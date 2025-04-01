@@ -131,118 +131,110 @@ const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
 
 // Shader Functions
 
-const vertexFn = tgpu['~unstable']
-  .vertexFn({
-    in: {
-      position: d.vec4f,
-      normal: d.vec4f,
-    },
-    out: {
-      pos: d.builtin.position,
-      normal: d.vec4f,
-      worldPos: d.vec4f,
-    },
-  })
-  .does((input) => {
-    const worldPos = input.position;
-    const pos = std.mul(camera.value.view, input.position);
-    return {
-      pos: std.mul(camera.value.projection, pos),
-      normal: input.normal,
-      worldPos: worldPos,
-    };
-  });
+const vertexFn = tgpu['~unstable'].vertexFn({
+  in: {
+    position: d.vec4f,
+    normal: d.vec4f,
+  },
+  out: {
+    pos: d.builtin.position,
+    normal: d.vec4f,
+    worldPos: d.vec4f,
+  },
+})((input) => {
+  const worldPos = input.position;
+  const pos = std.mul(camera.value.view, input.position);
+  return {
+    pos: std.mul(camera.value.projection, pos),
+    normal: input.normal,
+    worldPos: worldPos,
+  };
+});
 
-const fragmentFn = tgpu['~unstable']
-  .fragmentFn({
-    in: {
-      normal: d.vec4f,
-      worldPos: d.vec4f,
-    },
-    out: d.vec4f,
-  })
-  .does((input) => {
-    const norm = std.normalize(input.normal.xyz);
-    const lDir = std.normalize(light.value.direction);
+const fragmentFn = tgpu['~unstable'].fragmentFn({
+  in: {
+    normal: d.vec4f,
+    worldPos: d.vec4f,
+  },
+  out: d.vec4f,
+})((input) => {
+  const norm = std.normalize(input.normal.xyz);
+  const lDir = std.normalize(light.value.direction);
 
-    const ambient = std.mul(
-      material.value.ambient,
+  const ambient = std.mul(
+    material.value.ambient,
+    std.mul(light.value.intensity, light.value.color),
+  );
+  const diffFactor = std.max(std.dot(norm, lDir), 0.0);
+  const diffuse = std.mul(
+    diffFactor,
+    std.mul(
+      material.value.diffuse,
       std.mul(light.value.intensity, light.value.color),
-    );
-    const diffFactor = std.max(std.dot(norm, lDir), 0.0);
-    const diffuse = std.mul(
-      diffFactor,
-      std.mul(
-        material.value.diffuse,
-        std.mul(light.value.intensity, light.value.color),
-      ),
-    );
+    ),
+  );
 
-    const vDir = std.normalize(
-      std.sub(camera.value.position.xyz, input.worldPos.xyz),
-    );
+  const vDir = std.normalize(
+    std.sub(camera.value.position.xyz, input.worldPos.xyz),
+  );
 
-    const rDir = std.reflect(d.vec3f(-lDir.x, -lDir.y, -lDir.z), norm);
-    const specFactor = std.pow(
-      std.max(std.dot(vDir, rDir), 0.0),
-      material.value.shininess,
-    );
-    const specular = std.mul(
-      specFactor,
-      std.mul(
-        material.value.specular,
-        std.mul(light.value.intensity, light.value.color),
-      ),
-    );
+  const rDir = std.reflect(d.vec3f(-lDir.x, -lDir.y, -lDir.z), norm);
+  const specFactor = std.pow(
+    std.max(std.dot(vDir, rDir), 0.0),
+    material.value.shininess,
+  );
+  const specular = std.mul(
+    specFactor,
+    std.mul(
+      material.value.specular,
+      std.mul(light.value.intensity, light.value.color),
+    ),
+  );
 
-    const reflView = std.reflect(d.vec3f(-vDir.x, -vDir.y, -vDir.z), norm);
-    const envColor = std.textureSample(cubemap, sampler, reflView);
+  const reflView = std.reflect(d.vec3f(-vDir.x, -vDir.y, -vDir.z), norm);
+  const envColor = std.textureSample(cubemap, sampler, reflView);
 
-    const directLighting = std.add(ambient, std.add(diffuse, specular));
-    const finalColor = std.mix(
-      directLighting,
-      envColor.xyz,
-      material.value.reflectivity,
-    );
-    return d.vec4f(finalColor, 1.0);
-  });
+  const directLighting = std.add(ambient, std.add(diffuse, specular));
+  const finalColor = std.mix(
+    directLighting,
+    envColor.xyz,
+    material.value.reflectivity,
+  );
+  return d.vec4f(finalColor, 1.0);
+});
 
-const cubeVertexFn = tgpu['~unstable']
-  .vertexFn({
-    in: {
-      position: d.vec4f,
-      uv: d.vec2f,
-    },
-    out: {
-      pos: d.builtin.position,
-      texCoord: d.vec3f,
-    },
-  })
-  .does((input) => {
-    const viewRotationMatrix = d.mat4x4f(
-      camera.value.view.columns[0],
-      camera.value.view.columns[1],
-      camera.value.view.columns[2],
-      d.vec4f(0, 0, 0, 1),
-    );
-    const pos = std.mul(viewRotationMatrix, input.position);
-    return {
-      pos: std.mul(camera.value.projection, pos),
-      texCoord: input.position.xyz,
-    };
-  });
+const cubeVertexFn = tgpu['~unstable'].vertexFn({
+  in: {
+    position: d.vec4f,
+    uv: d.vec2f,
+  },
+  out: {
+    pos: d.builtin.position,
+    texCoord: d.vec3f,
+  },
+})((input) => {
+  const viewRotationMatrix = d.mat4x4f(
+    camera.value.view.columns[0],
+    camera.value.view.columns[1],
+    camera.value.view.columns[2],
+    d.vec4f(0, 0, 0, 1),
+  );
+  const pos = std.mul(viewRotationMatrix, input.position);
+  return {
+    pos: std.mul(camera.value.projection, pos),
+    texCoord: input.position.xyz,
+  };
+});
 
-const cubeFragmentFn = tgpu['~unstable']
-  .fragmentFn({
-    in: {
-      texCoord: d.vec3f,
-    },
-    out: d.vec4f,
-  })
-  .does((input) => {
-    const dir = std.normalize(input.texCoord);
-    return std.textureSample(cubemap, sampler, dir);
-  });
+const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
+  in: {
+    texCoord: d.vec3f,
+  },
+  out: d.vec4f,
+})((input) => {
+  const dir = std.normalize(input.texCoord);
+  return std.textureSample(cubemap, sampler, dir);
+});
 
 // Pipeline Setup
 

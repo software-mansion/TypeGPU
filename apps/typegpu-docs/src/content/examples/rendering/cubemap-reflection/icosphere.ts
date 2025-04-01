@@ -140,75 +140,73 @@ export class IcosphereGenerator {
 
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
-    const computeFn = tgpu['~unstable']
-      .computeFn({
-        in: { gid: d.builtin.globalInvocationId },
-        workgroupSize: [64, 1, 1],
-      })
-      .does((input) => {
-        const triangleCount = std.arrayLength(prevVertices.value) / d.u32(3);
-        const triangleIndex = input.gid.x + input.gid.y * d.u32(65535);
-        if (triangleIndex >= triangleCount) {
-          return;
-        }
+    const computeFn = tgpu['~unstable'].computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [64, 1, 1],
+    })((input) => {
+      const triangleCount = std.arrayLength(prevVertices.value) / d.u32(3);
+      const triangleIndex = input.gid.x + input.gid.y * d.u32(65535);
+      if (triangleIndex >= triangleCount) {
+        return;
+      }
 
-        const baseIndexPrev = triangleIndex * d.u32(3);
+      const baseIndexPrev = triangleIndex * d.u32(3);
 
-        const v1 = helpers.unpackVec2u(
-          prevVertices.value[baseIndexPrev].position,
+      const v1 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev].position,
+      );
+      const v2 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev + d.u32(1)].position,
+      );
+      const v3 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev + d.u32(2)].position,
+      );
+
+      const v12 = helpers.normalizeSafely(helpers.calculateMidpoint(v1, v2));
+      const v23 = helpers.normalizeSafely(helpers.calculateMidpoint(v2, v3));
+      const v31 = helpers.normalizeSafely(helpers.calculateMidpoint(v3, v1));
+
+      const newVertices = [
+        // Triangle A: [v1, v12, v31]
+        v1,
+        v12,
+        v31,
+        // Triangle B: [v2, v23, v12]
+        v2,
+        v23,
+        v12,
+        // Triangle C: [v3, v31, v23]
+        v3,
+        v31,
+        v23,
+        // Triangle D: [v12, v23, v31]
+        v12,
+        v23,
+        v31,
+      ];
+
+      const baseIndexNext = triangleIndex * d.u32(12);
+      for (let i = d.u32(0); i < 12; i++) {
+        const reprojectedVertex = newVertices[i];
+
+        const triBase = i - (i % d.u32(3));
+        const normal = helpers.getNormal(
+          newVertices[triBase],
+          newVertices[triBase + d.u32(1)],
+          newVertices[triBase + d.u32(2)],
+          smoothFlag.value,
+          reprojectedVertex,
         );
-        const v2 = helpers.unpackVec2u(
-          prevVertices.value[baseIndexPrev + d.u32(1)].position,
-        );
-        const v3 = helpers.unpackVec2u(
-          prevVertices.value[baseIndexPrev + d.u32(2)].position,
-        );
 
-        const v12 = helpers.normalizeSafely(helpers.calculateMidpoint(v1, v2));
-        const v23 = helpers.normalizeSafely(helpers.calculateMidpoint(v2, v3));
-        const v31 = helpers.normalizeSafely(helpers.calculateMidpoint(v3, v1));
+        const outIndex = baseIndexNext + i;
+        const nextVertex = nextVertices.value[outIndex];
 
-        const newVertices = [
-          // Triangle A: [v1, v12, v31]
-          v1,
-          v12,
-          v31,
-          // Triangle B: [v2, v23, v12]
-          v2,
-          v23,
-          v12,
-          // Triangle C: [v3, v31, v23]
-          v3,
-          v31,
-          v23,
-          // Triangle D: [v12, v23, v31]
-          v12,
-          v23,
-          v31,
-        ];
+        nextVertex.position = helpers.packVec2u(reprojectedVertex);
+        nextVertex.normal = helpers.packVec2u(normal);
 
-        const baseIndexNext = triangleIndex * d.u32(12);
-        for (let i = d.u32(0); i < 12; i++) {
-          const reprojectedVertex = newVertices[i];
-
-          const triBase = i - (i % d.u32(3));
-          const normal = helpers.getNormal(
-            newVertices[triBase],
-            newVertices[triBase + d.u32(1)],
-            newVertices[triBase + d.u32(2)],
-            smoothFlag.value,
-            reprojectedVertex,
-          );
-
-          const outIndex = baseIndexNext + i;
-          const nextVertex = nextVertices.value[outIndex];
-
-          nextVertex.position = helpers.packVec2u(reprojectedVertex);
-          nextVertex.normal = helpers.packVec2u(normal);
-
-          nextVertices.value[outIndex] = nextVertex;
-        }
-      });
+        nextVertices.value[outIndex] = nextVertex;
+      }
+    });
 
     this.pipeline = this.root['~unstable']
       .withCompute(computeFn)
