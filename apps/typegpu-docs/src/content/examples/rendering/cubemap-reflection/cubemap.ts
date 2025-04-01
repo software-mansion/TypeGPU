@@ -15,11 +15,11 @@ function vert(
 export const cubeVertices: d.Infer<typeof CubeVertex>[] = [
   // Bottom face
   vert([-1, -1, -1, 1], [0, 0]),
-  vert([-1, -1, 1, 1], [1, 1]),
-  vert([-1, -1, -1, 1], [1, 0]),
-  vert([1, -1, -1, 1], [0, 0]),
-  vert([1, -1, 1, 1], [0, 1]),
-  vert([-1, -1, -1, 1], [1, 0]),
+  vert([1, -1, -1, 1], [1, 0]),
+  vert([1, -1, 1, 1], [1, 1]),
+  vert([1, -1, 1, 1], [1, 1]),
+  vert([-1, -1, 1, 1], [0, 1]),
+  vert([-1, -1, -1, 1], [0, 0]),
 
   // Right face
   vert([1, 1, 1, 1], [0, 1]),

@@ -65,8 +65,13 @@ const cubeVertexBuffer = root
 
 // Camera Setup
 
-const cameraPosition = d.vec4f(0, 0, 5, 1);
 const cameraInitialPos = d.vec3f(0, 1, 5);
+const cameraPosition = d.vec4f(
+  cameraInitialPos.x,
+  cameraInitialPos.y,
+  cameraInitialPos.z,
+  1,
+);
 const cameraBuffer = root
   .createBuffer(Camera, {
     view: m.mat4.lookAt(cameraInitialPos, [0, 0, 0], [0, 1, 0], d.mat4x4f()),
@@ -74,7 +79,7 @@ const cameraBuffer = root
       Math.PI / 4,
       canvas.width / canvas.height,
       0.1,
-      100,
+      10000,
       d.mat4x4f(),
     ),
     position: cameraPosition,
@@ -300,6 +305,25 @@ loop();
 
 // #region Example controls and cleanup
 
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const dpr = window.devicePixelRatio;
+    const width = entry.contentRect.width;
+    const height = entry.contentRect.height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const newProj = m.mat4.perspective(
+      Math.PI / 4,
+      canvas.width / canvas.height,
+      0.1,
+      10000,
+      d.mat4x4f(),
+    );
+    cameraBuffer.writePartial({ projection: newProj });
+  }
+});
+resizeObserver.observe(canvas);
+
 // Variables for mouse interaction.
 let isDragging = false;
 let prevX = 0;
@@ -370,6 +394,16 @@ canvas.addEventListener('mousemove', (event) => {
     updateCameraOrbit(dx, dy);
   }
 });
+
+function hideHelp() {
+  const helpElem = document.getElementById('help');
+  if (helpElem) {
+    helpElem.style.opacity = '0';
+  }
+}
+for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
+  window.addEventListener(eventName, hideHelp, { once: true });
+}
 
 export const controls = {
   subdivisions: {
@@ -451,6 +485,8 @@ export function onCleanup() {
   icosphereGenerator.destroy();
   cubemapTexture.destroy();
   root.destroy();
+
+  resizeObserver.unobserve(canvas);
 }
 
 // #endregion
