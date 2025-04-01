@@ -149,14 +149,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _ownBuffer: boolean;
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
-  private _compiledWriter:
-    | ((
-        view: DataView,
-        offset: number,
-        data: Infer<TData>,
-        littleEndian: boolean,
-      ) => void)
-    | undefined;
 
   private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
@@ -263,7 +255,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
   compileWriter(): void {
     if (EVAL_ALLOWED_IN_ENV) {
-      this._compiledWriter = getCompiledWriterForSchema(this.dataType);
+      getCompiledWriterForSchema(this.dataType);
     } else {
       throw new Error('This environment does not allow eval');
     }
@@ -276,15 +268,8 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
       if (EVAL_ALLOWED_IN_ENV) {
-        if (!this._compiledWriter) {
-          this._compiledWriter = getCompiledWriterForSchema(this.dataType);
-        }
-        this._compiledWriter(
-          new DataView(mapped),
-          0,
-          data,
-          endianness === 'little',
-        );
+        const writer = getCompiledWriterForSchema(this.dataType);
+        writer(new DataView(mapped), 0, data, endianness === 'little');
         return;
       }
       writeData(new BufferWriter(mapped), this.dataType, data);
@@ -300,15 +285,8 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     this._group.flush();
 
     if (EVAL_ALLOWED_IN_ENV) {
-      if (!this._compiledWriter) {
-        this._compiledWriter = getCompiledWriterForSchema(this.dataType);
-      }
-      this._compiledWriter(
-        new DataView(this._hostBuffer),
-        0,
-        data,
-        endianness === 'little',
-      );
+      const writer = getCompiledWriterForSchema(this.dataType);
+      writer(new DataView(this._hostBuffer), 0, data, endianness === 'little');
     } else {
       writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
     }
