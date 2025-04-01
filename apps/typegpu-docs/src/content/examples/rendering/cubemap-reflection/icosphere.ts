@@ -2,6 +2,7 @@ import tgpu, {
   type TgpuBuffer,
   type TgpuComputePipeline,
   type TgpuRoot,
+  type UniformFlag,
   type VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -129,12 +130,15 @@ const generatorLayout = tgpu.bindGroupLayout({
 export class IcosphereGenerator {
   private cache = new Map<string, IcosphereBuffer>();
   private readonly pipeline: TgpuComputePipeline;
+  private readonly smoothBuffer: TgpuBuffer<d.U32> & UniformFlag;
 
   constructor(
     private root: TgpuRoot,
     private maxBufferSize?: number,
   ) {
     const { prevVertices, nextVertices, smoothFlag } = generatorLayout.bound;
+
+    this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
     const computeFn = tgpu['~unstable']
       .computeFn({
@@ -285,14 +289,12 @@ export class IcosphereGenerator {
       )
       .$usage('storage');
 
-    const smoothBuffer = this.root
-      .createBuffer(d.u32, smooth ? 1 : 0)
-      .$usage('uniform');
+    this.smoothBuffer.write(smooth ? 1 : 0);
 
     const bindGroup = this.root.createBindGroup(generatorLayout, {
       prevVertices: currentComputeView,
       nextVertices: nextComputeView,
-      smoothFlag: smoothBuffer,
+      smoothFlag: this.smoothBuffer,
     });
 
     const triangleCount = getVertexAmount(wantedSubdivisions - 1) / 3;
@@ -312,7 +314,7 @@ export class IcosphereGenerator {
     for (const buffer of this.cache.values()) {
       buffer.destroy();
     }
-
+    this.smoothBuffer.destroy();
     this.cache.clear();
   }
 }
