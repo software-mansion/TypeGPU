@@ -66,12 +66,6 @@ const cubeVertexBuffer = root
 // Camera Setup
 
 const cameraInitialPos = d.vec3f(0, 1, 5);
-const cameraPosition = d.vec4f(
-  cameraInitialPos.x,
-  cameraInitialPos.y,
-  cameraInitialPos.z,
-  1,
-);
 const cameraBuffer = root
   .createBuffer(Camera, {
     view: m.mat4.lookAt(cameraInitialPos, [0, 0, 0], [0, 1, 0], d.mat4x4f()),
@@ -82,7 +76,7 @@ const cameraBuffer = root
       10000,
       d.mat4x4f(),
     ),
-    position: cameraPosition,
+    position: d.vec4f(cameraInitialPos, 1),
   })
   .$usage('uniform');
 
