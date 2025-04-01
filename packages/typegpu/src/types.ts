@@ -232,9 +232,5 @@ export function hasInternalDataType(
 export function isMarkedInternal(
   value: unknown,
 ): value is { [$internal]: Record<string, unknown> } {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    $internal in (value as object)
-  );
+  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
 }

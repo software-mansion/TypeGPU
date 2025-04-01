@@ -190,7 +190,7 @@ export function generateExpression(
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
-        dataType: isWgsl(target.dataType)
+        dataType: d.isData(target.dataType)
           ? getTypeForPropAccess(target.dataType, property)
           : UnknownData,
       };
@@ -199,7 +199,7 @@ export function generateExpression(
     const propValue = (target.value as any)[property];
 
     if (target.dataType.type !== 'unknown') {
-      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+      if (wgsl.isMat(target.dataType) && property === 'columns') {
         return {
           value: target.value,
           dataType: target.dataType,
@@ -243,7 +243,7 @@ export function generateExpression(
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      dataType: isWgsl(targetExpr.dataType)
+      dataType: d.isData(targetExpr.dataType)
         ? getTypeForIndexAccess(targetExpr.dataType)
         : UnknownData,
     };
@@ -291,14 +291,16 @@ export function generateExpression(
       };
     }
 
+    if (!isMarkedInternal(idValue)) {
+      throw new Error(
+        `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+      );
+    }
+
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
-
-    if (!isMarkedInternal(idValue)) {
-      throw new Error(`Function ${String(idValue)} is not marked as internal.`);
-    }
 
     return {
       value: resolveRes(ctx, fnRes),
