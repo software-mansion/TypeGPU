@@ -62,14 +62,9 @@ export const cubeVertices: d.Infer<typeof CubeVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-const cubemapUrls = [
-  'cubemapTest/posx.jpg', // right
-  'cubemapTest/negx.jpg', // left
-  'cubemapTest/posy.jpg', // top
-  'cubemapTest/negy.jpg', // bottom
-  'cubemapTest/posz.jpg', // front
-  'cubemapTest/negz.jpg', // back
-];
+const cubemapUrls = ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
+  (side) => `assets/cubemap-reflection/${side}.jpg`,
+);
 
 export async function loadCubemap(
   root: TgpuRoot,
