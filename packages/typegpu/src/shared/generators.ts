@@ -18,17 +18,17 @@ export function* naturalsExcept(
   }
 }
 
-type MapValueToResource<T> = { [K in keyof T]: Snippet };
+type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
-  gpuImpl: (...args: MapValueToResource<Parameters<T>>) => Snippet,
+  gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
 ): T {
   return ((...args: Parameters<T>) => {
     if (inGPUMode()) {
       return gpuImpl(
-        ...(args as unknown as MapValueToResource<Parameters<T>>),
+        ...(args as unknown as MapValueToSnippet<Parameters<T>>),
       ) as unknown as Snippet;
     }
     // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>

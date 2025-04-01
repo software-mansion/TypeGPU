@@ -187,7 +187,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  getResourceById(id: string): Snippet | undefined {
+  getSnippetById(id: string): Snippet | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -341,7 +341,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getById(id: string): Snippet | null {
-    const item = this._itemStateStack.getResourceById(id);
+    const item = this._itemStateStack.getSnippetById(id);
 
     if (item === undefined) {
       return null;

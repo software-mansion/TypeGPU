@@ -13,7 +13,7 @@ import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
-  numericLiteralToResource,
+  numericLiteralToSnippet,
 } from './generationHelpers.js';
 
 const parenthesizedOps = [
@@ -262,7 +262,7 @@ export function generateExpression(
 
   if ('n' in expression) {
     // Numeric Literal
-    const type = numericLiteralToResource(expression.n);
+    const type = numericLiteralToSnippet(expression.n);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression.n}`);
     }
@@ -277,12 +277,12 @@ export function generateExpression(
 
     ctx.callStack.push(idValue);
 
-    const argResources = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedResources = argResources.map((res) => ({
+    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
+    const resolvedSnippets = argSnippets.map((res) => ({
       value: resolveRes(ctx, res),
       dataType: res.dataType,
     }));
-    const argValues = resolvedResources.map((res) => res.value);
+    const argValues = resolvedSnippets.map((res) => res.value);
 
     ctx.callStack.pop();
 
@@ -304,7 +304,7 @@ export function generateExpression(
 
     // Assuming that `id` is callable
     return (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...resolvedResources,
+      ...resolvedSnippets,
     ) as Snippet;
   }
 

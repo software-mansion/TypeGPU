@@ -211,7 +211,7 @@ export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
     return UnknownData;
   }
   if (typeof resource === 'number') {
-    return numericLiteralToResource(String(resource))?.dataType ?? UnknownData;
+    return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
   }
   if (typeof resource === 'boolean') {
     return bool;
@@ -227,7 +227,7 @@ export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
   return isWgslData(resource) ? resource : UnknownData;
 }
 
-export function numericLiteralToResource(value: string): Snippet | undefined {
+export function numericLiteralToSnippet(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
     return { value, dataType: abstractInt };
