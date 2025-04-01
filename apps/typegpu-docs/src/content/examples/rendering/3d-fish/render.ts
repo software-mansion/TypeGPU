@@ -17,8 +17,7 @@ export const vertexShader = tgpu['~unstable']
   .vertexFn({
     in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
     out: ModelVertexOutput,
-  })
-  .does((input) => {
+  })((input) => {
     // rotate the model so that it aligns with model's direction of movement
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const currentModelData = modelData.value[input.instanceIndex];
@@ -91,8 +90,10 @@ export const vertexShader = tgpu['~unstable']
   .$name('vertex shader');
 
 const sampleTexture = tgpu['~unstable']
-  .fn([d.vec2f], d.vec4f)
-  .does(/* wgsl */ `(uv: vec2f) -> vec4f {
+  .fn(
+    { uv: d.vec2f },
+    d.vec4f,
+  )(/* wgsl */ `{
     return textureSample(shaderTexture, shaderSampler, uv);
   }`)
   .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })
@@ -102,13 +103,12 @@ export const fragmentShader = tgpu['~unstable']
   .fragmentFn({
     in: ModelVertexOutput,
     out: d.vec4f,
-  })
-  .does((input) => {
+  })((input) => {
     // shade the fragment in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
     // then apply sea fog and sea desaturation
 
-    const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+    const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));

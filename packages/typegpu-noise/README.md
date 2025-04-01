@@ -14,8 +14,7 @@ import { randf } from '@typegpu/noise';
 const timeUniform = root.createUniform(f32);
 
 const mainFrag = tgpu
-  .fragmentFn({ in: { pos: builtin.position }, out: vec4f })
-  .does((input) => {
+  .fragmentFn({ in: { pos: builtin.position }, out: vec4f })((input) => {
     const time = timeUniform.value;
     randf.seed2(add(input.pos.xy, vec2f(time)));
 
