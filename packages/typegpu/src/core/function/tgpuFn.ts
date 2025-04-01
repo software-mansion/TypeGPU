@@ -3,6 +3,7 @@ import type { AnyWgslData } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import { createDualImpl } from '../../shared/generators';
 import { $internal } from '../../shared/symbols';
+import type { GenerationCtx } from '../../smol/wgslGenerator';
 import {
   type Labelled,
   type ResolutionCtx,
@@ -183,7 +184,23 @@ function createFn<
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      return core.resolve(ctx);
+      if (typeof implementation === 'string') {
+        return core.resolve(ctx);
+      }
+
+      const generationCtx = ctx as GenerationCtx;
+      if (generationCtx.callStack === undefined) {
+        throw new Error(
+          'Cannot resolve a TGSL function outside of a generation context',
+        );
+      }
+
+      try {
+        generationCtx.callStack.push(shell.returnType);
+        return core.resolve(ctx);
+      } finally {
+        generationCtx.callStack.pop();
+      }
     },
   };
 

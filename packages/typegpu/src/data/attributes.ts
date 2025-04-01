@@ -1,9 +1,10 @@
 import type {
+  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr';
+} from '../shared/repr.js';
 import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
@@ -290,7 +291,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   // Type-token, not available at runtime
-  public readonly '~repr'!: Infer<TInner>;
+  public declare readonly [$repr]: Infer<TInner>;
 
   constructor(
     public readonly inner: TInner,

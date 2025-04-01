@@ -9,22 +9,20 @@ const rotate = tgpu['~unstable'].fn(
   { v: d.vec2f, angle: d.f32 },
   d.vec2f,
 )(/* wgsl */ `{
-    let pos = vec2(
-      (v.x * cos(angle)) - (v.y * sin(angle)),
-      (v.x * sin(angle)) + (v.y * cos(angle))
-    );
+  let pos = vec2(
+    (in.v.x * cos(in.angle)) - (in.v.y * sin(in.angle)),
+    (in.v.x * sin(in.angle)) + (in.v.y * cos(in.angle))
+  );
 
-    return pos;
-  }
-`);
+  return pos;
+}`);
 
 const getRotationFromVelocity = tgpu['~unstable'].fn(
   { velocity: d.vec2f },
   d.f32,
 )(/* wgsl */ `{
-    return -atan2(velocity.x, velocity.y);
-  }
-`);
+  return -atan2(velocity.x, velocity.y);
+}`);
 
 const TriangleData = d.struct({
   position: d.vec2f,
@@ -32,11 +30,10 @@ const TriangleData = d.struct({
 });
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: d.arrayOf(TriangleData, triangleAmount) },
   colorPalette: { uniform: d.vec3f },
 });
 
-const { trianglePos, colorPalette } = renderBindGroupLayout.bound;
+const { colorPalette } = renderBindGroupLayout.bound;
 
 const VertexOutput = {
   position: d.builtin.position,
@@ -62,7 +59,6 @@ const mainVert = tgpu['~unstable']
     return Out(pos, color);
   }`)
   .$uses({
-    trianglePos,
     colorPalette,
     getRotationFromVelocity,
     rotate,
@@ -72,9 +68,8 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })(/* wgsl */ `{
-    return in.color;
-  }
-`);
+  return in.color;
+}`);
 
 const Params = d
   .struct({
@@ -225,7 +220,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
   let alignmentCount = 0;
   let cohesionCount = 0;
 
-  for (let i = d.u32(0); i < std.arrayLength(currentTrianglePos.value); i++) {
+  for (let i = d.u32(0); i < currentTrianglePos.value.length; i++) {
     if (i === index) {
       continue;
     }
@@ -294,7 +289,6 @@ const computePipeline = root['~unstable']
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
-    trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
   }),
 );
