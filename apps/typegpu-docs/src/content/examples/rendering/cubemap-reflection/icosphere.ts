@@ -152,19 +152,25 @@ export class IcosphereGenerator {
 
       const baseIndexPrev = triangleIndex * d.u32(3);
 
-      const v1 = helpers.unpackVec2u(
-        prevVertices.value[baseIndexPrev].position,
-      );
-      const v2 = helpers.unpackVec2u(
-        prevVertices.value[baseIndexPrev + d.u32(1)].position,
-      );
-      const v3 = helpers.unpackVec2u(
-        prevVertices.value[baseIndexPrev + d.u32(2)].position,
-      );
+      const v1 = helpers.unpackVec2u({
+        packed: prevVertices.value[baseIndexPrev].position,
+      });
+      const v2 = helpers.unpackVec2u({
+        packed: prevVertices.value[baseIndexPrev + d.u32(1)].position,
+      });
+      const v3 = helpers.unpackVec2u({
+        packed: prevVertices.value[baseIndexPrev + d.u32(2)].position,
+      });
 
-      const v12 = helpers.normalizeSafely(helpers.calculateMidpoint(v1, v2));
-      const v23 = helpers.normalizeSafely(helpers.calculateMidpoint(v2, v3));
-      const v31 = helpers.normalizeSafely(helpers.calculateMidpoint(v3, v1));
+      const v12 = helpers.normalizeSafely({
+        v: helpers.calculateMidpoint({ v1: v1, v2: v2 }),
+      });
+      const v23 = helpers.normalizeSafely({
+        v: helpers.calculateMidpoint({ v1: v2, v2: v3 }),
+      });
+      const v31 = helpers.normalizeSafely({
+        v: helpers.calculateMidpoint({ v1: v3, v2: v1 }),
+      });
 
       const newVertices = [
         // Triangle A: [v1, v12, v31]
@@ -190,19 +196,19 @@ export class IcosphereGenerator {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % d.u32(3));
-        const normal = helpers.getNormal(
-          newVertices[triBase],
-          newVertices[triBase + d.u32(1)],
-          newVertices[triBase + d.u32(2)],
-          smoothFlag.value,
-          reprojectedVertex,
-        );
+        const normal = helpers.getNormal({
+          v1: newVertices[triBase],
+          v2: newVertices[triBase + d.u32(1)],
+          v3: newVertices[triBase + d.u32(2)],
+          smoothNormals: smoothFlag.value,
+          vertexPos: reprojectedVertex,
+        });
 
         const outIndex = baseIndexNext + i;
         const nextVertex = nextVertices.value[outIndex];
 
-        nextVertex.position = helpers.packVec2u(reprojectedVertex);
-        nextVertex.normal = helpers.packVec2u(normal);
+        nextVertex.position = helpers.packVec2u({ toPack: reprojectedVertex });
+        nextVertex.normal = helpers.packVec2u({ toPack: normal });
 
         nextVertices.value[outIndex] = nextVertex;
       }
