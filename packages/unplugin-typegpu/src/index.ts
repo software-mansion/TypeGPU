@@ -75,6 +75,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
     const tgslFunctionDefs: {
       def: FunctionNode;
+      name?: string | undefined;
       removeJsImplementation: boolean;
     }[] = [];
 
@@ -112,6 +113,15 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
           if (directive) {
             tgslFunctionDefs.push({
               def: removeKernelDirective(node),
+              name:
+                node.type === 'FunctionDeclaration' ||
+                node.type === 'FunctionExpression'
+                  ? node.id?.name
+                  : _parent?.type === 'VariableDeclarator'
+                    ? _parent.id.type === 'Identifier'
+                      ? _parent.id.name
+                      : undefined
+                    : undefined,
               removeJsImplementation: directive !== 'kernel & js',
             });
           }
@@ -128,29 +138,26 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       );
     }
 
-    for (const { def, removeJsImplementation } of tgslFunctionDefs) {
+    for (const { def, name, removeJsImplementation } of tgslFunctionDefs) {
       const { argNames, body, externalNames } = transpileFn(def);
-
-      const functionStatementName =
-        def.type === 'FunctionDeclaration' ? def.id?.name : undefined;
+      const isFunctionStatement = def.type === 'FunctionDeclaration';
 
       if (
-        functionStatementName &&
+        isFunctionStatement &&
+        name &&
         code
           .slice(0, def.start)
-          .search(
-            new RegExp(`(?<![\\w_.])${functionStatementName}(?![\\w_])`),
-          ) !== -1
+          .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
       ) {
         throw new Error(
-          `File ${id}: function "${functionStatementName}", containing ${removeJsImplementation ? 'kernel' : 'kernel & js'} directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+          `File ${id}: function "${name}", containing ${removeJsImplementation ? 'kernel' : 'kernel & js'} directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
         );
       }
 
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
       magicString.appendLeft(
         def.start,
-        `${functionStatementName ? `const ${functionStatementName} = ` : ''}${tgpuAlias}.__assignAst(`,
+        `${isFunctionStatement && name ? `const ${name} = ` : ''}${tgpuAlias}.__assignAst(`,
       );
       magicString.appendRight(
         def.end,
@@ -162,7 +169,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       } else {
         magicString.appendRight(
           def.end,
-          `)${functionStatementName ? ';' : ''}`,
+          `)${isFunctionStatement && name ? ';' : ''}`,
         );
       }
 
@@ -170,7 +177,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         magicString.overwrite(
           def.start,
           def.end,
-          `${tgpuAlias}.__removedJsImpl(${functionStatementName ? `"${functionStatementName}"` : ''})`,
+          `${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`,
         );
       }
     }

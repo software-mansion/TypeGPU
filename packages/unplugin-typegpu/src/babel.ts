@@ -80,7 +80,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     ArrowFunctionExpression(path) {
-      const transpiled = functionToTranspiled(path.node, ctx);
+      const transpiled = functionToTranspiled(
+        path.node,
+        ctx,
+        path.parentPath.node.type === 'VariableDeclarator'
+          ? path.parentPath.node.id.type === 'Identifier'
+            ? path.parentPath.node.id.name
+            : undefined
+          : undefined,
+      );
       if (transpiled) {
         path.replaceWith(transpiled);
         path.skip();
@@ -88,7 +96,17 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     FunctionExpression(path) {
-      const transpiled = functionToTranspiled(path.node, ctx);
+      const transpiled = functionToTranspiled(
+        path.node,
+        ctx,
+        path.node.id?.name
+          ? path.node.id.name
+          : path.parentPath.node.type === 'VariableDeclarator'
+            ? path.parentPath.node.id.type === 'Identifier'
+              ? path.parentPath.node.id.name
+              : undefined
+            : undefined,
+      );
       if (transpiled) {
         path.replaceWith(transpiled);
         path.skip();

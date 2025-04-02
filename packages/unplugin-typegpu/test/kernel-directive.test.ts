@@ -18,7 +18,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
+      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -96,7 +96,7 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['unstable'].fn([]);
-      shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      shell(tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -149,7 +149,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
+      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
 
             console.log(addGPU);
 
@@ -242,7 +242,7 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['unstable'].fn([]);
 
-            shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            shell(tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell(function addCPU(a, b) {
                 return a + b;
