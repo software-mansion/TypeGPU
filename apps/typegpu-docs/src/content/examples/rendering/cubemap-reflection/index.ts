@@ -452,6 +452,7 @@ export const controls = {
     max: d.vec3f(1, 1, 1),
     step: d.vec3f(0.01, 0.01, 0.01),
     onVectorSliderChange: (value: d.v3f) => {
+      console.log('ambient', value);
       materialProps.ambient = value;
       materialBuffer.writePartial({ ambient: value });
     },

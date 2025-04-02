@@ -68,7 +68,7 @@ if (body.firstChild) {
 
 // Execute example
 // @ts-ignore
-const example = import('./src/index.ts');
+const example = await import('./src/index.ts');
 
 // Create example controls
 for (const controls of Object.values(example)) {
@@ -140,6 +140,17 @@ for (const controls of Object.values(example)) {
           comp: 'x' | 'y' | 'z' | 'w',
         ): number => (vec[comp] !== undefined ? vec[comp] : 0);
 
+        let currentVec: Record<string, number> = {};
+        const initialVec =
+          (params.initial as unknown as Record<string, number>) ||
+          (params.min as unknown as Record<string, number>);
+
+        for (const comp of components) {
+          currentVec[comp] = getComponentValue(initialVec, comp);
+        }
+
+        params.initial = currentVec as unknown as d.AnyVecInstance;
+
         for (const comp of components) {
           const row = document.createElement('div');
           row.style.display = 'flex';
@@ -155,21 +166,15 @@ for (const controls of Object.values(example)) {
           slider.min = `${getComponentValue(params.min as unknown as Record<string, number>, comp)}`;
           slider.max = `${getComponentValue(params.max as unknown as Record<string, number>, comp)}`;
           slider.step = `${getComponentValue(params.step as unknown as Record<string, number>, comp)}`;
-          const initialVec =
-            (params.initial as unknown as Record<string, number>) ||
-            (params.min as unknown as Record<string, number>);
-          slider.value = `${getComponentValue(initialVec, comp)}`;
+          slider.value = `${currentVec[comp]}`;
 
           slider.addEventListener('input', () => {
-            const currentVec =
-              (params.initial as unknown as Record<string, number>) ||
-              (params.min as unknown as Record<string, number>);
-            const newVec = {
-              ...currentVec,
-              [comp]: Number.parseFloat(slider.value),
-            };
+            const newVec = { ...currentVec };
+            newVec[comp] = Number.parseFloat(slider.value);
+
             params.onVectorSliderChange(newVec as unknown as d.AnyVecInstance);
             params.initial = newVec as unknown as d.AnyVecInstance;
+            currentVec = newVec;
           });
 
           row.appendChild(labelSpan);
