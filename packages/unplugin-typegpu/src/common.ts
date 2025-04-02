@@ -125,3 +125,6 @@ export function isShellImplementationCall(
       node.callee.property.name === 'does')
   );
 }
+
+export const kernelDirectives = ['kernel', 'kernel & js'] as const;
+export type KernelDirective = (typeof kernelDirectives)[number];

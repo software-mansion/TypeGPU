@@ -6,10 +6,12 @@ import { type UnpluginFactory, createUnplugin } from 'unplugin';
 import babel from './babel';
 import {
   type Context,
+  type KernelDirective,
   type TypegpuPluginOptions,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
+  kernelDirectives,
   shouldSkipFile,
 } from './common';
 
@@ -19,19 +21,19 @@ type FunctionNode =
   | acorn.FunctionExpression
   | acorn.ArrowFunctionExpression;
 
-function isKernelMarkedFunction(node: FunctionNode) {
+function getKernelDirective(node: FunctionNode): KernelDirective | undefined {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
-      if (
-        statement.type === 'ExpressionStatement' &&
-        statement.directive === 'kernel'
-      ) {
-        return true;
+      for (const directive of kernelDirectives) {
+        if (
+          statement.type === 'ExpressionStatement' &&
+          statement.directive === directive
+        ) {
+          return directive;
+        }
       }
     }
   }
-
-  return false;
 }
 
 function removeKernelDirective(node: FunctionNode) {
@@ -40,7 +42,10 @@ function removeKernelDirective(node: FunctionNode) {
       (statement) =>
         !(
           statement.type === 'ExpressionStatement' &&
-          statement.directive === 'kernel'
+          statement.directive &&
+          kernelDirectives.includes(
+            statement.directive as (typeof kernelDirectives)[number],
+          )
         ),
     );
   }
@@ -68,7 +73,10 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       allowReturnOutsideFunction: true,
     }) as Node;
 
-    const tgslFunctionDefs: FunctionNode[] = [];
+    const tgslFunctionDefs: {
+      def: FunctionNode;
+      removeJsImplementation: boolean;
+    }[] = [];
 
     walk(ast, {
       enter(_node, _parent, prop, index) {
@@ -87,18 +95,26 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
               (implementation.type === 'FunctionExpression' ||
                 implementation.type === 'ArrowFunctionExpression')
             ) {
-              tgslFunctionDefs.push(implementation);
+              tgslFunctionDefs.push({
+                def: implementation,
+                removeJsImplementation: true,
+              });
             }
           }
         }
 
         if (
-          (node.type === 'ArrowFunctionExpression' ||
-            node.type === 'FunctionExpression' ||
-            node.type === 'FunctionDeclaration') &&
-          isKernelMarkedFunction(node)
+          node.type === 'ArrowFunctionExpression' ||
+          node.type === 'FunctionExpression' ||
+          node.type === 'FunctionDeclaration'
         ) {
-          tgslFunctionDefs.push(removeKernelDirective(node));
+          const directive = getKernelDirective(node);
+          if (directive) {
+            tgslFunctionDefs.push({
+              def: removeKernelDirective(node),
+              removeJsImplementation: directive !== 'kernel & js',
+            });
+          }
         }
       },
     });
@@ -112,7 +128,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       );
     }
 
-    for (const def of tgslFunctionDefs) {
+    for (const { def, removeJsImplementation } of tgslFunctionDefs) {
       const { argNames, body, externalNames } = transpileFn(def);
 
       const functionStatementName =
@@ -127,7 +143,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
           ) !== -1
       ) {
         throw new Error(
-          `File ${id}: function "${functionStatementName}", containing "kernel" directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+          `File ${id}: function "${functionStatementName}", containing ${removeJsImplementation ? 'kernel' : 'kernel & js'} directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
         );
       }
 
@@ -147,6 +163,14 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         magicString.appendRight(
           def.end,
           `)${functionStatementName ? ';' : ''}`,
+        );
+      }
+
+      if (removeJsImplementation) {
+        magicString.overwrite(
+          def.start,
+          def.end,
+          `${tgpuAlias}.__removedJsImpl(${functionStatementName ? `"${functionStatementName}"` : ''})`,
         );
       }
     }

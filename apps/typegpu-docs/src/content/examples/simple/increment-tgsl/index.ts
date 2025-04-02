@@ -20,6 +20,17 @@ const increment = tgpu['~unstable'].computeFn({
   counter.value.z += d.f32(input.num.x);
 });
 
+const addJs = ({ x, y }: { x: number; y: number }) => {
+  'kernel & js';
+  return x + y;
+};
+
+const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(addJs);
+
+console.log(addJs({ x: 2, y: 3 }));
+
+console.log(tgpu.resolve({ externals: { add } }));
+
 const pipeline = root['~unstable'].withCompute(increment).createPipeline();
 
 async function doIncrement() {

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { babelTransform, rollupTransform } from './transform';
 
-describe('[BABEL] "kernel" directive', () => {
+describe('[BABEL] "kernel & js" directive', () => {
   it('makes plugin transpile marked arrow functions', () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-          'kernel';
+          'kernel & js';
           return a + b;
       };
 
@@ -18,7 +18,11 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
+      const addGPU = tgpu.__assignAst((a, b) => {
+        'kernel & js';
+
+        return a + b;
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -32,7 +36,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell((a, b) => {
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -44,7 +48,11 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['unstable'].fn([]);
-      shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      shell(tgpu.__assignAst((a, b) => {
+        'kernel & js';
+
+        return a + b;
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell((a, b) => {
         return a + b;
       });"
@@ -58,7 +66,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell(function(a, b){
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -70,7 +78,11 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['unstable'].fn([]);
-      shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      shell(tgpu.__assignAst(function (a, b) {
+        'kernel & js';
+
+        return a + b;
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function (a, b) {
         return a + b;
       });"
@@ -84,7 +96,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell(function addGPU(a, b){
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -96,7 +108,11 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['unstable'].fn([]);
-      shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      shell(tgpu.__assignAst(function addGPU(a, b) {
+        'kernel & js';
+
+        return a + b;
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -108,7 +124,7 @@ describe('[BABEL] "kernel" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel';
+        'kernel & js';
         return a + b;
       }
 
@@ -119,7 +135,11 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
+      const addGPU = tgpu.__assignAst(function addGPU(a, b) {
+        'kernel & js';
+
+        return a + b;
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
       function addCPU(a, b) {
         return a + b;
       }"
@@ -127,13 +147,13 @@ describe('[BABEL] "kernel" directive', () => {
   });
 });
 
-describe('[ROLLUP] "kernel" directive', () => {
+describe('[ROLLUP] "kernel & js" directive', () => {
   it('makes plugin transpile marked arrow functions', async () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-        'kernel';
+        'kernel & js';
         return a + b;
       };
 
@@ -149,7 +169,10 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
+      const addGPU = tgpu.__assignAst((a, b) => {
+              'kernel & js';
+              return a + b;
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
 
             console.log(addGPU);
 
@@ -169,7 +192,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell((a, b) => {
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -183,7 +206,10 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['unstable'].fn([]);
 
-            shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            shell(tgpu.__assignAst((a, b) => {
+                'kernel & js';
+                return a + b;
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell((a, b) => {
                 return a + b;
@@ -199,7 +225,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell(function(a, b){
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -212,7 +238,10 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['unstable'].fn([]);
 
-            shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            shell(tgpu.__assignAst(function(a, b){
+                'kernel & js';
+                return a + b;
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell(function(a, b) {
                 return a + b;
@@ -228,7 +257,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu['unstable'].fn([]);
 
       shell(function addGPU(a, b){
-          'kernel';
+          'kernel & js';
           return a + b;
       })
 
@@ -242,7 +271,10 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['unstable'].fn([]);
 
-            shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            shell(tgpu.__assignAst(function addGPU(a, b){
+                'kernel & js';
+                return a + b;
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell(function addCPU(a, b) {
                 return a + b;
@@ -256,7 +288,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel';
+        'kernel & js';
         return a + b;
       }
 
@@ -272,7 +304,10 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const addGPU = tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
+      const addGPU = tgpu.__assignAst(function addGPU(a, b) {
+              'kernel & js';
+              return a + b;
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
 
             console.log(addGPU);
 
