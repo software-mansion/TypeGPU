@@ -1,3 +1,5 @@
+import type * as d from 'typegpu/data';
+
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -105,19 +107,62 @@ for (const controls of Object.values(example)) {
         params.onSliderChange(Number.parseFloat(slider.value));
       }
 
-      if ('onSelectChange' in params) {
-        const select = document.createElement('select');
-        select.innerHTML = params.options
-          .map((option) => `<option value="${option}">${option}</option>`)
-          .join('');
-        select.value = params.initial ?? params.options[0];
+      if ('onVectorSliderChange' in params) {
+        const vectorContainer = document.createElement('div');
+        vectorContainer.style.display = 'flex';
+        vectorContainer.style.flexDirection = 'column';
+        vectorContainer.style.gap = '0.5rem';
 
-        select.addEventListener('change', () => {
-          params.onSelectChange(select.value);
-        });
+        const components: Array<'x' | 'y' | 'z' | 'w'> = [];
+        const minObj = params.min as unknown as Record<string, number>;
+        if ('x' in minObj) components.push('x');
+        if ('y' in minObj) components.push('y');
+        if ('z' in minObj) components.push('z');
+        if ('w' in minObj) components.push('w');
 
-        controlRow.appendChild(select);
-        params.onSelectChange(select.value);
+        const getComponentValue = (
+          vec: Record<string, number>,
+          comp: 'x' | 'y' | 'z' | 'w',
+        ): number => (vec[comp] !== undefined ? vec[comp] : 0);
+
+        for (const comp of components) {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.alignItems = 'center';
+          row.style.gap = '0.5rem';
+
+          const labelSpan = document.createElement('span');
+          labelSpan.innerText = comp;
+          labelSpan.style.minWidth = '20px';
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.min = `${getComponentValue(params.min as unknown as Record<string, number>, comp)}`;
+          slider.max = `${getComponentValue(params.max as unknown as Record<string, number>, comp)}`;
+          slider.step = `${getComponentValue(params.step as unknown as Record<string, number>, comp)}`;
+          const initialVec =
+            (params.initial as unknown as Record<string, number>) ||
+            (params.min as unknown as Record<string, number>);
+          slider.value = `${getComponentValue(initialVec, comp)}`;
+
+          slider.addEventListener('input', () => {
+            const currentVec =
+              (params.initial as unknown as Record<string, number>) ||
+              (params.min as unknown as Record<string, number>);
+            const newVec = {
+              ...currentVec,
+              [comp]: Number.parseFloat(slider.value),
+            };
+            params.onVectorSliderChange(newVec as unknown as d.AnyVecInstance);
+            params.initial = newVec as unknown as d.AnyVecInstance;
+          });
+
+          row.appendChild(labelSpan);
+          row.appendChild(slider);
+          vectorContainer.appendChild(row);
+        }
+
+        controlRow.appendChild(vectorContainer);
       }
 
       if ('onToggleChange' in params) {
@@ -169,6 +214,14 @@ type SliderControlParam = {
   step?: number;
 };
 
+type VectorSliderControlParam<T extends d.AnyVecInstance> = {
+  onVectorSliderChange: (newValue: T) => void;
+  initial?: T;
+  min: T;
+  max: T;
+  step: T;
+};
+
 type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
 };
@@ -183,4 +236,5 @@ type ExampleControlParam =
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
-  | TextAreaControlParam;
+  | TextAreaControlParam
+  | VectorSliderControlParam<d.AnyVecInstance>;

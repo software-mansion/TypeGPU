@@ -434,14 +434,16 @@ export const controls = {
     options: ['campsite', 'beach', 'chapel', 'city'],
     onSelectChange: async (value: CubemapNames) => {
       chosenCubemap = value;
-      cubemapTexture.destroy();
-      cubemapTexture = await loadCubemap(root, chosenCubemap);
-      cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+      const newCubemapTexture = await loadCubemap(root, chosenCubemap);
+      cubemap = newCubemapTexture.createView('sampled', { dimension: 'cube' });
 
       textureBindGroup = root.createBindGroup(textureLayout, {
         cubemap,
         texSampler: sampler,
       });
+
+      cubemapTexture.destroy();
+      cubemapTexture = newCubemapTexture;
     },
   },
   'ambient color': {

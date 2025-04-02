@@ -49,6 +49,6 @@ export type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSLiderControlParam<d.AnyVecInstance>;
+  | VectorSliderControlParam<d.AnyVecInstance>;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);
