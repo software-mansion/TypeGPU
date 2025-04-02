@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 import { cubeVertices } from './cubemap';
-import { loadCubemap } from './cubemap';
+import { type CubemapNames, loadCubemap } from './cubemap';
 import {
   Camera,
   CubeVertex,
@@ -102,8 +102,9 @@ const materialBuffer = root
 
 // Textures & Samplers
 
-const cubemapTexture = await loadCubemap(root);
-const cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+let chosenCubemap: CubemapNames = 'campsite';
+let cubemapTexture = await loadCubemap(root, chosenCubemap);
+let cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -122,6 +123,17 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
+});
+
+const textureLayout = tgpu.bindGroupLayout({
+  cubemap: { texture: 'float', viewDimension: 'cube' },
+  texSampler: { sampler: 'filtering' },
+});
+const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
+
+let textureBindGroup = root.createBindGroup(textureLayout, {
+  cubemap,
+  texSampler: sampler,
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
@@ -192,7 +204,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   );
 
   const reflView = std.reflect(d.vec3f(-vDir.x, -vDir.y, -vDir.z), norm);
-  const envColor = std.textureSample(cubemap, sampler, reflView);
+  const envColor = std.textureSample(cubemapBinding, texSampler, reflView);
 
   const directLighting = std.add(ambient, std.add(diffuse, specular));
   const finalColor = std.mix(
@@ -233,7 +245,7 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   const dir = std.normalize(input.texCoord);
-  return std.textureSample(cubemap, sampler, dir);
+  return std.textureSample(cubemapBinding, texSampler, dir);
 });
 
 // Pipeline Setup
@@ -266,6 +278,7 @@ function render() {
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
     .with(renderLayout, renderBindGroup)
+    .with(textureLayout, textureBindGroup)
     .draw(cubeVertices.length);
 
   pipeline
@@ -277,6 +290,7 @@ function render() {
     })
     .with(vertexLayout, vertexBuffer)
     .with(renderLayout, renderBindGroup)
+    .with(textureLayout, textureBindGroup)
     .draw(vertexBuffer.dataType.elementCount);
 
   root['~unstable'].flush();
@@ -346,7 +360,7 @@ function updateCameraOrbit(dx: number, dy: number) {
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
-  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
+  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 100);
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
@@ -413,6 +427,21 @@ export const controls = {
         subdivisions,
         smoothNormals,
       );
+    },
+  },
+  'cubemap texture': {
+    initial: chosenCubemap,
+    options: ['campsite', 'beach', 'chapel', 'city'],
+    onSelectChange: async (value: CubemapNames) => {
+      chosenCubemap = value;
+      cubemapTexture.destroy();
+      cubemapTexture = await loadCubemap(root, chosenCubemap);
+      cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+
+      textureBindGroup = root.createBindGroup(textureLayout, {
+        cubemap,
+        texSampler: sampler,
+      });
     },
   },
   'ambient color': {

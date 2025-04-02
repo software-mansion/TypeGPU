@@ -8,15 +8,15 @@ export const unpackVec2u = tgpu['~unstable'].fn(
 )(({ packed }) => {
   const xy = std.unpack2x16float(packed.x);
   const zw = std.unpack2x16float(packed.y);
-  return d.vec4f(xy.x, xy.y, zw.x, zw.y);
+  return d.vec4f(xy, zw);
 });
 
 export const packVec2u = tgpu['~unstable'].fn(
   { toPack: d.vec4f },
   d.vec2u,
 )(({ toPack }) => {
-  const xy = std.pack2x16float(d.vec2f(toPack.x, toPack.y));
-  const zw = std.pack2x16float(d.vec2f(toPack.z, toPack.w));
+  const xy = std.pack2x16float(toPack.xy);
+  const zw = std.pack2x16float(toPack.zw);
   return d.vec2u(xy, zw);
 });
 
@@ -24,7 +24,7 @@ export const normalizeSafely = tgpu['~unstable'].fn(
   { v: d.vec4f },
   d.vec4f,
 )(({ v }) => {
-  const length = std.length(d.vec3f(v.x, v.y, v.z));
+  const length = std.length(v.xyz);
   if (length < 1e-8) {
     return d.vec4f(0, 0, 1, 1);
   }

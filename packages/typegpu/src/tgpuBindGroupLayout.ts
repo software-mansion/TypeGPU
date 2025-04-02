@@ -318,7 +318,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
           ? TgpuComparisonSampler
           : T extends TgpuLayoutTexture
             ? TgpuSampledTexture<
-                Default<GetDimension<T['viewDimension']>, '2d'>,
+                Default<T['viewDimension'], '2d'>,
                 ChannelFormatToSchema[T['texture']]
               >
             : T extends TgpuLayoutStorageTexture

@@ -62,14 +62,14 @@ export const cubeVertices: d.Infer<typeof CubeVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-const cubemapUrls = ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
-  (side) => `assets/cubemap-reflection/${side}.jpg`,
-);
+export type CubemapNames = 'campsite' | 'beach' | 'chapel' | 'city';
+function getCubemapUrls(name: CubemapNames) {
+  return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
+    (side) => `assets/cubemap-reflection/${name}/${side}.jpg`,
+  );
+}
 
-export async function loadCubemap(
-  root: TgpuRoot,
-  urls: string[] = cubemapUrls,
-) {
+export async function loadCubemap(root: TgpuRoot, chosenCubemap: CubemapNames) {
   const size = 2048;
   const texture = root['~unstable']
     .createTexture({
@@ -80,7 +80,7 @@ export async function loadCubemap(
     .$usage('sampled', 'render');
 
   await Promise.all(
-    urls.map(async (url, i) => {
+    getCubemapUrls(chosenCubemap).map(async (url, i) => {
       const response = await fetch(url);
       const blob = await response.blob();
       const imageBitmap = await createImageBitmap(blob);

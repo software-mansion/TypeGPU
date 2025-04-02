@@ -14,17 +14,6 @@ type IcosphereBuffer = TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
 type VertexType = d.Infer<typeof Vertex>;
 
 /**
- * Safely normalizes a vector to prevent numerical instability
- */
-function normalizeSafely(v: d.v4f): d.v4f {
-  const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-  if (length < 1e-8) {
-    return d.vec4f(0, 0, 1, 1);
-  }
-  return d.vec4f(v.x / length, v.y / length, v.z / length, 1);
-}
-
-/**
  * Calculates the number of vertices in the icosphere based on the number of subdivisions
  */
 function getVertexAmount(subdivisions: number): number {
@@ -98,14 +87,14 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
     } else {
       const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
       const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
-      const faceNormal = normalizeSafely(
-        d.vec4f(
+      const faceNormal = helpers.normalizeSafely({
+        v: d.vec4f(
           edge1.y * edge2.z - edge1.z * edge2.y,
           edge1.z * edge2.x - edge1.x * edge2.z,
           edge1.x * edge2.y - edge1.y * edge2.x,
           0,
         ),
-      );
+      });
       vertices.push(Vertex({ position: v1, normal: faceNormal }));
       vertices.push(Vertex({ position: v2, normal: faceNormal }));
       vertices.push(Vertex({ position: v3, normal: faceNormal }));
