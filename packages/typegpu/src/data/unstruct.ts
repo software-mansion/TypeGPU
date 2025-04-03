@@ -1,6 +1,6 @@
-import type { Prettify } from '../shared/utilityTypes.js';
-import type { Unstruct } from './dataTypes.js';
-import type { BaseData } from './wgslTypes.js';
+import type { Prettify } from '../shared/utilityTypes';
+import type { Unstruct } from './dataTypes';
+import type { BaseData } from './wgslTypes';
 
 // ----------
 // Public API
