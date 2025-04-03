@@ -1,4 +1,5 @@
 import type { $repr, InferPartialRecord, InferRecord } from '../shared/repr.js';
+import type { Prettify } from '../shared/utilityTypes.js';
 import type { Unstruct } from './dataTypes.js';
 import type { BaseData } from './wgslTypes.js';
 
@@ -41,7 +42,7 @@ class UnstructImpl<TProps extends Record<string, BaseData>>
 
   public readonly type = 'unstruct';
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: InferRecord<TProps>;
+  public declare readonly [$repr]: Prettify<InferRecord<TProps>>;
   /** Type-token, not available at runtime */
   public readonly '~reprPartial'!: Partial<InferPartialRecord<TProps>>;
 
