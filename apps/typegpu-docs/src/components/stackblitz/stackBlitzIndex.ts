@@ -1,5 +1,3 @@
-import type * as d from 'typegpu/data';
-
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -124,64 +122,46 @@ for (const controls of Object.values(example)) {
 
       if ('onVectorSliderChange' in params) {
         const vectorContainer = document.createElement('div');
-        vectorContainer.style.display = 'flex';
-        vectorContainer.style.flexDirection = 'column';
-        vectorContainer.style.gap = '0.5rem';
+        vectorContainer.style.cssText =
+          'display: flex; flex-direction: column; gap: 0.5rem;';
 
-        const components: Array<'x' | 'y' | 'z' | 'w'> = [];
-        const minObj = params.min as unknown as Record<string, number>;
-        if ('x' in minObj) components.push('x');
-        if ('y' in minObj) components.push('y');
-        if ('z' in minObj) components.push('z');
-        if ('w' in minObj) components.push('w');
+        const value = params.initial ?? params.min;
+        const length = params.min.length;
+        const labels = ['x', 'y', 'z', 'w'];
 
-        const getComponentValue = (
-          vec: Record<string, number>,
-          comp: 'x' | 'y' | 'z' | 'w',
-        ): number => (vec[comp] !== undefined ? vec[comp] : 0);
-
-        let currentVec: Record<string, number> = {};
-        const initialVec =
-          (params.initial as unknown as Record<string, number>) ||
-          (params.min as unknown as Record<string, number>);
-
-        for (const comp of components) {
-          currentVec[comp] = getComponentValue(initialVec, comp);
-        }
-
-        params.initial = currentVec as unknown as d.AnyVecInstance;
-
-        for (const comp of components) {
+        const renderSlider = (index: number) => {
           const row = document.createElement('div');
-          row.style.display = 'flex';
-          row.style.alignItems = 'center';
-          row.style.gap = '0.5rem';
+          row.style.cssText =
+            'display: flex; align-items: center; gap: 0.5rem;';
 
           const labelSpan = document.createElement('span');
-          labelSpan.innerText = comp;
+          labelSpan.innerText = labels[index];
           labelSpan.style.minWidth = '20px';
 
           const slider = document.createElement('input');
           slider.type = 'range';
-          slider.min = `${getComponentValue(params.min as unknown as Record<string, number>, comp)}`;
-          slider.max = `${getComponentValue(params.max as unknown as Record<string, number>, comp)}`;
-          slider.step = `${getComponentValue(params.step as unknown as Record<string, number>, comp)}`;
-          slider.value = `${currentVec[comp]}`;
-
+          slider.min = `${params.min[index]}`;
+          slider.max = `${params.max[index]}`;
+          slider.step = `${params.step[index]}`;
+          slider.value = `${value[index]}`;
           slider.addEventListener('input', () => {
-            const newVec = { ...currentVec };
-            newVec[comp] = Number.parseFloat(slider.value);
-
-            params.onVectorSliderChange(newVec as unknown as d.AnyVecInstance);
-            params.initial = newVec as unknown as d.AnyVecInstance;
-            currentVec = newVec;
+            const newValues = [...value];
+            newValues[index] = Number.parseFloat(slider.value);
+            params.onVectorSliderChange(newValues);
           });
 
-          row.appendChild(labelSpan);
-          row.appendChild(slider);
-          vectorContainer.appendChild(row);
-        }
+          row.append(labelSpan, slider);
+          return row;
+        };
 
+        const container = document.createElement('div');
+        container.style.cssText =
+          'display: flex; flex-direction: column; gap: 0.5rem;';
+        for (let i = 0; i < length; i++) {
+          container.appendChild(renderSlider(i));
+        }
+        vectorContainer.appendChild(container);
+        params.onVectorSliderChange(value);
         controlRow.appendChild(vectorContainer);
       }
 
@@ -234,12 +214,12 @@ type SliderControlParam = {
   step?: number;
 };
 
-type VectorSliderControlParam<T extends d.AnyVecInstance> = {
-  onVectorSliderChange: (newValue: T) => void;
-  initial?: T;
-  min: T;
-  max: T;
-  step: T;
+type VectorSliderControlParam = {
+  onVectorSliderChange: (newValue: number[]) => void;
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
 };
 
 type ButtonControlParam = {
@@ -257,4 +237,4 @@ type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam<d.AnyVecInstance>;
+  | VectorSliderControlParam;

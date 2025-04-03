@@ -2,7 +2,6 @@ import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
-import type * as d from 'typegpu/data';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom';
@@ -92,7 +91,7 @@ function SliderRow({
   );
 }
 
-function VectorSliderRow<T extends d.AnyVecInstance>({
+function VectorSliderRow({
   label,
   initial,
   min,
@@ -101,13 +100,13 @@ function VectorSliderRow<T extends d.AnyVecInstance>({
   onChange,
 }: {
   label: string;
-  initial?: T;
-  min: T;
-  max: T;
-  step: T;
-  onChange: (value: T) => void;
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
+  onChange: (value: number[]) => void;
 }) {
-  const [value, setValue] = useState<T>(initial || min);
+  const [value, setValue] = useState<number[]>(initial ?? min);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
