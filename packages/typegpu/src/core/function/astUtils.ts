@@ -34,7 +34,7 @@ export function assignAst<T extends (...args: unknown[]) => unknown>(
 export function removedJsImpl(name?: string) {
   return () => {
     throw new Error(
-      `The function "${name ?? '<unnamed>'}" is invokable only on the GPU. If you want to use it on the CPU, mark it with "kernel & js" directive.`,
+      `The function "${name ?? '<unnamed>'}" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
     );
   };
 }
