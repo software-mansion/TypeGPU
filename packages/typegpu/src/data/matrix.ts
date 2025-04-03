@@ -3,6 +3,7 @@ import { $repr } from '../shared/repr.js';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {
+  AnyMatInstance,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
@@ -17,7 +18,7 @@ import type {
   v2f,
   v3f,
   v4f,
-} from './wgslTypes';
+} from './wgslTypes.js';
 
 // --------------
 // Implementation
@@ -31,8 +32,8 @@ type vBase = {
 
 interface MatSchemaOptions<TType extends string, ValueType> {
   type: TType;
-  rows: number;
-  columns: number;
+  rows: 2 | 3 | 4;
+  columns: 2 | 3 | 4;
   makeFromElements(...elements: number[]): ValueType;
 }
 
@@ -40,6 +41,91 @@ type MatConstructor<
   ValueType extends matBase<ColumnType>,
   ColumnType extends vBase,
 > = (...args: (number | ColumnType)[]) => ValueType;
+
+// Identity matrices
+export const identity4x4 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    )`,
+    dataType: mat4x4f,
+  }),
+);
+
+export const identity3x3 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0,
+    )`,
+    dataType: mat3x3f,
+  }),
+);
+
+export const identity2x2 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat2x2f(1, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0,
+      0.0, 1.0
+    )`,
+    dataType: mat2x2f,
+  }),
+);
+const IdentityFunctions: Record<number, () => AnyMatInstance> = {
+  2: identity2x2,
+  3: identity3x3,
+  4: identity4x4,
+};
+
+export const translation4x4 = createDualImpl(
+  // CPU implementation
+  (vector: v3f) => {
+    return mat4x4f(
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      vector.x,
+      vector.y,
+      vector.z,
+      1,
+    );
+  },
+  // GPU implementation
+  (vector) => {
+    return {
+      value: `mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+      dataType: mat4x4f,
+    };
+  },
+);
 
 function createMatSchema<
   TType extends string,
@@ -53,6 +139,8 @@ function createMatSchema<
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
     label: options.type,
+    identity: IdentityFunctions[options.columns],
+    translation: options.columns === 4 ? translation4x4 : undefined,
   };
 
   const construct = createDualImpl(
