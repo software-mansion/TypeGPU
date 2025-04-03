@@ -24,12 +24,9 @@ type FunctionNode =
 function getKernelDirective(node: FunctionNode): KernelDirective | undefined {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
-      for (const directive of kernelDirectives) {
-        if (
-          statement.type === 'ExpressionStatement' &&
-          statement.directive === directive
-        ) {
-          return directive;
+      if (statement.type === 'ExpressionStatement') {
+        if (kernelDirectives.includes(statement.directive as KernelDirective)) {
+          return statement.directive as KernelDirective;
         }
       }
     }
@@ -43,9 +40,7 @@ function removeKernelDirective(node: FunctionNode) {
         !(
           statement.type === 'ExpressionStatement' &&
           statement.directive &&
-          kernelDirectives.includes(
-            statement.directive as (typeof kernelDirectives)[number],
-          )
+          kernelDirectives.includes(statement.directive as KernelDirective)
         ),
     );
   }
