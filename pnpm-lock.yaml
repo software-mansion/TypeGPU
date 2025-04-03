@@ -263,8 +263,8 @@ importers:
   packages/tgpu-jit:
     dependencies:
       acorn:
-        specifier: ^8.12.1
-        version: 8.14.0
+        specifier: ^8.14.1
+        version: 8.14.1
       tinyest:
         specifier: workspace:~0.1.0-alpha.6
         version: link:../tinyest
@@ -350,8 +350,8 @@ importers:
         specifier: workspace:*
         version: link:../tgpu-dev-cli
       acorn:
-        specifier: ^8.12.1
-        version: 8.14.0
+        specifier: ^8.14.1
+        version: 8.14.1
       tsup:
         specifier: 'catalog:'
         version: 8.4.0(jiti@2.4.2)(postcss@8.5.3)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0)
@@ -491,8 +491,8 @@ importers:
         specifier: ^7.20.6
         version: 7.20.6
       acorn:
-        specifier: ^8.12.1
-        version: 8.14.0
+        specifier: ^8.14.1
+        version: 8.14.1
       rollup:
         specifier: 4.34.8
         version: 4.34.8
@@ -5133,8 +5133,8 @@ snapshots:
   '@astrojs/mdx@4.0.8(astro@5.3.1(@types/node@22.13.14)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0))':
     dependencies:
       '@astrojs/markdown-remark': 6.1.0
-      '@mdx-js/mdx': 3.1.0(acorn@8.14.0)
-      acorn: 8.14.0
+      '@mdx-js/mdx': 3.1.0(acorn@8.14.1)
+      acorn: 8.14.1
       astro: 5.3.1(@types/node@22.13.14)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0)
       es-module-lexer: 1.6.0
       estree-util-visit: 2.0.0
@@ -5801,36 +5801,6 @@ snapshots:
   '@loaders.gl/worker-utils@4.3.3(@loaders.gl/core@4.3.3)':
     dependencies:
       '@loaders.gl/core': 4.3.3
-
-  '@mdx-js/mdx@3.1.0(acorn@8.14.0)':
-    dependencies:
-      '@types/estree': 1.0.6
-      '@types/estree-jsx': 1.0.5
-      '@types/hast': 3.0.4
-      '@types/mdx': 2.0.13
-      collapse-white-space: 2.1.0
-      devlop: 1.1.0
-      estree-util-is-identifier-name: 3.0.0
-      estree-util-scope: 1.0.0
-      estree-walker: 3.0.3
-      hast-util-to-jsx-runtime: 2.3.6
-      markdown-extensions: 2.0.0
-      recma-build-jsx: 1.0.0
-      recma-jsx: 1.0.0(acorn@8.14.0)
-      recma-stringify: 1.0.0
-      rehype-recma: 1.0.0
-      remark-mdx: 3.1.0
-      remark-parse: 11.0.0
-      remark-rehype: 11.1.1
-      source-map: 0.7.4
-      unified: 11.0.5
-      unist-util-position-from-estree: 2.0.0
-      unist-util-stringify-position: 4.0.0
-      unist-util-visit: 5.0.0
-      vfile: 6.0.3
-    transitivePeerDependencies:
-      - acorn
-      - supports-color
 
   '@mdx-js/mdx@3.1.0(acorn@8.14.1)':
     dependencies:
@@ -6586,10 +6556,6 @@ snapshots:
   '@vtbag/turn-signal@1.3.0': {}
 
   '@webgpu/types@0.1.54': {}
-
-  acorn-jsx@5.3.2(acorn@8.14.0):
-    dependencies:
-      acorn: 8.14.0
 
   acorn-jsx@5.3.2(acorn@8.14.1):
     dependencies:
@@ -9094,16 +9060,6 @@ snapshots:
       estree-util-build-jsx: 3.0.1
       vfile: 6.0.3
 
-  recma-jsx@1.0.0(acorn@8.14.0):
-    dependencies:
-      acorn-jsx: 5.3.2(acorn@8.14.0)
-      estree-util-to-js: 2.0.0
-      recma-parse: 1.0.0
-      recma-stringify: 1.0.0
-      unified: 11.0.5
-    transitivePeerDependencies:
-      - acorn
-
   recma-jsx@1.0.0(acorn@8.14.1):
     dependencies:
       acorn-jsx: 5.3.2(acorn@8.14.1)
@@ -9865,7 +9821,7 @@ snapshots:
 
   unplugin@2.2.0:
     dependencies:
-      acorn: 8.14.0
+      acorn: 8.14.1
       webpack-virtual-modules: 0.6.2
 
   unstorage@1.15.0:

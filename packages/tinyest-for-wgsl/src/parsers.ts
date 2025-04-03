@@ -366,7 +366,7 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
 }
 
 export type TranspilationResult = {
-  argNames: string[];
+  argNames: tinyest.ArgNames;
   body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the
@@ -376,7 +376,7 @@ export type TranspilationResult = {
 };
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: acorn.Identifier[];
+  params: tinyest.ArgNames;
   body:
     | acorn.BlockStatement
     | acorn.Expression
@@ -438,26 +438,49 @@ export function extractFunctionParts(rootNode: JsNode): {
     throw new Error('tgpu.fn cannot be a generator');
   }
 
-  if (functionNode.params.some((p) => p.type !== 'Identifier')) {
-    throw new Error('tgpu.fn implementations require concrete parameters');
+  // destructured object argument
+  if (
+    functionNode.params[0] &&
+    functionNode.params[0].type === 'ObjectPattern'
+  ) {
+    return {
+      params: {
+        type: 'destructured-object',
+        props: functionNode.params[0].properties.flatMap((prop) =>
+          prop.type === 'Property' &&
+          prop.key.type === 'Identifier' &&
+          prop.value.type === 'Identifier'
+            ? [{ prop: prop.key.name, alias: prop.value.name }]
+            : [],
+        ),
+      },
+      body: functionNode.body,
+    };
   }
 
   return {
-    params: functionNode.params as acorn.Identifier[],
+    params: {
+      type: 'identifiers',
+      names: functionNode.params.flatMap((x) =>
+        x.type === 'Identifier' ? [x.name] : [],
+      ),
+    },
     body: functionNode.body,
   };
 }
 
 export function transpileFn(rootNode: JsNode): TranspilationResult {
-  const { params, body } = extractFunctionParts(rootNode);
-  const argNames = params.map((p) => p.name);
+  const { params: argNames, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
     stack: [
       {
-        declaredNames: [...argNames],
+        declaredNames:
+          argNames.type === 'identifiers'
+            ? argNames.names
+            : argNames.props.map((prop) => prop.alias),
       },
     ],
   };

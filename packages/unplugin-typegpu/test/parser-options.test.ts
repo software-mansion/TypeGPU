@@ -7,29 +7,27 @@ describe('[BABEL] parser options', () => {
       import tgpu from 'typegpu';
       
       const increment = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const x = 2+2;
         });
     `;
 
     expect(babelTransform(codeWithImport, {})).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const increment = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(() => {
+      const increment = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
         const x = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
     `);
 
     const codeWithoutImport = `\
       const increment = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const x = 2+2;
         });
     `;
 
     expect(babelTransform(codeWithoutImport, {})).toMatchInlineSnapshot(`
-      "const increment = tgpu['~unstable'].fn([]).does(() => {
+      "const increment = tgpu['~unstable'].fn([])(() => {
         const x = 2 + 2;
       });"
     `);
@@ -42,8 +40,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       import tgpu from 'typegpu';
       
       const increment = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const x = 2+2;
         });
 
@@ -54,9 +51,8 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       "import tgpu from 'typegpu';
 
       const increment = tgpu['~unstable']
-              .fn([])
-              .does(tgpu.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              .fn([])(tgpu.__assignAst(() => {
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
 
             console.log(increment);
       "
@@ -64,8 +60,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
 
     const codeWithoutImport = `\
       const increment = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const x = 2+2;
         });
 
@@ -74,8 +69,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
 
     expect(await rollupTransform(codeWithoutImport, {})).toMatchInlineSnapshot(`
       "const increment = tgpu['~unstable']
-              .fn([])
-              .does(() => {
+              .fn([])(() => {
               });
 
             console.log(increment);

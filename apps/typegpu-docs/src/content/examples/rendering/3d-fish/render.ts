@@ -6,22 +6,18 @@ import * as p from './params';
 import {
   ModelVertexInput,
   ModelVertexOutput,
-  renderBindGroupLayout,
+  renderBindGroupLayout as layout,
 } from './schemas';
 import { applySinWave } from './tgsl-helpers';
-
-const { camera, modelTexture, sampler, modelData, currentTime } =
-  renderBindGroupLayout.bound;
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
     in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
     out: ModelVertexOutput,
-  })
-  .does((input) => {
+  })((input) => {
     // rotate the model so that it aligns with model's direction of movement
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-    const currentModelData = modelData.value[input.instanceIndex];
+    const currentModelData = layout.$.modelData[input.instanceIndex];
 
     // apply sin wave
 
@@ -30,7 +26,7 @@ export const vertexShader = tgpu['~unstable']
     if (currentModelData.applySinWave === 1) {
       const wavedResults = applySinWave(
         input.instanceIndex,
-        currentTime.value,
+        layout.$.currentTime,
         input.modelPosition,
         input.modelNormal,
       );
@@ -74,8 +70,8 @@ export const vertexShader = tgpu['~unstable']
     // project the world position into the camera
     const worldPositionUniform = d.vec4f(worldPosition.xyz, 1);
     const canvasPosition = std.mul(
-      camera.value.projection,
-      std.mul(camera.value.view, worldPositionUniform),
+      layout.$.camera.projection,
+      std.mul(layout.$.camera.view, worldPositionUniform),
     );
 
     return {
@@ -88,27 +84,28 @@ export const vertexShader = tgpu['~unstable']
       variant: currentModelData.variant,
     };
   })
-  .$name('vertex shader');
+  .$name('vertexShader');
 
 const sampleTexture = tgpu['~unstable']
-  .fn([d.vec2f], d.vec4f)
-  .does(/* wgsl */ `(uv: vec2f) -> vec4f {
-    return textureSample(shaderTexture, shaderSampler, uv);
+  .fn(
+    { uv: d.vec2f },
+    d.vec4f,
+  )(/* wgsl */ `{
+    return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
   }`)
-  .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })
-  .$name('sampleShader');
+  .$uses({ layout })
+  .$name('sampleTexture');
 
 export const fragmentShader = tgpu['~unstable']
   .fragmentFn({
     in: ModelVertexOutput,
     out: d.vec4f,
-  })
-  .does((input) => {
+  })((input) => {
     // shade the fragment in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
     // then apply sea fog and sea desaturation
 
-    const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+    const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
@@ -120,7 +117,7 @@ export const fragmentShader = tgpu['~unstable']
     );
 
     const viewSource = std.normalize(
-      std.sub(camera.value.position.xyz, input.worldPosition),
+      std.sub(layout.$.camera.position.xyz, input.worldPosition),
     );
     const reflectSource = std.normalize(
       std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
@@ -135,7 +132,7 @@ export const fragmentShader = tgpu['~unstable']
 
     // apply desaturation
     const distanceFromCamera = std.length(
-      std.sub(camera.value.position.xyz, input.worldPosition),
+      std.sub(layout.$.camera.position.xyz, input.worldPosition),
     );
 
     let desaturatedColor = lightedColor;
@@ -159,4 +156,4 @@ export const fragmentShader = tgpu['~unstable']
 
     return d.vec4f(foggedColor.xyz, 1);
   })
-  .$name('fragment shader');
+  .$name('fragmentShader');
