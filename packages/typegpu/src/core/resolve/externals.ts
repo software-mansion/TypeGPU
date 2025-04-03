@@ -68,7 +68,7 @@ export function addReturnTypeToExternals(
 
 function identifierRegex(name: string) {
   return new RegExp(
-    `(?<![\\w_.])${name.replaceAll('.', '\\.')}(?![\\w_])`,
+    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
     'g',
   );
 }
@@ -100,7 +100,7 @@ export function replaceExternalsInWgsl(
         [
           ...wgsl.matchAll(
             new RegExp(
-              `${externalName.replaceAll('.', '\\.')}\\.(?<prop>.*?)(?![\\w_])`,
+              `${externalName.replaceAll('.', '\\.').replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
               'g',
             ),
           ),

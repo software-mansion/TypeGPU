@@ -48,7 +48,7 @@ import {
   type Sampled,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
-import type { AnyData } from './data';
+import type { AnyData } from './data/dataTypes.js';
 import type { AnyWgslData, BaseData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import {
@@ -57,6 +57,7 @@ import {
   isUsableAsStorage,
 } from './extension';
 import type { TgpuNamable } from './namable';
+import type { Infer } from './shared/repr.js';
 import type { Default, OmitProps, Prettify } from './shared/utilityTypes';
 import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
@@ -163,6 +164,12 @@ export interface TgpuBindGroupLayout<
   readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+  readonly value: {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
+  };
+  readonly $: {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
   /**
@@ -309,7 +316,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ? TgpuBufferUniform<UnwrapRuntimeConstructor<T['uniform']>>
+    ? TgpuBufferUniform<T['uniform']>
     : T extends TgpuLayoutStorage
       ? StorageUsageForEntry<T>
       : T extends TgpuLayoutSampler
@@ -319,6 +326,24 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
           : T extends TgpuLayoutTexture
             ? TgpuSampledTexture<
                 Default<T['viewDimension'], '2d'>,
+                ChannelFormatToSchema[T['texture']]
+              >
+            : T extends TgpuLayoutStorageTexture
+              ? StorageTextureUsageForEntry<T>
+              : never;
+
+export type InferLayoutEntry<T extends TgpuLayoutEntry | null> =
+  T extends TgpuLayoutUniform
+    ? Infer<T['uniform']>
+    : T extends TgpuLayoutStorage
+      ? Infer<UnwrapRuntimeConstructor<T['storage']>>
+      : T extends TgpuLayoutSampler
+        ? TgpuSampler
+        : T extends TgpuLayoutComparisonSampler
+          ? TgpuComparisonSampler
+          : T extends TgpuLayoutTexture
+            ? TgpuSampledTexture<
+                Default<GetDimension<T['viewDimension']>, '2d'>,
                 ChannelFormatToSchema[T['texture']]
               >
             : T extends TgpuLayoutStorageTexture
@@ -392,6 +417,14 @@ class TgpuBindGroupLayoutImpl<
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
+  public readonly value = {} as {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
+  };
+
+  public readonly $ = this.value as {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
+  };
+
   constructor(public readonly entries: Entries) {
     let idx = 0;
 
@@ -461,8 +494,29 @@ class TgpuBindGroupLayoutImpl<
         }
       }
 
+      if (
+        'texture' in entry ||
+        'storageTexture' in entry ||
+        'externalTexture' in entry ||
+        'sampler' in entry
+      ) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.value as any)[key] = this.bound[key];
+      } else {
+        Object.defineProperty(this.value, key, {
+          get: () => {
+            // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+            return (this.bound[key] as any).value;
+          },
+        });
+      }
+
       idx++;
     }
+  }
+
+  toString(): string {
+    return `bindGroupLayout:${this._label ?? '<unnamed>'}`;
   }
 
   get label(): string | undefined {

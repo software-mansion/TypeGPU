@@ -40,7 +40,7 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
-  (props: InferRecord<TProps>): InferRecord<TProps>;
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
