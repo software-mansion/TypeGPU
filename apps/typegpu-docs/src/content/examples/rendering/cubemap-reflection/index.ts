@@ -447,7 +447,11 @@ export const controls = {
     },
   },
   'ambient color': {
-    initial: materialProps.ambient,
+    initial: [
+      materialProps.ambient.x,
+      materialProps.ambient.y,
+      materialProps.ambient.z,
+    ],
     min: [0, 0, 0],
     max: [1, 1, 1],
     step: [0.01, 0.01, 0.01],
@@ -457,7 +461,11 @@ export const controls = {
     },
   },
   'diffuse color': {
-    initial: materialProps.diffuse,
+    initial: [
+      materialProps.diffuse.x,
+      materialProps.diffuse.y,
+      materialProps.diffuse.z,
+    ],
     min: [0, 0, 0],
     max: [1, 1, 1],
     step: [0.01, 0.01, 0.01],
@@ -467,7 +475,11 @@ export const controls = {
     },
   },
   'specular color': {
-    initial: materialProps.specular,
+    initial: [
+      materialProps.specular.x,
+      materialProps.specular.y,
+      materialProps.specular.z,
+    ],
     min: [0, 0, 0],
     max: [1, 1, 1],
     step: [0.01, 0.01, 0.01],
