@@ -91,9 +91,10 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
               (implementation.type === 'FunctionExpression' ||
                 implementation.type === 'ArrowFunctionExpression')
             ) {
+              const directive = getKernelDirective(implementation);
               tgslFunctionDefs.push({
-                def: implementation,
-                removeJsImplementation: true,
+                def: removeKernelDirective(implementation),
+                removeJsImplementation: directive !== 'kernel & js',
               });
             }
           }
