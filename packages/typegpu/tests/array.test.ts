@@ -95,7 +95,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([]).does(() => {
+    const foo = tgpu['~unstable'].fn([])(() => {
       let acc = d.f32(1);
       for (let i = 0; i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
@@ -126,7 +126,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([]).does(() => {
+    const foo = tgpu['~unstable'].fn([])(() => {
       let acc = d.f32(1);
       for (let i = 0; i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;

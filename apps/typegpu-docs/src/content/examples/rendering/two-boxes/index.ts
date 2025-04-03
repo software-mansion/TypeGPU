@@ -1,6 +1,6 @@
 import tgpu, {
-  type TgpuBuffer,
   type TgpuBindGroup,
+  type TgpuBuffer,
   type VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -227,28 +227,21 @@ createDepthAndMsaaTextures();
 
 // Shaders and Pipeline
 
-const vertex = tgpu['~unstable']
-  .vertexFn({
-    in: { position: d.vec4f, color: d.vec4f },
-    out: { pos: d.builtin.position, color: d.vec4f },
-  })
-  .does((input) => {
-    const pos = std.mul(
-      camera.value.projection,
-      std.mul(
-        camera.value.view,
-        std.mul(transform.value.model, input.position),
-      ),
-    );
-    return { pos, color: input.color };
-  });
+const vertex = tgpu['~unstable'].vertexFn({
+  in: { position: d.vec4f, color: d.vec4f },
+  out: { pos: d.builtin.position, color: d.vec4f },
+})((input) => {
+  const pos = std.mul(
+    camera.value.projection,
+    std.mul(camera.value.view, std.mul(transform.value.model, input.position)),
+  );
+  return { pos, color: input.color };
+});
 
-const fragment = tgpu['~unstable']
-  .fragmentFn({
-    in: { color: d.vec4f },
-    out: d.vec4f,
-  })
-  .does((input) => input.color);
+const fragment = tgpu['~unstable'].fragmentFn({
+  in: { color: d.vec4f },
+  out: d.vec4f,
+})((input) => input.color);
 
 const pipeline = root['~unstable']
   .withVertex(vertex, vertexLayout.attrib)

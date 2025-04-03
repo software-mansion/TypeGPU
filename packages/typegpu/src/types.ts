@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { ArgNames, Block } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -159,7 +159,7 @@ export interface ResolutionCtx {
   resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
-    argNames: string[];
+    argNames: ArgNames;
     body: Block;
     externalNames: string[];
   };
