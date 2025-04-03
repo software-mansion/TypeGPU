@@ -6,7 +6,7 @@ import {
 } from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
 import { resolveFunctionHeader } from '../../resolutionCtx';
-import type { ResolutionCtx, Resource } from '../../types';
+import type { ResolutionCtx, Snippet } from '../../types';
 import {
   type ExternalMap,
   addArgTypesToExternals,
@@ -166,7 +166,7 @@ export function createFnCore(
           throw new MissingLinksError(this.label, missingExternals);
         }
 
-        const args: Resource[] = Array.isArray(shell.argTypes)
+        const args: Snippet[] = Array.isArray(shell.argTypes)
           ? ast.argNames.type === 'identifiers'
             ? ast.argNames.names.map((name, idx) => ({
                 value: name,

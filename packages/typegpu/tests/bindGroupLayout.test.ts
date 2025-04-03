@@ -619,7 +619,7 @@ describe('TgpuBindGroup', () => {
       const { foo, bar } = layout.bound;
 
       expectTypeOf(foo).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
-      expectTypeOf(bar).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuSampledTexture<'cube-array', F32>>();
     });
   });
 

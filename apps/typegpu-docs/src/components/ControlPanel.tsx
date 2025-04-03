@@ -17,6 +17,7 @@ import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { TextArea } from './design/TextArea';
 import { Toggle } from './design/Toggle';
+import { VectorSlider } from './design/VectorSlider';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
 function ToggleRow({
@@ -77,6 +78,42 @@ function SliderRow({
       <div className="text-sm">{label}</div>
 
       <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(newValue) => {
+          setValue(newValue);
+          runWithCatch(() => onChange(newValue));
+        }}
+      />
+    </>
+  );
+}
+
+function VectorSliderRow({
+  label,
+  initial,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
+  onChange: (value: number[]) => void;
+}) {
+  const [value, setValue] = useState<number[]>(initial ?? min);
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+
+  return (
+    <>
+      <div className="text-sm">{label}</div>
+
+      <VectorSlider
         min={min}
         max={max}
         step={step}
@@ -178,6 +215,16 @@ function paramToControlRow(param: ExampleControlParam) {
       key={param.label}
       label={param.label}
       onChange={param.onSliderChange}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onVectorSliderChange' in param ? (
+    <VectorSliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onVectorSliderChange}
       min={param.min}
       max={param.max}
       step={param.step}

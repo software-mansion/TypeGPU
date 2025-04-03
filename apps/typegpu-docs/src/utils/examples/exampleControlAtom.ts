@@ -22,6 +22,15 @@ export type SliderControlParam = {
   label: string;
 };
 
+export type VectorSliderControlParam = {
+  onVectorSliderChange: (newValue: number[]) => void;
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
+  label: string;
+};
+
 export type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
   label: string;
@@ -38,6 +47,7 @@ export type ExampleControlParam =
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
-  | TextAreaControlParam;
+  | TextAreaControlParam
+  | VectorSliderControlParam;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);

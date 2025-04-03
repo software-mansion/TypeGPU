@@ -15,9 +15,9 @@ import type {
   vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
-import type { Resource } from '../types';
+import type { Snippet } from '../types';
 
-function isNumeric(element: Resource) {
+function isNumeric(element: Snippet) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
