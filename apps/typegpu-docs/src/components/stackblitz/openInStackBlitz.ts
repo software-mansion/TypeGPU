@@ -14,7 +14,7 @@ const pnpmWorkspaceYaml = type({
 })(parse(pnpmWorkspace));
 
 if (pnpmWorkspaceYaml instanceof type.errors) {
-  throw new Error(pnpmWorkspaceYaml.message);
+  throw new Error(pnpmWorkspaceYaml.summary);
 }
 
 export const openInStackBlitz = (example: Example) => {
