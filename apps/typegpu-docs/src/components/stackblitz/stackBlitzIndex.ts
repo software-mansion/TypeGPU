@@ -121,48 +121,45 @@ for (const controls of Object.values(example)) {
       }
 
       if ('onVectorSliderChange' in params) {
-        const vectorContainer = document.createElement('div');
-        vectorContainer.style.cssText =
-          'display: flex; flex-direction: column; gap: 0.5rem;';
+        const sliderContainer = document.createElement('div');
+        sliderContainer.style.display = 'flex';
+        sliderContainer.style.flexDirection = 'column';
+        sliderContainer.style.gap = '0.2rem';
 
-        const value = params.initial ?? params.min;
+        const currentValues = params.initial
+          ? [...params.initial]
+          : [...params.min];
         const length = params.min.length;
         const labels = ['x', 'y', 'z', 'w'];
 
-        const renderSlider = (index: number) => {
+        for (let i = 0; i < length; i++) {
           const row = document.createElement('div');
-          row.style.cssText =
-            'display: flex; align-items: center; gap: 0.5rem;';
+          row.style.display = 'flex';
+          row.style.alignItems = 'center';
+          row.style.gap = '0.2rem';
 
           const labelSpan = document.createElement('span');
-          labelSpan.innerText = labels[index];
-          labelSpan.style.minWidth = '20px';
+          labelSpan.innerText = labels[i];
 
           const slider = document.createElement('input');
           slider.type = 'range';
-          slider.min = `${params.min[index]}`;
-          slider.max = `${params.max[index]}`;
-          slider.step = `${params.step[index]}`;
-          slider.value = `${value[index]}`;
+          slider.min = `${params.min[i]}`;
+          slider.max = `${params.max[i]}`;
+          slider.step = `${params.step[i] ?? 0.1}`;
+          slider.value = `${currentValues[i]}`;
+
           slider.addEventListener('input', () => {
-            const newValues = [...value];
-            newValues[index] = Number.parseFloat(slider.value);
-            params.onVectorSliderChange(newValues);
+            currentValues[i] = Number.parseFloat(slider.value);
+            params.onVectorSliderChange(currentValues);
           });
 
-          row.append(labelSpan, slider);
-          return row;
-        };
-
-        const container = document.createElement('div');
-        container.style.cssText =
-          'display: flex; flex-direction: column; gap: 0.5rem;';
-        for (let i = 0; i < length; i++) {
-          container.appendChild(renderSlider(i));
+          row.appendChild(labelSpan);
+          row.appendChild(slider);
+          sliderContainer.appendChild(row);
         }
-        vectorContainer.appendChild(container);
-        params.onVectorSliderChange(value);
-        controlRow.appendChild(vectorContainer);
+
+        params.onVectorSliderChange(currentValues);
+        controlRow.appendChild(sliderContainer);
       }
 
       if ('onToggleChange' in params) {
