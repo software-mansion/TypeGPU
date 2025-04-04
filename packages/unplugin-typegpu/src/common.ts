@@ -8,11 +8,13 @@ export type Context = {
    */
   tgpuAliases: Set<string>;
   fileId?: string | undefined;
+  autoNamingEnabled?: boolean | undefined;
 };
 
 export interface TypegpuPluginOptions {
   include?: 'all' | RegExp[];
   forceTgpuAlias?: string;
+  autoNamingEnabled?: boolean;
 }
 
 export function embedJSON(jsValue: unknown) {
@@ -25,7 +27,10 @@ export function embedJSON(jsValue: unknown) {
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
  * available via `import tgpu from 'typegpu'`.
  */
-function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
+export function isTgpu(
+  ctx: Context,
+  node: babel.Node | acorn.AnyNode,
+): boolean {
   let path = '';
 
   let tail = node;

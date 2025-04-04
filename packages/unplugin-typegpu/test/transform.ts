@@ -5,7 +5,10 @@ import type { TypegpuPluginOptions } from '../src';
 import babelPlugin from '../src/babel';
 import rollupPlugin from '../src/rollup';
 
-const defaultPluginOptions: TypegpuPluginOptions = { include: 'all' };
+const defaultPluginOptions: TypegpuPluginOptions = {
+  include: 'all',
+  autoNamingEnabled: false,
+};
 
 export const babelTransform = (
   code: string,

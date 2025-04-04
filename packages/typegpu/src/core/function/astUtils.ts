@@ -1,4 +1,5 @@
 import type { ArgNames, Block } from 'tinyest';
+import { isNamable } from '../../namable';
 
 export type Ast = {
   argNames: ArgNames;
@@ -37,4 +38,10 @@ export function removedJsImpl(name?: string) {
       `The function "${name ?? '<unnamed>'}" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
     );
   };
+}
+
+export function autoName(object: unknown, label: string) {
+  if (isNamable(object)) {
+    object.$name(label);
+  }
 }
