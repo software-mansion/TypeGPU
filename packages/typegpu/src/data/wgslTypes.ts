@@ -1017,7 +1017,7 @@ export const $structTag = Symbol('Tag for struct schemas');
 export interface WgslStruct<
   TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends TgpuNamable {
-  (props: InferRecord<TProps>): InferRecord<TProps>;
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   /** @deprecated */
   readonly type: 'struct';
   readonly label?: string | undefined;
