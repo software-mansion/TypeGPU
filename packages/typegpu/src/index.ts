@@ -4,7 +4,7 @@
 
 import { constant } from './core/constant/tgpuConstant';
 import { declare } from './core/declare/tgpuDeclare';
-import { assignAst } from './core/function/astUtils';
+import { assignAst, removedJsImpl } from './core/function/astUtils';
 import { computeFn } from './core/function/tgpuComputeFn';
 import { fn } from './core/function/tgpuFn';
 import { fragmentFn } from './core/function/tgpuFragmentFn';
@@ -53,6 +53,7 @@ export default tgpu;
 // Hidden API, used only by tooling (e.g., rollup plugin).
 Object.assign(tgpu, {
   __assignAst: assignAst,
+  __removedJsImpl: removedJsImpl,
 });
 
 export {

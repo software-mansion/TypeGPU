@@ -5,10 +5,12 @@ import type * as babel from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
   type Context,
+  type KernelDirective,
   type TypegpuPluginOptions,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
+  kernelDirectives,
   shouldSkipFile,
 } from './common';
 
@@ -20,24 +22,30 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function isKernelMarkedFunction(
+function getKernelDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
     | babel.ArrowFunctionExpression,
-) {
+): KernelDirective | undefined {
   const directives = (
     'directives' in node.body ? (node.body?.directives ?? []) : []
   ).map((directive) => directive.value.value);
 
-  return directives.includes('kernel');
+  for (const directive of kernelDirectives) {
+    if (directives.includes(directive)) {
+      return directive;
+    }
+  }
 }
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
   ctx: Context,
+  name?: string | undefined,
 ): babel.CallExpression | null {
-  if (!isKernelMarkedFunction(node)) {
+  const directive = getKernelDirective(node);
+  if (!directive) {
     return null;
   }
 
@@ -52,7 +60,9 @@ function functionToTranspiled(
   return types.callExpression(
     template.expression(`${tgpuAlias}.__assignAst`)(),
     [
-      node,
+      directive === 'kernel & js'
+        ? node
+        : template.expression`${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`(),
       template.expression`${embedJSON({ argNames, body, externalNames })}`(),
       types.objectExpression(
         externalNames.map((name) =>
@@ -70,7 +80,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     ArrowFunctionExpression(path) {
-      const transpiled = functionToTranspiled(path.node, ctx);
+      const transpiled = functionToTranspiled(
+        path.node,
+        ctx,
+        path.parentPath.node.type === 'VariableDeclarator'
+          ? path.parentPath.node.id.type === 'Identifier'
+            ? path.parentPath.node.id.name
+            : undefined
+          : undefined,
+      );
       if (transpiled) {
         path.replaceWith(transpiled);
         path.skip();
@@ -78,7 +96,17 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     FunctionExpression(path) {
-      const transpiled = functionToTranspiled(path.node, ctx);
+      const transpiled = functionToTranspiled(
+        path.node,
+        ctx,
+        path.node.id?.name
+          ? path.node.id.name
+          : path.parentPath.node.type === 'VariableDeclarator'
+            ? path.parentPath.node.id.type === 'Identifier'
+              ? path.parentPath.node.id.name
+              : undefined
+            : undefined,
+      );
       if (transpiled) {
         path.replaceWith(transpiled);
         path.skip();
@@ -92,7 +120,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.params,
         node.body,
       );
-      const transpiled = functionToTranspiled(expression, ctx);
+      const transpiled = functionToTranspiled(expression, ctx, node.id?.name);
       if (transpiled && node.id) {
         path.replaceWith(
           types.variableDeclaration('const', [
@@ -122,12 +150,16 @@ function functionVisitor(ctx: Context): TraverseOptions {
             );
           }
 
+          const directive = getKernelDirective(implementation);
+
           path.replaceWith(
             types.callExpression(node.callee, [
               types.callExpression(
                 template.expression(`${tgpuAlias}.__assignAst`)(),
                 [
-                  implementation,
+                  directive !== 'kernel & js'
+                    ? template.expression`${tgpuAlias}.__removedJsImpl()`()
+                    : implementation,
                   template.expression`${embedJSON({ argNames, body, externalNames })}`(),
                   types.objectExpression(
                     externalNames.map((name) =>
