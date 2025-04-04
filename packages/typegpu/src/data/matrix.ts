@@ -3,6 +3,7 @@ import { $repr } from '../shared/repr.js';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {
+  AnyWgslData,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
@@ -53,7 +54,7 @@ function createMatSchema<
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
     label: options.type,
-  };
+  } as unknown as AnyWgslData;
 
   const construct = createDualImpl(
     // CPU implementation
