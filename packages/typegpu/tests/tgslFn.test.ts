@@ -501,6 +501,19 @@ describe('TGSL tgpu.fn function', () => {
       );
     });
 
+    it('cannot be invoked for inline function with no directive', () => {
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(
+        ({ x, y }: { x: number; y: number }) => x + y,
+      );
+
+      expect(() => add({ x: 2, y: 3 })).toThrow();
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
+
     it('can be invoked for inline function with "kernel & js" directive', () => {
       const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(
         ({ x, y }: { x: number; y: number }) => {
