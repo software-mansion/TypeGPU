@@ -66,7 +66,7 @@ if (body.firstChild) {
 
 // Execute example
 // @ts-ignore
-const example = import('./src/index.ts');
+const example = await import('./src/index.ts');
 
 // Create example controls
 for (const controls of Object.values(example)) {
