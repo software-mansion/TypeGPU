@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec4f } from '../../src/data';
-import { atan2, isCloseTo } from '../../src/std';
+import { vec4f } from '../../../src/data';
+import { atan2, isCloseTo } from '../../../src/std';
 
 describe('atan2', () => {
   it('computes atan2 of two values', () => {
@@ -16,6 +16,6 @@ describe('atan2', () => {
         atan2(vec4f(0, 1, 0, -1), vec4f(1, 0, -1, 0)),
         vec4f(0, Math.PI / 2, Math.PI, -Math.PI / 2),
       ),
-    ).toBeTruthy();
+    ).toBe(true);
   });
 });

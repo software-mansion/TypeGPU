@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f } from '../../src/data';
-import { reflect } from '../../src/std';
+import { vec2f, vec3f } from '../../../src/data';
+import { reflect } from '../../../src/std';
 
 describe('reflect', () => {
   it('reflects a vec2f vector correctly', () => {

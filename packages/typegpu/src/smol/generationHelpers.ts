@@ -11,14 +11,17 @@ import {
   u32,
 } from '../data/numeric';
 import {
+  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec4b,
   vec4f,
   vec4h,
   vec4i,
@@ -44,18 +47,21 @@ const swizzleableTypes = [
   'vec2h',
   'vec2i',
   'vec2u',
+  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
+  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
+  'vec4<bool>',
   'struct',
 ] as const;
 
-type SwizzleableType = 'f' | 'h' | 'i' | 'u';
+type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
@@ -86,6 +92,12 @@ const swizzleLenToType: Record<
     3: vec3u,
     4: vec4u,
   },
+  b: {
+    1: bool,
+    2: vec2b,
+    3: vec3b,
+    4: vec4b,
+  },
 } as const;
 
 const kindToSchema = {
@@ -93,14 +105,17 @@ const kindToSchema = {
   vec2h: vec2h,
   vec2i: vec2i,
   vec2u: vec2u,
+  'vec2<bool>': vec2b,
   vec3f: vec3f,
   vec3h: vec3h,
   vec3i: vec3i,
   vec3u: vec3u,
+  'vec3<bool>': vec3b,
   vec4f: vec4f,
   vec4h: vec4h,
   vec4i: vec4i,
   vec4u: vec4u,
+  'vec4<bool>': vec4b,
   mat2x2f: mat2x2f,
   mat3x3f: mat3x3f,
   mat4x4f: mat4x4f,
@@ -111,14 +126,17 @@ const indexableTypeToResult = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
+  'vec2<bool>': bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
+  'vec3<bool>': bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
+  'vec4<bool>': bool,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
@@ -174,7 +192,9 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr[4] as SwizzleableType;
+    const swizzleTypeChar = targetTypeStr.includes('bool')
+      ? 'b'
+      : (targetTypeStr[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
