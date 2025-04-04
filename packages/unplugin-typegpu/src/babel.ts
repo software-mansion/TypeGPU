@@ -150,12 +150,16 @@ function functionVisitor(ctx: Context): TraverseOptions {
             );
           }
 
+          const directive = getKernelDirective(implementation);
+
           path.replaceWith(
             types.callExpression(node.callee, [
               types.callExpression(
                 template.expression(`${tgpuAlias}.__assignAst`)(),
                 [
-                  template.expression`${tgpuAlias}.__removedJsImpl()`(),
+                  directive !== 'kernel & js'
+                    ? template.expression`${tgpuAlias}.__removedJsImpl()`()
+                    : implementation,
                   template.expression`${embedJSON({ argNames, body, externalNames })}`(),
                   types.objectExpression(
                     externalNames.map((name) =>
