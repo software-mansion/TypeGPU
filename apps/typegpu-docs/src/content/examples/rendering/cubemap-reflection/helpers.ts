@@ -20,17 +20,6 @@ export const packVec2u = tgpu['~unstable'].fn(
   return d.vec2u(xy, zw);
 });
 
-export const normalizeSafely = tgpu['~unstable'].fn(
-  { v: d.vec4f },
-  d.vec4f,
-)(({ v }) => {
-  const length = std.length(v.xyz);
-  if (length < 1e-8) {
-    return d.vec4f(0, 0, 1, 1);
-  }
-  return d.vec4f(v.x / length, v.y / length, v.z / length, 1);
-});
-
 export const getNormal = tgpu['~unstable'].fn(
   {
     v1: d.vec4f,
@@ -41,24 +30,18 @@ export const getNormal = tgpu['~unstable'].fn(
   },
   d.vec4f,
 )(({ v1, v2, v3, smoothNormals, vertexPos }) => {
+  'kernel & js';
   if (smoothNormals === 1) {
     return vertexPos;
   }
-  const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
-  const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
-  return normalizeSafely({
-    v: d.vec4f(std.cross(edge1.xyz, edge2.xyz), 0),
-  });
+  const edge1 = std.sub(v2.xyz, v1.xyz);
+  const edge2 = std.sub(v3.xyz, v1.xyz);
+  return std.normalize(d.vec4f(std.cross(edge1, edge2), 0));
 });
 
 export const calculateMidpoint = tgpu['~unstable'].fn(
   { v1: d.vec4f, v2: d.vec4f },
   d.vec4f,
 )(({ v1, v2 }) => {
-  return d.vec4f(
-    (v1.x + v2.x) * 0.5,
-    (v1.y + v2.y) * 0.5,
-    (v1.z + v2.z) * 0.5,
-    1,
-  );
+  return d.vec4f(std.mul(0.5, std.add(v1.xyz, v2.xyz)), 1);
 });

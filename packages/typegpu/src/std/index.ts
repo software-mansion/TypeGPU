@@ -26,9 +26,29 @@ export {
   mix,
   pow,
   reflect,
-  isCloseTo,
   neg,
 } from './numeric.js';
+
+export {
+  // comparison
+  allEq,
+  eq,
+  ne,
+  lt,
+  le,
+  gt,
+  ge,
+  // logical ops
+  not,
+  or,
+  and,
+  // logical aggregation
+  all,
+  any,
+  // other
+  isCloseTo,
+  select,
+} from './boolean.js';
 
 export {
   atomicLoad,

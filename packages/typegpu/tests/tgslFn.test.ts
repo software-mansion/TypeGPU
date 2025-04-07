@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import { builtin } from '../src/builtin';
-import { f32, location, struct, vec2f, vec3f, vec4f } from '../src/data';
+import { f32, location, struct, u32, vec2f, vec3f, vec4f } from '../src/data';
 import { parse, parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
@@ -444,6 +444,91 @@ describe('TGSL tgpu.fn function', () => {
     `);
 
     expect(actual).toEqual(expected);
+  });
+
+  describe('(when using plugin) can be invoked on CPU only when marked with "kernel & js" directive', () => {
+    it('cannot be invoked for a constant with "kernel" directive', () => {
+      const addKernel = ({ x, y }: { x: number; y: number }) => {
+        'kernel';
+        return x + y;
+      };
+
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(addKernel);
+
+      expect(() => addKernel({ x: 2, y: 3 })).toThrow(
+        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+      );
+      expect(() => add({ x: 2, y: 3 })).toThrow(
+        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+      );
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
+
+    it('can be invoked for a constant with "kernel & js" directive', () => {
+      const addKernelJs = ({ x, y }: { x: number; y: number }) => {
+        'kernel & js';
+        return x + y;
+      };
+
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(addKernelJs);
+
+      expect(addKernelJs({ x: 2, y: 3 })).toEqual(5);
+      expect(add({ x: 2, y: 3 })).toEqual(5);
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
+
+    it('cannot be invoked for inline function with "kernel" directive', () => {
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(
+        ({ x, y }: { x: number; y: number }) => {
+          'kernel';
+          return x + y;
+        },
+      );
+
+      expect(() => add({ x: 2, y: 3 })).toThrow();
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
+
+    it('cannot be invoked for inline function with no directive', () => {
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(
+        ({ x, y }: { x: number; y: number }) => x + y,
+      );
+
+      expect(() => add({ x: 2, y: 3 })).toThrow();
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
+
+    it('can be invoked for inline function with "kernel & js" directive', () => {
+      const add = tgpu['~unstable'].fn({ x: u32, y: u32 })(
+        ({ x, y }: { x: number; y: number }) => {
+          'kernel & js';
+          return x + y;
+        },
+      );
+
+      expect(add({ x: 2, y: 3 })).toEqual(5);
+      expect(parseResolved({ add })).toEqual(
+        parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+      );
+    });
   });
 
   // TODO: Add this back when we can properly infer ast types (and implement appropriate behavior for pointers)

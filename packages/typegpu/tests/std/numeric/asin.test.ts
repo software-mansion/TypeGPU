@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f } from '../../src/data';
-import { asin, isCloseTo } from '../../src/std';
+import { vec3f } from '../../../src/data';
+import { asin, isCloseTo } from '../../../src/std';
 
 describe('asin', () => {
   it('computes asin of numeric value', () => {
@@ -12,6 +12,6 @@ describe('asin', () => {
   it('computes acos for two vectors', () => {
     expect(
       isCloseTo(asin(vec3f(-1, 0, 1)), vec3f(-Math.PI / 2, 0, Math.PI / 2)),
-    ).toBeTruthy();
+    ).toBe(true);
   });
 });

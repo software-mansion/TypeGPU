@@ -2,24 +2,24 @@ import type { SelfResolvable } from '../types';
 import type { VecKind } from './wgslTypes';
 
 // biome-ignore format: swizzles should not expand
-export abstract class VecBase extends Array implements SelfResolvable {
+export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract get kind(): VecKind;
 
   abstract get _Vec2(): new (
-    x: number,
-    y: number,
-  ) => Vec2;
+    x: S,
+    y: S,
+  ) => Vec2<S>;
   abstract get _Vec3(): new (
-    x: number,
-    y: number,
-    z: number,
-  ) => Vec3;
+    x: S,
+    y: S,
+    z: S,
+  ) => Vec3<S>;
   abstract get _Vec4(): new (
-    x: number,
-    y: number,
-    z: number,
-    w: number,
-  ) => Vec4;
+    x: S,
+    y: S,
+    z: S,
+    w: S,
+  ) => Vec4<S>;
 
   '~resolve'(): string {
     return `${this.kind}(${this.join(', ')})`;
@@ -367,20 +367,21 @@ export abstract class VecBase extends Array implements SelfResolvable {
   get wwww() { return new this._Vec4(this[3], this[3], this[3], this[3]); }
 }
 
-type Tuple2 = [number, number];
-type Tuple3 = [number, number, number];
-type Tuple4 = [number, number, number, number];
+type Tuple2<S> = [S, S];
+type Tuple3<S> = [S, S, S];
+type Tuple4<S> = [S, S, S, S];
 
-abstract class Vec2 extends VecBase implements Tuple2 {
+abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
+  abstract getDefaultValue(): S;
 
-  0: number;
-  1: number;
+  0: S;
+  1: S;
 
-  constructor(x?: number, y?: number) {
+  constructor(x?: S, y?: S) {
     super(2);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -391,27 +392,28 @@ abstract class Vec2 extends VecBase implements Tuple2 {
     return this[1];
   }
 
-  set x(value: number) {
+  set x(value: S) {
     this[0] = value;
   }
 
-  set y(value: number) {
+  set y(value: S) {
     this[1] = value;
   }
 }
 
-abstract class Vec3 extends VecBase implements Tuple3 {
+abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   declare readonly length = 3;
+  abstract getDefaultValue(): S;
 
-  0: number;
-  1: number;
-  2: number;
+  0: S;
+  1: S;
+  2: S;
 
-  constructor(x?: number, y?: number, z?: number) {
+  constructor(x?: S, y?: S, z?: S) {
     super(3);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
-    this[2] = z ?? x ?? 0;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
+    this[2] = z ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -426,33 +428,34 @@ abstract class Vec3 extends VecBase implements Tuple3 {
     return this[2];
   }
 
-  set x(value: number) {
+  set x(value: S) {
     this[0] = value;
   }
 
-  set y(value: number) {
+  set y(value: S) {
     this[1] = value;
   }
 
-  set z(value: number) {
+  set z(value: S) {
     this[2] = value;
   }
 }
 
-abstract class Vec4 extends VecBase implements Tuple4 {
+abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   declare readonly length = 4;
+  abstract getDefaultValue(): S;
 
-  0: number;
-  1: number;
-  2: number;
-  3: number;
+  0: S;
+  1: S;
+  2: S;
+  3: S;
 
-  constructor(x?: number, y?: number, z?: number, w?: number) {
+  constructor(x?: S, y?: S, z?: S, w?: S) {
     super(4);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
-    this[2] = z ?? x ?? 0;
-    this[3] = w ?? x ?? 0;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
+    this[2] = z ?? x ?? this.getDefaultValue();
+    this[3] = w ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -471,24 +474,28 @@ abstract class Vec4 extends VecBase implements Tuple4 {
     return this[3];
   }
 
-  set x(value: number) {
+  set x(value: S) {
     this[0] = value;
   }
 
-  set y(value: number) {
+  set y(value: S) {
     this[1] = value;
   }
 
-  set z(value: number) {
+  set z(value: S) {
     this[2] = value;
   }
 
-  set w(value: number) {
+  set w(value: S) {
     this[3] = value;
   }
 }
 
-export class Vec2fImpl extends Vec2 {
+export class Vec2fImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2f' as const;
   }
@@ -504,7 +511,11 @@ export class Vec2fImpl extends Vec2 {
   }
 }
 
-export class Vec2hImpl extends Vec2 {
+export class Vec2hImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2h' as const;
   }
@@ -520,7 +531,11 @@ export class Vec2hImpl extends Vec2 {
   }
 }
 
-export class Vec2iImpl extends Vec2 {
+export class Vec2iImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2i' as const;
   }
@@ -536,7 +551,11 @@ export class Vec2iImpl extends Vec2 {
   }
 }
 
-export class Vec2uImpl extends Vec2 {
+export class Vec2uImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2u' as const;
   }
@@ -552,7 +571,31 @@ export class Vec2uImpl extends Vec2 {
   }
 }
 
-export class Vec3fImpl extends Vec3 {
+export class Vec2bImpl extends Vec2<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
+  get kind() {
+    return 'vec2<bool>' as const;
+  }
+
+  get _Vec2() {
+    return Vec2bImpl;
+  }
+  get _Vec3() {
+    return Vec3bImpl;
+  }
+  get _Vec4() {
+    return Vec4bImpl;
+  }
+}
+
+export class Vec3fImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3f' as const;
   }
@@ -568,7 +611,11 @@ export class Vec3fImpl extends Vec3 {
   }
 }
 
-export class Vec3hImpl extends Vec3 {
+export class Vec3hImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3h' as const;
   }
@@ -584,7 +631,11 @@ export class Vec3hImpl extends Vec3 {
   }
 }
 
-export class Vec3iImpl extends Vec3 {
+export class Vec3iImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3i' as const;
   }
@@ -600,7 +651,11 @@ export class Vec3iImpl extends Vec3 {
   }
 }
 
-export class Vec3uImpl extends Vec3 {
+export class Vec3uImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3u' as const;
   }
@@ -616,7 +671,31 @@ export class Vec3uImpl extends Vec3 {
   }
 }
 
-export class Vec4fImpl extends Vec4 {
+export class Vec3bImpl extends Vec3<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
+  get kind() {
+    return 'vec3<bool>' as const;
+  }
+
+  get _Vec2() {
+    return Vec2bImpl;
+  }
+  get _Vec3() {
+    return Vec3bImpl;
+  }
+  get _Vec4() {
+    return Vec4bImpl;
+  }
+}
+
+export class Vec4fImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4f' as const;
   }
@@ -632,7 +711,11 @@ export class Vec4fImpl extends Vec4 {
   }
 }
 
-export class Vec4hImpl extends Vec4 {
+export class Vec4hImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4h' as const;
   }
@@ -648,7 +731,11 @@ export class Vec4hImpl extends Vec4 {
   }
 }
 
-export class Vec4iImpl extends Vec4 {
+export class Vec4iImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4i' as const;
   }
@@ -664,7 +751,11 @@ export class Vec4iImpl extends Vec4 {
   }
 }
 
-export class Vec4uImpl extends Vec4 {
+export class Vec4uImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4u' as const;
   }
@@ -677,5 +768,25 @@ export class Vec4uImpl extends Vec4 {
   }
   get _Vec4() {
     return Vec4uImpl;
+  }
+}
+
+export class Vec4bImpl extends Vec4<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
+  get kind() {
+    return 'vec4<bool>' as const;
+  }
+
+  get _Vec2() {
+    return Vec2bImpl;
+  }
+  get _Vec3() {
+    return Vec3bImpl;
+  }
+  get _Vec4() {
+    return Vec4bImpl;
   }
 }

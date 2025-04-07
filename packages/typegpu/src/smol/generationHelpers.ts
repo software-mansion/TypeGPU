@@ -1,4 +1,5 @@
 import { isDerived, isSlot } from '../core/slot/slotTypes';
+import type { AnyData } from '../data/dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import {
   abstractFloat,
@@ -10,22 +11,23 @@ import {
   u32,
 } from '../data/numeric';
 import {
+  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec4b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
 } from '../data/vector';
 import {
-  type AnyWgslData,
-  type BaseData,
   type WgslStruct,
   isDecorated,
   isWgslArray,
@@ -45,23 +47,26 @@ const swizzleableTypes = [
   'vec2h',
   'vec2i',
   'vec2u',
+  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
+  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
+  'vec4<bool>',
   'struct',
 ] as const;
 
-type SwizzleableType = 'f' | 'h' | 'i' | 'u';
+type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
   SwizzleableType,
-  Record<SwizzleLength, AnyWgslData>
+  Record<SwizzleLength, AnyData>
 > = {
   f: {
     1: f32,
@@ -87,6 +92,12 @@ const swizzleLenToType: Record<
     3: vec3u,
     4: vec4u,
   },
+  b: {
+    1: bool,
+    2: vec2b,
+    3: vec3b,
+    4: vec4b,
+  },
 } as const;
 
 const kindToSchema = {
@@ -94,14 +105,17 @@ const kindToSchema = {
   vec2h: vec2h,
   vec2i: vec2i,
   vec2u: vec2u,
+  'vec2<bool>': vec2b,
   vec3f: vec3f,
   vec3h: vec3h,
   vec3i: vec3i,
   vec3u: vec3u,
+  'vec3<bool>': vec3b,
   vec4f: vec4f,
   vec4h: vec4h,
   vec4i: vec4i,
   vec4u: vec4u,
+  'vec4<bool>': vec4b,
   mat2x2f: mat2x2f,
   mat3x3f: mat3x3f,
   mat4x4f: mat4x4f,
@@ -112,14 +126,17 @@ const indexableTypeToResult = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
+  'vec2<bool>': bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
+  'vec3<bool>': bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
+  'vec4<bool>': bool,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
@@ -128,7 +145,7 @@ const indexableTypeToResult = {
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): BaseData | UnknownData {
+): AnyData | UnknownData {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -146,23 +163,25 @@ export function getTypeForPropAccess(
     }
     const unwrapped = ctx.unwrap(targetType);
 
-    return getTypeFromWgsl(unwrapped as Wgsl) as BaseData;
+    return getTypeFromWgsl(unwrapped);
   }
 
-  let target = targetType as BaseData;
+  let target = targetType as AnyData;
 
   if (hasInternalDataType(target)) {
-    target = target[$internal].dataType;
+    target = target[$internal].dataType as AnyData;
   }
   while (isDecorated(target)) {
-    target = target.inner;
+    target = target.inner as AnyData;
   }
 
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    return (target as WgslStruct).propTypes[propName] ?? UnknownData;
+    return (
+      ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
+    );
   }
 
   const propLength = propName.length;
@@ -173,7 +192,9 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr[4] as SwizzleableType;
+    const swizzleTypeChar = targetTypeStr.includes('bool')
+      ? 'b'
+      : (targetTypeStr[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
@@ -184,11 +205,11 @@ export function getTypeForPropAccess(
   return isWgslData(target) ? target : UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
+export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
   if (isWgslData(resource)) {
     // array
     if (isWgslArray(resource)) {
-      return resource.elementType;
+      return resource.elementType as AnyData;
     }
 
     // vector or matrix
@@ -202,7 +223,7 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
   return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFromWgsl(resource.value as Wgsl);
   }

@@ -1,5 +1,7 @@
+import type { TgpuDualFn } from '../data/dataTypes';
 import { inGPUMode } from '../gpuMode';
 import type { Snippet } from '../types';
+import { $internal } from './symbols';
 
 /**
  * Yields values in the sequence 0,1,2..∞ except for the ones in the `excluded` set.
@@ -24,8 +26,8 @@ type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
-): T {
-  return ((...args: Parameters<T>) => {
+): TgpuDualFn<T> {
+  const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
       return gpuImpl(
         ...(args as unknown as MapValueToSnippet<Parameters<T>>),
@@ -34,4 +36,12 @@ export function createDualImpl<T extends (...args: any[]) => any>(
     // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
     return jsImpl(...(args as any));
   }) as T;
+
+  Object.defineProperty(impl, $internal, {
+    value: {
+      implementation: jsImpl,
+    },
+  });
+
+  return impl as TgpuDualFn<T>;
 }

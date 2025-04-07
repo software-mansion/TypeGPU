@@ -42,8 +42,7 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
     d.vec4f(-goldenRatio, 0, -1, 1),
     d.vec4f(-goldenRatio, 0, 1, 1),
   ].map((v) => {
-    const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    return d.vec4f(v.x / length, v.y / length, v.z / length, 1);
+    return d.vec4f(std.normalize(v.xyz), 1);
   });
 
   const faces: [number, number, number][] = [
@@ -75,24 +74,25 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
 
   const vertices: VertexType[] = [];
 
-  for (const [i1, i2, i3] of faces) {
-    const v1 = initialVertices[i1];
-    const v2 = initialVertices[i2];
-    const v3 = initialVertices[i3];
+  for (const indices of faces) {
+    const faceVertices = indices.map((i) => initialVertices[i]);
 
     if (smooth) {
-      vertices.push(Vertex({ position: v1, normal: v1 }));
-      vertices.push(Vertex({ position: v2, normal: v2 }));
-      vertices.push(Vertex({ position: v3, normal: v3 }));
+      vertices.push(
+        ...faceVertices.map((v) => Vertex({ position: v, normal: v })),
+      );
     } else {
-      const edge1 = d.vec4f(std.sub(v2.xyz, v1.xyz), 0);
-      const edge2 = d.vec4f(std.sub(v3.xyz, v1.xyz), 0);
-      const faceNormal = helpers.normalizeSafely({
-        v: d.vec4f(std.cross(edge1.xyz, edge2.xyz), 0),
+      const normal = helpers.getNormal({
+        v1: faceVertices[0],
+        v2: faceVertices[1],
+        v3: faceVertices[2],
+        smoothNormals: 0,
+        vertexPos: faceVertices[0],
       });
-      vertices.push(Vertex({ position: v1, normal: faceNormal }));
-      vertices.push(Vertex({ position: v2, normal: faceNormal }));
-      vertices.push(Vertex({ position: v3, normal: faceNormal }));
+
+      vertices.push(
+        ...faceVertices.map((v) => Vertex({ position: v, normal })),
+      );
     }
   }
 
@@ -149,15 +149,18 @@ export class IcosphereGenerator {
         packed: prevVertices.value[baseIndexPrev + d.u32(2)].position,
       });
 
-      const v12 = helpers.normalizeSafely({
-        v: helpers.calculateMidpoint({ v1: v1, v2: v2 }),
-      });
-      const v23 = helpers.normalizeSafely({
-        v: helpers.calculateMidpoint({ v1: v2, v2: v3 }),
-      });
-      const v31 = helpers.normalizeSafely({
-        v: helpers.calculateMidpoint({ v1: v3, v2: v1 }),
-      });
+      const v12 = d.vec4f(
+        std.normalize(helpers.calculateMidpoint({ v1: v1, v2: v2 }).xyz),
+        1,
+      );
+      const v23 = d.vec4f(
+        std.normalize(helpers.calculateMidpoint({ v1: v2, v2: v3 }).xyz),
+        1,
+      );
+      const v31 = d.vec4f(
+        std.normalize(helpers.calculateMidpoint({ v1: v3, v2: v1 }).xyz),
+        1,
+      );
 
       const newVertices = [
         // Triangle A: [v1, v12, v31]
