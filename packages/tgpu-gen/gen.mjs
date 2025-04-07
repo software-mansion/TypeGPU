@@ -225,14 +225,16 @@ function generateType(type_, options) {
     type_ instanceof StructInfo
       ? type_.name
       : type_ instanceof ArrayInfo
-      ? `d.arrayOf(${generateType(type_.format, options)}, ${
-          type_.count > 0 ? type_.count : LENGTH_VAR
-        })`
-      : type_ instanceof TemplateInfo && type_.name === 'atomic' && type_.format
-      ? `d.atomic(${generateType(type_.format, options)})`
-      : type_.size === 0
-      ? type_.name
-      : `d.${replaceWithAlias(type_)}`;
+        ? `d.arrayOf(${generateType(type_.format, options)}, ${
+            type_.count > 0 ? type_.count : LENGTH_VAR
+          })`
+        : type_ instanceof TemplateInfo &&
+            type_.name === 'atomic' &&
+            type_.format
+          ? `d.atomic(${generateType(type_.format, options)})`
+          : type_.size === 0
+            ? type_.name
+            : `d.${replaceWithAlias(type_)}`;
 
   const result =
     type_.attributes?.reduce(
@@ -359,14 +361,14 @@ function generateStorageVariable(variable, options) {
         ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
         : ''
     }${generateType(variable.type, options)},${
-    variable.access
-      ? `\n    access: '${
-          ACCESS_TYPES[
-            /** @type ('read' | 'write' | 'read_write') */ (variable.access)
-          ]
-        }',`
-      : ''
-  }
+      variable.access
+        ? `\n    access: '${
+            ACCESS_TYPES[
+              /** @type ('read' | 'write' | 'read_write') */ (variable.access)
+            ]
+          }',`
+        : ''
+    }
   }`;
 }
 
@@ -378,18 +380,18 @@ function getViewDimension(variable) {
   const dimension = type_.includes('_1d')
     ? '1d'
     : type_.includes('_2d')
-    ? '2d'
-    : type_.includes('_3d')
-    ? '3d'
-    : type_.includes('_cube')
-    ? 'cube'
-    : null;
+      ? '2d'
+      : type_.includes('_3d')
+        ? '3d'
+        : type_.includes('_cube')
+          ? 'cube'
+          : null;
 
   return type_.includes('_array')
     ? `${dimension ?? '2d'}-array`
     : dimension !== '2d'
-    ? dimension
-    : null;
+      ? dimension
+      : null;
 }
 
 /**
@@ -405,8 +407,8 @@ function generateStorageTextureVariable(variable) {
 
   return `{
     storageTexture: '${variable.format?.name}',${
-    access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-  }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
+    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
   }`;
 }
 
@@ -447,11 +449,11 @@ function generateTextureVariable(variable) {
       type_.includes('_depth')
         ? 'depth'
         : format && format in SAMPLE_TYPES
-        ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
-        : 'uint'
+          ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
+          : 'uint'
     }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
-    multisampled ? '\n    multisampled: true,' : ''
-  }
+      multisampled ? '\n    multisampled: true,' : ''
+    }
   }`;
 }
 

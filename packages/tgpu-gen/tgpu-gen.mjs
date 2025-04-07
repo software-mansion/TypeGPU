@@ -2,13 +2,13 @@
 
 // @ts-check
 
-import arg from 'arg';
-import chokidar from 'chokidar';
-import { glob } from 'glob';
 import { readFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { exit } from 'node:process';
+import arg from 'arg';
+import chokidar from 'chokidar';
+import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
 import { createOutputPathCompiler } from './outputPathCompiler.mjs';
@@ -76,8 +76,8 @@ const execute = async () => {
   const existingFileStrategy = args['--overwrite']
     ? 'overwrite'
     : args['--keep']
-    ? 'keep'
-    : undefined;
+      ? 'keep'
+      : undefined;
 
   const extension = path.extname(output);
 
