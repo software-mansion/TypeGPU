@@ -1,6 +1,10 @@
-import { type atomicI32, type atomicU32, isWgslData } from '../data/wgslTypes';
+import {
+  Void,
+  type atomicI32,
+  type atomicU32,
+  isWgslData,
+} from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
-import { Void } from '../types';
 
 type AnyAtomic = atomicI32 | atomicU32;
 

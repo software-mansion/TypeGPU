@@ -1,6 +1,5 @@
 import type { TgpuNamable } from '../namable.js';
 import type {
-  $repr,
   Infer,
   InferGPU,
   InferGPURecord,
@@ -10,6 +9,7 @@ import type {
   MemIdentity,
   MemIdentityRecord,
 } from '../shared/repr.js';
+import { $repr } from '../shared/repr.js';
 import type { Prettify } from '../shared/utilityTypes.js';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -49,6 +49,12 @@ export interface AbstractFloat {
   /** Type-token, not available at runtime */
   readonly [$repr]: number;
 }
+
+export interface Void {
+  readonly type: 'void';
+  readonly [$repr]: undefined;
+}
+export const Void: Void = { type: 'void', [$repr]: undefined };
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -1158,6 +1164,7 @@ export const wgslTypeLiterals = [
   'decorated',
   'abstractInt',
   'abstractFloat',
+  'void',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1222,7 +1229,8 @@ export type AnyWgslData =
   | Atomic
   | Decorated
   | AbstractInt
-  | AbstractFloat;
+  | AbstractFloat
+  | Void;
 
 // #endregion
 

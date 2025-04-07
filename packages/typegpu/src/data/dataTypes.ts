@@ -6,10 +6,18 @@ import type {
   InferPartialRecord,
   InferRecord,
 } from '../shared/repr.js';
+import { $internal } from '../shared/symbols.js';
 import type { Prettify } from '../shared/utilityTypes.js';
 import { vertexFormats } from '../shared/vertexFormat.js';
 import type { PackedData } from './vertexFormatData.js';
 import * as wgsl from './wgslTypes.js';
+
+export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
+  TImpl & {
+    [$internal]: {
+      implementation: TImpl | string;
+    };
+  };
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -139,5 +147,5 @@ export function isData(value: unknown): value is AnyData {
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
 export type AnyConcreteData = Exclude<
   AnyData,
-  wgsl.AbstractInt | wgsl.AbstractFloat
+  wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
 >;

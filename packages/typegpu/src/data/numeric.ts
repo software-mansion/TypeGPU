@@ -60,7 +60,7 @@ const u32Cast = createDualImpl(
  */
 export const u32: U32 = Object.assign(u32Cast, {
   type: 'u32',
-}) as U32;
+}) as unknown as U32;
 
 const i32Cast = createDualImpl(
   // CPU implementation
@@ -99,7 +99,7 @@ const i32Cast = createDualImpl(
  */
 export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
-}) as I32;
+}) as unknown as I32;
 
 const f32Cast = createDualImpl(
   // CPU implementation
@@ -127,7 +127,7 @@ const f32Cast = createDualImpl(
  */
 export const f32: F32 = Object.assign(f32Cast, {
   type: 'f32',
-}) as F32;
+}) as unknown as F32;
 
 const f16Cast = createDualImpl(
   // CPU implementation
@@ -158,4 +158,4 @@ const f16Cast = createDualImpl(
  */
 export const f16: F16 = Object.assign(f16Cast, {
   type: 'f16',
-}) as F16;
+}) as unknown as F16;
