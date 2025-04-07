@@ -54,16 +54,18 @@ function topologicalSort(structs) {
   const neighbors = {};
 
   for (const struct of structs) {
-    neighbors[struct.name] = new Set();
+    /** @type Set<string>*/
+    const neighborsSet = new Set();
+    neighbors[struct.name] = neighborsSet;
     for (const neighbor of struct.members) {
       if (allStructNames.includes(neighbor.type.name)) {
-        neighbors[struct.name].add(neighbor.type.name);
+        neighborsSet.add(neighbor.type.name);
       }
       if (
         neighbor.type instanceof ArrayInfo &&
         allStructNames.includes(neighbor.type.format.name)
       ) {
-        neighbors[struct.name].add(neighbor.type.format.name);
+        neighborsSet.add(neighbor.type.format.name);
       }
     }
   }
@@ -78,13 +80,13 @@ function topologicalSort(structs) {
   function dns(structName) {
     visited[structName] = true;
 
-    for (const neighbor of neighbors[structName]) {
+    for (const neighbor of neighbors[structName] ?? []) {
       if (!visited[neighbor]) {
         dns(neighbor);
       }
     }
 
-    result.push(allStructs[structName]);
+    result.push(/** @type StructInfo */ (allStructs[structName]));
   }
 
   for (const structName of Object.keys(allStructs)) {
@@ -173,7 +175,9 @@ function isVarLengthArray(type_) {
  * @param {StructInfo} struct
  */
 function hasVarLengthMember(struct) {
-  return isVarLengthArray(struct.members[struct.members.length - 1].type);
+  return isVarLengthArray(
+    /** @type MemberInfo */ (struct.members[struct.members.length - 1]).type,
+  );
 }
 
 /**
@@ -221,16 +225,14 @@ function generateType(type_, options) {
     type_ instanceof StructInfo
       ? type_.name
       : type_ instanceof ArrayInfo
-        ? `d.arrayOf(${generateType(type_.format, options)}, ${
-            type_.count > 0 ? type_.count : LENGTH_VAR
-          })`
-        : type_ instanceof TemplateInfo &&
-            type_.name === 'atomic' &&
-            type_.format
-          ? `d.atomic(${generateType(type_.format, options)})`
-          : type_.size === 0
-            ? type_.name
-            : `d.${replaceWithAlias(type_)}`;
+      ? `d.arrayOf(${generateType(type_.format, options)}, ${
+          type_.count > 0 ? type_.count : LENGTH_VAR
+        })`
+      : type_ instanceof TemplateInfo && type_.name === 'atomic' && type_.format
+      ? `d.atomic(${generateType(type_.format, options)})`
+      : type_.size === 0
+      ? type_.name
+      : `d.${replaceWithAlias(type_)}`;
 
   const result =
     type_.attributes?.reduce(
@@ -329,7 +331,7 @@ function generateGroupLayout(group, options) {
  * @param {Options} options
  */
 function generateVariable(variable, options) {
-  return RESOURCE_GENERATORS[variable.resourceType](variable, options);
+  return RESOURCE_GENERATORS[variable.resourceType]?.(variable, options);
 }
 
 /**
@@ -357,8 +359,14 @@ function generateStorageVariable(variable, options) {
         ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
         : ''
     }${generateType(variable.type, options)},${
-      variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
-    }
+    variable.access
+      ? `\n    access: '${
+          ACCESS_TYPES[
+            /** @type ('read' | 'write' | 'read_write') */ (variable.access)
+          ]
+        }',`
+      : ''
+  }
   }`;
 }
 
@@ -370,18 +378,18 @@ function getViewDimension(variable) {
   const dimension = type_.includes('_1d')
     ? '1d'
     : type_.includes('_2d')
-      ? '2d'
-      : type_.includes('_3d')
-        ? '3d'
-        : type_.includes('_cube')
-          ? 'cube'
-          : null;
+    ? '2d'
+    : type_.includes('_3d')
+    ? '3d'
+    : type_.includes('_cube')
+    ? 'cube'
+    : null;
 
   return type_.includes('_array')
     ? `${dimension ?? '2d'}-array`
     : dimension !== '2d'
-      ? dimension
-      : null;
+    ? dimension
+    : null;
 }
 
 /**
@@ -389,13 +397,16 @@ function getViewDimension(variable) {
  */
 function generateStorageTextureVariable(variable) {
   const viewDimension = getViewDimension(variable);
+
   const access =
-    variable.type instanceof TemplateInfo ? variable.type.access : null;
+    variable.type instanceof TemplateInfo
+      ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
+      : null;
 
   return `{
     storageTexture: '${variable.format?.name}',${
-      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+    access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
+  }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
   }`;
 }
 
@@ -409,7 +420,11 @@ const SAMPLER_TYPES = {
  */
 function generateSamplerVariable(variable) {
   return `{
-    sampler: '${SAMPLER_TYPES[variable.type.name]}',
+    sampler: '${
+      SAMPLER_TYPES[
+        /** @type ('sampler' | 'sampler_comparison') */ (variable.type.name)
+      ]
+    }',
   }`;
 }
 
@@ -428,9 +443,15 @@ function generateTextureVariable(variable) {
   const multisampled = type_.includes('_multisampled');
 
   return `{
-    texture: '${type_.includes('_depth') ? 'depth' : SAMPLE_TYPES[format]}',${
-      viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''
-    }${multisampled ? '\n    multisampled: true,' : ''}
+    texture: '${
+      type_.includes('_depth')
+        ? 'depth'
+        : format && format in SAMPLE_TYPES
+        ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
+        : 'uint'
+    }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
+    multisampled ? '\n    multisampled: true,' : ''
+  }
   }`;
 }
 
@@ -481,8 +502,8 @@ function generateFunction(func, wgsl, options) {
     func.stage === 'fragment'
       ? 'fragmentFn'
       : func.stage === 'vertex'
-        ? 'vertexFn'
-        : 'fn';
+      ? 'vertexFn'
+      : 'fn';
 
   const inputs = `[${func.arguments
     .flatMap((arg) =>

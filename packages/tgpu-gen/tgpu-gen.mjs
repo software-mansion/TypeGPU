@@ -2,13 +2,13 @@
 
 // @ts-check
 
+import arg from 'arg';
+import chokidar from 'chokidar';
+import { glob } from 'glob';
 import { readFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { exit } from 'node:process';
-import arg from 'arg';
-import chokidar from 'chokidar';
-import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
 import { createOutputPathCompiler } from './outputPathCompiler.mjs';
@@ -60,7 +60,7 @@ Options:
 `);
 
 const execute = async () => {
-  const input = args._[0];
+  const input = /** @type string */ (args._[0]);
   const output = args['--output'] ?? '*.ts';
   const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
   const watch = args['--watch'] ?? false;
@@ -75,8 +75,8 @@ const execute = async () => {
   const existingFileStrategy = args['--overwrite']
     ? 'overwrite'
     : args['--keep']
-      ? 'keep'
-      : undefined;
+    ? 'keep'
+    : undefined;
 
   const extension = path.extname(output);
 
@@ -85,7 +85,11 @@ const execute = async () => {
     !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
   ) {
     console.error(
-      `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      `${
+        color.Red
+      }Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(
+        ', ',
+      )}`,
     );
     exit(1);
   }
@@ -102,7 +106,9 @@ const execute = async () => {
 
   if (allMatchedFiles.length > 1 && !output.includes('*')) {
     console.error(
-      `${color.Red}Error: More than one file found (${allMatchedFiles.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
+      `${color.Red}Error: More than one file found (${allMatchedFiles.join(
+        ', ',
+      )}), while a non-pattern output name was provided ${color.Reset}`,
     );
     exit(1);
   }
@@ -117,7 +123,11 @@ const execute = async () => {
     !/\*\*\/.*\*.*/.test(output)
   ) {
     console.error(
-      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
+      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(
+        ', ',
+      )}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${
+        color.Reset
+      }`,
     );
     exit(1);
   }
@@ -144,7 +154,11 @@ const execute = async () => {
 
   if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
     console.error(
-      `Error: The following file(s) already exist: [${existingFilesIO.map(({ output }) => output).join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+      `Error: The following file(s) already exist: [${existingFilesIO
+        .map(({ output }) => output)
+        .join(
+          ', ',
+        )}]. Use --overwrite option to replace existing files or --keep to skip them.`,
     );
 
     exit(1);
@@ -228,7 +242,9 @@ function printVersion() {
     );
   } catch (error) {
     console.error(
-      `${color.Red}Error reading version: ${error.message}${color.Reset}`,
+      `${color.Red}Error reading version: ${
+        /** @type Error */ (error).message
+      }${color.Reset}`,
     );
     exit(1);
   }
