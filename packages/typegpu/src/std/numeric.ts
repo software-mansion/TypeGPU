@@ -489,3 +489,15 @@ export const isCloseTo = createDualImpl(
     };
   },
 );
+
+export const neg = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return -value as T;
+    }
+    return VectorOps.neg[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `-(${value.value})`, dataType: value.dataType }),
+);

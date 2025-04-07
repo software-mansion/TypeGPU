@@ -29,8 +29,6 @@ export const unpack2x16float = createDualImpl(
 /**
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#pack2x16float-builtin
- Converts two floating point values to half-precision floating point numbers, and then combines them into one u32 value.
- Component e[i] of the input is converted to a IEEE-754 binary16 value, which is then placed in bits 16 × i through 16 × i + 15 of the result. See § 15.7.6 Floating Point Conversion.
  */
 export const pack2x16float = createDualImpl(
   // CPU implementation

@@ -14,6 +14,7 @@ import {
 import { IcosphereGenerator } from './icosphere';
 
 // Initialization
+
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
   throw new Error('WebGPU not supported');
@@ -91,13 +92,7 @@ const lightBuffer = root
   .$usage('uniform');
 
 const materialBuffer = root
-  .createBuffer(Material, {
-    ambient: materialProps.ambient,
-    diffuse: materialProps.diffuse,
-    specular: materialProps.specular,
-    shininess: materialProps.shininess,
-    reflectivity: materialProps.reflectivity,
-  })
+  .createBuffer(Material, materialProps)
   .$usage('uniform');
 
 // Textures & Samplers
@@ -153,15 +148,14 @@ const vertexFn = tgpu['~unstable'].vertexFn({
     normal: d.vec4f,
     worldPos: d.vec4f,
   },
-})((input) => {
-  const worldPos = input.position;
-  const pos = std.mul(camera.value.view, input.position);
-  return {
-    pos: std.mul(camera.value.projection, pos),
-    normal: input.normal,
-    worldPos: worldPos,
-  };
-});
+})((input) => ({
+  pos: std.mul(
+    camera.value.projection,
+    std.mul(camera.value.view, input.position),
+  ),
+  normal: input.normal,
+  worldPos: input.position,
+}));
 
 const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: {
@@ -170,48 +164,67 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })((input) => {
-  const norm = std.normalize(input.normal.xyz);
-  const lDir = std.normalize(light.value.direction);
+  const normalizedNormal = std.normalize(input.normal.xyz);
+  const normalizedLightDir = std.normalize(light.value.direction);
 
-  const ambient = std.mul(
+  const ambientLight = std.mul(
     material.value.ambient,
     std.mul(light.value.intensity, light.value.color),
   );
-  const diffFactor = std.max(std.dot(norm, lDir), 0.0);
-  const diffuse = std.mul(
-    diffFactor,
+
+  const diffuseFactor = std.max(
+    std.dot(normalizedNormal, normalizedLightDir),
+    0.0,
+  );
+  const diffuseLight = std.mul(
+    diffuseFactor,
     std.mul(
       material.value.diffuse,
       std.mul(light.value.intensity, light.value.color),
     ),
   );
 
-  const vDir = std.normalize(
+  const viewDirection = std.normalize(
     std.sub(camera.value.position.xyz, input.worldPos.xyz),
   );
+  const reflectionDirection = std.reflect(
+    std.neg(normalizedLightDir),
+    normalizedNormal,
+  );
 
-  const rDir = std.reflect(d.vec3f(-lDir.x, -lDir.y, -lDir.z), norm);
-  const specFactor = std.pow(
-    std.max(std.dot(vDir, rDir), 0.0),
+  const specularFactor = std.pow(
+    std.max(std.dot(viewDirection, reflectionDirection), 0.0),
     material.value.shininess,
   );
-  const specular = std.mul(
-    specFactor,
+  const specularLight = std.mul(
+    specularFactor,
     std.mul(
       material.value.specular,
       std.mul(light.value.intensity, light.value.color),
     ),
   );
 
-  const reflView = std.reflect(d.vec3f(-vDir.x, -vDir.y, -vDir.z), norm);
-  const envColor = std.textureSample(cubemapBinding, texSampler, reflView);
+  const reflectionVector = std.reflect(
+    std.neg(viewDirection),
+    normalizedNormal,
+  );
+  const environmentColor = std.textureSample(
+    cubemapBinding,
+    texSampler,
+    reflectionVector,
+  );
 
-  const directLighting = std.add(ambient, std.add(diffuse, specular));
+  const directLighting = std.add(
+    ambientLight,
+    std.add(diffuseLight, specularLight),
+  );
+
   const finalColor = std.mix(
     directLighting,
-    envColor.xyz,
+    environmentColor.xyz,
     material.value.reflectivity,
   );
+
   return d.vec4f(finalColor, 1.0);
 });
 
@@ -231,9 +244,11 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
     camera.value.view.columns[2],
     d.vec4f(0, 0, 0, 1),
   );
-  const pos = std.mul(viewRotationMatrix, input.position);
   return {
-    pos: std.mul(camera.value.projection, pos),
+    pos: std.mul(
+      camera.value.projection,
+      std.mul(viewRotationMatrix, input.position),
+    ),
     texCoord: input.position.xyz,
   };
 });
@@ -244,8 +259,11 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })((input) => {
-  const dir = std.normalize(input.texCoord);
-  return std.textureSample(cubemapBinding, texSampler, dir);
+  return std.textureSample(
+    cubemapBinding,
+    texSampler,
+    std.normalize(input.texCoord),
+  );
 });
 
 // Pipeline Setup

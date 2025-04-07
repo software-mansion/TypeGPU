@@ -12,8 +12,8 @@ export const Vertex = d.unstruct({
 });
 
 export const ComputeVertex = d.struct({
-  position: d.vec2u, // 2x16 float
-  normal: d.vec2u, // 2x16 float
+  position: d.vec2u, // four packed 16-bit floats
+  normal: d.vec2u, // four packed 16-bit floats
 });
 
 export const CubeVertex = d.struct({

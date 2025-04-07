@@ -27,6 +27,7 @@ export {
   pow,
   reflect,
   isCloseTo,
+  neg,
 } from './numeric.js';
 
 export {

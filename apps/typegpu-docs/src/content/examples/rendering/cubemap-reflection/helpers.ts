@@ -47,12 +47,7 @@ export const getNormal = tgpu['~unstable'].fn(
   const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
   const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
   return normalizeSafely({
-    v: d.vec4f(
-      edge1.y * edge2.z - edge1.z * edge2.y,
-      edge1.z * edge2.x - edge1.x * edge2.z,
-      edge1.x * edge2.y - edge1.y * edge2.x,
-      0,
-    ),
+    v: d.vec4f(std.cross(edge1.xyz, edge2.xyz), 0),
   });
 });
 

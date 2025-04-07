@@ -85,15 +85,10 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
       vertices.push(Vertex({ position: v2, normal: v2 }));
       vertices.push(Vertex({ position: v3, normal: v3 }));
     } else {
-      const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
-      const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
+      const edge1 = d.vec4f(std.sub(v2.xyz, v1.xyz), 0);
+      const edge2 = d.vec4f(std.sub(v3.xyz, v1.xyz), 0);
       const faceNormal = helpers.normalizeSafely({
-        v: d.vec4f(
-          edge1.y * edge2.z - edge1.z * edge2.y,
-          edge1.z * edge2.x - edge1.x * edge2.z,
-          edge1.x * edge2.y - edge1.y * edge2.x,
-          0,
-        ),
+        v: d.vec4f(std.cross(edge1.xyz, edge2.xyz), 0),
       });
       vertices.push(Vertex({ position: v1, normal: faceNormal }));
       vertices.push(Vertex({ position: v2, normal: faceNormal }));
@@ -116,6 +111,9 @@ const generatorLayout = tgpu.bindGroupLayout({
   smoothFlag: { uniform: d.u32 },
 });
 
+const WORKGROUP_SIZE = 256;
+const MAX_DISPATCH = 65535;
+
 export class IcosphereGenerator {
   private cache = new Map<string, IcosphereBuffer>();
   private readonly pipeline: TgpuComputePipeline;
@@ -131,10 +129,10 @@ export class IcosphereGenerator {
 
     const computeFn = tgpu['~unstable'].computeFn({
       in: { gid: d.builtin.globalInvocationId },
-      workgroupSize: [64, 1, 1],
+      workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
       const triangleCount = std.arrayLength(prevVertices.value) / d.u32(3);
-      const triangleIndex = input.gid.x + input.gid.y * d.u32(65535);
+      const triangleIndex = input.gid.x + input.gid.y * d.u32(MAX_DISPATCH);
       if (triangleIndex >= triangleCount) {
         return;
       }
@@ -291,8 +289,14 @@ export class IcosphereGenerator {
     });
 
     const triangleCount = getVertexAmount(wantedSubdivisions - 1) / 3;
-    const xGroups = Math.min(triangleCount, 65535);
-    const yGroups = Math.ceil(triangleCount / 65535);
+
+    const totalWorkgroups = Math.ceil(triangleCount / WORKGROUP_SIZE);
+
+    const xGroups = Math.min(MAX_DISPATCH, totalWorkgroups);
+    const yGroups = Math.min(
+      MAX_DISPATCH,
+      Math.ceil(totalWorkgroups / MAX_DISPATCH),
+    );
 
     this.pipeline
       .with(generatorLayout, bindGroup)

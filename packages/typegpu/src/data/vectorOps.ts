@@ -958,4 +958,21 @@ export const VectorOps = {
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
   } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
+
+  neg: {
+    vec2f: unary2f((value) => -value),
+    vec2h: unary2h((value) => -value),
+    vec2i: unary2i((value) => -value),
+    vec2u: unary2u((value) => -value),
+
+    vec3f: unary3f((value) => -value),
+    vec3h: unary3h((value) => -value),
+    vec3i: unary3i((value) => -value),
+    vec3u: unary3u((value) => -value),
+
+    vec4f: unary4f((value) => -value),
+    vec4h: unary4h((value) => -value),
+    vec4i: unary4i((value) => -value),
+    vec4u: unary4u((value) => -value),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
 };
