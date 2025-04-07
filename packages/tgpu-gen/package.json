@@ -17,6 +17,9 @@
     "remeda": "^2.21.2",
     "wgsl_reflect": "git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63"
   },
+  "peerDependencies": {
+    "typegpu": "^0.5.4"
+  },
   "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
   "devDependencies": {
     "vitest": "catalog:"
