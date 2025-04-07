@@ -111,6 +111,9 @@
     "tinyest-for-wgsl": "workspace:~0.1.0-alpha.8",
     "unplugin": "^2.2.0"
   },
+  "peerDependencies": {
+    "typegpu": "^0.5.4"
+  },
   "devDependencies": {
     "@babel/template": "^7.25.9",
     "@babel/types": "^7.26.5",
