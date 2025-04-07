@@ -44,16 +44,20 @@ export function createFnCore(
   const externalsToApply: ExternalMap[] = [];
 
   if (typeof implementation === 'string') {
-    addArgTypesToExternals(
-      implementation,
-      Array.isArray(shell.argTypes)
-        ? shell.argTypes
-        : Object.values(shell.argTypes),
-      (externals) => externalsToApply.push(externals),
-    );
-    addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
-      externalsToApply.push(externals),
-    );
+    if (true /* TODO: check if using the old API */) {
+      // TODO: Remove this branch along with deprecated array arg types
+
+      addArgTypesToExternals(
+        implementation,
+        Array.isArray(shell.argTypes)
+          ? shell.argTypes
+          : Object.values(shell.argTypes),
+        (externals) => externalsToApply.push(externals),
+      );
+      addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
+        externalsToApply.push(externals),
+      );
+    }
 
     if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
       externalsToApply.push({ In: shell.argTypes[0] });

@@ -438,3 +438,29 @@ struct fragment_Output {
     );
   });
 });
+
+describe('tgpu.computeFn with raw string WGSL implementation', () => {
+  it('works', () => {
+    const foo = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: {
+        gid: d.builtin.globalInvocationId,
+      },
+    })(`{
+      var result: array<f32, 4>;
+    }`);
+
+    expect(parseResolved({ foo })).toEqual(
+      parse(`
+      struct foo_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1)
+      fn foo(in: foo_Input) {
+        var result: array<f32, 4>;
+      }
+    `),
+    );
+  });
+});
