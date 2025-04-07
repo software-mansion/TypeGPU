@@ -23,6 +23,7 @@ export interface TgpuFnShellBase<
 > {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
+  readonly isEntry: boolean;
 }
 
 export interface FnCore {
@@ -44,27 +45,31 @@ export function createFnCore(
   const externalsToApply: ExternalMap[] = [];
 
   if (typeof implementation === 'string') {
-    if (true /* TODO: check if using the old API */) {
-      // TODO: Remove this branch along with deprecated array arg types
+    if (!shell.isEntry) {
+      if (Array.isArray(shell.argTypes)) {
+        // TODO: Remove this branch along with deprecated array arg types
 
-      addArgTypesToExternals(
-        implementation,
-        Array.isArray(shell.argTypes)
-          ? shell.argTypes
-          : Object.values(shell.argTypes),
-        (externals) => externalsToApply.push(externals),
-      );
-      addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
-        externalsToApply.push(externals),
-      );
-    }
+        addArgTypesToExternals(
+          implementation,
+          Array.isArray(shell.argTypes)
+            ? shell.argTypes
+            : Object.values(shell.argTypes),
+          (externals) => externalsToApply.push(externals),
+        );
+        addReturnTypeToExternals(
+          implementation,
+          shell.returnType,
+          (externals) => externalsToApply.push(externals),
+        );
+      }
+    } else {
+      if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
+        externalsToApply.push({ In: shell.argTypes[0] });
+      }
 
-    if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
-      externalsToApply.push({ In: shell.argTypes[0] });
-    }
-
-    if (isWgslStruct(shell.returnType)) {
-      externalsToApply.push({ Out: shell.returnType });
+      if (isWgslStruct(shell.returnType)) {
+        externalsToApply.push({ Out: shell.returnType });
+      }
     }
   }
 
@@ -87,8 +92,7 @@ export function createFnCore(
       if (typeof implementation === 'string') {
         let header = '';
 
-        if (fnAttribute === '') {
-          // non-entry function
+        if (!shell.isEntry) {
           header = Array.isArray(shell.argTypes)
             ? ''
             : resolveFunctionHeader(
@@ -100,7 +104,6 @@ export function createFnCore(
                 shell.returnType as AnyWgslData,
               );
         } else {
-          // entry function
           const input =
             Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])
               ? '(in: In)'

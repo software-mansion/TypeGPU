@@ -440,7 +440,7 @@ struct fragment_Output {
 });
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
-  it('works', () => {
+  it('does not replace supposed input arg types in code', () => {
     const foo = tgpu['~unstable'].computeFn({
       workgroupSize: [1],
       in: {

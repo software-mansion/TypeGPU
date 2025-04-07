@@ -41,6 +41,7 @@ type TgpuFnShellHeader<
 > = {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
+  readonly isEntry: false;
 };
 
 /**
@@ -125,6 +126,7 @@ export function fn<
   const shell: TgpuFnShellHeader<Args, Return> = {
     argTypes,
     returnType,
+    isEntry: false,
   };
 
   const call = (implementation: Implementation) =>
