@@ -473,6 +473,7 @@ function generateFunctions(functions, wgsl, options) {
   return functions.length > 0
     ? `\n/* functions */
 ${functions
+  .filter((func) => func.stage === null)
   .map(
     (func) =>
       `${declareConst(func.name, options)} = ${generateFunction(
@@ -486,6 +487,8 @@ ${functions
 }
 
 /**
+ * For non-entry functions only for now.
+ *
  * @param {FunctionInfo} func
  * @param {string} wgsl
  * @param {Options} options
@@ -498,32 +501,26 @@ function generateFunction(func, wgsl, options) {
     .slice(func.startLine - 1, func.endLine)
     .join('\n');
 
-  const funcType =
-    func.stage === 'fragment'
-      ? 'fragmentFn'
-      : func.stage === 'vertex'
-      ? 'vertexFn'
-      : 'fn';
-
-  const inputs = `[${func.arguments
+  const inputs = `{${func.arguments
     .flatMap((arg) =>
       arg.type &&
       arg.type.attributes?.find((attr) => attr.name === 'builtin') === undefined
-        ? [generateType(arg.type, options)]
+        ? [`${arg.name}: ${generateType(arg.type, options)}`]
         : [],
     )
-    .join(', ')}]`;
+    .join(', ')}}`;
 
   const output = func.returnType
     ? generateType(func.returnType, options)
     : null;
 
-  return `tgpu
-  .${funcType}(${inputs}${
-    output ? `, ${output}` : ''
-  })(/* wgsl */ \`${implementation.slice(
-    implementation.indexOf(func.name) + func.name.length,
-  )}\`)`;
+  const body = implementation.match(/{.*}/s);
+
+  return body?.[0]
+    ? `tgpu['unstable'].fn(${inputs}${
+        output ? `, ${output}` : ''
+      })(/* wgsl */ \`${body[0]}\`)`
+    : '';
 }
 
 /**

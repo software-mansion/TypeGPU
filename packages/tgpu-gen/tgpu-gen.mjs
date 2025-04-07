@@ -48,15 +48,16 @@ Arguments:
   <input>       The input file or glob pattern.
 
 Options:
-  --output, -o  The output name or pattern for generated file(s). 
-                If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
-                Placeholder for file name (without extension): *, for directory: **
-                Default: "*.ts"
-  --watch, -w   Watch for changes in the input file(s) and regenerate the output file(s).
-  --commonjs    Generate a CommonJS style file.
+  --output, -o              The output name or pattern for generated file(s). 
+                            If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
+                            Placeholder for file name (without extension): *, for directory: **
+                            Default: "*.ts"
+  --watch, -w               Watch for changes in the input file(s) and regenerate the output file(s).
+  --commonjs                Generate a CommonJS style file.
 
-  --overwrite   Overwrite existing files.
-  --keep        Keep existing files.
+  --overwrite               Overwrite existing files.
+  --keep                    Keep existing files.
+  --experimental-functions  Generate tgpu.fn (non-entry) function definitions.
 `);
 
 const execute = async () => {
