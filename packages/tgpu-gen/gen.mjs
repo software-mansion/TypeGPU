@@ -470,10 +470,10 @@ function generateExternalTextureVariable(variable) {
  * @param {Options} options
  */
 function generateFunctions(functions, wgsl, options) {
-  return functions.length > 0
+  const nonEntryFunctions = functions.filter((func) => func.stage === null);
+  return nonEntryFunctions.length > 0
     ? `\n/* functions */
-${functions
-  .filter((func) => func.stage === null)
+${nonEntryFunctions
   .map(
     (func) =>
       `${declareConst(func.name, options)} = ${generateFunction(
