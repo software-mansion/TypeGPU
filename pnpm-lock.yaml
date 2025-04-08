@@ -252,6 +252,9 @@ importers:
       remeda:
         specifier: ^2.21.2
         version: 2.21.2
+      typegpu:
+        specifier: ^0.5.4
+        version: 0.5.4
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
         version: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
