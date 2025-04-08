@@ -36,6 +36,7 @@ const root = tgpu.initFromDevice({ device });
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+let exampleDestroyed = false;
 
 context.configure({
   device: root.device,
@@ -315,6 +316,9 @@ function render() {
 }
 
 function loop() {
+  if (exampleDestroyed) {
+    return;
+  }
   render();
   requestAnimationFrame(loop);
 }
@@ -529,11 +533,11 @@ export const controls = {
 };
 
 export function onCleanup() {
+  exampleDestroyed = true;
+  resizeObserver.unobserve(canvas);
   icosphereGenerator.destroy();
   cubemapTexture.destroy();
   root.destroy();
-
-  resizeObserver.unobserve(canvas);
 }
 
 // #endregion
