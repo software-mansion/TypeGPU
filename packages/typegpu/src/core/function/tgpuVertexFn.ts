@@ -26,6 +26,7 @@ type TgpuVertexFnShellHeader<
   readonly argTypes: [AnyWgslStruct];
   readonly returnType: VertexOut;
   readonly attributes: [VertexIn];
+  readonly isEntry: true;
 };
 
 /**
@@ -104,6 +105,7 @@ export function vertexFn<
     attributes: [options.in ?? ({} as VertexIn)],
     returnType: createOutputType(options.out) as unknown as VertexOut,
     argTypes: [createStructFromIO(options.in ?? {})],
+    isEntry: true,
   };
 
   const call = (
