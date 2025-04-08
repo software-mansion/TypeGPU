@@ -15,8 +15,8 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data';
-import { select } from '../../../src/std/boolean';
+} from '../../../src/data/index.ts';
+import { select } from '../../../src/std/boolean.ts';
 
 describe('select', () => {
   it('selects for f32 vectors', () => {

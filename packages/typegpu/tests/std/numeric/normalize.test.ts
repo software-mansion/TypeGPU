@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data';
-import { normalize } from '../../../src/std';
+import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
+import { normalize } from '../../../src/std/index.ts';
 
 describe('normalize', () => {
   it('computes normalized vector from vec2f', () => {
