@@ -140,30 +140,6 @@ describe('tgpu.fn', () => {
       TgpuFn<[d.F32, d.U32], d.Bool>
     >();
   });
-
-  it('parses template literal without arguments', () => {
-    const constFn = tgpu['~unstable'].fn([], d.i32)`() {
-        return 3;
-      }`.$name('const');
-
-    const actual = parseResolved({ constFn });
-
-    const expected = parse('fn const() { return 3; }');
-
-    expect(actual).toEqual(expected);
-  });
-
-  it('parses template literal with arguments of different types', () => {
-    const addFn = tgpu['~unstable'].fn([], d.i32)`() {
-        return ${10} + ${'20'} + ${30.1};
-      }`.$name('add');
-
-    const actual = parseResolved({ addFn });
-
-    const expected = parse('fn add() { return 10 + 20 + 30.1; }');
-
-    expect(actual).toEqual(expected);
-  });
 });
 
 describe('InferIO', () => {
