@@ -221,6 +221,7 @@ function createFn<
       value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
       dataType: shell.returnType ?? UnknownData,
     }),
+    shell.argTypes,
   );
 
   call[$internal].implementation = implementation;
@@ -291,6 +292,7 @@ function createBoundFunction<
         dataType: innerFn.shell.returnType ?? UnknownData,
       };
     },
+    innerFn.shell.argTypes,
   );
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;

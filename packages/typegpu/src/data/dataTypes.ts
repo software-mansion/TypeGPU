@@ -9,6 +9,7 @@ import type {
 import { $internal } from '../shared/symbols.js';
 import type { Prettify } from '../shared/utilityTypes.js';
 import { vertexFormats } from '../shared/vertexFormat.js';
+import type { Resource } from '../types.js';
 import type { PackedData } from './vertexFormatData.js';
 import * as wgsl from './wgslTypes.js';
 
@@ -16,6 +17,11 @@ export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {
     [$internal]: {
       implementation: TImpl | string;
+      argTypes:
+        | wgsl.AnyWgslData[]
+        | Record<string, wgsl.AnyWgslData>
+        | ((...args: Resource[]) => wgsl.AnyWgslData[])
+        | undefined;
     };
   };
 
