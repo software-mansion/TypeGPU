@@ -29,7 +29,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell((a, b) => {
         'kernel';
@@ -43,7 +43,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
       shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell((a, b) => {
         return a + b;
@@ -55,7 +55,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell(function(a, b){
         'kernel';
@@ -69,7 +69,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
       shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function (a, b) {
         return a + b;
@@ -81,7 +81,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell(function addGPU(a, b){
         'kernel';
@@ -95,7 +95,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
       shell(tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function addCPU(a, b) {
         return a + b;
@@ -166,7 +166,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell((a, b) => {
         'kernel';
@@ -181,7 +181,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
@@ -196,7 +196,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell(function(a, b){
         'kernel';
@@ -210,7 +210,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
@@ -225,7 +225,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
       shell(function addGPU(a, b){
         'kernel';
@@ -240,7 +240,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['unstable'].fn([]);
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(tgpu.__assignAst(tgpu.__removedJsImpl("addGPU"), {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 

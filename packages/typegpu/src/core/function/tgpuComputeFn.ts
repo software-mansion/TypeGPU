@@ -19,6 +19,7 @@ type TgpuComputeFnShellHeader<
   readonly argTypes: [AnyWgslStruct] | [];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
+  readonly isEntry: true;
 };
 
 /**
@@ -109,6 +110,7 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
+    isEntry: true,
   };
 
   const call = (implementation: Implementation) =>

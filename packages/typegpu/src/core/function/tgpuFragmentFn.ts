@@ -50,6 +50,7 @@ type TgpuFragmentFnShellHeader<
   readonly argTypes: [AnyWgslStruct] | [];
   readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
+  readonly isEntry: true;
 };
 
 /**
@@ -146,6 +147,7 @@ export function fragmentFn<
     returnType: (options.out && Object.keys(options.out).length !== 0
       ? createOutputType(options.out)
       : undefined) as FragmentOut,
+    isEntry: true,
   };
 
   const call = (
