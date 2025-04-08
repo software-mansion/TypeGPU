@@ -1,6 +1,6 @@
-import { ptrFn } from 'src/data/ptr.ts';
-import type { AnyWgslData } from 'src/data/wgslTypes.ts';
 import { u32 } from '../data/numeric.ts';
+import { ptrFn } from '../data/ptr.ts';
+import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 
 export const arrayLength = createDualImpl(

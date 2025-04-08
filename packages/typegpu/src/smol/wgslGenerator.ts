@@ -1,5 +1,5 @@
-import { arrayOf } from 'src/data/array.ts';
 import type * as smol from 'tinyest';
+import { arrayOf } from '../data/array.ts';
 import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
 import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.js';

@@ -21,6 +21,8 @@ import {
 } from './vectorImpl.ts';
 import type {
   AnyVecInstance,
+  AnyWgslData,
+  Decorated,
   Vec2b,
   Vec2f,
   Vec2h,
@@ -36,7 +38,9 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
+  WgslTypeLiteral,
 } from './wgslTypes.ts';
+import { isDecorated } from './wgslTypes.ts';
 
 // ----------
 // Public API
