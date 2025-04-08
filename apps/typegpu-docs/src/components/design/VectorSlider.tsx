@@ -13,32 +13,25 @@ export function VectorSlider({ min, max, step, value, onChange }: Props) {
     onChange([...value.slice(0, index), newValue, ...value.slice(index + 1)]);
   };
 
-  const renderSlider = (index: number) => {
-    const currentValue = value[index];
-    const currentMin = min[index];
-    const currentMax = max[index];
-    const currentStep = step[index];
-
-    return (
-      <div key={index} className="flex items-center flex-1">
-        <RadixSlider.Root
-          value={[currentValue]}
-          min={currentMin}
-          max={currentMax}
-          step={currentStep}
-          onValueChange={(values) => handleComponentChange(index, values[0])}
-          className="bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden flex-1"
-        >
-          <RadixSlider.Track className="flex-1 h-full">
-            <RadixSlider.Range className="absolute h-full bg-gradient-to-br from-gradient-purple to-gradient-blue" />
-          </RadixSlider.Track>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-center">
-            {currentValue.toFixed(2)}
-          </div>
-        </RadixSlider.Root>
-      </div>
-    );
-  };
+  const renderSlider = (index: number) => (
+    <div key={index} className="flex items-center flex-1">
+      <RadixSlider.Root
+        value={[value[index]]}
+        min={min[index]}
+        max={max[index]}
+        step={step[index]}
+        onValueChange={(values) => handleComponentChange(index, values[0])}
+        className="bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden flex-1"
+      >
+        <RadixSlider.Track className="flex-1 h-full">
+          <RadixSlider.Range className="absolute h-full bg-gradient-to-br from-gradient-purple to-gradient-blue" />
+        </RadixSlider.Track>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-center">
+          {value[index].toFixed(2)}
+        </div>
+      </RadixSlider.Root>
+    </div>
+  );
 
   const containerClass = 'flex w-full';
   const rowClass = 'flex flex-row gap-4 w-full';
