@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
 import { readData, writeData } from '../src/data/dataIO.ts';
+import * as d from '../src/data/index.ts';
 
 describe('d.unstruct', () => {
   it('properly calculates size with only loose members', () => {

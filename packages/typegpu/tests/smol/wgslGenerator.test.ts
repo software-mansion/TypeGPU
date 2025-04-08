@@ -1,12 +1,12 @@
 import { JitTranspiler } from 'tgpu-jit';
 import type * as smol from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import * as gpu from '../../src/gpuMode.ts';
+import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as wgslGenerator from '../../src/smol/wgslGenerator.ts';

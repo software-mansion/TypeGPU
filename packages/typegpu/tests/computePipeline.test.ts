@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
   type TgpuComputeFnShell,
   type TgpuComputePipeline,
 } from '../src/index.ts';
-import * as d from '../src/data/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuComputePipeline', () => {

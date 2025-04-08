@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src/index.ts';
 import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
 import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
 

@@ -1,5 +1,6 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { readData, writeData } from '../src/data/dataIO.ts';
 import {
   alignmentOf,
   arrayOf,
@@ -16,7 +17,6 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
-import { readData, writeData } from '../src/data/dataIO.ts';
 import type { Infer } from '../src/shared/repr.ts';
 
 describe('struct', () => {

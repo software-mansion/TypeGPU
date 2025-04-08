@@ -1,6 +1,6 @@
 import { WeslStream } from 'wesl';
-import tgpu from '../../src/index.ts';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve.ts';
+import tgpu from '../../src/index.ts';
 
 export function parse(code: string): string {
   const stream = new WeslStream(code);

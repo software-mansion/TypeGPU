@@ -1,7 +1,7 @@
-import type { Infer } from '../../shared/repr.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { createDualImpl } from '../../shared/generators.ts';
+import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
 import {

@@ -1,13 +1,4 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import tgpu, {
-  type TgpuBindGroupLayout,
-  type TgpuBufferUniform,
-  type TgpuBufferReadonly,
-  type TgpuBufferMutable,
-  type TgpuWriteonlyTexture,
-  type TgpuSampledTexture,
-  type TgpuMutableTexture,
-} from '../src/index.ts';
 import {
   type F32,
   type U32,
@@ -20,6 +11,15 @@ import {
   u32,
   vec3f,
 } from '../src/data/index.ts';
+import tgpu, {
+  type TgpuBindGroupLayout,
+  type TgpuBufferUniform,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
+  type TgpuWriteonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
+} from '../src/index.ts';
 import './utils/webgpuGlobals.ts';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {

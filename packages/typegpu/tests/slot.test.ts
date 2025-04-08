@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
-import tgpu from '../src/index.ts';
 import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
 import { parseResolved } from './utils/parseResolved.ts';

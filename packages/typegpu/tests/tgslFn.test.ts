@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src/index.ts';
 import { builtin } from '../src/builtin.ts';
 import {
   f32,
@@ -10,6 +9,7 @@ import {
   vec3f,
   vec4f,
 } from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {

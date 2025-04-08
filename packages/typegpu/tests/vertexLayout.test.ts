@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu from '../src/index.ts';
 import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader.ts';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute.ts';
 import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat.ts';
 
 describe('ArrayToContainedAttribs', () => {

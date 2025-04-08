@@ -9,8 +9,8 @@ import {
   isProviding,
   isSlot,
 } from './core/slot/slotTypes.ts';
-import { isData } from './data/dataTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
+import { isData } from './data/dataTypes.ts';
 import {
   type AnyWgslData,
   type BaseData,
@@ -24,8 +24,8 @@ import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
-import { generateFunction } from './smol/wgslGenerator.ts';
 import { getTypeFromWgsl } from './smol/generationHelpers.ts';
+import { generateFunction } from './smol/wgslGenerator.ts';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,

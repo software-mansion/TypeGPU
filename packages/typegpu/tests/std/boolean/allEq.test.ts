@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec2f, vec2u, vec4b, vec4f, vec4u } from '../../../src/data/index.ts';
+import {
+  vec2b,
+  vec2f,
+  vec2u,
+  vec4b,
+  vec4f,
+  vec4u,
+} from '../../../src/data/index.ts';
 import { allEq } from '../../../src/std/index.ts';
 
 describe('allEq', () => {

@@ -1,6 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { getSystemEndianness } from 'typed-binary';
-import { isWgslData } from '../../data/wgslTypes.ts';
 import {
   EVAL_ALLOWED_IN_ENV,
   getCompiledWriterForSchema,
@@ -9,6 +8,7 @@ import { readData, writeData } from '../../data/dataIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { isWgslData } from '../../data/wgslTypes.ts';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../namable.ts';
