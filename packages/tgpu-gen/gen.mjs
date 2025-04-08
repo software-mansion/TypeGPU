@@ -519,7 +519,7 @@ function generateFunction(func, wgsl, options) {
   const body = implementation.match(/{.*}/s);
 
   return body?.[0]
-    ? `tgpu['unstable'].fn(${inputs}${
+    ? `tgpu['~unstable'].fn(${inputs}${
         output ? `, ${output}` : ''
       })(/* wgsl */ \`${body[0]}\`)`
     : '';
