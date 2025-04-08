@@ -3,8 +3,7 @@ import tgpu from '../src';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import type { TgpuFn, TgpuFnShell } from '../src/core/function/tgpuFn';
 import * as d from '../src/data';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import { parse, parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
@@ -140,6 +139,30 @@ describe('tgpu.fn', () => {
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
       TgpuFn<[d.F32, d.U32], d.Bool>
     >();
+  });
+
+  it('parses template literal without arguments', () => {
+    const constFn = tgpu['~unstable'].fn([], d.i32)`() {
+        return 3;
+      }`.$name('const');
+
+    const actual = parseResolved({ constFn });
+
+    const expected = parse('fn const() { return 3; }');
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('parses template literal with arguments of different types', () => {
+    const addFn = tgpu['~unstable'].fn([], d.i32)`() {
+        return ${10} + ${'20'} + ${30.1};
+      }`.$name('add');
+
+    const actual = parseResolved({ addFn });
+
+    const expected = parse('fn add() { return 10 + 20 + 30.1; }');
+
+    expect(actual).toEqual(expected);
   });
 });
 

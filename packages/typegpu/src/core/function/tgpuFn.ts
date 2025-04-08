@@ -57,7 +57,10 @@ export type TgpuFnShell<
       ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
     ) => InferReturn<Return>,
   ) => TgpuFn<Args, Return>) &
-  ((implementation: string) => TgpuFn<Args, Return>) & {
+  ((
+    implementation: string | TemplateStringsArray,
+    ...values: unknown[]
+  ) => TgpuFn<Args, Return>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
@@ -127,12 +130,37 @@ export function fn<
     returnType,
   };
 
-  const call = (implementation: Implementation) =>
-    createFn(shell, implementation);
+  const call = (
+    implementation: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => {
+    if (
+      typeof implementation !== 'function' &&
+      typeof implementation !== 'string'
+    ) {
+      return createFn(
+        shell,
+        templateLiteralIdentity(implementation, ...values),
+      );
+    }
+    return createFn(shell, implementation);
+  };
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
   }) as TgpuFnShell<Args, Return>;
+}
+
+function templateLiteralIdentity(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string {
+  return strings
+    .slice(1)
+    .reduce(
+      (acc, elem, index) => `${acc}${values[index]}${elem}`,
+      strings[0] as string,
+    );
 }
 
 export function isTgpuFn<
