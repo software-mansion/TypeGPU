@@ -58,7 +58,7 @@ export function addReturnTypeToExternals(
   returnType: unknown,
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const matched = implementation.match(/->(?<output>.*?){/s);
+  const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
