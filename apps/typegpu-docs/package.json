@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/react": "^4.2.0",
+    "@astrojs/react": "^4.2.3",
     "@astrojs/sitemap": "^3.2.1",
     "@astrojs/starlight": "^0.32.2",
     "@astrojs/starlight-tailwind": "^3.0.0",
@@ -27,7 +27,7 @@
     "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "astro": "^5.3.1",
+    "astro": "^5.6.1",
     "arktype": "catalog:",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.4.0",
@@ -36,7 +36,7 @@
     "lucide-react": "^0.475.0",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.52.2",
-    "motion": "^12.4.5",
+    "motion": "^12.6.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remeda": "^2.21.2",
@@ -56,7 +56,7 @@
   "devDependencies": {
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
-    "@types/babel__traverse": "^7.20.6",
+    "@types/babel__traverse": "^7.20.7",
     "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
     "tailwindcss-motion": "^1.0.1"
