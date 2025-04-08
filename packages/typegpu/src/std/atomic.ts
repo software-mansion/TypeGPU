@@ -1,10 +1,13 @@
+import { i32, u32 } from '../data/numeric';
 import {
+  type AnyWgslData,
   Void,
   type atomicI32,
   type atomicU32,
   isWgslData,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
+import type { Resource } from '../types';
 
 type AnyAtomic = atomicI32 | atomicU32;
 
@@ -64,6 +67,13 @@ export const atomicStore = createDualImpl(
   },
 );
 
+const atomicTypeFn = (a: Resource, _value: Resource): AnyWgslData[] => {
+  if (a.dataType.type === 'atomic' && a.dataType.inner.type === 'i32') {
+    return [a.dataType, i32];
+  }
+  return [a.dataType as AnyWgslData, u32];
+};
+
 export const atomicAdd = createDualImpl(
   // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
@@ -81,6 +91,7 @@ export const atomicAdd = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicSub = createDualImpl(
@@ -100,6 +111,7 @@ export const atomicSub = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicMax = createDualImpl(
@@ -119,6 +131,7 @@ export const atomicMax = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicMin = createDualImpl(
@@ -138,6 +151,7 @@ export const atomicMin = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicAnd = createDualImpl(
@@ -157,6 +171,7 @@ export const atomicAnd = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicOr = createDualImpl(
@@ -176,6 +191,7 @@ export const atomicOr = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );
 
 export const atomicXor = createDualImpl(
@@ -195,4 +211,5 @@ export const atomicXor = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  atomicTypeFn,
 );

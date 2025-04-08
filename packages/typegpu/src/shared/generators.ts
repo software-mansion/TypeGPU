@@ -1,4 +1,5 @@
 import type { TgpuDualFn } from '../data/dataTypes';
+import type { AnyWgslData } from '../data/wgslTypes';
 import { inGPUMode } from '../gpuMode';
 import type { Resource } from '../types';
 import { $internal } from './symbols';
@@ -26,6 +27,11 @@ type MapValueToResource<T> = { [K in keyof T]: Resource };
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToResource<Parameters<T>>) => Resource,
+  argTypes?:
+    | AnyWgslData[]
+    | Record<string, AnyWgslData>
+    | ((...args: Resource[]) => AnyWgslData[])
+    | undefined,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
@@ -40,6 +46,7 @@ export function createDualImpl<T extends (...args: any[]) => any>(
   Object.defineProperty(impl, $internal, {
     value: {
       implementation: jsImpl,
+      argTypes,
     },
   });
 

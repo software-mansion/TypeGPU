@@ -3,6 +3,7 @@ import * as d from '../data';
 import type { AnyData } from '../data/dataTypes';
 import { abstractInt } from '../data/numeric.js';
 import * as wgsl from '../data/wgslTypes.js';
+import { $internal } from '../shared/symbols';
 import {
   type ResolutionCtx,
   type Resource,
@@ -11,6 +12,9 @@ import {
   isWgsl,
 } from '../types.js';
 import {
+  type ConversionResult,
+  convertType,
+  getBestConversion,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
@@ -89,6 +93,85 @@ export function resolveRes(ctx: GenerationCtx, res: Resource): string {
   }
 
   return String(res.value);
+}
+
+export function convertToCommonType(
+  ctx: GenerationCtx,
+  values: Resource[],
+): Resource[] | undefined {
+  const types = values.map((value) => value.dataType);
+  if (types.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const conversion = getBestConversion(types as AnyData[]);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return values.map((value, index) => {
+    const action = conversion.actions[index];
+    if (!action || action.action === 'none') {
+      return value;
+    }
+
+    if (action.action === 'ref') {
+      return {
+        value: `&${resolveRes(ctx, value)}`,
+        dataType: conversion.targetType,
+      };
+    }
+
+    if (action.action === 'deref') {
+      return {
+        value: `*${resolveRes(ctx, value)}`,
+        dataType: conversion.targetType,
+      };
+    }
+
+    if (action.action === 'cast') {
+      return {
+        value: `${ctx.resolve(conversion.targetType)}(${resolveRes(ctx, value)})`,
+        dataType: conversion.targetType,
+      };
+    }
+
+    throw new Error('Unknown conversion action');
+  });
+}
+
+export function applyConversion(
+  ctx: GenerationCtx,
+  value: Resource,
+  conversion: ConversionResult,
+): Resource {
+  const action = conversion.actions[0];
+  if (!action || action.action === 'none') {
+    return value;
+  }
+
+  if (action.action === 'ref') {
+    return {
+      value: `&${resolveRes(ctx, value)}`,
+      dataType: conversion.targetType,
+    };
+  }
+
+  if (action.action === 'deref') {
+    return {
+      value: `*${resolveRes(ctx, value)}`,
+      dataType: conversion.targetType,
+    };
+  }
+
+  if (action.action === 'cast') {
+    return {
+      value: `${ctx.resolve(conversion.targetType)}(${resolveRes(ctx, value)})`,
+      dataType: conversion.targetType,
+    };
+  }
+
+  throw new Error('Unknown conversion action');
 }
 
 function assertExhaustive(value: never): never {
@@ -188,6 +271,15 @@ export function generateExpression(
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
 
+    if (wgsl.isPtr(target.dataType)) {
+      return {
+        value: `(*${target.value}).${property}`,
+        dataType: d.isData(target.dataType.inner)
+          ? getTypeForPropAccess(target.dataType.inner, property)
+          : UnknownData,
+      };
+    }
+
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
@@ -260,6 +352,15 @@ export function generateExpression(
     const targetStr = resolveRes(ctx, targetExpr);
     const propertyStr = resolveRes(ctx, propertyExpr);
 
+    if (wgsl.isPtr(targetExpr.dataType)) {
+      return {
+        value: `(*${targetStr})[${propertyStr}]`,
+        dataType: d.isData(targetExpr.dataType.inner)
+          ? getTypeForIndexAccess(targetExpr.dataType.inner)
+          : UnknownData,
+      };
+    }
+
     return {
       value: `${targetStr}[${propertyStr}]`,
       dataType: d.isData(targetExpr.dataType)
@@ -316,9 +417,50 @@ export function generateExpression(
       );
     }
 
+    const argTypes = idValue[$internal]?.argTypes;
+    console.log('argTypes', argTypes);
+
+    let typePairs: [wgsl.AnyWgslData, Resource][] = [];
+    if (Array.isArray(argTypes)) {
+      typePairs = argTypes
+        .filter((_, index) => index < resolvedResources.length)
+        .map((type, index) => [type, resolvedResources[index]]) as [
+        wgsl.AnyWgslData,
+        Resource,
+      ][];
+    } else if (typeof argTypes === 'function') {
+      const types = argTypes(...resolvedResources) as wgsl.AnyWgslData[];
+      typePairs = types
+        .filter((_, index) => index < resolvedResources.length)
+        .map((type, index) => [type, resolvedResources[index]]) as [
+        wgsl.AnyWgslData,
+        Resource,
+      ][];
+    } else if (typeof argTypes === 'object' && argTypes !== null) {
+      console.log('HELP ME');
+      console.log('argTypes', argTypes);
+      console.log('resolvedResources', resolvedResources);
+    }
+    console.log('typePairs', typePairs);
+
+    const convertedResources = argTypes
+      ? typePairs.map(([type, res]) => {
+          const conversion = convertType(res.dataType as AnyData, type);
+          if (!conversion) {
+            return res;
+          }
+
+          return applyConversion(ctx, res, conversion);
+        })
+      : [];
+    console.log('convertedResources', convertedResources);
+    console.log('rawResources', resolvedResources);
+
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...resolvedResources,
+      ...(convertedResources.length > 0
+        ? convertedResources
+        : resolvedResources),
     ) as Resource;
 
     return {
@@ -373,33 +515,32 @@ export function generateExpression(
       throw new Error('Cannot create empty array literal.');
     }
 
-    let type = values[0]?.dataType;
-    const mismatchedType = values.find((value) => value.dataType !== type);
-    if (mismatchedType) {
+    const convertedValues = convertToCommonType(ctx, values);
+    if (!convertedValues) {
       throw new Error(
-        `Cannot mix types in array literal. Type ${mismatchedType.dataType.type} does not match expected type ${type?.type}.`,
+        'The given values cannot be automatically converted to a common type. Consider explicitly casting them.',
       );
     }
 
-    if (!wgsl.isWgslData(type)) {
-      throw new Error('Cannot use non-WGSL data types in array literals.');
-    }
-
-    type =
-      type.type === 'abstractInt'
-        ? d.u32
-        : type.type === 'abstractFloat'
-          ? d.f32
-          : type;
+    const targetType = convertedValues[0]?.dataType as AnyData;
+    const type =
+      targetType.type === 'abstractFloat'
+        ? d.f32
+        : targetType.type === 'abstractInt'
+          ? d.i32
+          : targetType;
 
     const typeId = ctx.resolve(type);
 
     const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = values.map((value) => resolveRes(ctx, value));
+    const arrayValues = convertedValues.map((value) => resolveRes(ctx, value));
 
     return {
       value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: d.arrayOf(type, values.length) as d.AnyWgslData,
+      dataType: d.arrayOf(
+        type as wgsl.AnyWgslData,
+        values.length,
+      ) as d.AnyWgslData,
     };
   }
 
