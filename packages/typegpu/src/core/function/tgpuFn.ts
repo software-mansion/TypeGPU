@@ -133,18 +133,13 @@ export function fn<
   const call = (
     implementation: Implementation | TemplateStringsArray,
     ...values: unknown[]
-  ) => {
-    if (
-      typeof implementation !== 'function' &&
-      typeof implementation !== 'string'
-    ) {
-      return createFn(
-        shell,
-        templateLiteralIdentity(implementation, ...values),
-      );
-    }
-    return createFn(shell, implementation);
-  };
+  ) =>
+    createFn(
+      shell,
+      typeof implementation === 'function' || typeof implementation === 'string'
+        ? implementation
+        : templateLiteralIdentity(implementation, ...values),
+    );
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
