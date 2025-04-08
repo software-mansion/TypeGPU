@@ -24,12 +24,12 @@ export const vertexShader = tgpu['~unstable']
     let wavedPosition = input.modelPosition;
     let wavedNormal = input.modelNormal;
     if (currentModelData.applySinWave === 1) {
-      const wavedResults = applySinWave(
-        input.instanceIndex,
-        layout.$.currentTime,
-        input.modelPosition,
-        input.modelNormal,
-      );
+      const wavedResults = applySinWave({
+        index: input.instanceIndex,
+        time: layout.$.currentTime,
+        position: input.modelPosition,
+        normal: input.modelNormal,
+      });
       wavedPosition = wavedResults.position;
       wavedNormal = wavedResults.normal;
     }

@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/color",
   "type": "module",
-  "version": "0.1.0-alpha.1",
+  "version": "0.0.1",
   "description": "A set of color helper functions for use in WebGPU/TypeGPU apps.",
   "exports": {
     ".": "./src/index.ts",
