@@ -465,6 +465,9 @@ importers:
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.8
         version: link:../tinyest-for-wgsl
+      typegpu:
+        specifier: ^0.5.4
+        version: 0.5.4
       unplugin:
         specifier: ^2.2.0
         version: 2.2.0
@@ -4542,6 +4545,10 @@ packages:
     resolution: {integrity: sha512-74pmf47HY/bHqamcCMGris+1AtGGsqTZ3Hc/UK4QvSmRuf/9PIF9753+c8XBh7JfX2r9KeZtVjOYjd6vFpc0qQ==}
     engines: {node: '>=18.0.0'}
 
+  tinyest@0.1.0-alpha.7:
+    resolution: {integrity: sha512-4R4Ysjh0UyX/s16XTEhRu6aAiXA7VAZ+LH/fNwK2o7MsSCHwmFIoRKOPL0/HE24MCZTW2sjAL7qEKugstb3wjw==}
+    engines: {node: '>=12.20.0'}
+
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
@@ -4656,6 +4663,10 @@ packages:
     hasBin: true
     peerDependencies:
       typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x
+
+  typegpu@0.5.4:
+    resolution: {integrity: sha512-H9C4NnEPNwDVcvceqoUsCmOm9M8YfRuYA3Go2zIGyQdI4G16/Ebh8SF1DgfJ1rPfoeYMsZ9HsD+4kWPM6J2Xog==}
+    engines: {node: '>=12.20.0'}
 
   typesafe-path@0.2.2:
     resolution: {integrity: sha512-OJabfkAg1WLZSqJAJ0Z6Sdt3utnbzr/jh+NAHoyWHJe8CMSy79Gm085094M9nvTPy22KzTVn5Zq5mbapCI/hPA==}
@@ -9925,6 +9936,8 @@ snapshots:
 
   tinybench@3.1.1: {}
 
+  tinyest@0.1.0-alpha.7: {}
+
   tinyexec@0.3.2: {}
 
   tinyglobby@0.2.12:
@@ -10028,6 +10041,11 @@ snapshots:
       minimatch: 9.0.5
       typescript: 5.8.2
       yaml: 2.7.0
+
+  typegpu@0.5.4:
+    dependencies:
+      tinyest: 0.1.0-alpha.7
+      typed-binary: 4.3.2
 
   typesafe-path@0.2.2: {}
 
