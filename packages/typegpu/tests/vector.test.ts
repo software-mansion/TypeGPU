@@ -1,10 +1,10 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
-import { parse, parseResolved } from './utils/parseResolved';
+import tgpu from '../src/index.ts';
+import * as d from '../src/data/index.ts';
+import { readData, writeData } from '../src/data/dataIO.ts';
+import { sizeOf } from '../src/data/sizeOf.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('vec2f', () => {
   it('should span 8 bytes', () => {

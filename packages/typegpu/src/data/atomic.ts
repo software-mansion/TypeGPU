@@ -1,5 +1,5 @@
-import type { $repr, Infer, MemIdentity } from '../shared/repr.js';
-import type { Atomic, I32, U32, atomicI32, atomicU32 } from './wgslTypes.js';
+import type { $repr, Infer, MemIdentity } from '../shared/repr.ts';
+import type { Atomic, I32, U32, atomicI32, atomicU32 } from './wgslTypes.ts';
 
 // ----------
 // Public API

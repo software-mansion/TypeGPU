@@ -1,5 +1,5 @@
-import { invariant } from './errors';
-import type { ResolutionCtx } from './types';
+import { invariant } from './errors.ts';
+import type { ResolutionCtx } from './types.ts';
 
 let resolutionCtx: ResolutionCtx | null = null;
 

@@ -1,4 +1,4 @@
-import { $structTag, type AnyWgslData, type WgslStruct } from './wgslTypes.js';
+import { $structTag, type AnyWgslData, type WgslStruct } from './wgslTypes.ts';
 
 // ----------
 // Public API

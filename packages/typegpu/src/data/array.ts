@@ -4,9 +4,9 @@ import type {
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr.js';
-import { sizeOf } from './sizeOf';
-import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
+} from '../shared/repr.ts';
+import { sizeOf } from './sizeOf.ts';
+import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes.ts';
 
 // ----------
 // Public API

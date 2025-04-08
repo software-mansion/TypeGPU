@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai';
 import { useMemo } from 'react';
-import { type InstanceResults, benchResultsAtom } from '../benchmark-app';
+import { type InstanceResults, benchResultsAtom } from '../benchmark-app.ts';
 
 export function ResultsTable(props: { results: InstanceResults }) {
   const { benches } = props.results;

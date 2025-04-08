@@ -1,7 +1,7 @@
 import { it as base, vi } from 'vitest';
-import tgpu from '../../src';
-import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes';
-import './webgpuGlobals';
+import tgpu from '../../src/index.ts';
+import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
+import './webgpuGlobals.ts';
 
 const adapterMock = {
   requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import tgpu from '../src/index.ts';
+import * as d from '../src/data/index.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {

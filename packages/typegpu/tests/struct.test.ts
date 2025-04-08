@@ -15,9 +15,9 @@ import {
   vec3f,
   vec3h,
   vec3u,
-} from '../src/data';
-import { readData, writeData } from '../src/data/dataIO';
-import type { Infer } from '../src/shared/repr';
+} from '../src/data/index.ts';
+import { readData, writeData } from '../src/data/dataIO.ts';
+import type { Infer } from '../src/shared/repr.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {

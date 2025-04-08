@@ -1,5 +1,5 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata } from './types';
+import type { Example, ExampleMetadata } from './types.ts';
 
 function pathPipe(path: string): string {
   return pipe(

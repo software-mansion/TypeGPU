@@ -1,5 +1,5 @@
 import type { ArgNames, Block } from 'tinyest';
-import { resolveData } from './core/resolve/resolveData';
+import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
   type SlotValuePair,
@@ -8,31 +8,31 @@ import {
   isDerived,
   isProviding,
   isSlot,
-} from './core/slot/slotTypes';
-import { isData } from './data';
-import { getAttributesString } from './data/attributes';
+} from './core/slot/slotTypes.ts';
+import { isData } from './data/dataTypes.ts';
+import { getAttributesString } from './data/attributes.ts';
 import {
   type AnyWgslData,
   type BaseData,
   isWgslArray,
   isWgslStruct,
-} from './data/wgslTypes';
-import { MissingSlotValueError, ResolutionError } from './errors';
-import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode';
-import type { JitTranspiler } from './jitTranspiler';
-import type { NameRegistry } from './nameRegistry';
-import { naturalsExcept } from './shared/generators';
-import type { Infer } from './shared/repr';
-import { $internal } from './shared/symbols';
-import { generateFunction } from './smol';
-import { getTypeFromWgsl } from './smol/generationHelpers';
+} from './data/wgslTypes.ts';
+import { MissingSlotValueError, ResolutionError } from './errors.ts';
+import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode.ts';
+import type { JitTranspiler } from './jitTranspiler.ts';
+import type { NameRegistry } from './nameRegistry.ts';
+import { naturalsExcept } from './shared/generators.ts';
+import type { Infer } from './shared/repr.ts';
+import { $internal } from './shared/symbols.ts';
+import { generateFunction } from './smol/wgslGenerator.ts';
+import { getTypeFromWgsl } from './smol/generationHelpers.ts';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
   bindGroupLayout,
-} from './tgpuBindGroupLayout';
+} from './tgpuBindGroupLayout.ts';
 import type {
   FnToWgslOptions,
   ItemLayer,
@@ -40,8 +40,8 @@ import type {
   ResolutionCtx,
   Resource,
   Wgsl,
-} from './types';
-import { UnknownData, isSelfResolvable, isWgsl } from './types';
+} from './types.ts';
+import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong

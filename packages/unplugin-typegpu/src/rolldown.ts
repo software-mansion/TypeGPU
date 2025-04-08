@@ -1,3 +1,3 @@
-import { rolldownPlugin } from './index';
+import { rolldownPlugin } from './index.ts';
 
 export default rolldownPlugin;

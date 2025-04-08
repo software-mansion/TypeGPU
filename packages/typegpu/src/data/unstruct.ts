@@ -1,7 +1,7 @@
-import type { $repr, InferPartialRecord, InferRecord } from '../shared/repr.js';
-import type { Prettify } from '../shared/utilityTypes.js';
-import type { Unstruct } from './dataTypes.js';
-import type { BaseData } from './wgslTypes.js';
+import type { $repr, InferPartialRecord, InferRecord } from '../shared/repr.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
+import type { Unstruct } from './dataTypes.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 // ----------
 // Public API

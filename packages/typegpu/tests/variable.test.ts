@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import type { TgpuVar, VariableScope } from '../src/core/variable/tgpuVariable';
-import * as d from '../src/data';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import tgpu from '../src/index.ts';
+import type {
+  TgpuVar,
+  VariableScope,
+} from '../src/core/variable/tgpuVariable.ts';
+import * as d from '../src/data/index.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 describe('var', () => {
   it('should inject variable declaration when used in functions', () => {

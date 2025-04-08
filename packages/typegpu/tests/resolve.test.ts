@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage';
-import * as d from '../src/data';
-import type { ResolutionCtx } from '../src/types';
-import { parse } from './utils/parseResolved';
+import tgpu from '../src/index.ts';
+import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
+import * as d from '../src/data/index.ts';
+import type { ResolutionCtx } from '../src/types.ts';
+import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {

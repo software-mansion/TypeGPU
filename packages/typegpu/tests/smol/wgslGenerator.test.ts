@@ -1,18 +1,18 @@
 import { JitTranspiler } from 'tgpu-jit';
 import type * as smol from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import tgpu, { StrictNameRegistry } from '../../src';
-import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
-import * as d from '../../src/data';
-import { abstractFloat, abstractInt } from '../../src/data/numeric';
-import { Void } from '../../src/data/wgslTypes';
-import * as gpu from '../../src/gpuMode';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx';
-import { $internal } from '../../src/shared/symbols';
-import * as wgslGenerator from '../../src/smol/wgslGenerator';
-import * as std from '../../src/std';
-import { it } from '../utils/extendedIt';
-import { parse, parseResolved } from '../utils/parseResolved';
+import tgpu, { StrictNameRegistry } from '../../src/index.ts';
+import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
+import * as d from '../../src/data/index.ts';
+import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { Void } from '../../src/data/wgslTypes.ts';
+import * as gpu from '../../src/gpuMode.ts';
+import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { $internal } from '../../src/shared/symbols.ts';
+import * as wgslGenerator from '../../src/smol/wgslGenerator.ts';
+import * as std from '../../src/std/index.ts';
+import { it } from '../utils/extendedIt.ts';
+import { parse, parseResolved } from '../utils/parseResolved.ts';
 
 const transpiler = new JitTranspiler();
 

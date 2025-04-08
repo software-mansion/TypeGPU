@@ -1,10 +1,10 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { mul } from '../src/std';
-import { it } from './utils/extendedIt';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import tgpu from '../src/index.ts';
+import * as d from '../src/data/index.ts';
+import { mul } from '../src/std/index.ts';
+import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {

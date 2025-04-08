@@ -3,8 +3,8 @@ import {
   type atomicI32,
   type atomicU32,
   isWgslData,
-} from '../data/wgslTypes';
-import { createDualImpl } from '../shared/generators';
+} from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
 
 type AnyAtomic = atomicI32 | atomicU32;
 
