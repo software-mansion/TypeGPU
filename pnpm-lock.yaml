@@ -202,8 +202,8 @@ importers:
         specifier: ^7.4.4
         version: 7.4.4
       '@types/babel__traverse':
-        specifier: ^7.20.6
-        version: 7.20.6
+        specifier: ^7.20.7
+        version: 7.20.7
       '@webgpu/types':
         specifier: 'catalog:'
         version: 0.1.54
@@ -488,8 +488,8 @@ importers:
         specifier: ^7.4.4
         version: 7.4.4
       '@types/babel__traverse':
-        specifier: ^7.20.6
-        version: 7.20.6
+        specifier: ^7.20.7
+        version: 7.20.7
       acorn:
         specifier: ^8.14.1
         version: 8.14.1
@@ -2047,8 +2047,8 @@ packages:
   '@types/babel__template@7.4.4':
     resolution: {integrity: sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==}
 
-  '@types/babel__traverse@7.20.6':
-    resolution: {integrity: sha512-r1bzfrm0tomOI8g1SzvCaQHo6Lcv6zu0EA+W2kHrt8dyrHQxGzBBL4kdkzIS+jBMV+EYcMAEAqXqYaLJq5rOZg==}
+  '@types/babel__traverse@7.20.7':
+    resolution: {integrity: sha512-dkO5fhS7+/oos4ciWxyEyjWe48zmG6wbCheo/G2ZnHx4fs3EU6YC6UM8rk56gAjNJ9P3MTH2jo5jb92/K6wbng==}
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
@@ -6676,7 +6676,7 @@ snapshots:
       '@babel/types': 7.26.5
       '@types/babel__generator': 7.6.8
       '@types/babel__template': 7.4.4
-      '@types/babel__traverse': 7.20.6
+      '@types/babel__traverse': 7.20.7
 
   '@types/babel__generator@7.6.8':
     dependencies:
@@ -6689,14 +6689,14 @@ snapshots:
       '@types/babel__core': 7.20.5
       '@types/babel__generator': 7.6.8
       '@types/babel__template': 7.4.4
-      '@types/babel__traverse': 7.20.6
+      '@types/babel__traverse': 7.20.7
 
   '@types/babel__template@7.4.4':
     dependencies:
       '@babel/parser': 7.26.9
       '@babel/types': 7.26.5
 
-  '@types/babel__traverse@7.20.6':
+  '@types/babel__traverse@7.20.7':
     dependencies:
       '@babel/types': 7.26.5
 
