@@ -111,8 +111,6 @@ const getBoxIntersection = tgpu['~unstable']
     { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
     IntersectionStruct,
   )(/* wgsl */ `{
-  var output: Out;
-
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -137,7 +135,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if (tMinY > tMin) {
@@ -157,7 +155,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if tMinZ > tMin {
@@ -168,11 +166,9 @@ const getBoxIntersection = tgpu['~unstable']
     tMax = tMaxZ;
   }
 
-  output.intersects = tMin > 0 && tMax > 0;
-  output.tMin = tMin;
-  output.tMax = tMax;
-  return output;
+  return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`)
+  .$uses({ IntersectionStruct })
   .$name('box_intersection');
 
 const vertexFunction = tgpu['~unstable']
