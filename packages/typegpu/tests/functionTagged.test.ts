@@ -43,7 +43,24 @@ describe('tgpu.fn tagged syntax', () => {
   });
 
   describe('vertex', () => {
-    it('parses template literal with arguments of different types for vertex', () => {
+    it('parses template literal without arguments', () => {
+      const vertexFn = tgpu['~unstable'].vertexFn({
+        in: {},
+        out: {},
+      })`{}`.$name('vertexFn');
+
+      const actual = parseResolved({ vertexFn });
+
+      const expected = parse(`
+        struct vertexFn_Input {}
+        struct vertexFn_Output {} 
+        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { }
+        `);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it('parses template literal with arguments of different types', () => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         in: {},
         out: {},
@@ -64,7 +81,24 @@ describe('tgpu.fn tagged syntax', () => {
   });
 
   describe('fragment', () => {
-    it('parses template literal with arguments of different types for fragment', () => {
+    it('parses template literal without arguments', () => {
+      const fragmentFn = tgpu['~unstable'].fragmentFn({
+        in: {},
+        out: {},
+      })`{}`.$name('fragmentFn');
+
+      const actual = parseResolved({ fragmentFn });
+
+      const expected = parse(`
+        struct fragmentFn_Input {}
+        struct fragmentFn_Output {} 
+        @fragment fn fragmentFn(in: fragmentFn_Input) -> fragmentFn_Output { }
+        `);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it('parses template literal with arguments of different types', () => {
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         in: {},
         out: {},
@@ -85,7 +119,22 @@ describe('tgpu.fn tagged syntax', () => {
   });
 
   describe('compute', () => {
-    it('parses template literal with arguments of different types for compute', () => {
+    it('parses template literal without arguments', () => {
+      const computeFn = tgpu['~unstable'].computeFn({
+        workgroupSize: [1],
+      })`{}`.$name('computeFn');
+
+      const actual = parseResolved({ computeFn });
+
+      const expected = parse(`
+        struct computeFn_Input {}
+        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { }
+        `);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it('parses template literal with arguments of different types', () => {
       const computeFn = tgpu['~unstable'].computeFn({
         workgroupSize: [1],
       })`{
