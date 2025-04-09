@@ -1,33 +1,33 @@
-import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer';
-import type { Disarray } from '../../data/dataTypes';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
+import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
+import type { Disarray } from '../../data/dataTypes.ts';
+import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
-} from '../../errors';
-import type { TgpuNamable } from '../../namable';
-import { resolve } from '../../resolutionCtx';
-import type { AnyVertexAttribs } from '../../shared/vertexFormat';
+} from '../../errors.ts';
+import type { TgpuNamable } from '../../namable.ts';
+import { resolve } from '../../resolutionCtx.ts';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
   isBindGroupLayout,
-} from '../../tgpuBindGroupLayout';
-import type { IOData, IOLayout } from '../function/fnTypes';
-import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes';
-import type { TgpuSlot } from '../slot/slotTypes';
-import { type TgpuTexture, isTexture } from '../texture/texture';
-import type { Render } from '../texture/usageExtension';
-import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader';
+} from '../../tgpuBindGroupLayout.ts';
+import type { IOData, IOLayout } from '../function/fnTypes.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { TgpuSlot } from '../slot/slotTypes.ts';
+import { type TgpuTexture, isTexture } from '../texture/texture.ts';
+import type { Render } from '../texture/usageExtension.ts';
+import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import {
   type TgpuVertexLayout,
   isVertexLayout,
-} from '../vertexLayout/vertexLayout';
-import { connectAttachmentToShader } from './connectAttachmentToShader';
-import { connectTargetsToShader } from './connectTargetsToShader';
+} from '../vertexLayout/vertexLayout.ts';
+import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
+import { connectTargetsToShader } from './connectTargetsToShader.ts';
 
 // ----------
 // Public API

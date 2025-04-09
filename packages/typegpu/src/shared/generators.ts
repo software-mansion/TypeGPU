@@ -1,7 +1,7 @@
-import type { TgpuDualFn } from '../data/dataTypes';
-import { inGPUMode } from '../gpuMode';
-import type { Resource } from '../types';
-import { $internal } from './symbols';
+import type { TgpuDualFn } from '../data/dataTypes.ts';
+import { inGPUMode } from '../gpuMode.ts';
+import type { Resource } from '../types.ts';
+import { $internal } from './symbols.ts';
 
 /**
  * Yields values in the sequence 0,1,2..∞ except for the ones in the `excluded` set.

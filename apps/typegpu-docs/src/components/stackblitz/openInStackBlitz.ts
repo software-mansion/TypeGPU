@@ -1,12 +1,13 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from '@std/yaml';
 import { type } from 'arktype';
-import typegpuoNoisePackageJson from '../../../../../packages/typegpu-noise/package.json';
+import typegpuColorPackageJson from '../../../../../packages/typegpu-color/package.json';
+import typegpuNoisePackageJson from '../../../../../packages/typegpu-noise/package.json';
 import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
 import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json';
-import type { Example } from '../../utils/examples/types';
+import type { Example } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
@@ -89,7 +90,8 @@ ${example.htmlCode}
       "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
       "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
       "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
-      "@typegpu/noise": "${typegpuoNoisePackageJson.version}"
+      "@typegpu/noise": "${typegpuNoisePackageJson.version}",
+      "@typegpu/color": "${typegpuColorPackageJson.version}"
     }
 }`,
         'vite.config.js': `\

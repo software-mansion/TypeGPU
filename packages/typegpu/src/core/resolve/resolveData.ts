@@ -1,11 +1,11 @@
-import { getAttributesString } from '../../data/attributes';
+import { getAttributesString } from '../../data/attributes.ts';
 import {
   type AnyData,
   type Disarray,
   type Unstruct,
   isLooseData,
-} from '../../data/dataTypes';
-import { formatToWGSLType } from '../../data/vertexFormatData';
+} from '../../data/dataTypes.ts';
+import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
   BaseData,
@@ -34,10 +34,10 @@ import type {
   Vec4u,
   WgslArray,
   WgslStruct,
-} from '../../data/wgslTypes';
-import { assertExhaustive } from '../../shared/utilityTypes';
-import type { ResolutionCtx } from '../../types';
-import { isAttribute } from '../vertexLayout/connectAttributesToShader';
+} from '../../data/wgslTypes.ts';
+import { assertExhaustive } from '../../shared/utilityTypes.ts';
+import type { ResolutionCtx } from '../../types.ts';
+import { isAttribute } from '../vertexLayout/connectAttributesToShader.ts';
 
 /**
  * Schemas for which their `type` property directly

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { babelTransform, rollupTransform } from './transform';
+import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] tgpu alias gathering', () => {
   it('works with default import named not tgpu', () => {

@@ -48,19 +48,20 @@ Arguments:
   <input>       The input file or glob pattern.
 
 Options:
-  --output, -o  The output name or pattern for generated file(s). 
-                If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
-                Placeholder for file name (without extension): *, for directory: **
-                Default: "*.ts"
-  --watch, -w   Watch for changes in the input file(s) and regenerate the output file(s).
-  --commonjs    Generate a CommonJS style file.
+  --output, -o              The output name or pattern for generated file(s). 
+                            If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
+                            Placeholder for file name (without extension): *, for directory: **
+                            Default: "*.ts"
+  --watch, -w               Watch for changes in the input file(s) and regenerate the output file(s).
+  --commonjs                Generate a CommonJS style file.
 
-  --overwrite   Overwrite existing files.
-  --keep        Keep existing files.
+  --overwrite               Overwrite existing files.
+  --keep                    Keep existing files.
+  --experimental-functions  Generate tgpu.fn (non-entry) function definitions.
 `);
 
 const execute = async () => {
-  const input = args._[0];
+  const input = /** @type string */ (args._[0]);
   const output = args['--output'] ?? '*.ts';
   const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
   const watch = args['--watch'] ?? false;
@@ -85,7 +86,11 @@ const execute = async () => {
     !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
   ) {
     console.error(
-      `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      `${
+        color.Red
+      }Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(
+        ', ',
+      )}`,
     );
     exit(1);
   }
@@ -102,7 +107,9 @@ const execute = async () => {
 
   if (allMatchedFiles.length > 1 && !output.includes('*')) {
     console.error(
-      `${color.Red}Error: More than one file found (${allMatchedFiles.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
+      `${color.Red}Error: More than one file found (${allMatchedFiles.join(
+        ', ',
+      )}), while a non-pattern output name was provided ${color.Reset}`,
     );
     exit(1);
   }
@@ -117,7 +124,11 @@ const execute = async () => {
     !/\*\*\/.*\*.*/.test(output)
   ) {
     console.error(
-      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
+      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(
+        ', ',
+      )}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${
+        color.Reset
+      }`,
     );
     exit(1);
   }
@@ -144,7 +155,11 @@ const execute = async () => {
 
   if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
     console.error(
-      `Error: The following file(s) already exist: [${existingFilesIO.map(({ output }) => output).join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+      `Error: The following file(s) already exist: [${existingFilesIO
+        .map(({ output }) => output)
+        .join(
+          ', ',
+        )}]. Use --overwrite option to replace existing files or --keep to skip them.`,
     );
 
     exit(1);
@@ -228,7 +243,9 @@ function printVersion() {
     );
   } catch (error) {
     console.error(
-      `${color.Red}Error reading version: ${error.message}${color.Reset}`,
+      `${color.Red}Error reading version: ${
+        /** @type Error */ (error).message
+      }${color.Reset}`,
     );
     exit(1);
   }

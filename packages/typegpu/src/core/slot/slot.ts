@@ -1,7 +1,7 @@
-import { getResolutionCtx } from '../../gpuMode';
-import type { $repr, Infer } from '../../shared/repr.js';
-import { unwrapProxy } from '../valueProxyUtils';
-import type { TgpuSlot } from './slotTypes';
+import { getResolutionCtx } from '../../gpuMode.ts';
+import type { $repr, Infer } from '../../shared/repr.ts';
+import { unwrapProxy } from '../valueProxyUtils.ts';
+import type { TgpuSlot } from './slotTypes.ts';
 
 // ----------
 // Public API

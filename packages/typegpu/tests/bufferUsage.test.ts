@@ -1,11 +1,11 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { parse } from './utils/parseResolved';
+import { parse } from './utils/parseResolved.ts';
 
-import tgpu from '../src';
+import tgpu from '../src/index.ts';
 
-import * as d from '../src/data';
-import type { Infer } from '../src/shared/repr';
-import { it } from './utils/extendedIt';
+import * as d from '../src/data/index.ts';
+import type { Infer } from '../src/shared/repr.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {

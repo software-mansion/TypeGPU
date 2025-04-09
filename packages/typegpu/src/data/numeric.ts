@@ -1,5 +1,5 @@
 import bin from 'typed-binary';
-import { createDualImpl } from '../shared/generators';
+import { createDualImpl } from '../shared/generators.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -8,7 +8,7 @@ import type {
   F32,
   I32,
   U32,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 export const abstractInt = {
   type: 'abstractInt',

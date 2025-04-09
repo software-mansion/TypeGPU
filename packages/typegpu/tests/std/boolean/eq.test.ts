@@ -9,8 +9,8 @@ import {
   vec4b,
   vec4f,
   vec4u,
-} from '../../../src/data';
-import { eq } from '../../../src/std';
+} from '../../../src/data/index.ts';
+import { eq } from '../../../src/std/index.ts';
 
 describe('eq', () => {
   it('compares integer vectors', () => {

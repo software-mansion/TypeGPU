@@ -1,5 +1,5 @@
-import { createDualImpl } from '../shared/generators';
-import { $repr } from '../shared/repr.js';
+import { createDualImpl } from '../shared/generators.ts';
+import { $repr } from '../shared/repr.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -17,7 +17,7 @@ import {
   Vec4iImpl,
   Vec4uImpl,
   type VecBase,
-} from './vectorImpl';
+} from './vectorImpl.ts';
 import type {
   AnyVecInstance,
   Vec2b,
@@ -35,7 +35,7 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 // ----------
 // Public API

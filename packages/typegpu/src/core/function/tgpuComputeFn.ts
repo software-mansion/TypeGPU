@@ -1,10 +1,10 @@
-import type { AnyComputeBuiltin } from '../../builtin';
-import type { AnyWgslStruct } from '../../data/wgslTypes';
-import { type TgpuNamable, isNamable } from '../../namable';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
-import { createFnCore } from './fnCore';
-import type { Implementation, InferIO } from './fnTypes';
-import { createStructFromIO } from './ioOutputType';
+import type { AnyComputeBuiltin } from '../../builtin.ts';
+import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
+import { type TgpuNamable, isNamable } from '../../namable.ts';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { createFnCore } from './fnCore.ts';
+import type { Implementation, InferIO } from './fnTypes.ts';
+import { createStructFromIO } from './ioOutputType.ts';
 
 // ----------
 // Public API
@@ -19,6 +19,7 @@ type TgpuComputeFnShellHeader<
   readonly argTypes: [AnyWgslStruct];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
+  readonly isEntry: true;
 };
 
 /**
@@ -106,6 +107,7 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
+    isEntry: true,
   };
 
   const call = (implementation: Implementation) =>

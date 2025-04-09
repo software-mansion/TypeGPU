@@ -1,7 +1,7 @@
-import { createDualImpl } from '../shared/generators';
-import { $repr } from '../shared/repr.js';
-import type { SelfResolvable } from '../types';
-import { vec2f, vec3f, vec4f } from './vector';
+import { createDualImpl } from '../shared/generators.ts';
+import { $repr } from '../shared/repr.ts';
+import type { SelfResolvable } from '../types.ts';
+import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
   Mat2x2f,
@@ -18,7 +18,7 @@ import type {
   v2f,
   v3f,
   v4f,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 // --------------
 // Implementation

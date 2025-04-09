@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { babelTransform, rollupTransform } from './transform';
+import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] parser options', () => {
   it('with no include option, import determines whether to run the plugin', () => {

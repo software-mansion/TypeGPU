@@ -1,12 +1,12 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data';
-import { offsetsForProps } from '../src/data/offsets';
+import * as d from '../src/data/index.ts';
+import { offsetsForProps } from '../src/data/offsets.ts';
 import {
   type WriteInstruction,
   getWriteInstructions,
-} from '../src/data/partialIO';
-import type { TypedArray } from '../src/shared/utilityTypes';
-import { it } from './utils/extendedIt';
+} from '../src/data/partialIO.ts';
+import type { TypedArray } from '../src/shared/utilityTypes.ts';
+import { it } from './utils/extendedIt.ts';
 
 function expectInstruction(
   instruction: WriteInstruction,

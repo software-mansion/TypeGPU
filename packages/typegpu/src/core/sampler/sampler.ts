@@ -2,10 +2,10 @@
 // Public API
 // ----------
 
-import type { TgpuNamable } from '../../namable';
-import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx, SelfResolvable } from '../../types';
-import type { Unwrapper } from '../../unwrapper';
+import type { TgpuNamable } from '../../namable.ts';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { Unwrapper } from '../../unwrapper.ts';
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
