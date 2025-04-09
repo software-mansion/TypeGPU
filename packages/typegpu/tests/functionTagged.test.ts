@@ -83,4 +83,23 @@ describe('tgpu.fn tagged syntax', () => {
       expect(actual).toEqual(expected);
     });
   });
+
+  describe('compute', () => {
+    it('parses template literal with arguments of different types for compute', () => {
+      const computeFn = tgpu['~unstable'].computeFn({
+        workgroupSize: [1],
+      })`{
+      ${10} + ${'20'} + ${30.1};
+    }`.$name('computeFn');
+
+      const actual = parseResolved({ computeFn });
+
+      const expected = parse(`
+        struct computeFn_Input {}
+        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { 10 + 20 + 30.1; }
+        `);
+
+      expect(actual).toEqual(expected);
+    });
+  });
 });
