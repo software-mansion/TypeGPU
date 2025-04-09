@@ -5,7 +5,6 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
-
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
     const emptyFn = tgpu['~unstable']
