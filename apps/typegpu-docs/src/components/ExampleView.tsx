@@ -23,7 +23,6 @@ type Props = {
 
 function useExample(
   tsImport: () => Promise<unknown>,
-  htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
@@ -62,7 +61,7 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [htmlCode, setSnackbarText, setExampleControlParams]);
+  }, [setSnackbarText, setExampleControlParams]);
 }
 
 export function ExampleView({ example }: Props) {
@@ -75,7 +74,7 @@ export function ExampleView({ example }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const codeFiles = Object.keys(tsCodes);
+  const codeFiles = tsCodes.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
     ...codeFiles.filter((name) => name !== 'index.ts'),
@@ -86,11 +85,11 @@ export function ExampleView({ example }: Props) {
     if (!exampleHtmlRef.current) {
       return;
     }
-    exampleHtmlRef.current.innerHTML = htmlCode;
+    exampleHtmlRef.current.innerHTML = htmlCode.content;
   }, [htmlCode]);
 
-  useExample(tsImport, htmlCode, setSnackbarText); // live example
-  useResizableCanvas(exampleHtmlRef, htmlCode);
+  useExample(tsImport, setSnackbarText); // live example
+  useResizableCanvas(exampleHtmlRef);
 
   return (
     <>
@@ -156,14 +155,14 @@ export function ExampleView({ example }: Props) {
 
                 <HtmlCodeEditor
                   shown={currentFile === 'index.html'}
-                  code={htmlCode}
+                  file={htmlCode}
                 />
 
-                {Object.entries(tsCodes).map(([key, value]) => (
+                {tsCodes.map((value) => (
                   <TsCodeEditor
-                    shown={key === currentFile}
-                    code={value}
-                    key={key}
+                    key={value.path}
+                    shown={value.path === currentFile}
+                    file={value}
                   />
                 ))}
               </div>
@@ -194,11 +193,7 @@ function GPUUnsupportedPanel() {
   );
 }
 
-function useResizableCanvas(
-  exampleHtmlRef: RefObject<HTMLDivElement | null>,
-  htmlCode: string,
-) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode and tsCode change
+function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
       | HTMLCanvasElement[]
@@ -261,5 +256,5 @@ function useResizableCanvas(
         observer.disconnect();
       }
     };
-  }, [exampleHtmlRef, htmlCode]);
+  }, [exampleHtmlRef]);
 }
