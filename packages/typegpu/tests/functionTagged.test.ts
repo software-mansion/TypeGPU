@@ -6,37 +6,37 @@ import { parse, parseResolved } from './utils/parseResolved';
 describe('tgpu.fn tagged syntax', () => {
   describe('function', () => {
     it('parses template literal without arguments', () => {
-      const constFn = tgpu['~unstable'].fn([], d.i32)`() {
+      const constFn = tgpu['~unstable'].fn([], d.i32)`() -> i32 {
         return 3;
       }`.$name('const');
 
       const actual = parseResolved({ constFn });
 
-      const expected = parse('fn const() { return 3; }');
+      const expected = parse('fn const() -> i32 { return 3; }');
 
       expect(actual).toEqual(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
-      const addFn = tgpu['~unstable'].fn([], d.i32)`() {
+      const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
         return ${10} + ${'20'} + ${30.1};
       }`.$name('add');
 
       const actual = parseResolved({ addFn });
 
-      const expected = parse('fn add() { return 10 + 20 + 30.1; }');
+      const expected = parse('fn add() -> f32 { return 10 + 20 + 30.1; }');
 
       expect(actual).toEqual(expected);
     });
 
     it('parses template literal with arguments of different types, object args', () => {
-      const addFn = tgpu['~unstable'].fn({}, d.i32)`{
+      const addFn = tgpu['~unstable'].fn({}, d.f32)`{
         return ${10} + ${'20'} + ${30.1};
       }`.$name('add');
 
       const actual = parseResolved({ addFn });
 
-      const expected = parse('fn add() { return 10 + 20 + 30.1; }');
+      const expected = parse('fn add() -> f32 { return 10 + 20 + 30.1; }');
 
       expect(actual).toEqual(expected);
     });

@@ -51,20 +51,18 @@ Functions can use external resources passed inside a record via the `$uses` meth
 Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
 
 ```ts
-const getBlue = tgpu['~unstable']
-  .fn({}, d.vec4f)(`{ 
+const getBlue = tgpu["~unstable"].fn({}, d.vec4f)`{ 
     return vec4f(0.114, 0.447, 0.941, 1); 
-  }`);
+  }`;
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
-const getGradientColor = tgpu['~unstable']
-  .fn({ ratio: d.f32 }, d.vec4f)(`{
+const getGradientColor = tgpu["~unstable"].fn({ ratio: d.f32 }, d.vec4f)`{
     let color = mix(purple, getBlue(), ratio);
     return color;
-  }`)
+  }`
   .$uses({ purple, getBlue })
-  .$name('getGradientColor');
+  .$name("getGradientColor");
 ```
 
 The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
@@ -90,11 +88,10 @@ Defining entry functions is similar to regular ones, but is done through dedicat
 They can be passed to root-defined pipelines and they accept special arguments like builtins (`d.builtin`) and decorated data (`d.location`).
 
 ```ts
-const mainVertex = tgpu['~unstable']
-  .vertexFn({
-    in: { vertexIndex: d.builtin.vertexIndex },
-    out: { outPos: d.builtin.position, uv: d.vec2f },
-  })(/* wgsl */ `{
+const mainVertex = tgpu["~unstable"].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position, uv: d.vec2f },
+}) /* wgsl */`{
     var pos = array<vec2f, 3>(
       vec2(0.0, 0.5),
       vec2(-0.5, -0.5),
@@ -108,13 +105,15 @@ const mainVertex = tgpu['~unstable']
     );
 
     return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
-  }`);
+  }`;
 
-const mainFragment = tgpu['~unstable']
-  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(/* wgsl */ `{
+const mainFragment = tgpu["~unstable"].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+}) /* wgsl */`{
     return getGradientColor((in.uv[0] + in.uv[1]) / 2);
-  }`)
-  .$uses({ getGradientColor });
+  }`.$uses({ getGradientColor });
+
 ```
 
 When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
