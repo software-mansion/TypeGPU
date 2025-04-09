@@ -1,58 +1,58 @@
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin';
-import type { AnyData, Disarray } from '../../data/dataTypes';
-import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type { AnyData, Disarray } from '../../data/dataTypes.ts';
+import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
   invariant,
-} from '../../errors';
-import type { JitTranspiler } from '../../jitTranspiler';
-import { WeakMemo } from '../../memo';
+} from '../../errors.ts';
+import type { JitTranspiler } from '../../jitTranspiler.ts';
+import { WeakMemo } from '../../memo.ts';
 import {
   type NameRegistry,
   RandomNameRegistry,
   StrictNameRegistry,
-} from '../../nameRegistry';
-import type { Infer } from '../../shared/repr';
-import type { AnyVertexAttribs } from '../../shared/vertexFormat';
+} from '../../nameRegistry.ts';
+import type { Infer } from '../../shared/repr.ts';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   LayoutEntryToInput,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
-} from '../../tgpuBindGroupLayout';
+} from '../../tgpuBindGroupLayout.ts';
 import {
   TgpuBindGroupImpl,
   isBindGroup,
   isBindGroupLayout,
-} from '../../tgpuBindGroupLayout';
+} from '../../tgpuBindGroupLayout.ts';
 import {
   INTERNAL_createBuffer,
   type TgpuBuffer,
   type VertexFlag,
   isBuffer,
-} from '../buffer/buffer';
+} from '../buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
   TgpuFixedBufferUsage,
-} from '../buffer/bufferUsage';
-import type { IOLayout } from '../function/fnTypes';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn';
-import type { TgpuFn } from '../function/tgpuFn';
+} from '../buffer/bufferUsage.ts';
+import type { IOLayout } from '../function/fnTypes.ts';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentOutConstrained,
   TgpuFragmentFn,
-} from '../function/tgpuFragmentFn';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn';
+} from '../function/tgpuFragmentFn.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   type INTERNAL_TgpuComputePipeline,
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
   isComputePipeline,
-} from '../pipeline/computePipeline';
+} from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   type INTERNAL_TgpuRenderPipeline,
@@ -60,19 +60,19 @@ import {
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
   isRenderPipeline,
-} from '../pipeline/renderPipeline';
+} from '../pipeline/renderPipeline.ts';
 import {
   type INTERNAL_TgpuFixedSampler,
   type TgpuComparisonSampler,
   type TgpuSampler,
   isComparisonSampler,
   isSampler,
-} from '../sampler/sampler';
+} from '../sampler/sampler.ts';
 import {
   type TgpuAccessor,
   type TgpuSlot,
   isAccessor,
-} from '../slot/slotTypes';
+} from '../slot/slotTypes.ts';
 import {
   type INTERNAL_TgpuFixedSampledTexture,
   type INTERNAL_TgpuFixedStorageTexture,
@@ -86,12 +86,12 @@ import {
   isSampledTextureView,
   isStorageTextureView,
   isTexture,
-} from '../texture/texture';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+} from '../texture/texture.ts';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
   type TgpuVertexLayout,
   isVertexLayout,
-} from '../vertexLayout/vertexLayout';
+} from '../vertexLayout/vertexLayout.ts';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
@@ -102,7 +102,7 @@ import type {
   WithCompute,
   WithFragment,
   WithVertex,
-} from './rootTypes';
+} from './rootTypes.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(

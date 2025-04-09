@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f } from '../../../src/data';
-import { asin, isCloseTo } from '../../../src/std';
+import { vec3f } from '../../../src/data/index.ts';
+import { asin, isCloseTo } from '../../../src/std/index.ts';
 
 describe('asin', () => {
   it('computes asin of numeric value', () => {

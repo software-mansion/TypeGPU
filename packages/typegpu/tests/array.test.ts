@@ -1,12 +1,12 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { readData, writeData } from '../src/data/dataIO';
-import { StrictNameRegistry } from '../src/nameRegistry';
-import { resolve } from '../src/resolutionCtx';
-import type { Infer } from '../src/shared/repr';
-import { parse, parseResolved } from './utils/parseResolved';
+import { readData, writeData } from '../src/data/dataIO.ts';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { StrictNameRegistry } from '../src/nameRegistry.ts';
+import { resolve } from '../src/resolutionCtx.ts';
+import type { Infer } from '../src/shared/repr.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('array', () => {
   it('takes element alignment into account when measuring', () => {

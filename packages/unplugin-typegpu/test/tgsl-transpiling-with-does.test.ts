@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { babelTransform, rollupTransform } from './transform';
+import { babelTransform, rollupTransform } from './transform.ts';
 
 // TODO: remove along with the deprecated 'does' method.
 

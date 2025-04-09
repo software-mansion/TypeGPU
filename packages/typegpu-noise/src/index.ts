@@ -8,7 +8,7 @@ import {
   randSeed2,
   randSeed3,
   randSeed4,
-} from './random.js';
+} from './random.ts';
 
 export const randf: {
   sample: typeof randFloat01;
@@ -41,4 +41,4 @@ export {
   // ---
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
-} from './generator.js';
+} from './generator.ts';

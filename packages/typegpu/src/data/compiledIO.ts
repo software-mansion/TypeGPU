@@ -1,10 +1,10 @@
-import { roundUp } from '../mathUtils';
-import type { Infer } from '../shared/repr';
-import { alignmentOf } from './alignmentOf';
-import { isDisarray, isUnstruct } from './dataTypes';
-import { offsetsForProps } from './offsets';
-import { sizeOf } from './sizeOf';
-import * as wgsl from './wgslTypes';
+import { roundUp } from '../mathUtils.ts';
+import type { Infer } from '../shared/repr.ts';
+import { alignmentOf } from './alignmentOf.ts';
+import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { offsetsForProps } from './offsets.ts';
+import { sizeOf } from './sizeOf.ts';
+import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {

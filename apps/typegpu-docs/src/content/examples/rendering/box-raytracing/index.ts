@@ -136,7 +136,7 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if (tMinY > tMin) {
@@ -156,7 +156,7 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if tMinZ > tMin {

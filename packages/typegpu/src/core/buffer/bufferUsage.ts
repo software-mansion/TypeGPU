@@ -1,18 +1,18 @@
-import type { AnyData } from '../../data/dataTypes';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
-import { type StorageFlag, isUsableAsStorage } from '../../extension';
-import { inGPUMode } from '../../gpuMode';
-import type { TgpuNamable } from '../../namable';
-import { $repr, type Infer, type InferGPU } from '../../shared/repr.js';
-import { $internal } from '../../shared/symbols';
-import type { LayoutMembership } from '../../tgpuBindGroupLayout';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
+import { type StorageFlag, isUsableAsStorage } from '../../extension.ts';
+import { inGPUMode } from '../../gpuMode.ts';
+import type { TgpuNamable } from '../../namable.ts';
+import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
   ResolutionCtx,
   SelfResolvable,
-} from '../../types';
-import { valueProxyHandler } from '../valueProxyUtils';
-import type { TgpuBuffer, UniformFlag } from './buffer';
+} from '../../types.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
+import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 
 // ----------
 // Public API

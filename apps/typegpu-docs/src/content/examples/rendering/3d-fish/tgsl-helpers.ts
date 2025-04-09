@@ -24,9 +24,9 @@ const ApplySinWaveReturnSchema = d.struct({
 });
 
 export const applySinWave = tgpu['~unstable'].fn(
-  [d.u32, d.u32, d.vec3f, d.vec3f],
+  { index: d.u32, time: d.u32, position: d.vec3f, normal: d.vec3f },
   ApplySinWaveReturnSchema,
-)((index, time, position, normal) => {
+)(({ index, time, position, normal }) => {
   const a = 60.1;
   const b = 0.8;
   const c = 10.1;

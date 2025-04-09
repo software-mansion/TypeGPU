@@ -1,3 +1,3 @@
-import { esbuildPlugin } from './index';
+import { esbuildPlugin } from './index.ts';
 
 export default esbuildPlugin;

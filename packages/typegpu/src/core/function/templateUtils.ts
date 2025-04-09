@@ -1,4 +1,4 @@
-import type { Implementation } from './fnTypes';
+import type { Implementation } from './fnTypes.ts';
 
 export function stripTemplate(
   arg: Implementation | TemplateStringsArray,

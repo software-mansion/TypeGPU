@@ -1,17 +1,17 @@
-import type { OmitBuiltins } from '../../builtin';
-import type { AnyWgslStruct } from '../../data/wgslTypes';
-import { type TgpuNamable, isNamable } from '../../namable';
-import type { GenerationCtx } from '../../smol/wgslGenerator';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
-import { addReturnTypeToExternals } from '../resolve/externals';
-import { createFnCore } from './fnCore';
-import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
+import type { OmitBuiltins } from '../../builtin.ts';
+import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
+import { type TgpuNamable, isNamable } from '../../namable.ts';
+import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { addReturnTypeToExternals } from '../resolve/externals.ts';
+import { createFnCore } from './fnCore.ts';
+import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes.ts';
 import {
   type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
-} from './ioOutputType';
-import { stripTemplate } from './templateUtils';
+} from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -27,6 +27,7 @@ type TgpuVertexFnShellHeader<
   readonly argTypes: [AnyWgslStruct];
   readonly returnType: VertexOut;
   readonly attributes: [VertexIn];
+  readonly isEntry: true;
 };
 
 /**
@@ -109,6 +110,7 @@ export function vertexFn<
     attributes: [options.in ?? ({} as VertexIn)],
     returnType: createOutputType(options.out) as unknown as VertexOut,
     argTypes: [createStructFromIO(options.in ?? {})],
+    isEntry: true,
   };
 
   const call = (

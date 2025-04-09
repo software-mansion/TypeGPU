@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { parse, parseResolved } from './utils/parseResolved';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
@@ -433,6 +433,32 @@ struct fragment_Output {
       fn main() {
         let c = get_color();
         return c;
+      }
+    `),
+    );
+  });
+});
+
+describe('tgpu.computeFn with raw string WGSL implementation', () => {
+  it('does not replace supposed input arg types in code', () => {
+    const foo = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: {
+        gid: d.builtin.globalInvocationId,
+      },
+    })(`{
+      var result: array<f32, 4>;
+    }`);
+
+    expect(parseResolved({ foo })).toEqual(
+      parse(`
+      struct foo_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1)
+      fn foo(in: foo_Input) {
+        var result: array<f32, 4>;
       }
     `),
     );

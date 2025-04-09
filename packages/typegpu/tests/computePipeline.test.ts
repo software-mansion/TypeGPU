@@ -1,11 +1,11 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
   type TgpuComputeFnShell,
   type TgpuComputePipeline,
-} from '../src';
-import * as d from '../src/data';
-import { it } from './utils/extendedIt';
+} from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {

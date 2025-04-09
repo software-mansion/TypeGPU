@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data';
-import { and } from '../../../src/std/boolean';
+import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
+import { and } from '../../../src/std/boolean.ts';
 
 describe('and', () => {
   it('and vectors', () => {

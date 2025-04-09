@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
   Infer,
   InferGPU,
@@ -8,9 +8,9 @@ import type {
   InferRecord,
   MemIdentity,
   MemIdentityRecord,
-} from '../shared/repr.js';
-import { $repr } from '../shared/repr.js';
-import type { Prettify } from '../shared/utilityTypes.js';
+} from '../shared/repr.ts';
+import { $repr } from '../shared/repr.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 

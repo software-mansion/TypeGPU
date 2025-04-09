@@ -1,5 +1,5 @@
-import type { AnyData } from './dataTypes';
-import type { Ptr } from './wgslTypes';
+import type { AnyData } from './dataTypes.ts';
+import type { Ptr } from './wgslTypes.ts';
 
 export function ptrFn<T extends AnyData>(
   inner: T,

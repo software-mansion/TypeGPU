@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { logicalExpressionTests } from './logical-expressions';
+import { logicalExpressionTests } from './logical-expressions.ts';
 
 const root = await tgpu.init();
 const result = root['~unstable'].createMutable(d.i32, 0);
