@@ -10,6 +10,7 @@ import {
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
+  isTgpu,
   kernelDirectives,
   shouldSkipFile,
 } from './common';
@@ -74,9 +75,23 @@ function functionToTranspiled(
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
+  const declarationStack: string[] = [];
   return {
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
+    },
+
+    VariableDeclarator: {
+      enter(path) {
+        if (path.node.id.type === 'Identifier') {
+          declarationStack.push(path.node.id.name);
+        }
+      },
+      exit(path) {
+        if (path.node.id.type === 'Identifier') {
+          declarationStack.pop();
+        }
+      },
     },
 
     ArrowFunctionExpression(path) {
@@ -177,6 +192,32 @@ function functionVisitor(ctx: Context): TraverseOptions {
           path.skip();
         }
       }
+
+      if (ctx.autoNamingEnabled) {
+        const callee = node.callee;
+        if (
+          callee.type === 'MemberExpression' &&
+          ((callee.object.type === 'Identifier' &&
+            isTgpu(ctx, callee.object)) ||
+            (callee.object.type === 'MemberExpression' &&
+              callee.object.object.type === 'Identifier' &&
+              isTgpu(ctx, callee.object.object)))
+        ) {
+          const name = declarationStack[declarationStack.length - 1];
+          if (name) {
+            path.replaceWith(
+              types.callExpression(
+                template.expression(
+                  `${ctx.tgpuAliases.values().next().value}.__autoName`,
+                )(),
+                [node, template.expression(`"${name}"`)()],
+              ),
+            );
+
+            path.skip();
+          }
+        }
+      }
     },
   };
 }
@@ -201,6 +242,7 @@ export default function () {
             options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
           ),
           fileId: id,
+          autoNamingEnabled: options?.autoNamingEnabled ?? true,
         };
 
         path.traverse(functionVisitor(ctx));
