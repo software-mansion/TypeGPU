@@ -4,10 +4,9 @@ export function stripTemplate(
   arg: Implementation | TemplateStringsArray,
   ...values: unknown[]
 ): Implementation {
-  if (isTemplateStringsArray(arg)) {
-    return templateLiteralIdentity(arg, ...values);
-  }
-  return arg;
+  return isTemplateStringsArray(arg)
+    ? templateLiteralIdentity(arg, ...values)
+    : arg;
 }
 
 function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
@@ -15,7 +14,7 @@ function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
     Array.isArray(value) &&
     'raw' in value &&
     Array.isArray(value.raw) &&
-    value.raw.every((item: unknown) => typeof item === 'string')
+    value.raw.every((item) => typeof item === 'string')
   );
 }
 

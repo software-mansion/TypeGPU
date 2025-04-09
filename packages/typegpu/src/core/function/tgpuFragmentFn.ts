@@ -77,7 +77,7 @@ export type TgpuFragmentFnShell<
     implementation: string,
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
   ((
-    implementation: TemplateStringsArray,
+    strings: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
     /**

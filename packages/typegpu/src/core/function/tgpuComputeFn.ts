@@ -43,7 +43,7 @@ export type TgpuComputeFnShell<
    */
   ((implementation: string) => TgpuComputeFn<ComputeIn>) &
   ((
-    implementation: TemplateStringsArray,
+    strings: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuComputeFn<ComputeIn>) & {
     /**
