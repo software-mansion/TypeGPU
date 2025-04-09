@@ -179,7 +179,7 @@ export function createFnCore(
                 value:
                   (ast.argNames.type === 'identifiers'
                     ? ast.argNames.names[i]
-                    : undefined) ?? `param_${i}`,
+                    : undefined) ?? `arg_${i}`,
                 dataType: arg as AnyWgslData,
               }))
             : []
