@@ -19,16 +19,27 @@ These functions can reference outside resources, like other user-defined or help
 ## Creating a function
 
 Functions are constructed by first defining their shells, which specify their inputs and outputs.
-Then the actual WGSL implementation is passed in as an argument to a shell invocation.
+Then the actual WGSL implementation is passed in as an argument to a shell invocation. If the code string is a template literal, you can omit the parentheses, which may result in a more compact Biome/Prettier formatting.
 
 The following code defines a function that accepts one argument and returns one value.
 
 ```ts
 const getGradientColor = tgpu['~unstable']
-  .fn({ ratio: d.f32 }, d.vec4f)(`{
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), d.vec4f(0.114, 0.447, 0.941, 1), ratio);
+  .fn(
+    { ratio: d.f32 },
+    d.vec4f,
+  )(`{
+    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
     return color;
   }`)
+  .$name('getGradientColor');
+
+// or
+
+const getGradientColor = tgpu['~unstable'].fn({ ratio: d.f32 }, d.vec4f)`{
+    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+    return color;
+  }`
   .$name('getGradientColor');
 ```
 

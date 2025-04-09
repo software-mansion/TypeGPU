@@ -46,14 +46,12 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`);
 
-const mainFragment = tgpu['~unstable']
-  .fragmentFn({
-    in: { uv: d.vec2f },
-    out: d.vec4f,
-  })(/* wgsl */ `{
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+}) /* wgsl */`{
     return getGradientColor((in.uv[0] + in.uv[1]) / 2);
-  }`)
-  .$uses({ getGradientColor });
+  }`.$uses({ getGradientColor });
 
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})

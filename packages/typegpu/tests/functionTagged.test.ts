@@ -29,8 +29,8 @@ describe('tgpu.fn tagged syntax', () => {
       expect(actual).toEqual(expected);
     });
 
-    it('parses template literal with arguments of different types, new syntax', () => {
-      const addFn = tgpu['~unstable'].fn({})`{
+    it('parses template literal with arguments of different types, object args', () => {
+      const addFn = tgpu['~unstable'].fn({}, d.i32)`{
         return ${10} + ${'20'} + ${30.1};
       }`.$name('add');
 
