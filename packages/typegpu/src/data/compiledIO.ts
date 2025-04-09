@@ -106,11 +106,10 @@ export function buildWriter(
     const primitive = typeToPrimitive[node.type];
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
-    const components = ['x', 'y', 'z', 'w'];
     const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
     for (let i = 0; i < count; i++) {
-      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, littleEndian);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}[${i}], littleEndian);\n`;
     }
     return code;
   }
@@ -129,7 +128,7 @@ export function buildWriter(
       const rowIndex = i % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}, littleEndian);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}][${rowIndex}], littleEndian);\n`;
     }
 
     return code;
