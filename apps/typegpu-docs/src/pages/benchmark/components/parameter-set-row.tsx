@@ -1,6 +1,6 @@
 import { type PrimitiveAtom, useAtom, useSetAtom } from 'jotai';
 import { useCallback } from 'react';
-import { DeleteIcon } from '../../../components/design/DeleteIcon.ts';
+import { DeleteIcon } from '../../../components/design/DeleteIcon.tsx';
 import {
   type BenchParameterSet,
   deleteParameterSetAtom,
