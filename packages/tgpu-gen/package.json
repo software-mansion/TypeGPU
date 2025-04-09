@@ -1,6 +1,6 @@
 {
   "name": "tgpu-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A CLI tool for automatic TypeGPU code generation.",
   "license": "MIT",
   "bin": {
