@@ -1,4 +1,4 @@
-export { discard } from './discard.js';
+export { discard } from './discard.ts';
 export {
   // ops
   add,
@@ -26,7 +26,7 @@ export {
   mix,
   pow,
   reflect,
-} from './numeric.js';
+} from './numeric.ts';
 
 export {
   // comparison
@@ -47,7 +47,7 @@ export {
   // other
   isCloseTo,
   select,
-} from './boolean.js';
+} from './boolean.ts';
 
 export {
   atomicLoad,
@@ -63,6 +63,6 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
-} from './atomic.js';
+} from './atomic.ts';
 
-export { arrayLength } from './array.js';
+export { arrayLength } from './array.ts';

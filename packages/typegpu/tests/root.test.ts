@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { it } from './utils/extendedIt';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
   describe('.createBuffer', () => {

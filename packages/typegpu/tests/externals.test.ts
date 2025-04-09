@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   type ExternalMap,
   addArgTypesToExternals,
-} from '../src/core/resolve/externals';
-import * as d from '../src/data';
+} from '../src/core/resolve/externals.ts';
+import * as d from '../src/data/index.ts';
 
 describe('addArgTypesToExternals', () => {
   const Particle = d.struct({

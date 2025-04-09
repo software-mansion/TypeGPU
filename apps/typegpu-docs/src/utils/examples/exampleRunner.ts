@@ -1,5 +1,5 @@
-import type { ExampleControlParam } from './exampleControlAtom';
-import type { ExampleState } from './exampleState';
+import type { ExampleControlParam } from './exampleControlAtom.ts';
+import type { ExampleState } from './exampleState.ts';
 
 type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 

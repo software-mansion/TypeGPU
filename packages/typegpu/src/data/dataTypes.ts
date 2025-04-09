@@ -1,16 +1,16 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
   $repr,
   Infer,
   InferPartial,
   InferPartialRecord,
   InferRecord,
-} from '../shared/repr.js';
-import { $internal } from '../shared/symbols.js';
-import type { Prettify } from '../shared/utilityTypes.js';
-import { vertexFormats } from '../shared/vertexFormat.js';
-import type { PackedData } from './vertexFormatData.js';
-import * as wgsl from './wgslTypes.js';
+} from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
+import { vertexFormats } from '../shared/vertexFormat.ts';
+import type { PackedData } from './vertexFormatData.ts';
+import * as wgsl from './wgslTypes.ts';
 
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {

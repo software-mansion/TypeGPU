@@ -1,5 +1,5 @@
-import { f32 } from '../data/numeric';
-import { VectorOps } from '../data/vectorOps';
+import { f32 } from '../data/numeric.ts';
+import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyFloatVecInstance,
   AnyMatInstance,
@@ -8,9 +8,9 @@ import type {
   v3f,
   v3h,
   vBaseForMat,
-} from '../data/wgslTypes';
-import { createDualImpl } from '../shared/generators';
-import type { Resource } from '../types';
+} from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
+import type { Resource } from '../types.ts';
 
 export function isNumeric(element: Resource) {
   const type = element.dataType.type;

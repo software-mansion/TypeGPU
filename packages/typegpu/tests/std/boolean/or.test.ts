@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data';
-import { or } from '../../../src/std/boolean';
+import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
+import { or } from '../../../src/std/boolean.ts';
 
 describe('or', () => {
   it('ors vectors', () => {

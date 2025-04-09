@@ -1,4 +1,4 @@
-import type { ExampleControlParam } from './exampleControlAtom';
+import type { ExampleControlParam } from './exampleControlAtom.ts';
 
 export type ExampleState = {
   dispose: () => void;

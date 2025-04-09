@@ -1,3 +1,3 @@
-import { rspackPlugin } from './index';
+import { rspackPlugin } from './index.ts';
 
 export default rspackPlugin;

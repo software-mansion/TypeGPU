@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import { builtin } from '../src/builtin';
-import { f32, location, struct, u32, vec2f, vec3f, vec4f } from '../src/data';
-import { parse, parseResolved } from './utils/parseResolved';
+import { builtin } from '../src/builtin.ts';
+import {
+  f32,
+  location,
+  struct,
+  u32,
+  vec2f,
+  vec3f,
+  vec4f,
+} from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {

@@ -7,7 +7,7 @@ import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
 import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json';
-import type { Example } from '../../utils/examples/types';
+import type { Example } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({

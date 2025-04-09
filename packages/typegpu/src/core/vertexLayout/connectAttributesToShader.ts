@@ -1,15 +1,15 @@
-import { isBuiltin } from '../../data/attributes';
-import { getCustomLocation } from '../../data/dataTypes';
-import { isData } from '../../data/dataTypes';
+import { isBuiltin } from '../../data/attributes.ts';
+import { getCustomLocation } from '../../data/dataTypes.ts';
+import { isData } from '../../data/dataTypes.ts';
 import type {
   AnyVertexAttribs,
   TgpuVertexAttrib,
-} from '../../shared/vertexFormat';
-import type { IOData, IOLayout } from '../function/fnTypes';
+} from '../../shared/vertexFormat.ts';
+import type { IOData, IOLayout } from '../function/fnTypes.ts';
 import type {
   INTERNAL_TgpuVertexAttrib,
   TgpuVertexLayout,
-} from './vertexLayout';
+} from './vertexLayout.ts';
 
 export interface ConnectAttributesToShaderResult {
   usedVertexLayouts: TgpuVertexLayout[];

@@ -6,7 +6,7 @@ import {
   type TestIdentifier,
   identifierOf,
   selectedTestsAtom,
-} from '../suites.js';
+} from '../suites.ts';
 
 type CheckboxState = 'checked' | 'unchecked' | 'indeterminate';
 

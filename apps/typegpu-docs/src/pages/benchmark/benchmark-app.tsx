@@ -6,22 +6,22 @@ import type { Bench } from 'tinybench';
 import {
   BenchmarkFallback,
   BenchmarkResults,
-} from './components/benchmark-results.js';
-import { SuiteCheckbox } from './components/checkbox-tree.js';
-import { ParameterSetRow } from './components/parameter-set-row.js';
-import { importTypeGPU, importTypeGPUData } from './modules.js';
+} from './components/benchmark-results.tsx';
+import { SuiteCheckbox } from './components/checkbox-tree.tsx';
+import { ParameterSetRow } from './components/parameter-set-row.tsx';
+import { importTypeGPU, importTypeGPUData } from './modules.ts';
 import {
   type BenchParameterSet,
   createParameterSetAtom,
   parameterSetAtomsAtom,
   parameterSetsAtom,
-} from './parameter-set.js';
+} from './parameter-set.ts';
 import {
   type Suite,
   getFilteredSuites,
   selectedTestsAtom,
   unfilteredSuites,
-} from './suites.js';
+} from './suites.ts';
 
 export interface InstanceResults {
   parameterSet: BenchParameterSet;

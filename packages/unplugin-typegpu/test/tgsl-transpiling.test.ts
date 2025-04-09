@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { babelTransform, rollupTransform } from './transform';
+import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
   it('wraps argument passed to function shell with tgpu.__assignAst call', () => {

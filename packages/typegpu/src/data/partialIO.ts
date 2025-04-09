@@ -1,13 +1,13 @@
 import { BufferWriter } from 'typed-binary';
-import { roundUp } from '../mathUtils';
-import type { Infer, InferPartial } from '../shared/repr';
-import { alignmentOf } from './alignmentOf';
-import { writeData } from './dataIO';
-import { isDisarray, isUnstruct } from './dataTypes';
-import { offsetsForProps } from './offsets';
-import { sizeOf } from './sizeOf';
-import type * as wgsl from './wgslTypes';
-import { isWgslArray, isWgslStruct } from './wgslTypes';
+import { roundUp } from '../mathUtils.ts';
+import type { Infer, InferPartial } from '../shared/repr.ts';
+import { alignmentOf } from './alignmentOf.ts';
+import { writeData } from './dataIO.ts';
+import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { offsetsForProps } from './offsets.ts';
+import { sizeOf } from './sizeOf.ts';
+import type * as wgsl from './wgslTypes.ts';
+import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 export interface WriteInstruction {
   data: Uint8Array;

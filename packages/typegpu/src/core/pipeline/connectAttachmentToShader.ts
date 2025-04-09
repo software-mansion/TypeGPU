@@ -1,9 +1,9 @@
-import { isData } from '../../data/dataTypes';
-import type { FragmentOutConstrained } from '../function/tgpuFragmentFn';
+import { isData } from '../../data/dataTypes.ts';
+import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
 import type {
   AnyFragmentColorAttachment,
   ColorAttachment,
-} from './renderPipeline';
+} from './renderPipeline.ts';
 
 function isColorAttachment(
   value: unknown | ColorAttachment,

@@ -1,16 +1,16 @@
 import type { ISerialInput, ISerialOutput } from 'typed-binary';
-import type { Infer, InferRecord } from '../shared/repr';
-import alignIO from './alignIO';
-import { alignmentOf, customAlignmentOf } from './alignmentOf';
+import type { Infer, InferRecord } from '../shared/repr.ts';
+import alignIO from './alignIO.ts';
+import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import type {
   AnyConcreteData,
   AnyData,
   Disarray,
   LooseDecorated,
   Unstruct,
-} from './dataTypes';
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
-import { sizeOf } from './sizeOf';
+} from './dataTypes.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { sizeOf } from './sizeOf.ts';
 import {
   vec2f,
   vec2h,
@@ -24,8 +24,8 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from './vector';
-import type * as wgsl from './wgslTypes';
+} from './vector.ts';
+import type * as wgsl from './wgslTypes.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,

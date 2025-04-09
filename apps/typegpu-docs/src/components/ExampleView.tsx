@@ -4,17 +4,17 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
-} from '../utils/examples/codeEditorShownAtom';
-import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom';
-import { ExecutionCancelledError } from '../utils/examples/errors';
-import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
-import { executeExample } from '../utils/examples/exampleRunner';
-import type { ExampleState } from '../utils/examples/exampleState';
-import type { Example } from '../utils/examples/types';
-import { isGPUSupported } from '../utils/isGPUSupported';
-import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor';
-import { ControlPanel } from './ControlPanel';
-import { Snackbar } from './design/Snackbar';
+} from '../utils/examples/codeEditorShownAtom.ts';
+import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
+import { ExecutionCancelledError } from '../utils/examples/errors.ts';
+import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
+import { executeExample } from '../utils/examples/exampleRunner.ts';
+import type { ExampleState } from '../utils/examples/exampleState.ts';
+import type { Example } from '../utils/examples/types.ts';
+import { isGPUSupported } from '../utils/isGPUSupported.ts';
+import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
+import { ControlPanel } from './ControlPanel.tsx';
+import { Snackbar } from './design/Snackbar.tsx';
 
 type Props = {
   example: Example;
