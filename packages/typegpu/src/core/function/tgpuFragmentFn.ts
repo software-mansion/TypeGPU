@@ -144,7 +144,7 @@ export function fragmentFn<
         ? [createStructFromIO(options.in)]
         : [],
     targets: options.out,
-    returnType: (options.out && Object.keys(options.out).length !== 0
+    returnType: (Object.keys(options.out).length !== 0
       ? createOutputType(options.out)
       : undefined) as FragmentOut,
     isEntry: true,

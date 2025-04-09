@@ -103,7 +103,7 @@ export function vertexFn<
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType: (options.out && Object.keys(options.out).length !== 0
+    returnType: (Object.keys(options.out).length !== 0
       ? createOutputType(options.out)
       : undefined) as unknown as VertexOut,
     argTypes:
