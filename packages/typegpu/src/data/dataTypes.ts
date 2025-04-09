@@ -54,7 +54,7 @@ export interface Unstruct<
   readonly propTypes: TProps;
   readonly [$repr]: Prettify<InferRecord<TProps>>;
   readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
-  readonly '~memIdent': Unstruct<Prettify<MemIdentityRecord<TProps>>>;
+  readonly '~memIdent': Unstruct<MemIdentityRecord<TProps>>;
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
 
