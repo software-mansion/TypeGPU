@@ -2,10 +2,10 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute';
-import { loadModel } from './load-model';
-import * as p from './params';
-import { fragmentShader, vertexShader } from './render';
+import { computeShader } from './compute.ts';
+import { loadModel } from './load-model.ts';
+import * as p from './params.ts';
+import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   type ModelData,
@@ -15,7 +15,7 @@ import {
   modelVertexLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
-} from './schemas';
+} from './schemas.ts';
 
 // setup
 

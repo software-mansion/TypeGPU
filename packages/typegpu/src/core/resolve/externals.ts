@@ -1,7 +1,7 @@
-import { isLooseData } from '../../data/dataTypes';
-import { isWgslStruct } from '../../data/wgslTypes';
-import { isNamable } from '../../namable';
-import { type ResolutionCtx, isWgsl } from '../../types';
+import { isLooseData } from '../../data/dataTypes.ts';
+import { isWgslStruct } from '../../data/wgslTypes.ts';
+import { isNamable } from '../../namable.ts';
+import { type ResolutionCtx, isWgsl } from '../../types.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,

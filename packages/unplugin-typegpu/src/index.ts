@@ -3,7 +3,7 @@ import { type Node, walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { type UnpluginFactory, createUnplugin } from 'unplugin';
-import babel from './babel';
+import babel from './babel.ts';
 import {
   type Context,
   type KernelDirective,
@@ -13,7 +13,7 @@ import {
   isShellImplementationCall,
   kernelDirectives,
   shouldSkipFile,
-} from './common';
+} from './common.ts';
 
 type FunctionNode =
   | acorn.FunctionDeclaration
@@ -187,7 +187,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
 const unplugin = createUnplugin(typegpu);
 
-export type { TypegpuPluginOptions } from './common';
+export type { TypegpuPluginOptions } from './common.ts';
 
 export default unplugin;
 

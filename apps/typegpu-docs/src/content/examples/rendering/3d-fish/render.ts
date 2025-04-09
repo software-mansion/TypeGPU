@@ -2,13 +2,13 @@ import { hsvToRgb, rgbToHsv } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as p from './params';
+import * as p from './params.ts';
 import {
   ModelVertexInput,
   ModelVertexOutput,
   renderBindGroupLayout as layout,
-} from './schemas';
-import { applySinWave } from './tgsl-helpers';
+} from './schemas.ts';
+import { applySinWave } from './tgsl-helpers.ts';
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({

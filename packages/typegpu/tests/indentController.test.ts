@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IndentController } from '../src/resolutionCtx';
+import { IndentController } from '../src/resolutionCtx.ts';
 
 const INDENT_SPACES_COUNT = 2;
 

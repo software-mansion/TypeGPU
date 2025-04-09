@@ -1,21 +1,21 @@
-import { getAttributesString } from '../../data/attributes';
+import { getAttributesString } from '../../data/attributes.ts';
 import {
   type AnyWgslData,
   isWgslData,
   isWgslStruct,
-} from '../../data/wgslTypes';
-import { MissingLinksError } from '../../errors';
-import { resolveFunctionHeader } from '../../resolutionCtx';
-import type { ResolutionCtx, Resource } from '../../types';
+} from '../../data/wgslTypes.ts';
+import { MissingLinksError } from '../../errors.ts';
+import { resolveFunctionHeader } from '../../resolutionCtx.ts';
+import type { ResolutionCtx, Resource } from '../../types.ts';
 import {
   type ExternalMap,
   addArgTypesToExternals,
   addReturnTypeToExternals,
   applyExternals,
   replaceExternalsInWgsl,
-} from '../resolve/externals';
-import { getPrebuiltAstFor } from './astUtils';
-import type { Implementation } from './fnTypes';
+} from '../resolve/externals.ts';
+import { getPrebuiltAstFor } from './astUtils.ts';
+import type { Implementation } from './fnTypes.ts';
 
 export interface TgpuFnShellBase<
   Args extends unknown[] | Record<string, unknown>,

@@ -12,7 +12,7 @@ import {
   isShellImplementationCall,
   kernelDirectives,
   shouldSkipFile,
-} from './common';
+} from './common.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.

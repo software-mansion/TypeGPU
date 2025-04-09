@@ -1,5 +1,6 @@
-import { bool, f32, vec2b, vec3b, vec4b } from '../data';
-import { VectorOps } from '../data/vectorOps';
+import { bool, f32 } from '../data/numeric.ts';
+import { vec2b, vec3b, vec4b } from '../data/vector.ts';
+import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyBooleanVecInstance,
   AnyFloatVecInstance,
@@ -11,10 +12,10 @@ import type {
   v2b,
   v3b,
   v4b,
-} from '../data/wgslTypes';
-import { createDualImpl } from '../shared/generators';
-import type { Resource } from '../types';
-import { isNumeric, sub } from './numeric';
+} from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
+import type { Resource } from '../types.ts';
+import { isNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Resource) {
   if (value.dataType.type.includes('2')) {

@@ -1,7 +1,7 @@
 import { Bench } from 'tinybench';
 import type { v2u, v3f, v4i } from 'typegpu/data';
-import { stringifyLocator } from '../parameter-set';
-import { createSuite } from '../suites';
+import { stringifyLocator } from '../parameter-set.ts';
+import { createSuite } from '../suites.ts';
 
 export const vectorCreationSuite = createSuite(
   ({ params, d }) => {

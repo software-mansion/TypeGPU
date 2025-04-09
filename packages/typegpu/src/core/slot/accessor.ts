@@ -1,17 +1,17 @@
-import type { AnyWgslData } from '../../data';
-import { getResolutionCtx } from '../../gpuMode';
-import type { $repr, Infer } from '../../shared/repr.js';
-import { $internal } from '../../shared/symbols';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import { getResolutionCtx } from '../../gpuMode.ts';
+import type { $repr, Infer } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import {
   type ResolutionCtx,
   type SelfResolvable,
   isBufferUsage,
-} from '../../types';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage';
-import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
-import { valueProxyHandler } from '../valueProxyUtils';
-import { slot } from './slot';
-import type { TgpuAccessor, TgpuSlot } from './slotTypes';
+} from '../../types.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
+import { type TgpuFn, isTgpuFn } from '../function/tgpuFn.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { slot } from './slot.ts';
+import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
 // Public API

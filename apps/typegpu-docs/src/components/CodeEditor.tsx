@@ -6,8 +6,8 @@ import Editor, {
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
-import { SANDBOX_MODULES } from '../utils/examples/sandboxModules';
-import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
+import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
+import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
 
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;

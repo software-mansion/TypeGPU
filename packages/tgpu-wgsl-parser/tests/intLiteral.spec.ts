@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { IntLiteral } from '../src/grammar';
-import { parse } from '../src/index';
+import type { IntLiteral } from '../src/grammar.ts';
+import { parse } from '../src/index.ts';
 
 describe('int_literal', () => {
   it('parses decimal unsigned ints', () => {

@@ -4,8 +4,8 @@ import type {
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr.js';
-import { alignmentOf } from './alignmentOf';
+} from '../shared/repr.ts';
+import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
   type AnyLooseData,
@@ -13,8 +13,8 @@ import {
   type LooseTypeLiteral,
   isLooseData,
   isLooseDecorated,
-} from './dataTypes';
-import { sizeOf } from './sizeOf';
+} from './dataTypes.ts';
+import { sizeOf } from './sizeOf.ts';
 import {
   type Align,
   type AnyWgslData,
@@ -35,7 +35,7 @@ import {
   isDecorated,
   isSizeAttrib,
   isWgslData,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 // ----------
 // Public API

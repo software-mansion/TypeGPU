@@ -2,25 +2,30 @@ import type {
   AnyFragmentInputBuiltin,
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
-} from '../../builtin';
-import type { AnyAttribute } from '../../data/attributes';
+} from '../../builtin.ts';
+import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
   AnyWgslStruct,
   Decorated,
   Location,
   Vec4f,
-} from '../../data/wgslTypes';
-import { type TgpuNamable, isNamable } from '../../namable';
-import type { GenerationCtx } from '../../smol/wgslGenerator';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
-import { addReturnTypeToExternals } from '../resolve/externals';
-import { createFnCore } from './fnCore';
-import type { BaseIOData, IORecord, Implementation, InferIO } from './fnTypes';
+} from '../../data/wgslTypes.ts';
+import { type TgpuNamable, isNamable } from '../../namable.ts';
+import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { addReturnTypeToExternals } from '../resolve/externals.ts';
+import { createFnCore } from './fnCore.ts';
+import type {
+  BaseIOData,
+  IORecord,
+  Implementation,
+  InferIO,
+} from './fnTypes.ts';
 import {
   type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
-} from './ioOutputType';
+} from './ioOutputType.ts';
 
 // ----------
 // Public API

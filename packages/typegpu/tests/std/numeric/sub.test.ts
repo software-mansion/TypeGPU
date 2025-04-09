@@ -9,8 +9,8 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../../src/data';
-import { sub } from '../../../src/std';
+} from '../../../src/data/index.ts';
+import { sub } from '../../../src/std/index.ts';
 
 describe('sub', () => {
   it('computes difference of two vec2f', () => {

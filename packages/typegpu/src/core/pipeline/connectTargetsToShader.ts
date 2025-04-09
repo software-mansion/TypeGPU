@@ -1,6 +1,6 @@
-import { isData } from '../../data/dataTypes';
-import type { FragmentOutConstrained } from '../function/tgpuFragmentFn';
-import type { AnyFragmentTargets } from './renderPipeline';
+import { isData } from '../../data/dataTypes.ts';
+import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
+import type { AnyFragmentTargets } from './renderPipeline.ts';
 
 function isColorTargetState(
   value: unknown | GPUColorTargetState,

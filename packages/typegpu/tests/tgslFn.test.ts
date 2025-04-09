@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import { builtin } from '../src/builtin';
-import * as d from '../src/data';
-import { parse, parseResolved } from './utils/parseResolved';
+import { builtin } from '../src/builtin.ts';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {

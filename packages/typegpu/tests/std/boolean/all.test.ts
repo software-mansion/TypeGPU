@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data';
-import { all } from '../../../src/std/boolean';
+import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
+import { all } from '../../../src/std/boolean.ts';
 
 describe('all', () => {
   it('calculates for 2 element vectors', () => {
