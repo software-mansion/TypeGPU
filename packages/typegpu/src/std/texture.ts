@@ -1,14 +1,8 @@
-import type { TgpuSampler } from '../core/sampler/sampler';
-import type { TgpuSampledTexture } from '../core/texture/texture';
-import {
-  type v2f,
-  type v2i,
-  type v3f,
-  type v3i,
-  type v4f,
-  vec4f,
-} from '../data';
-import { createDualImpl } from '../shared/generators';
+import type { TgpuSampler } from '../core/sampler/sampler.ts';
+import type { TgpuSampledTexture } from '../core/texture/texture.ts';
+import { vec4f } from '../data/vector.ts';
+import type { v2f, v2i, v3f, v3i, v4f } from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
 
 type TextureSampleOverload = {
   <T extends TgpuSampledTexture<'1d'>>(

@@ -1,11 +1,15 @@
-import type { AnyUnstruct, Disarray } from '../../data/dataTypes';
-import type { AnyWgslStruct, Decorated, WgslArray } from '../../data/wgslTypes';
+import type { AnyUnstruct, Disarray } from '../../data/dataTypes.ts';
+import type {
+  AnyWgslStruct,
+  Decorated,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
   TgpuVertexAttrib,
   VertexFormat,
-} from '../../shared/vertexFormat';
+} from '../../shared/vertexFormat.ts';
 
 /**
  * The array can hold T, where T is a single/multi-component numeric, or a struct with members of type T.

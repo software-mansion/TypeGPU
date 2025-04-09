@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { babelTransform, rollupTransform } from './transform';
+import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] "kernel" directive', () => {
   it('makes plugin transpile marked arrow functions', () => {

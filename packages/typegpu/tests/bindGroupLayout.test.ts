@@ -1,13 +1,4 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import tgpu, {
-  type TgpuBindGroupLayout,
-  type TgpuBufferUniform,
-  type TgpuBufferReadonly,
-  type TgpuBufferMutable,
-  type TgpuWriteonlyTexture,
-  type TgpuSampledTexture,
-  type TgpuMutableTexture,
-} from '../src';
 import {
   type F32,
   type U32,
@@ -19,18 +10,27 @@ import {
   f32,
   u32,
   vec3f,
-} from '../src/data';
-import './utils/webgpuGlobals';
-import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
+} from '../src/data/index.ts';
+import tgpu, {
+  type TgpuBindGroupLayout,
+  type TgpuBufferUniform,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
+  type TgpuWriteonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
+} from '../src/index.ts';
+import './utils/webgpuGlobals.ts';
+import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   MissingBindingError,
   type TgpuBindGroup,
   type TgpuLayoutComparisonSampler,
   type TgpuLayoutSampler,
   type UnwrapRuntimeConstructor,
-} from '../src/tgpuBindGroupLayout';
-import { it } from './utils/extendedIt';
-import { parse } from './utils/parseResolved';
+} from '../src/tgpuBindGroupLayout.ts';
+import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;

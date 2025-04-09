@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
   Infer,
   InferGPU,
@@ -8,9 +8,9 @@ import type {
   InferRecord,
   MemIdentity,
   MemIdentityRecord,
-} from '../shared/repr.js';
-import { $repr } from '../shared/repr.js';
-import type { Prettify } from '../shared/utilityTypes.js';
+} from '../shared/repr.ts';
+import { $repr } from '../shared/repr.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
@@ -1169,7 +1169,7 @@ export const wgslTypeLiterals = [
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 
-export type PerspectiveOrLinearInterpolatableData =
+export type PerspectiveOrLinearInterpolatableBaseType =
   | F32
   | F16
   | Vec2f
@@ -1179,8 +1179,11 @@ export type PerspectiveOrLinearInterpolatableData =
   | Vec4f
   | Vec4h;
 
-export type FlatInterpolatableData =
-  | PerspectiveOrLinearInterpolatableData
+export type PerspectiveOrLinearInterpolatableData =
+  | PerspectiveOrLinearInterpolatableBaseType
+  | Decorated<PerspectiveOrLinearInterpolatableBaseType>;
+
+export type FlatInterpolatableAdditionalBaseType =
   | I32
   | U32
   | Vec2i
@@ -1189,6 +1192,11 @@ export type FlatInterpolatableData =
   | Vec3u
   | Vec4i
   | Vec4u;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | FlatInterpolatableAdditionalBaseType
+  | Decorated<FlatInterpolatableAdditionalBaseType>;
 
 export type ScalarData =
   | Bool

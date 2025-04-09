@@ -1,6 +1,6 @@
-import { $repr, type Infer } from '../shared/repr.js';
-import type { VertexFormat } from '../shared/vertexFormat';
-import { f32, i32, u32 } from './numeric';
+import { $repr, type Infer } from '../shared/repr.ts';
+import type { VertexFormat } from '../shared/vertexFormat.ts';
+import { f32, i32, u32 } from './numeric.ts';
 import {
   vec2f,
   vec2i,
@@ -11,7 +11,7 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from './vector';
+} from './vector.ts';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];

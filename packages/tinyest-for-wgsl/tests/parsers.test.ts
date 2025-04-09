@@ -2,7 +2,7 @@ import babel from '@babel/parser';
 import type { Node } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers';
+import { transpileFn } from '../src/parsers.ts';
 
 const parseRollup = (code: string) =>
   acorn.parse(code, { ecmaVersion: 'latest' });

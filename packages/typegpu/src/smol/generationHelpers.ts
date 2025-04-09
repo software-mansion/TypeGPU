@@ -1,6 +1,6 @@
-import { isDerived, isSlot } from '../core/slot/slotTypes';
-import type { AnyData } from '../data/dataTypes';
-import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
+import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
+import type { AnyData } from '../data/dataTypes.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
   abstractInt,
@@ -9,7 +9,7 @@ import {
   f32,
   i32,
   u32,
-} from '../data/numeric';
+} from '../data/numeric.ts';
 import {
   vec2b,
   vec2f,
@@ -26,21 +26,21 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../data/vector';
+} from '../data/vector.ts';
 import {
   type WgslStruct,
   isDecorated,
   isWgslArray,
   isWgslData,
-} from '../data/wgslTypes';
-import { getResolutionCtx } from '../gpuMode';
-import { $internal } from '../shared/symbols';
+} from '../data/wgslTypes.ts';
+import { getResolutionCtx } from '../gpuMode.ts';
+import { $internal } from '../shared/symbols.ts';
 import {
   type Snippet,
   UnknownData,
   type Wgsl,
   hasInternalDataType,
-} from '../types';
+} from '../types.ts';
 
 const swizzleableTypes = [
   'vec2f',

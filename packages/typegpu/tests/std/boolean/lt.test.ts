@@ -9,8 +9,8 @@ import {
   vec4b,
   vec4f,
   vec4i,
-} from '../../../src/data';
-import { lt } from '../../../src/std';
+} from '../../../src/data/index.ts';
+import { lt } from '../../../src/std/index.ts';
 
 describe('lt', () => {
   it('compares integer vectors', () => {

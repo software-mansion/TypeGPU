@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest';
-import type { Default, Mutable } from '../src/shared/utilityTypes';
+import type { Default, Mutable } from '../src/shared/utilityTypes.ts';
 
 describe('Default', () => {
   it('turns undefined into the default', () => {

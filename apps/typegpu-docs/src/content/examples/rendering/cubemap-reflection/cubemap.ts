@@ -1,6 +1,6 @@
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { CubeVertex } from './dataTypes';
+import { CubeVertex } from './dataTypes.ts';
 
 function vert(
   position: [number, number, number, number],

@@ -2,16 +2,15 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { cubeVertices } from './cubemap';
-import { type CubemapNames, loadCubemap } from './cubemap';
+import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import {
   Camera,
   CubeVertex,
   DirectionalLight,
   Material,
   Vertex,
-} from './dataTypes';
-import { IcosphereGenerator } from './icosphere';
+} from './dataTypes.ts';
+import { IcosphereGenerator } from './icosphere.ts';
 
 // Initialization
 

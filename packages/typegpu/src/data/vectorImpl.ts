@@ -1,5 +1,5 @@
-import type { SelfResolvable } from '../types';
-import type { VecKind } from './wgslTypes';
+import type { SelfResolvable } from '../types.ts';
+import type { VecKind } from './wgslTypes.ts';
 
 // biome-ignore format: swizzles should not expand
 export abstract class VecBase<S> extends Array implements SelfResolvable {

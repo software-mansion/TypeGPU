@@ -7,8 +7,8 @@ import tgpu, {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { ComputeVertex, Vertex } from './dataTypes';
-import * as helpers from './helpers';
+import { ComputeVertex, Vertex } from './dataTypes.ts';
+import * as helpers from './helpers.ts';
 
 type IcosphereBuffer = TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
 type VertexType = d.Infer<typeof Vertex>;

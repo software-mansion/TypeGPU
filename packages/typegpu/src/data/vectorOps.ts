@@ -1,4 +1,4 @@
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
   vec2b,
   vec2f,
@@ -15,9 +15,9 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from './vector';
-import type * as wgsl from './wgslTypes';
-import type { VecKind } from './wgslTypes';
+} from './vector.ts';
+import type * as wgsl from './wgslTypes.ts';
+import type { VecKind } from './wgslTypes.ts';
 
 type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;

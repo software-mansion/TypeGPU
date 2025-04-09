@@ -1,21 +1,21 @@
 import type * as smol from 'tinyest';
-import * as d from '../data';
-import type { AnyData } from '../data/dataTypes';
-import { abstractInt } from '../data/numeric.js';
-import * as wgsl from '../data/wgslTypes.js';
+import type { AnyData } from '../data/dataTypes.ts';
+import * as d from '../data/index.ts';
+import { abstractInt } from '../data/numeric.ts';
+import * as wgsl from '../data/wgslTypes.ts';
 import {
   type ResolutionCtx,
   type Snippet,
   UnknownData,
   isMarkedInternal,
   isWgsl,
-} from '../types.js';
+} from '../types.ts';
 import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToSnippet,
-} from './generationHelpers.js';
+} from './generationHelpers.ts';
 
 const parenthesizedOps = [
   '==',

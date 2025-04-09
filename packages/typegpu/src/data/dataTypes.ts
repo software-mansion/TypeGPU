@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
   $repr,
   Infer,
@@ -7,12 +7,12 @@ import type {
   InferPartialRecord,
   InferRecord,
   MemIdentityRecord,
-} from '../shared/repr.js';
-import { $internal } from '../shared/symbols.js';
-import type { Prettify } from '../shared/utilityTypes.js';
-import { vertexFormats } from '../shared/vertexFormat.js';
-import type { PackedData } from './vertexFormatData.js';
-import * as wgsl from './wgslTypes.js';
+} from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
+import { vertexFormats } from '../shared/vertexFormat.ts';
+import type { PackedData } from './vertexFormatData.ts';
+import * as wgsl from './wgslTypes.ts';
 
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {
@@ -53,7 +53,7 @@ export interface Unstruct<
   readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly [$repr]: Prettify<InferRecord<TProps>>;
-  readonly '~gpuRepr': InferGPURecord<TProps>;
+  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
   readonly '~memIdent': Unstruct<MemIdentityRecord<TProps>>;
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }

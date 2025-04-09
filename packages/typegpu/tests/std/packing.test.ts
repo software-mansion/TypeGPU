@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec4f } from '../../src/data';
+import { vec2f, vec4f } from '../../src/data/vector.ts';
 import {
   pack2x16float,
   pack4x8unorm,
   unpack2x16float,
   unpack4x8unorm,
-} from '../../src/std';
+} from '../../src/std/packing.ts';
 
 describe('packing', () => {
   it('packs and unpacks 4x8 unorm', () => {

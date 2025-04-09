@@ -1,12 +1,12 @@
 import { describe, expect } from 'vitest';
-import { u32 } from '../src/data';
-import './utils/webgpuGlobals';
+import { u32 } from '../src/data/index.ts';
+import './utils/webgpuGlobals.ts';
 import {
   asMutable,
   asReadonly,
   asUniform,
-} from '../src/core/buffer/bufferUsage';
-import { it } from './utils/extendedIt';
+} from '../src/core/buffer/bufferUsage.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('asUsage', () => {
   it('allows creating bufferUsages only for buffers allowing them', ({

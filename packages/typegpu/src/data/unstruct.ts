@@ -1,6 +1,5 @@
-import type { Prettify } from '../shared/utilityTypes';
-import type { Unstruct } from './dataTypes';
-import type { BaseData } from './wgslTypes';
+import type { Unstruct } from './dataTypes.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -26,12 +25,12 @@ import type { BaseData } from './wgslTypes';
  */
 export function unstruct<TProps extends Record<string, BaseData>>(
   properties: TProps,
-): Unstruct<Prettify<TProps>> {
+): Unstruct<TProps> {
   const unstruct = <T>(props: T) => props;
   Object.setPrototypeOf(unstruct, UnstructImpl);
   unstruct.propTypes = properties;
 
-  return unstruct as unknown as Unstruct<Prettify<TProps>>;
+  return unstruct as unknown as Unstruct<TProps>;
 }
 
 // --------------

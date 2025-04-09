@@ -1,5 +1,5 @@
-import type { $repr, Infer, InferPartial } from '../shared/repr.js';
-import type { AnyData, Disarray } from './dataTypes.js';
+import type { $repr, Infer, InferPartial } from '../shared/repr.ts';
+import type { AnyData, Disarray } from './dataTypes.ts';
 
 // ----------
 // Public API

@@ -1,10 +1,10 @@
 import { Measurer } from 'typed-binary';
-import { roundUp } from '../mathUtils';
-import alignIO from './alignIO';
-import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import { type AnyUnstruct, type Unstruct, isUnstruct } from './dataTypes';
-import { sizeOf } from './sizeOf';
-import type { AnyWgslStruct, BaseData, WgslStruct } from './wgslTypes';
+import { roundUp } from '../mathUtils.ts';
+import alignIO from './alignIO.ts';
+import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
+import { type AnyUnstruct, type Unstruct, isUnstruct } from './dataTypes.ts';
+import { sizeOf } from './sizeOf.ts';
+import type { AnyWgslStruct, BaseData, WgslStruct } from './wgslTypes.ts';
 
 export interface OffsetInfo {
   offset: number;

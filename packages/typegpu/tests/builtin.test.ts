@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { OmitBuiltins } from '../src/builtin';
-import * as d from '../src/data';
-import { StrictNameRegistry } from '../src/nameRegistry';
-import { resolve } from '../src/resolutionCtx';
+import type { OmitBuiltins } from '../src/builtin.ts';
+import * as d from '../src/data/index.ts';
+import { StrictNameRegistry } from '../src/nameRegistry.ts';
+import { resolve } from '../src/resolutionCtx.ts';
 
 describe('builtin', () => {
   it('adds a @builtin attribute to a struct field', () => {

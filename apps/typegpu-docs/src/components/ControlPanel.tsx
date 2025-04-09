@@ -2,23 +2,23 @@ import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom';
-import { examples } from '../utils/examples/exampleContent';
+import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom.ts';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
+import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
+import { examples } from '../utils/examples/exampleContent.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
-} from '../utils/examples/exampleControlAtom';
-import { menuShownAtom } from '../utils/examples/menuShownAtom';
-import { isGPUSupported } from '../utils/isGPUSupported';
-import { Button } from './design/Button';
-import { Select } from './design/Select';
-import { Slider } from './design/Slider';
-import { TextArea } from './design/TextArea';
-import { Toggle } from './design/Toggle';
-import { VectorSlider } from './design/VectorSlider';
-import { openInStackBlitz } from './stackblitz/openInStackBlitz';
+} from '../utils/examples/exampleControlAtom.ts';
+import { menuShownAtom } from '../utils/examples/menuShownAtom.ts';
+import { isGPUSupported } from '../utils/isGPUSupported.ts';
+import { Button } from './design/Button.tsx';
+import { Select } from './design/Select.tsx';
+import { Slider } from './design/Slider.tsx';
+import { TextArea } from './design/TextArea.tsx';
+import { Toggle } from './design/Toggle.tsx';
+import { VectorSlider } from './design/VectorSlider.tsx';
+import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 function ToggleRow({
   label,
