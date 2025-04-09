@@ -27,6 +27,7 @@ import type {
   InferIO,
   InferReturn,
 } from './fnTypes';
+import { stripTemplate } from './templateUtils';
 
 // ----------
 // Public API
@@ -57,8 +58,9 @@ export type TgpuFnShell<
       ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
     ) => InferReturn<Return>,
   ) => TgpuFn<Args, Return>) &
+  ((implementation: string) => TgpuFn<Args, Return>) &
   ((
-    implementation: string | TemplateStringsArray,
+    strings: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuFn<Args, Return>) & {
     /**
@@ -131,31 +133,17 @@ export function fn<
   };
 
   const call = (
-    implementation: Implementation | TemplateStringsArray,
+    arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
   ) =>
     createFn(
       shell,
-      typeof implementation === 'function' || typeof implementation === 'string'
-        ? implementation
-        : templateLiteralIdentity(implementation, ...values),
+      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
   }) as TgpuFnShell<Args, Return>;
-}
-
-function templateLiteralIdentity(
-  strings: TemplateStringsArray,
-  ...values: unknown[]
-): string {
-  return strings
-    .slice(1)
-    .reduce(
-      (acc, elem, index) => `${acc}${values[index]}${elem}`,
-      strings[0] as string,
-    );
 }
 
 export function isTgpuFn<

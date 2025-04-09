@@ -5,7 +5,7 @@ import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { Implementation, InferIO } from './fnTypes';
 import { createStructFromIO } from './ioOutputType';
-import { stripTagged } from './taggedUtils';
+import { stripTemplate } from './templateUtils';
 
 // ----------
 // Public API
@@ -41,8 +41,9 @@ export type TgpuComputeFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
+  ((implementation: string) => TgpuComputeFn<ComputeIn>) &
   ((
-    implementation: string | TemplateStringsArray,
+    implementation: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuComputeFn<ComputeIn>) & {
     /**
@@ -113,16 +114,13 @@ export function computeFn<
   };
 
   const call = (
-    implementation: Implementation | TemplateStringsArray,
+    arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
   ) =>
     createComputeFn(
       shell,
       options.workgroupSize,
-      stripTagged(
-        implementation as Implementation | TemplateStringsArray,
-        ...values,
-      ),
+      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {

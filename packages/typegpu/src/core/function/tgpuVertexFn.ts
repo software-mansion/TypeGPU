@@ -11,7 +11,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType';
-import { stripTagged } from './taggedUtils';
+import { stripTemplate } from './templateUtils';
 
 // ----------
 // Public API
@@ -42,7 +42,10 @@ export type TgpuVertexFnShell<
     implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
   ((
-    implementation: string | TemplateStringsArray,
+    implementation: string,
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
+  ((
+    strings: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
     /**
@@ -109,17 +112,14 @@ export function vertexFn<
   };
 
   const call = (
-    implementation: (
+    arg: (
       input: InferIO<VertexIn>,
     ) => InferIO<VertexOut> | string | TemplateStringsArray,
     ...values: unknown[]
   ) =>
     createVertexFn(
       shell,
-      stripTagged(
-        implementation as Implementation | TemplateStringsArray,
-        ...values,
-      ),
+      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {

@@ -1,6 +1,6 @@
 import type { Implementation } from './fnTypes';
 
-export function stripTagged(
+export function stripTemplate(
   arg: Implementation | TemplateStringsArray,
   ...values: unknown[]
 ): Implementation {

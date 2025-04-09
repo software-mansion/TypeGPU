@@ -21,7 +21,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType';
-import { stripTagged } from './taggedUtils';
+import { stripTemplate } from './templateUtils';
 
 // ----------
 // Public API
@@ -74,7 +74,10 @@ export type TgpuFragmentFnShell<
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
   ((
-    implementation: string | TemplateStringsArray,
+    implementation: string,
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
+  ((
+    implementation: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
     /**
@@ -146,7 +149,7 @@ export function fragmentFn<
   };
 
   const call = (
-    implementation:
+    arg:
       | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
       | string
       | TemplateStringsArray,
@@ -154,10 +157,7 @@ export function fragmentFn<
   ) =>
     createFragmentFn(
       shell,
-      stripTagged(
-        implementation as Implementation | TemplateStringsArray,
-        ...values,
-      ),
+      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {
