@@ -7,8 +7,8 @@ import {
   BenchmarkFallback,
   BenchmarkResults,
 } from './components/benchmark-results.tsx';
-import { SuiteCheckbox } from './components/checkbox-tree.ts';
-import { ParameterSetRow } from './components/parameter-set-row.ts';
+import { SuiteCheckbox } from './components/checkbox-tree.tsx';
+import { ParameterSetRow } from './components/parameter-set-row.tsx';
 import { importTypeGPU, importTypeGPUData } from './modules.ts';
 import {
   type BenchParameterSet,
