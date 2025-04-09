@@ -62,4 +62,25 @@ describe('tgpu.fn tagged syntax', () => {
       expect(actual).toEqual(expected);
     });
   });
+
+  describe('fragment', () => {
+    it('parses template literal with arguments of different types for fragment', () => {
+      const fragmentFn = tgpu['~unstable'].fragmentFn({
+        in: {},
+        out: {},
+      })`{
+      ${10} + ${'20'} + ${30.1};
+    }`.$name('fragmentFn');
+
+      const actual = parseResolved({ fragmentFn });
+
+      const expected = parse(`
+        struct fragmentFn_Input {}
+        struct fragmentFn_Output {} 
+        @fragment fn fragmentFn(in: fragmentFn_Input) -> fragmentFn_Output { 10 + 20 + 30.1; }
+        `);
+
+      expect(actual).toEqual(expected);
+    });
+  });
 });
