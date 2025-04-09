@@ -6,7 +6,7 @@ import type { Bench } from 'tinybench';
 import {
   BenchmarkFallback,
   BenchmarkResults,
-} from './components/benchmark-results.ts';
+} from './components/benchmark-results.tsx';
 import { SuiteCheckbox } from './components/checkbox-tree.ts';
 import { ParameterSetRow } from './components/parameter-set-row.ts';
 import { importTypeGPU, importTypeGPUData } from './modules.ts';
