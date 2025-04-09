@@ -90,28 +90,25 @@ const dataLayout = tgpu
 const rotate = tgpu['~unstable'].fn(
   { v: d.vec2f, angle: d.f32 },
   d.vec2f,
-)(/* wgsl */ `{
+) /* wgsl */`{
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
       (v.x * sin(angle)) + (v.y * cos(angle))
     );
 
     return pos;
-  }
-`);
+  }`;
 
-const mainVert = tgpu['~unstable']
-  .vertexFn({
-    in: {
-      tilt: d.f32,
-      angle: d.f32,
-      color: d.vec4f,
-      center: d.vec2f,
-      index: d.builtin.vertexIndex,
-    },
-    out: VertexOutput,
-  })(
-    /* wgsl */ `{
+const mainVert = tgpu['~unstable'].vertexFn({
+  in: {
+    tilt: d.f32,
+    angle: d.f32,
+    color: d.vec4f,
+    center: d.vec2f,
+    index: d.builtin.vertexIndex,
+  },
+  out: VertexOutput,
+})`/* wgsl */ {
     let width = in.tilt;
     let height = in.tilt / 2;
 
@@ -129,36 +126,31 @@ const mainVert = tgpu['~unstable']
     }
 
     return Out(vec4f(pos, 0.0, 1.0), in.color);
-  }`,
-  )
-  .$uses({
-    rotate,
-    canvasAspectRatio: canvasAspectRatioUniform,
-  });
+  }`.$uses({
+  rotate,
+  canvasAspectRatio: canvasAspectRatioUniform,
+});
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
-})(/* wgsl */ `{
-    return in.color;
-  }`);
+}) /* wgsl */`{ return in.color; }`;
 
-const mainCompute = tgpu['~unstable']
-  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })(
-    /* wgsl */ `{
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})`/* wgsl */ {
     let index = in.gid.x;
     if index == 0 {
       time += deltaTime;
     }
     let phase = (time / 300) + particleData[index].seed;
     particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
-  }`,
-  )
-  .$uses({
-    particleData: particleDataStorage,
-    deltaTime: deltaTimeUniform,
-    time: timeStorage,
-  });
+  }`.$uses({
+  particleData: particleDataStorage,
+  deltaTime: deltaTimeUniform,
+  time: timeStorage,
+});
 
 // pipelines
 
