@@ -219,9 +219,7 @@ export function location<TLocation extends number, TData extends AnyData>(
  */
 export function interpolate<
   TInterpolation extends PerspectiveOrLinearInterpolationType,
-  TData extends
-    | PerspectiveOrLinearInterpolatableData
-    | Decorated<PerspectiveOrLinearInterpolatableData>,
+  TData extends PerspectiveOrLinearInterpolatableData,
 >(
   interpolationType: TInterpolation,
   data: TData,
@@ -246,7 +244,7 @@ export function interpolate<
  */
 export function interpolate<
   TInterpolation extends FlatInterpolationType,
-  TData extends FlatInterpolatableData | Decorated<FlatInterpolatableData>,
+  TData extends FlatInterpolatableData,
 >(
   interpolationType: TInterpolation,
   data: TData,
