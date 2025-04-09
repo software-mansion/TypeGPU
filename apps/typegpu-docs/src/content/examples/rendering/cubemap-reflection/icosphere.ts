@@ -139,26 +139,26 @@ export class IcosphereGenerator {
 
       const baseIndexPrev = triangleIndex * d.u32(3);
 
-      const v1 = helpers.unpackVec2u({
-        packed: prevVertices.value[baseIndexPrev].position,
-      });
-      const v2 = helpers.unpackVec2u({
-        packed: prevVertices.value[baseIndexPrev + d.u32(1)].position,
-      });
-      const v3 = helpers.unpackVec2u({
-        packed: prevVertices.value[baseIndexPrev + d.u32(2)].position,
-      });
+      const v1 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev].position,
+      );
+      const v2 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev + d.u32(1)].position,
+      );
+      const v3 = helpers.unpackVec2u(
+        prevVertices.value[baseIndexPrev + d.u32(2)].position,
+      );
 
       const v12 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint({ v1: v1, v2: v2 }).xyz),
+        std.normalize(helpers.calculateMidpoint(v1, v2).xyz),
         1,
       );
       const v23 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint({ v1: v2, v2: v3 }).xyz),
+        std.normalize(helpers.calculateMidpoint(v2, v3).xyz),
         1,
       );
       const v31 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint({ v1: v3, v2: v1 }).xyz),
+        std.normalize(helpers.calculateMidpoint(v3, v1).xyz),
         1,
       );
 
@@ -197,8 +197,8 @@ export class IcosphereGenerator {
         const outIndex = baseIndexNext + i;
         const nextVertex = nextVertices.value[outIndex];
 
-        nextVertex.position = helpers.packVec2u({ toPack: reprojectedVertex });
-        nextVertex.normal = helpers.packVec2u({ toPack: normal });
+        nextVertex.position = helpers.packVec2u(reprojectedVertex);
+        nextVertex.normal = helpers.packVec2u(normal);
 
         nextVertices.value[outIndex] = nextVertex;
       }

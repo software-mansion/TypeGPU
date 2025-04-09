@@ -3,18 +3,18 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 export const unpackVec2u = tgpu['~unstable'].fn(
-  { packed: d.vec2u },
+  [d.vec2u],
   d.vec4f,
-)(({ packed }) => {
+)((packed) => {
   const xy = std.unpack2x16float(packed.x);
   const zw = std.unpack2x16float(packed.y);
   return d.vec4f(xy, zw);
 });
 
 export const packVec2u = tgpu['~unstable'].fn(
-  { toPack: d.vec4f },
+  [d.vec4f],
   d.vec2u,
-)(({ toPack }) => {
+)((toPack) => {
   const xy = std.pack2x16float(toPack.xy);
   const zw = std.pack2x16float(toPack.zw);
   return d.vec2u(xy, zw);
@@ -40,8 +40,8 @@ export const getNormal = tgpu['~unstable'].fn(
 });
 
 export const calculateMidpoint = tgpu['~unstable'].fn(
-  { v1: d.vec4f, v2: d.vec4f },
+  [d.vec4f, d.vec4f],
   d.vec4f,
-)(({ v1, v2 }) => {
+)((v1, v2) => {
   return d.vec4f(std.mul(0.5, std.add(v1.xyz, v2.xyz)), 1);
 });
