@@ -13,6 +13,29 @@
 <video width="512" autoplay muted loop playsinline src="https://github.com/user-attachments/assets/5bca716d-477d-44a1-a839-5df0c8d9044c"></video>
 </div>
 
+## TypeGPU for libraries
+> TypeGPU can be used as an interoperability layer between use-case specific libraries!
+
+When creating a type-safe WebGPU library, one can expect to encounter at least one of the following problems:
+- Serializing/deserializing data.
+- Dynamically generating parts of the WGSL shader.
+- Complex type inference.
+
+If implemented from scratch, interoperability with other libraries (ones that have a different focus, solve different problems) can be near impossible without going down to *untyped WebGPU land*. Moreover, to keep up with demand from users, they can be tempted to go out of scope of their initial use-case, even though another library already solves that problem.
+
+
+
+
+(...)
+
+## TypeGPU as a foundation
+
+(...)
+
+## TypeGPU as an afterthought
+
+(...)
+
 ## Documentation
 
 We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
