@@ -23,7 +23,7 @@ type TgpuVertexFnShellHeader<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly returnType: VertexOut;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
@@ -103,8 +103,13 @@ export function vertexFn<
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType: createOutputType(options.out) as unknown as VertexOut,
-    argTypes: [createStructFromIO(options.in ?? {})],
+    returnType: (Object.keys(options.out).length !== 0
+      ? createOutputType(options.out)
+      : undefined) as unknown as VertexOut,
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     isEntry: true,
   };
 

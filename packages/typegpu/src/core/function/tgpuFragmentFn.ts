@@ -52,7 +52,7 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
   readonly isEntry: true;
@@ -144,9 +144,14 @@ export function fragmentFn<
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
-    argTypes: [createStructFromIO(options.in ?? {})],
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     targets: options.out,
-    returnType: createOutputType(options.out) as FragmentOut,
+    returnType: (Object.keys(options.out).length !== 0
+      ? createOutputType(options.out)
+      : undefined) as FragmentOut,
     isEntry: true,
   };
 
