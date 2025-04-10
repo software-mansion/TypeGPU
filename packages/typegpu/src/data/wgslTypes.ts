@@ -1169,7 +1169,7 @@ export const wgslTypeLiterals = [
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 
-export type PerspectiveOrLinearInterpolatableData =
+export type PerspectiveOrLinearInterpolatableBaseType =
   | F32
   | F16
   | Vec2f
@@ -1179,8 +1179,11 @@ export type PerspectiveOrLinearInterpolatableData =
   | Vec4f
   | Vec4h;
 
-export type FlatInterpolatableData =
-  | PerspectiveOrLinearInterpolatableData
+export type PerspectiveOrLinearInterpolatableData =
+  | PerspectiveOrLinearInterpolatableBaseType
+  | Decorated<PerspectiveOrLinearInterpolatableBaseType>;
+
+export type FlatInterpolatableAdditionalBaseType =
   | I32
   | U32
   | Vec2i
@@ -1189,6 +1192,11 @@ export type FlatInterpolatableData =
   | Vec3u
   | Vec4i
   | Vec4u;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | FlatInterpolatableAdditionalBaseType
+  | Decorated<FlatInterpolatableAdditionalBaseType>;
 
 export type ScalarData =
   | Bool
