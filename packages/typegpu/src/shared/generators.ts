@@ -1,6 +1,6 @@
 import type { TgpuDualFn } from '../data/dataTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
-import type { Resource } from '../types.ts';
+import type { Snippet } from '../types.ts';
 import { $internal } from './symbols.ts';
 
 /**
@@ -20,18 +20,18 @@ export function* naturalsExcept(
   }
 }
 
-type MapValueToResource<T> = { [K in keyof T]: Resource };
+type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
-  gpuImpl: (...args: MapValueToResource<Parameters<T>>) => Resource,
+  gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
       return gpuImpl(
-        ...(args as unknown as MapValueToResource<Parameters<T>>),
-      ) as unknown as Resource;
+        ...(args as unknown as MapValueToSnippet<Parameters<T>>),
+      ) as unknown as Snippet;
     }
     // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
     return jsImpl(...(args as any));
