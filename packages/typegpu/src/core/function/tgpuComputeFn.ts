@@ -122,7 +122,7 @@ export function computeFn<
     createComputeFn(
       shell,
       options.workgroupSize,
-      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
+      stripTemplate(arg, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {

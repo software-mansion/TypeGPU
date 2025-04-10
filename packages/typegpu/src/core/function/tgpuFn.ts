@@ -137,11 +137,7 @@ export function fn<
   const call = (
     arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
-  ) =>
-    createFn(
-      shell,
-      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
-    );
+  ) => createFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
