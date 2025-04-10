@@ -37,9 +37,9 @@ const getGradientColor = tgpu['~unstable']
 // or
 
 const getGradientColor = tgpu['~unstable'].fn({ ratio: d.f32 }, d.vec4f)`{
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-    return color;
-  }`.$name('getGradientColor');
+  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+  return color;
+}`.$name('getGradientColor');
 ```
 
 If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.

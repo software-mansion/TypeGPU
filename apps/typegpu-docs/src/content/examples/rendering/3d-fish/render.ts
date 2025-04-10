@@ -90,8 +90,8 @@ const sampleTexture = tgpu['~unstable'].fn(
   { uv: d.vec2f },
   d.vec4f,
 ) /* wgsl */`{
-    return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
-  }`
+  return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
+}`
   .$uses({ layout })
   .$name('sampleTexture');
 

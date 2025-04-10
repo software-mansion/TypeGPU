@@ -91,13 +91,13 @@ const rotate = tgpu['~unstable'].fn(
   { v: d.vec2f, angle: d.f32 },
   d.vec2f,
 ) /* wgsl */`{
-    let pos = vec2(
-      (v.x * cos(angle)) - (v.y * sin(angle)),
-      (v.x * sin(angle)) + (v.y * cos(angle))
-    );
+  let pos = vec2(
+    (v.x * cos(angle)) - (v.y * sin(angle)),
+    (v.x * sin(angle)) + (v.y * cos(angle))
+  );
 
-    return pos;
-  }`;
+  return pos;
+}`;
 
 const mainVert = tgpu['~unstable'].vertexFn({
   in: {
@@ -108,25 +108,25 @@ const mainVert = tgpu['~unstable'].vertexFn({
     index: d.builtin.vertexIndex,
   },
   out: VertexOutput,
-})`/* wgsl */ {
-    let width = in.tilt;
-    let height = in.tilt / 2;
+}) /* wgsl */`{
+  let width = in.tilt;
+  let height = in.tilt / 2;
 
-    var pos = rotate(array<vec2f, 4>(
-      vec2f(0, 0),
-      vec2f(width, 0),
-      vec2f(0, height),
-      vec2f(width, height),
-    )[in.index] / 350, in.angle) + in.center;
+  var pos = rotate(array<vec2f, 4>(
+    vec2f(0, 0),
+    vec2f(width, 0),
+    vec2f(0, height),
+    vec2f(width, height),
+  )[in.index] / 350, in.angle) + in.center;
 
-    if (canvasAspectRatio < 1) {
-      pos.x /= canvasAspectRatio;
-    } else {
-      pos.y *= canvasAspectRatio;
-    }
+  if (canvasAspectRatio < 1) {
+    pos.x /= canvasAspectRatio;
+  } else {
+    pos.y *= canvasAspectRatio;
+  }
 
-    return Out(vec4f(pos, 0.0, 1.0), in.color);
-  }`.$uses({
+  return Out(vec4f(pos, 0.0, 1.0), in.color);
+}`.$uses({
   rotate,
   canvasAspectRatio: canvasAspectRatioUniform,
 });
@@ -139,14 +139,14 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 const mainCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
-})`/* wgsl */ {
-    let index = in.gid.x;
-    if index == 0 {
-      time += deltaTime;
-    }
-    let phase = (time / 300) + particleData[index].seed;
-    particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
-  }`.$uses({
+}) /* wgsl */`{
+  let index = in.gid.x;
+  if index == 0 {
+    time += deltaTime;
+  }
+  let phase = (time / 300) + particleData[index].seed;
+  particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+}`.$uses({
   particleData: particleDataStorage,
   deltaTime: deltaTimeUniform,
   time: timeStorage,
