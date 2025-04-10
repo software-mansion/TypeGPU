@@ -156,16 +156,9 @@ export function fragmentFn<
   };
 
   const call = (
-    arg:
-      | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
-      | string
-      | TemplateStringsArray,
+    arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
-  ) =>
-    createFragmentFn(
-      shell,
-      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
-    );
+  ) => createFragmentFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

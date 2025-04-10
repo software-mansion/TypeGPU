@@ -114,15 +114,9 @@ export function vertexFn<
   };
 
   const call = (
-    arg: (
-      input: InferIO<VertexIn>,
-    ) => InferIO<VertexOut> | string | TemplateStringsArray,
+    arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
-  ) =>
-    createVertexFn(
-      shell,
-      stripTemplate(arg as Implementation | TemplateStringsArray, ...values),
-    );
+  ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
