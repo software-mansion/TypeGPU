@@ -58,7 +58,7 @@ import {
 } from './extension.ts';
 import type { TgpuNamable } from './namable.ts';
 import type { Infer } from './shared/repr.ts';
-import type { Default, OmitProps, Prettify } from './shared/utilityTypes.ts';
+import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 
@@ -186,15 +186,6 @@ export interface TgpuBindGroupLayout<
    * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
    */
   $idx(index?: number): this;
-
-  /**
-   * @deprecated Use the `root.createBindGroup` API instead, accessible through `await tgpu.init()`
-   */
-  populate(
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
-  ): TgpuBindGroup<Entries>;
 
   /**
    * Creates a raw WebGPU resource based on the typed descriptor.
@@ -625,12 +616,6 @@ class TgpuBindGroupLayoutImpl<
     });
 
     return unwrapped;
-  }
-
-  populate(
-    entries: { [K in keyof Entries]: LayoutEntryToInput<Entries[K]> },
-  ): TgpuBindGroup<Entries> {
-    return new TgpuBindGroupImpl(this, entries);
   }
 }
 

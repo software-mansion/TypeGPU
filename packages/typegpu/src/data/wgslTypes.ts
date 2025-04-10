@@ -1035,7 +1035,7 @@ export interface WgslStruct<
   /** Type-token, not available at runtime */
   readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
+  readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   /** Type-token, not available at runtime */
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
