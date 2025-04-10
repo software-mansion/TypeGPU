@@ -9,6 +9,20 @@ const { title, theme = 'light' } = Astro.props;
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <!-- <meta property="og:image" content="http://euro-travel-example.com/thumbnail.jpg"> -->
+    <!-- <meta property="og:url" content="http://euro-travel-example.com/index.htm"> -->
+    <!-- <meta name="twitter:card" content="summary_large_image"> -->
+
+    <!-- <meta
+      property="og:description"
+      content="Offering tour packages for individuals or groups."
+    />
+    <meta property="og:site_name" content="European Travel, Inc." />
+    <meta name="twitter:image:alt" content="Alt text for image" /> -->
+
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
     <style is:global>
