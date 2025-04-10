@@ -3,7 +3,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
-describe('tgpu.fn tagged syntax', () => {
+describe('tagged syntax', () => {
   describe('function', () => {
     it('parses template literal without arguments', () => {
       const constFn = tgpu['~unstable'].fn([], d.i32)`() -> i32 {
@@ -19,24 +19,28 @@ describe('tgpu.fn tagged syntax', () => {
 
     it('parses template literal with arguments of different types', () => {
       const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
-        return ${10} + ${'20'} + ${30.1};
+        return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`.$name('add');
 
       const actual = parseResolved({ addFn });
 
-      const expected = parse('fn add() -> f32 { return 10 + 20 + 30.1; }');
+      const expected = parse(
+        'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
+      );
 
       expect(actual).toEqual(expected);
     });
 
     it('parses template literal with arguments of different types, object args', () => {
       const addFn = tgpu['~unstable'].fn({}, d.f32)`{
-        return ${10} + ${'20'} + ${30.1};
+        return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`.$name('add');
 
       const actual = parseResolved({ addFn });
 
-      const expected = parse('fn add() -> f32 { return 10 + 20 + 30.1; }');
+      const expected = parse(
+        'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
+      );
 
       expect(actual).toEqual(expected);
     });
@@ -45,16 +49,16 @@ describe('tgpu.fn tagged syntax', () => {
   describe('vertex', () => {
     it('parses template literal without arguments', () => {
       const vertexFn = tgpu['~unstable'].vertexFn({
-        in: {},
-        out: {},
-      })`{}`.$name('vertexFn');
+        in: { pos: d.builtin.position },
+        out: { pos: d.builtin.position },
+      })`{ return in.pos; }`.$name('vertexFn');
 
       const actual = parseResolved({ vertexFn });
 
       const expected = parse(`
-        struct vertexFn_Input {}
-        struct vertexFn_Output {} 
-        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { }
+        struct vertexFn_Input { @builtin(position) pos: vec4f, }
+        struct vertexFn_Output { @builtin(position) pos: vec4f, } 
+        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { return in.pos; }
         `);
 
       expect(actual).toEqual(expected);
@@ -62,19 +66,22 @@ describe('tgpu.fn tagged syntax', () => {
 
     it('parses template literal with arguments of different types', () => {
       const vertexFn = tgpu['~unstable'].vertexFn({
-        in: {},
-        out: {},
+        in: { pos: d.builtin.position },
+        out: { pos: d.builtin.position },
       })`{
-      ${10} + ${'20'} + ${30.1};
-    }`.$name('vertexFn');
+        var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
+        return in.pos;
+      }`.$name('vertexFn');
 
       const actual = parseResolved({ vertexFn });
 
       const expected = parse(`
-        struct vertexFn_Input {}
-        struct vertexFn_Output {} 
-        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { 10 + 20 + 30.1; }
-        `);
+        struct vertexFn_Input { @builtin(position) pos: vec4f, }
+        struct vertexFn_Output { @builtin(position) pos: vec4f, } 
+        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { 
+          var a = f32(10) + f32(20) + f32(30.1);
+          return in.pos;
+        }`);
 
       expect(actual).toEqual(expected);
     });
@@ -83,36 +90,42 @@ describe('tgpu.fn tagged syntax', () => {
   describe('fragment', () => {
     it('parses template literal without arguments', () => {
       const fragmentFn = tgpu['~unstable'].fragmentFn({
-        in: {},
-        out: {},
-      })`{}`.$name('fragmentFn');
+        in: { pos: d.builtin.position },
+        out: d.vec4f,
+      })`{ return vec4f(); }`.$name('fragmentFn');
 
       const actual = parseResolved({ fragmentFn });
 
       const expected = parse(`
-        struct fragmentFn_Input {}
-        struct fragmentFn_Output {} 
-        @fragment fn fragmentFn(in: fragmentFn_Input) -> fragmentFn_Output { }
-        `);
+        struct fragmentFn_Input {
+          @builtin(position) pos: vec4f,
+        }
+        @fragment fn fragmentFn(in: fragmentFn_Input) -> @location(0) vec4f { 
+          return vec4f(); 
+        }`);
 
       expect(actual).toEqual(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
       const fragmentFn = tgpu['~unstable'].fragmentFn({
-        in: {},
-        out: {},
+        in: { pos: d.builtin.position },
+        out: d.vec4f,
       })`{
-      ${10} + ${'20'} + ${30.1};
-    }`.$name('fragmentFn');
+        var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
+        return vec4f();
+      }`.$name('fragmentFn');
 
       const actual = parseResolved({ fragmentFn });
 
       const expected = parse(`
-        struct fragmentFn_Input {}
-        struct fragmentFn_Output {} 
-        @fragment fn fragmentFn(in: fragmentFn_Input) -> fragmentFn_Output { 10 + 20 + 30.1; }
-        `);
+        struct fragmentFn_Input {
+          @builtin(position) pos: vec4f,
+        }
+        @fragment fn fragmentFn(in: fragmentFn_Input) -> @location(0) vec4f { 
+          var a = f32(10) + f32(20) + f32(30.1);
+          return vec4f(); 
+        }`);
 
       expect(actual).toEqual(expected);
     });
@@ -121,13 +134,16 @@ describe('tgpu.fn tagged syntax', () => {
   describe('compute', () => {
     it('parses template literal without arguments', () => {
       const computeFn = tgpu['~unstable'].computeFn({
+        in: { gid: d.builtin.globalInvocationId },
         workgroupSize: [1],
       })`{}`.$name('computeFn');
 
       const actual = parseResolved({ computeFn });
 
       const expected = parse(`
-        struct computeFn_Input {}
+        struct computeFn_Input {
+          @builtin(global_invocation_id) gid: vec3u,
+        }
         @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { }
         `);
 
@@ -136,16 +152,19 @@ describe('tgpu.fn tagged syntax', () => {
 
     it('parses template literal with arguments of different types', () => {
       const computeFn = tgpu['~unstable'].computeFn({
+        in: { gid: d.builtin.globalInvocationId },
         workgroupSize: [1],
       })`{
-      ${10} + ${'20'} + ${30.1};
-    }`.$name('computeFn');
+        var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
+      }`.$name('computeFn');
 
       const actual = parseResolved({ computeFn });
 
       const expected = parse(`
-        struct computeFn_Input {}
-        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { 10 + 20 + 30.1; }
+        struct computeFn_Input {
+          @builtin(global_invocation_id) gid: vec3u,
+        }
+        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { var a = f32(10) + f32(20) + f32(30.1); }
         `);
 
       expect(actual).toEqual(expected);
