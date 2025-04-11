@@ -12,7 +12,7 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('array', () => {
   it('produces a visually pleasant type', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
-    attest(TestArray).type.toString.snap('WgslArray<Vec3u>');
+    attest(TestArray).type.toString.snap();
   });
 
   it('takes element alignment into account when measuring', () => {

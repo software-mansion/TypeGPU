@@ -108,8 +108,9 @@
     "@babel/standalone": "^7.26.6",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.11",
+    "picomatch": "^4.0.2",
     "tinyest-for-wgsl": "workspace:~0.1.0-alpha.8",
-    "unplugin": "^2.2.0"
+    "unplugin": "^2.3.1"
   },
   "peerDependencies": {
     "typegpu": "^0.5.4"
@@ -122,7 +123,9 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
+    "@types/picomatch": "^4.0.0",
     "acorn": "^8.14.1",
+    "defu": "^6.1.4",
     "rollup": "~4.37.0",
     "tsup": "catalog:",
     "typescript": "catalog:"
