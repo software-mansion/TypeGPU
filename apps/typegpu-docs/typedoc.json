@@ -1,0 +1,14 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "../../packages/typegpu/src/index.ts",
+    "../../packages/typegpu/src/data/index.ts",
+    "../../packages/typegpu/src/std/index.ts"
+  ],
+  "plugin": ["typedoc-plugin-markdown"],
+  "tsconfig": "../../packages/typegpu/tsconfig.json",
+  "excludeInternal": true,
+  "excludeReferences": true,
+  "router": "category",
+  "out": "./src/content/docs/api"
+}
