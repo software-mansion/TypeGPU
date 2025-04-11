@@ -65,14 +65,16 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
+    "@ark/attest": "^0.45.10",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/node": "^22.13.14",
     "@webgpu/types": "catalog:",
+    "arktype": "catalog:",
     "jiti": "^2.4.2",
-    "unplugin-typegpu": "workspace:*",
+    "tgpu-jit": "workspace:*",
     "tsup": "catalog:",
     "typescript": "catalog:",
-    "tgpu-jit": "workspace:*",
+    "unplugin-typegpu": "workspace:*",
     "wesl": "0.6.0-rc1",
     "wgpu-matrix": "^3.4.0"
   },

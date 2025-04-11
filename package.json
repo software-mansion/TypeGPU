@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev:watch",
-    "dev:test": "vitest",
+    "dev:test": "ATTEST_skipTypes=1 vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
     "test": "pnpm run '/^test:.*/'",
