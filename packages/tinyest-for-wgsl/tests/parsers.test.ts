@@ -2,7 +2,7 @@ import babel from '@babel/parser';
 import type { Node } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers.ts';
+import { transpileFn } from '../src/parsers';
 
 const parseRollup = (code: string) =>
   acorn.parse(code, { ecmaVersion: 'latest' });
@@ -29,10 +29,7 @@ describe('transpileFn', () => {
     dualTest((p) => {
       const { argNames, body, externalNames } = transpileFn(p('() => {}'));
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(argNames).toEqual([]);
       expect(body).toEqual({ b: [] });
       expect(externalNames).toEqual([]);
     }),
@@ -45,10 +42,7 @@ describe('transpileFn', () => {
         p('function example() {}'),
       );
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(argNames).toEqual([]);
       expect(body).toEqual({ b: [] });
       expect(externalNames).toEqual([]);
     }),
@@ -61,10 +55,7 @@ describe('transpileFn', () => {
         p('(a, b) => a + b - c'),
       );
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: ['a', 'b'],
-      });
+      expect(argNames).toEqual(['a', 'b']);
       expect(body).toEqual({
         b: [{ r: { x: [{ x: ['a', '+', 'b'] }, '-', 'c'] } }],
       });
@@ -82,10 +73,7 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(argNames).toEqual([]);
       expect(body).toEqual({
         b: [
           { c: ['a', { n: '0' }] },
@@ -109,10 +97,7 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(argNames).toEqual([]);
       expect(body).toEqual({
         b: [
           { c: ['a', { n: '0' }] },
@@ -131,10 +116,7 @@ describe('transpileFn', () => {
         p('() => external.outside.prop'),
       );
 
-      expect(argNames).toEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(argNames).toEqual([]);
       expect(body).toEqual({
         b: [{ r: { a: [{ a: ['external', 'outside'] }, 'prop'] } }],
       });

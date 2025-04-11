@@ -1,5 +1,5 @@
-import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 
 // ----------
 // Public API

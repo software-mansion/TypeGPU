@@ -5,13 +5,13 @@ import type {
   TgpuSampledTexture,
   TgpuTexture,
   TgpuWriteonlyTexture,
-} from '../src/core/texture/texture.ts';
-import type { Render, Sampled } from '../src/core/texture/usageExtension.ts';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data/index.ts';
-import './utils/webgpuGlobals.ts';
-import tgpu from '../src/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
-import { it } from './utils/extendedIt.ts';
+} from '../src/core/texture/texture';
+import type { Render, Sampled } from '../src/core/texture/usageExtension';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
+import './utils/webgpuGlobals';
+import tgpu from '../src';
+import { StrictNameRegistry } from '../src/nameRegistry';
+import { it } from './utils/extendedIt';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({

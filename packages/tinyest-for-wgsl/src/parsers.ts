@@ -1,6 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
-import type * as tinyest from 'tinyest';
+import type * as smol from 'tinyest';
 
 type Scope = {
   /** identifiers declared in this scope */
@@ -95,7 +95,7 @@ const Transpilers: Partial<{
   [Type in JsNode['type']]: (
     ctx: Context,
     node: Extract<JsNode, { type: Type }>,
-  ) => tinyest.AnyNode;
+  ) => smol.AnyNode;
 }> = {
   Program(ctx, node) {
     const body = node.body[0];
@@ -118,7 +118,7 @@ const Transpilers: Partial<{
 
     const result = {
       b: node.body.map(
-        (statement) => transpile(ctx, statement) as tinyest.Statement,
+        (statement) => transpile(ctx, statement) as smol.Statement,
       ),
     };
 
@@ -129,7 +129,7 @@ const Transpilers: Partial<{
 
   ReturnStatement: (ctx, node) => ({
     r: node.argument
-      ? (transpile(ctx, node.argument) as tinyest.Expression)
+      ? (transpile(ctx, node.argument) as smol.Expression)
       : null,
   }),
 
@@ -145,41 +145,41 @@ const Transpilers: Partial<{
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x: [left, wgslOp, right] } as tinyest.BinaryExpression;
+    return { x: [left, wgslOp, right] } as smol.BinaryExpression;
   },
 
   LogicalExpression(ctx, node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x: [left, wgslOp, right] } as tinyest.LogicalExpression;
+    return { x: [left, wgslOp, right] } as smol.LogicalExpression;
   },
 
   AssignmentExpression(ctx, node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator as acorn.AssignmentOperator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x: [left, wgslOp, right] } as tinyest.AssignmentExpression;
+    return { x: [left, wgslOp, right] } as smol.AssignmentExpression;
   },
 
   UnaryExpression(ctx, node) {
     const wgslOp = node.operator;
     const argument = transpile(ctx, node.argument);
-    return { u: [wgslOp, argument] } as tinyest.UnaryExpression;
+    return { u: [wgslOp, argument] } as smol.UnaryExpression;
   },
 
   MemberExpression(ctx, node) {
-    const object = transpile(ctx, node.object) as tinyest.Expression;
+    const object = transpile(ctx, node.object) as smol.Expression;
 
     // If the property is computed, it could potentially be an external identifier.
     if (node.computed) {
-      const property = transpile(ctx, node.property) as tinyest.Expression;
+      const property = transpile(ctx, node.property) as smol.Expression;
       return { i: [object, property] };
     }
 
     // If the property is not computed, we don't want to register identifiers as external.
     ctx.ignoreExternalDepth++;
-    const property = transpile(ctx, node.property) as tinyest.Expression;
+    const property = transpile(ctx, node.property) as smol.Expression;
     ctx.ignoreExternalDepth--;
 
     if (typeof property !== 'string') {
@@ -191,7 +191,7 @@ const Transpilers: Partial<{
 
   UpdateExpression(ctx, node) {
     const operator = node.operator;
-    const argument = transpile(ctx, node.argument) as tinyest.Expression;
+    const argument = transpile(ctx, node.argument) as smol.Expression;
     if (node.prefix) {
       throw new Error('Prefix update expressions are not supported in WGSL.');
     }
@@ -221,11 +221,11 @@ const Transpilers: Partial<{
   },
 
   CallExpression(ctx, node) {
-    const callee = transpile(ctx, node.callee) as tinyest.Expression;
+    const callee = transpile(ctx, node.callee) as smol.Expression;
 
     const args = node.arguments.map((arg) =>
       transpile(ctx, arg),
-    ) as tinyest.Expression[];
+    ) as smol.Expression[];
 
     return { f: [callee, args] };
   },
@@ -235,7 +235,7 @@ const Transpilers: Partial<{
       if (!elem || elem.type === 'SpreadElement') {
         throw new Error('Spread elements are not supported in TGSL.');
       }
-      return transpile(ctx, elem) as tinyest.Expression;
+      return transpile(ctx, elem) as smol.Expression;
     });
     return { y: elements };
   },
@@ -259,7 +259,7 @@ const Transpilers: Partial<{
     ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
 
     const init = decl.init
-      ? (transpile(ctx, decl.init) as tinyest.Expression)
+      ? (transpile(ctx, decl.init) as smol.Expression)
       : undefined;
 
     if (node.kind === 'var') {
@@ -279,10 +279,10 @@ const Transpilers: Partial<{
   },
 
   IfStatement(ctx, node) {
-    const test = transpile(ctx, node.test) as tinyest.Expression;
-    const consequent = transpile(ctx, node.consequent) as tinyest.Statement;
+    const test = transpile(ctx, node.test) as smol.Expression;
+    const consequent = transpile(ctx, node.consequent) as smol.Statement;
     const alternate = node.alternate
-      ? (transpile(ctx, node.alternate) as tinyest.Statement)
+      ? (transpile(ctx, node.alternate) as smol.Statement)
       : undefined;
 
     return {
@@ -291,7 +291,7 @@ const Transpilers: Partial<{
   },
 
   ObjectExpression(ctx, node) {
-    const properties: Record<string, tinyest.Expression> = {};
+    const properties: Record<string, smol.Expression> = {};
 
     for (const prop of node.properties) {
       // TODO: Handle SpreadElement
@@ -317,7 +317,7 @@ const Transpilers: Partial<{
           ? (transpile(ctx, prop.key) as string)
           : String(prop.key.value);
       ctx.ignoreExternalDepth--;
-      const value = transpile(ctx, prop.value) as tinyest.Expression;
+      const value = transpile(ctx, prop.value) as smol.Expression;
 
       properties[key] = value;
     }
@@ -327,21 +327,21 @@ const Transpilers: Partial<{
 
   ForStatement(ctx, node) {
     const init = node.init
-      ? (transpile(ctx, node.init) as tinyest.Statement)
+      ? (transpile(ctx, node.init) as smol.Statement)
       : undefined;
     const condition = node.test
-      ? (transpile(ctx, node.test) as tinyest.Expression)
+      ? (transpile(ctx, node.test) as smol.Expression)
       : undefined;
     const update = node.update
-      ? (transpile(ctx, node.update) as tinyest.Statement)
+      ? (transpile(ctx, node.update) as smol.Statement)
       : undefined;
-    const body = transpile(ctx, node.body) as tinyest.Statement;
+    const body = transpile(ctx, node.body) as smol.Statement;
     return { j: [init, condition, update, body] };
   },
 
   WhileStatement(ctx, node) {
-    const condition = transpile(ctx, node.test) as tinyest.Expression;
-    const body = transpile(ctx, node.body) as tinyest.Statement;
+    const condition = transpile(ctx, node.test) as smol.Expression;
+    const body = transpile(ctx, node.body) as smol.Statement;
     return { w: [condition, body] };
   },
 
@@ -354,7 +354,7 @@ const Transpilers: Partial<{
   },
 };
 
-function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
+function transpile(ctx: Context, node: JsNode): smol.AnyNode {
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
@@ -366,8 +366,8 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
 }
 
 export type TranspilationResult = {
-  argNames: tinyest.ArgNames;
-  body: tinyest.Block;
+  argNames: string[];
+  body: smol.Block;
   /**
    * All identifiers found in the function code that are not declared in the
    * function itself, or in the block that is accessing that identifier.
@@ -376,7 +376,7 @@ export type TranspilationResult = {
 };
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.ArgNames;
+  params: acorn.Identifier[];
   body:
     | acorn.BlockStatement
     | acorn.Expression
@@ -438,60 +438,37 @@ export function extractFunctionParts(rootNode: JsNode): {
     throw new Error('tgpu.fn cannot be a generator');
   }
 
-  // destructured object argument
-  if (
-    functionNode.params[0] &&
-    functionNode.params[0].type === 'ObjectPattern'
-  ) {
-    return {
-      params: {
-        type: 'destructured-object',
-        props: functionNode.params[0].properties.flatMap((prop) =>
-          prop.type === 'Property' &&
-          prop.key.type === 'Identifier' &&
-          prop.value.type === 'Identifier'
-            ? [{ prop: prop.key.name, alias: prop.value.name }]
-            : [],
-        ),
-      },
-      body: functionNode.body,
-    };
+  if (functionNode.params.some((p) => p.type !== 'Identifier')) {
+    throw new Error('tgpu.fn implementations require concrete parameters');
   }
 
   return {
-    params: {
-      type: 'identifiers',
-      names: functionNode.params.flatMap((x) =>
-        x.type === 'Identifier' ? [x.name] : [],
-      ),
-    },
+    params: functionNode.params as acorn.Identifier[],
     body: functionNode.body,
   };
 }
 
 export function transpileFn(rootNode: JsNode): TranspilationResult {
-  const { params: argNames, body } = extractFunctionParts(rootNode);
+  const { params, body } = extractFunctionParts(rootNode);
+  const argNames = params.map((p) => p.name);
 
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
     stack: [
       {
-        declaredNames:
-          argNames.type === 'identifiers'
-            ? argNames.names
-            : argNames.props.map((prop) => prop.alias),
+        declaredNames: [...argNames],
       },
     ],
   };
 
-  const tinyestBody = transpile(ctx, body);
+  const smolBody = transpile(ctx, body);
   const externalNames = [...ctx.externalNames];
 
   if (body.type === 'BlockStatement') {
     return {
       argNames,
-      body: tinyestBody as tinyest.Block,
+      body: smolBody as smol.Block,
       externalNames,
     };
   }
@@ -499,13 +476,13 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   return {
     argNames,
     body: {
-      b: [{ r: tinyestBody as tinyest.Expression }],
+      b: [{ r: smolBody as smol.Expression }],
     },
     externalNames,
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
+export function transpileNode(node: JsNode): smol.AnyNode {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,

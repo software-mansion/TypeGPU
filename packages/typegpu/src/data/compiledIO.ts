@@ -1,10 +1,10 @@
-import { roundUp } from '../mathUtils.ts';
-import type { Infer } from '../shared/repr.ts';
-import { alignmentOf } from './alignmentOf.ts';
-import { isDisarray, isUnstruct } from './dataTypes.ts';
-import { offsetsForProps } from './offsets.ts';
-import { sizeOf } from './sizeOf.ts';
-import * as wgsl from './wgslTypes.ts';
+import { roundUp } from '../mathUtils';
+import type { Infer } from '../shared/repr';
+import { alignmentOf } from './alignmentOf';
+import { isDisarray, isUnstruct } from './dataTypes';
+import { offsetsForProps } from './offsets';
+import { sizeOf } from './sizeOf';
+import * as wgsl from './wgslTypes';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {
@@ -61,10 +61,6 @@ export function buildWriter(
   offsetExpr: string,
   valueExpr: string,
 ): string {
-  if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
-    return buildWriter(node.inner, offsetExpr, valueExpr);
-  }
-
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
     const propOffsets = offsetsForProps(node);
     const sortedProps = Object.entries(propOffsets).sort(
@@ -135,7 +131,12 @@ export function buildWriter(
     return code;
   }
 
-  const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
+  const primitive =
+    typeToPrimitive[
+      wgsl.isAtomic(node)
+        ? node.inner.type
+        : (node.type as keyof typeof typeToPrimitive)
+    ];
   return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 

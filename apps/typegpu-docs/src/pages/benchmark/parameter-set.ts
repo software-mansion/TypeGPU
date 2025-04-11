@@ -1,6 +1,6 @@
 import { type Getter, atom } from 'jotai';
 import { splitAtom } from 'jotai/utils';
-import { atomWithUrl } from './atom-with-url.ts';
+import { atomWithUrl } from './atom-with-url.js';
 
 export type PackageLocator =
   | {

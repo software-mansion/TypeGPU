@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ValueDecl } from '../src/grammar.ts';
-import { parse } from '../src/index.ts';
+import type { ValueDecl } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('value_decl', () => {
   it('parses non-typed', () => {

@@ -2,10 +2,10 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
-import { loadModel } from './load-model.ts';
-import * as p from './params.ts';
-import { fragmentShader, vertexShader } from './render.ts';
+import { computeShader } from './compute';
+import { loadModel } from './load-model';
+import * as p from './params';
+import { fragmentShader, vertexShader } from './render';
 import {
   Camera,
   type ModelData,
@@ -15,7 +15,7 @@ import {
   modelVertexLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
-} from './schemas.ts';
+} from './schemas';
 
 // setup
 
@@ -71,8 +71,6 @@ const randomizeFishPositions = () => {
         Math.random() * 0.1 - 0.05,
       ),
       scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
-      variant: Math.random(),
-      applySinWave: 1,
       applySeaFog: 1,
       applySeaDesaturation: 1,
     }),
@@ -121,19 +119,12 @@ const timePassedBuffer = root
   .$usage('uniform')
   .$name('time passed buffer');
 
-const currentTimeBuffer = root
-  .createBuffer(d.u32)
-  .$usage('uniform')
-  .$name('current time buffer');
-
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
     {
       position: d.vec3f(0, -p.aquariumSize.y / 2 - 1, 0),
       direction: d.vec3f(1, 0, 0),
       scale: 1,
-      variant: 0,
-      applySinWave: 0,
       applySeaFog: 1,
       applySeaDesaturation: 0,
     },
@@ -181,7 +172,6 @@ const renderFishBindGroups = [0, 1].map((idx) =>
     camera: cameraBuffer,
     modelTexture: fishModel.texture,
     sampler: sampler,
-    currentTime: currentTimeBuffer,
   }),
 );
 
@@ -190,7 +180,6 @@ const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
   modelTexture: oceanFloorModel.texture,
   sampler: sampler,
-  currentTime: currentTimeBuffer,
 });
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -214,7 +203,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
   }
   odd = !odd;
 
-  currentTimeBuffer.write(timestamp);
   timePassedBuffer.write(timestamp - lastTimestamp);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);

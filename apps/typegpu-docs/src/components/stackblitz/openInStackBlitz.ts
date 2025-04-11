@@ -1,13 +1,11 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from '@std/yaml';
 import { type } from 'arktype';
-import typegpuColorPackageJson from '../../../../../packages/typegpu-color/package.json';
-import typegpuNoisePackageJson from '../../../../../packages/typegpu-noise/package.json';
 import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
 import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json';
-import type { Example } from '../../utils/examples/types.ts';
+import type { Example } from '../../utils/examples/types';
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
@@ -15,7 +13,7 @@ const pnpmWorkspaceYaml = type({
 })(parse(pnpmWorkspace));
 
 if (pnpmWorkspaceYaml instanceof type.errors) {
-  throw new Error(pnpmWorkspaceYaml.summary);
+  throw new Error(pnpmWorkspaceYaml.message);
 }
 
 export const openInStackBlitz = (example: Example) => {
@@ -35,7 +33,7 @@ export const openInStackBlitz = (example: Example) => {
       template: 'node',
       title: example.metadata.title,
       files: {
-        'index.ts': index.replaceAll(/\/\/\s*@ts-ignore\s*\n/g, ''),
+        'index.ts': index.slice('// @ts-ignore\n'.length),
         ...tsFiles,
         'index.html': `\
 <!DOCTYPE html>
@@ -89,9 +87,7 @@ ${example.htmlCode}
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
       "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
       "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
-      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
-      "@typegpu/noise": "${typegpuNoisePackageJson.version}",
-      "@typegpu/color": "${typegpuColorPackageJson.version}"
+      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}"
     }
 }`,
         'vite.config.js': `\

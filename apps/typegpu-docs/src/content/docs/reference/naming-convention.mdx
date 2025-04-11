@@ -25,7 +25,8 @@ We give tgpu functions *camelCase* names, without any special suffix or prefix. 
 
 ```ts
 const createBoid = tgpu
-  .fn([], Boid)(() => ({
+  .fn([], Boid)
+  .does(() => ({
     pos: vec2f(),
     vel: vec2f(0, 1),
   }));

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import type { ResolutionCtx } from '../src/types.ts';
-import { parse } from './utils/parseResolved.ts';
+import tgpu from '../src';
+import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage';
+import * as d from '../src/data';
+import type { ResolutionCtx } from '../src/types';
+import { parse } from './utils/parseResolved';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -42,11 +42,13 @@ describe('tgpu resolve', () => {
     } as unknown as TgpuBufferReadonly<d.F32>;
 
     const fragment1 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1))
+      .fragmentFn({ out: d.vec4f })
+      .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 
     const fragment2 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1))
+      .fragmentFn({ out: d.vec4f })
+      .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment2');
 
     const resolved = tgpu.resolve({
@@ -75,10 +77,8 @@ describe('tgpu resolve', () => {
     });
 
     const getPlayerHealth = tgpu['~unstable']
-      .fn(
-        [PlayerData],
-        d.f32,
-      )((pInfo) => {
+      .fn([PlayerData], d.f32)
+      .does((pInfo) => {
         return pInfo.health;
       })
       .$name('getPlayerHealthTest');
@@ -129,10 +129,8 @@ describe('tgpu resolve', () => {
     });
 
     const random = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(/* wgsl */ `() -> f32 {
+      .fn([], d.f32)
+      .does(/* wgsl */ `() -> f32 {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
         r.range = vec2<f32>(0.0, 1.0);
@@ -282,10 +280,8 @@ describe('tgpu resolve', () => {
 
   it('should resolve object externals and replace their usages in template', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)
+      .does(`() {
         let color = vec3f();
         return color;
       }`)
@@ -325,20 +321,16 @@ describe('tgpu resolve', () => {
 
   it('should resolve only used object externals and ignore non-existing', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)
+      .does(`() {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getIntensity = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)
+      .does(`() {
         return 1;
       }`)
       .$name('get_intensity');

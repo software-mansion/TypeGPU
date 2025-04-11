@@ -1,22 +1,22 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { getSystemEndianness } from 'typed-binary';
+import { isWgslData } from '../../data';
 import {
   EVAL_ALLOWED_IN_ENV,
   getCompiledWriterForSchema,
-} from '../../data/compiledIO.ts';
-import { readData, writeData } from '../../data/dataIO.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
-import { getWriteInstructions } from '../../data/partialIO.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
-import { isWgslData } from '../../data/wgslTypes.ts';
-import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
-import type { StorageFlag } from '../../extension.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import type { Infer, InferPartial } from '../../shared/repr.ts';
-import type { MemIdentity } from '../../shared/repr.ts';
-import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
-import { isGPUBuffer } from '../../types.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+} from '../../data/compiledIO';
+import { readData, writeData } from '../../data/dataIO';
+import type { AnyData } from '../../data/dataTypes';
+import { getWriteInstructions } from '../../data/partialIO';
+import { sizeOf } from '../../data/sizeOf';
+import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
+import type { StorageFlag } from '../../extension';
+import type { TgpuNamable } from '../../namable';
+import type { Infer, InferPartial } from '../../shared/repr';
+import type { MemIdentity } from '../../shared/repr';
+import type { UnionToIntersection } from '../../shared/utilityTypes';
+import { isGPUBuffer } from '../../types';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
@@ -25,7 +25,7 @@ import {
   asMutable,
   asReadonly,
   asUniform,
-} from './bufferUsage.ts';
+} from './bufferUsage';
 
 // ----------
 // Public API

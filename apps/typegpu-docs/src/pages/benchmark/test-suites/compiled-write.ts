@@ -1,8 +1,8 @@
 import { Bench } from 'tinybench';
 import type { TgpuBuffer, TgpuRoot } from 'typegpu';
 import type { v3f } from 'typegpu/data';
-import { stringifyLocator } from '../parameter-set.ts';
-import { createSuite } from '../suites.ts';
+import { stringifyLocator } from '../parameter-set';
+import { createSuite } from '../suites';
 
 export const compiledWriteSuite = createSuite(
   ({ params, tgpuModule, d }) => {

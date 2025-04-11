@@ -1,1 +1,1 @@
-export { transpileFn, transpileNode } from './parsers.ts';
+export { transpileFn, transpileNode } from './parsers';

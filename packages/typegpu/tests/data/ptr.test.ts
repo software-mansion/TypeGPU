@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu from '../../src';
+import * as d from '../../src/data';
 
 describe('d.ptrFn', () => {
   it('wraps a schema and infers type properly', () => {

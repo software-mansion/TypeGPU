@@ -1,47 +1,43 @@
-import type { OmitBuiltins } from '../../builtin.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
-import type { JitTranspiler } from '../../jitTranspiler.ts';
-import type { NameRegistry } from '../../nameRegistry.ts';
-import type { Infer } from '../../shared/repr.ts';
-import type {
-  Mutable,
-  OmitProps,
-  Prettify,
-} from '../../shared/utilityTypes.ts';
+import type { OmitBuiltins } from '../../builtin';
+import type { AnyData, Disarray } from '../../data/dataTypes';
+import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
+import type { JitTranspiler } from '../../jitTranspiler';
+import type { NameRegistry } from '../../nameRegistry';
+import type { Infer } from '../../shared/repr';
+import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   LayoutEntryToInput,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
-} from '../../tgpuBindGroupLayout.ts';
-import type { Unwrapper } from '../../unwrapper.ts';
-import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+} from '../../tgpuBindGroupLayout';
+import type { Unwrapper } from '../../unwrapper';
+import type { TgpuBuffer, VertexFlag } from '../buffer/buffer';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
   TgpuFixedBufferUsage,
-} from '../buffer/bufferUsage.ts';
-import type { IOLayout, IORecord } from '../function/fnTypes.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
+} from '../buffer/bufferUsage';
+import type { IOLayout, IORecord } from '../function/fnTypes';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFn } from '../function/tgpuFn';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
   TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
-import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
+} from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
+import type { TgpuComputePipeline } from '../pipeline/computePipeline';
 import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
-} from '../pipeline/renderPipeline.ts';
-import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuTexture } from '../texture/texture.ts';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
-import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
+} from '../pipeline/renderPipeline';
+import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes';
+import type { TgpuTexture } from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout';
 
 // ----------
 // Public API

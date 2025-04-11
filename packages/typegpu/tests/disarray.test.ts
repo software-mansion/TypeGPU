@@ -1,8 +1,8 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import * as d from '../src/data';
+import { readData, writeData } from '../src/data/dataIO';
+import { it } from './utils/extendedIt';
 
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {

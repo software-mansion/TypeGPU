@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import * as d from '../src/data';
+import { StrictNameRegistry } from '../src/nameRegistry';
+import { resolve } from '../src/resolutionCtx';
 
 describe('attributes', () => {
   it('adds attributes in the correct order', () => {

@@ -1,18 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  TgpuVar,
-  VariableScope,
-} from '../src/core/variable/tgpuVariable.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu from '../src';
+import type { TgpuVar, VariableScope } from '../src/core/variable/tgpuVariable';
+import * as d from '../src/data';
+import { parse } from './utils/parseResolved';
+import { parseResolved } from './utils/parseResolved';
 
 describe('var', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
     const fn1 = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         let y = x;
         return x;
       }`)
@@ -117,7 +115,7 @@ describe('var', () => {
       })
       .$name('boid');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = boidVariable.value;
       const vel = boidVariable.value.vel;
       const velX = boidVariable.value.vel.x;

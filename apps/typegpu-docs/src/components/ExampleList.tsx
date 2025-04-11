@@ -1,6 +1,6 @@
-import { examplesByCategory } from '../utils/examples/exampleContent.ts';
-import { exampleCategories } from '../utils/examples/types.ts';
-import { ExampleLink } from './ExampleLink.tsx';
+import { examplesByCategory } from '../utils/examples/exampleContent';
+import { exampleCategories } from '../utils/examples/types';
+import { ExampleLink } from './ExampleLink';
 
 function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
   return (

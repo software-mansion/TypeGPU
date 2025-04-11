@@ -1,10 +1,10 @@
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
+import type { AnyWgslData } from '../../data/wgslTypes';
+import { inGPUMode } from '../../gpuMode';
+import type { TgpuNamable } from '../../namable';
+import type { Infer } from '../../shared/repr';
+import { $internal } from '../../shared/symbols';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
 
 // ----------
 // Public API

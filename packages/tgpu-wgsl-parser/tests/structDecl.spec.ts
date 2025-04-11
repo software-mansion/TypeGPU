@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { StructDecl, StructMember } from '../src/grammar.ts';
-import { parse } from '../src/index.ts';
+import type { StructDecl, StructMember } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('struct_decl', () => {
   it('parses struct with simple members', () => {

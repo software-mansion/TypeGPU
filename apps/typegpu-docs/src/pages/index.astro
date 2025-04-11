@@ -1,29 +1,29 @@
 ---
 import { Image } from 'astro:assets';
+import FeatureCard from '../components/FeatureCard.astro';
+import GetStartedButton from '../components/GetStartedButton.astro';
+import FooterLink from '../components/FooterLink.astro';
+import PageLayout from '../layouts/PageLayout.astro';
 import DiscordIconSvg from '../assets/discord-icon.svg';
-import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
-import Illustration from '../assets/illustration.svg';
-import SwmLogoSvg from '../assets/swm-logo.svg';
 import SwmLogomarkSvg from '../assets/swm-logomark.svg';
+import SwmLogoSvg from '../assets/swm-logo.svg';
 import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
 import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
-import FeatureCard from '../components/FeatureCard.astro';
-import FooterLink from '../components/FooterLink.astro';
-import GetStartedButton from '../components/GetStartedButton.astro';
-import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
-import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
-import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
-import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
-import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
-import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
+import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
+import Illustration from '../assets/illustration.svg';
 import RoadMapStep from '../components/roadmap/RoadMapStep.astro';
-import PageLayout from '../layouts/PageLayout.astro';
+import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
+import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
+import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
+import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
+import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
+import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
 
-<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
+<PageLayout>
   <main
     class="flex flex-col items-center bg-tameplum-50 lg:gap-[7.5rem] gap-10 md:gap-20">
     <section
@@ -98,11 +98,10 @@ const showcaseVideoResolution = [2048, 1200];
             aspectRatio:
               showcaseVideoResolution[0] / showcaseVideoResolution[1],
           }}
-          autoplay
-          loop
-          muted
-          controls
-          playsinline
+          autoplay="true"
+          loop="true"
+          muted="true"
+          controls="true"
           class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
         ></video>
       </div>

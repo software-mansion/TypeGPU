@@ -1,5 +1,5 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata } from './types.ts';
+import type { Example, ExampleMetadata } from './types';
 
 function pathPipe(path: string): string {
   return pipe(
@@ -38,6 +38,24 @@ function pathToExampleFilesMap<T>(
   return groups;
 }
 
+function pathToExampleFilesToImportMap(
+  record: Record<string, () => Promise<unknown>>,
+): Record<string, Record<string, () => Promise<unknown>>> {
+  const groups: Record<string, Record<string, () => Promise<unknown>>> = {};
+
+  for (const [filePath, dynamicImport] of Object.entries(record)) {
+    const groupKey = pathPipe(filePath);
+    const fileNameMatch = filePath.match(/\/([^\/]+\.ts)$/);
+    const fileName = fileNameMatch ? fileNameMatch[1] : filePath;
+    if (!groups[groupKey]) {
+      groups[groupKey] = {};
+    }
+    groups[groupKey][fileName] = dynamicImport;
+  }
+
+  return groups;
+}
+
 const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/meta.json', {
     eager: true,
@@ -56,14 +74,11 @@ const readonlyTsFiles: Record<
   }),
 );
 
-const tsFilesImportFunctions: Record<string, () => Promise<unknown>> = pipe(
-  import.meta.glob('../../content/examples/**/index.ts'),
-  entries(),
-  map(
-    ([key, value]) =>
-      [pathPipe(key), value] satisfies [string, () => Promise<unknown>],
-  ),
-  fromEntries(),
+const tsFilesImportFunctions: Record<
+  string,
+  Record<string, () => Promise<unknown>>
+> = pathToExampleFilesToImportMap(
+  import.meta.glob('../../content/examples/**/*.ts'),
 );
 
 const htmlFiles: Record<string, string> = pathToExampleKey(
@@ -85,7 +100,7 @@ export const examples = pipe(
           key,
           metadata: value,
           tsCodes: readonlyTsFiles[key] ?? {},
-          tsImport: tsFilesImportFunctions[key],
+          tsImports: tsFilesImportFunctions[key] ?? {},
           htmlCode: htmlFiles[key] ?? '',
         },
       ] satisfies [string, Example],

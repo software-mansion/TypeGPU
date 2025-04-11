@@ -1,4 +1,4 @@
-import type { TranspilationResult } from './core/function/fnTypes.ts';
+import type { TranspilationResult } from './core/function/fnTypes';
 
 /**
  * Used to transpile JS resources into SMoL on demand.

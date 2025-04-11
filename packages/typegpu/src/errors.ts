@@ -1,9 +1,9 @@
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
-import type { TgpuSlot } from './core/slot/slotTypes.ts';
-import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type { AnyData, Disarray } from './data/dataTypes.ts';
-import type { WgslArray } from './data/wgslTypes.ts';
-import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuSlot } from './core/slot/slotTypes';
+import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
+import type { AnyData, Disarray } from './data/dataTypes';
+import type { WgslArray } from './data/wgslTypes';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 const prefix = 'Invariant failed';
 

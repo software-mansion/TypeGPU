@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { TranslationUnit } from '../src/grammar.ts';
-import { parse } from '../src/index.ts';
+import type { TranslationUnit } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('function_decl', () => {
   it('parses empty function', () => {

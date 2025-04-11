@@ -1,9 +1,9 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { examples, examplesStable } from '../utils/examples/exampleContent.ts';
-import { ExampleNotFound } from './ExampleNotFound.tsx';
-import { ExampleView } from './ExampleView.tsx';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { examples, examplesStable } from '../utils/examples/exampleContent';
+import { ExampleNotFound } from './ExampleNotFound';
+import { ExampleView } from './ExampleView';
 
 const getRandomExampleKey = () => {
   const keys = Object.keys(examplesStable);

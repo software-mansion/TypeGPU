@@ -1,66 +1,40 @@
-import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore } from './fnCore.ts';
-import type { Implementation, InferIO } from './fnTypes.ts';
-import { createStructFromIO } from './ioOutputType.ts';
-import { stripTemplate } from './templateUtils.ts';
+import type { AnyComputeBuiltin } from '../../builtin';
+import type { AnyWgslStruct } from '../../data/struct';
+import { type TgpuNamable, isNamable } from '../../namable';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
+import { createFnCore } from './fnCore';
+import type { Implementation, InferIO } from './fnTypes';
+import { createStructFromIO } from './ioOutputType';
 
 // ----------
 // Public API
 // ----------
 
 /**
- * Describes a compute entry function signature (its arguments, return type and workgroup size)
+ * Describes a compute entry function signature (its arguments and return type)
  */
-type TgpuComputeFnShellHeader<
+export interface TgpuComputeFnShell<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
-> = {
+> {
   readonly argTypes: [AnyWgslStruct];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
-  readonly isEntry: true;
-};
 
-/**
- * Describes a compute entry function signature (its arguments, return type and workgroup size).
- * Allows creating tgpu compute functions by calling this shell
- * and passing the implementation (as WGSL string or JS function) as the argument.
- */
-export type TgpuComputeFnShell<
-  ComputeIn extends Record<string, AnyComputeBuiltin>,
-> = TgpuComputeFnShellHeader<ComputeIn> /**
- * Creates a type-safe implementation of this signature
- */ &
-  ((
+  /**
+   * Creates a type-safe implementation of this signature
+   */
+  does(
     implementation: (input: InferIO<ComputeIn>) => undefined,
-  ) => TgpuComputeFn<ComputeIn>) &
+  ): TgpuComputeFn<ComputeIn>;
+
   /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  ((implementation: string) => TgpuComputeFn<ComputeIn>) &
-  ((
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ) => TgpuComputeFn<ComputeIn>) & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does: ((
-      implementation: (input: InferIO<ComputeIn>) => undefined,
-    ) => TgpuComputeFn<ComputeIn>) &
-      /**
-       * @param implementation
-       *   Raw WGSL function implementation with header and body
-       *   without `fn` keyword and function name
-       *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */
-      ((implementation: string) => TgpuComputeFn<ComputeIn>);
-  };
+  does(implementation: string): TgpuComputeFn<ComputeIn>;
+}
 
 export interface TgpuComputeFn<
   ComputeIn extends Record<string, AnyComputeBuiltin> = Record<
@@ -104,7 +78,7 @@ export function computeFn<
   in?: ComputeIn;
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
-  const shell: TgpuComputeFnShellHeader<ComputeIn> = {
+  return {
     argTypes: [createStructFromIO(options.in ?? {})],
     returnType: undefined,
     workgroupSize: [
@@ -112,22 +86,15 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
-    isEntry: true,
+
+    does(implementation) {
+      return createComputeFn(
+        this,
+        options.workgroupSize,
+        implementation as Implementation,
+      );
+    },
   };
-
-  const call = (
-    arg: Implementation | TemplateStringsArray,
-    ...values: unknown[]
-  ) =>
-    createComputeFn(
-      shell,
-      options.workgroupSize,
-      stripTemplate(arg, ...values),
-    );
-
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuComputeFnShell<ComputeIn>;
 }
 
 // --------------
@@ -135,7 +102,7 @@ export function computeFn<
 // --------------
 
 function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
-  shell: TgpuComputeFnShellHeader<ComputeIn>,
+  shell: TgpuComputeFnShell<ComputeIn>,
   workgroupSize: number[],
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {

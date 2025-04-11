@@ -10,15 +10,14 @@ const counterBuffer = root
   .$usage('storage');
 const counter = counterBuffer.as('mutable');
 
-const increment = tgpu['~unstable'].computeFn({
-  in: { num: d.builtin.numWorkgroups },
-  workgroupSize: [1],
-})((input) => {
-  const tmp = counter.value.x;
-  counter.value.x = counter.value.y;
-  counter.value.y += tmp;
-  counter.value.z += d.f32(input.num.x);
-});
+const increment = tgpu['~unstable']
+  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
+  .does((input) => {
+    const tmp = counter.value.x;
+    counter.value.x = counter.value.y;
+    counter.value.y += tmp;
+    counter.value.z += d.f32(input.num.x);
+  });
 
 const pipeline = root['~unstable'].withCompute(increment).createPipeline();
 

@@ -1,15 +1,8 @@
-import { f32, i32, u32 } from '../../data/numeric.ts';
-import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
-import type { Default } from '../../shared/utilityTypes.ts';
-import type { TextureProps } from './textureProps.ts';
+import { f32, i32, u32 } from '../../data/numeric';
+import { vec4f, vec4i, vec4u } from '../../data/vector';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes';
+import type { Default } from '../../shared/utilityTypes';
+import type { TextureProps } from './textureProps';
 
 export const texelFormatToChannelType = {
   r8unorm: f32 as F32,

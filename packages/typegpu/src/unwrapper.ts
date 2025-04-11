@@ -1,23 +1,20 @@
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
-import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
-import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
 import type {
   TgpuComparisonSampler,
   TgpuSampler,
-} from './core/sampler/sampler.ts';
+} from './core/sampler/sampler';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
   TgpuSampledTexture,
   TgpuTexture,
   TgpuWriteonlyTexture,
-} from './core/texture/texture.ts';
-import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type { AnyData } from './data/dataTypes.ts';
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-} from './tgpuBindGroupLayout.ts';
+} from './core/texture/texture';
+import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
+import type { AnyData } from './data/dataTypes';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 export interface Unwrapper {
   readonly device: GPUDevice;

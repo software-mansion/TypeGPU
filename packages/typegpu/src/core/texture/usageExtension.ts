@@ -1,6 +1,6 @@
-import type { StorageFlag } from '../../extension.ts';
-import type { StorageTextureTexelFormat } from './textureFormats.ts';
-import type { TextureProps } from './textureProps.ts';
+import type { StorageFlag } from '../../extension';
+import type { StorageTextureTexelFormat } from './textureFormats';
+import type { TextureProps } from './textureProps';
 
 export interface Sampled {
   usableAsSampled: true;

@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu from '../src';
+import * as d from '../src/data';
+import { it } from './utils/extendedIt';
+import { parse } from './utils/parseResolved';
+import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -13,10 +13,8 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -37,10 +35,8 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -50,7 +46,8 @@ describe('tgpu.slot', () => {
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
     const main = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         return getColorWithGreen();
       }`)
       .$name('main')
@@ -74,10 +71,8 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -87,7 +82,8 @@ describe('tgpu.slot', () => {
     const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
 
     const main = tgpu['~unstable']
-      .fn([])(/* wgsl */ `() {
+      .fn([])
+      .does(/* wgsl */ `() {
         getColorWithGreen();
       }`)
       .$name('main')
@@ -113,10 +109,8 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)
+      .does(`() {
         return colorSlot;
       })`)
       .$name('getColor')
@@ -136,10 +130,8 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -149,7 +141,8 @@ describe('tgpu.slot', () => {
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
     const wrapperFn = tgpu['~unstable']
-      .fn([])(/* wgsl */ `() {
+      .fn([])
+      .does(/* wgsl */ `() {
       return getColorWithGreen();
     }`)
       .$uses({ getColorWithGreen })
@@ -157,7 +150,8 @@ describe('tgpu.slot', () => {
       .with(colorSlot, RED);
 
     const main = tgpu['~unstable']
-      .fn([])(/* wgsl */ `() {
+      .fn([])
+      .does(/* wgsl */ `() {
         getColorWithRed();
         wrapperFn();
       }`)
@@ -195,27 +189,24 @@ describe('tgpu.slot', () => {
       .$name('color');
 
     const getSize = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(/* wgsl */ `() -> f32 {
+      .fn([], d.f32)
+      .does(/* wgsl */ `() -> f32 {
         return sizeSlot;
       }`)
       .$uses({ sizeSlot })
       .$name('getSize');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$uses({ colorSlot })
       .$name('getColor');
 
     const sizeAndColor = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         getSize();
         getColor();
       }`)
@@ -223,7 +214,8 @@ describe('tgpu.slot', () => {
       .$name('sizeAndColor');
 
     const wrapperFn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         sizeAndColor();
       }`)
       .$uses({ sizeAndColor })
@@ -243,7 +235,8 @@ describe('tgpu.slot', () => {
       .with(colorSlot, GREEN);
 
     const main = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         wrapperWithSmallRed();
         wrapperWithBigRed();
         wrapperWithSmallGreen();
@@ -330,26 +323,31 @@ describe('tgpu.slot', () => {
     const slotD = tgpu['~unstable'].slot(4).$name('d');
 
     const fn1 = tgpu['~unstable']
-      .fn([])('() { let value = slotA; }')
+      .fn([])
+      .does('() { let value = slotA; }')
       .$uses({ slotA })
       .$name('fn1');
     const fn2 = tgpu['~unstable']
-      .fn([])('() { fn1(); }')
+      .fn([])
+      .does('() { fn1(); }')
       .$uses({ fn1 })
       .$name('fn2')
       .with(slotC, slotD);
     const fn3 = tgpu['~unstable']
-      .fn([])('() { fn2(); }')
+      .fn([])
+      .does('() { fn2(); }')
       .$uses({ fn2 })
       .$name('fn3')
       .with(slotB, slotC);
     const fn4 = tgpu['~unstable']
-      .fn([])('() { fn3(); }')
+      .fn([])
+      .does('() { fn3(); }')
       .$uses({ fn3 })
       .$name('fn4')
       .with(slotA, slotB);
     const main = tgpu['~unstable']
-      .fn([])('() { fn4(); }')
+      .fn([])
+      .does('() { fn4(); }')
       .$uses({ fn4 })
       .$name('main');
 
@@ -384,15 +382,13 @@ describe('tgpu.slot', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(
       d.vec3f,
       tgpu['~unstable']
-        .fn(
-          [],
-          d.vec3f,
-        )(() => d.vec3f(1, 2, 3))
+        .fn([], d.vec3f)
+        .does(() => d.vec3f(1, 2, 3))
         .$name('getColor'),
     );
     const colorAccessorSlot = tgpu['~unstable'].slot(colorAccessorFn);
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = vectorSlot.value;
       const posX = vectorSlot.value.x;
       const vel = uniformSlot.value.vel;

@@ -1,8 +1,8 @@
-import type { JitTranspiler } from '../../jitTranspiler.ts';
-import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
-import { resolve as resolveImpl } from '../../resolutionCtx.ts';
-import type { SelfResolvable, Wgsl } from '../../types.ts';
-import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
+import type { JitTranspiler } from '../../jitTranspiler';
+import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
+import { resolve as resolveImpl } from '../../resolutionCtx';
+import type { SelfResolvable, Wgsl } from '../../types';
+import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
   /**

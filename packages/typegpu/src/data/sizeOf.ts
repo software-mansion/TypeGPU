@@ -1,16 +1,18 @@
-import { roundUp } from '../mathUtils.ts';
-import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
-import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes.ts';
+import { roundUp } from '../mathUtils';
+import { alignmentOf, customAlignmentOf } from './alignmentOf';
+import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes';
 import {
   getCustomSize,
   isDisarray,
   isLooseDecorated,
   isUnstruct,
-} from './dataTypes.ts';
-import type { BaseData, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
-import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+} from './dataTypes';
+import type { WgslStruct } from './struct';
+import type { BaseData, WgslTypeLiteral } from './wgslTypes';
+import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
+  bool: 4,
   f32: 4,
   f16: 2,
   i32: 4,

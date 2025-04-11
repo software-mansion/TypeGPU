@@ -1,70 +1,55 @@
-import type { OmitBuiltins } from '../../builtin.ts';
-import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { addReturnTypeToExternals } from '../resolve/externals.ts';
-import { createFnCore } from './fnCore.ts';
-import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes.ts';
+import type { OmitBuiltins } from '../../builtin';
+import type { AnyWgslStruct } from '../../data/struct';
+import { type TgpuNamable, isNamable } from '../../namable';
+import type { GenerationCtx } from '../../smol/wgslGenerator';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
+import { addReturnTypeToExternals } from '../resolve/externals';
+import { createFnCore } from './fnCore';
+import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
 import {
   type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
-} from './ioOutputType.ts';
-import { stripTemplate } from './templateUtils.ts';
+} from './ioOutputType';
 
 // ----------
 // Public API
 // ----------
 
 /**
- * Describes a vertex entry function signature (its arguments, return type and attributes)
+ * Describes a vertex entry function signature (its arguments and return type)
  */
-type TgpuVertexFnShellHeader<
+export interface TgpuVertexFnShell<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
-> = {
+> {
   readonly argTypes: [AnyWgslStruct];
   readonly returnType: VertexOut;
   readonly attributes: [VertexIn];
-  readonly isEntry: true;
-};
 
-/**
- * Describes a vertex entry function signature (its arguments, return type and attributes).
- * Allows creating tgpu vertex functions by calling this shell
- * and passing the implementation (as WGSL string or JS function) as the argument.
- */
-export type TgpuVertexFnShell<
-  VertexIn extends IOLayout,
-  VertexOut extends IOLayout,
-> = TgpuVertexFnShellHeader<VertexIn, VertexOut> &
-  ((
+  /**
+   * Creates a type-safe implementation of this signature
+   */
+  does(
     implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-  ((
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
+
+  /**
+   * @param implementation
+   *   Raw WGSL function implementation with header and body
+   *   without `fn` keyword and function name
+   *   e.g. `"(x: f32) -> f32 { return x; }"`;
+   */
+  does(
     implementation: string,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-  ((
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does: ((
-      implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-    ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-      ((
-        implementation: string,
-      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
-  };
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
+}
 
 export interface TgpuVertexFn<
   VertexIn extends IOLayout = IOLayout,
   VertexOut extends IOLayout = IOLayout,
 > extends TgpuNamable {
-  readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
+  readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
   readonly inputType: IOLayoutToSchema<VertexIn>;
 
@@ -106,21 +91,16 @@ export function vertexFn<
   in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
-  const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
+  return {
     attributes: [options.in ?? ({} as VertexIn)],
     returnType: createOutputType(options.out) as unknown as VertexOut,
     argTypes: [createStructFromIO(options.in ?? {})],
-    isEntry: true,
+
+    does(implementation) {
+      // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
+      return createVertexFn(this, implementation as Implementation) as any;
+    },
   };
-
-  const call = (
-    arg: Implementation | TemplateStringsArray,
-    ...values: unknown[]
-  ) => createVertexFn(shell, stripTemplate(arg, ...values));
-
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuVertexFnShell<VertexIn, VertexOut>;
 }
 
 // --------------
@@ -128,7 +108,7 @@ export function vertexFn<
 // --------------
 
 function createVertexFn(
-  shell: TgpuVertexFnShellHeader<IOLayout, IOLayout>,
+  shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
   type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;

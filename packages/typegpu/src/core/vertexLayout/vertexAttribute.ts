@@ -1,15 +1,12 @@
-import type { AnyUnstruct, Disarray } from '../../data/dataTypes.ts';
-import type {
-  AnyWgslStruct,
-  Decorated,
-  WgslArray,
-} from '../../data/wgslTypes.ts';
+import type { Disarray, Unstruct } from '../../data/dataTypes';
+import type { AnyWgslStruct } from '../../data/struct';
+import type { Decorated, WgslArray } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
   TgpuVertexAttrib,
   VertexFormat,
-} from '../../shared/vertexFormat.ts';
+} from '../../shared/vertexFormat';
 
 /**
  * The array can hold T, where T is a single/multi-component numeric, or a struct with members of type T.
@@ -19,7 +16,7 @@ import type {
  * - WgslStruct<{ a: Vec3f, b: unorm8x2 }>
  * - WgslStruct<{ nested: WgslStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends AnyWgslStruct | AnyUnstruct
+export type DataToContainedAttribs<T> = T extends AnyWgslStruct | Unstruct
   ? {
       [Key in keyof T['propTypes']]: DataToContainedAttribs<
         T['propTypes'][Key]

@@ -1,3 +1,3 @@
-import { farmPlugin } from './index.ts';
+import { farmPlugin } from './index';
 
 export default farmPlugin;

@@ -1,3 +1,3 @@
-import { vitePlugin } from './index.ts';
+import { vitePlugin } from './index';
 
 export default vitePlugin;

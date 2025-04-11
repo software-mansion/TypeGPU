@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/tinyest",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.4",
   "license": "MIT",
   "exports": "./src/index.ts",
   "publish": {

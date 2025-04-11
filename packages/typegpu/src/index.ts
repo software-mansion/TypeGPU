@@ -2,22 +2,22 @@
  * @module typegpu
  */
 
-import { constant } from './core/constant/tgpuConstant.ts';
-import { declare } from './core/declare/tgpuDeclare.ts';
-import { assignAst, removedJsImpl } from './core/function/astUtils.ts';
-import { computeFn } from './core/function/tgpuComputeFn.ts';
-import { fn } from './core/function/tgpuFn.ts';
-import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
-import { vertexFn } from './core/function/tgpuVertexFn.ts';
-import { resolve } from './core/resolve/tgpuResolve.ts';
-import { init, initFromDevice } from './core/root/init.ts';
-import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
-import { accessor } from './core/slot/accessor.ts';
-import { derived } from './core/slot/derived.ts';
-import { slot } from './core/slot/slot.ts';
-import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
-import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
+import { constant } from './core/constant/tgpuConstant';
+import { declare } from './core/declare/tgpuDeclare';
+import { assignAst } from './core/function/astUtils';
+import { computeFn } from './core/function/tgpuComputeFn';
+import { fn } from './core/function/tgpuFn';
+import { fragmentFn } from './core/function/tgpuFragmentFn';
+import { vertexFn } from './core/function/tgpuVertexFn';
+import { resolve } from './core/resolve/tgpuResolve';
+import { init, initFromDevice } from './core/root/init';
+import { comparisonSampler, sampler } from './core/sampler/sampler';
+import { accessor } from './core/slot/accessor';
+import { derived } from './core/slot/derived';
+import { slot } from './core/slot/slot';
+import { privateVar, workgroupVar } from './core/variable/tgpuVariable';
+import { vertexLayout } from './core/vertexLayout/vertexLayout';
+import { bindGroupLayout } from './tgpuBindGroupLayout';
 
 export const tgpu = {
   bindGroupLayout,
@@ -53,7 +53,6 @@ export default tgpu;
 // Hidden API, used only by tooling (e.g., rollup plugin).
 Object.assign(tgpu, {
   __assignAst: assignAst,
-  __removedJsImpl: removedJsImpl,
 });
 
 export {
@@ -63,34 +62,34 @@ export {
   MissingSlotValueError,
   NotUniformError,
   ResolutionError,
-} from './errors.ts';
-export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry.ts';
+} from './errors';
+export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export {
   isBuffer,
   isUsableAsVertex,
-} from './core/buffer/buffer.ts';
-export { isSlot, isDerived } from './core/slot/slotTypes.ts';
+} from './core/buffer/buffer';
+export { isSlot, isDerived } from './core/slot/slotTypes';
 export {
   isSampler,
   isComparisonSampler,
-} from './core/sampler/sampler.ts';
+} from './core/sampler/sampler';
 export {
   isSampledTextureView,
   isStorageTextureView,
   isTexture,
-} from './core/texture/texture.ts';
+} from './core/texture/texture';
 export {
   isUsableAsRender,
   isUsableAsSampled,
-} from './core/texture/usageExtension.ts';
-export { isUsableAsStorage } from './extension.ts';
+} from './core/texture/usageExtension';
+export { isUsableAsStorage } from './extension';
 export {
   asUniform as unstable_asUniform,
   asReadonly as unstable_asReadonly,
   asMutable as unstable_asMutable,
   isUsableAsUniform,
-} from './core/buffer/bufferUsage.ts';
-export { isTgpuFn } from './core/function/tgpuFn.ts';
+} from './core/buffer/bufferUsage';
+export { isTgpuFn } from './core/function/tgpuFn';
 
 // types
 
@@ -100,29 +99,29 @@ export type {
   WithCompute,
   WithFragment,
   WithVertex,
-} from './core/root/rootTypes.ts';
-export type { StorageFlag, Storage } from './extension.ts';
-export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
-export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+} from './core/root/rootTypes';
+export type { StorageFlag, Storage } from './extension';
+export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
+export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
+export type { TgpuComputePipeline } from './core/pipeline/computePipeline';
 export type {
   TgpuBuffer,
   UniformFlag,
   Uniform,
   VertexFlag,
   Vertex,
-} from './core/buffer/buffer.ts';
+} from './core/buffer/buffer';
 export type {
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from './core/buffer/bufferUsage.ts';
+} from './core/buffer/bufferUsage';
 export type {
   TgpuSlot,
   TgpuDerived,
   TgpuAccessor,
   Eventual,
-} from './core/slot/slotTypes.ts';
+} from './core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
@@ -130,16 +129,16 @@ export type {
   TgpuMutableTexture,
   TgpuSampledTexture,
   TgpuAnyTextureView,
-} from './core/texture/texture.ts';
-export type { TextureProps } from './core/texture/textureProps.ts';
-export type { Render, Sampled } from './core/texture/usageExtension.ts';
-export type { InitOptions, InitFromDeviceOptions } from './core/root/init.ts';
-export type { TgpuConst } from './core/constant/tgpuConstant.ts';
+} from './core/texture/texture';
+export type { TextureProps } from './core/texture/textureProps';
+export type { Render, Sampled } from './core/texture/usageExtension';
+export type { InitOptions, InitFromDeviceOptions } from './core/root/init';
+export type { TgpuConst } from './core/constant/tgpuConstant';
 export type {
   TgpuVar,
   VariableScope,
-} from './core/variable/tgpuVariable.ts';
-export type { TgpuSampler } from './core/sampler/sampler.ts';
+} from './core/variable/tgpuVariable';
+export type { TgpuSampler } from './core/sampler/sampler';
 export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -153,21 +152,21 @@ export type {
   BindLayoutEntry,
   LayoutEntryToInput,
   TgpuBindGroup,
-} from './tgpuBindGroupLayout.ts';
+} from './tgpuBindGroupLayout';
 export type {
   TgpuFn,
   TgpuFnShell,
-} from './core/function/tgpuFn.ts';
+} from './core/function/tgpuFn';
 export type {
   TgpuVertexFnShell,
   TgpuVertexFn,
-} from './core/function/tgpuVertexFn.ts';
+} from './core/function/tgpuVertexFn';
 export type {
   TgpuFragmentFnShell,
   TgpuFragmentFn,
-} from './core/function/tgpuFragmentFn.ts';
+} from './core/function/tgpuFragmentFn';
 export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
-} from './core/function/tgpuComputeFn.ts';
-export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
+} from './core/function/tgpuComputeFn';
+export type { TgpuDeclare } from './core/declare/tgpuDeclare';

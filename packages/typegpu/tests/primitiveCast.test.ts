@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { f16, f32, i32, u32 } from '../src/data/index.ts';
+import { f16, f32, i32, u32 } from '../src/data';
 
 describe('u32', () => {
   it('casts a number to u32', () => {

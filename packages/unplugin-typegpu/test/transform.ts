@@ -1,9 +1,9 @@
 import Babel from '@babel/standalone';
 import virtual from '@rollup/plugin-virtual';
 import { rollup } from 'rollup';
-import babelPlugin from '../src/babel.ts';
-import type { TypegpuPluginOptions } from '../src/common.ts';
-import rollupPlugin from '../src/rollup.ts';
+import type { TypegpuPluginOptions } from '../src';
+import babelPlugin from '../src/babel';
+import rollupPlugin from '../src/rollup';
 
 const defaultPluginOptions: TypegpuPluginOptions = { include: 'all' };
 

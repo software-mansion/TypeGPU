@@ -1,12 +1,12 @@
 import { parse } from 'acorn';
-import type { AnyNode, ArgNames, Block } from 'tinyest';
+import type { AnyNode, Block } from 'tinyest';
 import { transpileFn, transpileNode } from 'tinyest-for-wgsl';
 
 /**
  * Information extracted from transpiling a JS function.
  */
 type TranspilationResult = {
-  argNames: ArgNames;
+  argNames: string[];
   body: Block;
   /**
    * All identifiers found in the function code that are not declared in the

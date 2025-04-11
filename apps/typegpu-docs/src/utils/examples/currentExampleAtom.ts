@@ -1,7 +1,7 @@
 import { atomWithHash } from 'jotai-location';
 import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
-import { PLAYGROUND_KEY } from './exampleContent.ts';
+import { PLAYGROUND_KEY } from './exampleContent';
 
 const exampleHashPrefix = `example=${PLAYGROUND_KEY}`;
 

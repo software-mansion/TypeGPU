@@ -1,9 +1,7 @@
-import { createDualImpl } from '../shared/generators.ts';
-import { $repr } from '../shared/repr.ts';
-import type { SelfResolvable } from '../types.ts';
-import { vec2f, vec3f, vec4f } from './vector.ts';
+import { createDualImpl } from '../shared/generators';
+import type { SelfResolvable } from '../types';
+import { vec2f, vec3f, vec4f } from './vector';
 import type {
-  AnyWgslData,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
@@ -18,7 +16,7 @@ import type {
   v2f,
   v3f,
   v4f,
-} from './wgslTypes.ts';
+} from './wgslTypes';
 
 // --------------
 // Implementation
@@ -48,13 +46,13 @@ function createMatSchema<
   ColumnType extends vBase,
 >(
   options: MatSchemaOptions<TType, ValueType>,
-): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
+): { type: TType; '~repr': ValueType } & MatConstructor<ValueType, ColumnType> {
   const MatSchema = {
     /** Type-token, not available at runtime */
-    [$repr]: undefined as unknown as ValueType,
+    '~repr': undefined as unknown as ValueType,
     type: options.type,
     label: options.type,
-  } as unknown as AnyWgslData;
+  };
 
   const construct = createDualImpl(
     // CPU implementation
@@ -89,7 +87,7 @@ function createMatSchema<
 
   return Object.assign(construct, MatSchema) as unknown as {
     type: TType;
-    [$repr]: ValueType;
+    '~repr': ValueType;
   } & MatConstructor<ValueType, ColumnType>;
 }
 

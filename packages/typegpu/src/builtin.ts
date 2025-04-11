@@ -1,7 +1,7 @@
-import { arrayOf } from './data/array.ts';
-import { attribute } from './data/attributes.ts';
-import { f32, u32 } from './data/numeric.ts';
-import { vec3u, vec4f } from './data/vector.ts';
+import { arrayOf } from './data/array';
+import { attribute } from './data/attributes';
+import { f32, u32 } from './data/numeric';
+import { vec3u, vec4f } from './data/vector';
 import type {
   BaseData,
   Builtin,
@@ -11,7 +11,7 @@ import type {
   Vec3u,
   Vec4f,
   WgslArray,
-} from './data/wgslTypes.ts';
+} from './data/wgslTypes';
 
 // ----------
 // Public API

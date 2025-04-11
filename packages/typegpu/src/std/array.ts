@@ -1,5 +1,5 @@
-import { u32 } from '../data/numeric.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { u32 } from '../data/numeric';
+import { createDualImpl } from '../shared/generators';
 
 export const arrayLength = createDualImpl(
   // CPU implementation

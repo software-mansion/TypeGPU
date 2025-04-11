@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu from '../src';
+import * as d from '../src/data';
+import { it } from './utils/extendedIt';
+import { parse } from './utils/parseResolved';
+import { parseResolved } from './utils/parseResolved';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
@@ -13,10 +13,8 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -24,10 +22,8 @@ describe('tgpu.accessor', () => {
       .with(
         colorAccessor,
         tgpu['~unstable']
-          .fn(
-            [],
-            d.vec3f,
-          )(`() -> vec3f { return ${RED_RESOLVED}; }`)
+          .fn([], d.vec3f)
+          .does(`() -> vec3f { return ${RED_RESOLVED}; }`)
           .$name('red'),
       );
 
@@ -48,10 +44,8 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -83,10 +77,8 @@ describe('tgpu.accessor', () => {
       .$name('multiplier');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return color * multiplier;
       }`)
       .$name('getColor')
@@ -109,10 +101,8 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -133,10 +123,8 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -146,7 +134,8 @@ describe('tgpu.accessor', () => {
     const getColorWithGreen = getColor.with(colorAccessor, d.vec3f(0, 1, 0));
 
     const main = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         return getColorWithGreen();
       }`)
       .$name('main')
@@ -169,10 +158,8 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)
+      .does(`() {
         return color;
       })`)
       .$name('getColor')
@@ -202,15 +189,14 @@ describe('tgpu.accessor', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(
       d.vec3f,
       tgpu['~unstable']
-        .fn(
-          [],
-          d.vec3f,
-        )(() => RED)
+        .fn([], d.vec3f)
+        .does(() => RED)
         .$name('getColor'),
     );
 
     const main = tgpu['~unstable']
-      .fn([])(() => {
+      .fn([])
+      .does(() => {
         const color = colorAccessorValue.value;
         const color2 = colorAccessorUsage.value;
         const color3 = colorAccessorFn.value;

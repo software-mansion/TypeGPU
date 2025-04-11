@@ -1,21 +1,19 @@
 import type * as smol from 'tinyest';
-import type { AnyData } from '../data/dataTypes.ts';
-import * as d from '../data/index.ts';
-import { abstractInt } from '../data/numeric.ts';
-import * as wgsl from '../data/wgslTypes.ts';
+import * as d from '../data';
+import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
-  type Snippet,
+  type Resource,
   UnknownData,
-  isMarkedInternal,
+  type Wgsl,
   isWgsl,
-} from '../types.ts';
+} from '../types';
 import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
-  numericLiteralToSnippet,
-} from './generationHelpers.ts';
+  numericLiteralToResource,
+} from './generationHelpers';
 
 const parenthesizedOps = [
   '==',
@@ -47,8 +45,8 @@ type Operator =
   | smol.UnaryOperator;
 
 function operatorToType<
-  TL extends AnyData | UnknownData,
-  TR extends AnyData | UnknownData,
+  TL extends wgsl.AnyWgslData | UnknownData,
+  TR extends wgsl.AnyWgslData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
@@ -76,11 +74,14 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  getById(id: string): Snippet | null;
-  defineVariable(id: string, dataType: wgsl.AnyWgslData | UnknownData): Snippet;
+  getById(id: string): Resource | null;
+  defineVariable(
+    id: string,
+    dataType: wgsl.AnyWgslData | UnknownData,
+  ): Resource;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
+export function resolveRes(ctx: GenerationCtx, res: Resource): string {
   if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
@@ -94,7 +95,7 @@ function assertExhaustive(value: never): never {
   );
 }
 
-export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
+export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
   return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
@@ -113,11 +114,11 @@ export function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
-): Snippet {
+): Resource {
   return ctx.defineVariable(id, dataType);
 }
 
-export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
+export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -129,7 +130,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
 export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
-): Snippet {
+): Resource {
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -188,50 +189,16 @@ export function generateExpression(
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
-        dataType: d.isData(target.dataType)
-          ? getTypeForPropAccess(target.dataType, property)
-          : UnknownData,
+        dataType: getTypeForPropAccess(target.dataType as Wgsl, property),
       };
     }
-
-    if (wgsl.isWgslArray(target.dataType)) {
-      if (property === 'length') {
-        if (target.dataType.elementCount === 0) {
-          // Dynamically-sized array
-          return {
-            value: `arrayLength(&${ctx.resolve(target.value)})`,
-            dataType: d.u32,
-          };
-        }
-
-        return {
-          value: String(target.dataType.elementCount),
-          dataType: abstractInt,
-        };
-      }
-    }
-
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
-
-    if (target.dataType.type !== 'unknown') {
-      if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return {
-          value: target.value,
-          dataType: target.dataType,
-        };
-      }
-
-      return {
-        value: propValue,
-        dataType: getTypeForPropAccess(target.dataType, property),
-      };
-    }
 
     if (isWgsl(target.value)) {
       return {
         value: propValue,
-        dataType: getTypeForPropAccess(target.value, property),
+        dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
       };
     }
 
@@ -259,15 +226,13 @@ export function generateExpression(
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      dataType: d.isData(targetExpr.dataType)
-        ? getTypeForIndexAccess(targetExpr.dataType)
-        : UnknownData,
+      dataType: getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData),
     };
   }
 
   if ('n' in expression) {
     // Numeric Literal
-    const type = numericLiteralToSnippet(expression.n);
+    const type = numericLiteralToResource(expression.n);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression.n}`);
     }
@@ -282,12 +247,12 @@ export function generateExpression(
 
     ctx.callStack.push(idValue);
 
-    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedSnippets = argSnippets.map((res) => ({
+    const argResources = args.map((arg) => generateExpression(ctx, arg));
+    const resolvedResources = argResources.map((res) => ({
       value: resolveRes(ctx, res),
       dataType: res.dataType,
     }));
-    const argValues = resolvedSnippets.map((res) => res.value);
+    const argValues = resolvedResources.map((res) => res.value);
 
     ctx.callStack.pop();
 
@@ -307,21 +272,10 @@ export function generateExpression(
       };
     }
 
-    if (!isMarkedInternal(idValue)) {
-      throw new Error(
-        `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
-      );
-    }
-
     // Assuming that `id` is callable
-    const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...resolvedSnippets,
-    ) as Snippet;
-
-    return {
-      value: resolveRes(ctx, fnRes),
-      dataType: fnRes.dataType,
-    };
+    return (idValue as unknown as (...args: unknown[]) => unknown)(
+      ...resolvedResources,
+    ) as Resource;
   }
 
   if ('o' in expression) {
@@ -396,7 +350,7 @@ export function generateExpression(
 
     return {
       value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: d.arrayOf(type, values.length) as d.AnyWgslData,
+      dataType: d.arrayOf(type as d.AnyWgslData, values.length),
     };
   }
 
@@ -474,10 +428,6 @@ ${alternate}`;
 
     if (!eq || !rawValue) {
       throw new Error('Cannot create variable without an initial value.');
-    }
-
-    if (d.isLooseData(eq.dataType)) {
-      throw new Error('Cannot create variable with loose data type.');
     }
 
     registerBlockVariable(ctx, rawId, eq.dataType);

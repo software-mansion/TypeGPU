@@ -9,7 +9,7 @@ You can think of slots as holes in the shader that can be filled in from the out
 ```ts
 const filterColorSlot = tgpu.slot<vec3f>(); // => TgpuSlot<vec3f>
 
-const filter = tgpu.fn([vec3f])((color) => {
+const filter = tgpu.fn([vec3f]).does((color) => {
   const filterColor = filterColorSlot.$; // => vec3f
 
   return mul(color, filterColor);
@@ -29,7 +29,7 @@ const filterWithGreen = filter
 ```ts
 const safeLoopSlot = tgpu.slot(false);
 
-const processObjects = tgpu.fn([f32], f32)(() => {
+const processObjects = tgpu.fn([f32], f32).does(() => {
   let len = objects.length;
 
   if (safeLoopSlot.$) { // <- evaluated at compile time
@@ -49,12 +49,12 @@ const processObjects = tgpu.fn([f32], f32)(() => {
 ```ts
 // physics.ts
 
-const defaultGravity = tgpu.fn([vec2f], vec2f)(() => vec2f(0, 9.8));
+const defaultGravity = tgpu.fn([vec2f], vec2f).does(() => vec2f(0, 9.8));
 
 export const getGravitySlot = tgpu.slot(defaultGravity);
 //           ^ TgpuSlot<TgpuFn<[Vec2f], Vec2f>>
 
-export const stepPhysics = tgpu.fn([])(() => {
+export const stepPhysics = tgpu.fn([]).does(() => {
   for (const obj of objects.$) {
     // Calling whatever implementation was provided.
     const gravity = getGravitySlot.$(obj.position);
@@ -70,13 +70,15 @@ export const stepPhysics = tgpu.fn([])(() => {
 import { stepPhysics, getGravitySlot } from './physics';
 
 const getGravityTowardsCenter = tgpu
-  .fn([vec2f], vec2f)((position) => mul(normalize(position), -1));
+  .fn([vec2f], vec2f)
+  .does((position) => mul(normalize(position), -1));
 
 const stepPhysicsAltered = stepPhysics
   .with(getGravitySlot, getGravityTowardsCenter);
 
 const main = tgpu
-  .computeFn()(() => {
+  .computeFn()
+  .does(() => {
     stepPhysicsAltered(); // <- Will use altered gravity.
   });
 ```

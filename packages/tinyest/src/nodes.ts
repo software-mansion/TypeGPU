@@ -195,16 +195,3 @@ export type Expression =
   | Literal;
 
 export type AnyNode = Statement | Expression;
-
-export type ArgNames =
-  | {
-      type: 'identifiers';
-      names: string[];
-    }
-  | {
-      type: 'destructured-object';
-      props: {
-        prop: string;
-        alias: string;
-      }[];
-    };

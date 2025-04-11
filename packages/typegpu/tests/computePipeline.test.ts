@@ -1,16 +1,17 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
   type TgpuComputeFnShell,
   type TgpuComputePipeline,
-} from '../src/index.ts';
-import { it } from './utils/extendedIt.ts';
+} from '../src';
+import * as d from '../src/data';
+import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
     const entryFn = tgpu['~unstable']
-      .computeFn({ workgroupSize: [32] })(() => {
+      .computeFn({ workgroupSize: [32] })
+      .does(() => {
         // do something
       })
       .$name('main');
@@ -39,7 +40,8 @@ describe('TgpuComputePipeline', () => {
       .$name('example-layout');
 
     const entryFn = tgpu['~unstable']
-      .computeFn({ workgroupSize: [1] })(() => {
+      .computeFn({ workgroupSize: [1] })
+      .does(() => {
         layout.bound.alpha; // Using an entry of the layout
       })
       .$name('main');

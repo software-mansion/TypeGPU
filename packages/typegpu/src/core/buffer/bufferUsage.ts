@@ -1,18 +1,18 @@
-import type { AnyData } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
-import { type StorageFlag, isUsableAsStorage } from '../../extension.ts';
-import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
-import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
+import type { AnyData } from '../../data/dataTypes';
+import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
+import { type StorageFlag, isUsableAsStorage } from '../../extension';
+import { inGPUMode } from '../../gpuMode';
+import type { TgpuNamable } from '../../namable';
+import type { Infer, InferGPU } from '../../shared/repr';
+import { $internal } from '../../shared/symbols';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
   ResolutionCtx,
   SelfResolvable,
-} from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
-import type { TgpuBuffer, UniformFlag } from './buffer.ts';
+} from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
+import type { TgpuBuffer, UniformFlag } from './buffer';
 
 // ----------
 // Public API
@@ -24,7 +24,7 @@ export interface TgpuBufferUsage<
 > {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
-  readonly [$repr]: Infer<TData>;
+  readonly '~repr': Infer<TData>;
   value: InferGPU<TData>;
 
   readonly [$internal]: {
@@ -76,7 +76,7 @@ class TgpuFixedBufferImpl<
     TgpuFixedBufferUsage<TData>
 {
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TData>;
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
 
@@ -146,7 +146,7 @@ export class TgpuLaidOutBufferImpl<
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
 {
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TData>;
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
 

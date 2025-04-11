@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CallExpression } from '../src/grammar.ts';
-import { parse } from '../src/index.ts';
+import type { CallExpression } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('call_expression', () => {
   it('parses function call with no args', () => {

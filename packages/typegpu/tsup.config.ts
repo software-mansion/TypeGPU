@@ -10,7 +10,7 @@ export default defineConfig({
   entry,
   outDir: 'dist',
   format: ['cjs', 'esm'],
-  target: 'es2024',
+  target: 'es2017',
   splitting: true,
   sourcemap: true,
   minify: !inDevMode,

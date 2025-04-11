@@ -1,6 +1,5 @@
-import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
-import type { AnyData } from '../data/dataTypes.ts';
-import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
+import { isDerived, isSlot } from '../core/slot/slotTypes';
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import {
   abstractFloat,
   abstractInt,
@@ -9,64 +8,60 @@ import {
   f32,
   i32,
   u32,
-} from '../data/numeric.ts';
+} from '../data/numeric';
+import type { WgslStruct } from '../data/struct';
 import {
-  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
-  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
-  vec4b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
-} from '../data/vector.ts';
+} from '../data/vector';
 import {
-  type WgslStruct,
+  type AnyWgslData,
+  type BaseData,
   isDecorated,
   isWgslArray,
   isWgslData,
-} from '../data/wgslTypes.ts';
-import { getResolutionCtx } from '../gpuMode.ts';
-import { $internal } from '../shared/symbols.ts';
+} from '../data/wgslTypes';
+import { getResolutionCtx } from '../gpuMode';
+import { $internal } from '../shared/symbols';
 import {
-  type Snippet,
+  type Resource,
   UnknownData,
   type Wgsl,
   hasInternalDataType,
-} from '../types.ts';
+} from '../types';
 
 const swizzleableTypes = [
   'vec2f',
   'vec2h',
   'vec2i',
   'vec2u',
-  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
-  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
-  'vec4<bool>',
   'struct',
 ] as const;
 
-type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
+type SwizzleableType = 'f' | 'h' | 'i' | 'u';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
   SwizzleableType,
-  Record<SwizzleLength, AnyData>
+  Record<SwizzleLength, AnyWgslData>
 > = {
   f: {
     1: f32,
@@ -92,12 +87,6 @@ const swizzleLenToType: Record<
     3: vec3u,
     4: vec4u,
   },
-  b: {
-    1: bool,
-    2: vec2b,
-    3: vec3b,
-    4: vec4b,
-  },
 } as const;
 
 const kindToSchema = {
@@ -105,17 +94,14 @@ const kindToSchema = {
   vec2h: vec2h,
   vec2i: vec2i,
   vec2u: vec2u,
-  'vec2<bool>': vec2b,
   vec3f: vec3f,
   vec3h: vec3h,
   vec3i: vec3i,
   vec3u: vec3u,
-  'vec3<bool>': vec3b,
   vec4f: vec4f,
   vec4h: vec4h,
   vec4i: vec4i,
   vec4u: vec4u,
-  'vec4<bool>': vec4b,
   mat2x2f: mat2x2f,
   mat3x3f: mat3x3f,
   mat4x4f: mat4x4f,
@@ -126,17 +112,14 @@ const indexableTypeToResult = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
-  'vec2<bool>': bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
-  'vec3<bool>': bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
-  'vec4<bool>': bool,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
@@ -145,7 +128,7 @@ const indexableTypeToResult = {
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): AnyData | UnknownData {
+): BaseData | UnknownData {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -163,25 +146,23 @@ export function getTypeForPropAccess(
     }
     const unwrapped = ctx.unwrap(targetType);
 
-    return getTypeFromWgsl(unwrapped);
+    return getTypeFromWgsl(unwrapped as Wgsl) as BaseData;
   }
 
-  let target = targetType as AnyData;
+  let target = targetType as BaseData;
 
   if (hasInternalDataType(target)) {
-    target = target[$internal].dataType as AnyData;
+    target = target[$internal].dataType;
   }
   while (isDecorated(target)) {
-    target = target.inner as AnyData;
+    target = target.inner;
   }
 
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    return (
-      ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
-    );
+    return (target as WgslStruct).propTypes[propName] ?? UnknownData;
   }
 
   const propLength = propName.length;
@@ -192,9 +173,7 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr.includes('bool')
-      ? 'b'
-      : (targetTypeStr[4] as SwizzleableType);
+    const swizzleTypeChar = targetTypeStr[4] as SwizzleableType;
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
@@ -205,11 +184,11 @@ export function getTypeForPropAccess(
   return isWgslData(target) ? target : UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
+export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
   if (isWgslData(resource)) {
     // array
     if (isWgslArray(resource)) {
-      return resource.elementType as AnyData;
+      return resource.elementType;
     }
 
     // vector or matrix
@@ -223,7 +202,7 @@ export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
   return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFromWgsl(resource.value as Wgsl);
   }
@@ -232,7 +211,7 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
     return UnknownData;
   }
   if (typeof resource === 'number') {
-    return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
+    return numericLiteralToResource(String(resource))?.dataType ?? UnknownData;
   }
   if (typeof resource === 'boolean') {
     return bool;
@@ -248,7 +227,7 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
   return isWgslData(resource) ? resource : UnknownData;
 }
 
-export function numericLiteralToSnippet(value: string): Snippet | undefined {
+export function numericLiteralToResource(value: string): Resource | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
     return { value, dataType: abstractInt };

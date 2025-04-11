@@ -1,7 +1,7 @@
 import { Bench } from 'tinybench';
 import type { TgpuBuffer, TgpuRoot } from 'typegpu';
-import { stringifyLocator } from '../parameter-set.ts';
-import { createSuite } from '../suites.ts';
+import { stringifyLocator } from '../parameter-set';
+import { createSuite } from '../suites';
 
 export const partialWriteSuite = createSuite(
   ({ params, tgpuModule, d }) => {

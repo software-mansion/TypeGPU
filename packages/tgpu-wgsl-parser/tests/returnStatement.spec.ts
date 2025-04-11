@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ReturnStatement } from '../src/grammar.ts';
-import { parse } from '../src/index.ts';
+import type { ReturnStatement } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('return_statement', () => {
   it('parses empty return', () => {

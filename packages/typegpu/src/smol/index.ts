@@ -1,2 +1,2 @@
-export { generateFunction } from './wgslGenerator.ts';
-export type { GenerationCtx } from './wgslGenerator.ts';
+export { generateFunction } from './wgslGenerator';
+export type { GenerationCtx } from './wgslGenerator';

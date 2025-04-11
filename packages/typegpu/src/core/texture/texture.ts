@@ -1,18 +1,11 @@
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
-import { invariant } from '../../errors.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import type { Default } from '../../shared/utilityTypes.ts';
-import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
-import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes';
+import { invariant } from '../../errors';
+import type { TgpuNamable } from '../../namable';
+import type { Default } from '../../shared/utilityTypes';
+import type { UnionToIntersection } from '../../shared/utilityTypes';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
   type StorageFormatOptions,
@@ -24,9 +17,9 @@ import {
   channelKindToFormat,
   texelFormatToChannelType,
   texelFormatToDataType,
-} from './textureFormats.ts';
-import type { TextureProps } from './textureProps.ts';
-import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
+} from './textureFormats';
+import type { TextureProps } from './textureProps';
+import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension';
 
 type ResolveStorageDimension<
   TDimension extends GPUTextureViewDimension,

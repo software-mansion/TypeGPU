@@ -1,9 +1,9 @@
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 import {
   type ExternalMap,
   applyExternals,
   replaceExternalsInWgsl,
-} from '../resolve/externals.ts';
+} from '../resolve/externals';
 
 // ----------
 // Public API

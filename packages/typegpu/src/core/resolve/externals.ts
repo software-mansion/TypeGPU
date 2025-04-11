@@ -1,7 +1,7 @@
-import { isLooseData } from '../../data/dataTypes.ts';
-import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable } from '../../namable.ts';
-import { type ResolutionCtx, isWgsl } from '../../types.ts';
+import { isLooseData } from '../../data/dataTypes';
+import { isWgslStruct } from '../../data/wgslTypes';
+import { isNamable } from '../../namable';
+import { type ResolutionCtx, isWgsl } from '../../types';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -58,7 +58,7 @@ export function addReturnTypeToExternals(
   returnType: unknown,
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
+  const matched = implementation.match(/->(?<output>.*?){/s);
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
@@ -68,7 +68,7 @@ export function addReturnTypeToExternals(
 
 function identifierRegex(name: string) {
   return new RegExp(
-    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
+    `(?<![\\w_.])${name.replaceAll('.', '\\.')}(?![\\w_])`,
     'g',
   );
 }
@@ -100,7 +100,7 @@ export function replaceExternalsInWgsl(
         [
           ...wgsl.matchAll(
             new RegExp(
-              `${externalName.replaceAll('.', '\\.').replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
+              `${externalName.replaceAll('.', '\\.')}\\.(?<prop>.*?)(?![\\w_])`,
               'g',
             ),
           ),

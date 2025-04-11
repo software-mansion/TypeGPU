@@ -1,6 +1,4 @@
-export const $repr = Symbol(
-  'Type token for the inferred (CPU & GPU) representation of a resource',
-);
+import type { AnyData } from '../data/dataTypes';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -8,10 +6,10 @@ export const $repr = Symbol(
  * type A = Infer<F32> // => number
  * type B = Infer<WgslArray<F32>> // => number[]
  */
-export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
+export type Infer<T> = T extends { readonly '~repr': infer TRepr } ? TRepr : T;
 export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
   ? TRepr
-  : T extends { readonly [$repr]: infer TRepr }
+  : T extends { readonly '~repr': infer TRepr }
     ? TRepr | undefined
     : T extends Record<string | number | symbol, unknown>
       ? InferPartialRecord<T>
@@ -38,7 +36,7 @@ export type InferGPURecord<
 };
 
 export type MemIdentity<T> = T extends {
-  readonly '~memIdent': infer TMemIdent;
+  readonly '~memIdent': infer TMemIdent extends AnyData;
 }
   ? TMemIdent
   : T;

@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import * as d from '../src/data/index.ts';
+import * as d from '../src/data';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {

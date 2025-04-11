@@ -1,15 +1,14 @@
+import { type WgslStruct, isBuiltin, struct } from '../../data';
 import {
   type Decorate,
   type HasCustomLocation,
   type IsBuiltin,
   attribute,
   location,
-} from '../../data/attributes.ts';
-import { isBuiltin } from '../../data/attributes.ts';
-import { getCustomLocation, isData } from '../../data/dataTypes.ts';
-import { struct } from '../../data/struct.ts';
-import type { BaseData, Location, WgslStruct } from '../../data/wgslTypes.ts';
-import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
+} from '../../data/attributes';
+import { getCustomLocation, isData } from '../../data/dataTypes';
+import type { BaseData, Location } from '../../data/wgslTypes';
+import type { IOData, IOLayout, IORecord } from './fnTypes';
 
 export type WithLocations<T extends IORecord> = {
   [Key in keyof T]: IsBuiltin<T[Key]> extends true

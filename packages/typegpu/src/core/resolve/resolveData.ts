@@ -1,11 +1,12 @@
-import { getAttributesString } from '../../data/attributes.ts';
+import { getAttributesString } from '../../data/attributes';
 import {
   type AnyData,
   type Disarray,
   type Unstruct,
   isLooseData,
-} from '../../data/dataTypes.ts';
-import { formatToWGSLType } from '../../data/vertexFormatData.ts';
+} from '../../data/dataTypes';
+import type { WgslStruct } from '../../data/struct';
+import { formatToWGSLType } from '../../data/vertexFormatData';
 import type {
   AnyWgslData,
   BaseData,
@@ -17,27 +18,23 @@ import type {
   Mat3x3f,
   Mat4x4f,
   U32,
-  Vec2b,
   Vec2f,
   Vec2h,
   Vec2i,
   Vec2u,
-  Vec3b,
   Vec3f,
   Vec3h,
   Vec3i,
   Vec3u,
-  Vec4b,
   Vec4f,
   Vec4h,
   Vec4i,
   Vec4u,
   WgslArray,
-  WgslStruct,
-} from '../../data/wgslTypes.ts';
-import { assertExhaustive } from '../../shared/utilityTypes.ts';
-import type { ResolutionCtx } from '../../types.ts';
-import { isAttribute } from '../vertexLayout/connectAttributesToShader.ts';
+} from '../../data/wgslTypes';
+import { assertExhaustive } from '../../shared/utilityTypes';
+import type { ResolutionCtx } from '../../types';
+import { isAttribute } from '../vertexLayout/connectAttributesToShader';
 
 /**
  * Schemas for which their `type` property directly
@@ -61,9 +58,6 @@ const identityTypes = [
   'vec2u',
   'vec3u',
   'vec4u',
-  'vec2<bool>',
-  'vec3<bool>',
-  'vec4<bool>',
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
@@ -87,9 +81,6 @@ type IdentityType =
   | Vec2u
   | Vec3u
   | Vec4u
-  | Vec2b
-  | Vec3b
-  | Vec4b
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f;
@@ -255,10 +246,6 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
 
   if (data.type === 'abstractInt' || data.type === 'abstractFloat') {
     throw new Error('Abstract types have no concrete representation in WGSL');
-  }
-
-  if (data.type === 'void') {
-    throw new Error('Void has no representation in WGSL');
   }
 
   assertExhaustive(data, 'resolveData');

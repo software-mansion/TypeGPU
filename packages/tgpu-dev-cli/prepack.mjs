@@ -5,7 +5,6 @@
 
 import * as fs from 'node:fs/promises';
 import process from 'node:process';
-import arg from 'arg';
 import { consola } from 'consola';
 import { execa } from 'execa';
 import { entries, mapValues } from 'remeda';
@@ -13,7 +12,6 @@ import color from './colors.mjs';
 import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
 import { Frog } from './log.mjs';
 import { progress } from './progress.mjs';
-import { verifyPublishTag } from './verify-publish-tag.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
@@ -72,9 +70,6 @@ async function transformPackageJSON() {
     if (value.startsWith('./dist/')) {
       return value.replace(/^\.\/dist/, '.');
     }
-    if (value.startsWith('./src/')) {
-      return value.replace(/^\.\/src/, '.');
-    }
     return value;
   });
 
@@ -132,12 +127,6 @@ const ICON = {
 async function main() {
   consola.start('Preparing the package for publishing');
   console.log('');
-
-  const args = arg({ '--skip-publish-tag-check': Boolean });
-
-  if (!args['--skip-publish-tag-check']) {
-    verifyPublishTag();
-  }
 
   /** @type {PromiseSettledResult<*>[]} */
   const results = await progress('', async (update) => {

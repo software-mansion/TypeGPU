@@ -1,19 +1,19 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
-} from './core/buffer/bufferUsage.ts';
-import type { TgpuConst } from './core/constant/tgpuConstant.ts';
-import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
-import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
-import type { TgpuFn } from './core/function/tgpuFn.ts';
-import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
-import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
-import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
-import type { TgpuSampler } from './core/sampler/sampler.ts';
+} from './core/buffer/bufferUsage';
+import type { TgpuConst } from './core/constant/tgpuConstant';
+import type { TgpuDeclare } from './core/declare/tgpuDeclare';
+import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
+import type { TgpuFn } from './core/function/tgpuFn';
+import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn';
+import type { TgpuVertexFn } from './core/function/tgpuVertexFn';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
+import type { TgpuSampler } from './core/sampler/sampler';
 import {
   type Eventual,
   type SlotValuePair,
@@ -22,28 +22,27 @@ import {
   isDerived,
   isProviding,
   isSlot,
-} from './core/slot/slotTypes.ts';
-import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
-import type {
-  TgpuAnyTextureView,
-  TgpuTexture,
-} from './core/texture/texture.ts';
-import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData } from './data/dataTypes.ts';
+} from './core/slot/slotTypes';
+import type { TgpuExternalTexture } from './core/texture/externalTexture';
+import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
+import type { TgpuVar } from './core/variable/tgpuVariable';
+import type { AnyData } from './data';
 import {
+  type AbstractFloat,
+  type AbstractInt,
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
   type BaseData,
   isWgslData,
-} from './data/wgslTypes.ts';
-import type { NameRegistry } from './nameRegistry.ts';
-import type { Infer } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+} from './data/wgslTypes';
+import type { NameRegistry } from './nameRegistry';
+import type { Infer } from './shared/repr';
+import { $internal } from './shared/symbols';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
-} from './tgpuBindGroupLayout.ts';
+} from './tgpuBindGroupLayout';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -71,19 +70,23 @@ export type ResolvableObject =
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export const UnknownData = {
-  type: 'unknown' as const,
+  type: 'unknown',
 };
 export type UnknownData = typeof UnknownData;
+export const Void = {
+  type: 'void' as const,
+};
+export type Void = typeof Void;
 
-export type Snippet = {
+export type Resource = {
   value: unknown;
-  dataType: AnyData | UnknownData;
+  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
-  args: Snippet[];
+  args: Resource[];
   returnType: AnyWgslData;
   body: Block;
   externalMap: Record<string, unknown>;
@@ -103,7 +106,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   popSlotBindings(): void;
   pushFunctionScope(
-    args: Snippet[],
+    args: Resource[],
     returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ): void;
@@ -112,8 +115,8 @@ export interface ItemStateStack {
   popBlockScope(): void;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
-  getSnippetById(id: string): Snippet | undefined;
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
+  getResourceById(id: string): Resource | undefined;
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource;
 }
 
 /**
@@ -156,7 +159,7 @@ export interface ResolutionCtx {
   resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
-    argNames: ArgNames;
+    argNames: string[];
     body: Block;
     externalNames: string[];
   };
@@ -230,10 +233,4 @@ export function hasInternalDataType(
     typeof value === 'object' &&
     !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
   );
-}
-
-export function isMarkedInternal(
-  value: unknown,
-): value is { [$internal]: Record<string, unknown> } {
-  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
 }

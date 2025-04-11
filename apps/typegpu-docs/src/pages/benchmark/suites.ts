@@ -1,11 +1,10 @@
 import { entries, filter, fromEntries, map, pipe } from 'remeda';
 import type { Bench } from 'tinybench';
-import { atomWithUrl } from './atom-with-url.ts';
-import type { TypeGPUDataModule, TypeGPUModule } from './modules.ts';
-import type { BenchParameterSet } from './parameter-set.ts';
-import { compiledWriteSuite } from './test-suites/compiled-write.ts';
-import { partialWriteSuite } from './test-suites/partial-write.ts';
-import { vectorCreationSuite } from './test-suites/vector-creation.ts';
+import { atomWithUrl } from './atom-with-url';
+import type { TypeGPUDataModule, TypeGPUModule } from './modules';
+import type { BenchParameterSet } from './parameter-set';
+import { compiledWriteSuite } from './test-suites/compiled-write';
+import { partialWriteSuite } from './test-suites/partial-write';
 
 export type TestIdentifier = `${string}_${string}`;
 
@@ -40,7 +39,6 @@ export function createSuite<T extends { bench: Bench }>(
 export const unfilteredSuites: Record<string, Suite> = {
   'Partial write': partialWriteSuite,
   'Compiled write': compiledWriteSuite,
-  'Vector creation': vectorCreationSuite,
 };
 
 export function getFilteredSuites(selectedTests: TestIdentifier[]) {

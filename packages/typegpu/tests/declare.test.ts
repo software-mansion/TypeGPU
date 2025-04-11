@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu from '../src';
+import * as d from '../src/data';
+import { parse } from './utils/parseResolved';
+import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
@@ -11,7 +11,8 @@ describe('tgpu.declare', () => {
     );
 
     const fn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -32,7 +33,8 @@ describe('tgpu.declare', () => {
     );
 
     const fn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         declaration
         // do nothing
       }`)
@@ -50,7 +52,8 @@ describe('tgpu.declare', () => {
 
   it('should inject all provided declarations', () => {
     const fn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         // do nothing
       }`)
       .$uses({
@@ -89,7 +92,8 @@ describe('tgpu.declare', () => {
       });
 
     const fn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -118,7 +122,8 @@ describe('tgpu.declare', () => {
       .$uses({ Output });
 
     const fn = tgpu['~unstable']
-      .fn([])(`() {
+      .fn([])
+      .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -143,10 +148,8 @@ describe('tgpu.declare', () => {
     );
 
     const main = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)
+      .does(() => {
         declaration;
         return 2;
       })

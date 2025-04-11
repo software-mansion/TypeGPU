@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { alignmentOf } from '../src/data/alignmentOf.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src';
+import * as d from '../src/data';
+import { alignmentOf } from '../src/data/alignmentOf';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {

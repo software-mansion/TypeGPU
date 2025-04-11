@@ -1,13 +1,13 @@
-import { MissingBindGroupsError } from '../../errors.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import { resolve } from '../../resolutionCtx.ts';
+import { MissingBindGroupsError } from '../../errors';
+import type { TgpuNamable } from '../../namable';
+import { resolve } from '../../resolutionCtx';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
-} from '../../tgpuBindGroupLayout.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import type { TgpuSlot } from '../slot/slotTypes.ts';
+} from '../../tgpuBindGroupLayout';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { TgpuSlot } from '../slot/slotTypes';
 
 // ----------
 // Public API

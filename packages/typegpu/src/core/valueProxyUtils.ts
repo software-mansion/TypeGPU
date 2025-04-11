@@ -1,14 +1,14 @@
-import type { BaseData } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
-import { getTypeForPropAccess } from '../smol/generationHelpers.ts';
+import type { BaseData } from '../data';
+import { $internal } from '../shared/symbols';
+import { getTypeForPropAccess } from '../smol/generationHelpers';
 import {
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
   type Wgsl,
   isBufferUsage,
-} from '../types.ts';
-import { isAccessor, isDerived, isSlot } from './slot/slotTypes.ts';
+} from '../types';
+import { isAccessor, isDerived, isSlot } from './slot/slotTypes';
 
 export const valueProxyHandler: ProxyHandler<
   SelfResolvable &
