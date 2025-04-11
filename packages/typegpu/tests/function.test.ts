@@ -1,10 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes.ts';
-import type { TgpuFn, TgpuFnShell } from '../src/core/function/tgpuFn.ts';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
