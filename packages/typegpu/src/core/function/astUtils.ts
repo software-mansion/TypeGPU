@@ -1,7 +1,7 @@
-import type { Block } from 'tinyest';
+import type { ArgNames, Block } from 'tinyest';
 
 export type Ast = {
-  argNames: string[];
+  argNames: ArgNames;
   body: Block;
   externalNames: string[];
 };
@@ -29,4 +29,12 @@ export function assignAst<T extends (...args: unknown[]) => unknown>(
 ): T {
   functionToAstMap.set(fn, { ast, externals });
   return fn;
+}
+
+export function removedJsImpl(name?: string) {
+  return () => {
+    throw new Error(
+      `The function "${name ?? '<unnamed>'}" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
+    );
+  };
 }

@@ -1,20 +1,23 @@
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
+  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec4b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
-} from './vector';
-import type * as wgsl from './wgslTypes';
-import type { VecKind } from './wgslTypes';
+} from './vector.ts';
+import type * as wgsl from './wgslTypes.ts';
+import type { VecKind } from './wgslTypes.ts';
 
 type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
@@ -106,6 +109,100 @@ const binaryComponentWise4u = (op: BinaryOp) => (a: wgsl.v4u, b: wgsl.v4u) =>
   vec4u(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
 
 export const VectorOps = {
+  eq: {
+    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x === e2.x, e1.y === e2.y),
+    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x === e2.x, e1.y === e2.y),
+    vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x === e2.x, e1.y === e2.y),
+    vec2u: (e1: wgsl.v2u, e2: wgsl.v2u) => vec2b(e1.x === e2.x, e1.y === e2.y),
+    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) =>
+      vec2b(e1.x === e2.x, e1.y === e2.y),
+
+    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f) =>
+      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
+    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h) =>
+      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
+    vec3i: (e1: wgsl.v3i, e2: wgsl.v3i) =>
+      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
+    vec3u: (e1: wgsl.v3u, e2: wgsl.v3u) =>
+      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
+    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) =>
+      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
+
+    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f) =>
+      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
+    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h) =>
+      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
+    vec4i: (e1: wgsl.v4i, e2: wgsl.v4i) =>
+      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
+    vec4u: (e1: wgsl.v4u, e2: wgsl.v4u) =>
+      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
+    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
+      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyVecInstance>(
+      e1: T,
+      e2: T,
+    ) => T extends wgsl.AnyVec2Instance
+      ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance
+        ? wgsl.v3b
+        : wgsl.v4b
+  >,
+
+  lt: {
+    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x < e2.x, e1.y < e2.y),
+    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x < e2.x, e1.y < e2.y),
+    vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x < e2.x, e1.y < e2.y),
+    vec2u: (e1: wgsl.v2u, e2: wgsl.v2u) => vec2b(e1.x < e2.x, e1.y < e2.y),
+
+    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f) =>
+      vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
+    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h) =>
+      vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
+    vec3i: (e1: wgsl.v3i, e2: wgsl.v3i) =>
+      vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
+    vec3u: (e1: wgsl.v3u, e2: wgsl.v3u) =>
+      vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
+
+    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f) =>
+      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
+    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h) =>
+      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
+    vec4i: (e1: wgsl.v4i, e2: wgsl.v4i) =>
+      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
+    vec4u: (e1: wgsl.v4u, e2: wgsl.v4u) =>
+      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyNumericVecInstance>(
+      e1: T,
+      e2: T,
+    ) => T extends wgsl.AnyVec2Instance
+      ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance
+        ? wgsl.v3b
+        : wgsl.v4b
+  >,
+
+  or: {
+    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) =>
+      vec2b(e1.x || e2.x, e1.y || e2.y),
+    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) =>
+      vec3b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z),
+    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
+      vec4b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z, e1.w || e2.w),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyBooleanVecInstance>(e1: T, e2: T) => T
+  >,
+
+  all: {
+    'vec2<bool>': (e: wgsl.v2b) => e.x && e.y,
+    'vec3<bool>': (e: wgsl.v3b) => e.x && e.y && e.z,
+    'vec4<bool>': (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
+  } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
+
   abs: {
     vec2f: unary2f(Math.abs),
     vec2h: unary2h(Math.abs),
@@ -126,18 +223,12 @@ export const VectorOps = {
   atan2: {
     vec2f: binaryComponentWise2f(Math.atan2),
     vec2h: binaryComponentWise2h(Math.atan2),
-    vec2i: binaryComponentWise2i(Math.atan2),
-    vec2u: binaryComponentWise2u(Math.atan2),
 
     vec3f: binaryComponentWise3f(Math.atan2),
     vec3h: binaryComponentWise3h(Math.atan2),
-    vec3i: binaryComponentWise3i(Math.atan2),
-    vec3u: binaryComponentWise3u(Math.atan2),
 
     vec4f: binaryComponentWise4f(Math.atan2),
     vec4h: binaryComponentWise4h(Math.atan2),
-    vec4i: binaryComponentWise4i(Math.atan2),
-    vec4u: binaryComponentWise4u(Math.atan2),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   acos: {
@@ -177,18 +268,12 @@ export const VectorOps = {
   ceil: {
     vec2f: unary2f(Math.ceil),
     vec2h: unary2h(Math.ceil),
-    vec2i: unary2i(Math.ceil),
-    vec2u: unary2u(Math.ceil),
 
     vec3f: unary3f(Math.ceil),
     vec3h: unary3h(Math.ceil),
-    vec3i: unary3i(Math.ceil),
-    vec3u: unary3u(Math.ceil),
 
     vec4f: unary4f(Math.ceil),
     vec4h: unary4h(Math.ceil),
-    vec4i: unary4i(Math.ceil),
-    vec4u: unary4u(Math.ceil),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   clamp: {
@@ -259,16 +344,12 @@ export const VectorOps = {
   length: {
     vec2f: lengthVec2,
     vec2h: lengthVec2,
-    vec2i: lengthVec2,
-    vec2u: lengthVec2,
+
     vec3f: lengthVec3,
     vec3h: lengthVec3,
-    vec3i: lengthVec3,
-    vec3u: lengthVec3,
+
     vec4f: lengthVec4,
     vec4h: lengthVec4,
-    vec4i: lengthVec4,
-    vec4u: lengthVec4,
   } as Record<VecKind, (v: vBase) => number>,
 
   add: {
@@ -668,40 +749,20 @@ export const VectorOps = {
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => {
-      return vec3i(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-      );
-    },
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => {
-      return vec3u(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-      );
-    },
   } as Record<
-    'vec3f' | 'vec3i' | 'vec3u',
-    <T extends wgsl.v3f | wgsl.v3i | wgsl.v3u>(a: T, b: T) => T
+    'vec3f' | 'vec3h',
+    <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T
   >,
 
   floor: {
     vec2f: unary2f(Math.floor),
     vec2h: unary2h(Math.floor),
-    vec2i: unary2i(Math.floor),
-    vec2u: unary2u(Math.floor),
 
     vec3f: unary3f(Math.floor),
     vec3h: unary3h(Math.floor),
-    vec3i: unary3i(Math.floor),
-    vec3u: unary3u(Math.floor),
 
     vec4f: unary4f(Math.floor),
     vec4h: unary4h(Math.floor),
-    vec4i: unary4i(Math.floor),
-    vec4u: unary4u(Math.floor),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   max: {
@@ -765,19 +826,7 @@ export const VectorOps = {
       ),
   } as Record<
     'vec2f' | 'vec3f' | 'vec4f' | 'vec2h' | 'vec3h' | 'vec4h' | 'number',
-    <
-      T extends
-        | wgsl.v2f
-        | wgsl.v3f
-        | wgsl.v4f
-        | wgsl.v2h
-        | wgsl.v3h
-        | wgsl.v4h
-        | number,
-    >(
-      a: T,
-      b: T,
-    ) => T
+    <T extends wgsl.AnyFloatVecInstance | number>(a: T, b: T) => T
   >,
 
   mix: {
@@ -873,69 +922,45 @@ export const VectorOps = {
   sin: {
     vec2f: unary2f(Math.sin),
     vec2h: unary2h(Math.sin),
-    vec2i: unary2i(Math.sin),
-    vec2u: unary2u(Math.sin),
 
     vec3f: unary3f(Math.sin),
     vec3h: unary3h(Math.sin),
-    vec3i: unary3i(Math.sin),
-    vec3u: unary3u(Math.sin),
 
     vec4f: unary4f(Math.sin),
     vec4h: unary4h(Math.sin),
-    vec4i: unary4i(Math.sin),
-    vec4u: unary4u(Math.sin),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   cos: {
     vec2f: unary2f(Math.cos),
     vec2h: unary2h(Math.cos),
-    vec2i: unary2i(Math.cos),
-    vec2u: unary2u(Math.cos),
 
     vec3f: unary3f(Math.cos),
     vec3h: unary3h(Math.cos),
-    vec3i: unary3i(Math.cos),
-    vec3u: unary3u(Math.cos),
 
     vec4f: unary4f(Math.cos),
     vec4h: unary4h(Math.cos),
-    vec4i: unary4i(Math.cos),
-    vec4u: unary4u(Math.cos),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   exp: {
     vec2f: unary2f(Math.exp),
     vec2h: unary2h(Math.exp),
-    vec2i: unary2i(Math.exp),
-    vec2u: unary2u(Math.exp),
 
     vec3f: unary3f(Math.exp),
     vec3h: unary3h(Math.exp),
-    vec3i: unary3i(Math.exp),
-    vec3u: unary3u(Math.exp),
 
     vec4f: unary4f(Math.exp),
     vec4h: unary4h(Math.exp),
-    vec4i: unary4i(Math.exp),
-    vec4u: unary4u(Math.exp),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   fract: {
     vec2f: unary2f((value) => value - Math.floor(value)),
     vec2h: unary2h((value) => value - Math.floor(value)),
-    vec2i: unary2i((value) => value - Math.floor(value)),
-    vec2u: unary2u((value) => value - Math.floor(value)),
 
     vec3f: unary3f((value) => value - Math.floor(value)),
     vec3h: unary3h((value) => value - Math.floor(value)),
-    vec3i: unary3i((value) => value - Math.floor(value)),
-    vec3u: unary3u((value) => value - Math.floor(value)),
 
     vec4f: unary4f((value) => value - Math.floor(value)),
     vec4h: unary4h((value) => value - Math.floor(value)),
-    vec4i: unary4i((value) => value - Math.floor(value)),
-    vec4u: unary4u((value) => value - Math.floor(value)),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   isCloseToZero: {
@@ -958,4 +983,70 @@ export const VectorOps = {
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
   } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
+
+  neg: {
+    vec2f: unary2f((value) => -value),
+    vec2h: unary2h((value) => -value),
+    vec2i: unary2i((value) => -value),
+    vec2u: unary2u((value) => -value),
+    'vec2<bool>': (e: wgsl.v2b) => vec2b(!e.x, !e.y),
+
+    vec3f: unary3f((value) => -value),
+    vec3h: unary3h((value) => -value),
+    vec3i: unary3i((value) => -value),
+    vec3u: unary3u((value) => -value),
+    'vec3<bool>': (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
+
+    vec4f: unary4f((value) => -value),
+    vec4h: unary4h((value) => -value),
+    vec4i: unary4i((value) => -value),
+    vec4u: unary4u((value) => -value),
+    'vec4<bool>': (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  select: {
+    vec2f: (f: wgsl.v2f, t: wgsl.v2f, c: wgsl.v2b) =>
+      vec2f(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2h: (f: wgsl.v2h, t: wgsl.v2h, c: wgsl.v2b) =>
+      vec2h(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2i: (f: wgsl.v2i, t: wgsl.v2i, c: wgsl.v2b) =>
+      vec2i(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2u: (f: wgsl.v2u, t: wgsl.v2u, c: wgsl.v2b) =>
+      vec2u(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    'vec2<bool>': (f: wgsl.v2b, t: wgsl.v2b, c: wgsl.v2b) =>
+      vec2b(c.x ? t.x : f.x, c.y ? t.y : f.y),
+
+    vec3f: (f: wgsl.v3f, t: wgsl.v3f, c: wgsl.v3b) =>
+      vec3f(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3h: (f: wgsl.v3h, t: wgsl.v3h, c: wgsl.v3b) =>
+      vec3h(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3i: (f: wgsl.v3i, t: wgsl.v3i, c: wgsl.v3b) =>
+      vec3i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3u: (f: wgsl.v3u, t: wgsl.v3u, c: wgsl.v3b) =>
+      vec3u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    'vec3<bool>': (f: wgsl.v3b, t: wgsl.v3b, c: wgsl.v3b) =>
+      vec3b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+
+    vec4f: (f: wgsl.v4f, t: wgsl.v4f, c: wgsl.v4b) =>
+      vec4f(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4h: (f: wgsl.v4h, t: wgsl.v4h, c: wgsl.v4b) =>
+      vec4h(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4i: (f: wgsl.v4i, t: wgsl.v4i, c: wgsl.v4b) =>
+      vec4i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4u: (f: wgsl.v4u, t: wgsl.v4u, c: wgsl.v4b) =>
+      vec4u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    'vec4<bool>': (f: wgsl.v4b, t: wgsl.v4b, c: wgsl.v4b) =>
+      vec4b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyVecInstance>(
+      f: T,
+      t: T,
+      c: T extends wgsl.AnyVec2Instance
+        ? wgsl.v2b
+        : T extends wgsl.AnyVec3Instance
+          ? wgsl.v3b
+          : wgsl.v4b,
+    ) => T
+  >,
 };

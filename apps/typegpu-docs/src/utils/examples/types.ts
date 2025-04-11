@@ -13,12 +13,13 @@ export const exampleCategories = [
   { key: 'image-processing', label: 'Image processing' },
   { key: 'simulation', label: 'Simulation' },
   { key: 'algorithms', label: 'Algorithms' },
+  { key: 'tests', label: 'Tests' },
 ];
 
 export type Example = {
   key: string;
   tsCodes: Record<string, string>;
-  tsImports: Record<string, () => Promise<unknown>>;
+  tsImport: () => Promise<unknown>;
   htmlCode: string;
   metadata: ExampleMetadata;
 };

@@ -1,26 +1,26 @@
-import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
+import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
+import type { Disarray } from '../../data/dataTypes.ts';
 import {
   getCustomLocation,
   isLooseDecorated,
   isUnstruct,
-} from '../../data/dataTypes';
-import type { Disarray } from '../../data/dataTypes';
-import { sizeOf } from '../../data/sizeOf';
-import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
-import type { BaseData, WgslArray } from '../../data/wgslTypes';
-import { roundUp } from '../../mathUtils';
-import type { TgpuNamable } from '../../namable';
+} from '../../data/dataTypes.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
+import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
+import { roundUp } from '../../mathUtils.ts';
+import type { TgpuNamable } from '../../namable.ts';
 import {
   type TgpuVertexAttrib,
   type VertexFormat,
   kindToDefaultFormatMap,
   vertexFormats,
-} from '../../shared/vertexFormat';
-import type { Labelled } from '../../types';
+} from '../../shared/vertexFormat.ts';
+import type { Labelled } from '../../types.ts';
 import type {
   ArrayToContainedAttribs,
   DataToContainedAttribs,
-} from './vertexAttribute';
+} from './vertexAttribute.ts';
 
 // ----------
 // Public API

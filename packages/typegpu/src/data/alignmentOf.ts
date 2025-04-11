@@ -4,17 +4,16 @@ import {
   isDisarray,
   isLooseDecorated,
   isUnstruct,
-} from './dataTypes';
-import { packedFormats } from './vertexFormatData';
+} from './dataTypes.ts';
+import { packedFormats } from './vertexFormatData.ts';
 import {
   type BaseData,
   isDecorated,
   isWgslArray,
   isWgslStruct,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 const knownAlignmentMap: Record<string, number> = {
-  bool: 4,
   f32: 4,
   f16: 2,
   i32: 4,

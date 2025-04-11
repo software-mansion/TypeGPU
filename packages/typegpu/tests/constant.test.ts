@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.const', () => {
   it('should inject const declaration when used in functions', () => {
     const x = tgpu['~unstable'].const(d.u32, 2);
     const fn1 = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         return x;
       }`)
       .$uses({ x })
@@ -40,7 +39,7 @@ describe('tgpu.const', () => {
       })
       .$name('boid');
 
-    const func = tgpu['~unstable'].fn([]).does(() => {
+    const func = tgpu['~unstable'].fn([])(() => {
       const pos = boidConst.value;
       const vel = boidConst.value.vel;
       const velX = boidConst.value.vel.x;

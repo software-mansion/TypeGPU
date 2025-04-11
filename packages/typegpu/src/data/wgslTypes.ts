@@ -1,10 +1,16 @@
+import type { TgpuNamable } from '../namable.ts';
 import type {
   Infer,
   InferGPU,
+  InferGPURecord,
   InferPartial,
+  InferPartialRecord,
+  InferRecord,
   MemIdentity,
-} from '../shared/repr';
-import type { AnyWgslStruct, WgslStruct } from './struct';
+  MemIdentityRecord,
+} from '../shared/repr.ts';
+import { $repr } from '../shared/repr.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
@@ -13,10 +19,15 @@ export interface NumberArrayView {
   [n: number]: number;
 }
 
+export interface BooleanArrayView {
+  readonly length: number;
+  [n: number]: boolean;
+}
+
 export interface BaseData {
   type: string;
   /** Type-token, not available at runtime */
-  readonly '~repr': unknown;
+  readonly [$repr]: unknown;
 }
 
 // #region Instance Types
@@ -26,7 +37,8 @@ export interface BaseData {
  */
 export interface AbstractInt {
   readonly type: 'abstractInt';
-  readonly '~repr': number;
+  /** Type-token, not available at runtime */
+  readonly [$repr]: number;
 }
 
 /**
@@ -34,8 +46,15 @@ export interface AbstractInt {
  */
 export interface AbstractFloat {
   readonly type: 'abstractFloat';
-  readonly '~repr': number;
+  /** Type-token, not available at runtime */
+  readonly [$repr]: number;
 }
+
+export interface Void {
+  readonly type: 'void';
+  readonly [$repr]: undefined;
+}
+export const Void: Void = { type: 'void', [$repr]: undefined };
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -396,6 +415,17 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
 }
 
 /**
+ * Interface representing its WGSL vector type counterpart: `vec2<bool>`.
+ * A vector with 2 elements of type `bool`
+ */
+export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec2<bool>';
+  x: boolean;
+  y: boolean;
+}
+
+/**
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
@@ -441,6 +471,18 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
   x: number;
   y: number;
   z: number;
+}
+
+/**
+ * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
+ * A vector with 3 elements of type `bool`
+ */
+export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec3<bool>';
+  x: boolean;
+  y: boolean;
+  z: boolean;
 }
 
 /**
@@ -495,23 +537,42 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   w: number;
 }
 
-export type AnyVecInstance =
-  | v2f
-  | v2h
-  | v2i
-  | v2u
-  | v3f
-  | v3h
-  | v3i
-  | v3u
-  | v4f
-  | v4h
-  | v4i
-  | v4u;
+/**
+ * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
+ * A vector with 4 elements of type `bool`
+ */
+export interface v4b extends BooleanArrayView, Swizzle4<v2b, v3b, v4b> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec4<bool>';
+  x: boolean;
+  y: boolean;
+  z: boolean;
+  w: boolean;
+}
 
-export type AnyVec2Instance = v2f | v2h | v2i | v2u;
-export type AnyVec3Instance = v3f | v3h | v3i | v3u;
-export type AnyVec4Instance = v4f | v4h | v4i | v4u;
+export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
+
+export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
+
+export type AnyBooleanVecInstance = v2b | v3b | v4b;
+
+export type AnyNumericVec2Instance = v2f | v2h | v2i | v2u;
+export type AnyNumericVec3Instance = v3f | v3h | v3i | v3u;
+export type AnyNumericVec4Instance = v4f | v4h | v4i | v4u;
+
+export type AnyNumericVecInstance =
+  | AnyNumericVec2Instance
+  | AnyNumericVec3Instance
+  | AnyNumericVec4Instance;
+
+export type AnyVec2Instance = v2f | v2h | v2i | v2u | v2b;
+export type AnyVec3Instance = v3f | v3h | v3i | v3u | v3b;
+export type AnyVec4Instance = v4f | v4h | v4i | v4u | v4b;
+
+export type AnyVecInstance =
+  | AnyVec2Instance
+  | AnyVec3Instance
+  | AnyVec4Instance;
 
 export type VecKind = AnyVecInstance['kind'];
 
@@ -591,7 +652,7 @@ export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
  */
 export interface Bool {
   readonly type: 'bool';
-  readonly '~repr': boolean;
+  readonly [$repr]: boolean;
 }
 
 /**
@@ -600,7 +661,7 @@ export interface Bool {
 export interface F32 {
   readonly type: 'f32';
   /** Type-token, not available at runtime */
-  readonly '~repr': number;
+  readonly [$repr]: number;
 
   (v: number | boolean): number;
 }
@@ -611,7 +672,7 @@ export interface F32 {
 export interface F16 {
   readonly type: 'f16';
   /** Type-token, not available at runtime */
-  readonly '~repr': number;
+  readonly [$repr]: number;
 
   (v: number | boolean): number;
 }
@@ -622,7 +683,7 @@ export interface F16 {
 export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
-  readonly '~repr': number;
+  readonly [$repr]: number;
   readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
 
   (v: number | boolean): number;
@@ -634,7 +695,7 @@ export interface I32 {
 export interface U32 {
   readonly type: 'u32';
   /** Type-token, not available at runtime */
-  readonly '~repr': number;
+  readonly [$repr]: number;
   readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 
   (v: number | boolean): number;
@@ -646,12 +707,12 @@ export interface U32 {
 export interface Vec2f {
   readonly type: 'vec2f';
   /** Type-token, not available at runtime */
-  readonly '~repr': v2f;
+  readonly [$repr]: v2f;
 
   (x: number, y: number): v2f;
   (xy: number): v2f;
   (): v2f;
-  (v: AnyVec2Instance): v2f;
+  (v: AnyNumericVec2Instance): v2f;
 }
 
 /**
@@ -660,12 +721,12 @@ export interface Vec2f {
 export interface Vec2h {
   readonly type: 'vec2h';
   /** Type-token, not available at runtime */
-  readonly '~repr': v2h;
+  readonly [$repr]: v2h;
 
   (x: number, y: number): v2h;
   (xy: number): v2h;
   (): v2h;
-  (v: AnyVec2Instance): v2h;
+  (v: AnyNumericVec2Instance): v2h;
 }
 
 /**
@@ -674,12 +735,12 @@ export interface Vec2h {
 export interface Vec2i {
   readonly type: 'vec2i';
   /** Type-token, not available at runtime */
-  readonly '~repr': v2i;
+  readonly [$repr]: v2i;
 
   (x: number, y: number): v2i;
   (xy: number): v2i;
   (): v2i;
-  (v: AnyVec2Instance): v2i;
+  (v: AnyNumericVec2Instance): v2i;
 }
 
 /**
@@ -688,12 +749,27 @@ export interface Vec2i {
 export interface Vec2u {
   readonly type: 'vec2u';
   /** Type-token, not available at runtime */
-  readonly '~repr': v2u;
+  readonly [$repr]: v2u;
 
   (x: number, y: number): v2u;
   (xy: number): v2u;
   (): v2u;
-  (v: AnyVec2Instance): v2u;
+  (v: AnyNumericVec2Instance): v2u;
+}
+
+/**
+ * Type of the `d.vec2b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
+ */
+export interface Vec2b {
+  readonly type: 'vec2<bool>';
+  /** Type-token, not available at runtime */
+  readonly [$repr]: v2b;
+
+  (x: boolean, y: boolean): v2b;
+  (xy: boolean): v2b;
+  (): v2b;
+  (v: v2b): v2b;
 }
 
 /**
@@ -702,14 +778,14 @@ export interface Vec2u {
 export interface Vec3f {
   readonly type: 'vec3f';
   /** Type-token, not available at runtime */
-  readonly '~repr': v3f;
+  readonly [$repr]: v3f;
 
   (x: number, y: number, z: number): v3f;
   (xyz: number): v3f;
   (): v3f;
-  (v: AnyVec3Instance): v3f;
-  (v0: AnyVec2Instance, z: number): v3f;
-  (x: number, v0: AnyVec2Instance): v3f;
+  (v: AnyNumericVec3Instance): v3f;
+  (v0: AnyNumericVec2Instance, z: number): v3f;
+  (x: number, v0: AnyNumericVec2Instance): v3f;
 }
 
 /**
@@ -718,14 +794,14 @@ export interface Vec3f {
 export interface Vec3h {
   readonly type: 'vec3h';
   /** Type-token, not available at runtime */
-  readonly '~repr': v3h;
+  readonly [$repr]: v3h;
 
   (x: number, y: number, z: number): v3h;
   (xyz: number): v3h;
   (): v3h;
-  (v: AnyVec3Instance): v3h;
-  (v0: AnyVec2Instance, z: number): v3h;
-  (x: number, v0: AnyVec2Instance): v3h;
+  (v: AnyNumericVec3Instance): v3h;
+  (v0: AnyNumericVec2Instance, z: number): v3h;
+  (x: number, v0: AnyNumericVec2Instance): v3h;
 }
 
 /**
@@ -734,14 +810,14 @@ export interface Vec3h {
 export interface Vec3i {
   readonly type: 'vec3i';
   /** Type-token, not available at runtime */
-  readonly '~repr': v3i;
+  readonly [$repr]: v3i;
 
   (x: number, y: number, z: number): v3i;
   (xyz: number): v3i;
   (): v3i;
-  (v: AnyVec3Instance): v3i;
-  (v0: AnyVec2Instance, z: number): v3i;
-  (x: number, v0: AnyVec2Instance): v3i;
+  (v: AnyNumericVec3Instance): v3i;
+  (v0: AnyNumericVec2Instance, z: number): v3i;
+  (x: number, v0: AnyNumericVec2Instance): v3i;
 }
 
 /**
@@ -750,14 +826,31 @@ export interface Vec3i {
 export interface Vec3u {
   readonly type: 'vec3u';
   /** Type-token, not available at runtime */
-  readonly '~repr': v3u;
+  readonly [$repr]: v3u;
 
   (x: number, y: number, z: number): v3u;
   (xyz: number): v3u;
   (): v3u;
-  (v: AnyVec3Instance): v3u;
-  (v0: AnyVec2Instance, z: number): v3u;
-  (x: number, v0: AnyVec2Instance): v3u;
+  (v: AnyNumericVec3Instance): v3u;
+  (v0: AnyNumericVec2Instance, z: number): v3u;
+  (x: number, v0: AnyNumericVec2Instance): v3u;
+}
+
+/**
+ * Type of the `d.vec3b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
+ */
+export interface Vec3b {
+  readonly type: 'vec3<bool>';
+  /** Type-token, not available at runtime */
+  readonly [$repr]: v3b;
+
+  (x: boolean, y: boolean, z: boolean): v3b;
+  (xyz: boolean): v3b;
+  (): v3b;
+  (v: v3b): v3b;
+  (v0: v2b, z: boolean): v3b;
+  (x: boolean, v0: v2b): v3b;
 }
 
 /**
@@ -766,18 +859,18 @@ export interface Vec3u {
 export interface Vec4f {
   readonly type: 'vec4f';
   /** Type-token, not available at runtime */
-  readonly '~repr': v4f;
+  readonly [$repr]: v4f;
 
   (x: number, y: number, z: number, w: number): v4f;
   (xyzw: number): v4f;
   (): v4f;
-  (v: AnyVec4Instance): v4f;
-  (v0: AnyVec3Instance, w: number): v4f;
-  (x: number, v0: AnyVec3Instance): v4f;
-  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4f;
-  (v0: AnyVec2Instance, z: number, w: number): v4f;
-  (x: number, v0: AnyVec2Instance, z: number): v4f;
-  (x: number, y: number, v0: AnyVec2Instance): v4f;
+  (v: AnyNumericVec4Instance): v4f;
+  (v0: AnyNumericVec3Instance, w: number): v4f;
+  (x: number, v0: AnyNumericVec3Instance): v4f;
+  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4f;
+  (v0: AnyNumericVec2Instance, z: number, w: number): v4f;
+  (x: number, v0: AnyNumericVec2Instance, z: number): v4f;
+  (x: number, y: number, v0: AnyNumericVec2Instance): v4f;
 }
 
 /**
@@ -786,18 +879,18 @@ export interface Vec4f {
 export interface Vec4h {
   readonly type: 'vec4h';
   /** Type-token, not available at runtime */
-  readonly '~repr': v4h;
+  readonly [$repr]: v4h;
 
   (x: number, y: number, z: number, w: number): v4h;
   (xyzw: number): v4h;
   (): v4h;
-  (v: AnyVec4Instance): v4h;
-  (v0: AnyVec3Instance, w: number): v4h;
-  (x: number, v0: AnyVec3Instance): v4h;
-  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4h;
-  (v0: AnyVec2Instance, z: number, w: number): v4h;
-  (x: number, v0: AnyVec2Instance, z: number): v4h;
-  (x: number, y: number, v0: AnyVec2Instance): v4h;
+  (v: AnyNumericVec4Instance): v4h;
+  (v0: AnyNumericVec3Instance, w: number): v4h;
+  (x: number, v0: AnyNumericVec3Instance): v4h;
+  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4h;
+  (v0: AnyNumericVec2Instance, z: number, w: number): v4h;
+  (x: number, v0: AnyNumericVec2Instance, z: number): v4h;
+  (x: number, y: number, v0: AnyNumericVec2Instance): v4h;
 }
 
 /**
@@ -806,18 +899,18 @@ export interface Vec4h {
 export interface Vec4i {
   readonly type: 'vec4i';
   /** Type-token, not available at runtime */
-  readonly '~repr': v4i;
+  readonly [$repr]: v4i;
 
   (x: number, y: number, z: number, w: number): v4i;
   (xyzw: number): v4i;
   (): v4i;
-  (v: AnyVec4Instance): v4i;
-  (v0: AnyVec3Instance, w: number): v4i;
-  (x: number, v0: AnyVec3Instance): v4i;
-  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4i;
-  (v0: AnyVec2Instance, z: number, w: number): v4i;
-  (x: number, v0: AnyVec2Instance, z: number): v4i;
-  (x: number, y: number, v0: AnyVec2Instance): v4i;
+  (v: AnyNumericVec4Instance): v4i;
+  (v0: AnyNumericVec3Instance, w: number): v4i;
+  (x: number, v0: AnyNumericVec3Instance): v4i;
+  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4i;
+  (v0: AnyNumericVec2Instance, z: number, w: number): v4i;
+  (x: number, v0: AnyNumericVec2Instance, z: number): v4i;
+  (x: number, y: number, v0: AnyNumericVec2Instance): v4i;
 }
 
 /**
@@ -826,18 +919,39 @@ export interface Vec4i {
 export interface Vec4u {
   readonly type: 'vec4u';
   /** Type-token, not available at runtime */
-  readonly '~repr': v4u;
+  readonly [$repr]: v4u;
 
   (x: number, y: number, z: number, w: number): v4u;
   (xyzw: number): v4u;
   (): v4u;
-  (v: AnyVec4Instance): v4u;
-  (v0: AnyVec3Instance, w: number): v4u;
-  (x: number, v0: AnyVec3Instance): v4u;
-  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4u;
-  (v0: AnyVec2Instance, z: number, w: number): v4u;
-  (x: number, v0: AnyVec2Instance, z: number): v4u;
-  (x: number, y: number, v0: AnyVec2Instance): v4u;
+  (v: AnyNumericVec4Instance): v4u;
+  (v0: AnyNumericVec3Instance, w: number): v4u;
+  (x: number, v0: AnyNumericVec3Instance): v4u;
+  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4u;
+  (v0: AnyNumericVec2Instance, z: number, w: number): v4u;
+  (x: number, v0: AnyNumericVec2Instance, z: number): v4u;
+  (x: number, y: number, v0: AnyNumericVec2Instance): v4u;
+}
+
+/**
+ * Type of the `d.vec4b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
+ */
+export interface Vec4b {
+  readonly type: 'vec4<bool>';
+  /** Type-token, not available at runtime */
+  readonly [$repr]: v4b;
+
+  (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
+  (xyzw: boolean): v4b;
+  (): v4b;
+  (v: v4b): v4b;
+  (v0: v3b, w: boolean): v4b;
+  (x: boolean, v0: v3b): v4b;
+  (v0: v2b, v1: v2b): v4b;
+  (v0: v2b, z: boolean, w: boolean): v4b;
+  (x: boolean, v0: v2b, z: boolean): v4b;
+  (x: boolean, y: boolean, v0: v2b): v4b;
 }
 
 /**
@@ -846,7 +960,7 @@ export interface Vec4u {
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
   /** Type-token, not available at runtime */
-  readonly '~repr': m2x2f;
+  readonly [$repr]: m2x2f;
 
   (...elements: number[]): m2x2f;
   (...columns: v2f[]): m2x2f;
@@ -859,7 +973,7 @@ export interface Mat2x2f {
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
   /** Type-token, not available at runtime */
-  readonly '~repr': m3x3f;
+  readonly [$repr]: m3x3f;
 
   (...elements: number[]): m3x3f;
   (...columns: v3f[]): m3x3f;
@@ -872,7 +986,7 @@ export interface Mat3x3f {
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
   /** Type-token, not available at runtime */
-  readonly '~repr': m4x4f;
+  readonly [$repr]: m4x4f;
 
   (...elements: number[]): m4x4f;
   (...columns: v4f[]): m4x4f;
@@ -891,11 +1005,43 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementCount: number;
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
-  readonly '~repr': Infer<TElement>[];
+  readonly [$repr]: Infer<TElement>[];
   readonly '~gpuRepr': InferGPU<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
+
+export const $structTag = Symbol('Tag for struct schemas');
+
+/**
+ * Struct schema constructed via `d.struct` function.
+ *
+ * Responsible for handling reading and writing struct values
+ * between binary and JS representation. Takes into account
+ * the `byteAlignment` requirement of its members.
+ */
+export interface WgslStruct<
+  TProps extends Record<string, BaseData> = Record<string, BaseData>,
+> extends TgpuNamable {
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  /** @deprecated */
+  readonly type: 'struct';
+  readonly label?: string | undefined;
+  readonly propTypes: TProps;
+
+  readonly [$structTag]: true;
+  /** Type-token, not available at runtime */
+  readonly [$repr]: Prettify<InferRecord<TProps>>;
+  /** Type-token, not available at runtime */
+  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
+  /** Type-token, not available at runtime */
+  readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
+  /** Type-token, not available at runtime */
+  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
+export type AnyWgslStruct = WgslStruct<any>;
 
 export type AddressSpace =
   | 'uniform'
@@ -916,7 +1062,7 @@ export interface Ptr<
   readonly addressSpace: TAddr;
   readonly access: TAccess;
   /** Type-token, not available at runtime */
-  readonly '~repr': Infer<TInner>;
+  readonly [$repr]: Infer<TInner>;
 }
 
 /**
@@ -926,7 +1072,7 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly type: 'atomic';
   readonly inner: TInner;
   /** Type-token, not available at runtime */
-  readonly '~repr': Infer<TInner>;
+  readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
   readonly '~memIdent': MemIdentity<TInner>;
 }
@@ -979,7 +1125,7 @@ export interface Decorated<
   readonly inner: TInner;
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
-  readonly '~repr': Infer<TInner>;
+  readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
   readonly '~memIdent': TAttribs extends Location<number>[]
@@ -997,14 +1143,17 @@ export const wgslTypeLiterals = [
   'vec2h',
   'vec2i',
   'vec2u',
+  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
+  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
+  'vec4<bool>',
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
@@ -1015,11 +1164,12 @@ export const wgslTypeLiterals = [
   'decorated',
   'abstractInt',
   'abstractFloat',
+  'void',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 
-export type PerspectiveOrLinearInterpolatableData =
+export type PerspectiveOrLinearInterpolatableBaseType =
   | F32
   | F16
   | Vec2f
@@ -1029,8 +1179,11 @@ export type PerspectiveOrLinearInterpolatableData =
   | Vec4f
   | Vec4h;
 
-export type FlatInterpolatableData =
-  | PerspectiveOrLinearInterpolatableData
+export type PerspectiveOrLinearInterpolatableData =
+  | PerspectiveOrLinearInterpolatableBaseType
+  | Decorated<PerspectiveOrLinearInterpolatableBaseType>;
+
+export type FlatInterpolatableAdditionalBaseType =
   | I32
   | U32
   | Vec2i
@@ -1039,6 +1192,20 @@ export type FlatInterpolatableData =
   | Vec3u
   | Vec4i
   | Vec4u;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | FlatInterpolatableAdditionalBaseType
+  | Decorated<FlatInterpolatableAdditionalBaseType>;
+
+export type ScalarData =
+  | Bool
+  | F32
+  | F16
+  | I32
+  | U32
+  | AbstractInt
+  | AbstractFloat;
 
 export type AnyWgslData =
   | Bool
@@ -1050,14 +1217,17 @@ export type AnyWgslData =
   | Vec2h
   | Vec2i
   | Vec2u
+  | Vec2b
   | Vec3f
   | Vec3h
   | Vec3i
   | Vec3u
+  | Vec3b
   | Vec4f
   | Vec4h
   | Vec4i
   | Vec4u
+  | Vec4b
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
@@ -1067,7 +1237,8 @@ export type AnyWgslData =
   | Atomic
   | Decorated
   | AbstractInt
-  | AbstractFloat;
+  | AbstractFloat
+  | Void;
 
 // #endregion
 
@@ -1154,7 +1325,7 @@ export function isWgslArray<T extends WgslArray>(
 export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.type === 'struct';
+  return !!(schema as T)?.[$structTag];
 }
 
 /**

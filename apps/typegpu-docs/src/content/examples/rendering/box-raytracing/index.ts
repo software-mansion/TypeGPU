@@ -92,13 +92,13 @@ const boxSizeUniform = root['~unstable']
 
 // bind groups and layouts
 
-const renderBindGroupLayout = tgpu.bindGroupLayout({
+const renderLayout = tgpu.bindGroupLayout({
   boxMatrix: { storage: boxMatrixBuffer.dataType },
   cameraPosition: { storage: cameraPositionBuffer.dataType },
   cameraAxes: { storage: cameraAxesBuffer.dataType },
 });
 
-const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
+const renderBindGroup = root.createBindGroup(renderLayout, {
   boxMatrix: boxMatrixBuffer,
   cameraPosition: cameraPositionBuffer,
   cameraAxes: cameraAxesBuffer,
@@ -106,15 +106,10 @@ const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
 
 // functions
 
-const getBoxIntersection = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, RayStruct], IntersectionStruct)
-  .does(/* wgsl */ `(
-  boundMin: vec3f,
-  boundMax: vec3f,
-  ray: RayStruct
-) -> IntersectionStruct {
-  var output: IntersectionStruct;
-
+const getBoxIntersection = tgpu['~unstable'].fn(
+  { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
+  IntersectionStruct,
+) /* wgsl */`{
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -139,7 +134,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if (tMinY > tMin) {
@@ -159,7 +154,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if tMinZ > tMin {
@@ -170,20 +165,15 @@ const getBoxIntersection = tgpu['~unstable']
     tMax = tMaxZ;
   }
 
-  output.intersects = tMin > 0 && tMax > 0;
-  output.tMin = tMin;
-  output.tMax = tMax;
-  return output;
-}
-`)
+  return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
+}`
+  .$uses({ IntersectionStruct })
   .$name('box_intersection');
 
-const vertexFunction = tgpu['~unstable']
-  .vertexFn({
-    in: { vertexIndex: d.builtin.vertexIndex },
-    out: { outPos: d.builtin.position },
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+const vertexFunction = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position },
+}) /* wgsl */`{
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -193,24 +183,22 @@ const vertexFunction = tgpu['~unstable']
     vec2<f32>(-1,  1)
   );
 
-  var output: VertexOutput;
-  output.outPos = vec4f(pos[input.vertexIndex], 0, 1);
-  return output;
-}`)
-  .$name('vertex_main');
+  return Out(vec4f(pos[in.vertexIndex], 0, 1));
+}`.$name('vertex_main');
 
 const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
 const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
-const fragmentFunction = tgpu['~unstable']
-  .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+const fragmentFunction = tgpu['~unstable'].fragmentFn({
+  in: { position: d.builtin.position },
+  out: d.vec4f,
+}) /* wgsl */`{
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
   ray.origin = cameraPosition;
-  ray.direction += cameraAxes.right * (input.position.x - f32(canvasDims.width)/2)/minDim;
-  ray.direction += cameraAxes.up * (input.position.y - f32(canvasDims.height)/2)/minDim;
+  ray.direction += cameraAxes.right * (in.position.x - f32(canvasDims.width)/2)/minDim;
+  ray.direction += cameraAxes.up * (in.position.y - f32(canvasDims.height)/2)/minDim;
   ray.direction += cameraAxes.forward;
   ray.direction = normalize(ray.direction);
 
@@ -254,9 +242,9 @@ const fragmentFunction = tgpu['~unstable']
   }
 
   return color;
-}`)
+}`
   .$uses({
-    ...renderBindGroupLayout.bound,
+    ...renderLayout.bound,
     RayStruct,
     getBoxIntersection,
     X,
@@ -274,16 +262,15 @@ const fragmentFunction = tgpu['~unstable']
 const pipeline = root['~unstable']
   .with(
     boxSizeAccessor,
-    tgpu['~unstable']
-      .fn([], d.u32)
-      .does('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: boxSizeUniform }),
+    tgpu['~unstable'].fn([], d.u32)`() -> u32 { return boxSize; }`.$uses({
+      boxSize: boxSizeUniform,
+    }),
   )
   .with(canvasDimsAccessor, canvasDimsUniform)
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()
-  .with(renderBindGroupLayout, renderBindGroup);
+  .with(renderLayout, renderBindGroup);
 
 // UI
 

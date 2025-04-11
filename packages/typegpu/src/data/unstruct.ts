@@ -1,6 +1,5 @@
-import type { InferPartialRecord, InferRecord } from '../shared/repr';
-import type { Unstruct } from './dataTypes';
-import type { BaseData } from './wgslTypes';
+import type { Unstruct } from './dataTypes.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -27,32 +26,31 @@ import type { BaseData } from './wgslTypes';
 export function unstruct<TProps extends Record<string, BaseData>>(
   properties: TProps,
 ): Unstruct<TProps> {
-  return new UnstructImpl(properties as TProps);
+  const unstruct = <T>(props: T) => props;
+  Object.setPrototypeOf(unstruct, UnstructImpl);
+  unstruct.propTypes = properties;
+
+  return unstruct as unknown as Unstruct<TProps>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-class UnstructImpl<TProps extends Record<string, BaseData>>
-  implements Unstruct<TProps>
-{
-  private _label: string | undefined;
+const UnstructImpl = {
+  type: 'unstruct',
+  _label: undefined as string | undefined,
 
-  public readonly type = 'unstruct';
-  /** Type-token, not available at runtime */
-  public readonly '~repr'!: InferRecord<TProps>;
-  /** Type-token, not available at runtime */
-  public readonly '~reprPartial'!: Partial<InferPartialRecord<TProps>>;
-
-  constructor(public readonly propTypes: TProps) {}
-
-  get label() {
+  get label(): string | undefined {
     return this._label;
-  }
+  },
 
   $name(label: string) {
     this._label = label;
     return this;
-  }
-}
+  },
+
+  toString(): string {
+    return `unstruct:${this.label ?? '<unnamed>'}`;
+  },
+};

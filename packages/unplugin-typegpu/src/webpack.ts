@@ -1,3 +1,3 @@
-import { webpackPlugin } from './index';
+import { webpackPlugin } from './index.ts';
 
 export default webpackPlugin;

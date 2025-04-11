@@ -1,4 +1,4 @@
-import type { PackageLocator } from './parameter-set.js';
+import type { PackageLocator } from './parameter-set.ts';
 
 export type TypeGPUModule = typeof import('typegpu');
 export type TypeGPUDataModule = typeof import('typegpu/data');

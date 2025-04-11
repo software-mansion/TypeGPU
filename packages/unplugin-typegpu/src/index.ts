@@ -1,25 +1,55 @@
-import type { AnyNode, CallExpression } from 'acorn';
+import type * as acorn from 'acorn';
 import { type Node, walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { type UnpluginFactory, createUnplugin } from 'unplugin';
-import babel from './babel';
+import babel from './babel.ts';
 import {
   type Context,
+  type KernelDirective,
   type TypegpuPluginOptions,
   embedJSON,
   gatherTgpuAliases,
-  isDoesCall,
+  isShellImplementationCall,
+  kernelDirectives,
   shouldSkipFile,
-} from './common';
+} from './common.ts';
 
-type TgslFunctionDef = {
-  varDecl: CallExpression;
-  implementation: AnyNode;
-};
+type FunctionNode =
+  | acorn.FunctionDeclaration
+  | acorn.AnonymousFunctionDeclaration
+  | acorn.FunctionExpression
+  | acorn.ArrowFunctionExpression;
+
+function getKernelDirective(node: FunctionNode): KernelDirective | undefined {
+  if (node.body.type === 'BlockStatement') {
+    for (const statement of node.body.body) {
+      if (statement.type === 'ExpressionStatement') {
+        if (kernelDirectives.includes(statement.directive as KernelDirective)) {
+          return statement.directive as KernelDirective;
+        }
+      }
+    }
+  }
+}
+
+function removeKernelDirective(node: FunctionNode) {
+  if (node.body.type === 'BlockStatement') {
+    node.body.body = node.body.body.filter(
+      (statement) =>
+        !(
+          statement.type === 'ExpressionStatement' &&
+          statement.directive &&
+          kernelDirectives.includes(statement.directive as KernelDirective)
+        ),
+    );
+  }
+
+  return node;
+}
 
 const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
-  options: TypegpuPluginOptions,
+  options: TypegpuPluginOptions = {},
 ) => ({
   name: 'unplugin-typegpu' as const,
   transform(code, id) {
@@ -38,30 +68,58 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       allowReturnOutsideFunction: true,
     }) as Node;
 
-    const tgslFunctionDefs: TgslFunctionDef[] = [];
+    const tgslFunctionDefs: {
+      def: FunctionNode;
+      name?: string | undefined;
+      removeJsImplementation: boolean;
+    }[] = [];
 
     walk(ast, {
       enter(_node, _parent, prop, index) {
-        const node = _node as AnyNode;
+        const node = _node as acorn.AnyNode;
 
         if (node.type === 'ImportDeclaration') {
           gatherTgpuAliases(node, ctx);
         }
 
         if (node.type === 'CallExpression') {
-          if (isDoesCall(node, ctx)) {
+          if (isShellImplementationCall(node, ctx)) {
             const implementation = node.arguments[0];
 
             if (
               implementation &&
-              !(implementation.type === 'TemplateLiteral') &&
-              !(implementation.type === 'Literal')
+              (implementation.type === 'FunctionExpression' ||
+                implementation.type === 'ArrowFunctionExpression')
             ) {
+              const directive = getKernelDirective(implementation);
               tgslFunctionDefs.push({
-                varDecl: node,
-                implementation,
+                def: removeKernelDirective(implementation),
+                removeJsImplementation: directive !== 'kernel & js',
               });
             }
+          }
+        }
+
+        if (
+          node.type === 'ArrowFunctionExpression' ||
+          node.type === 'FunctionExpression' ||
+          node.type === 'FunctionDeclaration'
+        ) {
+          const directive = getKernelDirective(node);
+          if (directive) {
+            tgslFunctionDefs.push({
+              def: removeKernelDirective(node),
+              name:
+                node.type === 'FunctionDeclaration' ||
+                node.type === 'FunctionExpression'
+                  ? node.id?.name
+                  : _parent?.type === 'VariableDeclarator'
+                    ? _parent.id.type === 'Identifier'
+                      ? _parent.id.name
+                      : undefined
+                    : undefined,
+              removeJsImplementation: directive !== 'kernel & js',
+            });
           }
         }
       },
@@ -76,28 +134,47 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       );
     }
 
-    for (const expr of tgslFunctionDefs) {
-      const { argNames, body, externalNames } = transpileFn(
-        expr.implementation,
-      );
+    for (const { def, name, removeJsImplementation } of tgslFunctionDefs) {
+      const { argNames, body, externalNames } = transpileFn(def);
+      const isFunctionStatement = def.type === 'FunctionDeclaration';
+
+      if (
+        isFunctionStatement &&
+        name &&
+        code
+          .slice(0, def.start)
+          .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
+      ) {
+        throw new Error(
+          `File ${id}: function "${name}", containing ${removeJsImplementation ? 'kernel' : 'kernel & js'} directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+        );
+      }
 
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
       magicString.appendLeft(
-        expr.implementation.start,
-        `${tgpuAlias}.__assignAst(`,
+        def.start,
+        `${isFunctionStatement && name ? `const ${name} = ` : ''}${tgpuAlias}.__assignAst(`,
       );
       magicString.appendRight(
-        expr.implementation.end,
+        def.end,
         `, ${embedJSON({ argNames, body, externalNames })}`,
       );
 
       if (externalNames.length > 0) {
-        magicString.appendRight(
-          expr.implementation.end,
-          `, {${externalNames.join(', ')}})`,
-        );
+        magicString.appendRight(def.end, `, {${externalNames.join(', ')}})`);
       } else {
-        magicString.appendRight(expr.implementation.end, ')');
+        magicString.appendRight(
+          def.end,
+          `)${isFunctionStatement && name ? ';' : ''}`,
+        );
+      }
+
+      if (removeJsImplementation) {
+        magicString.overwrite(
+          def.start,
+          def.end,
+          `${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`,
+        );
       }
     }
 
@@ -110,7 +187,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
 const unplugin = createUnplugin(typegpu);
 
-export type { TypegpuPluginOptions } from './common';
+export type { TypegpuPluginOptions } from './common.ts';
 
 export default unplugin;
 

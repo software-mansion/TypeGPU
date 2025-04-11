@@ -1,20 +1,18 @@
 import { JitTranspiler } from 'tgpu-jit';
 import type * as smol from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { StrictNameRegistry } from '../../src';
-import tgpu from '../../src';
-import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
-import * as d from '../../src/data';
-import { abstractFloat, abstractInt } from '../../src/data/numeric';
-import * as gpu from '../../src/gpuMode';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx';
-import { $internal } from '../../src/shared/symbols';
-import * as wgslGenerator from '../../src/smol/wgslGenerator';
-import * as std from '../../src/std';
-import { Void } from '../../src/types';
-import { it } from '../utils/extendedIt';
-import { parse } from '../utils/parseResolved';
-import { parseResolved } from '../utils/parseResolved';
+import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
+import * as d from '../../src/data/index.ts';
+import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { Void } from '../../src/data/wgslTypes.ts';
+import * as gpu from '../../src/gpuMode.ts';
+import tgpu, { StrictNameRegistry } from '../../src/index.ts';
+import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { $internal } from '../../src/shared/symbols.ts';
+import * as wgslGenerator from '../../src/smol/wgslGenerator.ts';
+import * as std from '../../src/std/index.ts';
+import { it } from '../utils/extendedIt.ts';
+import { parse, parseResolved } from '../utils/parseResolved.ts';
 
 const transpiler = new JitTranspiler();
 
@@ -153,8 +151,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn([], d.u32)
-      .does(() => {
+      .fn(
+        [],
+        d.u32,
+      )(() => {
         return testUsage.value.a + testUsage.value.b.x;
       })
       .$name('testFn');
@@ -215,7 +215,10 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('uniform');
 
-    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
       return testUsage.value[3] as number;
     });
 
@@ -276,8 +279,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn([d.u32], d.vec4f)
-      .does((idx) => {
+      .fn(
+        [d.u32],
+        d.vec4f,
+      )((idx) => {
         // biome-ignore lint/style/noNonNullAssertion: <no thanks>
         const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
         const vec = std.mix(d.vec4f(), testUsage.value.a, value);
@@ -309,7 +314,11 @@ describe('wgslGenerator', () => {
     } as const;
     expect(astInfo.ast.body).toEqual(expectedAst);
 
-    const args = astInfo.ast.argNames.map((name) => ({
+    if (astInfo.ast.argNames.type !== 'identifiers') {
+      throw new Error('Expected arguments as identifier names in ast');
+    }
+
+    const args = astInfo.ast.argNames.names.map((name) => ({
       value: name,
       dataType: d.u32,
     }));
@@ -501,8 +510,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([], d.vec4u)
-      .does(() => {
+      .fn(
+        [],
+        d.vec4u,
+      )(() => {
         return derived.value;
       })
       .$name('testFn');
@@ -551,8 +562,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([d.u32], d.f32)
-      .does((idx) => {
+      .fn(
+        [d.u32],
+        d.f32,
+      )((idx) => {
         return derived.value[idx] as number;
       })
       .$name('testFn');
@@ -588,7 +601,10 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions', () => {
-    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
       const arr = [1, 2, 3];
       return arr[1] as number;
     });
@@ -639,7 +655,10 @@ describe('wgslGenerator', () => {
       })
       .$name('TestStruct');
 
-    const testFn = tgpu['~unstable'].fn([], d.f32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.f32,
+    )(() => {
       const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
       return (arr[1] as { x: number; y: number }).y;
     });
@@ -694,8 +713,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(() => {
+      .fn(
+        [],
+        d.f32,
+      )(() => {
         const arr = [derived.value, std.mul(derived.value, d.vec2f(2, 2))];
         return (arr[1] as { x: number; y: number }).y;
       })
@@ -789,5 +810,85 @@ describe('wgslGenerator', () => {
         ],
       }
     `);
+  });
+
+  it('allows for member access on values returned from function calls', () => {
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.vec3f,
+    });
+
+    const fnOne = tgpu['~unstable'].fn([], TestStruct).does(() => {
+      return TestStruct({ x: 1, y: d.vec3f(1, 2, 3) });
+    });
+
+    const fnTwo = tgpu['~unstable'].fn([], d.f32).does(() => {
+      return fnOne().y.x;
+    });
+
+    expect(parseResolved({ fnTwo })).toEqual(
+      parse(`
+      struct TestStruct {
+        x: u32,
+        y: vec3f,
+      }
+
+      fn fnOne() -> TestStruct {
+        return TestStruct(1, vec3f(1, 2, 3));
+      }
+
+      fn fnTwo() -> f32 {
+        return fnOne().y.x;
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      fnTwo[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(astInfo.ast.body).toMatchInlineSnapshot(`
+      {
+        "b": [
+          {
+            "r": {
+              "a": [
+                {
+                  "a": [
+                    {
+                      "f": [
+                        "fnOne",
+                        [],
+                      ],
+                    },
+                    "y",
+                  ],
+                },
+                "x",
+              ],
+            },
+          },
+        ],
+      }
+    `);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: return fnOne().y.x;
+    //                     ^ this should be a f32
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      // biome-ignore lint/suspicious/noExplicitAny: <sue me>
+      (astInfo.ast.body as any).b[0].r as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.f32);
   });
 });

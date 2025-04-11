@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { TranslationUnit } from '../src/grammar';
-import { parse } from '../src/index';
+import type { TranslationUnit } from '../src/grammar.ts';
+import { parse } from '../src/index.ts';
 
 describe('override_decl', () => {
   it('parses untyped, unassigned', () => {

@@ -1,12 +1,12 @@
-import { getResolutionCtx } from '../../gpuMode';
-import type { Infer } from '../../shared/repr';
-import { unwrapProxy } from '../valueProxyUtils';
+import { getResolutionCtx } from '../../gpuMode.ts';
+import { $repr, type Infer } from '../../shared/repr.ts';
+import { unwrapProxy } from '../valueProxyUtils.ts';
 import type {
   Eventual,
   SlotValuePair,
   TgpuDerived,
   TgpuSlot,
-} from './slotTypes';
+} from './slotTypes.ts';
 
 // ----------
 // Public API
@@ -28,7 +28,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
-    '~repr': undefined as Infer<T>,
+    [$repr]: undefined as Infer<T>,
 
     get value(): Infer<T> {
       const ctx = getResolutionCtx();
@@ -62,7 +62,7 @@ function createBoundDerived<T>(
 ): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
-    '~repr': undefined as Infer<T>,
+    [$repr]: undefined as Infer<T>,
 
     '~compute'() {
       throw new Error(

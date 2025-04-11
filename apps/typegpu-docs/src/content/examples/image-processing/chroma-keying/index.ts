@@ -16,7 +16,8 @@ const VertexOutput = d.struct({
   uv: d.location(0, d.vec2f),
 });
 
-const shaderCode = /* wgsl */ `
+const shaderCode = tgpu.resolve({
+  template: /* wgsl */ `
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -44,22 +45,18 @@ fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
   return output;
 }
 
-const rgb_to_ycbcr_matrix = mat3x3f(
+const rgbToYcbcrMatrix = mat3x3f(
   0.299,     0.587,     0.114,
  -0.168736, -0.331264,  0.5,
   0.5,      -0.418688, -0.081312,
 );
 
-fn rgb_to_ycbcr(rgb: vec3f) -> vec3f {
- return rgb * rgb_to_ycbcr_matrix;
-}
-
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
 
-  let ycbcr = col.rgb * rgb_to_ycbcr_matrix;
-  let colycbcr = color * rgb_to_ycbcr_matrix;
+  let ycbcr = col.rgb * rgbToYcbcrMatrix;
+  let colycbcr = color * rgbToYcbcrMatrix;
 
   let crDiff = abs(ycbcr.g - colycbcr.g);
   let cbDiff = abs(ycbcr.b - colycbcr.b);
@@ -70,7 +67,15 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   return col;
-}`;
+}
+
+`,
+  externals: {
+    ...rareLayout.bound,
+    ...frequentLayout.bound,
+    VertexOutput,
+  },
+});
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -138,14 +143,7 @@ const rareBindGroup = root.createBindGroup(rareLayout, {
 });
 
 const shaderModule = device.createShaderModule({
-  code: tgpu.resolve({
-    template: shaderCode,
-    externals: {
-      ...rareLayout.bound,
-      ...frequentLayout.bound,
-      VertexOutput,
-    },
-  }),
+  code: shaderCode,
 });
 
 const renderPipeline = device.createRenderPipeline({

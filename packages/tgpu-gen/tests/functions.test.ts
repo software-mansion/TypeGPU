@@ -13,9 +13,7 @@ fn rotate(v: vec2f, angle: f32) -> vec2f {
 }`;
 
     expect(generate(wgsl)).toContain(`\
-export const rotate = tgpu
-  .fn([d.vec2f, d.f32], d.vec2f)
-  .does(/* wgsl */ \`(v: vec2f, angle: f32) -> vec2f {
+export const rotate = tgpu['~unstable'].fn({v: d.vec2f, angle: d.f32}, d.vec2f)(/* wgsl */ \`{
     let pos = vec2(
         (v.x * cos(angle)) - (v.y * sin(angle)),
         (v.x * sin(angle)) + (v.y * cos(angle)),
@@ -31,75 +29,8 @@ fn foo() {
 }`;
 
     expect(generate(wgsl)).toContain(`\
-export const foo = tgpu
-  .fn([])
-  .does(/* wgsl */ \`() {
+export const foo = tgpu['~unstable'].fn({})(/* wgsl */ \`{
     let x = vec3f();
-}\`);`);
-  });
-
-  it('generates entry vertex functions', () => {
-    const wgsl = `\
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(1) color: vec4f,
-};
-
-@vertex
-fn mainVert(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
-    let instanceInfo = trianglePos[ii];
-
-    let angle = getRotationFromVelocity(instanceInfo.velocity);
-    let rotated = rotate(v, angle);
-
-    let offset = instanceInfo.position;
-    let pos = vec4(rotated + offset, 0.0, 1.0);
-
-    let color = vec4(
-        sin(angle + colorPalette.r) * 0.45 + 0.45,
-        sin(angle + colorPalette.g) * 0.45 + 0.45,
-        sin(angle + colorPalette.b) * 0.45 + 0.45,
-        1.0
-    );
-
-    return VertexOutput(pos, color);
-}`;
-
-    expect(generate(wgsl)).toContain(`\
-export const mainVert = tgpu
-  .vertexFn([d.location(0, d.vec2f)], VertexOutput)
-  .does(/* wgsl */ \`(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
-    let instanceInfo = trianglePos[ii];
-
-    let angle = getRotationFromVelocity(instanceInfo.velocity);
-    let rotated = rotate(v, angle);
-
-    let offset = instanceInfo.position;
-    let pos = vec4(rotated + offset, 0.0, 1.0);
-
-    let color = vec4(
-        sin(angle + colorPalette.r) * 0.45 + 0.45,
-        sin(angle + colorPalette.g) * 0.45 + 0.45,
-        sin(angle + colorPalette.b) * 0.45 + 0.45,
-        1.0
-    );
-
-    return VertexOutput(pos, color);
-}\`);`);
-  });
-
-  it('generates entry fragment functions', () => {
-    const wgsl = `\
-@fragment
-fn mainFrag(@location(1) color: vec4f) -> @location(0) vec4f {
-    return color;
-}`;
-
-    expect(generate(wgsl)).toContain(`\
-export const mainFrag = tgpu
-  .fragmentFn([d.location(1, d.vec4f)], d.location(0, d.vec4f))
-  .does(/* wgsl */ \`(@location(1) color: vec4f) -> @location(0) vec4f {
-    return color;
 }\`);`);
   });
 

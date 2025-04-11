@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { it } from './utils/extendedIt';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
   describe('.createBuffer', () => {
@@ -201,19 +201,17 @@ describe('TgpuRoot', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
-    const mainVertexUsing = tgpu['~unstable'].vertexFn({ out: {} }).does(() => {
+    const mainVertexUsing = tgpu['~unstable'].vertexFn({ out: {} })(() => {
       layout.bound.foo.value;
       return {};
     });
 
     // A vertex function that is using none of the layout's entries
-    const mainVertexNotUsing = tgpu['~unstable']
-      .vertexFn({ out: {} })
-      .does(() => ({}));
+    const mainVertexNotUsing = tgpu['~unstable'].vertexFn({ out: {} })(
+      () => ({}),
+    );
 
-    const mainFragment = tgpu['~unstable']
-      .fragmentFn({ out: {} })
-      .does(() => ({}));
+    const mainFragment = tgpu['~unstable'].fragmentFn({ out: {} })(() => ({}));
 
     it('ignores bind groups that are not used in the shader', ({
       root,

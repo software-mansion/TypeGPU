@@ -1,11 +1,12 @@
 import type {
+  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr';
-import { sizeOf } from './sizeOf';
-import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
+} from '../shared/repr.ts';
+import { sizeOf } from './sizeOf.ts';
+import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -36,7 +37,7 @@ export function arrayOf<TElement extends AnyWgslData>(
 class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly type = 'array';
   /** Type-token, not available at runtime */
-  public readonly '~repr'!: Infer<TElement>[];
+  public declare readonly [$repr]: Infer<TElement>[];
   /** Type-token, not available at runtime */
   public readonly '~gpuRepr'!: InferGPU<TElement>[];
   /** Type-token, not available at runtime */

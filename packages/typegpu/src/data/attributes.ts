@@ -1,10 +1,11 @@
 import type {
+  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr';
-import { alignmentOf } from './alignmentOf';
+} from '../shared/repr.ts';
+import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
   type AnyLooseData,
@@ -12,8 +13,8 @@ import {
   type LooseTypeLiteral,
   isLooseData,
   isLooseDecorated,
-} from './dataTypes';
-import { sizeOf } from './sizeOf';
+} from './dataTypes.ts';
+import { sizeOf } from './sizeOf.ts';
 import {
   type Align,
   type AnyWgslData,
@@ -34,7 +35,7 @@ import {
   isDecorated,
   isSizeAttrib,
   isWgslData,
-} from './wgslTypes';
+} from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -290,7 +291,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   // Type-token, not available at runtime
-  public readonly '~repr'!: Infer<TInner>;
+  public declare readonly [$repr]: Infer<TInner>;
 
   constructor(
     public readonly inner: TInner,

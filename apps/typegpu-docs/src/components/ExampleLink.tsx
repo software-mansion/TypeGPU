@@ -3,10 +3,10 @@ import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
 import SelectedDotSvg from '../assets/selected-dot.svg';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
-import { menuShownMobileAtom } from '../utils/examples/menuShownAtom';
-import useEvent from '../utils/useEvent';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
+import { PLAYGROUND_KEY } from '../utils/examples/exampleContent.ts';
+import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
+import useEvent from '../utils/useEvent.ts';
 
 type Props = {
   exampleKey: string | undefined;

@@ -4,15 +4,15 @@ import { useId, useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom';
+import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import {
   menuShownAtom,
   menuShownMobileAtom,
-} from '../utils/examples/menuShownAtom';
-import ExampleList from './ExampleList';
-import ExamplePage from './ExamplePage';
-import { Button } from './design/Button';
-import { Toggle } from './design/Toggle';
+} from '../utils/examples/menuShownAtom.ts';
+import ExampleList from './ExampleList.tsx';
+import ExamplePage from './ExamplePage.tsx';
+import { Button } from './design/Button.tsx';
+import { Toggle } from './design/Toggle.tsx';
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);

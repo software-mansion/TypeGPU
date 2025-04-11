@@ -1,10 +1,10 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { mul } from '../src/std';
-import { it } from './utils/extendedIt';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { mul } from '../src/std/index.ts';
+import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
@@ -17,8 +17,10 @@ describe('TgpuDerived', () => {
     const b = tgpu['~unstable'].derived(() => double.value + 2);
 
     const main = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(() => {
+      .fn(
+        [],
+        d.f32,
+      )(() => {
         return a.value + b.value;
       })
       .$name('main');
@@ -39,8 +41,10 @@ describe('TgpuDerived', () => {
     const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
     const getDouble = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(() => {
+      .fn(
+        [],
+        d.f32,
+      )(() => {
         return double.value;
       })
       .$name('getDouble');
@@ -50,8 +54,7 @@ describe('TgpuDerived', () => {
     const c = getDouble.with(foo, 4);
 
     const main = tgpu['~unstable']
-      .fn([])
-      .does(() => {
+      .fn([])(() => {
         a();
         b();
         c();
@@ -84,8 +87,7 @@ describe('TgpuDerived', () => {
       const gridSize = gridSizeSlot.value;
 
       return tgpu['~unstable']
-        .fn([d.arrayOf(d.f32, gridSize)])
-        .does((arr) => {
+        .fn([d.arrayOf(d.f32, gridSize)])((arr) => {
           // do something
         })
         .$name('fill');
@@ -97,8 +99,7 @@ describe('TgpuDerived', () => {
     const exampleArray: number[] = [];
 
     const main = tgpu['~unstable']
-      .fn([])
-      .does(() => {
+      .fn([])(() => {
         fill.value(exampleArray);
         fillWith2.value(exampleArray);
         fillWith3.value(exampleArray);
@@ -146,7 +147,7 @@ describe('TgpuDerived', () => {
       () => derivedUniformSlot,
     );
 
-    const func = tgpu['~unstable'].fn([]).does(() => {
+    const func = tgpu['~unstable'].fn([])(() => {
       const pos = doubledVectorSlot.value;
       const posX = doubledVectorSlot.value.x;
       const vel = derivedUniformSlot.value.vel;
@@ -190,18 +191,19 @@ describe('TgpuDerived', () => {
     const valueSlot = utgpu.slot(1).$name('valueSlot');
 
     const derivedFn = utgpu.derived(() => {
-      return utgpu
-        .fn([], d.f32)
-        .does(() => valueSlot.value)
+      return tgpu['~unstable']
+        .fn(
+          [],
+          d.f32,
+        )(() => valueSlot.value)
         .with(valueSlot, valueSlot.value) // currently necessary to work :/
         .$name('innerFn');
     });
 
     const derivedFnWith2 = derivedFn.with(valueSlot, 2);
 
-    const mainFn = utgpu
-      .fn([])
-      .does(() => {
+    const mainFn = tgpu['~unstable']
+      .fn([])(() => {
         derivedFn.value();
         derivedFnWith2.value();
       })

@@ -3,69 +3,49 @@ import Editor, {
   type Monaco,
   type OnMount,
 } from '@monaco-editor/react';
-import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
-import { entries, map, pipe } from 'remeda';
-import wgpuMatrixDts from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
-import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
-
-const typegpuSrcFiles: Record<string, string> = import.meta.glob(
-  '../../../../packages/typegpu/src/**/*.ts',
-  {
-    query: 'raw',
-    eager: true,
-    import: 'default',
-  },
-);
-
-const typegpuExtraLibs = pipe(
-  entries(typegpuSrcFiles),
-  map(([path, content]) => ({
-    filename: path.replace('../../../../packages/', ''),
-    content,
-  })),
-);
-
-const mediacaptureDtsFiles: Record<string, string> = import.meta.glob(
-  '../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
-  {
-    query: 'raw',
-    eager: true,
-    import: 'default',
-  },
-);
-
-const mediacaptureExtraLibs = pipe(
-  entries(mediacaptureDtsFiles),
-  map(([path, content]) => ({
-    filename: path.replace(
-      '../../node_modules/@types/dom-mediacapture-transform',
-      '@types/dom-mediacapture-transform',
-    ),
-    content,
-  })),
-);
+import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
+import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
+import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
 
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
-  tsDefaults.addExtraLib(webgpuTypes);
-  for (const lib of typegpuExtraLibs) {
-    tsDefaults.addExtraLib(lib.content, lib.filename);
+  const reroutes = pipe(
+    entries(SANDBOX_MODULES),
+    map(([key, moduleDef]) => {
+      if ('reroute' in moduleDef.typeDef) {
+        return [key, moduleDef.typeDef.reroute] as const;
+      }
+      return null;
+    }),
+    filter(isTruthy),
+    fromEntries(),
+  );
+
+  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
+    if ('content' in moduleDef.typeDef) {
+      tsDefaults.addExtraLib(
+        moduleDef.typeDef.content,
+        moduleDef.typeDef.filename,
+      );
+
+      if (
+        moduleDef.typeDef.filename &&
+        moduleDef.typeDef.filename !== moduleKey // the redirect is not a no-op
+      ) {
+        reroutes[moduleKey] = [
+          ...(reroutes[moduleKey] ?? []),
+          moduleDef.typeDef.filename,
+        ];
+      }
+    }
   }
-  for (const lib of mediacaptureExtraLibs) {
-    tsDefaults.addExtraLib(lib.content, lib.filename);
-  }
-  tsDefaults.addExtraLib(wgpuMatrixDts, 'wgpu-matrix.d.ts');
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
-    paths: {
-      typegpu: ['typegpu/src/index.ts'],
-      'typegpu/data': ['typegpu/src/data/index.ts'],
-      'typegpu/std': ['typegpu/src/std/index.ts'],
-    },
+    paths: reroutes,
   });
 }
 

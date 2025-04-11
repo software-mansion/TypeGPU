@@ -1,6 +1,3 @@
-// @ts-ignore
-import * as example from './src/index.ts';
-
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -67,6 +64,10 @@ if (body.firstChild) {
   body.appendChild(controlsPanel);
 }
 
+// Execute example
+// @ts-ignore
+const example = await import('./src/index.ts');
+
 // Create example controls
 for (const controls of Object.values(example)) {
   if (typeof controls === 'function') {
@@ -119,6 +120,48 @@ for (const controls of Object.values(example)) {
         params.onSelectChange(select.value);
       }
 
+      if ('onVectorSliderChange' in params) {
+        const sliderContainer = document.createElement('div');
+        sliderContainer.style.display = 'flex';
+        sliderContainer.style.flexDirection = 'column';
+        sliderContainer.style.gap = '0.2rem';
+
+        const currentValues = params.initial
+          ? [...params.initial]
+          : [...params.min];
+        const length = params.min.length;
+        const labels = ['x', 'y', 'z', 'w'];
+
+        for (let i = 0; i < length; i++) {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.alignItems = 'center';
+          row.style.gap = '0.2rem';
+
+          const labelSpan = document.createElement('span');
+          labelSpan.innerText = labels[i];
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.min = `${params.min[i]}`;
+          slider.max = `${params.max[i]}`;
+          slider.step = `${params.step[i] ?? 0.1}`;
+          slider.value = `${currentValues[i]}`;
+
+          slider.addEventListener('input', () => {
+            currentValues[i] = Number.parseFloat(slider.value);
+            params.onVectorSliderChange(currentValues);
+          });
+
+          row.appendChild(labelSpan);
+          row.appendChild(slider);
+          sliderContainer.appendChild(row);
+        }
+
+        params.onVectorSliderChange(currentValues);
+        controlRow.appendChild(sliderContainer);
+      }
+
       if ('onToggleChange' in params) {
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
@@ -168,6 +211,14 @@ type SliderControlParam = {
   step?: number;
 };
 
+type VectorSliderControlParam = {
+  onVectorSliderChange: (newValue: number[]) => void;
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
+};
+
 type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
 };
@@ -182,4 +233,5 @@ type ExampleControlParam =
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
-  | TextAreaControlParam;
+  | TextAreaControlParam
+  | VectorSliderControlParam;

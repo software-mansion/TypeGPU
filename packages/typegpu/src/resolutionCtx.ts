@@ -1,5 +1,5 @@
-import type { Block } from 'tinyest';
-import { resolveData } from './core/resolve/resolveData';
+import type { ArgNames, Block } from 'tinyest';
+import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
   type SlotValuePair,
@@ -8,40 +8,40 @@ import {
   isDerived,
   isProviding,
   isSlot,
-} from './core/slot/slotTypes';
-import { isData } from './data';
-import { getAttributesString } from './data/attributes';
+} from './core/slot/slotTypes.ts';
+import { getAttributesString } from './data/attributes.ts';
+import { isData } from './data/dataTypes.ts';
 import {
   type AnyWgslData,
   type BaseData,
   isWgslArray,
   isWgslStruct,
-} from './data/wgslTypes';
-import { MissingSlotValueError, ResolutionError } from './errors';
-import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode';
-import type { JitTranspiler } from './jitTranspiler';
-import type { NameRegistry } from './nameRegistry';
-import { naturalsExcept } from './shared/generators';
-import type { Infer } from './shared/repr';
-import { $internal } from './shared/symbols';
-import { generateFunction } from './smol';
-import { getTypeFromWgsl } from './smol/generationHelpers';
+} from './data/wgslTypes.ts';
+import { MissingSlotValueError, ResolutionError } from './errors.ts';
+import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode.ts';
+import type { JitTranspiler } from './jitTranspiler.ts';
+import type { NameRegistry } from './nameRegistry.ts';
+import { naturalsExcept } from './shared/generators.ts';
+import type { Infer } from './shared/repr.ts';
+import { $internal } from './shared/symbols.ts';
+import { getTypeFromWgsl } from './smol/generationHelpers.ts';
+import { generateFunction } from './smol/wgslGenerator.ts';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
   bindGroupLayout,
-} from './tgpuBindGroupLayout';
+} from './tgpuBindGroupLayout.ts';
 import type {
   FnToWgslOptions,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  Resource,
+  Snippet,
   Wgsl,
-} from './types';
-import { UnknownData, isSelfResolvable, isWgsl } from './types';
+} from './types.ts';
+import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -68,7 +68,7 @@ type SlotBindingLayer = {
 
 type FunctionScopeLayer = {
   type: 'functionScope';
-  args: Resource[];
+  args: Snippet[];
   externalMap: Record<string, unknown>;
   returnType: AnyWgslData | undefined;
 };
@@ -123,7 +123,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    args: Resource[],
+    args: Snippet[],
     returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ) {
@@ -187,7 +187,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  getResourceById(id: string): Resource | undefined {
+  getSnippetById(id: string): Snippet | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -225,7 +225,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource {
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -340,8 +340,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.dedent();
   }
 
-  getById(id: string): Resource | null {
-    const item = this._itemStateStack.getResourceById(id);
+  getById(id: string): Snippet | null {
+    const item = this._itemStateStack.getSnippetById(id);
 
     if (item === undefined) {
       return null;
@@ -350,7 +350,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
+  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet {
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
@@ -363,7 +363,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   transpileFn(fn: string): {
-    argNames: string[];
+    argNames: ArgNames;
     body: Block;
     externalNames: string[];
   } {
@@ -384,20 +384,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
-      const str = generateFunction(this, options.body);
-
-      const argList = options.args
-        .map(
-          (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
-        )
-        .join(', ');
-
       return {
-        head:
-          options.returnType !== undefined
-            ? `(${argList}) -> ${getAttributesString(options.returnType)} ${this.resolve(options.returnType)}`
-            : `(${argList})`,
-        body: str,
+        head: resolveFunctionHeader(this, options.args, options.returnType),
+        body: generateFunction(this, options.body),
       };
     } finally {
       this._itemStateStack.popFunctionScope();
@@ -696,4 +685,18 @@ export function resolve(
     bindGroupLayouts,
     catchall,
   };
+}
+
+export function resolveFunctionHeader(
+  ctx: ResolutionCtx,
+  args: Snippet[],
+  returnType: AnyWgslData,
+) {
+  const argList = args
+    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyWgslData)}`)
+    .join(', ');
+
+  return returnType !== undefined
+    ? `(${argList}) -> ${getAttributesString(returnType)} ${ctx.resolve(returnType)}`
+    : `(${argList})`;
 }

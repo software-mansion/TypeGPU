@@ -1,14 +1,25 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
+  $repr,
   Infer,
+  InferGPURecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
-} from '../shared/repr.js';
-import type { Prettify } from '../shared/utilityTypes.js';
-import { vertexFormats } from '../shared/vertexFormat.js';
-import type { PackedData } from './vertexFormatData.js';
-import * as wgsl from './wgslTypes.js';
+  MemIdentityRecord,
+} from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
+import { vertexFormats } from '../shared/vertexFormat.ts';
+import type { PackedData } from './vertexFormatData.ts';
+import * as wgsl from './wgslTypes.ts';
+
+export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
+  TImpl & {
+    [$internal]: {
+      implementation: TImpl | string;
+    };
+  };
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -22,7 +33,7 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
-  readonly '~repr': Infer<TElement>[];
+  readonly [$repr]: Infer<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
 }
 
@@ -37,12 +48,18 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
-  readonly '~repr': Prettify<InferRecord<TProps>>;
+  readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
+  readonly '~memIdent': Unstruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
+export type AnyUnstruct = Unstruct<any>;
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
@@ -51,7 +68,7 @@ export interface LooseDecorated<
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
-  readonly '~repr': Infer<TInner>;
+  readonly [$repr]: Infer<TInner>;
 }
 
 const looseTypeLiterals = [
@@ -63,7 +80,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
+export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return looseTypeLiterals.includes((data as AnyLooseData)?.type);
@@ -138,5 +155,5 @@ export function isData(value: unknown): value is AnyData {
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
 export type AnyConcreteData = Exclude<
   AnyData,
-  wgsl.AbstractInt | wgsl.AbstractFloat
+  wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
 >;

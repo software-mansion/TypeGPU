@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ForStatement } from '../src/grammar';
-import { parse } from '../src/index';
+import type { ForStatement } from '../src/grammar.ts';
+import { parse } from '../src/index.ts';
 
 describe('for_statement', () => {
   it('parses for loop with empty body', () => {
