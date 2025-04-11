@@ -1,3 +1,7 @@
+/**
+ * @module typegpu/std
+ */
+
 export { discard } from './discard.ts';
 
 export {

@@ -6,8 +6,7 @@ import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
-import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
-import typegpu from 'unplugin-typegpu/rollup';
+import typegpu from 'unplugin-typegpu/vite';
 
 /**
  * @template T
@@ -29,22 +28,7 @@ export default defineConfig({
     starlight({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
-      plugins: stripFalsy([
-        starlightBlog(),
-        DEV &&
-          starlightTypeDoc({
-            entryPoints: [
-              '../../packages/typegpu/src/index.ts',
-              '../../packages/typegpu/src/data/index.ts',
-              '../../packages/typegpu/src/std/index.ts',
-            ],
-            tsconfig: '../../packages/typegpu/tsconfig.json',
-            typeDoc: {
-              excludeInternal: true,
-              excludeReferences: true,
-            },
-          }),
-      ]),
+      plugins: stripFalsy([starlightBlog()]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
         dark: './src/assets/typegpu-logo-dark.svg',
@@ -169,7 +153,6 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
           ]),
         },
       ]),
