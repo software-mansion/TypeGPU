@@ -1,3 +1,6 @@
 import { setup } from '@ark/attest';
 
-export default () => setup({});
+export default () =>
+  setup({
+    shouldFormat: false,
+  });
