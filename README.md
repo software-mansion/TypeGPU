@@ -17,9 +17,9 @@
 <br>
 
 **Table of contents:**
-- [TypeGPU for libraries](#typegpu-for-libraries)
-- [TypeGPU as a foundation](#typegpu-as-a-foundation)
-- [TypeGPU as an afterthought](#typegpu-as-an-afterthought)
+- [📚 TypeGPU for libraries](#typegpu-for-libraries)
+- [⚙️ TypeGPU as a foundation](#typegpu-as-a-foundation)
+- [🧩 TypeGPU as part of the puzzle](#typegpu-as-part-of-the-puzzle)
 - [Documentation](#documentation)
 - [What's next?](#whats-next)
 - [Repository structure](#repository-structure)
@@ -92,9 +92,9 @@ export async function generateHeightMap(
 
 ## TypeGPU as a foundation
 
+Even though our plan is to (...)
 
-
-## TypeGPU as an afterthought
+## TypeGPU as part of the puzzle
 
 (...)
 
