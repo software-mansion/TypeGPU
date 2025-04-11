@@ -34,18 +34,22 @@ export type {
   Vec2h,
   Vec2i,
   Vec2u,
+  Vec2b,
   Vec3f,
   Vec3h,
   Vec3i,
   Vec3u,
+  Vec3b,
   Vec4f,
   Vec4h,
   Vec4i,
   Vec4u,
+  Vec4b,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
   WgslArray,
+  WgslStruct,
   Ptr,
   Atomic,
   Decorated,
@@ -68,10 +72,7 @@ export type {
   m3x3f,
   m4x4f,
 } from './wgslTypes';
-export {
-  type WgslStruct,
-  struct,
-} from './struct';
+export { struct } from './struct';
 export { arrayOf } from './array';
 export {
   ptrFn,
@@ -93,14 +94,17 @@ export {
   vec2h,
   vec2i,
   vec2u,
+  vec2b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec3b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
+  vec4b,
 } from './vector';
 export { disarrayOf } from './disarray';
 export { unstruct } from './unstruct';

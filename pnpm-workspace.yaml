@@ -3,7 +3,9 @@ packages:
   - 'apps/*'
 
 catalog:
-  typescript: ^5.7.3
+  arktype: ^2.1.15
+  typescript: ^5.8.2
   tsup: ^8.4.0
+  unbuild: ^3.5.0
   "@webgpu/types": ^0.1.54
-  vitest: ^3.0.7
+  vitest: ^3.0.9

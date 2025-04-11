@@ -7,12 +7,10 @@ import {
   isLooseDecorated,
   isUnstruct,
 } from './dataTypes';
-import type { WgslStruct } from './struct';
-import type { BaseData, WgslTypeLiteral } from './wgslTypes';
+import type { BaseData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
-  bool: 4,
   f32: 4,
   f16: 2,
   i32: 4,

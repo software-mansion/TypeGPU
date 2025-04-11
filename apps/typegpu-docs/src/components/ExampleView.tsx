@@ -22,7 +22,7 @@ type Props = {
 };
 
 function useExample(
-  tsImports: Record<string, () => Promise<unknown>>,
+  tsImport: () => Promise<unknown>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
@@ -34,7 +34,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(tsImports)
+    executeExample(tsImport)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -66,7 +66,7 @@ function useExample(
 }
 
 export function ExampleView({ example }: Props) {
-  const { tsCodes, tsImports, htmlCode } = example;
+  const { tsCodes, tsImport, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFile, setCurrentFile] = useState<string>('index.ts');
@@ -89,7 +89,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [htmlCode]);
 
-  useExample(tsImports, htmlCode, setSnackbarText); // live example
+  useExample(tsImport, htmlCode, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef, htmlCode);
 
   return (
@@ -111,7 +111,7 @@ export function ExampleView({ example }: Props) {
               className={cs(
                 'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
                 codeEditorShowing
-                  ? 'md:max-h-[calc(50vh-3rem)] md:overflow-auto'
+                  ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                   : '',
               )}
             >

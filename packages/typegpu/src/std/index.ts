@@ -18,7 +18,6 @@ export {
   exp,
   floor,
   fract,
-  isCloseTo,
   identity,
   length,
   max,
@@ -27,9 +26,28 @@ export {
   mix,
   pow,
   reflect,
-  sin,
-  translate,
 } from './numeric.js';
+
+export {
+  // comparison
+  allEq,
+  eq,
+  ne,
+  lt,
+  le,
+  gt,
+  ge,
+  // logical ops
+  not,
+  or,
+  and,
+  // logical aggregation
+  all,
+  any,
+  // other
+  isCloseTo,
+  select,
+} from './boolean.js';
 
 export {
   atomicLoad,

@@ -1,19 +1,20 @@
 import type * as smol from 'tinyest';
 import * as d from '../data';
-import * as wgsl from '../data/wgslTypes';
+import { abstractInt } from '../data/numeric.js';
+import * as wgsl from '../data/wgslTypes.js';
 import {
   type ResolutionCtx,
   type Resource,
   UnknownData,
   type Wgsl,
   isWgsl,
-} from '../types';
+} from '../types.js';
 import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToResource,
-} from './generationHelpers';
+} from './generationHelpers.js';
 
 const parenthesizedOps = [
   '==',
@@ -192,6 +193,24 @@ export function generateExpression(
         dataType: getTypeForPropAccess(target.dataType as Wgsl, property),
       };
     }
+
+    if (wgsl.isWgslArray(target.dataType)) {
+      if (property === 'length') {
+        if (target.dataType.elementCount === 0) {
+          // Dynamically-sized array
+          return {
+            value: `arrayLength(&${ctx.resolve(target.value)})`,
+            dataType: d.u32,
+          };
+        }
+
+        return {
+          value: String(target.dataType.elementCount),
+          dataType: abstractInt,
+        };
+      }
+    }
+
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
 

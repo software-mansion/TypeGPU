@@ -5,14 +5,14 @@
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "scripts": {
-    "dev": "DEV=true pnpm -r dev:build && DEV=true pnpm --parallel -r dev:watch",
+    "dev": "DEV=true pnpm --parallel -r dev:watch",
     "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
-    "test": "DEV=true pnpm -r dev:build && pnpm run '/^test:.*/'",
+    "test": "pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r --parallel test:types",
     "test:spec": "vitest run",
-    "nightly-build": "pnpm -r dev:build && pnpm --filter typegpu prepublishOnly"
+    "nightly-build": "pnpm --filter typegpu prepublishOnly --skip-publish-tag-check"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -37,9 +37,9 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@webgpu/types": "catalog:",
-    "@types/node": "^22.13.4",
+    "@types/node": "^22.13.14",
     "dpdm": "^3.14.0",
-    "pkg-pr-new": "^0.0.39",
+    "pkg-pr-new": "^0.0.41",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
