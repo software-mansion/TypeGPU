@@ -447,7 +447,7 @@ export function extractFunctionParts(rootNode: JsNode): {
       params: {
         type: 'destructured-object',
         props: functionNode.params[0].properties.flatMap((prop) =>
-          prop.type === 'Property' &&
+          (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
           prop.key.type === 'Identifier' &&
           prop.value.type === 'Identifier'
             ? [{ prop: prop.key.name, alias: prop.value.name }]
