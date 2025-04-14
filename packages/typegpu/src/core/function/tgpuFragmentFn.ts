@@ -26,6 +26,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -80,6 +81,10 @@ export type TgpuFragmentFnShell<
    */
   ((
     implementation: string,
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -156,10 +161,9 @@ export function fragmentFn<
   };
 
   const call = (
-    implementation:
-      | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
-      | string,
-  ) => createFragmentFn(shell, implementation as Implementation);
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createFragmentFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

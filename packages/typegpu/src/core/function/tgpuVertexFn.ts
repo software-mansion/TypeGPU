@@ -11,6 +11,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -43,6 +44,10 @@ export type TgpuVertexFnShell<
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
   ((
     implementation: string,
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -114,8 +119,9 @@ export function vertexFn<
   };
 
   const call = (
-    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut> | string,
-  ) => createVertexFn(shell, implementation as Implementation);
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

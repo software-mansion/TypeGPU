@@ -86,13 +86,12 @@ export const vertexShader = tgpu['~unstable']
   })
   .$name('vertexShader');
 
-const sampleTexture = tgpu['~unstable']
-  .fn(
-    { uv: d.vec2f },
-    d.vec4f,
-  )(/* wgsl */ `{
-    return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
-  }`)
+const sampleTexture = tgpu['~unstable'].fn(
+  { uv: d.vec2f },
+  d.vec4f,
+) /* wgsl */`{
+  return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
+}`
   .$uses({ layout })
   .$name('sampleTexture');
 

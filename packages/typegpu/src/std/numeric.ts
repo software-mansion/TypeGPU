@@ -10,9 +10,9 @@ import type {
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import type { Resource } from '../types.ts';
+import type { Snippet } from '../types.ts';
 
-export function isNumeric(element: Resource) {
+export function isNumeric(element: Snippet) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
@@ -443,4 +443,16 @@ export const distance = createDualImpl(
   },
   // GPU implementation
   (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
+);
+
+export const neg = createDualImpl(
+  // CPU implementation
+  <T extends AnyNumericVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return -value as T;
+    }
+    return VectorOps.neg[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `-(${value.value})`, dataType: value.dataType }),
 );

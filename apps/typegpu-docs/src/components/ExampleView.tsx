@@ -111,7 +111,7 @@ export function ExampleView({ example }: Props) {
               className={cs(
                 'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
                 codeEditorShowing
-                  ? 'md:max-h-[calc(50vh-3rem)] md:overflow-auto'
+                  ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                   : '',
               )}
             >
