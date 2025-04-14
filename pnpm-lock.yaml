@@ -272,7 +272,7 @@ importers:
         specifier: workspace:~0.1.0-alpha.7
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0-alpha.8
+        specifier: workspace:~0.1.0-alpha.9
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -466,7 +466,7 @@ importers:
         specifier: ^0.30.11
         version: 0.30.17
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0-alpha.8
+        specifier: workspace:~0.1.0-alpha.9
         version: link:../tinyest-for-wgsl
       typegpu:
         specifier: ^0.5.4
