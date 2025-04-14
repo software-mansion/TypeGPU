@@ -24,7 +24,7 @@ export const mainVertex = tgpu['~unstable']
   .does((input) => {
     const camera = EXT.camera.value;
     const object = extCelestialBody.inState.value[input.instanceIdx];
-    const worldPosition = mul(object.modelMatrix, input.position);
+    const worldPosition = mul(object.modelTransformationMatrix, input.position);
     const relativeToCamera = mul(camera.view, worldPosition);
     return {
       position: mul(camera.projection, relativeToCamera),

@@ -18,7 +18,7 @@ export const computeShader = tgpu['~unstable']
     const position = objectState.position;
     const velocity = objectState.velocity;
     const mass = objectState.mass;
-    let modelMatrix = objectState.modelMatrix;
+    let modelMatrix = objectState.modelTransformationMatrix;
 
     let normDirection = d.vec3f();
     if (std.length(position) !== 0) {
@@ -44,7 +44,7 @@ export const computeShader = tgpu['~unstable']
       position: position,
       velocity: velocity,
       mass: mass,
-      modelMatrix: modelMatrix,
+      modelTransformationMatrix: modelMatrix,
     });
   })
   .$name('cube physics compute shader');

@@ -18,7 +18,6 @@ export {
   exp,
   floor,
   fract,
-  identity,
   length,
   max,
   min,
@@ -27,7 +26,6 @@ export {
   pow,
   reflect,
   sin,
-  translate,
 } from './numeric.js';
 
 export {
@@ -66,5 +64,10 @@ export {
   storageBarrier,
   textureBarrier,
 } from './atomic.js';
+
+export {
+  identity,
+  translate,
+} from './matrix.js'
 
 export { arrayLength } from './array.js';

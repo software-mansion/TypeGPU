@@ -21,7 +21,7 @@ export const VertexOutput = {
 };
 
 export const CelestialBody = d.struct({
-  modelMatrix: d.mat4x4f,
+  modelTransformationMatrix: d.mat4x4f,
   position: d.vec3f,
   velocity: d.vec3f,
   mass: d.f32,

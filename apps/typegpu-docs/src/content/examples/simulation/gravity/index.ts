@@ -15,6 +15,9 @@ import {
 
 // AAA rotacja kamery poza ekranem
 // AAA większy canvas
+// AAA presety: atom, ziemia i księzyc, oort cloud, solar system, andromeda x milky way
+// AAA skybox jak w endzie
+// AAA speed slider
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -63,25 +66,25 @@ const CelestialBodyMaxArray = d.arrayOf(CelestialBody, 4);
 const celestialBodiesBufferA = root
   .createBuffer(CelestialBodyMaxArray, [
     {
-      modelMatrix: d.mat4x4f(),
+      modelTransformationMatrix: d.mat4x4f(),
       position: d.vec3f(0, 10, 0),
       velocity: d.vec3f(0, 0, 3),
       mass: 1,
     },
     {
-      modelMatrix: d.mat4x4f(),
+      modelTransformationMatrix: d.mat4x4f(),
       position: d.vec3f(0, 20, 0),
       velocity: d.vec3f(0, 0, 2),
       mass: 1,
     },
     {
-      modelMatrix: d.mat4x4f(),
+      modelTransformationMatrix: d.mat4x4f(),
       position: d.vec3f(0, -10, 0),
       velocity: d.vec3f(0, 0, -3),
       mass: 1,
     },
     {
-      modelMatrix: d.mat4x4f(),
+      modelTransformationMatrix: d.mat4x4f(),
       position: d.vec3f(5, 0, 0),
       velocity: d.vec3f(0, 0, 0),
       mass: 1,
