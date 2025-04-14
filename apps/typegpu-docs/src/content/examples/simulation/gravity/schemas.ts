@@ -1,11 +1,11 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
-export const VertexStruct = d.struct({
+export const ModelVertexInput = {
   position: d.vec3f,
   normal: d.vec3f,
   uv: d.vec2f,
-});
+};
 
 export const CameraStruct = d.struct({
   position: d.vec3f,
@@ -42,3 +42,7 @@ export const celestialBodyLayout = tgpu.bindGroupLayout({
   inState: { storage: CelestialBodyArray, access: 'readonly' },
   outState: { storage: CelestialBodyArray, access: 'mutable' },
 });
+
+export const vertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(d.struct(ModelVertexInput), n),
+);

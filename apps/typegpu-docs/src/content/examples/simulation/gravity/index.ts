@@ -2,21 +2,20 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute-shader.ts';
-import { cubeModel, cubeVerticesArray } from './cube.ts';
 import { cameraInitialPos, target } from './env.ts';
+import { loadModel } from './load-model.ts';
 import { mainFragment, mainVertex } from './main-shaders.ts';
 import {
   CameraStruct,
   CelestialBodyStruct,
-  // ObjectStruct,
-  VertexStruct,
   cameraBindGroupLayout,
   celestialBodyLayout,
+  vertexLayout,
 } from './schemas.ts';
 
-const vertexLayout = tgpu.vertexLayout(
-  (n: number) => d.arrayOf(VertexStruct, n), //, 'instance'
-);
+// AAA rotacja kamery poza ekranem
+// AAA większy canvas
+
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -28,14 +27,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const vertexBuffer = root
-  .createBuffer(
-    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
-  )
-  .$usage('vertex')
-  .$name('vertex');
-vertexBuffer.write(cubeVerticesArray);
-console.log(cubeModel.attributes);
+const { vertexBuffer } = await loadModel(
+  root,
+  '/TypeGPU/assets/gravity/cube_blend.obj',
+  '/TypeGPU/assets/gravity/cube_texture.png',
+);
 
 const sampler = device.createSampler({
   magFilter: 'linear',
@@ -57,27 +53,6 @@ const cameraInitial = CameraStruct({
 const cameraBuffer = root
   .createBuffer(CameraStruct, cameraInitial)
   .$usage('uniform');
-
-// const sphereModelMatrix = d.mat4x4f();
-// m.mat4.identity(sphereModelMatrix);
-// m.mat4.translate(
-//   sphereModelMatrix,
-//   d.vec3f(spherePos.x, spherePos.y, spherePos.z),
-//   sphereModelMatrix,
-// );
-
-// export const centerObjectBuffer = root
-//   .createBuffer(ObjectStruct, {
-//     modelMatrix: sphereModelMatrix,
-//   })
-//   .$usage('uniform');
-
-// const centerObjectBindGroup = root.createBindGroup(
-//   centerObjectbindGroupLayout,
-//   {
-//     object: centerObjectBuffer,
-//   },
-// );
 
 const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   camera: cameraBuffer,
@@ -158,7 +133,7 @@ function render() {
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
-      clearValue: [0, 0, 0, 1], // background color
+      clearValue: [0, 1, 0, 1], // background color
     })
     .with(vertexLayout, vertexBuffer)
     .with(cameraBindGroupLayout, cameraBindGroup)
@@ -167,16 +142,6 @@ function render() {
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
     .draw(36, 4);
-
-  // renderPipeline
-  //   .withColorAttachment({
-  //     view: context.getCurrentTexture().createView(),
-  //     loadOp: 'load',
-  //     storeOp: 'store',
-  //     clearValue: [0, 0, 0, 1], // background color
-  //   })
-  //   .with(centerObjectbindGroupLayout, centerObjectBindGroup)
-  //   .draw(150, 1);
 
   root['~unstable'].flush();
 }
