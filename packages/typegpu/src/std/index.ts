@@ -26,6 +26,8 @@ export {
   mix,
   pow,
   reflect,
+  sin,
+  translate,
 } from './numeric.js';
 
 export {

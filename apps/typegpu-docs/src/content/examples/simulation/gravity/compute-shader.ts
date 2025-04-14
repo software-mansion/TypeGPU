@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { G } from './env';
-import { CelectialBodyStruct, celestialBodyLayout } from './structs';
+import { CelestialBodyStruct, celestialBodyLayout } from './schemas';
 
 const celestialBodiesBindGroup = celestialBodyLayout.bound;
 
@@ -29,8 +29,10 @@ export const computeShader = tgpu['~unstable']
 
     for (let i = 0; i < 3; i++) {
       const distance = std.length(position);
-      const acceleration = -G * mass * normDirection[i] / (distance * distance);
-      position[i] = position[i] + velocity[i] * dt + 0.5 * acceleration * dt * dt;
+      const acceleration =
+        (-G * mass * normDirection[i]) / (distance * distance);
+      position[i] =
+        position[i] + velocity[i] * dt + 0.5 * acceleration * dt * dt;
       velocity[i] = velocity[i] + acceleration * dt;
       velocity[i] = velocity[i] * 0.99; // damping
     }
@@ -38,7 +40,7 @@ export const computeShader = tgpu['~unstable']
     modelMatrix = std.identity();
     modelMatrix = std.translate(modelMatrix, position);
 
-    celestialBodiesBindGroup.outState.value[input.gid.x] = CelectialBodyStruct({
+    celestialBodiesBindGroup.outState.value[input.gid.x] = CelestialBodyStruct({
       position: position,
       velocity: velocity,
       mass: mass,

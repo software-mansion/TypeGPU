@@ -1,21 +1,21 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute-shaders';
-import { cubeModel, cubeVerticesArray } from './cube';
-import { cameraInitialPos, target } from './env';
-import { mainFragment, mainVertex } from './main-shaders';
+import { computeShader } from './compute-shader.ts';
+import { cubeModel, cubeVerticesArray } from './cube.ts';
+import { cameraInitialPos, target } from './env.ts';
+import { mainFragment, mainVertex } from './main-shaders.ts';
 import {
   CameraStruct,
-  CelectialBodyStruct,
+  CelestialBodyStruct,
   // ObjectStruct,
   VertexStruct,
   cameraBindGroupLayout,
   celestialBodyLayout,
-} from './structs';
+} from './schemas.ts';
 
-const vertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(VertexStruct, n) //, 'instance'
+const vertexLayout = tgpu.vertexLayout(
+  (n: number) => d.arrayOf(VertexStruct, n), //, 'instance'
 );
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -27,7 +27,6 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
-
 
 const vertexBuffer = root
   .createBuffer(
@@ -86,7 +85,7 @@ const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   sampler,
 });
 
-const CelestialBodyMaxArray = d.arrayOf(CelectialBodyStruct, 4);
+const CelestialBodyMaxArray = d.arrayOf(CelestialBodyStruct, 4);
 
 const celestialBodiesBufferA = root
   .createBuffer(CelestialBodyMaxArray, [
@@ -113,7 +112,7 @@ const celestialBodiesBufferA = root
       position: d.vec3f(5, 0, 0),
       velocity: d.vec3f(0, 0, 0),
       mass: 1,
-    }
+    },
   ])
   .$usage('storage');
 const celestialBodiesBufferB = root
@@ -178,7 +177,6 @@ function render() {
   //   })
   //   .with(centerObjectbindGroupLayout, centerObjectBindGroup)
   //   .draw(150, 1);
-    
 
   root['~unstable'].flush();
 }

@@ -3,8 +3,6 @@ import { OBJLoader } from '@loaders.gl/obj';
 import * as d from 'typegpu/data';
 
 export const cubeModel = await load('assets/gravity/cube_blend.obj', OBJLoader);
-const textureResponse = await fetch('assets/gravity/cube_texture.png');
-const imageBitmap = await createImageBitmap(await textureResponse.blob());
 
 const positions = cubeModel.attributes.POSITION.value;
 const normals = cubeModel.attributes.NORMAL

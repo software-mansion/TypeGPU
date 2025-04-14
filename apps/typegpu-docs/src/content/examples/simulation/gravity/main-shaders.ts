@@ -1,8 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
-import { lightDirection, lightPosition } from './env';
-import { cameraBindGroupLayout, celestialBodyLayout } from './structs';
+import { lightDirection, lightPosition } from './env.ts';
+import { cameraBindGroupLayout, celestialBodyLayout } from './schemas.ts';
 
 export const EXT = cameraBindGroupLayout.bound;
 const extCelestialBody = celestialBodyLayout.bound;
@@ -37,7 +37,6 @@ export const mainVertex = tgpu['~unstable']
     };
   })
   .$name('mainVertex');
-
 
 export const mainFragment = tgpu['~unstable']
   .fragmentFn({
