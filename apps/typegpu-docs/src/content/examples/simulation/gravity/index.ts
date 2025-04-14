@@ -19,7 +19,7 @@ import {
   renderInstanceLayout,
 } from './schemas.ts';
 
-// AAA rotacja kamery poza ekranem
+// AAA update camera to newer version
 // AAA większy canvas
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles
@@ -27,7 +27,9 @@ import {
 // AAA speed slider
 // AAA bufor z czasem
 // AAA napraw lighting
-// AAA depth stencil
+// AAA resize observer
+// AAA model kuli
+// AAA zderzenia
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -116,8 +118,19 @@ const computePipeline = root['~unstable']
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, renderInstanceLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
   .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
   .createPipeline();
+
+const depthTexture = root.device.createTexture({
+  size: [canvas.width, canvas.height, 1],
+  format: 'depth24plus',
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
 
 function render() {
   dynamicResourcesBox.data.flip = 1 - dynamicResourcesBox.data.flip;
@@ -137,6 +150,12 @@ function render() {
       loadOp: 'clear',
       storeOp: 'store',
       clearValue: [0, 1, 0, 1], // background color
+    })
+    .withDepthStencilAttachment({
+      view: depthTexture.createView(),
+      depthClearValue: 1,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
     })
     .with(renderInstanceLayout, vertexBuffer)
     .with(renderBindGroupLayout, cameraBindGroup)
