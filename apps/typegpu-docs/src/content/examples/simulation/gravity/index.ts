@@ -1,9 +1,10 @@
-import tgpu from 'typegpu';
+import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
+import { type Preset, presetsEnum } from './presets.ts';
 import { mainFragment, mainVertex } from './render.ts';
 import {
   Camera,
@@ -19,6 +20,9 @@ import {
 // andromeda x milky way, particles
 // AAA skybox jak w endzie
 // AAA speed slider
+// AAA bufor z czasem
+// AAA napraw lighting
+// AAA depth stencil
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -30,6 +34,27 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
+
+// type texture = TgpuTexture<{
+//   size: [number, number];
+//   format: 'rgba8unorm';
+// }> &
+//   Sampled &
+//   Render;
+
+const CelestialBodyMaxArray = (n: number) => d.arrayOf(CelestialBody, n);
+
+interface DynamicResources {
+  celestialBodiesCount: number;
+
+  computeBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
+  computeBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
+}
+
+const {
+  computeBufferA: celestialBodiesBufferA,
+  computeBufferB: celestialBodiesBufferB,
+} = await loadPreset('Atom');
 
 const { vertexBuffer } = await loadModel(
   root,
@@ -66,28 +91,6 @@ const cameraBindGroup = root.createBindGroup(renderBindGroupLayout, {
   // cube: cubeBuffer,
   sampler,
 });
-
-const CelestialBodyMaxArray = d.arrayOf(CelestialBody, 4);
-
-const celestialBodiesBufferA = root
-  .createBuffer(CelestialBodyMaxArray, [
-    {
-      modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(1, 0, 0),
-      velocity: d.vec3f(0, 1, 0),
-      mass: 10,
-    },
-    {
-      modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 1, 0),
-      velocity: d.vec3f(0, -1, 0.002),
-      mass: 10,
-    },
-  ])
-  .$usage('storage');
-const celestialBodiesBufferB = root
-  .createBuffer(CelestialBodyMaxArray)
-  .$usage('storage');
 
 const celestialBodiesCountBuffer = root
   .createBuffer(d.i32, p.celestialBodiesCount)
@@ -156,7 +159,44 @@ function frame() {
   render();
 }
 
+function loadPreset(preset: Preset): DynamicResources {
+  const celestialBodiesCount = 2;
+
+  const computeBufferA = root
+    .createBuffer(CelestialBodyMaxArray(2), [
+      {
+        modelTransformationMatrix: d.mat4x4f(),
+        position: d.vec3f(1, 0, 0),
+        velocity: d.vec3f(0, 1, 0),
+        mass: 10,
+      },
+      {
+        modelTransformationMatrix: d.mat4x4f(),
+        position: d.vec3f(0, 1, 0),
+        velocity: d.vec3f(0, -1, 0.002),
+        mass: 10,
+      },
+    ])
+    .$usage('storage');
+  const computeBufferB = root
+    .createBuffer(CelestialBodyMaxArray(2))
+    .$usage('storage');
+
+  return { celestialBodiesCount, computeBufferA, computeBufferB };
+}
+
 // #region Camera controls
+
+export const controls = {
+  Preset: {
+    initial: presetsEnum[0],
+    options: presetsEnum,
+    onSelectChange: (value: Preset) => {
+      loadPreset(value);
+    },
+  },
+};
+
 // Variables for mouse interaction.
 let isDragging = false;
 let prevX = 0;
