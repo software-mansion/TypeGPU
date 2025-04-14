@@ -1,4 +1,8 @@
-import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
+import tgpu, {
+  type StorageFlag,
+  type TgpuBindGroup,
+  type TgpuBuffer,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -10,7 +14,7 @@ import { mainFragment, mainVertex } from './render.ts';
 import {
   Camera,
   CelestialBody,
-  computeBindGroupLayout,
+  celestialBodiesBindGroupLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
@@ -50,14 +54,6 @@ const { vertexBuffer, vertexCount } = await loadModel(
 
 const CelestialBodyMaxArray = (n: number) => d.arrayOf(CelestialBody, n);
 
-interface DynamicResources {
-  celestialBodiesCount: number;
-  computeBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
-  computeBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
-}
-
-const dynamicResources = await loadPreset('Atom');
-
 const sampler = device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -92,18 +88,24 @@ const celestialBodiesCountBuffer = root
   .createBuffer(d.i32, p.celestialBodiesCount)
   .$usage('uniform');
 
-let flip = false;
-const celestialBodiesBindGroupA = root.createBindGroup(computeBindGroupLayout, {
-  celestialBodiesCount: celestialBodiesCountBuffer,
-  inState: dynamicResources.computeBufferA,
-  outState: dynamicResources.computeBufferB,
-});
+interface DynamicResources {
+  celestialBodiesCount: number;
+  flip: number;
+  celestialBodiesBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
+    StorageFlag;
+  celestialBodiesBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
+    StorageFlag;
+  celestialBodiesBindGroupA: TgpuBindGroup<
+    (typeof celestialBodiesBindGroupLayout)['entries']
+  >;
+  celestialBodiesBindGroupB: TgpuBindGroup<
+    (typeof celestialBodiesBindGroupLayout)['entries']
+  >;
+}
 
-const celestialBodiesBindGroupB = root.createBindGroup(computeBindGroupLayout, {
-  celestialBodiesCount: celestialBodiesCountBuffer,
-  inState: dynamicResources.computeBufferB,
-  outState: dynamicResources.computeBufferA,
-});
+const dynamicResourcesBox = {
+  data: await loadPreset('Atom'),
+};
 
 // Pipelines
 const computePipeline = root['~unstable']
@@ -118,12 +120,14 @@ const renderPipeline = root['~unstable']
   .createPipeline();
 
 function render() {
-  flip = !flip;
+  dynamicResourcesBox.data.flip = 1 - dynamicResourcesBox.data.flip;
 
   computePipeline
     .with(
-      computeBindGroupLayout,
-      flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
+      celestialBodiesBindGroupLayout,
+      dynamicResourcesBox.data.flip === 1
+        ? dynamicResourcesBox.data.celestialBodiesBindGroupA
+        : dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
     .dispatchWorkgroups(4); // count of celestial bodies
 
@@ -137,10 +141,12 @@ function render() {
     .with(renderInstanceLayout, vertexBuffer)
     .with(renderBindGroupLayout, cameraBindGroup)
     .with(
-      computeBindGroupLayout,
-      flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
+      celestialBodiesBindGroupLayout,
+      dynamicResourcesBox.data.flip === 1
+        ? dynamicResourcesBox.data.celestialBodiesBindGroupA
+        : dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
-    .draw(vertexCount, dynamicResources.celestialBodiesCount);
+    .draw(vertexCount, dynamicResourcesBox.data.celestialBodiesCount);
 
   root['~unstable'].flush();
 }
@@ -180,10 +186,31 @@ function loadPreset(preset: Preset): DynamicResources {
     .createBuffer(CelestialBodyMaxArray(celestialBodies.length))
     .$usage('storage');
 
+  const celestialBodiesBindGroupA = root.createBindGroup(
+    celestialBodiesBindGroupLayout,
+    {
+      celestialBodiesCount: celestialBodiesCountBuffer,
+      inState: computeBufferA,
+      outState: computeBufferB,
+    },
+  );
+
+  const celestialBodiesBindGroupB = root.createBindGroup(
+    celestialBodiesBindGroupLayout,
+    {
+      celestialBodiesCount: celestialBodiesCountBuffer,
+      inState: computeBufferB,
+      outState: computeBufferA,
+    },
+  );
+
   return {
+    flip: 0,
     celestialBodiesCount: celestialBodies.length,
-    computeBufferA,
-    computeBufferB,
+    celestialBodiesBufferA: computeBufferA,
+    celestialBodiesBufferB: computeBufferB,
+    celestialBodiesBindGroupA,
+    celestialBodiesBindGroupB,
   };
 }
 
@@ -194,7 +221,8 @@ export const controls = {
     initial: presetsEnum[0],
     options: presetsEnum,
     onSelectChange: (value: Preset) => {
-      loadPreset(value);
+      const oldData = dynamicResourcesBox.data;
+      dynamicResourcesBox.data = loadPreset(value);
     },
   },
 };

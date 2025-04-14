@@ -4,12 +4,12 @@ import * as std from 'typegpu/std';
 import { lightDirection, lightPosition } from './params.ts';
 import {
   VertexOutput,
-  computeBindGroupLayout,
+  celestialBodiesBindGroupLayout,
   renderBindGroupLayout,
 } from './schemas.ts';
 
 export const EXT = renderBindGroupLayout.bound;
-const extCelestialBody = computeBindGroupLayout.bound;
+const extCelestialBody = celestialBodiesBindGroupLayout.bound;
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({

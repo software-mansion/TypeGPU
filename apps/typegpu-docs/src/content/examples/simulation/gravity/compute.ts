@@ -1,10 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { CelestialBody, computeBindGroupLayout } from './schemas';
+import { CelestialBody, celestialBodiesBindGroupLayout } from './schemas';
 
 const { inState, outState, celestialBodiesCount } =
-  computeBindGroupLayout.bound;
+  celestialBodiesBindGroupLayout.bound;
 
 export const computeShader = tgpu['~unstable']
   .computeFn({

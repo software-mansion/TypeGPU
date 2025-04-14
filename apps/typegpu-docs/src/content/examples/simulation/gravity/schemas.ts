@@ -28,7 +28,7 @@ export const CelestialBody = d.struct({
 });
 
 // layouts
-export const computeBindGroupLayout = tgpu.bindGroupLayout({
+export const celestialBodiesBindGroupLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
     uniform: d.i32,
     access: 'readonly',
