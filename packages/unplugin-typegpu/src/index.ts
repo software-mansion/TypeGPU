@@ -35,8 +35,10 @@ function getKernelDirective(node: FunctionNode): KernelDirective | undefined {
 }
 
 function removeKernelDirective(node: FunctionNode) {
-  if (node.body.type === 'BlockStatement') {
-    node.body.body = node.body.body.filter(
+  const cloned = structuredClone(node);
+
+  if (cloned.body.type === 'BlockStatement') {
+    cloned.body.body = cloned.body.body.filter(
       (statement) =>
         !(
           statement.type === 'ExpressionStatement' &&
@@ -46,7 +48,7 @@ function removeKernelDirective(node: FunctionNode) {
     );
   }
 
-  return node;
+  return cloned;
 }
 
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
@@ -102,6 +104,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                       def: removeKernelDirective(implementation),
                       removeJsImplementation: directive !== 'kernel & js',
                     });
+                    this.skip();
                   }
                 }
               }
@@ -126,6 +129,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                           : undefined,
                     removeJsImplementation: directive !== 'kernel & js',
                   });
+                  this.skip();
                 }
               }
             },
