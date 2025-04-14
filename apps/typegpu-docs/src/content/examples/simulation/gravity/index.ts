@@ -1,10 +1,11 @@
 import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
-import { type Preset, presetsEnum } from './presets.ts';
+import { type Preset, presets, presetsEnum } from './presets.ts';
 import { mainFragment, mainVertex } from './render.ts';
 import {
   Camera,
@@ -42,25 +43,20 @@ context.configure({
 //   Sampled &
 //   Render;
 
+const { vertexBuffer, vertexCount } = await loadModel(
+  root,
+  '/TypeGPU/assets/gravity/cube_blend.obj',
+);
+
 const CelestialBodyMaxArray = (n: number) => d.arrayOf(CelestialBody, n);
 
 interface DynamicResources {
   celestialBodiesCount: number;
-
   computeBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
   computeBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> & StorageFlag;
 }
 
-const {
-  computeBufferA: celestialBodiesBufferA,
-  computeBufferB: celestialBodiesBufferB,
-} = await loadPreset('Atom');
-
-const { vertexBuffer } = await loadModel(
-  root,
-  '/TypeGPU/assets/gravity/cube_blend.obj',
-  '/TypeGPU/assets/gravity/cube_texture.png',
-);
+const dynamicResources = await loadPreset('Atom');
 
 const sampler = device.createSampler({
   magFilter: 'linear',
@@ -99,14 +95,14 @@ const celestialBodiesCountBuffer = root
 let flip = false;
 const celestialBodiesBindGroupA = root.createBindGroup(computeBindGroupLayout, {
   celestialBodiesCount: celestialBodiesCountBuffer,
-  inState: celestialBodiesBufferA,
-  outState: celestialBodiesBufferB,
+  inState: dynamicResources.computeBufferA,
+  outState: dynamicResources.computeBufferB,
 });
 
 const celestialBodiesBindGroupB = root.createBindGroup(computeBindGroupLayout, {
   celestialBodiesCount: celestialBodiesCountBuffer,
-  inState: celestialBodiesBufferB,
-  outState: celestialBodiesBufferA,
+  inState: dynamicResources.computeBufferB,
+  outState: dynamicResources.computeBufferA,
 });
 
 // Pipelines
@@ -144,7 +140,7 @@ function render() {
       computeBindGroupLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
-    .draw(36, 4);
+    .draw(vertexCount, dynamicResources.celestialBodiesCount);
 
   root['~unstable'].flush();
 }
@@ -160,29 +156,35 @@ function frame() {
 }
 
 function loadPreset(preset: Preset): DynamicResources {
-  const celestialBodiesCount = 2;
+  const presetData = presets[preset];
+
+  const celestialBodies: d.Infer<typeof CelestialBody>[] =
+    presetData.celestialBodies
+      .flatMap((group) => group.elements)
+      .map((element) => {
+        return {
+          modelTransformationMatrix: std.identity(),
+          position: element.position,
+          velocity: element.velocity,
+          mass: element.mass,
+        };
+      });
 
   const computeBufferA = root
-    .createBuffer(CelestialBodyMaxArray(2), [
-      {
-        modelTransformationMatrix: d.mat4x4f(),
-        position: d.vec3f(1, 0, 0),
-        velocity: d.vec3f(0, 1, 0),
-        mass: 10,
-      },
-      {
-        modelTransformationMatrix: d.mat4x4f(),
-        position: d.vec3f(0, 1, 0),
-        velocity: d.vec3f(0, -1, 0.002),
-        mass: 10,
-      },
-    ])
+    .createBuffer(
+      CelestialBodyMaxArray(celestialBodies.length),
+      celestialBodies,
+    )
     .$usage('storage');
   const computeBufferB = root
-    .createBuffer(CelestialBodyMaxArray(2))
+    .createBuffer(CelestialBodyMaxArray(celestialBodies.length))
     .$usage('storage');
 
-  return { celestialBodiesCount, computeBufferA, computeBufferB };
+  return {
+    celestialBodiesCount: celestialBodies.length,
+    computeBufferA,
+    computeBufferB,
+  };
 }
 
 // #region Camera controls

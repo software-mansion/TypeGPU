@@ -4,21 +4,17 @@ import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { renderInstanceLayout } from './schemas.ts';
 
-export async function loadModel(
-  root: TgpuRoot,
-  modelPath: string,
-  texturePath: string,
-) {
+export async function loadModel(root: TgpuRoot, modelPath: string) {
   const modelMesh = await load(modelPath, OBJLoader);
-  const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
+  const vertexCount = modelMesh.attributes.POSITION.value.length / 3;
 
   const vertexBuffer = root
-    .createBuffer(renderInstanceLayout.schemaForCount(polygonCount))
+    .createBuffer(renderInstanceLayout.schemaForCount(vertexCount))
     .$usage('vertex')
     .$name(`model vertices of ${modelPath}`);
 
   const modelVertices = [];
-  for (let i = 0; i < polygonCount; i++) {
+  for (let i = 0; i < vertexCount; i++) {
     modelVertices.push({
       position: d.vec3f(
         modelMesh.attributes.POSITION.value[3 * i],
@@ -40,6 +36,13 @@ export async function loadModel(
 
   vertexBuffer.write(modelVertices);
 
+  return {
+    vertexBuffer,
+    vertexCount,
+  };
+}
+
+export async function loadTexture(root: TgpuRoot, texturePath: string) {
   const textureResponse = await fetch(texturePath);
   const imageBitmap = await createImageBitmap(await textureResponse.blob());
   const texture = root['~unstable']
@@ -56,9 +59,5 @@ export async function loadModel(
     [imageBitmap.width, imageBitmap.height],
   );
 
-  return {
-    vertexBuffer: vertexBuffer,
-    polygonCount: polygonCount,
-    texture: texture,
-  };
+  return texture;
 }
