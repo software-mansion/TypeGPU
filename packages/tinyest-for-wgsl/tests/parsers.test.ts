@@ -145,7 +145,7 @@ describe('transpileFn', () => {
   );
 
   it(
-    'handles deconstructed args',
+    'handles destructured args',
     dualTest((p) => {
       const { argNames, externalNames } = transpileFn(
         p(`({ pos, a: b }) => {
