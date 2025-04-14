@@ -17,7 +17,7 @@ import { stripTemplate } from './templateUtils.ts';
 type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
@@ -105,7 +105,10 @@ export function computeFn<
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
-    argTypes: [createStructFromIO(options.in ?? {})],
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     returnType: undefined,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,
