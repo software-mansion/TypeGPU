@@ -1,7 +1,7 @@
 import type * as acorn from 'acorn';
 import defu from 'defu';
 import { type Node, walk } from 'estree-walker';
-import MagicString from 'magic-string';
+import { MagicStringAST, generateTransform } from 'magic-string-ast';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { type UnpluginInstance, createUnplugin } from 'unplugin';
 import babel from './babel.ts';
@@ -78,6 +78,8 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             removeJsImplementation: boolean;
           }[] = [];
 
+          const magicString = new MagicStringAST(code);
+
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
@@ -129,7 +131,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          const magicString = new MagicString(code);
           const tgpuAlias = ctx.tgpuAliases.values().next().value;
 
           if (tgpuAlias === undefined && tgslFunctionDefs.length > 0) {
@@ -181,18 +182,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             }
 
             if (removeJsImplementation) {
-              magicString.overwrite(
-                def.start,
-                def.end,
+              magicString.overwriteNode(
+                def,
                 `${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`,
               );
             }
           }
 
-          return {
-            code: magicString.toString(),
-            map: magicString.generateMap(),
-          };
+          return generateTransform(magicString, id);
         },
       },
     };

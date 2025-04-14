@@ -11,7 +11,7 @@ catalogs:
       version: 0.1.54
     arktype:
       specifier: ^2.1.15
-      version: 2.1.15
+      version: 2.1.19
     tsup:
       specifier: ^8.4.0
       version: 8.4.0
@@ -463,14 +463,14 @@ importers:
   packages/unplugin-typegpu:
     dependencies:
       '@babel/standalone':
-        specifier: ^7.26.6
-        version: 7.26.9
+        specifier: ^7.27.0
+        version: 7.27.0
       estree-walker:
         specifier: ^3.0.3
         version: 3.0.3
-      magic-string:
-        specifier: ^0.30.11
-        version: 0.30.17
+      magic-string-ast:
+        specifier: ^0.9.1
+        version: 0.9.1
       picomatch:
         specifier: ^4.0.2
         version: 4.0.2
@@ -729,8 +729,8 @@ packages:
     resolution: {integrity: sha512-aA63XwOkcl4xxQa3HjPMqOP6LiK0ZDv3mUPYEFXkpHbaFjtGggE1A61FjFzJnB+p7/oy2gA8E+rcBNl/zC1tMg==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/standalone@7.26.9':
-    resolution: {integrity: sha512-UTeQKy0kzJwWRe55kT1uK4G9H6D0lS6G4207hCU/bDaOhA5t2aC0qHN6GmID0Axv3OFLNXm27NdqcWp+BXcGtA==}
+  '@babel/standalone@7.27.0':
+    resolution: {integrity: sha512-UxFDpi+BuSz6Q1X73P3ZSM1CB7Nbbqys+7COi/tdouRuaqRsJ6GAzUyxTswbqItHSItVY3frQdd+paBHHGEk9g==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.26.9':
@@ -3368,6 +3368,10 @@ packages:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
 
+  magic-string-ast@0.9.1:
+    resolution: {integrity: sha512-18dv2ZlSSgJ/jDWlZGKfnDJx56ilNlYq9F7NnwuWTErsmYmqJ2TWE4l1o2zlUHBYUGBy3tIhPCC1gxq8M5HkMA==}
+    engines: {node: '>=20.18.0'}
+
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
 
@@ -5673,7 +5677,7 @@ snapshots:
     dependencies:
       regenerator-runtime: 0.14.1
 
-  '@babel/standalone@7.26.9': {}
+  '@babel/standalone@7.27.0': {}
 
   '@babel/template@7.26.9':
     dependencies:
@@ -8341,6 +8345,10 @@ snapshots:
   lunr@2.3.9: {}
 
   lz-string@1.5.0: {}
+
+  magic-string-ast@0.9.1:
+    dependencies:
+      magic-string: 0.30.17
 
   magic-string@0.30.17:
     dependencies:
