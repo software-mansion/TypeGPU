@@ -19,7 +19,7 @@ if (pnpmWorkspaceYaml instanceof type.errors) {
 }
 
 export const openInStackBlitz = (example: Example) => {
-  const tsFiles = example.tsCodes.reduce(
+  const tsFiles = example.tsFiles.reduce(
     (acc, file) => {
       acc[`src/${file.path}`] = file.content.replaceAll(
         '/TypeGPU',
@@ -46,7 +46,7 @@ export const openInStackBlitz = (example: Example) => {
     <title>${example.metadata.title}</title>
 </head>
 <body>
-${example.htmlCode.content}
+${example.htmlFile.content}
 <script type="module" src="/index.ts"></script>
 </body>
 </html>`,

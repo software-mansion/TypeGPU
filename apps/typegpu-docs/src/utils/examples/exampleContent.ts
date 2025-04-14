@@ -16,8 +16,6 @@ function pathToExampleKey(path: string): string {
 function globToExampleFiles(
   record: Record<string, string>,
 ): Record<string, ExampleSrcFile[]> {
-  const groups: Record<string, ExampleSrcFile[]> = {};
-
   return R.pipe(
     record,
     R.mapValues((content, key): ExampleSrcFile => {
@@ -82,9 +80,9 @@ export const examples = R.pipe(
       ({
         key,
         metadata: value,
-        tsCodes: readonlyTsFiles[key] ?? [],
+        tsFiles: readonlyTsFiles[key] ?? [],
         tsImport: tsFilesImportFunctions[key],
-        htmlCode: htmlFiles[key][0] ?? '',
+        htmlFile: htmlFiles[key][0] ?? '',
       }) satisfies Example,
   ),
 );

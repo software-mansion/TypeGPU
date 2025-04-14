@@ -24,8 +24,8 @@ export type ExampleSrcFile = {
 
 export type Example = {
   key: string;
-  tsCodes: ExampleSrcFile[];
+  tsFiles: ExampleSrcFile[];
   tsImport: () => Promise<unknown>;
-  htmlCode: ExampleSrcFile;
+  htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
 };

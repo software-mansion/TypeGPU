@@ -65,19 +65,19 @@ function useExample(
 }
 
 export function ExampleView({ example }: Props) {
-  const { tsCodes, tsImport, htmlCode } = example;
+  const { tsFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFile, setCurrentFile] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const codeFiles = tsCodes.map((file) => file.path);
+  const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
-    ...codeFiles.filter((name) => name !== 'index.ts'),
+    ...filePaths.filter((name) => name !== 'index.ts'),
     'index.html',
   ];
 
@@ -85,8 +85,8 @@ export function ExampleView({ example }: Props) {
     if (!exampleHtmlRef.current) {
       return;
     }
-    exampleHtmlRef.current.innerHTML = htmlCode.content;
-  }, [htmlCode]);
+    exampleHtmlRef.current.innerHTML = htmlFile.content;
+  }, [htmlFile]);
 
   useExample(tsImport, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef);
@@ -139,10 +139,10 @@ export function ExampleView({ example }: Props) {
                       <button
                         key={fileName}
                         type="button"
-                        onClick={() => setCurrentFile(fileName)}
+                        onClick={() => setCurrentFilePath(fileName)}
                         className={cs(
                           'px-4 rounded-t-lg rounded-b-none text-nowrap',
-                          currentFile === fileName
+                          currentFilePath === fileName
                             ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
                             : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
                         )}
@@ -154,15 +154,15 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <HtmlCodeEditor
-                  shown={currentFile === 'index.html'}
-                  file={htmlCode}
+                  shown={currentFilePath === 'index.html'}
+                  file={htmlFile}
                 />
 
-                {tsCodes.map((value) => (
+                {tsFiles.map((file) => (
                   <TsCodeEditor
-                    key={value.path}
-                    shown={value.path === currentFile}
-                    file={value}
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    file={file}
                   />
                 ))}
               </div>
