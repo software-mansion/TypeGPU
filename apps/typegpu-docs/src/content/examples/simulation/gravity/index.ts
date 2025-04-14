@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute.ts';
 import { loadModel } from './load-model.ts';
-import { cameraInitialPos, target } from './params.ts';
+import * as p from './params.ts';
 import { mainFragment, mainVertex } from './render.ts';
 import {
   Camera,
@@ -15,7 +15,8 @@ import {
 
 // AAA rotacja kamery poza ekranem
 // AAA większy canvas
-// AAA presety: atom, ziemia i księzyc, oort cloud, solar system, andromeda x milky way
+// AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
+// andromeda x milky way, particles
 // AAA skybox jak w endzie
 // AAA speed slider
 
@@ -43,8 +44,13 @@ const sampler = device.createSampler({
 
 // Camera
 const cameraInitial = Camera({
-  position: cameraInitialPos.xyz,
-  view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
+  position: p.cameraInitialPos.xyz,
+  view: m.mat4.lookAt(
+    p.cameraInitialPos,
+    p.target,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
   projection: m.mat4.perspective(
     Math.PI / 4,
     canvas.clientWidth / canvas.clientHeight,
@@ -95,13 +101,19 @@ const celestialBodiesBufferB = root
   .createBuffer(CelestialBodyMaxArray)
   .$usage('storage');
 
+const celestialBodiesCountBuffer = root
+  .createBuffer(d.u32, p.celestialBodiesCount)
+  .$usage('uniform');
+
 let flip = false;
 const celestialBodiesBindGroupA = root.createBindGroup(computeBindGroupLayout, {
+  celestialBodiesCount: celestialBodiesCountBuffer,
   inState: celestialBodiesBufferA,
   outState: celestialBodiesBufferB,
 });
 
 const celestialBodiesBindGroupB = root.createBindGroup(computeBindGroupLayout, {
+  celestialBodiesCount: celestialBodiesCountBuffer,
   inState: celestialBodiesBufferB,
   outState: celestialBodiesBufferA,
 });
@@ -167,14 +179,14 @@ let isRightDragging = false;
 let rightPrevX = 0;
 let rightPrevY = 0;
 let orbitRadius = Math.sqrt(
-  cameraInitialPos.x * cameraInitialPos.x +
-    cameraInitialPos.y * cameraInitialPos.y +
-    cameraInitialPos.z * cameraInitialPos.z,
+  p.cameraInitialPos.x * p.cameraInitialPos.x +
+    p.cameraInitialPos.y * p.cameraInitialPos.y +
+    p.cameraInitialPos.z * p.cameraInitialPos.z,
 );
 
 // Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(cameraInitialPos.x, cameraInitialPos.z);
-let orbitPitch = Math.asin(cameraInitialPos.y / orbitRadius);
+let orbitYaw = Math.atan2(p.cameraInitialPos.x, p.cameraInitialPos.z);
+let orbitPitch = Math.asin(p.cameraInitialPos.y / orbitRadius);
 
 // Helper functions for updating transforms.
 function updateCubesRotation(dx: number, dy: number) {
@@ -201,7 +213,7 @@ function updateCameraOrbit(dx: number, dy: number) {
 
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    p.target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
@@ -222,7 +234,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    p.target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );

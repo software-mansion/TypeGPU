@@ -10,3 +10,5 @@ export const cameraInitialPos = d.vec4f(20, 5, 20, 1);
 export const cubePos = { x: 3, y: 10, z: 0 };
 export const cubeVelocity = { x: 0, y: 0, z: 0 };
 export const G = 9.8; // gravity acceleration
+
+export const celestialBodiesCount = 4;

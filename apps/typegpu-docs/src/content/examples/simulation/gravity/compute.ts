@@ -4,7 +4,8 @@ import * as std from 'typegpu/std';
 import { G } from './params';
 import { CelestialBody, computeBindGroupLayout } from './schemas';
 
-const celestialBodiesBindGroup = computeBindGroupLayout.bound;
+const { inState, outState, celestialBodiesCount } =
+  computeBindGroupLayout.bound;
 
 export const computeShader = tgpu['~unstable']
   .computeFn({
@@ -14,7 +15,7 @@ export const computeShader = tgpu['~unstable']
   .does((input) => {
     const dt = 0.016;
 
-    const objectState = celestialBodiesBindGroup.inState.value[input.gid.x];
+    const objectState = inState.value[input.gid.x];
     const position = objectState.position;
     const velocity = objectState.velocity;
     const mass = objectState.mass;
@@ -27,7 +28,7 @@ export const computeShader = tgpu['~unstable']
       normDirection = d.vec3f(0, 0, 0);
     }
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < celestialBodiesCount.value; i++) {
       const distance = std.length(position);
       const acceleration =
         (-G * mass * normDirection[i]) / (distance * distance);
@@ -40,7 +41,7 @@ export const computeShader = tgpu['~unstable']
     modelMatrix = std.identity();
     modelMatrix = std.translate(modelMatrix, position);
 
-    celestialBodiesBindGroup.outState.value[input.gid.x] = CelestialBody({
+    outState.value[input.gid.x] = CelestialBody({
       position: position,
       velocity: velocity,
       mass: mass,

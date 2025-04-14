@@ -29,6 +29,10 @@ export const CelestialBody = d.struct({
 
 // layouts
 export const computeBindGroupLayout = tgpu.bindGroupLayout({
+  celestialBodiesCount: {
+    uniform: d.i32,
+    access: 'readonly',
+  },
   inState: {
     storage: (n: number) => d.arrayOf(CelestialBody, n),
     access: 'readonly',
