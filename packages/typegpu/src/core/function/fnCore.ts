@@ -175,9 +175,12 @@ export function createFnCore(
 
         const args: Snippet[] = Array.isArray(shell.argTypes)
           ? ast.argNames.type === 'identifiers'
-            ? ast.argNames.names.map((name, idx) => ({
-                value: name,
-                dataType: (shell.argTypes as unknown[])[idx] as AnyWgslData,
+            ? shell.argTypes.map((arg, i) => ({
+                value:
+                  (ast.argNames.type === 'identifiers'
+                    ? ast.argNames.names[i]
+                    : undefined) ?? `arg_${i}`,
+                dataType: arg as AnyWgslData,
               }))
             : []
           : Object.entries(shell.argTypes).map(([name, dataType]) => ({
