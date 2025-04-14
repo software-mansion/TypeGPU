@@ -118,7 +118,7 @@ export default defineConfig({
             // },
           ]),
         },
-        {
+        DEV && {
           label: 'Ecosystem',
           items: stripFalsy([
             {

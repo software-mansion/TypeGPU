@@ -22,7 +22,6 @@
 
 </div>
 
-
 ## Documentation
 
 We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
