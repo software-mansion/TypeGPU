@@ -2,7 +2,7 @@ import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { vertexLayout } from './schemas.ts';
+import { renderInstanceLayout } from './schemas.ts';
 
 export async function loadModel(
   root: TgpuRoot,
@@ -13,7 +13,7 @@ export async function loadModel(
   const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
 
   const vertexBuffer = root
-    .createBuffer(vertexLayout.schemaForCount(polygonCount))
+    .createBuffer(renderInstanceLayout.schemaForCount(polygonCount))
     .$usage('vertex')
     .$name(`model vertices of ${modelPath}`);
 

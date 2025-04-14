@@ -2,17 +2,14 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
 import { lightDirection, lightPosition } from './params.ts';
-import { cameraBindGroupLayout, celestialBodyLayout } from './schemas.ts';
+import {
+  VertexOutput,
+  computeBindGroupLayout,
+  renderBindGroupLayout,
+} from './schemas.ts';
 
-export const EXT = cameraBindGroupLayout.bound;
-const extCelestialBody = celestialBodyLayout.bound;
-
-const VertexOutput = {
-  position: d.builtin.position,
-  uv: d.vec2f,
-  normals: d.vec3f,
-  worldPosition: d.vec3f,
-};
+export const EXT = renderBindGroupLayout.bound;
+const extCelestialBody = computeBindGroupLayout.bound;
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({

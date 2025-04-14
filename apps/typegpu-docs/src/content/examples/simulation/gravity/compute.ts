@@ -2,9 +2,9 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { G } from './params';
-import { CelestialBodyStruct, celestialBodyLayout } from './schemas';
+import { CelestialBody, computeBindGroupLayout } from './schemas';
 
-const celestialBodiesBindGroup = celestialBodyLayout.bound;
+const celestialBodiesBindGroup = computeBindGroupLayout.bound;
 
 export const computeShader = tgpu['~unstable']
   .computeFn({
@@ -40,7 +40,7 @@ export const computeShader = tgpu['~unstable']
     modelMatrix = std.identity();
     modelMatrix = std.translate(modelMatrix, position);
 
-    celestialBodiesBindGroup.outState.value[input.gid.x] = CelestialBodyStruct({
+    celestialBodiesBindGroup.outState.value[input.gid.x] = CelestialBody({
       position: position,
       velocity: velocity,
       mass: mass,

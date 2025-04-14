@@ -6,11 +6,11 @@ import { loadModel } from './load-model.ts';
 import { cameraInitialPos, target } from './params.ts';
 import { mainFragment, mainVertex } from './render.ts';
 import {
-  CameraStruct,
-  CelestialBodyStruct,
-  cameraBindGroupLayout,
-  celestialBodyLayout,
-  vertexLayout,
+  Camera,
+  CelestialBody,
+  computeBindGroupLayout,
+  renderBindGroupLayout,
+  renderInstanceLayout,
 } from './schemas.ts';
 
 // AAA rotacja kamery poza ekranem
@@ -39,7 +39,7 @@ const sampler = device.createSampler({
 });
 
 // Camera
-const cameraInitial = CameraStruct({
+const cameraInitial = Camera({
   position: cameraInitialPos.xyz,
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(
@@ -50,17 +50,15 @@ const cameraInitial = CameraStruct({
     d.mat4x4f(),
   ),
 });
-const cameraBuffer = root
-  .createBuffer(CameraStruct, cameraInitial)
-  .$usage('uniform');
+const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
+const cameraBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
   // cube: cubeBuffer,
   sampler,
 });
 
-const CelestialBodyMaxArray = d.arrayOf(CelestialBodyStruct, 4);
+const CelestialBodyMaxArray = d.arrayOf(CelestialBody, 4);
 
 const celestialBodiesBufferA = root
   .createBuffer(CelestialBodyMaxArray, [
@@ -95,12 +93,12 @@ const celestialBodiesBufferB = root
   .$usage('storage');
 
 let flip = false;
-const celestialBodiesBindGroupA = root.createBindGroup(celestialBodyLayout, {
+const celestialBodiesBindGroupA = root.createBindGroup(computeBindGroupLayout, {
   inState: celestialBodiesBufferA,
   outState: celestialBodiesBufferB,
 });
 
-const celestialBodiesBindGroupB = root.createBindGroup(celestialBodyLayout, {
+const celestialBodiesBindGroupB = root.createBindGroup(computeBindGroupLayout, {
   inState: celestialBodiesBufferB,
   outState: celestialBodiesBufferA,
 });
@@ -113,7 +111,7 @@ const computePipeline = root['~unstable']
   .$name('compute pipeline');
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVertex, vertexLayout.attrib)
+  .withVertex(mainVertex, renderInstanceLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
   .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
   .createPipeline();
@@ -123,7 +121,7 @@ function render() {
 
   computePipeline
     .with(
-      celestialBodyLayout,
+      computeBindGroupLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
     .dispatchWorkgroups(4); // count of celestial bodies
@@ -135,10 +133,10 @@ function render() {
       storeOp: 'store',
       clearValue: [0, 1, 0, 1], // background color
     })
-    .with(vertexLayout, vertexBuffer)
-    .with(cameraBindGroupLayout, cameraBindGroup)
+    .with(renderInstanceLayout, vertexBuffer)
+    .with(renderBindGroupLayout, cameraBindGroup)
     .with(
-      celestialBodyLayout,
+      computeBindGroupLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
     .draw(36, 4);
