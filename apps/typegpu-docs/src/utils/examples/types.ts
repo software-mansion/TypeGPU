@@ -16,14 +16,16 @@ export const exampleCategories = [
   { key: 'tests', label: 'Tests' },
 ];
 
-export type Example = {
-  key: string;
-  tsCodes: Record<string, string>;
-  tsImport: () => Promise<unknown>;
-  htmlCode: string;
-  metadata: ExampleMetadata;
+export type ExampleSrcFile = {
+  exampleKey: string;
+  path: string;
+  content: string;
 };
 
-export type Module = {
-  default: string;
+export type Example = {
+  key: string;
+  tsFiles: ExampleSrcFile[];
+  tsImport: () => Promise<unknown>;
+  htmlFile: ExampleSrcFile;
+  metadata: ExampleMetadata;
 };
