@@ -6,13 +6,14 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import {
   type Context,
   type KernelDirective,
-  type TypegpuPluginOptions,
+  type Options,
+  codeFilterRegexes,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
   kernelDirectives,
-  shouldSkipFile,
 } from './common.ts';
+import { createFilterForId } from './filter.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -185,14 +186,23 @@ export default function () {
   return {
     visitor: {
       Program(path, state) {
-        // @ts-ignore
-        const code: string | undefined = state.file?.code;
-        // @ts-ignore
-        const options: TypegpuPluginOptions | undefined = state.opts;
-        // @ts-ignore
-        const id: string | undefined = state.filename;
+        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        const code: string | undefined = (state as any).file?.code;
+        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        const options: Options | undefined = (state as any).opts;
+        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        const id: string | undefined = (state as any).filename;
 
-        if (shouldSkipFile(options, id, code)) {
+        const filter = createFilterForId(options);
+        if (id && filter && !filter?.(id)) {
+          return;
+        }
+
+        if (
+          !options?.forceTgpuAlias &&
+          code &&
+          !codeFilterRegexes.some((reg) => reg.test(code))
+        ) {
           return;
         }
 

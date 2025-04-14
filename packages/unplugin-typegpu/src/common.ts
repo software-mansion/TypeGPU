@@ -1,5 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
+import type { FilterPattern } from 'unplugin';
 
 export type Context = {
   /**
@@ -10,10 +11,16 @@ export type Context = {
   fileId?: string | undefined;
 };
 
-export interface TypegpuPluginOptions {
-  include?: 'all' | RegExp[];
+export interface Options {
+  include?: FilterPattern;
+  exclude?: FilterPattern;
+  enforce?: 'post' | 'pre' | undefined;
   forceTgpuAlias?: string;
 }
+
+export const defaultOptions = {
+  include: [/\.m?[jt]sx?$/],
+};
 
 export function embedJSON(jsValue: unknown) {
   return JSON.stringify(jsValue)
@@ -53,30 +60,16 @@ const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
 const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
 const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
 
-export function shouldSkipFile(
-  options: TypegpuPluginOptions | undefined,
-  id: string | undefined,
-  code: string | undefined,
-) {
-  if (code && !options?.include) {
-    if (
-      !typegpuImportRegex.test(code) &&
-      !typegpuRequireRegex.test(code) &&
-      !typegpuDynamicImportRegex.test(code)
-    ) {
-      // No imports to `typegpu` or its sub modules, exiting early.
-      return true;
-    }
-  } else if (
-    options?.include &&
-    options.include !== 'all' &&
-    (!id || !options.include.some((pattern) => pattern.test(id)))
-  ) {
-    return true;
-  }
-
-  return false;
-}
+/**
+ * Regexes used to efficiently determine if a file is
+ * meant to be processed by our plugin. We assume every file
+ * that should be processed imports `typegpu` in some way.
+ */
+export const codeFilterRegexes = [
+  typegpuImportRegex,
+  typegpuDynamicImportRegex,
+  typegpuRequireRegex,
+];
 
 export function gatherTgpuAliases(
   node: acorn.ImportDeclaration | babel.ImportDeclaration,
