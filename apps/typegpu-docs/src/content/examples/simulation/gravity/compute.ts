@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { G } from './env';
+import { G } from './params';
 import { CelestialBodyStruct, celestialBodyLayout } from './schemas';
 
 const celestialBodiesBindGroup = celestialBodyLayout.bound;

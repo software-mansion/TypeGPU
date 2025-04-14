@@ -1,10 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute-shader.ts';
-import { cameraInitialPos, target } from './env.ts';
+import { computeShader } from './compute.ts';
 import { loadModel } from './load-model.ts';
-import { mainFragment, mainVertex } from './main-shaders.ts';
+import { cameraInitialPos, target } from './params.ts';
+import { mainFragment, mainVertex } from './render.ts';
 import {
   CameraStruct,
   CelestialBodyStruct,

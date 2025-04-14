@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
-import { lightDirection, lightPosition } from './env.ts';
+import { lightDirection, lightPosition } from './params.ts';
 import { cameraBindGroupLayout, celestialBodyLayout } from './schemas.ts';
 
 export const EXT = cameraBindGroupLayout.bound;
