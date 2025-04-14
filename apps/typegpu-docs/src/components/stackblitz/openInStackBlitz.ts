@@ -19,9 +19,9 @@ if (pnpmWorkspaceYaml instanceof type.errors) {
 }
 
 export const openInStackBlitz = (example: Example) => {
-  const tsFiles = Object.entries(example.tsCodes).reduce(
-    (acc, [fileName, code]) => {
-      acc[`src/${fileName}`] = code.replaceAll(
+  const tsFiles = example.tsFiles.reduce(
+    (acc, file) => {
+      acc[`src/${file.path}`] = file.content.replaceAll(
         '/TypeGPU',
         'https://docs.swmansion.com/TypeGPU',
       );
@@ -46,7 +46,7 @@ export const openInStackBlitz = (example: Example) => {
     <title>${example.metadata.title}</title>
 </head>
 <body>
-${example.htmlCode}
+${example.htmlFile.content}
 <script type="module" src="/index.ts"></script>
 </body>
 </html>`,
