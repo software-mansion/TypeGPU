@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
+import * as std from 'typegpu/std';
 import { lightDirection, lightPosition } from './params.ts';
 import {
   VertexOutput,
@@ -24,10 +24,10 @@ export const mainVertex = tgpu['~unstable']
   .does((input) => {
     const camera = EXT.camera.value;
     const object = extCelestialBody.inState.value[input.instanceIdx];
-    const worldPosition = mul(object.modelTransformationMatrix, input.position);
-    const relativeToCamera = mul(camera.view, worldPosition);
+    const worldPosition = std.add(input.position, d.vec4f(object.position, 1));
+    const relativeToCamera = std.mul(camera.view, worldPosition);
     return {
-      position: mul(camera.projection, relativeToCamera),
+      position: std.mul(camera.projection, relativeToCamera),
       uv: input.uv,
       normals: input.normal,
       worldPosition: worldPosition.xyz,
@@ -41,33 +41,38 @@ export const mainFragment = tgpu['~unstable']
     out: d.vec4f,
   })
   .does((input) => {
-    const normal = normalize(input.normals);
+    const normal = std.normalize(input.normals);
     // Directional lighting
-    const directionalLightIntensity = max(dot(normal, lightDirection), 0.0);
+    const directionalLightIntensity = std.max(
+      std.dot(normal, lightDirection),
+      0.0,
+    );
     const directionalComponent = 0.3 * directionalLightIntensity;
 
     // Point Lighting
-    const surfaceToLight = normalize(sub(lightPosition, input.worldPosition));
-    const pointLightIntensity = max(dot(normal, surfaceToLight), 0.0);
+    const surfaceToLight = std.normalize(
+      std.sub(lightPosition, input.worldPosition),
+    );
+    const pointLightIntensity = std.max(std.dot(normal, surfaceToLight), 0.0);
     const pointComponent = 0.6 * pointLightIntensity;
 
     const lighting = directionalComponent + pointComponent;
     const albedo = d.vec3f(1.0, 1.0, 1.0); // base color
 
     const cameraPos = EXT.camera.value.position;
-    const surfaceToCamera = normalize(
-      sub(EXT.camera.value.position, input.worldPosition),
+    const surfaceToCamera = std.normalize(
+      std.sub(EXT.camera.value.position, input.worldPosition),
     );
 
-    const halfVector = normalize(add(surfaceToLight, surfaceToCamera));
-    const specular = pow(max(dot(normal, halfVector), 0.0), 0.5);
+    const halfVector = std.normalize(std.add(surfaceToLight, surfaceToCamera));
+    const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 0.5);
+
     return d.vec4f(
       albedo.x * lighting * specular,
       albedo.y * lighting * specular,
       albedo.z * lighting * specular,
       1,
     );
-    // return d.vec4f(specular,specular,specular, 1);
   })
   .$name('mainFragment');
 

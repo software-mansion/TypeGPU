@@ -11,4 +11,4 @@ export const cubePos = { x: 3, y: 10, z: 0 };
 export const cubeVelocity = { x: 0, y: 0, z: 0 };
 export const G = 9.8; // gravity acceleration
 
-export const celestialBodiesCount = 4;
+export const celestialBodiesCount = 2;

@@ -73,27 +73,15 @@ const celestialBodiesBufferA = root
   .createBuffer(CelestialBodyMaxArray, [
     {
       modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 10, 0),
-      velocity: d.vec3f(0, 0, 3),
-      mass: 1,
+      position: d.vec3f(1, 0, 0),
+      velocity: d.vec3f(0, 1, 0),
+      mass: 10,
     },
     {
       modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 20, 0),
-      velocity: d.vec3f(0, 0, 2),
-      mass: 1,
-    },
-    {
-      modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(0, -10, 0),
-      velocity: d.vec3f(0, 0, -3),
-      mass: 1,
-    },
-    {
-      modelTransformationMatrix: d.mat4x4f(),
-      position: d.vec3f(5, 0, 0),
-      velocity: d.vec3f(0, 0, 0),
-      mass: 1,
+      position: d.vec3f(0, 1, 0),
+      velocity: d.vec3f(0, -1, 0.002),
+      mass: 10,
     },
   ])
   .$usage('storage');
@@ -102,7 +90,7 @@ const celestialBodiesBufferB = root
   .$usage('storage');
 
 const celestialBodiesCountBuffer = root
-  .createBuffer(d.u32, p.celestialBodiesCount)
+  .createBuffer(d.i32, p.celestialBodiesCount)
   .$usage('uniform');
 
 let flip = false;
@@ -117,7 +105,6 @@ const celestialBodiesBindGroupB = root.createBindGroup(computeBindGroupLayout, {
   inState: celestialBodiesBufferB,
   outState: celestialBodiesBufferA,
 });
-console.log(tgpu.resolve({ externals: { computeShader } }));
 
 // Pipelines
 const computePipeline = root['~unstable']
@@ -159,7 +146,6 @@ function render() {
   root['~unstable'].flush();
 }
 
-// console.log('Cube position:', await vertexBuffer.read());
 let destroyed = false;
 // Frame loop
 function frame() {

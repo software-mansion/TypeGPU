@@ -1,7 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { G } from './params';
 import { CelestialBody, computeBindGroupLayout } from './schemas';
 
 const { inState, outState, celestialBodiesCount } =
@@ -11,41 +10,33 @@ export const computeShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [1],
-  })
-  .does((input) => {
+  })((input) => {
+    const current = inState.value[input.gid.x];
     const dt = 0.016;
 
-    const objectState = inState.value[input.gid.x];
-    const position = objectState.position;
-    const velocity = objectState.velocity;
-    const mass = objectState.mass;
-    let modelMatrix = objectState.modelTransformationMatrix;
-
-    let normDirection = d.vec3f();
-    if (std.length(position) !== 0) {
-      normDirection = std.normalize(position);
-    } else {
-      normDirection = d.vec3f(0, 0, 0);
-    }
-
+    let force = d.vec3f();
     for (let i = 0; i < celestialBodiesCount.value; i++) {
-      const distance = std.length(position);
-      const acceleration =
-        (-G * mass * normDirection[i]) / (distance * distance);
-      position[i] =
-        position[i] + velocity[i] * dt + 0.5 * acceleration * dt * dt;
-      velocity[i] = velocity[i] + acceleration * dt;
-      velocity[i] = velocity[i] * 0.99; // damping
+      if (d.u32(i) === input.gid.x) {
+        continue;
+      }
+      const other = inState.value[i];
+      const dist = std.max(10, std.distance(current.position, other.position));
+      force = std.add(
+        force,
+        std.mul(
+          (current.mass * other.mass) / dist / dist,
+          std.normalize(std.sub(other.position, current.position)),
+        ),
+      );
     }
-
-    modelMatrix = std.identity();
-    modelMatrix = std.translate(modelMatrix, position);
-
-    outState.value[input.gid.x] = CelestialBody({
-      position: position,
-      velocity: velocity,
-      mass: mass,
-      modelTransformationMatrix: modelMatrix,
+    const acceleration = std.mul(1 / current.mass, force);
+    const updatedCurrent = CelestialBody({
+      position: std.add(current.position, std.mul(dt, current.velocity)),
+      velocity: std.add(current.velocity, std.mul(dt, acceleration)),
+      mass: current.mass,
+      modelTransformationMatrix: current.modelTransformationMatrix,
     });
+
+    outState.value[input.gid.x] = updatedCurrent;
   })
-  .$name('cube physics compute shader');
+  .$name('Compute shader');
