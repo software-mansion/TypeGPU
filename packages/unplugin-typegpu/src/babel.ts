@@ -1,6 +1,6 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
-import type { TraverseOptions } from '@babel/traverse';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
@@ -75,7 +75,11 @@ function functionToTranspiled(
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
-  const declarationStack: string[] = [];
+  const declarationStack: {
+    name: string;
+    path: NodePath<babel.VariableDeclarator>;
+    shouldBeAutoNamed: boolean;
+  }[] = [];
   return {
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
@@ -84,13 +88,36 @@ function functionVisitor(ctx: Context): TraverseOptions {
     VariableDeclarator: {
       enter(path) {
         if (path.node.id.type === 'Identifier') {
-          declarationStack.push(path.node.id.name);
+          declarationStack.push({
+            name: path.node.id.name,
+            path,
+            shouldBeAutoNamed: false,
+          });
         }
       },
+
       exit(path) {
         if (path.node.id.type === 'Identifier') {
-          declarationStack.pop();
+          // biome-ignore lint/style/noNonNullAssertion:
+          const { name, path, shouldBeAutoNamed } = declarationStack.pop()!;
+          const node = path.node;
+
+          if (ctx.autoNamingEnabled && shouldBeAutoNamed && node.init) {
+            path.replaceWith(
+              types.variableDeclarator(
+                node.id,
+                types.callExpression(
+                  template.expression(
+                    `${ctx.tgpuAliases.values().next().value}.__autoName`,
+                  )(),
+                  [node.init, template.expression(`"${name}"`)()],
+                ),
+              ),
+            );
+          }
         }
+
+        path.skip();
       },
     },
 
@@ -191,31 +218,25 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
           path.skip();
         }
+
+        const declaration = declarationStack[declarationStack.length - 1];
+        if (declaration) {
+          declaration.shouldBeAutoNamed = true;
+        }
       }
 
-      if (ctx.autoNamingEnabled) {
-        const callee = node.callee;
-        if (
-          callee.type === 'MemberExpression' &&
-          ((callee.object.type === 'Identifier' &&
-            isTgpu(ctx, callee.object)) ||
-            (callee.object.type === 'MemberExpression' &&
-              callee.object.object.type === 'Identifier' &&
-              isTgpu(ctx, callee.object.object)))
-        ) {
-          const name = declarationStack[declarationStack.length - 1];
-          if (name) {
-            path.replaceWith(
-              types.callExpression(
-                template.expression(
-                  `${ctx.tgpuAliases.values().next().value}.__autoName`,
-                )(),
-                [node, template.expression(`"${name}"`)()],
-              ),
-            );
+      const callee = node.callee;
 
-            path.skip();
-          }
+      if (
+        callee?.type === 'MemberExpression' &&
+        ((callee.object.type === 'Identifier' && isTgpu(ctx, callee.object)) ||
+          (callee.object.type === 'MemberExpression' &&
+            callee.object.object.type === 'Identifier' &&
+            isTgpu(ctx, callee.object.object)))
+      ) {
+        const declaration = declarationStack[declarationStack.length - 1];
+        if (declaration) {
+          declaration.shouldBeAutoNamed = true;
         }
       }
     },

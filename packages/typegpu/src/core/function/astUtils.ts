@@ -40,8 +40,8 @@ export function removedJsImpl(name?: string) {
   };
 }
 
-export function autoName(object: unknown, label: string) {
-  if (isNamable(object)) {
-    object.$name(label);
-  }
+export function autoName<T>(object: T, label: string): T {
+  return isNamable(object) && 'label' in object && object.label !== undefined
+    ? object.$name(label)
+    : object;
 }
