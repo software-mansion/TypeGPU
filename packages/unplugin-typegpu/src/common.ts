@@ -56,6 +56,21 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   return ctx.tgpuAliases.has(path);
 }
 
+const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
+const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
+const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
+
+/**
+ * Regexes used to efficiently determine if a file is
+ * meant to be processed by our plugin. We assume every file
+ * that should be processed imports `typegpu` in some way.
+ */
+export const codeFilterRegexes = [
+  typegpuImportRegex,
+  typegpuDynamicImportRegex,
+  typegpuRequireRegex,
+];
+
 export function gatherTgpuAliases(
   node: acorn.ImportDeclaration | babel.ImportDeclaration,
   ctx: Context,

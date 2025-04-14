@@ -9,6 +9,7 @@ import {
   type Context,
   type KernelDirective,
   type Options,
+  codeFilterRegexes,
   defaultOptions,
   embedJSON,
   gatherTgpuAliases,
@@ -61,6 +62,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       transform: {
         filter: {
           id: options,
+          ...(options.forceTgpuAlias ? {} : { code: codeFilterRegexes }),
         },
         handler(code, id) {
           const ctx: Context = {

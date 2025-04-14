@@ -7,6 +7,7 @@ import {
   type Context,
   type KernelDirective,
   type Options,
+  codeFilterRegexes,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
@@ -186,12 +187,22 @@ export default function () {
     visitor: {
       Program(path, state) {
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        const code: string | undefined = (state as any).file?.code;
+        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const options: Options | undefined = (state as any).opts;
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const id: string | undefined = (state as any).filename;
 
         const filter = createFilterForId(options);
         if (id && filter && !filter?.(id)) {
+          return;
+        }
+
+        if (
+          !options?.forceTgpuAlias &&
+          code &&
+          !codeFilterRegexes.some((reg) => reg.test(code))
+        ) {
           return;
         }
 
