@@ -109,6 +109,7 @@
     "estree-walker": "^3.0.3",
     "magic-string-ast": "^0.9.1",
     "picomatch": "^4.0.2",
+    "defu": "^6.1.4",
     "tinyest-for-wgsl": "workspace:~0.1.0-alpha.8",
     "unplugin": "^2.3.1"
   },
@@ -125,7 +126,6 @@
     "@types/babel__traverse": "^7.20.7",
     "@types/picomatch": "^4.0.0",
     "acorn": "^8.14.1",
-    "defu": "^6.1.4",
     "rollup": "~4.37.0",
     "tsup": "catalog:",
     "typescript": "catalog:"

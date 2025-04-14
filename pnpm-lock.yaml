@@ -465,6 +465,9 @@ importers:
       '@babel/standalone':
         specifier: ^7.27.0
         version: 7.27.0
+      defu:
+        specifier: ^6.1.4
+        version: 6.1.4
       estree-walker:
         specifier: ^3.0.3
         version: 3.0.3
@@ -511,9 +514,6 @@ importers:
       acorn:
         specifier: ^8.14.1
         version: 8.14.1
-      defu:
-        specifier: ^6.1.4
-        version: 6.1.4
       rollup:
         specifier: 4.34.8
         version: 4.34.8
