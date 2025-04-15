@@ -22,7 +22,7 @@ catalogs:
       specifier: ^3.5.0
       version: 3.5.0
     vitest:
-      specifier: ^3.1.1
+      specifier: ^3.0.9
       version: 3.1.1
 
 overrides:
@@ -406,8 +406,8 @@ importers:
         specifier: workspace:*
         version: link:../unplugin-typegpu
       wesl:
-        specifier: 0.6.0-rc1
-        version: 0.6.0-rc1
+        specifier: 0.6.0-rc4
+        version: 0.6.0-rc4
       wgpu-matrix:
         specifier: ^3.4.0
         version: 3.4.0
@@ -3452,8 +3452,8 @@ packages:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
 
-  mini-parse@0.6.0-rc1:
-    resolution: {integrity: sha512-rSmxVlUt7EQxdIn0mg8hB2SkcJwXorXPlyhx6y71icWnST1VqGI1hVR4y82DTToIQWV6vtB5Ip+gmAXdrT7Urg==}
+  mini-parse@0.6.0-rc4:
+    resolution: {integrity: sha512-p8+G8d+4Z+4ud0/Nyl3IO5T6tMTJ+UKULSyponsiy6VxbF0o4Maag8e8AaJj4VMix5/8ZBhxZ/AZlt9YcGBJXg==}
 
   minimatch@10.0.1:
     resolution: {integrity: sha512-ethXTt3SGGR+95gudmqJ1eNhRO7eGEGIgYA9vnPatK4/etz2MEVDno5GMCibdMTuBMyElzIlgxMna3K94XDIDQ==}
@@ -5001,8 +5001,8 @@ packages:
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
-  wesl@0.6.0-rc1:
-    resolution: {integrity: sha512-jP/VGaBxaqz+zKrgUkCgRmtO9GcT+JDFn7NgLtVg0xF7nxfX52RybMuSNuwyPB1qJwCMH/yjmeHK71v98GXwbg==}
+  wesl@0.6.0-rc4:
+    resolution: {integrity: sha512-2NUxMfHdWilOSQWCcQBZnxt4csc5HGDNoefD/1RLpLTyXcwM+10Z4gki9+DvKX1T546eG7pQ8Ak6NV/5zSvGGQ==}
 
   wgpu-matrix@3.4.0:
     resolution: {integrity: sha512-kXHrbAPKEn9A32Wf4wVldyx9MmnzwhuB5p8GCqoJP3ItU5+iDT4J3aTQwPZWkfb153hwGtqZtUwR2M+ipJKadg==}
@@ -8621,7 +8621,7 @@ snapshots:
 
   mimic-response@3.1.0: {}
 
-  mini-parse@0.6.0-rc1: {}
+  mini-parse@0.6.0-rc4: {}
 
   minimatch@10.0.1:
     dependencies:
@@ -10304,9 +10304,9 @@ snapshots:
 
   webpack-virtual-modules@0.6.2: {}
 
-  wesl@0.6.0-rc1:
+  wesl@0.6.0-rc4:
     dependencies:
-      mini-parse: 0.6.0-rc1
+      mini-parse: 0.6.0-rc4
 
   wgpu-matrix@3.4.0: {}
 
