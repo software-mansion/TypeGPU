@@ -23,7 +23,8 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [typegpu({})],
+    // Allowing query params, for invalidation
+    plugins: [typegpu({ include: [/\.m?[jt]sx?/] })],
   },
   integrations: [
     starlight({
