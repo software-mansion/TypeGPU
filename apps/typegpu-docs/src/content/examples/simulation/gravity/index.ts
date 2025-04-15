@@ -22,7 +22,7 @@ import {
 // AAA update camera to newer version
 // AAA większy canvas
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
-// andromeda x milky way, particles
+// andromeda x milky way, particles, balls on ground, negative mass
 // AAA skybox jak w endzie
 // AAA speed slider
 // AAA bufor z czasem
@@ -86,9 +86,7 @@ const cameraBindGroup = root.createBindGroup(renderBindGroupLayout, {
   sampler,
 });
 
-const celestialBodiesCountBuffer = root
-  .createBuffer(d.i32, p.celestialBodiesCount)
-  .$usage('uniform');
+const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 
 interface DynamicResources {
   celestialBodiesCount: number;
@@ -142,7 +140,7 @@ function render() {
         ? dynamicResourcesBox.data.celestialBodiesBindGroupA
         : dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
-    .dispatchWorkgroups(4); // count of celestial bodies
+    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount); // count of celestial bodies
 
   renderPipeline
     .withColorAttachment({
@@ -223,6 +221,8 @@ function loadPreset(preset: Preset): DynamicResources {
     },
   );
 
+  celestialBodiesCountBuffer.write(celestialBodies.length);
+
   return {
     flip: 0,
     celestialBodiesCount: celestialBodies.length,
@@ -241,6 +241,7 @@ export const controls = {
     options: presetsEnum,
     onSelectChange: (value: Preset) => {
       const oldData = dynamicResourcesBox.data;
+      // AAA dispose of the oldData
       dynamicResourcesBox.data = loadPreset(value);
     },
   },

@@ -41,6 +41,16 @@ export const presets: Record<Preset, PresetData> = {
             velocity: d.vec3f(-1, 0, 0),
             mass: 10,
           },
+          {
+            position: d.vec3f(0, 0, 10),
+            velocity: d.vec3f(0, 0, 0),
+            mass: 1000,
+          },
+          {
+            position: d.vec3f(0, 0, -10),
+            velocity: d.vec3f(0, 0, 0),
+            mass: 10,
+          },
         ],
       },
     ],
@@ -53,13 +63,13 @@ export const presets: Record<Preset, PresetData> = {
         elements: [
           {
             position: d.vec3f(10, 0, 0),
-            velocity: d.vec3f(0, 1, 0),
-            mass: 100,
+            velocity: d.vec3f(0, 0, 0),
+            mass: 1,
           },
           {
             position: d.vec3f(-10, 0, 0),
-            velocity: d.vec3f(0, -1, 0),
-            mass: 100,
+            velocity: d.vec3f(0, 0, 0),
+            mass: 10,
           },
         ],
       },

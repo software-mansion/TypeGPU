@@ -20,7 +20,7 @@ export const computeShader = tgpu['~unstable']
         continue;
       }
       const other = inState.value[i];
-      const dist = std.max(10, std.distance(current.position, other.position));
+      const dist = std.max(0.1, std.distance(current.position, other.position));
       force = std.add(
         force,
         std.mul(
