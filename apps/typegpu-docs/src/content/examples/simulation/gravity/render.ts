@@ -17,11 +17,13 @@ export const mainVertex = tgpu['~unstable']
       instanceIdx: d.builtin.instanceIndex,
     },
     out: VertexOutput,
-  })
-  .does((input) => {
+  })((input) => {
     const camera = renderLayout.$.camera;
     const object = celestialBodiesLayout.$.inState[input.instanceIdx];
-    const worldPosition = std.add(input.position, d.vec4f(object.position, 1));
+    const worldPosition = std.add(
+      std.mul(object.modelTransformationMatrix, input.position),
+      d.vec4f(object.position, 1),
+    );
     const relativeToCamera = std.mul(camera.view, worldPosition);
     return {
       position: std.mul(camera.projection, relativeToCamera),

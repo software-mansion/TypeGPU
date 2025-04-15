@@ -50,7 +50,7 @@ context.configure({
 
 const { vertexBuffer, vertexCount } = await loadModel(
   root,
-  '/TypeGPU/assets/gravity/cube_blend.obj',
+  '/TypeGPU/assets/gravity/sphere.obj',
 );
 
 const CelestialBodyMaxArray = (n: number) => d.arrayOf(CelestialBody, n);
@@ -120,7 +120,7 @@ const renderPipeline = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
-  .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
+  .withPrimitive({ topology: 'triangle-list', cullMode: 'front' })
   .createPipeline();
 
 const depthTexture = root.device.createTexture({
@@ -173,8 +173,8 @@ function frame() {
   if (destroyed) {
     return;
   }
-  requestAnimationFrame(frame);
   render();
+  requestAnimationFrame(frame);
 }
 
 function loadPreset(preset: Preset): DynamicResources {
@@ -185,7 +185,7 @@ function loadPreset(preset: Preset): DynamicResources {
       .flatMap((group) => group.elements)
       .map((element) => {
         return {
-          modelTransformationMatrix: std.identity(),
+          modelTransformationMatrix: std.mul(1, std.identity()),
           position: element.position,
           velocity: element.velocity,
           mass: element.mass,

@@ -62,14 +62,14 @@ export const presets: Record<Preset, PresetData> = {
         texture: '/TypeGPU/assets/gravity/cube_texture.png',
         elements: [
           {
-            position: d.vec3f(10, 0, 0),
+            position: d.vec3f(1, 0, 0),
             velocity: d.vec3f(0, 0, 0),
-            mass: 1,
+            mass: 0,
           },
           {
-            position: d.vec3f(-10, 0, 0),
+            position: d.vec3f(-1, 0, 0),
             velocity: d.vec3f(0, 0, 0),
-            mass: 10,
+            mass: 0,
           },
         ],
       },

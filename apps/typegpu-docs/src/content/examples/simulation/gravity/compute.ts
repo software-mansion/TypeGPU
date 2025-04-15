@@ -29,7 +29,10 @@ export const computeShader = tgpu['~unstable']
         ),
       );
     }
-    const acceleration = std.mul(1 / current.mass, force);
+    let acceleration = d.vec3f();
+    if (current.mass > 0) {
+      acceleration = std.mul(1 / current.mass, force);
+    }
     const updatedCurrent = CelestialBody({
       position: std.add(current.position, std.mul(dt, current.velocity)),
       velocity: std.add(current.velocity, std.mul(dt, acceleration)),
