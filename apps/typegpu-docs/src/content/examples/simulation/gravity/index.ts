@@ -26,7 +26,6 @@ import {
 // AAA skybox jak w endzie
 // AAA speed slider
 // AAA bufor z czasem
-// AAA napraw lighting
 // AAA resize observer
 // AAA model kuli
 // AAA zderzenia

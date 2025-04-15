@@ -1,15 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { lightDirection, lightPosition } from './params.ts';
+import * as p from './params.ts';
 import {
   VertexOutput,
-  celestialBodiesBindGroupLayout,
-  renderBindGroupLayout,
+  celestialBodiesBindGroupLayout as celestialBodiesLayout,
+  renderBindGroupLayout as renderLayout,
 } from './schemas.ts';
-
-export const EXT = renderBindGroupLayout.bound;
-const extCelestialBody = celestialBodiesBindGroupLayout.bound;
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({
@@ -22,8 +19,8 @@ export const mainVertex = tgpu['~unstable']
     out: VertexOutput,
   })
   .does((input) => {
-    const camera = EXT.camera.value;
-    const object = extCelestialBody.inState.value[input.instanceIdx];
+    const camera = renderLayout.$.camera;
+    const object = celestialBodiesLayout.$.inState[input.instanceIdx];
     const worldPosition = std.add(input.position, d.vec4f(object.position, 1));
     const relativeToCamera = std.mul(camera.view, worldPosition);
     return {
@@ -39,40 +36,34 @@ export const mainFragment = tgpu['~unstable']
   .fragmentFn({
     in: VertexOutput,
     out: d.vec4f,
-  })
-  .does((input) => {
-    const normal = std.normalize(input.normals);
-    // Directional lighting
-    const directionalLightIntensity = std.max(
-      std.dot(normal, lightDirection),
-      0.0,
-    );
-    const directionalComponent = 0.3 * directionalLightIntensity;
+  })((input) => {
+    //const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
+    const textureColor = d.vec3f(0.6, 0.3, 0.5); //textureColorWithAlpha.xyz;
+    const normal = input.normals;
 
-    // Point Lighting
-    const surfaceToLight = std.normalize(
-      std.sub(lightPosition, input.worldPosition),
-    );
-    const pointLightIntensity = std.max(std.dot(normal, surfaceToLight), 0.0);
-    const pointComponent = 0.6 * pointLightIntensity;
+    const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
-    const lighting = directionalComponent + pointComponent;
-    const albedo = d.vec3f(1.0, 1.0, 1.0); // base color
-
-    const cameraPos = EXT.camera.value.position;
-    const surfaceToCamera = std.normalize(
-      std.sub(EXT.camera.value.position, input.worldPosition),
+    const cosTheta = std.dot(normal, p.lightDirection);
+    const diffuse = std.mul(
+      std.max(0, cosTheta),
+      std.mul(textureColor, p.lightColor),
     );
 
-    const halfVector = std.normalize(std.add(surfaceToLight, surfaceToCamera));
-    const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 0.5);
-
-    return d.vec4f(
-      albedo.x * lighting * specular,
-      albedo.y * lighting * specular,
-      albedo.z * lighting * specular,
-      1,
+    const viewSource = std.normalize(
+      std.sub(renderLayout.$.camera.position.xyz, input.worldPosition),
     );
+    const reflectSource = std.normalize(
+      std.reflect(std.mul(-1, p.lightDirection), normal),
+    );
+    const specularStrength = std.pow(
+      std.max(0, std.dot(viewSource, reflectSource)),
+      16,
+    );
+    const specular = std.mul(specularStrength, p.lightColor);
+
+    const lightedColor = std.add(ambient, std.add(diffuse, specular));
+
+    return d.vec4f(lightedColor.xyz, 1);
   })
   .$name('mainFragment');
 
