@@ -185,12 +185,13 @@ function loadPreset(preset: Preset): DynamicResources {
     presetData.celestialBodies
       .flatMap((group) => group.elements)
       .map((element) => {
+        const radius = element.radius ?? element.mass ** (1 / 3);
         return {
-          modelTransformationMatrix: std.mul(element.radius, std.identity()),
+          modelTransformationMatrix: std.mul(radius, std.identity()),
           position: element.position,
-          velocity: element.velocity,
+          velocity: element.velocity ?? d.vec3f(),
           mass: element.mass,
-          radius: element.radius,
+          radius: radius,
         };
       });
 
