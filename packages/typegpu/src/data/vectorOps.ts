@@ -1,4 +1,4 @@
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
   vec2b,
   vec2f,
@@ -15,9 +15,9 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from './vector';
-import type * as wgsl from './wgslTypes';
-import type { VecKind } from './wgslTypes';
+} from './vector.ts';
+import type * as wgsl from './wgslTypes.ts';
+import type { VecKind } from './wgslTypes.ts';
 
 type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
@@ -184,12 +184,6 @@ export const VectorOps = {
         ? wgsl.v3b
         : wgsl.v4b
   >,
-
-  neg: {
-    'vec2<bool>': (e: wgsl.v2b) => vec2b(!e.x, !e.y),
-    'vec3<bool>': (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
-    'vec4<bool>': (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
-  } as Record<VecKind, <T extends wgsl.AnyBooleanVecInstance>(v: T) => T>,
 
   or: {
     'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) =>
@@ -989,6 +983,26 @@ export const VectorOps = {
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
   } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
+
+  neg: {
+    vec2f: unary2f((value) => -value),
+    vec2h: unary2h((value) => -value),
+    vec2i: unary2i((value) => -value),
+    vec2u: unary2u((value) => -value),
+    'vec2<bool>': (e: wgsl.v2b) => vec2b(!e.x, !e.y),
+
+    vec3f: unary3f((value) => -value),
+    vec3h: unary3h((value) => -value),
+    vec3i: unary3i((value) => -value),
+    vec3u: unary3u((value) => -value),
+    'vec3<bool>': (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
+
+    vec4f: unary4f((value) => -value),
+    vec4h: unary4h((value) => -value),
+    vec4i: unary4i((value) => -value),
+    vec4u: unary4u((value) => -value),
+    'vec4<bool>': (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   select: {
     vec2f: (f: wgsl.v2f, t: wgsl.v2f, c: wgsl.v2b) =>

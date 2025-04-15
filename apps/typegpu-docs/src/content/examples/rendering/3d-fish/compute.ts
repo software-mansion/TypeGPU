@@ -1,9 +1,9 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as p from './params';
-import { computeBindGroupLayout as layout } from './schemas';
-import { distanceVectorFromLine } from './tgsl-helpers';
+import * as p from './params.ts';
+import { computeBindGroupLayout as layout } from './schemas.ts';
+import { distanceVectorFromLine } from './tgsl-helpers.ts';
 
 export const computeShader = tgpu['~unstable']
   .computeFn({

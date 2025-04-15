@@ -106,13 +106,10 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 
 // functions
 
-const getBoxIntersection = tgpu['~unstable']
-  .fn(
-    { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
-    IntersectionStruct,
-  )(/* wgsl */ `{
-  var output: Out;
-
+const getBoxIntersection = tgpu['~unstable'].fn(
+  { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
+  IntersectionStruct,
+) /* wgsl */`{
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -137,7 +134,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if (tMinY > tMin) {
@@ -157,7 +154,7 @@ const getBoxIntersection = tgpu['~unstable']
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
-    return output;
+    return IntersectionStruct();
   }
 
   if tMinZ > tMin {
@@ -168,18 +165,15 @@ const getBoxIntersection = tgpu['~unstable']
     tMax = tMaxZ;
   }
 
-  output.intersects = tMin > 0 && tMax > 0;
-  output.tMin = tMin;
-  output.tMax = tMax;
-  return output;
-}`)
+  return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
+}`
+  .$uses({ IntersectionStruct })
   .$name('box_intersection');
 
-const vertexFunction = tgpu['~unstable']
-  .vertexFn({
-    in: { vertexIndex: d.builtin.vertexIndex },
-    out: { outPos: d.builtin.position },
-  })(/* wgsl */ `{
+const vertexFunction = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position },
+}) /* wgsl */`{
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -190,17 +184,15 @@ const vertexFunction = tgpu['~unstable']
   );
 
   return Out(vec4f(pos[in.vertexIndex], 0, 1));
-}`)
-  .$name('vertex_main');
+}`.$name('vertex_main');
 
 const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
 const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
-const fragmentFunction = tgpu['~unstable']
-  .fragmentFn({
-    in: { position: d.builtin.position },
-    out: d.vec4f,
-  })(/* wgsl */ `{
+const fragmentFunction = tgpu['~unstable'].fragmentFn({
+  in: { position: d.builtin.position },
+  out: d.vec4f,
+}) /* wgsl */`{
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
@@ -250,7 +242,7 @@ const fragmentFunction = tgpu['~unstable']
   }
 
   return color;
-}`)
+}`
   .$uses({
     ...renderLayout.bound,
     RayStruct,
@@ -270,12 +262,9 @@ const fragmentFunction = tgpu['~unstable']
 const pipeline = root['~unstable']
   .with(
     boxSizeAccessor,
-    tgpu['~unstable']
-      .fn(
-        [],
-        d.u32,
-      )('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: boxSizeUniform }),
+    tgpu['~unstable'].fn([], d.u32)`() -> u32 { return boxSize; }`.$uses({
+      boxSize: boxSizeUniform,
+    }),
   )
   .with(canvasDimsAccessor, canvasDimsUniform)
   .withVertex(vertexFunction, {})

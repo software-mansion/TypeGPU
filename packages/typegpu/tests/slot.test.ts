@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { it } from './utils/extendedIt';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
+import { parseResolved } from './utils/parseResolved.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';

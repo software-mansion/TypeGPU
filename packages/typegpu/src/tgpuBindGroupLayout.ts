@@ -2,14 +2,14 @@ import {
   type TgpuBuffer,
   type UniformFlag,
   isBuffer,
-} from './core/buffer/buffer';
+} from './core/buffer/buffer.ts';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   TgpuLaidOutBufferImpl,
   isUsableAsUniform,
-} from './core/buffer/bufferUsage';
+} from './core/buffer/bufferUsage.ts';
 import {
   type TgpuComparisonSampler,
   TgpuLaidOutComparisonSamplerImpl,
@@ -17,8 +17,8 @@ import {
   type TgpuSampler,
   isComparisonSampler,
   isSampler,
-} from './core/sampler/sampler';
-import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
+} from './core/sampler/sampler.ts';
+import { TgpuExternalTextureImpl } from './core/texture/externalTexture.ts';
 import {
   type StorageTextureDimension,
   TgpuLaidOutSampledTextureImpl,
@@ -31,36 +31,36 @@ import {
   isSampledTextureView,
   isStorageTextureView,
   isTexture,
-} from './core/texture/texture';
+} from './core/texture/texture.ts';
 import type {
   SampleTypeToStringChannelType,
   ViewDimensionToDimension,
-} from './core/texture/textureFormats';
+} from './core/texture/textureFormats.ts';
 import type {
   ChannelFormatToSchema,
   ChannelTypeToLegalFormats,
   StorageTextureTexelFormat,
   TexelFormatToDataType,
-} from './core/texture/textureFormats';
-import type { TextureProps } from './core/texture/textureProps';
+} from './core/texture/textureFormats.ts';
+import type { TextureProps } from './core/texture/textureProps.ts';
 import {
   NotSampledError,
   type Sampled,
   isUsableAsSampled,
-} from './core/texture/usageExtension';
-import type { AnyData } from './data/dataTypes.js';
-import type { AnyWgslData, BaseData } from './data/wgslTypes';
-import { NotUniformError } from './errors';
+} from './core/texture/usageExtension.ts';
+import type { AnyData } from './data/dataTypes.ts';
+import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
+import { NotUniformError } from './errors.ts';
 import {
   NotStorageError,
   type StorageFlag,
   isUsableAsStorage,
-} from './extension';
-import type { TgpuNamable } from './namable';
-import type { Infer } from './shared/repr.js';
-import type { Default, OmitProps, Prettify } from './shared/utilityTypes';
-import type { TgpuShaderStage } from './types';
-import type { Unwrapper } from './unwrapper';
+} from './extension.ts';
+import type { TgpuNamable } from './namable.ts';
+import type { Infer } from './shared/repr.ts';
+import type { Default, Prettify } from './shared/utilityTypes.ts';
+import type { TgpuShaderStage } from './types.ts';
+import type { Unwrapper } from './unwrapper.ts';
 
 // ----------
 // Public API
@@ -186,15 +186,6 @@ export interface TgpuBindGroupLayout<
    * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
    */
   $idx(index?: number): this;
-
-  /**
-   * @deprecated Use the `root.createBindGroup` API instead, accessible through `await tgpu.init()`
-   */
-  populate(
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
-  ): TgpuBindGroup<Entries>;
 
   /**
    * Creates a raw WebGPU resource based on the typed descriptor.
@@ -325,7 +316,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
           ? TgpuComparisonSampler
           : T extends TgpuLayoutTexture
             ? TgpuSampledTexture<
-                Default<GetDimension<T['viewDimension']>, '2d'>,
+                Default<T['viewDimension'], '2d'>,
                 ChannelFormatToSchema[T['texture']]
               >
             : T extends TgpuLayoutStorageTexture
@@ -625,12 +616,6 @@ class TgpuBindGroupLayoutImpl<
     });
 
     return unwrapped;
-  }
-
-  populate(
-    entries: { [K in keyof Entries]: LayoutEntryToInput<Entries[K]> },
-  ): TgpuBindGroup<Entries> {
-    return new TgpuBindGroupImpl(this, entries);
   }
 }
 

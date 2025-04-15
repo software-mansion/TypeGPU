@@ -1,5 +1,6 @@
-import { isDerived, isSlot } from '../core/slot/slotTypes';
-import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
+import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
+import type { AnyData } from '../data/dataTypes.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
   abstractInt,
@@ -8,7 +9,7 @@ import {
   f32,
   i32,
   u32,
-} from '../data/numeric';
+} from '../data/numeric.ts';
 import {
   vec2b,
   vec2f,
@@ -25,23 +26,21 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../data/vector';
+} from '../data/vector.ts';
 import {
-  type AnyWgslData,
-  type BaseData,
   type WgslStruct,
   isDecorated,
   isWgslArray,
   isWgslData,
-} from '../data/wgslTypes';
-import { getResolutionCtx } from '../gpuMode';
-import { $internal } from '../shared/symbols';
+} from '../data/wgslTypes.ts';
+import { getResolutionCtx } from '../gpuMode.ts';
+import { $internal } from '../shared/symbols.ts';
 import {
-  type Resource,
+  type Snippet,
   UnknownData,
   type Wgsl,
   hasInternalDataType,
-} from '../types';
+} from '../types.ts';
 
 const swizzleableTypes = [
   'vec2f',
@@ -67,7 +66,7 @@ type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
   SwizzleableType,
-  Record<SwizzleLength, AnyWgslData>
+  Record<SwizzleLength, AnyData>
 > = {
   f: {
     1: f32,
@@ -146,7 +145,7 @@ const indexableTypeToResult = {
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): BaseData | UnknownData {
+): AnyData | UnknownData {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -164,23 +163,25 @@ export function getTypeForPropAccess(
     }
     const unwrapped = ctx.unwrap(targetType);
 
-    return getTypeFromWgsl(unwrapped as Wgsl) as BaseData;
+    return getTypeFromWgsl(unwrapped);
   }
 
-  let target = targetType as BaseData;
+  let target = targetType as AnyData;
 
   if (hasInternalDataType(target)) {
-    target = target[$internal].dataType;
+    target = target[$internal].dataType as AnyData;
   }
   while (isDecorated(target)) {
-    target = target.inner;
+    target = target.inner as AnyData;
   }
 
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    return (target as WgslStruct).propTypes[propName] ?? UnknownData;
+    return (
+      ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
+    );
   }
 
   const propLength = propName.length;
@@ -204,11 +205,11 @@ export function getTypeForPropAccess(
   return isWgslData(target) ? target : UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
+export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
   if (isWgslData(resource)) {
     // array
     if (isWgslArray(resource)) {
-      return resource.elementType;
+      return resource.elementType as AnyData;
     }
 
     // vector or matrix
@@ -222,7 +223,7 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
   return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFromWgsl(resource.value as Wgsl);
   }
@@ -231,7 +232,7 @@ export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
     return UnknownData;
   }
   if (typeof resource === 'number') {
-    return numericLiteralToResource(String(resource))?.dataType ?? UnknownData;
+    return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
   }
   if (typeof resource === 'boolean') {
     return bool;
@@ -247,7 +248,7 @@ export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
   return isWgslData(resource) ? resource : UnknownData;
 }
 
-export function numericLiteralToResource(value: string): Resource | undefined {
+export function numericLiteralToSnippet(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
     return { value, dataType: abstractInt };

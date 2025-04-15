@@ -10,7 +10,7 @@ import {
   vec4f,
 } from 'typegpu/data';
 import { cos, dot, mul, sin } from 'typegpu/std';
-import { randomGeneratorSlot } from './generator.js';
+import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data';
-import { length } from '../../../src/std';
+import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
+import { length } from '../../../src/std/index.ts';
 
 describe('length', () => {
   it('computes length of vec2f', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
-import { parse, parseResolved } from './utils/parseResolved';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {

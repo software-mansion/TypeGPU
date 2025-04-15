@@ -1,14 +1,14 @@
-import { roundUp } from '../mathUtils';
-import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes';
+import { roundUp } from '../mathUtils.ts';
+import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
+import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes.ts';
 import {
   getCustomSize,
   isDisarray,
   isLooseDecorated,
   isUnstruct,
-} from './dataTypes';
-import type { BaseData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
-import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
+} from './dataTypes.ts';
+import type { BaseData, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
+import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 const knownSizesMap: Record<string, number> = {
   f32: 4,

@@ -1,5 +1,5 @@
-import { f32 } from '../data/numeric';
-import { VectorOps } from '../data/vectorOps';
+import { f32 } from '../data/numeric.ts';
+import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyFloatVecInstance,
   AnyMatInstance,
@@ -8,11 +8,11 @@ import type {
   v3f,
   v3h,
   vBaseForMat,
-} from '../data/wgslTypes';
-import { createDualImpl } from '../shared/generators';
-import type { Resource } from '../types';
+} from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
+import type { Snippet } from '../types.ts';
 
-export function isNumeric(element: Resource) {
+export function isNumeric(element: Snippet) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
@@ -443,4 +443,16 @@ export const distance = createDualImpl(
   },
   // GPU implementation
   (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
+);
+
+export const neg = createDualImpl(
+  // CPU implementation
+  <T extends AnyNumericVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return -value as T;
+    }
+    return VectorOps.neg[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `-(${value.value})`, dataType: value.dataType }),
 );

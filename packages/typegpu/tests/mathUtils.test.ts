@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roundUp } from '../src/mathUtils';
+import { roundUp } from '../src/mathUtils.ts';
 
 describe('roundUp', () => {
   it('does nothing when value is multiple of modulo', () => {

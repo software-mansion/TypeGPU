@@ -1,9 +1,9 @@
-import type { AnyWgslData } from '../../data';
-import type { TgpuNamable } from '../../namable';
-import type { $repr, Infer } from '../../shared/repr.js';
-import type { Labelled } from '../../types';
-import type { TgpuFn } from '../function/tgpuFn';
-import type { TgpuBufferUsage } from './../buffer/bufferUsage';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { TgpuNamable } from '../../namable.ts';
+import type { $repr, Infer } from '../../shared/repr.ts';
+import type { Labelled } from '../../types.ts';
+import type { TgpuFn } from '../function/tgpuFn.ts';
+import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable, Labelled {
   readonly resourceType: 'slot';

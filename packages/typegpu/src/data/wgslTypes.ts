@@ -1,6 +1,5 @@
-import type { TgpuNamable } from '../namable.js';
+import type { TgpuNamable } from '../namable.ts';
 import type {
-  $repr,
   Infer,
   InferGPU,
   InferGPURecord,
@@ -9,8 +8,9 @@ import type {
   InferRecord,
   MemIdentity,
   MemIdentityRecord,
-} from '../shared/repr.js';
-import type { Prettify } from '../shared/utilityTypes.js';
+} from '../shared/repr.ts';
+import { $repr } from '../shared/repr.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
@@ -49,6 +49,12 @@ export interface AbstractFloat {
   /** Type-token, not available at runtime */
   readonly [$repr]: number;
 }
+
+export interface Void {
+  readonly type: 'void';
+  readonly [$repr]: undefined;
+}
+export const Void: Void = { type: 'void', [$repr]: undefined };
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -1029,7 +1035,7 @@ export interface WgslStruct<
   /** Type-token, not available at runtime */
   readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
+  readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   /** Type-token, not available at runtime */
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
@@ -1158,11 +1164,12 @@ export const wgslTypeLiterals = [
   'decorated',
   'abstractInt',
   'abstractFloat',
+  'void',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 
-export type PerspectiveOrLinearInterpolatableData =
+export type PerspectiveOrLinearInterpolatableBaseType =
   | F32
   | F16
   | Vec2f
@@ -1172,8 +1179,11 @@ export type PerspectiveOrLinearInterpolatableData =
   | Vec4f
   | Vec4h;
 
-export type FlatInterpolatableData =
-  | PerspectiveOrLinearInterpolatableData
+export type PerspectiveOrLinearInterpolatableData =
+  | PerspectiveOrLinearInterpolatableBaseType
+  | Decorated<PerspectiveOrLinearInterpolatableBaseType>;
+
+export type FlatInterpolatableAdditionalBaseType =
   | I32
   | U32
   | Vec2i
@@ -1182,6 +1192,11 @@ export type FlatInterpolatableData =
   | Vec3u
   | Vec4i
   | Vec4u;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | FlatInterpolatableAdditionalBaseType
+  | Decorated<FlatInterpolatableAdditionalBaseType>;
 
 export type ScalarData =
   | Bool
@@ -1222,7 +1237,8 @@ export type AnyWgslData =
   | Atomic
   | Decorated
   | AbstractInt
-  | AbstractFloat;
+  | AbstractFloat
+  | Void;
 
 // #endregion
 

@@ -1,14 +1,13 @@
-export { discard } from './discard.js';
+export { discard } from './discard.ts';
+
 export {
-  // ops
-  add,
-  sub,
-  mul,
+  abs,
   // builtin functions
   acos,
+  // ops
+  add,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
@@ -21,53 +20,65 @@ export {
   length,
   max,
   min,
-  normalize,
   mix,
+  mul,
+  neg,
+  normalize,
   pow,
   reflect,
   sin,
+  sub,
 } from './numeric.js';
 
 export {
+  // logical aggregation
+  all,
   // comparison
   allEq,
+  and,
+  any,
   eq,
-  ne,
-  lt,
-  le,
-  gt,
   ge,
+  gt,
+  // other
+  isCloseTo,
+  le,
+  lt,
+  ne,
   // logical ops
   not,
   or,
-  and,
-  // logical aggregation
-  all,
-  any,
-  // other
-  isCloseTo,
   select,
-} from './boolean.js';
+} from './boolean.ts';
 
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
-  // synchronization
-  workgroupBarrier,
   storageBarrier,
   textureBarrier,
-} from './atomic.js';
+  // synchronization
+  workgroupBarrier,
+} from './atomic.ts';
 
 export {
   identity,
   translate,
-} from './matrix.js'
+} from './matrix.js';
 
 export { arrayLength } from './array.js';
+
+export {
+  pack2x16float,
+  pack4x8unorm,
+  unpack2x16float,
+  unpack4x8unorm,
+} from './packing.js';
+
+export { textureSample } from './texture.js';

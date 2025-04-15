@@ -1,9 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
-import * as d from '../src/data';
+import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 
-import { readData, writeData } from '../src/data/dataIO';
+import { readData, writeData } from '../src/data/dataIO.ts';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {

@@ -1,11 +1,11 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
   type TgpuFragmentFnShell,
   type TgpuVertexFnShell,
-} from '../src';
-import * as d from '../src/data';
-import { it } from './utils/extendedIt';
+} from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {

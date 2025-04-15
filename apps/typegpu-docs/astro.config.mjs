@@ -23,7 +23,8 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [typegpu({})],
+    // Allowing query params, for invalidation
+    plugins: [typegpu({ include: [/\.m?[jt]sx?/] })],
   },
   integrations: [
     starlight({
@@ -116,6 +117,23 @@ export default defineConfig({
             //   label: 'Parametrized Functions',
             //   slug: 'guides/parametrized-functions',
             // },
+          ]),
+        },
+        DEV && {
+          label: 'Ecosystem',
+          items: stripFalsy([
+            {
+              label: '@typegpu/noise',
+              slug: 'ecosystem/typegpu-noise',
+            },
+            {
+              label: '@typegpu/color',
+              slug: 'ecosystem/typegpu-color',
+            },
+            {
+              label: 'Third-party',
+              slug: 'ecosystem/third-party',
+            },
           ]),
         },
         {

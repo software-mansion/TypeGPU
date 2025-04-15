@@ -1,17 +1,17 @@
-import type { Infer } from '../../data';
-import type { AnyWgslData } from '../../data/wgslTypes';
-import type { TgpuNamable } from '../../namable';
-import { createDualImpl } from '../../shared/generators';
-import { $internal } from '../../shared/symbols';
-import type { GenerationCtx } from '../../smol/wgslGenerator';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { TgpuNamable } from '../../namable.ts';
+import { createDualImpl } from '../../shared/generators.ts';
+import type { Infer } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
+import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
 import {
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
   UnknownData,
   type Wgsl,
-} from '../../types';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage';
+} from '../../types.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   type Eventual,
   type Providing,
@@ -19,14 +19,15 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
   isAccessor,
-} from '../slot/slotTypes';
-import { createFnCore } from './fnCore';
+} from '../slot/slotTypes.ts';
+import { createFnCore } from './fnCore.ts';
 import type {
   Implementation,
   InferArgs,
   InferIO,
   InferReturn,
-} from './fnTypes';
+} from './fnTypes.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -41,6 +42,7 @@ type TgpuFnShellHeader<
 > = {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
+  readonly isEntry: false;
 };
 
 /**
@@ -57,7 +59,11 @@ export type TgpuFnShell<
       ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
     ) => InferReturn<Return>,
   ) => TgpuFn<Args, Return>) &
-  ((implementation: string) => TgpuFn<Args, Return>) & {
+  ((implementation: string) => TgpuFn<Args, Return>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => TgpuFn<Args, Return>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
@@ -125,10 +131,13 @@ export function fn<
   const shell: TgpuFnShellHeader<Args, Return> = {
     argTypes,
     returnType,
+    isEntry: false,
   };
 
-  const call = (implementation: Implementation) =>
-    createFn(shell, implementation);
+  const call = (
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,
@@ -221,11 +230,7 @@ function createFn<
     }),
   );
 
-  Object.defineProperty(call, $internal, {
-    value: {
-      implementation,
-    },
-  });
+  call[$internal].implementation = implementation;
 
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     Args,
@@ -310,11 +315,7 @@ function createBoundFunction<
     },
   });
 
-  Object.defineProperty(fn, $internal, {
-    value: {
-      implementation: innerFn[$internal].implementation,
-    },
-  });
+  fn[$internal].implementation = innerFn[$internal].implementation;
 
   return fn;
 }

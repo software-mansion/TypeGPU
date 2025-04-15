@@ -1,8 +1,9 @@
 import babel from '@babel/parser';
 import type { Node } from '@babel/types';
 import * as acorn from 'acorn';
+import type { ArgNames } from 'tinyest';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers';
+import { transpileFn } from '../src/parsers.ts';
 
 const parseRollup = (code: string) =>
   acorn.parse(code, { ecmaVersion: 'latest' });
@@ -140,6 +141,33 @@ describe('transpileFn', () => {
       });
       // Only 'external' is external.
       expect(externalNames).toEqual(['external']);
+    }),
+  );
+
+  it(
+    'handles destructured args',
+    dualTest((p) => {
+      const { argNames, externalNames } = transpileFn(
+        p(`({ pos, a: b }) => {
+          const x = pos.x;
+        }`),
+      );
+
+      expect(argNames).toEqual({
+        type: 'destructured-object',
+        props: [
+          {
+            alias: 'pos',
+            prop: 'pos',
+          },
+          {
+            alias: 'b',
+            prop: 'a',
+          },
+        ],
+      } satisfies ArgNames);
+
+      expect(externalNames).toEqual([]);
     }),
   );
 });

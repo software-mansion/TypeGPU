@@ -1,5 +1,5 @@
 import type * as smol from 'tinyest';
-import type { AnyAttribute } from '../../data/attributes';
+import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
   Decorated,
   F16,
@@ -18,8 +18,8 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
-} from '../../data/wgslTypes';
-import type { Infer } from '../../shared/repr';
+} from '../../data/wgslTypes.ts';
+import type { Infer } from '../../shared/repr.ts';
 
 /**
  * Information extracted from transpiling a JS function.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { GlobalVariableDecl, VariableDecl } from '../src/grammar';
-import { parse } from '../src/index';
+import type { GlobalVariableDecl, VariableDecl } from '../src/grammar.ts';
+import { parse } from '../src/index.ts';
 
 describe('variable_decl', () => {
   it('parses unassigned', () => {
