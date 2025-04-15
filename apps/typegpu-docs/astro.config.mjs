@@ -119,6 +119,23 @@ export default defineConfig({
             // },
           ]),
         },
+        DEV && {
+          label: 'Ecosystem',
+          items: stripFalsy([
+            {
+              label: '@typegpu/noise',
+              slug: 'ecosystem/typegpu-noise',
+            },
+            {
+              label: '@typegpu/color',
+              slug: 'ecosystem/typegpu-color',
+            },
+            {
+              label: 'Third-party',
+              slug: 'ecosystem/third-party',
+            },
+          ]),
+        },
         {
           label: 'Integration',
           items: stripFalsy([
