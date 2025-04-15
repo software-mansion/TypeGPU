@@ -138,6 +138,12 @@ export function convertToCommonType(
     return undefined;
   }
 
+  if (conversion.hasImplicitConversions) {
+    console.warn(
+      `Implicit conversions from [${types.map((t) => ctx.resolve(t)).join(', ')}] to ${ctx.resolve(conversion.targetType)} are supported, but they are not recommended. Consider using explicit conversions.`,
+    );
+  }
+
   return values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
@@ -153,6 +159,12 @@ export function applyConversion(
   const action = conversion.actions[0];
 
   invariant(action, 'Action should not be undefined');
+
+  if (conversion.hasImplicitConversions) {
+    console.warn(
+      `Implicit conversion from ${ctx.resolve(value.dataType)} to ${ctx.resolve(conversion.targetType)} is supported, but it is not recommended. Consider using explicit conversions.`,
+    );
+  }
 
   return applyActionToSnippet(ctx, value, action, conversion.targetType);
 }

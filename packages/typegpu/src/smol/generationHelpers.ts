@@ -488,7 +488,9 @@ export function getBestConversion(
   const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
 
   const explicitResult = findBestType(types, uniqueTypes, false);
-  if (explicitResult) return explicitResult;
+  if (explicitResult) {
+    return explicitResult;
+  }
 
   const implicitResult = findBestType(types, uniqueTypes, true);
   if (implicitResult) {
