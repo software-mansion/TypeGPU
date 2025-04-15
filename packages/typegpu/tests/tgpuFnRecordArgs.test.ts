@@ -147,7 +147,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
         a: u32,
         b: u32,
       }
-  
+
       fn newPointF(a: vec4f, b: Point) {
         var newPoint = b;
       }`),

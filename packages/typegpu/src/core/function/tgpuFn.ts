@@ -93,7 +93,9 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyWgslData[] | Record<string, AnyWgslData> = AnyWgslData[],
+  Args extends AnyWgslData[] | Record<string, AnyWgslData> =
+    | AnyWgslData[]
+    | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = TgpuFnBase<Args, Return> &
   ((
@@ -228,6 +230,7 @@ function createFn<
       value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
       dataType: shell.returnType ?? UnknownData,
     }),
+    shell.argTypes,
   );
 
   call[$internal].implementation = implementation;
@@ -298,6 +301,7 @@ function createBoundFunction<
         dataType: innerFn.shell.returnType ?? UnknownData,
       };
     },
+    innerFn.shell.argTypes,
   );
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;

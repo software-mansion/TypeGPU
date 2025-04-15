@@ -1,4 +1,5 @@
 import type { TgpuDualFn } from '../data/dataTypes.ts';
+import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
 import type { Snippet } from '../types.ts';
 import { $internal } from './symbols.ts';
@@ -26,20 +27,23 @@ type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
+  argTypes?:
+    | AnyWgslData[]
+    | Record<string, AnyWgslData>
+    | ((...args: Snippet[]) => AnyWgslData[])
+    | undefined,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
-      return gpuImpl(
-        ...(args as unknown as MapValueToSnippet<Parameters<T>>),
-      ) as unknown as Snippet;
+      return gpuImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
-    return jsImpl(...(args as any));
+    return jsImpl(...args);
   }) as T;
 
   Object.defineProperty(impl, $internal, {
     value: {
       implementation: jsImpl,
+      argTypes,
     },
   });
 

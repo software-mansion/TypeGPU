@@ -605,14 +605,14 @@ describe('wgslGenerator', () => {
       [],
       d.u32,
     )(() => {
-      const arr = [1, 2, 3];
+      const arr = [d.u32(1), 2, 3];
       return arr[1] as number;
     });
 
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() -> u32 {
-        var arr = array<u32, 3>(1, 2, 3);
+        var arr = array<u32, 3>(u32(1), 2, 3);
         return arr[1];
       }`),
     );
@@ -625,8 +625,23 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ c: ['arr', { 'y': [{ n: '1' }, { n: '2' }, { n: '3' }] },] }, { r: { i: ['arr', { n: '1' }] }, },], } as const;
+    const expectedAst = {
+      b: [
+        {
+          c: [
+            'arr',
+            {
+              y: [
+                { f: [{ a: ['d', 'u32'] }, [{ n: '1' }]] },
+                { n: '2' },
+                { n: '3' },
+              ],
+            },
+          ],
+        },
+        { r: { i: ['arr', { n: '1' }] } },
+      ],
+    } as const;
 
     expect(astInfo.ast.body).toEqual(expectedAst);
 

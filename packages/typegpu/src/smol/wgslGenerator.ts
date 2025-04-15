@@ -1,8 +1,10 @@
 import type * as smol from 'tinyest';
-import type { AnyData } from '../data/dataTypes.ts';
-import * as d from '../data/index.ts';
-import { abstractInt } from '../data/numeric.ts';
+import { arrayOf } from '../data/array.ts';
+import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
+import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { invariant } from '../errors.ts';
+import { $internal } from '../shared/symbols.ts';
 import {
   type ResolutionCtx,
   type Snippet,
@@ -11,6 +13,10 @@ import {
   isWgsl,
 } from '../types.ts';
 import {
+  type ConversionResult,
+  type ConversionResultAction,
+  convertType,
+  getBestConversion,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
@@ -52,14 +58,14 @@ function operatorToType<
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
-      return d.bool;
+      return bool;
     }
 
     return lhs;
   }
 
   if (binaryLogicalOps.includes(op)) {
-    return d.bool;
+    return bool;
   }
 
   if (op === '=') {
@@ -88,6 +94,81 @@ export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
   return String(res.value);
 }
 
+function applyActionToSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  action: ConversionResultAction,
+  targetType: AnyData,
+): Snippet {
+  if (action.action === 'none') {
+    return value;
+  }
+
+  const resolvedValue = resolveRes(ctx, value);
+
+  switch (action.action) {
+    case 'ref':
+      return { value: `&${resolvedValue}`, dataType: targetType };
+    case 'deref':
+      return { value: `*${resolvedValue}`, dataType: targetType };
+    case 'cast': {
+      return {
+        value: `${ctx.resolve(targetType)}(${resolvedValue})`,
+        dataType: targetType,
+      };
+    }
+    default: {
+      assertExhaustive(action.action);
+    }
+  }
+}
+
+export function convertToCommonType(
+  ctx: GenerationCtx,
+  values: Snippet[],
+): Snippet[] | undefined {
+  const types = values.map((value) => value.dataType);
+
+  if (types.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const conversion = getBestConversion(types as AnyData[]);
+  if (!conversion) {
+    return undefined;
+  }
+
+  if (conversion.hasImplicitConversions) {
+    console.warn(
+      `Implicit conversions from [${types.map((t) => ctx.resolve(t)).join(', ')}] to ${ctx.resolve(conversion.targetType)} are supported, but they are not recommended. Consider using explicit conversions.`,
+    );
+  }
+
+  return values.map((value, index) => {
+    const action = conversion.actions[index];
+    invariant(action, 'Action should not be undefined');
+    return applyActionToSnippet(ctx, value, action, conversion.targetType);
+  });
+}
+
+export function applyConversion(
+  ctx: GenerationCtx,
+  value: Snippet,
+  conversion: ConversionResult,
+): Snippet {
+  const action = conversion.actions[0];
+
+  invariant(action, 'Action should not be undefined');
+
+  if (conversion.hasImplicitConversions) {
+    console.warn(
+      `Implicit conversion from ${ctx.resolve(value.dataType)} to ${ctx.resolve(conversion.targetType)} is supported, but it is not recommended. Consider using explicit conversions.`,
+    );
+  }
+
+  return applyActionToSnippet(ctx, value, action, conversion.targetType);
+}
+
 function assertExhaustive(value: never): never {
   throw new Error(
     `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
@@ -95,7 +176,7 @@ function assertExhaustive(value: never): never {
 }
 
 export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
-  return { value: value ? 'true' : 'false', dataType: d.bool };
+  return { value: value ? 'true' : 'false', dataType: bool };
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
@@ -185,10 +266,19 @@ export function generateExpression(
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
 
+    if (wgsl.isPtr(target.dataType)) {
+      return {
+        value: `(*${target.value}).${property}`,
+        dataType: isData(target.dataType.inner)
+          ? getTypeForPropAccess(target.dataType.inner, property)
+          : UnknownData,
+      };
+    }
+
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
-        dataType: d.isData(target.dataType)
+        dataType: isData(target.dataType)
           ? getTypeForPropAccess(target.dataType, property)
           : UnknownData,
       };
@@ -200,7 +290,7 @@ export function generateExpression(
           // Dynamically-sized array
           return {
             value: `arrayLength(&${ctx.resolve(target.value)})`,
-            dataType: d.u32,
+            dataType: u32,
           };
         }
 
@@ -234,7 +324,6 @@ export function generateExpression(
         dataType: getTypeForPropAccess(target.value, property),
       };
     }
-
     if (typeof target.value === 'object') {
       const dataType = isWgsl(propValue)
         ? getTypeFromWgsl(propValue)
@@ -257,9 +346,18 @@ export function generateExpression(
     const targetStr = resolveRes(ctx, targetExpr);
     const propertyStr = resolveRes(ctx, propertyExpr);
 
+    if (wgsl.isPtr(targetExpr.dataType)) {
+      return {
+        value: `(*${targetStr})[${propertyStr}]`,
+        dataType: isData(targetExpr.dataType.inner)
+          ? getTypeForIndexAccess(targetExpr.dataType.inner)
+          : UnknownData,
+      };
+    }
+
     return {
       value: `${targetStr}[${propertyStr}]`,
-      dataType: d.isData(targetExpr.dataType)
+      dataType: isData(targetExpr.dataType)
         ? getTypeForIndexAccess(targetExpr.dataType)
         : UnknownData,
     };
@@ -313,9 +411,52 @@ export function generateExpression(
       );
     }
 
+    const argTypes = idValue[$internal]?.argTypes;
+
+    let typePairs: [wgsl.AnyWgslData, Snippet][] = [];
+    if (Array.isArray(argTypes)) {
+      typePairs = argTypes
+        .filter((_, index) => index < resolvedSnippets.length)
+        .map((type, index) => [type, resolvedSnippets[index]]) as [
+        wgsl.AnyWgslData,
+        Snippet,
+      ][];
+    } else if (typeof argTypes === 'function') {
+      const types = argTypes(...resolvedSnippets) as wgsl.AnyWgslData[];
+      typePairs = types
+        .filter((_, index) => index < resolvedSnippets.length)
+        .map((type, index) => [type, resolvedSnippets[index]]) as [
+        wgsl.AnyWgslData,
+        Snippet,
+      ][];
+    } else if (typeof argTypes === 'object' && argTypes !== null) {
+      typePairs = Object.entries(argTypes).map(([key, type]) => {
+        const res = (
+          argSnippets[0]?.value as unknown as Record<string, Snippet>
+        )[key];
+        if (!res) {
+          throw new Error(`Missing argument ${key} in function call`);
+        }
+        return [type, res] as [wgsl.AnyWgslData, Snippet];
+      });
+    }
+
+    const convertedResources = argTypes
+      ? typePairs.map(([type, res]) => {
+          const conversion = convertType(res.dataType as AnyData, type);
+          if (!conversion) {
+            return res;
+          }
+
+          return applyConversion(ctx, res, conversion);
+        })
+      : [];
+
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...resolvedSnippets,
+      ...(convertedResources.length > 0
+        ? convertedResources
+        : resolvedSnippets),
     ) as Snippet;
 
     return {
@@ -355,6 +496,30 @@ export function generateExpression(
       };
     }
 
+    if (isMarkedInternal(callee)) {
+      const argTypes = callee[$internal]?.argTypes;
+
+      if (typeof argTypes === 'object' && argTypes !== null) {
+        const propKeys = Object.keys(argTypes);
+        const objWithSnippets: Record<string, Snippet> = {};
+
+        for (const key of propKeys) {
+          const val = obj[key];
+          if (val === undefined) {
+            throw new Error(
+              `Missing property ${key} in object literal for function ${callee}`,
+            );
+          }
+          objWithSnippets[key] = generateExpression(ctx, val);
+        }
+
+        return {
+          value: objWithSnippets,
+          dataType: UnknownData,
+        };
+      }
+    }
+
     return {
       value: generateEntries(Object.values(obj)),
       dataType: UnknownData,
@@ -370,33 +535,32 @@ export function generateExpression(
       throw new Error('Cannot create empty array literal.');
     }
 
-    let type = values[0]?.dataType;
-    const mismatchedType = values.find((value) => value.dataType !== type);
-    if (mismatchedType) {
+    const convertedValues = convertToCommonType(ctx, values);
+    if (!convertedValues) {
       throw new Error(
-        `Cannot mix types in array literal. Type ${mismatchedType.dataType.type} does not match expected type ${type?.type}.`,
+        'The given values cannot be automatically converted to a common type. Consider explicitly casting them.',
       );
     }
 
-    if (!wgsl.isWgslData(type)) {
-      throw new Error('Cannot use non-WGSL data types in array literals.');
-    }
-
-    type =
-      type.type === 'abstractInt'
-        ? d.u32
-        : type.type === 'abstractFloat'
-          ? d.f32
-          : type;
+    const targetType = convertedValues[0]?.dataType as AnyData;
+    const type =
+      targetType.type === 'abstractFloat'
+        ? f32
+        : targetType.type === 'abstractInt'
+          ? i32
+          : targetType;
 
     const typeId = ctx.resolve(type);
 
     const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = values.map((value) => resolveRes(ctx, value));
+    const arrayValues = convertedValues.map((value) => resolveRes(ctx, value));
 
     return {
       value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: d.arrayOf(type, values.length) as d.AnyWgslData,
+      dataType: arrayOf(
+        type as wgsl.AnyWgslData,
+        values.length,
+      ) as wgsl.AnyWgslData,
     };
   }
 
@@ -476,7 +640,7 @@ ${alternate}`;
       throw new Error('Cannot create variable without an initial value.');
     }
 
-    if (d.isLooseData(eq.dataType)) {
+    if (isLooseData(eq.dataType)) {
       throw new Error('Cannot create variable with loose data type.');
     }
 
