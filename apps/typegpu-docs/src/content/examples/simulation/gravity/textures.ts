@@ -62,10 +62,10 @@ export const skyBoxVertices: d.Infer<typeof SkyBoxVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-export type SkyBoxNames = 'campsite' | 'beach' | 'chapel' | 'city';
+export type SkyBoxNames = 'campsite' | 'beach';
 function getSkyBoxUrls(name: SkyBoxNames) {
   return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
-    (side) => `/TypeGPU/assets/cubemap-reflection/${name}/${side}.jpg`,
+    (side) => `/TypeGPU/assets/gravity/skyboxes/${name}/${side}.jpg`,
   );
 }
 
@@ -91,6 +91,31 @@ export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBoxNames) {
         [size, size],
       );
     }),
+  );
+
+  return texture;
+}
+
+export type SphereTextureNames = 'earth' | 'moon';
+export async function loadSphereTexture(
+  root: TgpuRoot,
+  sphereTexture: SphereTextureNames,
+) {
+  const texturePath = `/TypeGPU/assets/gravity/textures/${sphereTexture}.jpg`;
+  const textureResponse = await fetch(texturePath);
+  const imageBitmap = await createImageBitmap(await textureResponse.blob());
+  const texture = root['~unstable']
+    .createTexture({
+      size: [imageBitmap.width, imageBitmap.height],
+      format: 'rgba8unorm',
+    })
+    .$usage('sampled', 'render')
+    .$name(`texture from ${texturePath}`);
+
+  root.device.queue.copyExternalImageToTexture(
+    { source: imageBitmap },
+    { texture: root.unwrap(texture) },
+    [imageBitmap.width, imageBitmap.height],
   );
 
   return texture;

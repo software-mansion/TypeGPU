@@ -30,7 +30,7 @@ import {
   skyBoxVertexLayout,
   textureBindGroupLayout,
 } from './schemas.ts';
-import { loadSkyBox, skyBoxVertices } from './skybox.ts';
+import { loadSkyBox, skyBoxVertices } from './textures.ts';
 
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles, balls on ground, negative mass

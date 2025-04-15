@@ -41,23 +41,3 @@ export async function loadModel(root: TgpuRoot, modelPath: string) {
     vertexCount,
   };
 }
-
-export async function loadTexture(root: TgpuRoot, texturePath: string) {
-  const textureResponse = await fetch(texturePath);
-  const imageBitmap = await createImageBitmap(await textureResponse.blob());
-  const texture = root['~unstable']
-    .createTexture({
-      size: [imageBitmap.width, imageBitmap.height],
-      format: 'rgba8unorm',
-    })
-    .$usage('sampled', 'render')
-    .$name(`texture from ${texturePath}`);
-
-  root.device.queue.copyExternalImageToTexture(
-    { source: imageBitmap },
-    { texture: root.unwrap(texture) },
-    [imageBitmap.width, imageBitmap.height],
-  );
-
-  return texture;
-}

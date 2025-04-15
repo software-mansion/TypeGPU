@@ -1,12 +1,12 @@
 import * as d from 'typegpu/data';
-import type { SkyBoxNames } from './skybox.ts';
+import type { SkyBoxNames, SphereTextureNames } from './textures.ts';
 
 export const presetsEnum = ['Atom', 'Solar System'] as const;
 export type Preset = (typeof presetsEnum)[number];
 export interface PresetData {
   skyBox: SkyBoxNames;
   celestialBodies: {
-    texture: string;
+    texture: SphereTextureNames;
     elements: {
       position: d.v3f;
       velocity?: d.v3f;
@@ -21,7 +21,7 @@ export const presets: Record<Preset, PresetData> = {
     skyBox: 'campsite',
     celestialBodies: [
       {
-        texture: '/TypeGPU/assets/gravity/cube_texture.png',
+        texture: 'moon',
         elements: [
           {
             position: d.vec3f(1, 0, 0),
@@ -61,7 +61,7 @@ export const presets: Record<Preset, PresetData> = {
     skyBox: 'beach',
     celestialBodies: [
       {
-        texture: '/TypeGPU/assets/gravity/cube_texture.png',
+        texture: 'earth',
         elements: [
           {
             position: d.vec3f(1, 0, 0),
