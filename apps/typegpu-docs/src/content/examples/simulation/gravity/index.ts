@@ -185,10 +185,11 @@ function loadPreset(preset: Preset): DynamicResources {
       .flatMap((group) => group.elements)
       .map((element) => {
         return {
-          modelTransformationMatrix: std.mul(1, std.identity()),
+          modelTransformationMatrix: std.mul(element.radius, std.identity()),
           position: element.position,
           velocity: element.velocity,
           mass: element.mass,
+          radius: element.radius,
         };
       });
 

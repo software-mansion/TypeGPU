@@ -10,6 +10,7 @@ export interface PresetData {
       position: d.v3f;
       velocity: d.v3f;
       mass: number;
+      radius: number;
     }[];
   }[];
 }
@@ -25,31 +26,37 @@ export const presets: Record<Preset, PresetData> = {
             position: d.vec3f(1, 0, 0),
             velocity: d.vec3f(0, 1, 0),
             mass: 1,
+            radius: 1,
           },
           {
             position: d.vec3f(-1, 0, 0),
             velocity: d.vec3f(0, -1, 0),
             mass: 1,
+            radius: 1,
           },
           {
             position: d.vec3f(0, 1, 0),
             velocity: d.vec3f(1, 0, 0),
             mass: 1,
+            radius: 1,
           },
           {
             position: d.vec3f(0, -1, 0),
             velocity: d.vec3f(-1, 0, 0),
             mass: 1,
+            radius: 1,
           },
           {
             position: d.vec3f(0, 0, 10),
             velocity: d.vec3f(0, 2, 0),
             mass: 100,
+            radius: 4.5,
           },
           {
             position: d.vec3f(0, 0, -10),
             velocity: d.vec3f(0, -2, 0),
             mass: 100,
+            radius: 4.5,
           },
         ],
       },
@@ -65,11 +72,13 @@ export const presets: Record<Preset, PresetData> = {
             position: d.vec3f(1, 0, 0),
             velocity: d.vec3f(0, 0, 0),
             mass: 0,
+            radius: 1,
           },
           {
             position: d.vec3f(-1, 0, 0),
             velocity: d.vec3f(0, 0, 0),
             mass: 0,
+            radius: 1,
           },
         ],
       },

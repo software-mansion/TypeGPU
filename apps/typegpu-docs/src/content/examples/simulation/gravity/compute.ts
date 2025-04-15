@@ -34,10 +34,11 @@ export const computeShader = tgpu['~unstable']
       acceleration = std.mul(1 / current.mass, force);
     }
     const updatedCurrent = CelestialBody({
+      modelTransformationMatrix: current.modelTransformationMatrix,
       position: std.add(current.position, std.mul(dt, current.velocity)),
       velocity: std.add(current.velocity, std.mul(dt, acceleration)),
       mass: current.mass,
-      modelTransformationMatrix: current.modelTransformationMatrix,
+      radius: current.radius,
     });
 
     outState.value[input.gid.x] = updatedCurrent;

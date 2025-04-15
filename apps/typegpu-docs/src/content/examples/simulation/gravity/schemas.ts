@@ -25,6 +25,7 @@ export const CelestialBody = d.struct({
   position: d.vec3f,
   velocity: d.vec3f,
   mass: d.f32,
+  radius: d.f32,
 });
 
 // layouts
