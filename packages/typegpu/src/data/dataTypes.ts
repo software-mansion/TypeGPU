@@ -7,17 +7,23 @@ import type {
   InferPartialRecord,
   InferRecord,
   MemIdentityRecord,
-} from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
-import type { Prettify } from '../shared/utilityTypes.ts';
-import { vertexFormats } from '../shared/vertexFormat.ts';
-import type { PackedData } from './vertexFormatData.ts';
-import * as wgsl from './wgslTypes.ts';
+} from '../shared/repr.js';
+import { $internal } from '../shared/symbols.js';
+import type { Prettify } from '../shared/utilityTypes.js';
+import { vertexFormats } from '../shared/vertexFormat.js';
+import type { Snippet } from '../types.js';
+import type { PackedData } from './vertexFormatData.js';
+import * as wgsl from './wgslTypes.js';
 
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {
     [$internal]: {
       implementation: TImpl | string;
+      argTypes:
+        | wgsl.AnyWgslData[]
+        | Record<string, wgsl.AnyWgslData>
+        | ((...args: Snippet[]) => wgsl.AnyWgslData[])
+        | undefined;
     };
   };
 

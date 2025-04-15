@@ -1,5 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
+import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -289,6 +290,29 @@ function makeVecSchema<TValue, S extends number | boolean>(
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
+  // Extract information about the current vector type
+  const vecParts = type.match(/vec(\d+)([fhiu]|<bool>)/);
+  if (!vecParts) throw new Error(`Invalid vector type: ${type}`);
+
+  const vecScalarType =
+    vecParts[2] === '<bool>'
+      ? 'bool'
+      : vecParts[2] === 'f'
+        ? 'f32'
+        : vecParts[2] === 'h'
+          ? 'f16'
+          : vecParts[2] === 'i'
+            ? 'i32'
+            : 'u32';
+
+  const scalarSchemas = {
+    bool: bool,
+    f32: f32,
+    f16: f16,
+    i32: i32,
+    u32: u32,
+  };
+
   const construct = createDualImpl(
     (...args: (S | AnyVecInstance)[]): TValue => {
       const values = new Array(args.length);
@@ -316,6 +340,34 @@ function makeVecSchema<TValue, S extends number | boolean>(
       value: `${type}(${args.map((v) => v.value).join(', ')})`,
       dataType: vecTypeToConstructor[type],
     }),
+    // TODO: this is awful and hacky - since the types returned are not actual types but impostors this will come to bite me
+    // The issue is the actual vector types are just being constructed so we can't acces them here
+    (...args) => {
+      const argTypes = new Array<AnyWgslData>(args.length);
+
+      for (let i = 0; i < args.length; ++i) {
+        // biome-ignore lint/style/noNonNullAssertion: <I mean cmon TS we are iterating over args using its length>
+        let argType = args[i]!.dataType;
+        while (isDecorated(argType)) {
+          argType = (argType as Decorated).inner as AnyWgslData;
+        }
+
+        if (argType.type?.startsWith('vec')) {
+          const argVecParts = argType.type.match(/vec(\d+)/);
+          if (argVecParts) {
+            const argVecLength = Number.parseInt(argVecParts[1] ?? '');
+            const targetVecType = `vec${argVecLength}${vecScalarType === 'bool' ? '<bool>' : vecScalarType.charAt(0)}`;
+            argTypes[i] = {
+              type: targetVecType as WgslTypeLiteral,
+            } as AnyWgslData;
+          }
+        } else {
+          argTypes[i] = scalarSchemas[vecScalarType];
+        }
+      }
+
+      return argTypes;
+    },
   );
 
   return Object.assign(construct, { type, [$repr]: undefined as TValue });
