@@ -19,14 +19,11 @@ import {
   renderInstanceLayout,
 } from './schemas.ts';
 
-// AAA większy canvas
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles, balls on ground, negative mass
 // AAA skybox jak w endzie
 // AAA speed slider
 // AAA bufor z czasem
-// AAA resize observer
-// AAA model kuli
 // AAA zderzenia
 // AAA mobile touch support
 
@@ -123,7 +120,7 @@ const renderPipeline = root['~unstable']
   .withPrimitive({ topology: 'triangle-list', cullMode: 'front' })
   .createPipeline();
 
-const depthTexture = root.device.createTexture({
+let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
   format: 'depth24plus',
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -139,7 +136,7 @@ function render() {
         ? dynamicResourcesBox.data.celestialBodiesBindGroupA
         : dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
-    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount); // count of celestial bodies
+    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
 
   renderPipeline
     .withColorAttachment({
@@ -249,22 +246,22 @@ export const controls = {
   },
 };
 
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const dpr = window.devicePixelRatio;
-    const width = entry.contentRect.width;
-    const height = entry.contentRect.height;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    const newProj = m.mat4.perspective(
-      Math.PI / 4,
-      canvas.width / canvas.height,
-      0.1,
-      10000,
-      d.mat4x4f(),
-    );
-    cameraBuffer.writePartial({ projection: newProj });
-  }
+const resizeObserver = new ResizeObserver(() => {
+  const proj = m.mat4.perspective(
+    Math.PI / 4,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000,
+    d.mat4x4f(),
+  );
+
+  cameraBuffer.writePartial({ projection: proj });
+  depthTexture.destroy();
+  depthTexture = root.device.createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
 });
 resizeObserver.observe(canvas);
 
