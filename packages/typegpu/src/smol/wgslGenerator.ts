@@ -1,4 +1,5 @@
 import type * as smol from 'tinyest';
+import { isTgpuFn } from '../core/function/tgpuFn.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
 import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
@@ -326,7 +327,6 @@ export function generateExpression(
         dataType: getTypeForPropAccess(target.value, property),
       };
     }
-
     if (typeof target.value === 'object') {
       const dataType = isWgsl(propValue)
         ? getTypeFromWgsl(propValue)
@@ -415,7 +415,6 @@ export function generateExpression(
     }
 
     const argTypes = idValue[$internal]?.argTypes;
-    console.log('argTypes', argTypes);
 
     let typePairs: [wgsl.AnyWgslData, Snippet][] = [];
     if (Array.isArray(argTypes)) {
@@ -434,11 +433,16 @@ export function generateExpression(
         Snippet,
       ][];
     } else if (typeof argTypes === 'object' && argTypes !== null) {
-      console.log('HELP ME');
-      console.log('argTypes', argTypes);
-      console.log('resolvedResources', resolvedSnippets);
+      typePairs = Object.entries(argTypes).map(([key, type]) => {
+        const res = (
+          argSnippets[0]?.value as unknown as Record<string, Snippet>
+        )[key];
+        if (!res) {
+          throw new Error(`Missing argument ${key} in function call`);
+        }
+        return [type, res] as [wgsl.AnyWgslData, Snippet];
+      });
     }
-    console.log('typePairs', typePairs);
 
     const convertedResources = argTypes
       ? typePairs.map(([type, res]) => {
@@ -450,8 +454,6 @@ export function generateExpression(
           return applyConversion(ctx, res, conversion);
         })
       : [];
-    console.log('convertedResources', convertedResources);
-    console.log('rawResources', resolvedSnippets);
 
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
@@ -495,6 +497,30 @@ export function generateExpression(
         value: generateEntries(values),
         dataType: callee,
       };
+    }
+
+    if (isTgpuFn(callee)) {
+      const argTypes = callee.shell.argTypes;
+
+      if (typeof argTypes === 'object' && argTypes !== null) {
+        const propKeys = Object.keys(argTypes);
+        const objWithSnippets: Record<string, Snippet> = {};
+
+        for (const key of propKeys) {
+          const val = obj[key];
+          if (val === undefined) {
+            throw new Error(
+              `Missing property ${key} in object literal for function ${callee}`,
+            );
+          }
+          objWithSnippets[key] = generateExpression(ctx, val);
+        }
+
+        return {
+          value: objWithSnippets,
+          dataType: UnknownData,
+        };
+      }
     }
 
     return {

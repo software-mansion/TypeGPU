@@ -34,7 +34,6 @@ function printSwizzlingFor(components: string) {
       ]
         .map((s) => `this[${componentIndex[s]}]`)
         .join(', ')}); }`;
-      console.log(implementation);
     }
   }
 }

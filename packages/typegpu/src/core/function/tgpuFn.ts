@@ -93,7 +93,9 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyWgslData[] | Record<string, AnyWgslData> = AnyWgslData[],
+  Args extends AnyWgslData[] | Record<string, AnyWgslData> =
+    | AnyWgslData[]
+    | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = TgpuFnBase<Args, Return> &
   ((

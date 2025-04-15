@@ -374,7 +374,6 @@ function getImplicitConversionRank(
   if (dest.type === 'decorated') {
     return getImplicitConversionRank(src, dest.inner as AnyData);
   }
-  console.log('getImplicitConversionRank', src.type, dest.type);
   if (
     src.type === 'ptr' &&
     getConversionRank(src.inner as AnyData, dest).rank <
@@ -526,7 +525,6 @@ export function convertType(
   targetType: AnyData,
   allowImplicit = true,
 ): ConversionResult | undefined {
-  console.log('convertType', sourceType.type, targetType.type, allowImplicit);
   if (sourceType.type === targetType.type) {
     return {
       targetType,

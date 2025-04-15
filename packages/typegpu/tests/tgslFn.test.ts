@@ -594,7 +594,6 @@ describe('TGSL tgpu.fn function', () => {
     );
 
     const actual = parseResolved({ addOnes });
-    console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
 
     const expected = parse(`
       fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
@@ -612,9 +611,6 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     const actualCall = parseResolved({ callAddOnes });
-    console.log(
-      tgpu.resolve({ externals: { callAddOnes }, template: 'callAddOnes' }),
-    );
 
     const expectedCall = parse(`
       fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
