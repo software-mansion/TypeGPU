@@ -35,12 +35,9 @@ export function createDualImpl<T extends (...args: any[]) => any>(
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
-      return gpuImpl(
-        ...(args as unknown as MapValueToSnippet<Parameters<T>>),
-      ) as unknown as Snippet;
+      return gpuImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
-    return jsImpl(...(args as any));
+    return jsImpl(...args);
   }) as T;
 
   Object.defineProperty(impl, $internal, {

@@ -1,9 +1,9 @@
 import type * as smol from 'tinyest';
-import { isTgpuFn } from '../core/function/tgpuFn.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
 import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
-import * as wgsl from '../data/wgslTypes.js';
+import * as wgsl from '../data/wgslTypes.ts';
+import { invariant } from '../errors.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
   type ResolutionCtx,
@@ -14,6 +14,7 @@ import {
 } from '../types.ts';
 import {
   type ConversionResult,
+  type ConversionResultAction,
   convertType,
   getBestConversion,
   getTypeForIndexAccess,
@@ -93,11 +94,41 @@ export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
   return String(res.value);
 }
 
+function applyActionToSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  action: ConversionResultAction,
+  targetType: AnyData,
+): Snippet {
+  if (action.action === 'none') {
+    return value;
+  }
+
+  const resolvedValue = resolveRes(ctx, value);
+
+  switch (action.action) {
+    case 'ref':
+      return { value: `&${resolvedValue}`, dataType: targetType };
+    case 'deref':
+      return { value: `*${resolvedValue}`, dataType: targetType };
+    case 'cast': {
+      return {
+        value: `${ctx.resolve(targetType)}(${resolvedValue})`,
+        dataType: targetType,
+      };
+    }
+    default: {
+      assertExhaustive(action.action);
+    }
+  }
+}
+
 export function convertToCommonType(
   ctx: GenerationCtx,
   values: Snippet[],
 ): Snippet[] | undefined {
   const types = values.map((value) => value.dataType);
+
   if (types.some((type) => type === UnknownData)) {
     return undefined;
   }
@@ -109,32 +140,8 @@ export function convertToCommonType(
 
   return values.map((value, index) => {
     const action = conversion.actions[index];
-    if (!action || action.action === 'none') {
-      return value;
-    }
-
-    if (action.action === 'ref') {
-      return {
-        value: `&${resolveRes(ctx, value)}`,
-        dataType: conversion.targetType,
-      };
-    }
-
-    if (action.action === 'deref') {
-      return {
-        value: `*${resolveRes(ctx, value)}`,
-        dataType: conversion.targetType,
-      };
-    }
-
-    if (action.action === 'cast') {
-      return {
-        value: `${ctx.resolve(conversion.targetType)}(${resolveRes(ctx, value)})`,
-        dataType: conversion.targetType,
-      };
-    }
-
-    throw new Error('Unknown conversion action');
+    invariant(action, 'Action should not be undefined');
+    return applyActionToSnippet(ctx, value, action, conversion.targetType);
   });
 }
 
@@ -144,32 +151,10 @@ export function applyConversion(
   conversion: ConversionResult,
 ): Snippet {
   const action = conversion.actions[0];
-  if (!action || action.action === 'none') {
-    return value;
-  }
 
-  if (action.action === 'ref') {
-    return {
-      value: `&${resolveRes(ctx, value)}`,
-      dataType: conversion.targetType,
-    };
-  }
+  invariant(action, 'Action should not be undefined');
 
-  if (action.action === 'deref') {
-    return {
-      value: `*${resolveRes(ctx, value)}`,
-      dataType: conversion.targetType,
-    };
-  }
-
-  if (action.action === 'cast') {
-    return {
-      value: `${ctx.resolve(conversion.targetType)}(${resolveRes(ctx, value)})`,
-      dataType: conversion.targetType,
-    };
-  }
-
-  throw new Error('Unknown conversion action');
+  return applyActionToSnippet(ctx, value, action, conversion.targetType);
 }
 
 function assertExhaustive(value: never): never {
@@ -499,8 +484,8 @@ export function generateExpression(
       };
     }
 
-    if (isTgpuFn(callee)) {
-      const argTypes = callee.shell.argTypes;
+    if (isMarkedInternal(callee)) {
+      const argTypes = callee[$internal]?.argTypes;
 
       if (typeof argTypes === 'object' && argTypes !== null) {
         const propKeys = Object.keys(argTypes);

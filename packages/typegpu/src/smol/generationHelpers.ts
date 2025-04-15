@@ -288,138 +288,207 @@ export function numericLiteralToSnippet(value: string): Snippet | undefined {
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
-type ConversionRank = { rank: number };
-type ImplicitConversionRank =
+type ConversionRankInfo =
   | { rank: number; action: 'cast'; targetType: AnyData }
   | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
-function getVectorComponent(type: AnyData): AnyData | null {
-  const mapping: Record<string, AnyData> = {
-    [vec2f.type]: f32,
-    [vec3f.type]: f32,
-    [vec4f.type]: f32,
-    [vec2h.type]: f16,
-    [vec3h.type]: f16,
-    [vec4h.type]: f16,
-    [vec2i.type]: i32,
-    [vec3i.type]: i32,
-    [vec4i.type]: i32,
-    [vec2u.type]: u32,
-    [vec3u.type]: u32,
-    [vec4u.type]: u32,
-  };
-  return mapping[type.type] ?? null;
+const INFINITE_RANK: ConversionRankInfo = {
+  rank: Number.POSITIVE_INFINITY,
+  action: 'none',
+};
+
+function unwrapDecorated(type: AnyData): AnyData {
+  let currentType = type;
+  while (currentType.type === 'decorated') {
+    currentType = currentType.inner as AnyData;
+  }
+  return currentType;
 }
 
-export function getConversionRank(src: AnyData, dest: AnyData): ConversionRank {
-  if (src.type === 'decorated') {
-    return getConversionRank(src.inner as AnyData, dest);
-  }
-  if (dest.type === 'decorated') {
-    return getConversionRank(src, dest.inner as AnyData);
-  }
-  if (src.type === dest.type) {
-    return { rank: 0 };
+const vecComponentMap: Readonly<Record<string, AnyData>> = {
+  [vec2f.type]: f32,
+  [vec3f.type]: f32,
+  [vec4f.type]: f32,
+  [vec2h.type]: f16,
+  [vec3h.type]: f16,
+  [vec4h.type]: f16,
+  [vec2i.type]: i32,
+  [vec3i.type]: i32,
+  [vec4i.type]: i32,
+  [vec2u.type]: u32,
+  [vec3u.type]: u32,
+  [vec4u.type]: u32,
+};
+
+function getVectorComponent(type: AnyData): AnyData | undefined {
+  return vecComponentMap[type.type];
+}
+
+function getAutoConversionRank(
+  src: AnyData,
+  dest: AnyData,
+): ConversionRankInfo {
+  const trueSrc = unwrapDecorated(src);
+  const trueDst = unwrapDecorated(dest);
+
+  if (trueSrc.type === trueDst.type) {
+    return { rank: 0, action: 'none' };
   }
 
-  if (src.type === 'abstractFloat') {
-    if (dest.type === 'f32') {
-      return { rank: 1 };
-    }
-    if (dest.type === 'f16') {
-      return { rank: 2 };
-    }
+  if (trueSrc.type === 'abstractFloat') {
+    if (trueDst.type === 'f32') return { rank: 1, action: 'none' };
+    if (trueDst.type === 'f16') return { rank: 2, action: 'none' };
   }
 
-  if (src.type === 'abstractInt') {
-    if (dest.type === 'i32') {
-      return { rank: 3 };
-    }
-    if (dest.type === 'u32') {
-      return { rank: 4 };
-    }
-    if (dest.type === 'abstractFloat') {
-      return { rank: 5 };
-    }
-    if (dest.type === 'f32') {
-      return { rank: 6 };
-    }
-    if (dest.type === 'f16') {
-      return { rank: 7 };
-    }
+  if (trueSrc.type === 'abstractInt') {
+    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
+    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
+    if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
+    if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
+    if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
   }
 
-  if (isVec(src) && isVec(dest)) {
-    const compSrc = getVectorComponent(src);
-    const compDest = getVectorComponent(dest);
+  if (isVec(trueSrc) && isVec(trueDst)) {
+    const compSrc = getVectorComponent(trueSrc);
+    const compDest = getVectorComponent(trueDst);
     if (compSrc && compDest) {
-      return getConversionRank(compSrc, compDest);
+      return getAutoConversionRank(compSrc, compDest);
     }
   }
 
-  if (isMat(src) && isMat(dest)) {
-    return getConversionRank(f32, f32);
+  if (isMat(trueSrc) && isMat(trueDst)) {
+    // Matrix conversion rank depends only on component type (always f32 for now)
+    return { rank: 0, action: 'none' };
   }
 
-  return { rank: Number.POSITIVE_INFINITY };
+  return INFINITE_RANK;
 }
 
 function getImplicitConversionRank(
   src: AnyData,
   dest: AnyData,
-): ImplicitConversionRank {
-  if (src.type === 'decorated') {
-    return getImplicitConversionRank(src.inner as AnyData, dest);
-  }
-  if (dest.type === 'decorated') {
-    return getImplicitConversionRank(src, dest.inner as AnyData);
-  }
+): ConversionRankInfo {
+  const trueSrc = unwrapDecorated(src);
+  const trueDst = unwrapDecorated(dest);
+
   if (
-    src.type === 'ptr' &&
-    getConversionRank(src.inner as AnyData, dest).rank <
+    trueSrc.type === 'ptr' &&
+    getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
   }
 
   if (
-    dest.type === 'ptr' &&
-    getConversionRank(src, dest.inner as AnyData).rank <
+    trueDst.type === 'ptr' &&
+    getAutoConversionRank(trueSrc, trueDst.inner as AnyData).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'ref' };
   }
 
   const primitiveTypes = ['f32', 'f16', 'i32', 'u32', 'bool'];
-  if (primitiveTypes.includes(src.type) && primitiveTypes.includes(dest.type)) {
-    return { rank: 1, action: 'cast', targetType: dest };
+  if (
+    primitiveTypes.includes(trueSrc.type) &&
+    primitiveTypes.includes(trueDst.type) &&
+    trueSrc.type !== trueDst.type
+  ) {
+    // the rank 10 is kind of arbitrary, but it should be higher than the rank of deref/ref
+    return { rank: 10, action: 'cast', targetType: trueDst };
   }
 
-  return { rank: Number.POSITIVE_INFINITY, action: 'none' };
+  return INFINITE_RANK;
 }
+
+function getConversionRank(
+  src: AnyData,
+  dest: AnyData,
+  allowImplicit: boolean,
+): ConversionRankInfo {
+  const autoRank = getAutoConversionRank(src, dest);
+  if (autoRank.rank < Number.POSITIVE_INFINITY) {
+    return autoRank;
+  }
+  if (allowImplicit) {
+    return getImplicitConversionRank(src, dest);
+  }
+  return INFINITE_RANK;
+}
+
+export type ConversionResultAction = {
+  sourceIndex: number;
+  action: ConversionAction;
+  targetType?: U32 | F32 | I32 | F16;
+};
 
 export type ConversionResult = {
   targetType: AnyData;
-  actions: Array<{
-    sourceIndex: number;
-    action: ConversionAction;
-    targetType?: U32 | F32 | I32 | F16;
-  }>;
+  actions: ConversionResultAction[];
   hasImplicitConversions?: boolean;
 };
+
+function findBestType(
+  types: AnyData[],
+  uniqueTypes: AnyData[],
+  allowImplicit: boolean,
+): ConversionResult | undefined {
+  let bestType: AnyData | undefined;
+  let minSum = Number.POSITIVE_INFINITY;
+  const conversionDetails = new Map<AnyData, ConversionRankInfo[]>();
+
+  for (const targetType of uniqueTypes) {
+    let currentSum = 0;
+    const currentDetails: ConversionRankInfo[] = [];
+    let possible = true;
+
+    for (const sourceType of types) {
+      const conversion = getConversionRank(
+        sourceType,
+        targetType,
+        allowImplicit,
+      );
+      if (conversion.rank === Number.POSITIVE_INFINITY) {
+        possible = false;
+        break;
+      }
+      currentSum += conversion.rank;
+      currentDetails.push(conversion);
+    }
+
+    if (possible && currentSum < minSum) {
+      minSum = currentSum;
+      bestType = targetType;
+      conversionDetails.set(bestType, currentDetails);
+    }
+  }
+
+  if (!bestType) {
+    return undefined;
+  }
+
+  const bestDetails = conversionDetails.get(bestType) as ConversionRankInfo[];
+  const actions: ConversionResultAction[] = bestDetails.map(
+    (detail, index) => ({
+      sourceIndex: index,
+      action: detail.action,
+      ...(detail.action === 'cast' && {
+        targetType: detail.targetType as U32 | F32 | I32 | F16,
+      }),
+    }),
+  );
+
+  return { targetType: bestType, actions };
+}
 
 export function getBestConversion(
   types: AnyData[],
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTypes = [...new Set(types)];
+  const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
 
-  const result = findBestType(types, uniqueTypes, false);
-
-  if (result) {
-    return result;
-  }
+  const explicitResult = findBestType(types, uniqueTypes, false);
+  if (explicitResult) return explicitResult;
 
   const implicitResult = findBestType(types, uniqueTypes, true);
   if (implicitResult) {
@@ -430,146 +499,27 @@ export function getBestConversion(
   return undefined;
 }
 
-function findBestType(
-  types: AnyData[],
-  uniqueTypes: AnyData[],
-  allowImplicit: boolean,
-): ConversionResult | undefined {
-  const conversionSums = new Map<AnyData, number>();
-
-  for (const targetType of uniqueTypes) {
-    let sum = 0;
-    let hasInfiniteRank = false;
-
-    for (const sourceType of types) {
-      if (sourceType.type === targetType.type) continue;
-
-      let conversion = getConversionRank(sourceType, targetType);
-      if (conversion.rank === Number.POSITIVE_INFINITY && allowImplicit) {
-        conversion = getImplicitConversionRank(sourceType, targetType);
-      }
-
-      if (conversion.rank === Number.POSITIVE_INFINITY) {
-        hasInfiniteRank = true;
-        break;
-      }
-
-      sum += conversion.rank;
-    }
-
-    if (!hasInfiniteRank) {
-      conversionSums.set(targetType, sum);
-    }
-  }
-
-  let bestType: AnyData | undefined;
-  let bestSum = Number.POSITIVE_INFINITY;
-
-  for (const [type, sum] of conversionSums.entries()) {
-    if (sum < bestSum) {
-      bestSum = sum;
-      bestType = type;
-    }
-  }
-
-  if (!bestType) return undefined;
-
-  const actions: Array<{
-    sourceIndex: number;
-    action: ConversionAction;
-    targetType?: U32 | F32 | I32 | F16;
-  }> = types.map((sourceType, index) => {
-    if (sourceType.type === bestType.type) {
-      return { sourceIndex: index, action: 'none' };
-    }
-
-    const explicitConversion = getConversionRank(sourceType, bestType);
-    if (explicitConversion.rank < Number.POSITIVE_INFINITY) {
-      return {
-        sourceIndex: index,
-        action: 'none',
-      };
-    }
-
-    if (allowImplicit) {
-      const implicitConversion = getImplicitConversionRank(
-        sourceType,
-        bestType,
-      );
-
-      if (implicitConversion.action === 'cast') {
-        return {
-          sourceIndex: index,
-          action: 'cast',
-          targetType: implicitConversion.targetType as U32 | F32 | I32 | F16,
-        };
-      }
-
-      return {
-        sourceIndex: index,
-        action: implicitConversion.action,
-      };
-    }
-
-    return { sourceIndex: index, action: 'none' };
-  });
-
-  return {
-    targetType: bestType,
-    actions,
-  };
-}
-
 export function convertType(
   sourceType: AnyData,
   targetType: AnyData,
   allowImplicit = true,
 ): ConversionResult | undefined {
-  if (sourceType.type === targetType.type) {
-    return {
-      targetType,
-      actions: [{ sourceIndex: 0, action: 'none' }],
-    };
-  }
+  const conversion = getConversionRank(sourceType, targetType, allowImplicit);
 
-  const conversion = getConversionRank(sourceType, targetType);
   if (conversion.rank < Number.POSITIVE_INFINITY) {
-    return {
-      targetType,
-      actions: [{ sourceIndex: 0, action: 'none' }],
+    const actionDetail: ConversionResultAction = {
+      sourceIndex: 0,
+      action: conversion.action,
     };
-  }
-
-  if (allowImplicit) {
-    const implicitConversion = getImplicitConversionRank(
-      sourceType,
-      targetType,
-    );
-    if (implicitConversion.rank < Number.POSITIVE_INFINITY) {
-      if (implicitConversion.action === 'cast') {
-        return {
-          targetType,
-          actions: [
-            {
-              sourceIndex: 0,
-              action: 'cast',
-              targetType: implicitConversion.targetType as
-                | U32
-                | F32
-                | I32
-                | F16,
-            },
-          ],
-          hasImplicitConversions: true,
-        };
-      }
-
-      return {
-        targetType,
-        actions: [{ sourceIndex: 0, action: implicitConversion.action }],
-        hasImplicitConversions: true,
-      };
+    if (conversion.action === 'cast') {
+      actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
     }
+    return {
+      targetType: unwrapDecorated(targetType),
+      actions: [actionDetail],
+      hasImplicitConversions:
+        conversion.action !== 'none' && conversion.rank > 0,
+    };
   }
 
   return undefined;
