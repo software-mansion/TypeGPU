@@ -1,7 +1,10 @@
 import tgpu, {
+  type Render,
+  type Sampled,
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuBuffer,
+  type TgpuTexture,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -10,22 +13,34 @@ import { computeShader } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { type Preset, presets, presetsEnum } from './presets.ts';
-import { mainFragment, mainVertex } from './render.ts';
+import {
+  mainFragment,
+  mainVertex,
+  skyBoxFragment,
+  skyBoxVertex,
+} from './render.ts';
 import {
   Camera,
   CelestialBody,
+  SkyBoxVertex,
   celestialBodiesBindGroupLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
+  renderBindGroupLayout as renderLayout,
+  skyBoxVertexLayout,
+  textureBindGroupLayout,
 } from './schemas.ts';
+import { loadSkyBox, skyBoxVertices } from './skybox.ts';
 
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles, balls on ground, negative mass
-// AAA skybox jak w endzie
 // AAA speed slider
 // AAA bufor z czasem
 // AAA zderzenia
 // AAA mobile touch support
+// AAA fix specular artifact
+// AAA fix weird gravity behavior
+// AAA (inny ticket) show left menu, show code editor zapisane w linku
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -38,26 +53,16 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// type texture = TgpuTexture<{
-//   size: [number, number];
-//   format: 'rgba8unorm';
-// }> &
-//   Sampled &
-//   Render;
+// static resources
 
-const { vertexBuffer, vertexCount } = await loadModel(
-  root,
-  '/TypeGPU/assets/gravity/sphere.obj',
-);
-
-const CelestialBodyMaxArray = (n: number) => d.arrayOf(CelestialBody, n);
+const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
+  await loadModel(root, '/TypeGPU/assets/gravity/sphere.obj');
 
 const sampler = device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-// Camera
 const cameraInitial = Camera({
   position: p.cameraInitialPos.xyz,
   view: m.mat4.lookAt(
@@ -76,9 +81,12 @@ const cameraInitial = Camera({
 });
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-const cameraBindGroup = root.createBindGroup(renderBindGroupLayout, {
+const skyBoxVertexBuffer = root
+  .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
+  .$usage('vertex');
+
+const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
-  // cube: cubeBuffer,
   sampler,
 });
 
@@ -97,6 +105,10 @@ interface DynamicResources {
   celestialBodiesBindGroupB: TgpuBindGroup<
     (typeof celestialBodiesBindGroupLayout)['entries']
   >;
+  skyBoxTexture: TgpuTexture<{ size: [2048, 2048, 6]; format: 'rgba8unorm' }> &
+    Render &
+    Sampled;
+  skyBoxBindGroup: TgpuBindGroup<(typeof textureBindGroupLayout)['entries']>;
 }
 
 const dynamicResourcesBox = {
@@ -108,6 +120,14 @@ const computePipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
   .$name('compute pipeline');
+
+const skyBoxPipeline = root['~unstable']
+  .withVertex(skyBoxVertex, skyBoxVertexLayout.attrib)
+  .withFragment(skyBoxFragment, { format: presentationFormat })
+  .withPrimitive({
+    cullMode: 'front',
+  })
+  .createPipeline();
 
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, renderInstanceLayout.attrib)
@@ -138,10 +158,22 @@ function render() {
     )
     .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
 
+  skyBoxPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .with(skyBoxVertexLayout, skyBoxVertexBuffer)
+    .with(renderLayout, renderBindGroup)
+    .with(textureBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
+    .draw(skyBoxVertices.length);
+
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
+      loadOp: 'load',
       storeOp: 'store',
       clearValue: [0, 1, 0, 1], // background color
     })
@@ -151,15 +183,15 @@ function render() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(renderInstanceLayout, vertexBuffer)
-    .with(renderBindGroupLayout, cameraBindGroup)
+    .with(renderInstanceLayout, sphereVertexBuffer)
+    .with(renderBindGroupLayout, renderBindGroup)
     .with(
       celestialBodiesBindGroupLayout,
       dynamicResourcesBox.data.flip === 1
         ? dynamicResourcesBox.data.celestialBodiesBindGroupA
         : dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
-    .draw(vertexCount, dynamicResourcesBox.data.celestialBodiesCount);
+    .draw(sphereVertexCount, dynamicResourcesBox.data.celestialBodiesCount);
 
   root['~unstable'].flush();
 }
@@ -175,7 +207,7 @@ function frame() {
 }
 frame();
 
-function loadPreset(preset: Preset): DynamicResources {
+async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const presetData = presets[preset];
 
   const celestialBodies: d.Infer<typeof CelestialBody>[] =
@@ -194,12 +226,12 @@ function loadPreset(preset: Preset): DynamicResources {
 
   const computeBufferA = root
     .createBuffer(
-      CelestialBodyMaxArray(celestialBodies.length),
+      d.arrayOf(CelestialBody, celestialBodies.length),
       celestialBodies,
     )
     .$usage('storage');
   const computeBufferB = root
-    .createBuffer(CelestialBodyMaxArray(celestialBodies.length))
+    .createBuffer(d.arrayOf(CelestialBody, celestialBodies.length))
     .$usage('storage');
 
   const celestialBodiesBindGroupA = root.createBindGroup(
@@ -222,6 +254,14 @@ function loadPreset(preset: Preset): DynamicResources {
 
   celestialBodiesCountBuffer.write(celestialBodies.length);
 
+  const skyBoxTexture = await loadSkyBox(root, presetData.skyBox);
+  const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
+
+  const textureBindGroup = root.createBindGroup(textureBindGroupLayout, {
+    skyBox: skyBox,
+    sampler: sampler,
+  });
+
   return {
     flip: 0,
     celestialBodiesCount: celestialBodies.length,
@@ -229,6 +269,8 @@ function loadPreset(preset: Preset): DynamicResources {
     celestialBodiesBufferB: computeBufferB,
     celestialBodiesBindGroupA,
     celestialBodiesBindGroupB,
+    skyBoxTexture,
+    skyBoxBindGroup: textureBindGroup,
   };
 }
 
@@ -238,10 +280,10 @@ export const controls = {
   Preset: {
     initial: presetsEnum[0],
     options: presetsEnum,
-    onSelectChange: (value: Preset) => {
+    async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;
       // AAA dispose of the oldData
-      dynamicResourcesBox.data = loadPreset(value);
+      dynamicResourcesBox.data = await loadPreset(value);
     },
   },
 };

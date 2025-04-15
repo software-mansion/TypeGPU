@@ -28,6 +28,11 @@ export const CelestialBody = d.struct({
   radius: d.f32,
 });
 
+export const SkyBoxVertex = d.struct({
+  position: d.vec4f,
+  uv: d.vec2f,
+});
+
 // layouts
 export const celestialBodiesBindGroupLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
@@ -43,6 +48,15 @@ export const celestialBodiesBindGroupLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
 });
+
+export const textureBindGroupLayout = tgpu.bindGroupLayout({
+  skyBox: { texture: 'float', viewDimension: 'cube' },
+  sampler: { sampler: 'filtering' },
+});
+
+export const skyBoxVertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(SkyBoxVertex, n),
+);
 
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },

@@ -6,7 +6,46 @@ import {
   VertexOutput,
   celestialBodiesBindGroupLayout as celestialBodiesLayout,
   renderBindGroupLayout as renderLayout,
+  textureBindGroupLayout as textureLayout,
 } from './schemas.ts';
+
+export const skyBoxVertex = tgpu['~unstable'].vertexFn({
+  in: {
+    position: d.vec4f,
+    uv: d.vec2f,
+  },
+  out: {
+    pos: d.builtin.position,
+    texCoord: d.vec3f,
+  },
+})((input) => {
+  const viewRotationMatrix = d.mat4x4f(
+    renderLayout.$.camera.view.columns[0],
+    renderLayout.$.camera.view.columns[1],
+    renderLayout.$.camera.view.columns[2],
+    d.vec4f(0, 0, 0, 1),
+  );
+  return {
+    pos: std.mul(
+      renderLayout.$.camera.projection,
+      std.mul(viewRotationMatrix, input.position),
+    ),
+    texCoord: input.position.xyz,
+  };
+});
+
+export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
+  in: {
+    texCoord: d.vec3f,
+  },
+  out: d.vec4f,
+})((input) => {
+  return std.textureSample(
+    textureLayout.$.skyBox,
+    textureLayout.$.sampler,
+    std.normalize(input.texCoord),
+  );
+});
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({
