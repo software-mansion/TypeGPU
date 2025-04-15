@@ -65,7 +65,7 @@ export const cubeVertices: d.Infer<typeof CubeVertex>[] = [
 export type CubemapNames = 'campsite' | 'beach' | 'chapel' | 'city';
 function getCubemapUrls(name: CubemapNames) {
   return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
-    (side) => `assets/cubemap-reflection/${name}/${side}.jpg`,
+    (side) => `/TypeGPU/assets/cubemap-reflection/${name}/${side}.jpg`,
   );
 }
 
