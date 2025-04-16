@@ -48,7 +48,7 @@ describe('wgslGenerator', () => {
     const parsedBody = transpiler.transpileFn(code).body;
 
     expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-      `"[3,[[1,true]]]"`,
+      `"[0,[[10,true]]]"`,
     );
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
@@ -68,7 +68,7 @@ describe('wgslGenerator', () => {
     const parsedBody = transpiler.transpileFn(code).body;
 
     expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-      `"[3,[[4,"a",[21,"12"]],[11,"a","+=",[21,"21"]],[1,"a"]]]"`,
+      `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
     );
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
@@ -169,7 +169,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[1,[10,[16,[16,"testUsage","value"],"a"],"+",[16,[16,[16,"testUsage","value"],"b"],"x"]]]]]"`,
+      `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -231,7 +231,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[1,[17,[16,"testUsage","value"],[21,"3"]]]]]"`,
+      `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -299,7 +299,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[5,"value",[18,[16,"std","atomicLoad"],[[16,[17,[16,[16,[16,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[5,"vec",[18,[16,"std","mix"],[[18,[16,"d","vec4f"],[]],[16,[16,"testUsage","value"],"a"],"value"]]],[18,[16,"std","atomicStore"],[[16,[17,[16,[16,[16,"testUsage","value"],"b"],"aa"],"idx"],"x"],[16,"vec","y"]]],[1,"vec"]]]"`,
+      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
     if (astInfo.ast.argNames.type !== 'identifiers') {
@@ -373,7 +373,7 @@ describe('wgslGenerator', () => {
     const parsed = transpiler.transpileFn(code).body;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[3,[[6,[4,"i",[21,"0"]],[10,"i","<",[21,"10"]],[11,"i","+=",[21,"1"]],[3,[[8]]]]]]"`,
+      `"[0,[[14,[12,"i",[5,"0"]],[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
     );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
@@ -396,7 +396,7 @@ describe('wgslGenerator', () => {
     const parsed = transpiler.transpileFn(code).body;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[3,[[4,"i",[21,"0"]],[6,null,[10,"i","<",[21,"10"]],[11,"i","+=",[21,"1"]],[3,[[8]]]]]]"`,
+      `"[0,[[12,"i",[5,"0"]],[14,null,[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
     );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
@@ -419,7 +419,7 @@ describe('wgslGenerator', () => {
     const parsed = transpiler.transpileFn(code).body;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[3,[[4,"i",[21,"0"]],[7,[10,"i","<",[21,"10"]],[3,[[11,"i","+=",[21,"1"]]]]]]]"`,
+      `"[0,[[12,"i",[5,"0"]],[15,[1,"i","<",[5,"10"]],[0,[[2,"i","+=",[5,"1"]]]]]]]"`,
     );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
@@ -458,7 +458,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[1,[16,"derived","value"]]]]"`,
+      `"[0,[[10,[7,"derived","value"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -502,7 +502,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[1,[17,[16,"derived","value"],"idx"]]]]"`,
+      `"[0,[[10,[8,[7,"derived","value"],"idx"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -547,7 +547,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[5,"arr",[15,[[21,"1"],[21,"2"],[21,"3"]]]],[1,[17,"arr",[21,"1"]]]]]"`,
+      `"[0,[[13,"arr",[101,[[5,"1"],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -607,7 +607,7 @@ describe('wgslGenerator', () => {
     // biome-ignore format: <it's better that way>
     const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(`"[3,[[5,"arr",[15,[[18,"testStruct",[[14,{"x":[21,"1"],"y":[21,"2"]}]]],[18,"testStruct",[[14,{"x":[21,"3"],"y":[21,"4"]}]]]]]],[1,[16,[17,"arr",[21,"1"]],"y"]]]]"`);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(`"[0,[[13,"arr",[101,[[6,"testStruct",[[105,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[105,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`);
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -658,7 +658,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[5,"arr",[15,[[16,"derived","value"],[18,[16,"std","mul"],[[16,"derived","value"],[18,[16,"d","vec2f"],[[21,"2"],[21,"2"]]]]]]]],[1,[16,[17,"arr",[21,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[101,[[7,"derived","value"],[6,[7,"std","mul"],[[7,"derived","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 
@@ -701,7 +701,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[3,[[1,[16,[16,[18,"fnOne",[]],"y"],"x"]]]]"`,
+      `"[0,[[10,[7,[7,[6,"fnOne",[]],"y"],"x"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(

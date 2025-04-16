@@ -34,7 +34,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
       expect(externalNames).toEqual([]);
     }),
   );
@@ -50,7 +50,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
       expect(externalNames).toEqual([]);
     }),
   );
@@ -66,7 +66,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: ['a', 'b'],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[1,[10,[10,"a","+","b"],"-","c"]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`);
       expect(externalNames).toEqual(['c']);
     }),
   );
@@ -85,7 +85,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[5,"a",[21,"0"]],[11,"c","=",[10,"a","+",[21,"2"]]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`);
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toEqual(['c']);
     }),
@@ -107,7 +107,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[5,"a",[21,"0"]],[3,[[11,"c","=",[10,"a","+",[21,"2"]]]]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`);
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toEqual(['c']);
     }),
@@ -124,7 +124,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[1,[16,[16,"external","outside"],"prop"]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,[7,"external","outside"],"prop"]]]]"`);
       // Only 'external' is external.
       expect(externalNames).toEqual(['external']);
     }),

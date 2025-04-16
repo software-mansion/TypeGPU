@@ -3,29 +3,34 @@
 //
 
 export const NodeTypeCatalog = {
-  snippet: 0,
-  return: 1,
-  if: 2,
-  block: 3,
-  let: 4,
-  const: 5,
-  for: 6,
-  while: 7,
-  continue: 8,
-  break: 9,
-  binary_expr: 10,
-  assignment_expr: 11,
-  logical_expr: 12,
-  unary_expr: 13,
-  object_expr: 14,
-  array_expr: 15,
-  member_access: 16,
-  index_access: 17,
-  call: 18,
-  pre_update: 19,
-  post_update: 20,
-  numeric_literal: 21,
-  string_literal: 22,
+  // frequent
+  block: 0,
+  binary_expr: 1,
+  assignment_expr: 2,
+  logical_expr: 3,
+  unary_expr: 4,
+  numeric_literal: 5,
+  call: 6,
+  member_access: 7,
+  index_access: 8,
+
+  // regular
+  return: 10,
+  if: 11,
+  let: 12,
+  const: 13,
+  for: 14,
+  while: 15,
+  continue: 16,
+  break: 17,
+
+  // rare
+  snippet: 100,
+  array_expr: 101,
+  pre_update: 102,
+  post_update: 103,
+  string_literal: 104,
+  object_expr: 105,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;

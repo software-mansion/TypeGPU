@@ -14,7 +14,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
-      const increment = hello['~unstable'].fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = hello['~unstable'].fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
     `);
   });
 
@@ -50,7 +50,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
-      const increment = t['~unstable'].fn([])(t.__assignAst(t.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = t['~unstable'].fn([])(t.__assignAst(t.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
     `);
   });
 
@@ -66,7 +66,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
-      const increment = t.tgpu['~unstable'].fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = t.tgpu['~unstable'].fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
     `);
   });
 });
@@ -86,7 +86,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import hello from 'typegpu';
 
       hello['~unstable']
-              .fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}));
+              .fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
       "
     `);
   });
@@ -130,7 +130,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import { tgpu } from 'typegpu';
 
       tgpu['~unstable']
-              .fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}));
+              .fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
       "
     `);
   });
@@ -149,7 +149,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import * as t from 'typegpu';
 
       t.tgpu['~unstable']
-              .fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}));
+              .fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
       "
     `);
   });
