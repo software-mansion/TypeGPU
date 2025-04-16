@@ -1,4 +1,4 @@
-import * as smol from 'tinyest';
+import * as tinyest from 'tinyest';
 import type { AnyData } from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
@@ -41,10 +41,10 @@ const parenthesizedOps = [
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
 type Operator =
-  | smol.BinaryOperator
-  | smol.AssignmentOperator
-  | smol.LogicalOperator
-  | smol.UnaryOperator;
+  | tinyest.BinaryOperator
+  | tinyest.AssignmentOperator
+  | tinyest.LogicalOperator
+  | tinyest.UnaryOperator;
 
 function operatorToType<
   TL extends AnyData | UnknownData,
@@ -100,13 +100,13 @@ export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
 
 export function generateBlock(
   ctx: GenerationCtx,
-  [_, ...statements]: smol.Block,
+  [_, ...statements]: tinyest.Block,
 ): string {
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
 ${statements
-  .map((statement) => generateStatement(ctx, statement as smol.Statement))
+  .map((statement) => generateStatement(ctx, statement as tinyest.Statement))
   .join('\n')}
 ${ctx.dedent()}}`;
   } finally {
@@ -133,7 +133,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
 
 export function generateExpression(
   ctx: GenerationCtx,
-  expression: smol.Expression,
+  expression: tinyest.Expression,
 ): Snippet {
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
@@ -143,9 +143,9 @@ export function generateExpression(
   }
 
   if (
-    expression[0] === smol.NodeTypeCatalog.logical_expr ||
-    expression[0] === smol.NodeTypeCatalog.binary_expr ||
-    expression[0] === smol.NodeTypeCatalog.assignment_expr
+    expression[0] === tinyest.NodeTypeCatalog.logical_expr ||
+    expression[0] === tinyest.NodeTypeCatalog.binary_expr ||
+    expression[0] === tinyest.NodeTypeCatalog.assignment_expr
   ) {
     // Logical/Binary/Assignment Expression
     const [_, lhs, op, rhs] = expression;
@@ -164,7 +164,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.post_update) {
+  if (expression[0] === tinyest.NodeTypeCatalog.post_update) {
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -176,7 +176,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.unary_expr) {
+  if (expression[0] === tinyest.NodeTypeCatalog.unary_expr) {
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -189,7 +189,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.member_access) {
+  if (expression[0] === tinyest.NodeTypeCatalog.member_access) {
     // Member Access
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
@@ -258,7 +258,7 @@ export function generateExpression(
     throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.index_access) {
+  if (expression[0] === tinyest.NodeTypeCatalog.index_access) {
     // Index Access
     const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
@@ -274,7 +274,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.numeric_literal) {
+  if (expression[0] === tinyest.NodeTypeCatalog.numeric_literal) {
     // Numeric Literal
     const type = numericLiteralToSnippet(expression[1]);
     if (!type) {
@@ -283,7 +283,7 @@ export function generateExpression(
     return type;
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.call) {
+  if (expression[0] === tinyest.NodeTypeCatalog.call) {
     // Function Call
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
@@ -333,12 +333,12 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.object_expr) {
+  if (expression[0] === tinyest.NodeTypeCatalog.object_expr) {
     // Object Literal
     const obj = expression[1];
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
-    const generateEntries = (values: smol.Expression[]) =>
+    const generateEntries = (values: tinyest.Expression[]) =>
       values
         .map((value) => {
           const valueRes = generateExpression(ctx, value);
@@ -370,11 +370,11 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.array_expr) {
+  if (expression[0] === tinyest.NodeTypeCatalog.array_expr) {
     const [_, ...valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
-      generateExpression(ctx, value as smol.Expression),
+      generateExpression(ctx, value as tinyest.Expression),
     );
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
@@ -410,11 +410,11 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.string_literal) {
+  if (expression[0] === tinyest.NodeTypeCatalog.string_literal) {
     throw new Error('Cannot use string literals in TGSL.');
   }
 
-  if (expression[0] === smol.NodeTypeCatalog.pre_update) {
+  if (expression[0] === tinyest.NodeTypeCatalog.pre_update) {
     throw new Error('Cannot use pre-updates in TGSL.');
   }
 
@@ -423,7 +423,7 @@ export function generateExpression(
 
 export function generateStatement(
   ctx: GenerationCtx,
-  statement: smol.Statement,
+  statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
     return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
@@ -433,7 +433,7 @@ export function generateStatement(
     return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.return) {
+  if (statement[0] === tinyest.NodeTypeCatalog.return) {
     const returnValue = statement[1];
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
@@ -441,7 +441,7 @@ export function generateStatement(
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
       returnValue !== undefined &&
       typeof returnValue === 'object' &&
-      returnValue[0] === smol.NodeTypeCatalog.object_expr
+      returnValue[0] === tinyest.NodeTypeCatalog.object_expr
     ) {
       const resource = resolveRes(ctx, generateExpression(ctx, returnValue));
       const resolvedStruct = ctx.resolve(
@@ -458,7 +458,7 @@ export function generateStatement(
         )};`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.if) {
+  if (statement[0] === tinyest.NodeTypeCatalog.if) {
     const [_, cond, cons, alt] = statement;
     const condition = resolveRes(ctx, generateExpression(ctx, cond));
 
@@ -484,8 +484,8 @@ ${alternate}`;
   }
 
   if (
-    statement[0] === smol.NodeTypeCatalog.let ||
-    statement[0] === smol.NodeTypeCatalog.const
+    statement[0] === tinyest.NodeTypeCatalog.let ||
+    statement[0] === tinyest.NodeTypeCatalog.const
   ) {
     const [_, rawId, rawValue] = statement;
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
@@ -516,7 +516,7 @@ ${alternate}`;
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.block) {
+  if (statement[0] === tinyest.NodeTypeCatalog.block) {
     ctx.pushBlockScope(); // TODO: Is this needed? It's also in the `generateBlock` function.
     try {
       return generateBlock(ctx, statement);
@@ -525,7 +525,7 @@ ${alternate}`;
     }
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.for) {
+  if (statement[0] === tinyest.NodeTypeCatalog.for) {
     const [_, init, condition, update, body] = statement;
 
     const initStatement = init ? generateStatement(ctx, init) : undefined;
@@ -548,7 +548,7 @@ ${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
 ${bodyStr}`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.while) {
+  if (statement[0] === tinyest.NodeTypeCatalog.while) {
     const [_, condition, body] = statement;
     const conditionStr = resolveRes(ctx, generateExpression(ctx, condition));
 
@@ -561,17 +561,20 @@ ${ctx.pre}while (${conditionStr})
 ${bodyStr}`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.continue) {
+  if (statement[0] === tinyest.NodeTypeCatalog.continue) {
     return `${ctx.pre}continue;`;
   }
 
-  if (statement[0] === smol.NodeTypeCatalog.break) {
+  if (statement[0] === tinyest.NodeTypeCatalog.break) {
     return `${ctx.pre}break;`;
   }
 
   return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
 }
 
-export function generateFunction(ctx: GenerationCtx, body: smol.Block): string {
+export function generateFunction(
+  ctx: GenerationCtx,
+  body: tinyest.Block,
+): string {
   return generateBlock(ctx, body);
 }
