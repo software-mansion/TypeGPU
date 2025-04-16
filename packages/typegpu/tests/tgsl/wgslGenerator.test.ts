@@ -1,5 +1,5 @@
 import { JitTranspiler } from 'tgpu-jit';
-import type * as smol from 'tinyest';
+import type * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
 import * as d from '../../src/data/index.ts';
@@ -9,8 +9,8 @@ import * as gpu from '../../src/gpuMode.ts';
 import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { $internal } from '../../src/shared/symbols.ts';
-import * as wgslGenerator from '../../src/smol/wgslGenerator.ts';
 import * as std from '../../src/std/index.ts';
+import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
 
@@ -120,12 +120,12 @@ describe('wgslGenerator', () => {
       })),
     });
 
-    for (const stmt of (parsedBody as smol.Block).b) {
-      const letStatement = stmt as smol.Let;
+    for (const stmt of (parsedBody as tinyest.Block).b) {
+      const letStatement = stmt as tinyest.Let;
       const [name, numLiteral] = letStatement.l;
       const generatedExpr = wgslGenerator.generateExpression(
         ctx,
-        numLiteral as smol.Num,
+        numLiteral as tinyest.Num,
       );
       const expected = literals[name as keyof typeof literals];
 
@@ -181,7 +181,7 @@ describe('wgslGenerator', () => {
     const res1 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
-        .x[0] as smol.Expression,
+        .x[0] as tinyest.Expression,
     );
 
     expect(res1.dataType).toEqual(d.u32);
@@ -191,7 +191,7 @@ describe('wgslGenerator', () => {
     const res2 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
-        .x[2] as smol.Expression,
+        .x[2] as tinyest.Expression,
     );
     expect(res2.dataType).toEqual(d.u32);
 
@@ -200,7 +200,7 @@ describe('wgslGenerator', () => {
     const sum = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as smol.Expression,
+        .r as tinyest.Expression,
     );
     expect(sum.dataType).toEqual(d.u32);
   });
@@ -246,7 +246,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as smol.Expression,
+        .r as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.u32);
@@ -335,7 +335,7 @@ describe('wgslGenerator', () => {
       ctx,
       // biome-ignore lint/style/noNonNullAssertion: <it's there>
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]!
-        .c![1] as unknown as smol.Expression,
+        .c![1] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.i32);
@@ -348,7 +348,7 @@ describe('wgslGenerator', () => {
       ctx,
       // biome-ignore lint/style/noNonNullAssertion: <it's there>
       (astInfo.ast.body as unknown as typeof expectedAst).b[1]!
-        .c![1] as unknown as smol.Expression,
+        .c![1] as unknown as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -363,12 +363,12 @@ describe('wgslGenerator', () => {
       ctx,
       // biome-ignore lint/style/noNonNullAssertion: <it's there>
       (astInfo.ast.body as unknown as typeof expectedAst).b[2]!
-        .f![1][0] as unknown as smol.Expression,
+        .f![1][0] as unknown as tinyest.Expression,
     );
     const res4 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst)
-        .b[2] as unknown as smol.Expression,
+        .b[2] as unknown as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -549,7 +549,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as smol.Expression,
+        .r as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.vec4u);
@@ -594,7 +594,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as smol.Expression,
+        .r as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.f32);
@@ -641,7 +641,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .c[1] as unknown as smol.Expression,
+        .c[1] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
@@ -700,7 +700,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .c[1] as unknown as smol.Expression,
+        .c[1] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(testStruct, 2));
@@ -886,7 +886,7 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       // biome-ignore lint/suspicious/noExplicitAny: <sue me>
-      (astInfo.ast.body as any).b[0].r as smol.Expression,
+      (astInfo.ast.body as any).b[0].r as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.f32);
