@@ -107,9 +107,7 @@ export function generateBlock(
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
-${statements
-  .map((statement) => generateStatement(ctx, statement as tinyest.Statement))
-  .join('\n')}
+${statements.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
   } finally {
     ctx.popBlockScope();

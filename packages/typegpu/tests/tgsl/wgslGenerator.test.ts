@@ -188,7 +188,7 @@ describe('wgslGenerator', () => {
     expect(res1.dataType).toEqual(d.u32);
 
     // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                                            ^ this should be a u32
+    //                                       ^ this should be a u32
     const res2 = wgslGenerator.generateExpression(
       ctx,
       // biome-ignore format: <it's better that way>
@@ -197,7 +197,7 @@ describe('wgslGenerator', () => {
     expect(res2.dataType).toEqual(d.u32);
 
     // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                   ^ this should be a u32
+    //            ^ this should be a u32
     const sum = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -607,7 +607,9 @@ describe('wgslGenerator', () => {
     // biome-ignore format: <it's better that way>
     const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(`"[0,[[13,"arr",[101,[[6,"testStruct",[[105,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[105,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[101,[[6,"testStruct",[[105,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[105,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
