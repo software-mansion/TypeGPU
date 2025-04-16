@@ -437,9 +437,10 @@ export function generateStatement(
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
-    const returnValue = returnNode
-      ? resolveRes(ctx, generateExpression(ctx, returnNode))
-      : undefined;
+    const returnValue =
+      returnNode !== undefined
+        ? resolveRes(ctx, generateExpression(ctx, returnNode))
+        : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
