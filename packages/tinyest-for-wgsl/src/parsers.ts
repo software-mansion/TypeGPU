@@ -120,7 +120,7 @@ const Transpilers: Partial<{
 
     const result = [
       NODE.block,
-      ...node.body.map(
+      node.body.map(
         (statement) => transpile(ctx, statement) as tinyest.Statement,
       ),
     ] as const;
@@ -232,15 +232,15 @@ const Transpilers: Partial<{
     return [NODE.call, callee, args];
   },
 
-  ArrayExpression(ctx, node) {
-    const elements = node.elements.map((elem) => {
+  ArrayExpression: (ctx, node) => [
+    NODE.array_expr,
+    node.elements.map((elem) => {
       if (!elem || elem.type === 'SpreadElement') {
         throw new Error('Spread elements are not supported in TGSL.');
       }
       return transpile(ctx, elem) as tinyest.Expression;
-    });
-    return [NODE.array_expr, ...elements];
-  },
+    }),
+  ],
 
   VariableDeclaration(ctx, node) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
@@ -501,7 +501,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 
   return {
     argNames,
-    body: [NODE.block, [NODE.return, tinyestBody as tinyest.Expression]],
+    body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
     externalNames,
   };
 }

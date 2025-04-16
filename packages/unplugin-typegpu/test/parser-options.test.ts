@@ -16,7 +16,7 @@ describe('[BABEL] parser options', () => {
       babelTransform(codeWithImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const increment = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      const increment = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}, {}));"
     `);
 
     const codeWithoutImport = `\
@@ -55,7 +55,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       "import tgpu from 'typegpu';
 
       const increment = tgpu['~unstable']
-              .fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              .fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"x",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}));
 
             console.log(increment);
       "

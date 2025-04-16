@@ -34,7 +34,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(body).toEqual({ b: [] });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[]]"`);
       expect(externalNames).toEqual([]);
     }),
   );
@@ -50,7 +50,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(body).toEqual({ b: [] });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[]]"`);
       expect(externalNames).toEqual([]);
     }),
   );
@@ -66,9 +66,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: ['a', 'b'],
       });
-      expect(body).toEqual({
-        b: [{ r: { x: [{ x: ['a', '+', 'b'] }, '-', 'c'] } }],
-      });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[1,[10,[10,"a","+","b"],"-","c"]]]]"`);
       expect(externalNames).toEqual(['c']);
     }),
   );
@@ -87,12 +85,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(body).toEqual({
-        b: [
-          { c: ['a', { n: '0' }] },
-          { x: ['c', '=', { x: ['a', '+', { n: '2' }] }] },
-        ],
-      });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[5,"a",[21,"0"]],[11,"c","=",[10,"a","+",[21,"2"]]]]]"`);
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toEqual(['c']);
     }),
@@ -114,12 +107,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(body).toEqual({
-        b: [
-          { c: ['a', { n: '0' }] },
-          { b: [{ x: ['c', '=', { x: ['a', '+', { n: '2' }] }] }] },
-        ],
-      });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[5,"a",[21,"0"]],[3,[[11,"c","=",[10,"a","+",[21,"2"]]]]]]]"`);
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toEqual(['c']);
     }),
@@ -136,9 +124,7 @@ describe('transpileFn', () => {
         type: 'identifiers',
         names: [],
       });
-      expect(body).toEqual({
-        b: [{ r: { a: [{ a: ['external', 'outside'] }, 'prop'] } }],
-      });
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[[1,[16,[16,"external","outside"],"prop"]]]]"`);
       // Only 'external' is external.
       expect(externalNames).toEqual(['external']);
     }),

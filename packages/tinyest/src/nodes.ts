@@ -63,7 +63,7 @@ export type If =
 /**
  * Represents a block of statements
  */
-export type Block = readonly [type: NodeTypeCatalog['block'], ...Statement[]];
+export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
 
 /**
  * Represents a let statement
@@ -201,7 +201,7 @@ export type ObjectExpression = readonly [
 
 export type ArrayExpression = readonly [
   type: NodeTypeCatalog['array_expr'],
-  ...Expression[],
+  values: Expression[],
 ];
 
 export type MemberAccess = readonly [

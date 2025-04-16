@@ -34,7 +34,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {
+      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[3,[[5,"tmp",[16,[16,"counter","value"],"x"]],[11,[16,[16,"counter","value"],"x"],"=",[16,[16,"counter","value"],"y"]],[11,[16,[16,"counter","value"],"y"],"+=","tmp"],[11,[16,[16,"counter","value"],"z"],"+=",[18,[16,"d","f32"],[[16,[16,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {
         counter: counter,
         d: d
       }));"
@@ -63,10 +63,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["x",true]}]},"externalNames":[]}, {}));
-      const b = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));
+      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[3,[[5,"x",true]]],"externalNames":[]}, {}));
+      const b = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"y",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}, {}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {
+      const c = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[1,"cx"]]],"externalNames":["cx"]}, {
         cx: cx
       }));
       const d = tgpu['~unstable'].fn([]).does('() {}');"
@@ -106,7 +106,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               
               tgpu['~unstable']
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
-                  .does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {counter, d}));
+                  .does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[3,[[5,"tmp",[16,[16,"counter","value"],"x"]],[11,[16,[16,"counter","value"],"x"],"=",[16,[16,"counter","value"],"y"]],[11,[16,[16,"counter","value"],"y"],"+=","tmp"],[11,[16,[16,"counter","value"],"z"],"+=",[18,[16,"d","f32"],[[16,[16,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {counter, d}));
       "
     `);
   });
@@ -132,12 +132,12 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["x",true]}]},"externalNames":[]}));
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[3,[[5,"x",true]]],"externalNames":[]}));
 
-              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[5,"y",[10,[21,"2"],"+",[21,"2"]]]]],"externalNames":[]}));
 
               const cx = 2;
-              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
+              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[3,[[1,"cx"]]],"externalNames":["cx"]}, {cx}));
 
               tgpu['~unstable'].fn([]).does('() {}');
       "

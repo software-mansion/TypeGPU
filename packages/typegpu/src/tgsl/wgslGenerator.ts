@@ -100,7 +100,7 @@ export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
 
 export function generateBlock(
   ctx: GenerationCtx,
-  [_, ...statements]: tinyest.Block,
+  [_, statements]: tinyest.Block,
 ): string {
   ctx.pushBlockScope();
   try {
@@ -371,7 +371,7 @@ export function generateExpression(
   }
 
   if (expression[0] === tinyest.NodeTypeCatalog.array_expr) {
-    const [_, ...valuesRaw] = expression;
+    const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
       generateExpression(ctx, value as tinyest.Expression),
@@ -434,28 +434,25 @@ export function generateStatement(
   }
 
   if (statement[0] === tinyest.NodeTypeCatalog.return) {
-    const returnValue = statement[1];
+    const returnNode = statement[1];
+    const returnValue = returnNode
+      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      : undefined;
+
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
     if (
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
-      returnValue !== undefined &&
-      typeof returnValue === 'object' &&
-      returnValue[0] === tinyest.NodeTypeCatalog.object_expr
+      typeof returnNode === 'object' &&
+      returnNode[0] === tinyest.NodeTypeCatalog.object_expr
     ) {
-      const resource = resolveRes(ctx, generateExpression(ctx, returnValue));
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],
       );
-      return `${ctx.pre}return ${resolvedStruct}(${resource});`;
+      return `${ctx.pre}return ${resolvedStruct}(${returnValue});`;
     }
 
-    return statement[1] === undefined
-      ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${resolveRes(
-          ctx,
-          generateExpression(ctx, statement[1]),
-        )};`;
+    return `${ctx.pre}return ${returnValue};`;
   }
 
   if (statement[0] === tinyest.NodeTypeCatalog.if) {
@@ -504,7 +501,7 @@ ${alternate}`;
     // If the value is a plain JS object it has to be an output struct
     if (
       typeof rawValue === 'object' &&
-      'o' in rawValue &&
+      rawValue[0] === tinyest.NodeTypeCatalog.object_expr &&
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
     ) {
       const resolvedStruct = ctx.resolve(
