@@ -1,4 +1,4 @@
-import type * as smol from 'tinyest';
+import type * as tinyest from 'tinyest';
 import type { AnyData } from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
@@ -41,10 +41,10 @@ const parenthesizedOps = [
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
 type Operator =
-  | smol.BinaryOperator
-  | smol.AssignmentOperator
-  | smol.LogicalOperator
-  | smol.UnaryOperator;
+  | tinyest.BinaryOperator
+  | tinyest.AssignmentOperator
+  | tinyest.LogicalOperator
+  | tinyest.UnaryOperator;
 
 function operatorToType<
   TL extends AnyData | UnknownData,
@@ -98,7 +98,10 @@ export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
   return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
-export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
+export function generateBlock(
+  ctx: GenerationCtx,
+  value: tinyest.Block,
+): string {
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
@@ -128,7 +131,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
 
 export function generateExpression(
   ctx: GenerationCtx,
-  expression: smol.Expression,
+  expression: tinyest.Expression,
 ): Snippet {
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
@@ -329,7 +332,7 @@ export function generateExpression(
     const obj = expression.o;
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
-    const generateEntries = (values: smol.Expression[]) =>
+    const generateEntries = (values: tinyest.Expression[]) =>
       values
         .map((value) => {
           const valueRes = generateExpression(ctx, value);
@@ -409,7 +412,7 @@ export function generateExpression(
 
 export function generateStatement(
   ctx: GenerationCtx,
-  statement: smol.Statement,
+  statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
     return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
@@ -555,6 +558,9 @@ ${bodyStr}`;
   return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
 }
 
-export function generateFunction(ctx: GenerationCtx, body: smol.Block): string {
+export function generateFunction(
+  ctx: GenerationCtx,
+  body: tinyest.Block,
+): string {
   return generateBlock(ctx, body);
 }

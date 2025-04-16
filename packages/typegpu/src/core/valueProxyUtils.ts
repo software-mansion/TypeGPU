@@ -1,6 +1,6 @@
 import type { BaseData } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
-import { getTypeForPropAccess } from '../smol/generationHelpers.ts';
+import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import {
   type Labelled,
   type ResolutionCtx,
