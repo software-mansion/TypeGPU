@@ -5,6 +5,7 @@ import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
 import { createStructFromIO } from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -16,7 +17,7 @@ import { createStructFromIO } from './ioOutputType.ts';
 type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
@@ -41,7 +42,11 @@ export type TgpuComputeFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  ((implementation: string) => TgpuComputeFn<ComputeIn>) & {
+  ((implementation: string) => TgpuComputeFn<ComputeIn>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => TgpuComputeFn<ComputeIn>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
@@ -100,7 +105,10 @@ export function computeFn<
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
-    argTypes: [createStructFromIO(options.in ?? {})],
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     returnType: undefined,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,
@@ -110,11 +118,14 @@ export function computeFn<
     isEntry: true,
   };
 
-  const call = (implementation: Implementation) =>
+  const call = (
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) =>
     createComputeFn(
       shell,
       options.workgroupSize,
-      implementation as Implementation,
+      stripTemplate(arg, ...values),
     );
 
   return Object.assign(Object.assign(call, shell), {

@@ -1,111 +1,105 @@
-import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata } from './types.ts';
+import pathe from 'pathe';
+import * as R from 'remeda';
+import type { Example, ExampleMetadata, ExampleSrcFile } from './types.ts';
 
-function pathPipe(path: string): string {
-  return pipe(
+const contentExamplesPath = '../../content/examples/';
+
+function pathToExampleKey(path: string): string {
+  return R.pipe(
     path,
-    (p) => p.replace(/^..\/..\/content\/examples\//, ''), // removing parent folder
-    (p) => p.replace(/\/[^\/]*$/, ''), // removing leaf file names (e.g. meta.json, index.ts)
-    (p) => p.replace(/\//, '--'), // replacing path separators with '--'
+    (p) => pathe.relative(contentExamplesPath, p), // removing parent folder
+    (p) => p.split('/'), // splitting into segments
+    ([category, name]) => `${category}--${name}`,
   );
 }
 
-function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
-  return pipe(
+function globToExampleFiles(
+  record: Record<string, string>,
+): Record<string, ExampleSrcFile[]> {
+  return R.pipe(
     record,
-    entries(),
-    map(([path, value]) => [pathPipe(path), value] as const),
-    fromEntries(),
+    R.mapValues((content, key): ExampleSrcFile => {
+      const pathRelToExamples = pathe.relative(contentExamplesPath, key);
+      const categoryDir = pathRelToExamples.split('/')[0];
+      const exampleDir = pathRelToExamples.split('/')[1];
+      const examplePath = pathe.join(
+        contentExamplesPath,
+        categoryDir,
+        exampleDir,
+      );
+
+      return {
+        exampleKey: pathToExampleKey(key),
+        path: pathe.relative(examplePath, key),
+        content,
+      };
+    }),
+    R.values(),
+    R.groupBy(R.prop('exampleKey')),
   );
 }
 
-function pathToExampleFilesMap<T>(
-  record: Record<string, T>,
-): Record<string, Record<string, T>> {
-  const groups: Record<string, Record<string, T>> = {};
-
-  for (const [path, value] of Object.entries(record)) {
-    const groupKey = pathPipe(path);
-
-    const fileNameMatch = path.match(/\/([^\/]+\.ts)$/);
-    const fileName = fileNameMatch ? fileNameMatch[1] : path;
-
-    if (!groups[groupKey]) {
-      groups[groupKey] = {};
-    }
-    groups[groupKey][fileName] = value;
-  }
-  return groups;
-}
-
-const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
+const metaFiles = R.pipe(
   import.meta.glob('../../content/examples/**/meta.json', {
     eager: true,
     import: 'default',
-  }),
+  }) as Record<string, ExampleMetadata>,
+  R.mapKeys(pathToExampleKey),
 );
 
-const readonlyTsFiles: Record<
-  string,
-  Record<string, string>
-> = pathToExampleFilesMap(
+const readonlyTsFiles = R.pipe(
   import.meta.glob('../../content/examples/**/*.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
-  }),
+  }) as Record<string, string>,
+  globToExampleFiles,
 );
 
-const tsFilesImportFunctions: Record<string, () => Promise<unknown>> = pipe(
-  import.meta.glob('../../content/examples/**/index.ts'),
-  entries(),
-  map(
-    ([key, value]) =>
-      [pathPipe(key), value] satisfies [string, () => Promise<unknown>],
-  ),
-  fromEntries(),
+const tsFilesImportFunctions = R.pipe(
+  import.meta.glob('../../content/examples/**/index.ts') as Record<
+    string,
+    () => Promise<unknown>
+  >,
+  R.mapKeys(pathToExampleKey),
 );
 
-const htmlFiles: Record<string, string> = pathToExampleKey(
+const htmlFiles = R.pipe(
   import.meta.glob('../../content/examples/**/index.html', {
     query: 'raw',
     eager: true,
     import: 'default',
-  }),
+  }) as Record<string, string>,
+  globToExampleFiles,
 );
 
-export const examples = pipe(
+export const examples = R.pipe(
   metaFiles,
-  entries(),
-  map(
-    ([key, value]) =>
-      [
+  R.mapValues(
+    (value, key) =>
+      ({
         key,
-        {
-          key,
-          metadata: value,
-          tsCodes: readonlyTsFiles[key] ?? {},
-          tsImport: tsFilesImportFunctions[key],
-          htmlCode: htmlFiles[key] ?? '',
-        },
-      ] satisfies [string, Example],
+        metadata: value,
+        tsFiles: readonlyTsFiles[key] ?? [],
+        tsImport: tsFilesImportFunctions[key],
+        htmlFile: htmlFiles[key][0] ?? '',
+      }) satisfies Example,
   ),
-  fromEntries(),
 );
 
-export const examplesStable = pipe(
+export const examplesStable = R.pipe(
   examples,
-  entries(),
-  filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
-  filter(([_, example]) =>
+  R.entries(),
+  R.filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
+  R.filter(([_, example]) =>
     example.metadata.tags?.includes('camera')
       ? typeof MediaStreamTrackProcessor === 'undefined'
       : true,
   ),
-  fromEntries(),
+  R.fromEntries(),
 );
 
-export const examplesByCategory = groupBy(
+export const examplesByCategory = R.groupBy(
   Object.values(examples),
   (example) => example.metadata.category,
 );

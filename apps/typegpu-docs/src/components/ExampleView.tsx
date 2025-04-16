@@ -23,7 +23,6 @@ type Props = {
 
 function useExample(
   tsImport: () => Promise<unknown>,
-  htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
@@ -62,23 +61,23 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [htmlCode, setSnackbarText, setExampleControlParams]);
+  }, [setSnackbarText, setExampleControlParams]);
 }
 
 export function ExampleView({ example }: Props) {
-  const { tsCodes, tsImport, htmlCode } = example;
+  const { tsFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFile, setCurrentFile] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const codeFiles = Object.keys(tsCodes);
+  const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
-    ...codeFiles.filter((name) => name !== 'index.ts'),
+    ...filePaths.filter((name) => name !== 'index.ts'),
     'index.html',
   ];
 
@@ -86,11 +85,11 @@ export function ExampleView({ example }: Props) {
     if (!exampleHtmlRef.current) {
       return;
     }
-    exampleHtmlRef.current.innerHTML = htmlCode;
-  }, [htmlCode]);
+    exampleHtmlRef.current.innerHTML = htmlFile.content;
+  }, [htmlFile]);
 
-  useExample(tsImport, htmlCode, setSnackbarText); // live example
-  useResizableCanvas(exampleHtmlRef, htmlCode);
+  useExample(tsImport, setSnackbarText); // live example
+  useResizableCanvas(exampleHtmlRef);
 
   return (
     <>
@@ -111,7 +110,7 @@ export function ExampleView({ example }: Props) {
               className={cs(
                 'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
                 codeEditorShowing
-                  ? 'md:max-h-[calc(50vh-3rem)] md:overflow-auto'
+                  ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                   : '',
               )}
             >
@@ -140,10 +139,10 @@ export function ExampleView({ example }: Props) {
                       <button
                         key={fileName}
                         type="button"
-                        onClick={() => setCurrentFile(fileName)}
+                        onClick={() => setCurrentFilePath(fileName)}
                         className={cs(
                           'px-4 rounded-t-lg rounded-b-none text-nowrap',
-                          currentFile === fileName
+                          currentFilePath === fileName
                             ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
                             : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
                         )}
@@ -155,15 +154,15 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <HtmlCodeEditor
-                  shown={currentFile === 'index.html'}
-                  code={htmlCode}
+                  shown={currentFilePath === 'index.html'}
+                  file={htmlFile}
                 />
 
-                {Object.entries(tsCodes).map(([key, value]) => (
+                {tsFiles.map((file) => (
                   <TsCodeEditor
-                    shown={key === currentFile}
-                    code={value}
-                    key={key}
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    file={file}
                   />
                 ))}
               </div>
@@ -194,11 +193,7 @@ function GPUUnsupportedPanel() {
   );
 }
 
-function useResizableCanvas(
-  exampleHtmlRef: RefObject<HTMLDivElement | null>,
-  htmlCode: string,
-) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode and tsCode change
+function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
       | HTMLCanvasElement[]
@@ -261,5 +256,5 @@ function useResizableCanvas(
         observer.disconnect();
       }
     };
-  }, [exampleHtmlRef, htmlCode]);
+  }, [exampleHtmlRef]);
 }

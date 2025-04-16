@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';
@@ -11,6 +11,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -23,7 +24,7 @@ type TgpuVertexFnShellHeader<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly returnType: VertexOut;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
@@ -43,6 +44,10 @@ export type TgpuVertexFnShell<
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
   ((
     implementation: string,
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -103,14 +108,20 @@ export function vertexFn<
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType: createOutputType(options.out) as unknown as VertexOut,
-    argTypes: [createStructFromIO(options.in ?? {})],
+    returnType: (Object.keys(options.out).length !== 0
+      ? createOutputType(options.out)
+      : undefined) as unknown as VertexOut,
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     isEntry: true,
   };
 
   const call = (
-    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut> | string,
-  ) => createVertexFn(shell, implementation as Implementation);
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

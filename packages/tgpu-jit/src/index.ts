@@ -16,7 +16,7 @@ type TranspilationResult = {
 };
 
 /**
- * Used to transpile JS resources into SMoL on demand.
+ * Used to transpile JS resources into tinyest on demand.
  */
 interface IJitTranspiler {
   transpileFn(rawJs: string): TranspilationResult;

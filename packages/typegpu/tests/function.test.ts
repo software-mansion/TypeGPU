@@ -1,10 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes.ts';
-import type { TgpuFn, TgpuFnShell } from '../src/core/function/tgpuFn.ts';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
@@ -140,6 +138,106 @@ describe('tgpu.fn', () => {
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
       TgpuFn<[d.F32, d.U32], d.Bool>
     >();
+  });
+});
+
+describe('tgpu.computeFn', () => {
+  it('does not create In struct when the are no arguments', () => {
+    const foo = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+      const x = 2;
+    });
+
+    expect(parseResolved({ foo })).not.toContain('struct');
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create In struct when there is empty object for arguments', () => {
+    const foo = tgpu['~unstable'].computeFn({ in: {}, workgroupSize: [1] })(
+      () => {
+        const x = 2;
+      },
+    );
+
+    expect(parseResolved({ foo })).not.toContain(parse('struct'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+});
+
+describe('tgpu.vertexFn', () => {
+  it('does not create In struct when the are no arguments', () => {
+    const foo = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })(() => ({
+      pos: d.vec4f(),
+    }));
+    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
+    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create In struct when there is empty object for arguments', () => {
+    const foo = tgpu['~unstable'].vertexFn({
+      in: {},
+      out: { pos: d.builtin.position },
+    })(() => {
+      return {
+        pos: d.vec4f(),
+      };
+    });
+    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
+    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create In struct when there is empty object for arguments', () => {
+    const foo = tgpu['~unstable'].vertexFn({
+      in: {},
+      out: { pos: d.builtin.position },
+    })(() => {
+      return {
+        pos: d.vec4f(),
+      };
+    });
+    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
+    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create Out struct when the are no output parameters', () => {
+    const foo = tgpu['~unstable'].vertexFn({
+      out: {},
+    })(() => ({
+      pos: d.vec4f(),
+    }));
+    expect(parseResolved({ foo })).not.toContain(parse('struct foo_Out'));
+  });
+});
+
+describe('tgpu.fragmentFn', () => {
+  it('does not create In struct when the are no arguments', () => {
+    const foo = tgpu['~unstable'].fragmentFn({
+      out: d.vec4f,
+    })(() => d.vec4f(0));
+
+    expect(parseResolved({ foo })).not.toContain(parse('struct'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create In struct when there is empty object for arguments', () => {
+    const foo = tgpu['~unstable'].fragmentFn({
+      in: {},
+      out: d.vec4f,
+    })(() => d.vec4f(0));
+
+    expect(parseResolved({ foo })).not.toContain(parse('struct'));
+    expect(foo.shell.argTypes).toEqual([]);
+  });
+
+  it('does not create Out struct when the are no output parameters', () => {
+    const foo = tgpu['~unstable'].fragmentFn({
+      out: {},
+    })(() => ({}));
+    expect(parseResolved({ foo })).not.toContain(parse('struct foo_Out'));
   });
 });
 

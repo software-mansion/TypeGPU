@@ -36,7 +36,7 @@ import {
 import { getResolutionCtx } from '../gpuMode.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
-  type Resource,
+  type Snippet,
   UnknownData,
   type Wgsl,
   hasInternalDataType,
@@ -232,7 +232,7 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
     return UnknownData;
   }
   if (typeof resource === 'number') {
-    return numericLiteralToResource(String(resource))?.dataType ?? UnknownData;
+    return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
   }
   if (typeof resource === 'boolean') {
     return bool;
@@ -248,7 +248,7 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
   return isWgslData(resource) ? resource : UnknownData;
 }
 
-export function numericLiteralToResource(value: string): Resource | undefined {
+export function numericLiteralToSnippet(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
     return { value, dataType: abstractInt };

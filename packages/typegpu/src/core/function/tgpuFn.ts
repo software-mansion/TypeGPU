@@ -3,7 +3,7 @@ import type { TgpuNamable } from '../../namable.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import {
   type Labelled,
   type ResolutionCtx,
@@ -27,6 +27,7 @@ import type {
   InferIO,
   InferReturn,
 } from './fnTypes.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -58,7 +59,11 @@ export type TgpuFnShell<
       ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
     ) => InferReturn<Return>,
   ) => TgpuFn<Args, Return>) &
-  ((implementation: string) => TgpuFn<Args, Return>) & {
+  ((implementation: string) => TgpuFn<Args, Return>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => TgpuFn<Args, Return>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
@@ -129,8 +134,10 @@ export function fn<
     isEntry: false,
   };
 
-  const call = (implementation: Implementation) =>
-    createFn(shell, implementation);
+  const call = (
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

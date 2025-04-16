@@ -24,8 +24,6 @@ import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
-import { getTypeFromWgsl } from './smol/generationHelpers.ts';
-import { generateFunction } from './smol/wgslGenerator.ts';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -33,12 +31,14 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout.ts';
+import { getTypeFromWgsl } from './tgsl/generationHelpers.ts';
+import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   FnToWgslOptions,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  Resource,
+  Snippet,
   Wgsl,
 } from './types.ts';
 import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
@@ -68,7 +68,7 @@ type SlotBindingLayer = {
 
 type FunctionScopeLayer = {
   type: 'functionScope';
-  args: Resource[];
+  args: Snippet[];
   externalMap: Record<string, unknown>;
   returnType: AnyWgslData | undefined;
 };
@@ -123,7 +123,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    args: Resource[],
+    args: Snippet[],
     returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ) {
@@ -187,7 +187,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  getResourceById(id: string): Resource | undefined {
+  getSnippetById(id: string): Snippet | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -225,7 +225,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource {
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -340,8 +340,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.dedent();
   }
 
-  getById(id: string): Resource | null {
-    const item = this._itemStateStack.getResourceById(id);
+  getById(id: string): Snippet | null {
+    const item = this._itemStateStack.getSnippetById(id);
 
     if (item === undefined) {
       return null;
@@ -350,7 +350,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
+  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet {
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
@@ -689,7 +689,7 @@ export function resolve(
 
 export function resolveFunctionHeader(
   ctx: ResolutionCtx,
-  args: Resource[],
+  args: Snippet[],
   returnType: AnyWgslData,
 ) {
   const argList = args

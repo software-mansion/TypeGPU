@@ -11,7 +11,7 @@ import type {
   Vec4f,
 } from '../../data/wgslTypes.ts';
 import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';
@@ -26,6 +26,7 @@ import {
   createOutputType,
   createStructFromIO,
 } from './ioOutputType.ts';
+import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
@@ -52,7 +53,7 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
-  readonly argTypes: [AnyWgslStruct];
+  readonly argTypes: [AnyWgslStruct] | [];
   readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
   readonly isEntry: true;
@@ -80,6 +81,10 @@ export type TgpuFragmentFnShell<
    */
   ((
     implementation: string,
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
+  ((
+    strings: TemplateStringsArray,
+    ...values: unknown[]
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -144,17 +149,21 @@ export function fragmentFn<
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
-    argTypes: [createStructFromIO(options.in ?? {})],
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0
+        ? [createStructFromIO(options.in)]
+        : [],
     targets: options.out,
-    returnType: createOutputType(options.out) as FragmentOut,
+    returnType: (Object.keys(options.out).length !== 0
+      ? createOutputType(options.out)
+      : undefined) as FragmentOut,
     isEntry: true,
   };
 
   const call = (
-    implementation:
-      | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
-      | string,
-  ) => createFragmentFn(shell, implementation as Implementation);
+    arg: Implementation | TemplateStringsArray,
+    ...values: unknown[]
+  ) => createFragmentFn(shell, stripTemplate(arg, ...values));
 
   return Object.assign(Object.assign(call, shell), {
     does: call,

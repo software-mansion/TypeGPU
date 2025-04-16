@@ -1,11 +1,11 @@
-import type * as smol from 'tinyest';
+import type * as tinyest from 'tinyest';
 import type { AnyData } from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import {
   type ResolutionCtx,
-  type Resource,
+  type Snippet,
   UnknownData,
   isMarkedInternal,
   isWgsl,
@@ -14,7 +14,7 @@ import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
-  numericLiteralToResource,
+  numericLiteralToSnippet,
 } from './generationHelpers.ts';
 
 const parenthesizedOps = [
@@ -41,10 +41,10 @@ const parenthesizedOps = [
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
 type Operator =
-  | smol.BinaryOperator
-  | smol.AssignmentOperator
-  | smol.LogicalOperator
-  | smol.UnaryOperator;
+  | tinyest.BinaryOperator
+  | tinyest.AssignmentOperator
+  | tinyest.LogicalOperator
+  | tinyest.UnaryOperator;
 
 function operatorToType<
   TL extends AnyData | UnknownData,
@@ -76,14 +76,11 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  getById(id: string): Resource | null;
-  defineVariable(
-    id: string,
-    dataType: wgsl.AnyWgslData | UnknownData,
-  ): Resource;
+  getById(id: string): Snippet | null;
+  defineVariable(id: string, dataType: wgsl.AnyWgslData | UnknownData): Snippet;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Resource): string {
+export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
   if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
@@ -97,11 +94,14 @@ function assertExhaustive(value: never): never {
   );
 }
 
-export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
+export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
   return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
-export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
+export function generateBlock(
+  ctx: GenerationCtx,
+  value: tinyest.Block,
+): string {
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
@@ -116,11 +116,11 @@ export function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
-): Resource {
+): Snippet {
   return ctx.defineVariable(id, dataType);
 }
 
-export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
+export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -131,8 +131,8 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
 
 export function generateExpression(
   ctx: GenerationCtx,
-  expression: smol.Expression,
-): Resource {
+  expression: tinyest.Expression,
+): Snippet {
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -270,7 +270,7 @@ export function generateExpression(
 
   if ('n' in expression) {
     // Numeric Literal
-    const type = numericLiteralToResource(expression.n);
+    const type = numericLiteralToSnippet(expression.n);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression.n}`);
     }
@@ -285,12 +285,12 @@ export function generateExpression(
 
     ctx.callStack.push(idValue);
 
-    const argResources = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedResources = argResources.map((res) => ({
+    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
+    const resolvedSnippets = argSnippets.map((res) => ({
       value: resolveRes(ctx, res),
       dataType: res.dataType,
     }));
-    const argValues = resolvedResources.map((res) => res.value);
+    const argValues = resolvedSnippets.map((res) => res.value);
 
     ctx.callStack.pop();
 
@@ -318,8 +318,8 @@ export function generateExpression(
 
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...resolvedResources,
-    ) as Resource;
+      ...resolvedSnippets,
+    ) as Snippet;
 
     return {
       value: resolveRes(ctx, fnRes),
@@ -332,7 +332,7 @@ export function generateExpression(
     const obj = expression.o;
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
-    const generateEntries = (values: smol.Expression[]) =>
+    const generateEntries = (values: tinyest.Expression[]) =>
       values
         .map((value) => {
           const valueRes = generateExpression(ctx, value);
@@ -412,7 +412,7 @@ export function generateExpression(
 
 export function generateStatement(
   ctx: GenerationCtx,
-  statement: smol.Statement,
+  statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
     return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
@@ -558,6 +558,9 @@ ${bodyStr}`;
   return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
 }
 
-export function generateFunction(ctx: GenerationCtx, body: smol.Block): string {
+export function generateFunction(
+  ctx: GenerationCtx,
+  body: tinyest.Block,
+): string {
   return generateBlock(ctx, body);
 }

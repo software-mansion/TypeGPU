@@ -14,10 +14,10 @@ import type {
   v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import type { Resource } from '../types.ts';
+import type { Snippet } from '../types.ts';
 import { isNumeric, sub } from './numeric.ts';
 
-function correspondingBooleanVectorSchema(value: Resource) {
+function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {
     return vec2b;
   }

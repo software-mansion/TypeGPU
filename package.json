@@ -6,12 +6,13 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev:watch",
-    "dev:test": "vitest",
+    "dev:test": "ATTEST_skipTypes=1 vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
-    "test": "pnpm run '/^test:.*/'",
+    "test": "pnpm run test:types && pnpm run test:spec-and-attest",
     "test:types": "pnpm run -r --parallel test:types",
-    "test:spec": "vitest run",
+    "test:spec": "ATTEST_skipTypes=1 vitest run",
+    "test:spec-and-attest": "vitest run",
     "nightly-build": "pnpm --filter typegpu prepublishOnly --skip-publish-tag-check"
   },
   "engines": {
@@ -36,8 +37,8 @@
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@webgpu/types": "catalog:",
     "@types/node": "^22.13.14",
+    "@webgpu/types": "catalog:",
     "dpdm": "^3.14.0",
     "pkg-pr-new": "^0.0.41",
     "tsup": "catalog:",

@@ -7,6 +7,7 @@ import Editor, {
 import type { editor } from 'monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
+import type { ExampleSrcFile } from '../utils/examples/types.ts';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
 
 function handleEditorWillMount(monaco: Monaco) {
@@ -56,7 +57,7 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 }
 
 type Props = {
-  code: string;
+  file: ExampleSrcFile;
   shown: boolean;
 };
 
@@ -67,7 +68,7 @@ const createCodeEditorComponent =
     onMount?: OnMount,
   ) =>
   (props: Props) => {
-    const { code, shown } = props;
+    const { file, shown } = props;
 
     return (
       <div
@@ -77,7 +78,8 @@ const createCodeEditorComponent =
       >
         <Editor
           defaultLanguage={language}
-          value={code}
+          value={file.content}
+          path={file.path}
           beforeMount={beforeMount}
           onMount={onMount}
           options={{
