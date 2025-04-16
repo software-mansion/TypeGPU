@@ -60,10 +60,10 @@ const terrainBuffer = await gen.generateHeightMap(root, { ... });
 
 // ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
 // not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
-plot.1dArray(root, terrainBuffer);
+plot.array1d(root, terrainBuffer);
 
 // SUCCESS!
-plot.2dArray(root, terrainBuffer);
+plot.array2d(root, terrainBuffer);
 ```
 
 We can pass typed values around without the need to copy anything back to CPU-accessible memory! Lets see an example of how we can construct a type-safe API:
