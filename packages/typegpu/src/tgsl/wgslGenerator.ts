@@ -17,6 +17,8 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 
+const { NodeTypeCatalog: NODE } = tinyest;
+
 const parenthesizedOps = [
   '==',
   '!=',
@@ -143,9 +145,9 @@ export function generateExpression(
   }
 
   if (
-    expression[0] === tinyest.NodeTypeCatalog.logical_expr ||
-    expression[0] === tinyest.NodeTypeCatalog.binary_expr ||
-    expression[0] === tinyest.NodeTypeCatalog.assignment_expr
+    expression[0] === NODE.logical_expr ||
+    expression[0] === NODE.binary_expr ||
+    expression[0] === NODE.assignment_expr
   ) {
     // Logical/Binary/Assignment Expression
     const [_, lhs, op, rhs] = expression;
@@ -164,7 +166,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.post_update) {
+  if (expression[0] === NODE.post_update) {
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -176,7 +178,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.unary_expr) {
+  if (expression[0] === NODE.unary_expr) {
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -189,7 +191,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.member_access) {
+  if (expression[0] === NODE.member_access) {
     // Member Access
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
@@ -258,7 +260,7 @@ export function generateExpression(
     throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.index_access) {
+  if (expression[0] === NODE.index_access) {
     // Index Access
     const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
@@ -274,7 +276,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.numeric_literal) {
+  if (expression[0] === NODE.numeric_literal) {
     // Numeric Literal
     const type = numericLiteralToSnippet(expression[1]);
     if (!type) {
@@ -283,7 +285,7 @@ export function generateExpression(
     return type;
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.call) {
+  if (expression[0] === NODE.call) {
     // Function Call
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
@@ -333,7 +335,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.object_expr) {
+  if (expression[0] === NODE.object_expr) {
     // Object Literal
     const obj = expression[1];
     const callee = ctx.callStack[ctx.callStack.length - 1];
@@ -370,7 +372,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.array_expr) {
+  if (expression[0] === NODE.array_expr) {
     const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
@@ -410,11 +412,11 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.string_literal) {
+  if (expression[0] === NODE.string_literal) {
     throw new Error('Cannot use string literals in TGSL.');
   }
 
-  if (expression[0] === tinyest.NodeTypeCatalog.pre_update) {
+  if (expression[0] === NODE.pre_update) {
     throw new Error('Cannot use pre-updates in TGSL.');
   }
 
@@ -433,7 +435,7 @@ export function generateStatement(
     return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.return) {
+  if (statement[0] === NODE.return) {
     const returnNode = statement[1];
     const returnValue = returnNode
       ? resolveRes(ctx, generateExpression(ctx, returnNode))
@@ -444,7 +446,7 @@ export function generateStatement(
     if (
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
       typeof returnNode === 'object' &&
-      returnNode[0] === tinyest.NodeTypeCatalog.object_expr
+      returnNode[0] === NODE.object_expr
     ) {
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],
@@ -452,10 +454,12 @@ export function generateStatement(
       return `${ctx.pre}return ${resolvedStruct}(${returnValue});`;
     }
 
-    return `${ctx.pre}return ${returnValue};`;
+    return returnValue
+      ? `${ctx.pre}return ${returnValue};`
+      : `${ctx.pre}return;`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.if) {
+  if (statement[0] === NODE.if) {
     const [_, cond, cons, alt] = statement;
     const condition = resolveRes(ctx, generateExpression(ctx, cond));
 
@@ -480,10 +484,7 @@ ${ctx.pre}else
 ${alternate}`;
   }
 
-  if (
-    statement[0] === tinyest.NodeTypeCatalog.let ||
-    statement[0] === tinyest.NodeTypeCatalog.const
-  ) {
+  if (statement[0] === NODE.let || statement[0] === NODE.const) {
     const [_, rawId, rawValue] = statement;
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
@@ -501,7 +502,7 @@ ${alternate}`;
     // If the value is a plain JS object it has to be an output struct
     if (
       typeof rawValue === 'object' &&
-      rawValue[0] === tinyest.NodeTypeCatalog.object_expr &&
+      rawValue[0] === NODE.object_expr &&
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
     ) {
       const resolvedStruct = ctx.resolve(
@@ -513,7 +514,7 @@ ${alternate}`;
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.block) {
+  if (statement[0] === NODE.block) {
     ctx.pushBlockScope(); // TODO: Is this needed? It's also in the `generateBlock` function.
     try {
       return generateBlock(ctx, statement);
@@ -522,7 +523,7 @@ ${alternate}`;
     }
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.for) {
+  if (statement[0] === NODE.for) {
     const [_, init, condition, update, body] = statement;
 
     const initStatement = init ? generateStatement(ctx, init) : undefined;
@@ -545,7 +546,7 @@ ${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
 ${bodyStr}`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.while) {
+  if (statement[0] === NODE.while) {
     const [_, condition, body] = statement;
     const conditionStr = resolveRes(ctx, generateExpression(ctx, condition));
 
@@ -558,11 +559,11 @@ ${ctx.pre}while (${conditionStr})
 ${bodyStr}`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.continue) {
+  if (statement[0] === NODE.continue) {
     return `${ctx.pre}continue;`;
   }
 
-  if (statement[0] === tinyest.NodeTypeCatalog.break) {
+  if (statement[0] === NODE.break) {
     return `${ctx.pre}break;`;
   }
 
