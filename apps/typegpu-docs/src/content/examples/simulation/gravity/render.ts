@@ -69,6 +69,7 @@ export const mainVertex = tgpu['~unstable']
       uv: input.uv,
       normals: input.normal,
       worldPosition: worldPosition.xyz,
+      sphereTextureIndex: object.textureIndex,
     };
   })
   .$name('mainVertex');
@@ -78,8 +79,13 @@ export const mainFragment = tgpu['~unstable']
     in: VertexOutput,
     out: d.vec4f,
   })((input) => {
-    //const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
-    const textureColor = d.vec3f(0.6, 0.3, 0.5); //textureColorWithAlpha.xyz;
+    const textureColor = std.textureSample(
+      renderLayout.$.celestialBodyTextures,
+      renderLayout.$.sampler,
+      input.uv,
+      input.sphereTextureIndex,
+    ).xyz;
+
     const normal = input.normals;
 
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));

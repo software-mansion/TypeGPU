@@ -39,6 +39,7 @@ export const computeShader = tgpu['~unstable']
       velocity: std.add(current.velocity, std.mul(dt, acceleration)),
       mass: current.mass,
       radius: current.radius,
+      textureIndex: current.textureIndex,
     });
 
     outState.value[input.gid.x] = updatedCurrent;

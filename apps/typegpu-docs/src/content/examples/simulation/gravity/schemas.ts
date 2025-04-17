@@ -18,6 +18,7 @@ export const VertexOutput = {
   uv: d.vec2f,
   normals: d.vec3f,
   worldPosition: d.vec3f,
+  sphereTextureIndex: d.interpolate('flat', d.u32),
 };
 
 export const CelestialBody = d.struct({
@@ -26,6 +27,7 @@ export const CelestialBody = d.struct({
   velocity: d.vec3f,
   mass: d.f32,
   radius: d.f32,
+  textureIndex: d.u32,
 });
 
 export const SkyBoxVertex = d.struct({
@@ -61,6 +63,7 @@ export const skyBoxVertexLayout = tgpu.vertexLayout((n: number) =>
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
+  celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
 });
 
 export const renderInstanceLayout = tgpu.vertexLayout((n: number) =>

@@ -96,26 +96,30 @@ export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBoxNames) {
   return texture;
 }
 
-export type SphereTextureNames = 'earth' | 'moon';
-export async function loadSphereTexture(
-  root: TgpuRoot,
-  sphereTexture: SphereTextureNames,
-) {
-  const texturePath = `/TypeGPU/assets/gravity/textures/${sphereTexture}.jpg`;
-  const textureResponse = await fetch(texturePath);
-  const imageBitmap = await createImageBitmap(await textureResponse.blob());
+export const sphereTextureNamesEnum = ['earth', 'moon'] as const;
+export type SphereTextureNames = (typeof sphereTextureNamesEnum)[number];
+export async function loadSphereTextures(root: TgpuRoot) {
   const texture = root['~unstable']
     .createTexture({
-      size: [imageBitmap.width, imageBitmap.height],
+      dimension: '2d',
+      size: [2048, 1024, sphereTextureNamesEnum.length],
       format: 'rgba8unorm',
     })
-    .$usage('sampled', 'render')
-    .$name(`texture from ${texturePath}`);
+    .$usage('sampled', 'render');
 
-  root.device.queue.copyExternalImageToTexture(
-    { source: imageBitmap },
-    { texture: root.unwrap(texture) },
-    [imageBitmap.width, imageBitmap.height],
+  await Promise.all(
+    sphereTextureNamesEnum.map(async (name, i) => {
+      const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const imageBitmap = await createImageBitmap(blob);
+
+      root.device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
+        [2048, 1024],
+      );
+    }),
   );
 
   return texture;

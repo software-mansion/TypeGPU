@@ -30,7 +30,12 @@ import {
   skyBoxVertexLayout,
   textureBindGroupLayout,
 } from './schemas.ts';
-import { loadSkyBox, skyBoxVertices } from './textures.ts';
+import {
+  loadSkyBox,
+  loadSphereTextures,
+  skyBoxVertices,
+  sphereTextureNamesEnum,
+} from './textures.ts';
 
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles, balls on ground, negative mass
@@ -85,12 +90,17 @@ const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
   .$usage('vertex');
 
+const sphereTextures = await loadSphereTextures(root);
+
 const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
   sampler,
+  celestialBodyTextures: sphereTextures,
 });
 
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
+
+// dynamic resources
 
 interface DynamicResources {
   celestialBodiesCount: number;
@@ -211,9 +221,8 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const presetData = presets[preset];
 
   const celestialBodies: d.Infer<typeof CelestialBody>[] =
-    presetData.celestialBodies
-      .flatMap((group) => group.elements)
-      .map((element) => {
+    presetData.celestialBodies.flatMap((group) =>
+      group.elements.map((element) => {
         const radius = element.radius ?? element.mass ** (1 / 3);
         return {
           modelTransformationMatrix: std.mul(radius, std.identity()),
@@ -221,8 +230,10 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           velocity: element.velocity ?? d.vec3f(),
           mass: element.mass,
           radius: radius,
+          textureIndex: sphereTextureNamesEnum.indexOf(group.texture),
         };
-      });
+      }),
+    );
 
   const computeBufferA = root
     .createBuffer(

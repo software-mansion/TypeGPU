@@ -24,21 +24,6 @@ export const presets: Record<Preset, PresetData> = {
         texture: 'moon',
         elements: [
           {
-            position: d.vec3f(1, 0, 0),
-            velocity: d.vec3f(0, 1, 0),
-            mass: 1,
-          },
-          {
-            position: d.vec3f(-1, 0, 0),
-            velocity: d.vec3f(0, -1, 0),
-            mass: 1,
-          },
-          {
-            position: d.vec3f(0, 1, 0),
-            velocity: d.vec3f(1, 0, 0),
-            mass: 1,
-          },
-          {
             position: d.vec3f(0, -1, 0),
             velocity: d.vec3f(-1, 0, 0),
             mass: 1,
@@ -52,6 +37,26 @@ export const presets: Record<Preset, PresetData> = {
             position: d.vec3f(0, 0, -10),
             velocity: d.vec3f(0, -2, 0),
             mass: 100,
+          },
+        ],
+      },
+      {
+        texture: 'earth',
+        elements: [
+          {
+            position: d.vec3f(1, 0, 0),
+            velocity: d.vec3f(0, 1, 0),
+            mass: 1,
+          },
+          {
+            position: d.vec3f(-1, 0, 0),
+            velocity: d.vec3f(0, -1, 0),
+            mass: 1,
+          },
+          {
+            position: d.vec3f(0, 1, 0),
+            velocity: d.vec3f(1, 0, 0),
+            mass: 1,
           },
         ],
       },
@@ -69,11 +74,16 @@ export const presets: Record<Preset, PresetData> = {
             mass: 0,
             radius: 1,
           },
+        ],
+      },
+      {
+        texture: 'moon',
+        elements: [
           {
             position: d.vec3f(-1, 0, 0),
             velocity: d.vec3f(0, 0, 0),
             mass: 0,
-            radius: 1,
+            radius: 0.25,
           },
         ],
       },
