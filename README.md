@@ -26,13 +26,32 @@
 <br>
 
 **Table of contents:**
-- [📚 TypeGPU for libraries](#typegpu-for-libraries)
 - [⚙️ TypeGPU as a foundation](#typegpu-as-a-foundation)
 - [🧩 TypeGPU as part of the puzzle](#typegpu-as-part-of-the-puzzle)
+- [📚 TypeGPU for libraries](#typegpu-for-libraries)
 - [Documentation](#documentation)
 - [What's next?](#whats-next)
 - [Projects using TypeGPU](#projects-using-typegpu)
 - [Repository structure](#repository-structure)
+
+## TypeGPU as a foundation
+
+We provide an abstraction that solves the most common WebGPU hurdles, yet does not restrict you in capability.
+You can granularly eject into vanilla WebGPU at any point. This means that, when building your app with TypeGPU,
+lock-in is not a concern!
+
+The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading Language) syntax in TypeScript means,
+that learning TypeGPU helps to learn WebGPU itself, with less frustrations.
+
+[The Getting Started and Fundamentals guides are a great starting point for new projects!](https://docs.swmansion.com/TypeGPU/getting-started/)
+
+## TypeGPU as part of the puzzle
+
+Our type-safe APIs can be used together, or in isolation. This makes partial application into existing apps just a few lines of code away, no matter the complexity of your app!
+
+[We wrote a comprehensive resource on ways TypeGPU can improve your existing codebase.](https://docs.swmansion.com/TypeGPU/integration/webgpu-interoperability/)
+
+Pick and choose which parts of TypeGPU you'd like to incorporate into your existing app!
 
 ## TypeGPU for libraries
 
@@ -100,13 +119,7 @@ export async function generateHeightMap(
 }
 ```
 
-## TypeGPU as a foundation
-
-Even though our plan is to (...)
-
-## TypeGPU as part of the puzzle
-
-(...)
+[Planning to create a WebGPU library? Reach out to us!](https://discord.gg/8jpfgDqPcM) We'd love to work with you to enrich the ecosystem with type-safe WebGPU utilities!
 
 ## Documentation
 
