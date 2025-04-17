@@ -24,7 +24,7 @@ import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
-import { getTypeFromWgsl } from './smol/generationHelpers.ts';
+import { coerceToSnippet } from './smol/generationHelpers.ts';
 import { generateFunction } from './smol/wgslGenerator.ts';
 import {
   type TgpuBindGroup,
@@ -41,7 +41,7 @@ import type {
   Snippet,
   Wgsl,
 } from './types.ts';
-import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
+import { type UnknownData, isSelfResolvable, isWgsl } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -198,13 +198,8 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
-        if (external !== undefined) {
-          return {
-            value: external,
-            dataType: isWgsl(external)
-              ? getTypeFromWgsl(external)
-              : UnknownData,
-          };
+        if (external !== undefined && external !== null) {
+          return coerceToSnippet(external);
         }
 
         // Since functions cannot access resources from the calling scope, we

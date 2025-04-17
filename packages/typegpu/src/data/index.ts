@@ -50,6 +50,7 @@ export type {
   Mat4x4f,
   WgslArray,
   WgslStruct,
+  AnyWgslStruct,
   Ptr,
   Atomic,
   Decorated,
