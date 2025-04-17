@@ -147,27 +147,27 @@ const Transpilers: Partial<{
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.binary_expr, left, wgslOp, right];
+    return [NODE.binaryExpr, left, wgslOp, right];
   },
 
   LogicalExpression(ctx, node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.logical_expr, left, wgslOp, right];
+    return [NODE.logicalExpr, left, wgslOp, right];
   },
 
   AssignmentExpression(ctx, node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator as acorn.AssignmentOperator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.assignment_expr, left, wgslOp, right];
+    return [NODE.assignmentExpr, left, wgslOp, right];
   },
 
   UnaryExpression(ctx, node) {
     const wgslOp = node.operator;
     const argument = transpile(ctx, node.argument) as tinyest.Expression;
-    return [NODE.unary_expr, wgslOp, argument] as tinyest.UnaryExpression;
+    return [NODE.unaryExpr, wgslOp, argument] as tinyest.UnaryExpression;
   },
 
   MemberExpression(ctx, node) {
@@ -176,7 +176,7 @@ const Transpilers: Partial<{
     // If the property is computed, it could potentially be an external identifier.
     if (node.computed) {
       const property = transpile(ctx, node.property) as tinyest.Expression;
-      return [NODE.index_access, object, property];
+      return [NODE.indexAccess, object, property];
     }
 
     // If the property is not computed, we don't want to register identifiers as external.
@@ -188,7 +188,7 @@ const Transpilers: Partial<{
       throw new Error('Expected identifier as property access key.');
     }
 
-    return [NODE.member_access, object, property];
+    return [NODE.memberAccess, object, property];
   },
 
   UpdateExpression(ctx, node) {
@@ -197,7 +197,7 @@ const Transpilers: Partial<{
     if (node.prefix) {
       throw new Error('Prefix update expressions are not supported in WGSL.');
     }
-    return [NODE.post_update, operator, argument];
+    return [NODE.postUpdate, operator, argument];
   },
 
   Literal(ctx, node) {
@@ -205,13 +205,13 @@ const Transpilers: Partial<{
       return node.value;
     }
     if (typeof node.value === 'string') {
-      return [NODE.string_literal, node.value];
+      return [NODE.stringLiteral, node.value];
     }
-    return [NODE.numeric_literal, node.raw ?? ''];
+    return [NODE.numericLiteral, node.raw ?? ''];
   },
 
   NumericLiteral(ctx, node) {
-    return [NODE.numeric_literal, String(node.value) ?? ''];
+    return [NODE.numericLiteral, String(node.value) ?? ''];
   },
 
   BooleanLiteral(ctx, node) {
@@ -219,7 +219,7 @@ const Transpilers: Partial<{
   },
 
   StringLiteral(ctx, node) {
-    return [NODE.string_literal, node.value];
+    return [NODE.stringLiteral, node.value];
   },
 
   CallExpression(ctx, node) {
@@ -233,7 +233,7 @@ const Transpilers: Partial<{
   },
 
   ArrayExpression: (ctx, node) => [
-    NODE.array_expr,
+    NODE.arrayExpr,
     node.elements.map((elem) => {
       if (!elem || elem.type === 'SpreadElement') {
         throw new Error('Spread elements are not supported in TGSL.');
@@ -324,7 +324,7 @@ const Transpilers: Partial<{
       properties[key] = value;
     }
 
-    return [NODE.object_expr, properties];
+    return [NODE.objectExpr, properties];
   },
 
   ForStatement(ctx, node) {

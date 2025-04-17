@@ -25,26 +25,14 @@ export const NodeTypeCatalog = {
   break: 17,
 
   // rare
-  snippet: 100,
-  arrayExpr: 101,
-  preUpdate: 102,
-  postUpdate: 103,
-  stringLiteral: 104,
-  objectExpr: 105,
+  arrayExpr: 100,
+  preUpdate: 101,
+  postUpdate: 102,
+  stringLiteral: 103,
+  objectExpr: 104,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
-
-/**
- * Resolved target code, along with metadata.
- *
- * @example
- * [NodeTypeCatalog.snippet, '13 + 134', { d: ['abstractInt'] }]
- * [NodeTypeCatalog.snippet, '{ return 123; }']
- */
-export type Snippet =
-  | readonly [type: NodeTypeCatalog['snippet'], code: string]
-  | readonly [type: NodeTypeCatalog['snippet'], code: string, meta: unknown];
 
 /**
  * Represents a return statement
@@ -250,7 +238,6 @@ export type Literal = Num | Str | boolean;
 /** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
 export type Expression =
   | string
-  | Snippet
   | BinaryExpression
   | AssignmentExpression
   | LogicalExpression

@@ -118,7 +118,7 @@ describe('wgslGenerator', () => {
       Object.entries(literals).map(([key, { value }]) => [
         NODE.let,
         key,
-        [NODE.numeric_literal, value],
+        [NODE.numericLiteral, value],
       ]),
     ]);
 
@@ -547,7 +547,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[101,[[5,"1"],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
+      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -608,7 +608,7 @@ describe('wgslGenerator', () => {
     const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[101,[[6,"testStruct",[[105,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[105,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -660,7 +660,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[101,[[7,"derived","value"],[6,[7,"std","mul"],[[7,"derived","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"derived","value"],[6,[7,"std","mul"],[[7,"derived","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 

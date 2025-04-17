@@ -143,11 +143,6 @@ export function generateExpression(
     return generateBoolean(ctx, expression);
   }
 
-  if (expression[0] === NODE.snippet) {
-    // TODO: Interpret metadata to extract the data type
-    return { value: expression[1], dataType: UnknownData };
-  }
-
   if (
     expression[0] === NODE.logicalExpr ||
     expression[0] === NODE.binaryExpr ||
