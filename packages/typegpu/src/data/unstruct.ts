@@ -1,3 +1,4 @@
+import { $internal } from '../shared/symbols.ts';
 import type { Unstruct } from './dataTypes.ts';
 import type { BaseData } from './wgslTypes.ts';
 
@@ -38,6 +39,7 @@ export function unstruct<TProps extends Record<string, BaseData>>(
 // --------------
 
 const UnstructImpl = {
+  [$internal]: true,
   type: 'unstruct',
   _label: undefined as string | undefined,
 

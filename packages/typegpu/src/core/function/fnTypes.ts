@@ -43,10 +43,25 @@ export type InferReturn<T> = T extends undefined
     void
   : Infer<T>;
 
-export type Implementation<
-  Args extends unknown[] = unknown[],
+export type JsImplementation<
+  Args extends unknown[] | Record<string, unknown> =
+    | unknown[]
+    | Record<string, unknown>,
   Return = unknown,
-> = string | ((...args: Args) => Return);
+> = (
+  ...args: Args extends unknown[]
+    ? InferArgs<Args>
+    : Args extends Record<string, never>
+      ? []
+      : [InferIO<Args>]
+) => InferReturn<Return>;
+
+export type Implementation<
+  Args extends unknown[] | Record<string, unknown> =
+    | unknown[]
+    | Record<string, unknown>,
+  Return = unknown,
+> = string | JsImplementation<Args, Return>;
 
 export type BaseIOData =
   | F32

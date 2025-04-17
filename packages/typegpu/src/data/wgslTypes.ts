@@ -10,6 +10,7 @@ import type {
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import { $repr } from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -25,8 +26,8 @@ export interface BooleanArrayView {
 }
 
 export interface BaseData {
-  type: string;
-  /** Type-token, not available at runtime */
+  readonly [$internal]: true;
+  readonly type: string;
   readonly [$repr]: unknown;
 }
 
@@ -36,8 +37,8 @@ export interface BaseData {
  * Represents a 64-bit integer.
  */
 export interface AbstractInt {
+  readonly [$internal]: true;
   readonly type: 'abstractInt';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
 }
 
@@ -45,16 +46,21 @@ export interface AbstractInt {
  * Represents a 64-bit IEEE 754 floating point number.
  */
 export interface AbstractFloat {
+  readonly [$internal]: true;
   readonly type: 'abstractFloat';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
 }
 
 export interface Void {
+  readonly [$internal]: true;
   readonly type: 'void';
   readonly [$repr]: undefined;
 }
-export const Void: Void = { type: 'void', [$repr]: undefined };
+export const Void: Void = {
+  [$internal]: true,
+  type: 'void',
+  [$repr]: undefined,
+};
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -375,6 +381,7 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
  * A vector with 2 elements of type f32
  */
 export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
@@ -386,6 +393,7 @@ export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
  * A vector with 2 elements of type f16
  */
 export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
   x: number;
@@ -397,6 +405,7 @@ export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
  * A vector with 2 elements of type i32
  */
 export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
@@ -408,6 +417,7 @@ export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
  * A vector with 2 elements of type u32
  */
 export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
@@ -419,6 +429,7 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
  * A vector with 2 elements of type `bool`
  */
 export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2<bool>';
   x: boolean;
@@ -430,6 +441,7 @@ export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
  * A vector with 3 elements of type f32
  */
 export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
@@ -442,6 +454,7 @@ export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
  * A vector with 3 elements of type f16
  */
 export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
   x: number;
@@ -454,6 +467,7 @@ export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
  * A vector with 3 elements of type i32
  */
 export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
@@ -466,6 +480,7 @@ export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
  * A vector with 3 elements of type u32
  */
 export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
@@ -478,6 +493,7 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
  * A vector with 3 elements of type `bool`
  */
 export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3<bool>';
   x: boolean;
@@ -490,6 +506,7 @@ export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
  * A vector with 4 elements of type f32
  */
 export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
   x: number;
@@ -503,6 +520,7 @@ export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
  * A vector with 4 elements of type f16
  */
 export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
   x: number;
@@ -516,6 +534,7 @@ export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
  * A vector with 4 elements of type i32
  */
 export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
   x: number;
@@ -529,6 +548,7 @@ export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
  * A vector with 4 elements of type u32
  */
 export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
   x: number;
@@ -542,6 +562,7 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
  * A vector with 4 elements of type `bool`
  */
 export interface v4b extends BooleanArrayView, Swizzle4<v2b, v3b, v4b> {
+  readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4<bool>';
   x: boolean;
@@ -577,6 +598,7 @@ export type AnyVecInstance =
 export type VecKind = AnyVecInstance['kind'];
 
 export interface matBase<TColumn> extends NumberArrayView {
+  readonly [$internal]: true;
   readonly columns: readonly TColumn[];
 }
 
@@ -651,6 +673,7 @@ export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Bool {
+  readonly [$internal]: true;
   readonly type: 'bool';
   readonly [$repr]: boolean;
 }
@@ -659,8 +682,8 @@ export interface Bool {
  * 32-bit float schema representing a single WGSL f32 value.
  */
 export interface F32 {
+  readonly [$internal]: true;
   readonly type: 'f32';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
 
   (v: number | boolean): number;
@@ -670,8 +693,8 @@ export interface F32 {
  * 16-bit float schema representing a single WGSL f16 value.
  */
 export interface F16 {
+  readonly [$internal]: true;
   readonly type: 'f16';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
 
   (v: number | boolean): number;
@@ -681,8 +704,8 @@ export interface F16 {
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
 export interface I32 {
+  readonly [$internal]: true;
   readonly type: 'i32';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
   readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
 
@@ -693,8 +716,8 @@ export interface I32 {
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
 export interface U32 {
+  readonly [$internal]: true;
   readonly type: 'u32';
-  /** Type-token, not available at runtime */
   readonly [$repr]: number;
   readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 
@@ -705,8 +728,8 @@ export interface U32 {
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
 export interface Vec2f {
+  readonly [$internal]: true;
   readonly type: 'vec2f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v2f;
 
   (x: number, y: number): v2f;
@@ -719,8 +742,8 @@ export interface Vec2f {
  * Type of the `d.vec2h` object/function: vector data type schema/constructor
  */
 export interface Vec2h {
+  readonly [$internal]: true;
   readonly type: 'vec2h';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v2h;
 
   (x: number, y: number): v2h;
@@ -733,8 +756,8 @@ export interface Vec2h {
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
 export interface Vec2i {
+  readonly [$internal]: true;
   readonly type: 'vec2i';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v2i;
 
   (x: number, y: number): v2i;
@@ -747,8 +770,8 @@ export interface Vec2i {
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
 export interface Vec2u {
+  readonly [$internal]: true;
   readonly type: 'vec2u';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v2u;
 
   (x: number, y: number): v2u;
@@ -762,8 +785,8 @@ export interface Vec2u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec2b {
+  readonly [$internal]: true;
   readonly type: 'vec2<bool>';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v2b;
 
   (x: boolean, y: boolean): v2b;
@@ -776,8 +799,8 @@ export interface Vec2b {
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
 export interface Vec3f {
+  readonly [$internal]: true;
   readonly type: 'vec3f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v3f;
 
   (x: number, y: number, z: number): v3f;
@@ -792,8 +815,8 @@ export interface Vec3f {
  * Type of the `d.vec3h` object/function: vector data type schema/constructor
  */
 export interface Vec3h {
+  readonly [$internal]: true;
   readonly type: 'vec3h';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v3h;
 
   (x: number, y: number, z: number): v3h;
@@ -808,8 +831,8 @@ export interface Vec3h {
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
 export interface Vec3i {
+  readonly [$internal]: true;
   readonly type: 'vec3i';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v3i;
 
   (x: number, y: number, z: number): v3i;
@@ -824,8 +847,8 @@ export interface Vec3i {
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
 export interface Vec3u {
+  readonly [$internal]: true;
   readonly type: 'vec3u';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v3u;
 
   (x: number, y: number, z: number): v3u;
@@ -841,8 +864,8 @@ export interface Vec3u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec3b {
+  readonly [$internal]: true;
   readonly type: 'vec3<bool>';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v3b;
 
   (x: boolean, y: boolean, z: boolean): v3b;
@@ -857,8 +880,8 @@ export interface Vec3b {
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
 export interface Vec4f {
+  readonly [$internal]: true;
   readonly type: 'vec4f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v4f;
 
   (x: number, y: number, z: number, w: number): v4f;
@@ -877,8 +900,8 @@ export interface Vec4f {
  * Type of the `d.vec4h` object/function: vector data type schema/constructor
  */
 export interface Vec4h {
+  readonly [$internal]: true;
   readonly type: 'vec4h';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v4h;
 
   (x: number, y: number, z: number, w: number): v4h;
@@ -897,8 +920,8 @@ export interface Vec4h {
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
 export interface Vec4i {
+  readonly [$internal]: true;
   readonly type: 'vec4i';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v4i;
 
   (x: number, y: number, z: number, w: number): v4i;
@@ -917,8 +940,8 @@ export interface Vec4i {
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
 export interface Vec4u {
+  readonly [$internal]: true;
   readonly type: 'vec4u';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v4u;
 
   (x: number, y: number, z: number, w: number): v4u;
@@ -938,8 +961,8 @@ export interface Vec4u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec4b {
+  readonly [$internal]: true;
   readonly type: 'vec4<bool>';
-  /** Type-token, not available at runtime */
   readonly [$repr]: v4b;
 
   (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
@@ -958,8 +981,8 @@ export interface Vec4b {
  * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
  */
 export interface Mat2x2f {
+  readonly [$internal]: true;
   readonly type: 'mat2x2f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: m2x2f;
 
   (...elements: number[]): m2x2f;
@@ -971,8 +994,8 @@ export interface Mat2x2f {
  * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
  */
 export interface Mat3x3f {
+  readonly [$internal]: true;
   readonly type: 'mat3x3f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: m3x3f;
 
   (...elements: number[]): m3x3f;
@@ -984,8 +1007,8 @@ export interface Mat3x3f {
  * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
  */
 export interface Mat4x4f {
+  readonly [$internal]: true;
   readonly type: 'mat4x4f';
-  /** Type-token, not available at runtime */
   readonly [$repr]: m4x4f;
 
   (...elements: number[]): m4x4f;
@@ -1001,17 +1024,15 @@ export interface Mat4x4f {
  * the `byteAlignment` requirement of its elementType.
  */
 export interface WgslArray<TElement extends BaseData = BaseData> {
+  readonly [$internal]: true;
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
-  /** Type-token, not available at runtime */
   readonly [$repr]: Infer<TElement>[];
   readonly '~gpuRepr': InferGPU<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
-
-export const $structTag = Symbol('Tag for struct schemas');
 
 /**
  * Struct schema constructed via `d.struct` function.
@@ -1024,13 +1045,11 @@ export interface WgslStruct<
   TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  /** @deprecated */
+  readonly [$internal]: true;
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
 
-  readonly [$structTag]: true;
-  /** Type-token, not available at runtime */
   readonly [$repr]: Prettify<InferRecord<TProps>>;
   /** Type-token, not available at runtime */
   readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
@@ -1057,11 +1076,11 @@ export interface Ptr<
   TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
   TAccess extends Access = Access,
 > {
+  readonly [$internal]: true;
   readonly type: 'ptr';
   readonly inner: TInner;
   readonly addressSpace: TAddr;
   readonly access: TAccess;
-  /** Type-token, not available at runtime */
   readonly [$repr]: Infer<TInner>;
 }
 
@@ -1069,33 +1088,38 @@ export interface Ptr<
  * Schema representing the `atomic<...>` WGSL data type.
  */
 export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
+  readonly [$internal]: true;
   readonly type: 'atomic';
   readonly inner: TInner;
-  /** Type-token, not available at runtime */
   readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
   readonly '~memIdent': MemIdentity<TInner>;
 }
 
 export interface atomicU32 {
-  type: 'atomicU32';
+  readonly [$internal]: true;
+  readonly type: 'atomicU32';
 }
 
 export interface atomicI32 {
-  type: 'atomicI32';
+  readonly [$internal]: true;
+  readonly type: 'atomicI32';
 }
 
 export interface Align<T extends number> {
+  readonly [$internal]: true;
   readonly type: '@align';
   readonly value: T;
 }
 
 export interface Size<T extends number> {
+  readonly [$internal]: true;
   readonly type: '@size';
   readonly value: T;
 }
 
 export interface Location<T extends number> {
+  readonly [$internal]: true;
   readonly type: '@location';
   readonly value: T;
 }
@@ -1108,11 +1132,13 @@ export type InterpolationType =
   | FlatInterpolationType;
 
 export interface Interpolate<T extends InterpolationType> {
+  readonly [$internal]: true;
   readonly type: '@interpolate';
   readonly value: T;
 }
 
 export interface Builtin<T extends string> {
+  readonly [$internal]: true;
   readonly type: '@builtin';
   readonly value: T;
 }
@@ -1121,10 +1147,10 @@ export interface Decorated<
   TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
+  readonly [$internal]: true;
   readonly type: 'decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
-  /** Type-token, not available at runtime */
   readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
@@ -1243,15 +1269,24 @@ export type AnyWgslData =
 // #endregion
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
-  return (value as AnyWgslData)?.type.startsWith('vec2');
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type.startsWith('vec2')
+  );
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
-  return (value as AnyWgslData)?.type.startsWith('vec3');
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type.startsWith('vec3')
+  );
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
-  return (value as AnyWgslData)?.type.startsWith('vec4');
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type.startsWith('vec4')
+  );
 }
 
 export function isVec(
@@ -1273,15 +1308,24 @@ export function isVec(
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
-  return (value as AnyWgslData)?.type === 'mat2x2f';
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type === 'mat2x2f'
+  );
 }
 
 export function isMat3x3f(value: unknown): value is Mat3x3f {
-  return (value as AnyWgslData)?.type === 'mat3x3f';
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type === 'mat3x3f'
+  );
 }
 
 export function isMat4x4f(value: unknown): value is Mat4x4f {
-  return (value as AnyWgslData)?.type === 'mat4x4f';
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    (value as AnyWgslData)?.type === 'mat4x4f'
+  );
 }
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
@@ -1289,7 +1333,10 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {
-  return wgslTypeLiterals.includes((value as AnyWgslData)?.type);
+  return (
+    (value as AnyWgslData)?.[$internal] &&
+    wgslTypeLiterals.includes((value as AnyWgslData)?.type)
+  );
 }
 
 /**
@@ -1307,7 +1354,7 @@ export function isWgslData(value: unknown): value is AnyWgslData {
 export function isWgslArray<T extends WgslArray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.type === 'array';
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'array';
 }
 
 /**
@@ -1325,7 +1372,7 @@ export function isWgslArray<T extends WgslArray>(
 export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
-  return !!(schema as T)?.[$structTag];
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'struct';
 }
 
 /**
@@ -1336,7 +1383,7 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtrFn(d.f32) // false
  */
 export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
-  return (schema as T)?.type === 'ptr';
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'ptr';
 }
 
 /**
@@ -1349,49 +1396,55 @@ export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
 export function isAtomic<T extends Atomic<U32 | I32>>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.type === 'atomic';
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'atomic';
 }
 
 export function isAlignAttrib<T extends Align<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === '@align';
+  return (value as T)?.[$internal] && (value as T)?.type === '@align';
 }
 
 export function isSizeAttrib<T extends Size<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === '@size';
+  return (value as T)?.[$internal] && (value as T)?.type === '@size';
 }
 
 export function isLocationAttrib<T extends Location<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === '@location';
+  return (value as T)?.[$internal] && (value as T)?.type === '@location';
 }
 
 export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === '@interpolate';
+  return (value as T)?.[$internal] && (value as T)?.type === '@interpolate';
 }
 
 export function isBuiltinAttrib<T extends Builtin<string>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === '@builtin';
+  return (value as T)?.[$internal] && (value as T)?.type === '@builtin';
 }
 
 export function isDecorated<T extends Decorated>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.type === 'decorated';
+  return (value as T)?.[$internal] && (value as T)?.type === 'decorated';
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return (value as AbstractFloat).type === 'abstractFloat';
+  return (
+    (value as AbstractFloat)?.[$internal] &&
+    (value as AbstractFloat).type === 'abstractFloat'
+  );
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
-  return (value as AbstractInt).type === 'abstractInt';
+  return (
+    (value as AbstractInt)?.[$internal] &&
+    (value as AbstractInt).type === 'abstractInt'
+  );
 }

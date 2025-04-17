@@ -1,8 +1,10 @@
 import { arrayOf } from './data/array.ts';
 import { attribute } from './data/attributes.ts';
+import type { LooseDecorated } from './data/dataTypes.ts';
 import { f32, u32 } from './data/numeric.ts';
 import { vec3u, vec4f } from './data/vector.ts';
 import type {
+  AnyWgslData,
   BaseData,
   Builtin,
   Decorated,
@@ -12,6 +14,7 @@ import type {
   Vec4f,
   WgslArray,
 } from './data/wgslTypes.ts';
+import { $internal } from './shared/symbols.ts';
 
 // ----------
 // Public API
@@ -51,67 +54,49 @@ export type BuiltinSubgroupInvocationId = Decorated<
 >;
 export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
 
+function defineBuiltin<T extends Decorated | LooseDecorated>(
+  dataType: AnyWgslData,
+  value: T['attribs'][0] extends { value: infer TValue } ? TValue : never,
+): T {
+  return attribute(dataType, {
+    [$internal]: true,
+    type: '@builtin',
+    // biome-ignore lint/suspicious/noExplicitAny: it's fine
+    value: value as any,
+  }) as T;
+}
+
 export const builtin = {
-  vertexIndex: attribute(u32, {
-    type: '@builtin',
-    value: 'vertex_index',
-  }) as BuiltinVertexIndex,
-  instanceIndex: attribute(u32, {
-    type: '@builtin',
-    value: 'instance_index',
-  }) as BuiltinInstanceIndex,
-  position: attribute(vec4f, {
-    type: '@builtin',
-    value: 'position',
-  }) as BuiltinPosition,
-  clipDistances: attribute(arrayOf(u32, 8), {
-    type: '@builtin',
-    value: 'clip_distances',
-  }) as BuiltinClipDistances,
-  frontFacing: attribute(f32, {
-    type: '@builtin',
-    value: 'front_facing',
-  }) as BuiltinFrontFacing,
-  fragDepth: attribute(f32, {
-    type: '@builtin',
-    value: 'frag_depth',
-  }) as BuiltinFragDepth,
-  sampleIndex: attribute(u32, {
-    type: '@builtin',
-    value: 'sample_index',
-  }) as BuiltinSampleIndex,
-  sampleMask: attribute(u32, {
-    type: '@builtin',
-    value: 'sample_mask',
-  }) as BuiltinSampleMask,
-  localInvocationId: attribute(vec3u, {
-    type: '@builtin',
-    value: 'local_invocation_id',
-  }) as BuiltinLocalInvocationId,
-  localInvocationIndex: attribute(u32, {
-    type: '@builtin',
-    value: 'local_invocation_index',
-  }) as BuiltinLocalInvocationIndex,
-  globalInvocationId: attribute(vec3u, {
-    type: '@builtin',
-    value: 'global_invocation_id',
-  }) as BuiltinGlobalInvocationId,
-  workgroupId: attribute(vec3u, {
-    type: '@builtin',
-    value: 'workgroup_id',
-  }) as BuiltinWorkgroupId,
-  numWorkgroups: attribute(vec3u, {
-    type: '@builtin',
-    value: 'num_workgroups',
-  }) as BuiltinNumWorkgroups,
-  subgroupInvocationId: attribute(u32, {
-    type: '@builtin',
-    value: 'subgroup_invocation_id',
-  }) as BuiltinSubgroupInvocationId,
-  subgroupSize: attribute(u32, {
-    type: '@builtin',
-    value: 'subgroup_size',
-  }) as BuiltinSubgroupSize,
+  vertexIndex: defineBuiltin<BuiltinVertexIndex>(u32, 'vertex_index'),
+  instanceIndex: defineBuiltin<BuiltinInstanceIndex>(u32, 'instance_index'),
+  position: defineBuiltin<BuiltinPosition>(vec4f, 'position'),
+  clipDistances: defineBuiltin<BuiltinClipDistances>(
+    arrayOf(u32, 8),
+    'clip_distances',
+  ),
+  frontFacing: defineBuiltin<BuiltinFrontFacing>(f32, 'front_facing'),
+  fragDepth: defineBuiltin<BuiltinFragDepth>(f32, 'frag_depth'),
+  sampleIndex: defineBuiltin<BuiltinSampleIndex>(u32, 'sample_index'),
+  sampleMask: defineBuiltin<BuiltinSampleMask>(u32, 'sample_mask'),
+  localInvocationId: defineBuiltin<BuiltinLocalInvocationId>(
+    vec3u,
+    'local_invocation_id',
+  ),
+  localInvocationIndex: defineBuiltin<BuiltinLocalInvocationIndex>(
+    u32,
+    'local_invocation_index',
+  ),
+  globalInvocationId: defineBuiltin<BuiltinGlobalInvocationId>(
+    vec3u,
+    'global_invocation_id',
+  ),
+  workgroupId: defineBuiltin<BuiltinWorkgroupId>(vec3u, 'workgroup_id'),
+  numWorkgroups: defineBuiltin<BuiltinNumWorkgroups>(vec3u, 'num_workgroups'),
+  subgroupInvocationId: defineBuiltin<BuiltinSubgroupInvocationId>(
+    u32,
+    'subgroup_invocation_id',
+  ),
+  subgroupSize: defineBuiltin<BuiltinSubgroupSize>(u32, 'subgroup_size'),
 } as const;
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];

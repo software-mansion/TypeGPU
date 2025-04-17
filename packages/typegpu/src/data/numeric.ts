@@ -1,5 +1,6 @@
 import bin from 'typed-binary';
 import { createDualImpl } from '../shared/generators.ts';
+import { $internal } from '../shared/symbols.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -11,10 +12,12 @@ import type {
 } from './wgslTypes.ts';
 
 export const abstractInt = {
+  [$internal]: true,
   type: 'abstractInt',
 } as AbstractInt;
 
 export const abstractFloat = {
+  [$internal]: true,
   type: 'abstractFloat',
 } as AbstractFloat;
 
@@ -22,6 +25,7 @@ export const abstractFloat = {
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  */
 export const bool: Bool = {
+  [$internal]: true,
   type: 'bool',
 } as Bool;
 

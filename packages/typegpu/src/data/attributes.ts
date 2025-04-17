@@ -5,6 +5,7 @@ import type {
   InferPartial,
   MemIdentity,
 } from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
@@ -157,8 +158,12 @@ export function align<TAlign extends number, TData extends AnyData>(
   alignment: TAlign,
   data: TData,
 ): Decorate<TData, Align<TAlign>> {
-  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
-  return attribute(data, { type: '@align', value: alignment }) as any;
+  return attribute(data, {
+    [$internal]: true,
+    type: '@align',
+    value: alignment,
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
 }
 
 /**
@@ -177,8 +182,12 @@ export function size<TSize extends number, TData extends AnyData>(
   size: TSize,
   data: TData,
 ): Decorate<TData, Size<TSize>> {
-  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
-  return attribute(data, { type: '@size', value: size }) as any;
+  return attribute(data, {
+    [$internal]: true,
+    type: '@size',
+    value: size,
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
 }
 
 /**
@@ -198,8 +207,12 @@ export function location<TLocation extends number, TData extends AnyData>(
   location: TLocation,
   data: TData,
 ): Decorate<TData, Location<TLocation>> {
-  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
-  return attribute(data, { type: '@location', value: location }) as any;
+  return attribute(data, {
+    [$internal]: true,
+    type: '@location',
+    value: location,
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
 }
 
 /**
@@ -258,6 +271,7 @@ export function interpolate<
   data: TData,
 ): Decorate<TData, Interpolate<TInterpolation>> {
   return attribute(data, {
+    [$internal]: true,
     type: '@interpolate',
     value: interpolationType,
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
@@ -290,7 +304,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
-  // Type-token, not available at runtime
+  public readonly [$internal] = true;
   public declare readonly [$repr]: Infer<TInner>;
 
   constructor(
@@ -342,6 +356,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
+  public readonly [$internal] = true;
   public readonly type = 'decorated';
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
@@ -354,5 +369,6 @@ class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {
+  public readonly [$internal] = true;
   public readonly type = 'loose-decorated';
 }
