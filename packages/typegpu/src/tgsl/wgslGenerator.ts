@@ -1,4 +1,4 @@
-import type * as tinyest from 'tinyest';
+import * as tinyest from 'tinyest';
 import type { AnyData } from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
@@ -16,6 +16,8 @@ import {
   getTypeFromWgsl,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
+
+const { NodeTypeCatalog: NODE } = tinyest;
 
 const parenthesizedOps = [
   '==',
@@ -100,12 +102,12 @@ export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
 
 export function generateBlock(
   ctx: GenerationCtx,
-  value: tinyest.Block,
+  [_, statements]: tinyest.Block,
 ): string {
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
-${value.b.map((statement) => generateStatement(ctx, statement)).join('\n')}
+${statements.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
   } finally {
     ctx.popBlockScope();
@@ -136,13 +138,18 @@ export function generateExpression(
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
+
   if (typeof expression === 'boolean') {
     return generateBoolean(ctx, expression);
   }
 
-  if ('x' in expression) {
+  if (
+    expression[0] === NODE.logicalExpr ||
+    expression[0] === NODE.binaryExpr ||
+    expression[0] === NODE.assignmentExpr
+  ) {
     // Logical/Binary/Assignment Expression
-    const [lhs, op, rhs] = expression.x;
+    const [_, lhs, op, rhs] = expression;
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
@@ -158,9 +165,9 @@ export function generateExpression(
     };
   }
 
-  if ('p' in expression) {
-    // Update Expression
-    const [op, arg] = expression.p;
+  if (expression[0] === NODE.postUpdate) {
+    // Post-Update Expression
+    const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
     const argStr = resolveRes(ctx, argExpr);
 
@@ -170,9 +177,9 @@ export function generateExpression(
     };
   }
 
-  if ('u' in expression) {
+  if (expression[0] === NODE.unaryExpr) {
     // Unary Expression
-    const [op, arg] = expression.u;
+    const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
     const argStr = resolveRes(ctx, argExpr);
 
@@ -183,9 +190,9 @@ export function generateExpression(
     };
   }
 
-  if ('a' in expression) {
+  if (expression[0] === NODE.memberAccess) {
     // Member Access
-    const [targetId, property] = expression.a;
+    const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
 
     if (typeof target.value === 'string') {
@@ -252,9 +259,9 @@ export function generateExpression(
     throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
-  if ('i' in expression) {
+  if (expression[0] === NODE.indexAccess) {
     // Index Access
-    const [target, property] = expression.i;
+    const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
     const propertyExpr = generateExpression(ctx, property);
     const targetStr = resolveRes(ctx, targetExpr);
@@ -268,18 +275,18 @@ export function generateExpression(
     };
   }
 
-  if ('n' in expression) {
+  if (expression[0] === NODE.numericLiteral) {
     // Numeric Literal
-    const type = numericLiteralToSnippet(expression.n);
+    const type = numericLiteralToSnippet(expression[1]);
     if (!type) {
-      throw new Error(`Invalid numeric literal ${expression.n}`);
+      throw new Error(`Invalid numeric literal ${expression[1]}`);
     }
     return type;
   }
 
-  if ('f' in expression) {
+  if (expression[0] === NODE.call) {
     // Function Call
-    const [callee, args] = expression.f;
+    const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
 
@@ -327,9 +334,9 @@ export function generateExpression(
     };
   }
 
-  if ('o' in expression) {
+  if (expression[0] === NODE.objectExpr) {
     // Object Literal
-    const obj = expression.o;
+    const obj = expression[1];
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
     const generateEntries = (values: tinyest.Expression[]) =>
@@ -364,11 +371,12 @@ export function generateExpression(
     };
   }
 
-  if ('y' in expression) {
+  if (expression[0] === NODE.arrayExpr) {
+    const [_, valuesRaw] = expression;
     // Array Expression
-    const values = expression.y.map((value) => {
-      return generateExpression(ctx, value);
-    });
+    const values = valuesRaw.map((value) =>
+      generateExpression(ctx, value as tinyest.Expression),
+    );
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
     }
@@ -403,8 +411,12 @@ export function generateExpression(
     };
   }
 
-  if ('s' in expression) {
+  if (expression[0] === NODE.stringLiteral) {
     throw new Error('Cannot use string literals in TGSL.');
+  }
+
+  if (expression[0] === NODE.preUpdate) {
+    throw new Error('Cannot use pre-updates in TGSL.');
   }
 
   assertExhaustive(expression);
@@ -422,32 +434,33 @@ export function generateStatement(
     return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
   }
 
-  if ('r' in statement) {
+  if (statement[0] === NODE.return) {
+    const returnNode = statement[1];
+    const returnValue =
+      returnNode !== undefined
+        ? resolveRes(ctx, generateExpression(ctx, returnNode))
+        : undefined;
+
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
     if (
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
-      statement.r !== null &&
-      typeof statement.r === 'object' &&
-      'o' in statement.r
+      typeof returnNode === 'object' &&
+      returnNode[0] === NODE.objectExpr
     ) {
-      const resource = resolveRes(ctx, generateExpression(ctx, statement.r));
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],
       );
-      return `${ctx.pre}return ${resolvedStruct}(${resource});`;
+      return `${ctx.pre}return ${resolvedStruct}(${returnValue});`;
     }
 
-    return statement.r === null
-      ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${resolveRes(
-          ctx,
-          generateExpression(ctx, statement.r),
-        )};`;
+    return returnValue
+      ? `${ctx.pre}return ${returnValue};`
+      : `${ctx.pre}return;`;
   }
 
-  if ('q' in statement) {
-    const [cond, cons, alt] = statement.q;
+  if (statement[0] === NODE.if) {
+    const [_, cond, cons, alt] = statement;
     const condition = resolveRes(ctx, generateExpression(ctx, cond));
 
     ctx.indent(); // {
@@ -471,8 +484,8 @@ ${ctx.pre}else
 ${alternate}`;
   }
 
-  if ('l' in statement || 'c' in statement) {
-    const [rawId, rawValue] = 'l' in statement ? statement.l : statement.c;
+  if (statement[0] === NODE.let || statement[0] === NODE.const) {
+    const [_, rawId, rawValue] = statement;
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
     if (!eq || !rawValue) {
@@ -489,7 +502,7 @@ ${alternate}`;
     // If the value is a plain JS object it has to be an output struct
     if (
       typeof rawValue === 'object' &&
-      'o' in rawValue &&
+      rawValue[0] === NODE.objectExpr &&
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
     ) {
       const resolvedStruct = ctx.resolve(
@@ -501,18 +514,12 @@ ${alternate}`;
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
   }
 
-  if ('b' in statement) {
-    ctx.pushBlockScope();
-    try {
-      return generateBlock(ctx, statement);
-    } finally {
-      ctx.popBlockScope();
-    }
+  if (statement[0] === NODE.block) {
+    return generateBlock(ctx, statement);
   }
 
-  // 'j' stands for for (trust me)
-  if ('j' in statement) {
-    const [init, condition, update, body] = statement.j;
+  if (statement[0] === NODE.for) {
+    const [_, init, condition, update, body] = statement;
 
     const initStatement = init ? generateStatement(ctx, init) : undefined;
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
@@ -534,8 +541,8 @@ ${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
 ${bodyStr}`;
   }
 
-  if ('w' in statement) {
-    const [condition, body] = statement.w;
+  if (statement[0] === NODE.while) {
+    const [_, condition, body] = statement;
     const conditionStr = resolveRes(ctx, generateExpression(ctx, condition));
 
     ctx.indent();
@@ -547,11 +554,11 @@ ${ctx.pre}while (${conditionStr})
 ${bodyStr}`;
   }
 
-  if ('k' in statement) {
+  if (statement[0] === NODE.continue) {
     return `${ctx.pre}continue;`;
   }
 
-  if ('d' in statement) {
+  if (statement[0] === NODE.break) {
     return `${ctx.pre}break;`;
   }
 

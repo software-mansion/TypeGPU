@@ -1,5 +1,5 @@
 import { JitTranspiler } from 'tgpu-jit';
-import type * as tinyest from 'tinyest';
+import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
 import * as d from '../../src/data/index.ts';
@@ -13,6 +13,8 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+
+const { NodeTypeCatalog: NODE } = tinyest;
 
 const transpiler = new JitTranspiler();
 
@@ -45,13 +47,9 @@ describe('wgslGenerator', () => {
 
     const parsedBody = transpiler.transpileFn(code).body;
 
-    expect(parsedBody).toEqual({
-      b: [
-        {
-          r: true,
-        },
-      ],
-    });
+    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+      `"[0,[[10,true]]]"`,
+    );
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
@@ -69,8 +67,9 @@ describe('wgslGenerator', () => {
 
     const parsedBody = transpiler.transpileFn(code).body;
 
-    // biome-ignore format: <it's better that way>
-    expect(parsedBody).toEqual({ b: [{ l: ['a', { n: '12', },], }, { x: ['a', '+=', { n: '21', },], }, { r: 'a', },], });
+    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+      `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
+    );
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
@@ -114,15 +113,18 @@ describe('wgslGenerator', () => {
 
     const parsedBody = transpiler.transpile(code);
 
-    expect(parsedBody).toEqual({
-      b: Object.entries(literals).map(([key, { value }]) => ({
-        l: [key, { n: value }],
-      })),
-    });
+    expect(parsedBody).toEqual([
+      NODE.block,
+      Object.entries(literals).map(([key, { value }]) => [
+        NODE.let,
+        key,
+        [NODE.numericLiteral, value],
+      ]),
+    ]);
 
-    for (const stmt of (parsedBody as tinyest.Block).b) {
+    for (const stmt of (parsedBody as tinyest.Block)[1]) {
       const letStatement = stmt as tinyest.Let;
-      const [name, numLiteral] = letStatement.l;
+      const [_, name, numLiteral] = letStatement;
       const generatedExpr = wgslGenerator.generateExpression(
         ctx,
         numLiteral as tinyest.Num,
@@ -166,10 +168,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ r: { x: [{ a: [{ a: ['testUsage', 'value'], }, 'a',], }, '+', { a: [{ a: [{ a: ['testUsage', 'value'], }, 'b',], }, 'x',], },], }, },], } as const;
-
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
+    );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
       d.u32,
@@ -177,30 +178,29 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                      ^ this should be a u32
+    //                   ^ this should be a u32
     const res1 = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
-        .x[0] as tinyest.Expression,
+      // biome-ignore format: <it's better that way>
+      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
     );
 
     expect(res1.dataType).toEqual(d.u32);
 
     // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                                            ^ this should be a u32
+    //                                       ^ this should be a u32
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
-        .x[2] as tinyest.Expression,
+      // biome-ignore format: <it's better that way>
+      (((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
     );
     expect(res2.dataType).toEqual(d.u32);
 
     // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //              ^ this should be a u32
+    //            ^ this should be a u32
     const sum = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
     expect(sum.dataType).toEqual(d.u32);
   });
@@ -230,10 +230,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ r: { i: [{ a: ['testUsage', 'value'], }, { n: '3', },], }, },], } as const;
-
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -242,11 +241,10 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: return testUsage.value[3];
-    //              ^ this should be a u32
+    //                   ^ this should be a u32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.u32);
@@ -300,19 +298,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // One AST to rule them all ৻(•̀ ᗜ •́৻)
-    const expectedAst = {
-      b: [
-        // biome-ignore format: <good luck with this formatted>
-        { c: ['value', { f: [{ a: ['std', 'atomicLoad'] }, [{ a: [{ i: [{ a: [{ a: [{ a: ['testUsage', 'value'] }, 'b'] }, 'aa'] }, 'idx'] }, 'y'] }]] }] },
-        // biome-ignore format: <good luck with this formatted>
-        { c: ['vec', { f: [{ a: ['std', 'mix'] }, [{ f: [{ a: ['d', 'vec4f'] }, []] }, { a: [{ a: ['testUsage', 'value'] }, 'a'] }, 'value']] }] },
-        // biome-ignore format: <good luck with this formatted>
-        { f: [{ a: ['std', 'atomicStore'] }, [{ a: [{ i: [{ a: [{ a: [{ a: ['testUsage', 'value'] }, 'b'] }, 'aa'] }, 'idx'] }, 'x'] }, { a: ['vec', 'y'] }]] },
-        { r: 'vec' },
-      ],
-    } as const;
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
+    );
 
     if (astInfo.ast.argNames.type !== 'identifiers') {
       throw new Error('Expected arguments as identifier names in ast');
@@ -333,9 +321,8 @@ describe('wgslGenerator', () => {
     //                           ^ this part should be a i32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore lint/style/noNonNullAssertion: <it's there>
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]!
-        .c![1] as unknown as tinyest.Expression,
+      // biome-ignore format: <good luck with this formatted>
+      ((astInfo.ast.body)[1][0] as tinyest.Const)[2],
     );
 
     expect(res.dataType).toEqual(d.i32);
@@ -346,29 +333,27 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore lint/style/noNonNullAssertion: <it's there>
-      (astInfo.ast.body as unknown as typeof expectedAst).b[1]!
-        .c![1] as unknown as tinyest.Expression,
+      // biome-ignore format: <good luck with this formatted>
+      ((astInfo.ast.body)[1][1] as tinyest.Const)[2],
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
     expect(res2.dataType).toEqual(d.vec4f);
 
     // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
-    //                             ^ this part should be an atomic u32
-    //                  ^ this part should be void
+    //                            ^ this part should be an atomic u32
+    //            ^ this part should be void
     ctx[$internal].itemStateStack.pushBlockScope();
     wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
     const res3 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore lint/style/noNonNullAssertion: <it's there>
-      (astInfo.ast.body as unknown as typeof expectedAst).b[2]!
-        .f![1][0] as unknown as tinyest.Expression,
+      // biome-ignore format: <good luck with this formatted>
+      ((astInfo.ast.body)[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
     );
     const res4 = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst)
-        .b[2] as unknown as tinyest.Expression,
+      // biome-ignore format: <good luck with this formatted>
+      (astInfo.ast.body)[1][2] as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -387,30 +372,9 @@ describe('wgslGenerator', () => {
 
     const parsed = transpiler.transpileFn(code).body;
 
-    expect(parsed).toEqual({
-      b: [
-        {
-          j: [
-            {
-              l: ['i', { n: '0' }],
-            },
-            {
-              x: ['i', '<', { n: '10' }],
-            },
-            {
-              x: ['i', '+=', { n: '1' }],
-            },
-            {
-              b: [
-                {
-                  k: null,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[14,[12,"i",[5,"0"]],[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
+    );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
@@ -431,31 +395,9 @@ describe('wgslGenerator', () => {
 
     const parsed = transpiler.transpileFn(code).body;
 
-    expect(parsed).toEqual({
-      b: [
-        {
-          l: ['i', { n: '0' }],
-        },
-        {
-          j: [
-            undefined,
-            {
-              x: ['i', '<', { n: '10' }],
-            },
-            {
-              x: ['i', '+=', { n: '1' }],
-            },
-            {
-              b: [
-                {
-                  k: null,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[12,"i",[5,"0"]],[14,null,[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
+    );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
@@ -476,27 +418,9 @@ describe('wgslGenerator', () => {
 
     const parsed = transpiler.transpileFn(code).body;
 
-    expect(parsed).toEqual({
-      b: [
-        {
-          l: ['i', { n: '0' }],
-        },
-        {
-          w: [
-            {
-              x: ['i', '<', { n: '10' }],
-            },
-            {
-              b: [
-                {
-                  x: ['i', '+=', { n: '1' }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[12,"i",[5,"0"]],[15,[1,"i","<",[5,"10"]],[0,[[2,"i","+=",[5,"1"]]]]]]]"`,
+    );
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
@@ -533,10 +457,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ r: { a: ['derived', 'value'], }, },], } as const;
-
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[7,"derived","value"]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -548,8 +471,8 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as tinyest.Expression,
+      // biome-ignore format: <it's better that way>
+      ((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.vec4u);
@@ -578,10 +501,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ r: { i: [{ a: ['derived', 'value'], }, 'idx'] }, },], } as const;
-
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[8,[7,"derived","value"],"idx"]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [{ value: 'idx', dataType: d.u32 }],
@@ -593,8 +515,7 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .r as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.f32);
@@ -625,10 +546,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ c: ['arr', { 'y': [{ n: '1' }, { n: '2' }, { n: '3' }] },] }, { r: { i: ['arr', { n: '1' }] }, },], } as const;
-
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -636,12 +556,12 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: var arr = array<u32, 3>(1, 2, 3);
-    //             ^ this should be an array<u32, 3>
+    // Check for: const arr = [1, 2, 3]
+    //                        ^ this should be an array<u32, 3>
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .c[1] as unknown as tinyest.Expression,
+      // biome-ignore format: <it's better that way>
+      ((astInfo.ast.body)[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
@@ -687,7 +607,9 @@ describe('wgslGenerator', () => {
     // biome-ignore format: <it's better that way>
     const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
 
-    expect(astInfo.ast.body).toEqual(expectedAst);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -695,12 +617,11 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
-    //            ^ this should be an array<TestStruct, 2>
+    // Check for: const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
+    //                        ^ this should be an array<TestStruct, 2>
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-        .c[1] as unknown as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(testStruct, 2));
@@ -738,78 +659,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(astInfo.ast.body).toMatchInlineSnapshot(`
-      {
-        "b": [
-          {
-            "c": [
-              "arr",
-              {
-                "y": [
-                  {
-                    "a": [
-                      "derived",
-                      "value",
-                    ],
-                  },
-                  {
-                    "f": [
-                      {
-                        "a": [
-                          "std",
-                          "mul",
-                        ],
-                      },
-                      [
-                        {
-                          "a": [
-                            "derived",
-                            "value",
-                          ],
-                        },
-                        {
-                          "f": [
-                            {
-                              "a": [
-                                "d",
-                                "vec2f",
-                              ],
-                            },
-                            [
-                              {
-                                "n": "2",
-                              },
-                              {
-                                "n": "2",
-                              },
-                            ],
-                          ],
-                        },
-                      ],
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            "r": {
-              "a": [
-                {
-                  "i": [
-                    "arr",
-                    {
-                      "n": "1",
-                    },
-                  ],
-                },
-                "y",
-              ],
-            },
-          },
-        ],
-      }
-    `);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[7,"derived","value"],[6,[7,"std","mul"],[[7,"derived","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+    );
   });
 
   it('allows for member access on values returned from function calls', () => {
@@ -850,30 +702,9 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(astInfo.ast.body).toMatchInlineSnapshot(`
-      {
-        "b": [
-          {
-            "r": {
-              "a": [
-                {
-                  "a": [
-                    {
-                      "f": [
-                        "fnOne",
-                        [],
-                      ],
-                    },
-                    "y",
-                  ],
-                },
-                "x",
-              ],
-            },
-          },
-        ],
-      }
-    `);
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[7,[7,[6,"fnOne",[]],"y"],"x"]]]]"`,
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
@@ -882,11 +713,11 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: return fnOne().y.x;
-    //                     ^ this should be a f32
+    //                   ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore lint/suspicious/noExplicitAny: <sue me>
-      (astInfo.ast.body as any).b[0].r as tinyest.Expression,
+      // biome-ignore format: <it's better that way>
+      ((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.f32);
