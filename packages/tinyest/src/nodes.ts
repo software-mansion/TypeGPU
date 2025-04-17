@@ -250,6 +250,7 @@ export type Literal = Num | Str | boolean;
 /** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
 export type Expression =
   | string
+  | Snippet
   | BinaryExpression
   | AssignmentExpression
   | LogicalExpression

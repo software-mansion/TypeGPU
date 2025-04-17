@@ -138,8 +138,14 @@ export function generateExpression(
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
+
   if (typeof expression === 'boolean') {
     return generateBoolean(ctx, expression);
+  }
+
+  if (expression[0] === NODE.snippet) {
+    // TODO: Interpret metadata to extract the data type
+    return { value: expression[1], dataType: UnknownData };
   }
 
   if (
@@ -514,12 +520,7 @@ ${alternate}`;
   }
 
   if (statement[0] === NODE.block) {
-    ctx.pushBlockScope(); // TODO: Is this needed? It's also in the `generateBlock` function.
-    try {
-      return generateBlock(ctx, statement);
-    } finally {
-      ctx.popBlockScope();
-    }
+    return generateBlock(ctx, statement);
   }
 
   if (statement[0] === NODE.for) {
