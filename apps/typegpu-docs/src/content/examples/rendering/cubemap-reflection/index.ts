@@ -401,7 +401,19 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
+canvas.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 1) {
+    isDragging = true;
+    prevX = event.touches[0].clientX;
+    prevY = event.touches[0].clientY;
+  }
+});
+
 window.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+window.addEventListener('touchend', () => {
   isDragging = false;
 });
 
@@ -412,6 +424,18 @@ canvas.addEventListener('mousemove', (event) => {
   prevY = event.clientY;
 
   if (isDragging) {
+    updateCameraOrbit(dx, dy);
+  }
+});
+
+canvas.addEventListener('touchmove', (event) => {
+  if (isDragging && event.touches.length === 1) {
+    event.preventDefault();
+    const dx = event.touches[0].clientX - prevX;
+    const dy = event.touches[0].clientY - prevY;
+    prevX = event.touches[0].clientX;
+    prevY = event.touches[0].clientY;
+
     updateCameraOrbit(dx, dy);
   }
 });
