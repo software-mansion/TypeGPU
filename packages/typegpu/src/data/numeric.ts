@@ -1,5 +1,6 @@
 import bin from 'typed-binary';
 import { createDualImpl } from '../shared/generators.ts';
+import { $internal } from '../shared/symbols.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -11,10 +12,12 @@ import type {
 } from './wgslTypes.ts';
 
 export const abstractInt = {
+  [$internal]: true,
   type: 'abstractInt',
 } as AbstractInt;
 
 export const abstractFloat = {
+  [$internal]: true,
   type: 'abstractFloat',
 } as AbstractFloat;
 
@@ -22,6 +25,7 @@ export const abstractFloat = {
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  */
 export const bool: Bool = {
+  [$internal]: true,
   type: 'bool',
 } as Bool;
 
@@ -59,6 +63,7 @@ const u32Cast = createDualImpl(
  * const value = u32(-3.1); // 0
  */
 export const u32: U32 = Object.assign(u32Cast, {
+  [$internal]: true,
   type: 'u32',
 }) as unknown as U32;
 
@@ -98,6 +103,7 @@ const i32Cast = createDualImpl(
  * const value = i32(10000000000) // 1410065408
  */
 export const i32: I32 = Object.assign(i32Cast, {
+  [$internal]: true,
   type: 'i32',
 }) as unknown as I32;
 
@@ -126,6 +132,7 @@ const f32Cast = createDualImpl(
  * const value = f32(true); // 1
  */
 export const f32: F32 = Object.assign(f32Cast, {
+  [$internal]: true,
   type: 'f32',
 }) as unknown as F32;
 
@@ -157,5 +164,6 @@ const f16Cast = createDualImpl(
  * const value = f16(21877.5); // 21872
  */
 export const f16: F16 = Object.assign(f16Cast, {
+  [$internal]: true,
   type: 'f16',
 }) as unknown as F16;

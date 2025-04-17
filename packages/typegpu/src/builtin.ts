@@ -12,6 +12,7 @@ import type {
   Vec4f,
   WgslArray,
 } from './data/wgslTypes.ts';
+import { $internal } from './shared/symbols.ts';
 
 // ----------
 // Public API
@@ -53,62 +54,77 @@ export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
 
 export const builtin = {
   vertexIndex: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'vertex_index',
   }) as BuiltinVertexIndex,
   instanceIndex: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'instance_index',
   }) as BuiltinInstanceIndex,
   position: attribute(vec4f, {
+    [$internal]: true,
     type: '@builtin',
     value: 'position',
   }) as BuiltinPosition,
   clipDistances: attribute(arrayOf(u32, 8), {
+    [$internal]: true,
     type: '@builtin',
     value: 'clip_distances',
   }) as BuiltinClipDistances,
   frontFacing: attribute(f32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'front_facing',
   }) as BuiltinFrontFacing,
   fragDepth: attribute(f32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'frag_depth',
   }) as BuiltinFragDepth,
   sampleIndex: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'sample_index',
   }) as BuiltinSampleIndex,
   sampleMask: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'sample_mask',
   }) as BuiltinSampleMask,
   localInvocationId: attribute(vec3u, {
+    [$internal]: true,
     type: '@builtin',
     value: 'local_invocation_id',
   }) as BuiltinLocalInvocationId,
   localInvocationIndex: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'local_invocation_index',
   }) as BuiltinLocalInvocationIndex,
   globalInvocationId: attribute(vec3u, {
+    [$internal]: true,
     type: '@builtin',
     value: 'global_invocation_id',
   }) as BuiltinGlobalInvocationId,
   workgroupId: attribute(vec3u, {
+    [$internal]: true,
     type: '@builtin',
     value: 'workgroup_id',
   }) as BuiltinWorkgroupId,
   numWorkgroups: attribute(vec3u, {
+    [$internal]: true,
     type: '@builtin',
     value: 'num_workgroups',
   }) as BuiltinNumWorkgroups,
   subgroupInvocationId: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'subgroup_invocation_id',
   }) as BuiltinSubgroupInvocationId,
   subgroupSize: attribute(u32, {
+    [$internal]: true,
     type: '@builtin',
     value: 'subgroup_size',
   }) as BuiltinSubgroupSize,

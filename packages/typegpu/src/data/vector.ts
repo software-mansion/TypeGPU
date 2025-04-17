@@ -1,5 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
+import { $internal } from '../shared/symbols.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -318,5 +319,9 @@ function makeVecSchema<TValue, S extends number | boolean>(
     }),
   );
 
-  return Object.assign(construct, { type, [$repr]: undefined as TValue });
+  return Object.assign(construct, {
+    [$internal]: true,
+    type,
+    [$repr]: undefined as TValue,
+  });
 }
