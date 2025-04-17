@@ -5,14 +5,14 @@
 export const NodeTypeCatalog = {
   // frequent
   block: 0,
-  binary_expr: 1,
-  assignment_expr: 2,
-  logical_expr: 3,
-  unary_expr: 4,
-  numeric_literal: 5,
+  binaryExpr: 1,
+  assignmentExpr: 2,
+  logicalExpr: 3,
+  unaryExpr: 4,
+  numericLiteral: 5,
   call: 6,
-  member_access: 7,
-  index_access: 8,
+  memberAccess: 7,
+  indexAccess: 8,
 
   // regular
   return: 10,
@@ -26,11 +26,11 @@ export const NodeTypeCatalog = {
 
   // rare
   snippet: 100,
-  array_expr: 101,
-  pre_update: 102,
-  post_update: 103,
-  string_literal: 104,
-  object_expr: 105,
+  arrayExpr: 101,
+  preUpdate: 102,
+  postUpdate: 103,
+  stringLiteral: 104,
+  objectExpr: 105,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -146,7 +146,7 @@ export type BinaryOperator =
   | '&';
 
 export type BinaryExpression = readonly [
-  type: NodeTypeCatalog['binary_expr'],
+  type: NodeTypeCatalog['binaryExpr'],
   lhs: Expression,
   op: BinaryOperator,
   rhs: Expression,
@@ -169,7 +169,7 @@ export type AssignmentOperator =
   | '&&=';
 
 export type AssignmentExpression = readonly [
-  type: NodeTypeCatalog['assignment_expr'],
+  type: NodeTypeCatalog['assignmentExpr'],
   lhs: Expression,
   op: AssignmentOperator,
   rhs: Expression,
@@ -178,7 +178,7 @@ export type AssignmentExpression = readonly [
 export type LogicalOperator = '&&' | '||';
 
 export type LogicalExpression = readonly [
-  type: NodeTypeCatalog['logical_expr'],
+  type: NodeTypeCatalog['logicalExpr'],
   lhs: Expression,
   op: LogicalOperator,
   rhs: Expression,
@@ -194,29 +194,29 @@ export type UnaryOperator =
   | 'delete';
 
 export type UnaryExpression = readonly [
-  type: NodeTypeCatalog['unary_expr'],
+  type: NodeTypeCatalog['unaryExpr'],
   op: UnaryOperator,
   inner: Expression,
 ];
 
 export type ObjectExpression = readonly [
-  type: NodeTypeCatalog['object_expr'],
+  type: NodeTypeCatalog['objectExpr'],
   Record<string, Expression>,
 ];
 
 export type ArrayExpression = readonly [
-  type: NodeTypeCatalog['array_expr'],
+  type: NodeTypeCatalog['arrayExpr'],
   values: Expression[],
 ];
 
 export type MemberAccess = readonly [
-  type: NodeTypeCatalog['member_access'],
+  type: NodeTypeCatalog['memberAccess'],
   object: Expression,
   member: string,
 ];
 
 export type IndexAccess = readonly [
-  type: NodeTypeCatalog['index_access'],
+  type: NodeTypeCatalog['indexAccess'],
   object: Expression,
   property: Expression,
 ];
@@ -228,22 +228,22 @@ export type Call = readonly [
 ];
 
 export type PostUpdate = readonly [
-  type: NodeTypeCatalog['pre_update'],
+  type: NodeTypeCatalog['postUpdate'],
   operator: '++' | '--',
   argument: Expression,
 ];
 
 export type PreUpdate = readonly [
-  type: NodeTypeCatalog['post_update'],
+  type: NodeTypeCatalog['preUpdate'],
   operator: '++' | '--',
   argument: Expression,
 ];
 
 /** A numeric literal */
-export type Num = readonly [type: NodeTypeCatalog['numeric_literal'], string];
+export type Num = readonly [type: NodeTypeCatalog['numericLiteral'], string];
 
 /** A string literal */
-export type Str = readonly [type: NodeTypeCatalog['string_literal'], string];
+export type Str = readonly [type: NodeTypeCatalog['stringLiteral'], string];
 
 export type Literal = Num | Str | boolean;
 

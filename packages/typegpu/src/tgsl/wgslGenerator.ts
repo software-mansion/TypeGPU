@@ -149,9 +149,9 @@ export function generateExpression(
   }
 
   if (
-    expression[0] === NODE.logical_expr ||
-    expression[0] === NODE.binary_expr ||
-    expression[0] === NODE.assignment_expr
+    expression[0] === NODE.logicalExpr ||
+    expression[0] === NODE.binaryExpr ||
+    expression[0] === NODE.assignmentExpr
   ) {
     // Logical/Binary/Assignment Expression
     const [_, lhs, op, rhs] = expression;
@@ -170,7 +170,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.post_update) {
+  if (expression[0] === NODE.postUpdate) {
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -182,7 +182,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.unary_expr) {
+  if (expression[0] === NODE.unaryExpr) {
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
@@ -195,7 +195,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.member_access) {
+  if (expression[0] === NODE.memberAccess) {
     // Member Access
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
@@ -264,7 +264,7 @@ export function generateExpression(
     throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
-  if (expression[0] === NODE.index_access) {
+  if (expression[0] === NODE.indexAccess) {
     // Index Access
     const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
@@ -280,7 +280,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.numeric_literal) {
+  if (expression[0] === NODE.numericLiteral) {
     // Numeric Literal
     const type = numericLiteralToSnippet(expression[1]);
     if (!type) {
@@ -339,7 +339,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.object_expr) {
+  if (expression[0] === NODE.objectExpr) {
     // Object Literal
     const obj = expression[1];
     const callee = ctx.callStack[ctx.callStack.length - 1];
@@ -376,7 +376,7 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.array_expr) {
+  if (expression[0] === NODE.arrayExpr) {
     const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
@@ -416,11 +416,11 @@ export function generateExpression(
     };
   }
 
-  if (expression[0] === NODE.string_literal) {
+  if (expression[0] === NODE.stringLiteral) {
     throw new Error('Cannot use string literals in TGSL.');
   }
 
-  if (expression[0] === NODE.pre_update) {
+  if (expression[0] === NODE.preUpdate) {
     throw new Error('Cannot use pre-updates in TGSL.');
   }
 
@@ -451,7 +451,7 @@ export function generateStatement(
     if (
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
       typeof returnNode === 'object' &&
-      returnNode[0] === NODE.object_expr
+      returnNode[0] === NODE.objectExpr
     ) {
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],
@@ -507,7 +507,7 @@ ${alternate}`;
     // If the value is a plain JS object it has to be an output struct
     if (
       typeof rawValue === 'object' &&
-      rawValue[0] === NODE.object_expr &&
+      rawValue[0] === NODE.objectExpr &&
       wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
     ) {
       const resolvedStruct = ctx.resolve(
