@@ -57,19 +57,25 @@ export const mainVertex = tgpu['~unstable']
     },
     out: VertexOutput,
   })((input) => {
-    const camera = renderLayout.$.camera;
-    const object = celestialBodiesLayout.$.inState[input.instanceIdx];
+    const currentBody = celestialBodiesLayout.$.inState[input.instanceIdx];
     const worldPosition = std.add(
-      std.mul(object.modelTransformationMatrix, input.position),
-      d.vec4f(object.position, 1),
+      // std.mul(0.1, input.position),
+      std.mul(currentBody.modelTransformationMatrix, input.position),
+      d.vec4f(currentBody.position, 1),
+      // d.vec4f(1),
     );
-    const relativeToCamera = std.mul(camera.view, worldPosition);
+
+    const camera = renderLayout.$.camera;
+    const positionOnCanvas = std.mul(
+      camera.projection,
+      std.mul(camera.view, worldPosition),
+    );
     return {
-      position: std.mul(camera.projection, relativeToCamera),
+      position: positionOnCanvas,
       uv: input.uv,
       normals: input.normal,
-      worldPosition: worldPosition.xyz,
-      sphereTextureIndex: object.textureIndex,
+      worldPosition: std.mul(1.00001 / worldPosition.w, worldPosition.xyz),
+      sphereTextureIndex: currentBody.textureIndex,
     };
   })
   .$name('mainVertex');

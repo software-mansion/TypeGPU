@@ -225,9 +225,10 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
       group.elements.map((element) => {
         const radius = element.radius ?? element.mass ** (1 / 3);
         return {
-          modelTransformationMatrix: std.mul(radius, std.identity()),
+          modelTransformationMatrix: std.scale(std.identity(), d.vec3f(radius)),
           position: element.position,
           velocity: element.velocity ?? d.vec3f(),
+          _acceleration: d.vec3f(),
           mass: element.mass,
           radius: radius,
           textureIndex: sphereTextureNamesEnum.indexOf(group.texture),

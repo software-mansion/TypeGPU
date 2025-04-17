@@ -20,7 +20,10 @@ export const computeShader = tgpu['~unstable']
         continue;
       }
       const other = inState.value[i];
-      const dist = std.max(0.1, std.distance(current.position, other.position));
+      const dist = std.max(
+        std.min(current.radius, other.radius),
+        std.distance(current.position, other.position),
+      );
       force = std.add(
         force,
         std.mul(
@@ -29,14 +32,27 @@ export const computeShader = tgpu['~unstable']
         ),
       );
     }
-    let acceleration = d.vec3f();
+    let updatedAcceleration = d.vec3f();
     if (current.mass > 0) {
-      acceleration = std.mul(1 / current.mass, force);
+      updatedAcceleration = std.mul(1 / current.mass, force);
     }
+    const updatedPosition = std.add(
+      current.position,
+      std.add(
+        std.mul(dt, current.velocity),
+        std.mul(dt * dt * 0.5, current._acceleration),
+      ),
+    );
+    const updatedVelocity = std.add(
+      current.velocity,
+      std.mul(0.5 * dt, std.add(current._acceleration, updatedAcceleration)),
+    );
+
     const updatedCurrent = CelestialBody({
       modelTransformationMatrix: current.modelTransformationMatrix,
-      position: std.add(current.position, std.mul(dt, current.velocity)),
-      velocity: std.add(current.velocity, std.mul(dt, acceleration)),
+      velocity: updatedVelocity,
+      position: updatedPosition,
+      _acceleration: updatedAcceleration,
       mass: current.mass,
       radius: current.radius,
       textureIndex: current.textureIndex,

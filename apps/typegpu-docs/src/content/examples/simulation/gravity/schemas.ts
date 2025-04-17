@@ -25,6 +25,9 @@ export const CelestialBody = d.struct({
   modelTransformationMatrix: d.mat4x4f,
   position: d.vec3f,
   velocity: d.vec3f,
+  // _acceleration is required for the leapfrog algorithm,
+  // setting this value has meaning only for one step
+  _acceleration: d.vec3f,
   mass: d.f32,
   radius: d.f32,
   textureIndex: d.u32,
