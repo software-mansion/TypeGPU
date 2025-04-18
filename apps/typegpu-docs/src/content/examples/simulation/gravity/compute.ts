@@ -64,12 +64,13 @@ export const computeShader = tgpu['~unstable']
     position = std.add(position, std.mul(dt, velocity));
 
     const updatedCurrent = CelestialBody({
+      destroyed: current.destroyed,
       modelTransformationMatrix: current.modelTransformationMatrix,
       velocity: velocity,
       position: position,
-      _acceleration: current._acceleration,
       mass: current.mass,
       radius: current.radius,
+      collisionBehavior: current.collisionBehavior,
       textureIndex: current.textureIndex,
     });
 

@@ -22,15 +22,14 @@ export const VertexOutput = {
 };
 
 export const CelestialBody = d.struct({
+  destroyed: d.u32, // boolean
   modelTransformationMatrix: d.mat4x4f,
   position: d.vec3f,
   velocity: d.vec3f,
-  // _acceleration is required for the leapfrog algorithm,
-  // setting this value has meaning only for one step
-  _acceleration: d.vec3f,
   mass: d.f32,
   radius: d.f32,
-  textureIndex: d.u32,
+  collisionBehavior: d.u32, // index of the collisionBehavior enum
+  textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
 });
 
 export const SkyBoxVertex = d.struct({

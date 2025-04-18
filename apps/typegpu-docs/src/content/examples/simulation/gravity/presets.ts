@@ -3,7 +3,7 @@ import * as std from 'typegpu/std';
 import type { SkyBoxNames, SphereTextureNames } from './textures.ts';
 
 export const presetsEnum = [
-  'Planet rings',
+  'Asteroid belt',
   'Test 0',
   'Test 1',
   'Test 2',
@@ -26,7 +26,7 @@ export interface PresetData {
 }
 
 export const presets: Record<Preset, PresetData> = {
-  'Planet rings': {
+  'Asteroid belt': {
     skyBox: 'milky-way',
     celestialBodies: [
       {

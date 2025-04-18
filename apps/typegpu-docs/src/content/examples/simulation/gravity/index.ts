@@ -44,6 +44,7 @@ import {
 // AAA (inny ticket) zderzenia
 // AAA mobile touch support
 // AAA dynamic lighting source, lighting direction
+// AAA ecosphere
 // AAA (inny ticket) show left menu, show code editor zapisane w linku
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -121,7 +122,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Planet rings'),
+  data: await loadPreset('Asteroid belt'),
 };
 
 // Pipelines
@@ -224,12 +225,13 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
       group.elements.map((element) => {
         const radius = element.radius ?? element.mass ** (1 / 3);
         return {
+          destroyed: 0,
           modelTransformationMatrix: std.scale(std.identity(), d.vec3f(radius)),
           position: element.position,
           velocity: element.velocity ?? d.vec3f(),
-          _acceleration: d.vec3f(),
           mass: element.mass,
           radius: radius,
+          collisionBehavior: 0,
           textureIndex: sphereTextureNamesEnum.indexOf(group.texture),
         };
       }),
