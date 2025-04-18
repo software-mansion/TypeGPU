@@ -1,5 +1,4 @@
-export { discard } from './discard.ts';
-
+export { discard } from './discard.js';
 export {
   // ops
   add,
@@ -14,20 +13,19 @@ export {
   clamp,
   cos,
   cross,
+  distance,
   dot,
+  exp,
   floor,
   fract,
   length,
   max,
   min,
   normalize,
-  distance,
-  sin,
-  exp,
   mix,
   pow,
   reflect,
-  neg,
+  sin,
 } from './numeric.js';
 
 export {
@@ -49,7 +47,7 @@ export {
   // other
   isCloseTo,
   select,
-} from './boolean.ts';
+} from './boolean.js';
 
 export {
   atomicLoad,
@@ -65,15 +63,21 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
-} from './atomic.ts';
+} from './atomic.js';
+
+export {
+  identity,
+  translate,
+  scale,
+} from './matrix.js'
 
 export { arrayLength } from './array.js';
 
 export {
-  pack4x8unorm,
   pack2x16float,
-  unpack4x8unorm,
+  pack4x8unorm,
   unpack2x16float,
+  unpack4x8unorm,
 } from './packing.js';
 
 export { textureSample } from './texture.js';

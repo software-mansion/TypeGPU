@@ -545,14 +545,14 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
  * const zero4x4 = mat4x4f(); // filled with zeros
  *
  * @example
- * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+ * const mat = mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
  * mat.columns[0] // vec4f(0, 1, 2, 3)
  * mat.columns[1] // vec4f(4, 5, 6, 7)
  * mat.columns[2] // vec4f(8, 9, 10, 11)
  * mat.columns[3] // vec4f(12, 13, 14, 15)
  *
  * @example
- * const mat = mat3x3f(
+ * const mat = mat4x4f(
  *  vec4f(0, 1, 2, 3),     // column 0
  *  vec4f(4, 5, 6, 7),     // column 1
  *  vec4f(8, 9, 10, 11),   // column 2
