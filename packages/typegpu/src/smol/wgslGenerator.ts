@@ -125,7 +125,6 @@ export function generateExpression(
   if ('x' in expression) {
     // Logical/Binary/Assignment Expression
     const [lhs, op, rhs] = expression.x;
-
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
@@ -144,7 +143,6 @@ export function generateExpression(
   if ('p' in expression) {
     // Update Expression
     const [op, arg] = expression.p;
-
     const argExpr = generateExpression(ctx, arg);
     const argStr = resolveRes(ctx, argExpr);
 
@@ -157,7 +155,6 @@ export function generateExpression(
   if ('u' in expression) {
     // Unary Expression
     const [op, arg] = expression.u;
-
     const argExpr = generateExpression(ctx, arg);
     const argStr = resolveRes(ctx, argExpr);
 
@@ -248,7 +245,6 @@ export function generateExpression(
   if ('i' in expression) {
     // Index Access
     const [target, property] = expression.i;
-
     const targetExpr = generateExpression(ctx, target);
     const propertyExpr = generateExpression(ctx, property);
     const targetStr = resolveRes(ctx, targetExpr);
@@ -273,7 +269,6 @@ export function generateExpression(
 
   if ('n' in expression) {
     // Numeric Literal
-
     const type = numericLiteralToSnippet(expression.n);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression.n}`);
@@ -284,7 +279,6 @@ export function generateExpression(
   if ('f' in expression) {
     // Function Call
     const [callee, args] = expression.f;
-
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
 
@@ -446,7 +440,6 @@ export function generateExpression(
     const values = expression.y.map((value) => {
       return generateExpression(ctx, value);
     });
-
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
     }
@@ -567,7 +560,6 @@ ${alternate}`;
 
   if ('l' in statement || 'c' in statement) {
     const [rawId, rawValue] = 'l' in statement ? statement.l : statement.c;
-
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
     if (!eq || !rawValue) {
