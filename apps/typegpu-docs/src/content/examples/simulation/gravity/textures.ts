@@ -1,5 +1,6 @@
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
+import { type SkyBox, sphereTextureNames } from './enums.ts';
 import { SkyBoxVertex } from './schemas.ts';
 
 function vert(
@@ -62,14 +63,13 @@ export const skyBoxVertices: d.Infer<typeof SkyBoxVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-export type SkyBoxNames = 'campsite' | 'beach' | 'milky-way';
-function getSkyBoxUrls(name: SkyBoxNames) {
+function getSkyBoxUrls(name: SkyBox) {
   return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
     (side) => `/TypeGPU/assets/gravity/skyboxes/${name}/${side}.jpg`,
   );
 }
 
-export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBoxNames) {
+export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBox) {
   const size = 2048;
   const texture = root['~unstable']
     .createTexture({
@@ -96,31 +96,17 @@ export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBoxNames) {
   return texture;
 }
 
-export const sphereTextureNamesEnum = [
-  'sun',
-  'mercury',
-  'venus',
-  'earth',
-  'mars',
-  'jupiter',
-  'saturn',
-  'uranus',
-  'neptune',
-  'moon',
-  'ceres-fictional',
-] as const;
-export type SphereTextureNames = (typeof sphereTextureNamesEnum)[number];
 export async function loadSphereTextures(root: TgpuRoot) {
   const texture = root['~unstable']
     .createTexture({
       dimension: '2d',
-      size: [2048, 1024, sphereTextureNamesEnum.length],
+      size: [2048, 1024, sphereTextureNames.length],
       format: 'rgba8unorm',
     })
     .$usage('sampled', 'render');
 
   await Promise.all(
-    sphereTextureNamesEnum.map(async (name, i) => {
+    sphereTextureNames.map(async (name, i) => {
       const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
       const response = await fetch(url);
       const blob = await response.blob();

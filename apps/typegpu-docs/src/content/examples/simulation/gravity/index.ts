@@ -10,9 +10,10 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute.ts';
+import { type Preset, presets, sphereTextureNames } from './enums.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
-import { type Preset, presets, presetsEnum } from './presets.ts';
+import { examplePresets } from './presets.ts';
 import {
   mainFragment,
   mainVertex,
@@ -30,12 +31,7 @@ import {
   skyBoxVertexLayout,
   textureBindGroupLayout,
 } from './schemas.ts';
-import {
-  loadSkyBox,
-  loadSphereTextures,
-  skyBoxVertices,
-  sphereTextureNamesEnum,
-} from './textures.ts';
+import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
 // AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
 // andromeda x milky way, particles, balls on ground, negative mass
@@ -218,7 +214,7 @@ function frame() {
 frame();
 
 async function loadPreset(preset: Preset): Promise<DynamicResources> {
-  const presetData = presets[preset];
+  const presetData = examplePresets[preset];
 
   const celestialBodies: d.Infer<typeof CelestialBody>[] =
     presetData.celestialBodies.flatMap((group) =>
@@ -232,7 +228,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           mass: element.mass,
           radius: radius,
           collisionBehavior: 0,
-          textureIndex: sphereTextureNamesEnum.indexOf(group.texture),
+          textureIndex: sphereTextureNames.indexOf(group.texture),
         };
       }),
     );
@@ -291,8 +287,8 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 export const controls = {
   Preset: {
-    initial: presetsEnum[0],
-    options: presetsEnum,
+    initial: 'Asteroid belt',
+    options: presets,
     async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;
       // AAA dispose of the oldData

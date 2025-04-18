@@ -1,19 +1,14 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import type { SkyBoxNames, SphereTextureNames } from './textures.ts';
+import type {
+  CollisionBehavior,
+  Preset,
+  SkyBox,
+  SphereTextureNames,
+} from './enums.ts';
 
-export const presetsEnum = [
-  'Asteroid belt',
-  'Test 0',
-  'Test 1',
-  'Test 2',
-  'Test 3',
-  'Test 4',
-  'Test 5',
-] as const;
-export type Preset = (typeof presetsEnum)[number];
 export interface PresetData {
-  skyBox: SkyBoxNames;
+  skyBox: SkyBox;
   celestialBodies: {
     texture: SphereTextureNames;
     elements: {
@@ -21,11 +16,12 @@ export interface PresetData {
       velocity?: d.v3f;
       mass: number;
       radius?: number;
+      collisionBehavior?: CollisionBehavior;
     }[];
   }[];
 }
 
-export const presets: Record<Preset, PresetData> = {
+export const examplePresets: Record<Preset, PresetData> = {
   'Asteroid belt': {
     skyBox: 'milky-way',
     celestialBodies: [
