@@ -10,7 +10,12 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute.ts';
-import { type Preset, presets, sphereTextureNames } from './enums.ts';
+import {
+  type Preset,
+  collisionBehavior,
+  presets,
+  sphereTextureNames,
+} from './enums.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { examplePresets } from './presets.ts';
@@ -219,15 +224,14 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const celestialBodies: d.Infer<typeof CelestialBody>[] =
     presetData.celestialBodies.flatMap((group) =>
       group.elements.map((element) => {
-        const radius = element.radius ?? element.mass ** (1 / 3);
         return {
           destroyed: 0,
-          modelTransformationMatrix: std.scale(std.identity(), d.vec3f(radius)),
           position: element.position,
           velocity: element.velocity ?? d.vec3f(),
           mass: element.mass,
-          radius: radius,
-          collisionBehavior: 0,
+          collisionBehavior: element.collisionBehavior
+            ? collisionBehavior.indexOf(element.collisionBehavior)
+            : 0,
           textureIndex: sphereTextureNames.indexOf(group.texture),
         };
       }),

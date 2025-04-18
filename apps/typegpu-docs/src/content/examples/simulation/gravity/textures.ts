@@ -1,5 +1,6 @@
-import type { TgpuRoot } from 'typegpu';
+import { type TgpuRoot, tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { type SkyBox, sphereTextureNames } from './enums.ts';
 import { SkyBoxVertex } from './schemas.ts';
 
@@ -122,3 +123,10 @@ export async function loadSphereTextures(root: TgpuRoot) {
 
   return texture;
 }
+
+export const radiusOf = tgpu['~unstable'].fn(
+  [d.f32],
+  d.f32,
+)((mass) => {
+  return std.pow((mass * 0.75) / Math.PI, 0.333);
+});

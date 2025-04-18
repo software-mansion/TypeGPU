@@ -19,15 +19,14 @@ export const VertexOutput = {
   normals: d.vec3f,
   worldPosition: d.vec3f,
   sphereTextureIndex: d.interpolate('flat', d.u32),
+  destroyed: d.interpolate('flat', d.u32),
 };
 
 export const CelestialBody = d.struct({
   destroyed: d.u32, // boolean
-  modelTransformationMatrix: d.mat4x4f,
   position: d.vec3f,
   velocity: d.vec3f,
   mass: d.f32,
-  radius: d.f32,
   collisionBehavior: d.u32, // index of the collisionBehavior enum
   textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
 });

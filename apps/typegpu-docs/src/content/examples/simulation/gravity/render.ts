@@ -8,6 +8,7 @@ import {
   renderBindGroupLayout as renderLayout,
   textureBindGroupLayout as textureLayout,
 } from './schemas.ts';
+import { radiusOf } from './textures.ts';
 
 export const skyBoxVertex = tgpu['~unstable'].vertexFn({
   in: {
@@ -58,11 +59,10 @@ export const mainVertex = tgpu['~unstable']
     out: VertexOutput,
   })((input) => {
     const currentBody = celestialBodiesLayout.$.inState[input.instanceIdx];
+
     const worldPosition = std.add(
-      // std.mul(0.1, input.position),
-      std.mul(currentBody.modelTransformationMatrix, input.position),
+      std.mul(radiusOf(currentBody.mass), input.position),
       d.vec4f(currentBody.position, 1),
-      // d.vec4f(1),
     );
 
     const camera = renderLayout.$.camera;
@@ -76,6 +76,7 @@ export const mainVertex = tgpu['~unstable']
       normals: input.normal,
       worldPosition: std.mul(1.00001 / worldPosition.w, worldPosition.xyz),
       sphereTextureIndex: currentBody.textureIndex,
+      destroyed: currentBody.destroyed,
     };
   })
   .$name('mainVertex');
@@ -85,6 +86,10 @@ export const mainFragment = tgpu['~unstable']
     in: VertexOutput,
     out: d.vec4f,
   })((input) => {
+    if (input.destroyed === 1) {
+      std.discard();
+    }
+
     const textureColor = std.textureSample(
       renderLayout.$.celestialBodyTextures,
       renderLayout.$.sampler,

@@ -4,19 +4,18 @@ import type {
   CollisionBehavior,
   Preset,
   SkyBox,
-  SphereTextureNames,
+  SphereTextureName,
 } from './enums.ts';
 
 export interface PresetData {
   skyBox: SkyBox;
   celestialBodies: {
-    texture: SphereTextureNames;
+    texture: SphereTextureName;
     elements: {
       position: d.v3f;
-      velocity?: d.v3f;
+      velocity?: d.v3f; // default: d.vec3f()
       mass: number;
-      radius?: number;
-      collisionBehavior?: CollisionBehavior;
+      collisionBehavior?: CollisionBehavior; // default: none
     }[];
   }[];
 }
@@ -31,7 +30,6 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(),
             mass: 1000,
-            radius: 3,
           },
         ],
       },
@@ -49,7 +47,39 @@ export const examplePresets: Record<Preset, PresetData> = {
               std.normalize(d.vec3f(-z, 0, x)),
             ),
             mass: 0.01,
-            radius: 0.1,
+          };
+        }),
+      },
+    ],
+  },
+  'Asteroid belt with collisions': {
+    skyBox: 'milky-way',
+    celestialBodies: [
+      {
+        texture: 'saturn',
+        elements: [
+          {
+            position: d.vec3f(),
+            mass: 100,
+            collisionBehavior: 'merge',
+          },
+        ],
+      },
+      {
+        texture: 'ceres-fictional',
+        elements: Array.from(Array(1000)).map(() => {
+          const r = 15 * Math.sqrt(Math.random() + 1);
+          const theta = Math.random() * 2 * Math.PI;
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
+          return {
+            position: d.vec3f(x, 1 * (Math.random() - 0.5), z),
+            velocity: std.mul(
+              Math.sqrt(100 / r),
+              std.normalize(d.vec3f(-z, 0, x)),
+            ),
+            mass: 0.001,
+            collisionBehavior: 'bouncy',
           };
         }),
       },
@@ -64,7 +94,6 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(1, 0, 0),
             mass: 0,
-            radius: 1,
           },
         ],
       },
@@ -74,7 +103,6 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(-1, 0, 0),
             mass: 0,
-            radius: 0.25,
           },
         ],
       },
@@ -147,17 +175,14 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(-10, 0, 0),
             velocity: d.vec3f(0, -1, 0),
             mass: 0.001,
-            radius: 0.4,
           },
           {
             position: d.vec3f(10.0001, 0, 0),
             mass: 0,
-            radius: 0.4,
           },
           {
             position: d.vec3f(-10.0001, 0, 0),
             mass: 0,
-            radius: 0.4,
           },
         ],
       },
@@ -172,7 +197,6 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(0, 0, 0),
             mass: 100,
-            radius: 1,
           },
         ],
       },
@@ -183,7 +207,6 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(3, 0, 0),
             velocity: d.vec3f(0, 1, 0),
             mass: 0.001,
-            radius: 0.4,
           },
         ],
       },
@@ -198,7 +221,6 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(0, -1010, 0),
             mass: 1000000,
-            radius: 1000,
           },
         ],
       },
@@ -208,27 +230,48 @@ export const examplePresets: Record<Preset, PresetData> = {
           {
             position: d.vec3f(0, 0, 0),
             mass: 0.0005,
-            radius: 1,
           },
           {
             position: d.vec3f(0, 5, 0),
             mass: 0.00025,
-            radius: 1,
           },
           {
             position: d.vec3f(0, 10, 0),
             mass: 0.00012,
-            radius: 1,
           },
           {
             position: d.vec3f(0, 15, 0),
             mass: 0.00006,
-            radius: 1,
           },
           {
             position: d.vec3f(0, 20, 0),
             mass: 0.00003,
-            radius: 1,
+          },
+        ],
+      },
+    ],
+  },
+  'Test 6': {
+    skyBox: 'beach',
+    celestialBodies: [
+      {
+        texture: 'earth',
+        elements: [
+          {
+            position: d.vec3f(0, 0, 0),
+            mass: 100,
+            collisionBehavior: 'merge',
+          },
+        ],
+      },
+      {
+        texture: 'moon',
+        elements: [
+          {
+            position: d.vec3f(3, 0, 0),
+            velocity: d.vec3f(0, 1, 0),
+            mass: 0.001,
+            collisionBehavior: 'bouncy',
           },
         ],
       },
