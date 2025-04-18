@@ -14,45 +14,47 @@ export const computeShader = tgpu['~unstable']
     const current = inState.value[input.gid.x];
     const dt = 0.016;
 
-    let force = d.vec3f();
+    let velocity = current.velocity;
+
     for (let i = 0; i < celestialBodiesCount.value; i++) {
-      if (d.u32(i) === input.gid.x) {
+      const other = inState.value[i];
+      if (d.u32(i) === input.gid.x || current.mass === 0 || other.mass === 0) {
         continue;
       }
-      const other = inState.value[i];
-      const dist = std.max(
-        std.min(current.radius, other.radius),
-        std.distance(current.position, other.position),
+
+      const dist = std.distance(current.position, other.position);
+      const direction = std.normalize(
+        std.sub(other.position, current.position),
       );
-      force = std.add(
-        force,
-        std.mul(
-          (current.mass * other.mass) / dist / dist,
-          std.normalize(std.sub(other.position, current.position)),
-        ),
-      );
+      const clampedDist = std.max(current.radius + other.radius, dist);
+      const gravityForce =
+        (current.mass * other.mass) / clampedDist / clampedDist;
+      const acc = gravityForce / current.mass;
+
+      velocity = std.add(velocity, std.mul(acc * dt, direction));
+
+      if (dist < current.radius + other.radius) {
+        velocity = std.sub(
+          velocity,
+          std.mul(
+            (((2 * other.mass) / (current.mass + other.mass)) *
+              std.dot(
+                std.sub(current.velocity, other.velocity),
+                std.sub(current.position, other.position),
+              )) /
+              std.pow(std.distance(current.position, other.position), 2),
+            std.sub(current.position, other.position),
+          ),
+        );
+      }
     }
-    let updatedAcceleration = d.vec3f();
-    if (current.mass > 0) {
-      updatedAcceleration = std.mul(1 / current.mass, force);
-    }
-    const updatedPosition = std.add(
-      current.position,
-      std.add(
-        std.mul(dt, current.velocity),
-        std.mul(dt * dt * 0.5, current._acceleration),
-      ),
-    );
-    const updatedVelocity = std.add(
-      current.velocity,
-      std.mul(0.5 * dt, std.add(current._acceleration, updatedAcceleration)),
-    );
+    const updatedPosition = std.add(current.position, std.mul(dt, velocity));
 
     const updatedCurrent = CelestialBody({
       modelTransformationMatrix: current.modelTransformationMatrix,
-      velocity: updatedVelocity,
+      velocity: velocity,
       position: updatedPosition,
-      _acceleration: updatedAcceleration,
+      _acceleration: current._acceleration,
       mass: current.mass,
       radius: current.radius,
       textureIndex: current.textureIndex,

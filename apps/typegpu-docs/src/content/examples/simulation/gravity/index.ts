@@ -41,10 +41,9 @@ import {
 // andromeda x milky way, particles, balls on ground, negative mass
 // AAA speed slider
 // AAA bufor z czasem
-// AAA zderzenia
+// AAA (inny ticket) zderzenia
 // AAA mobile touch support
-// AAA fix specular artifact
-// AAA fix weird gravity behavior
+// AAA dynamic lighting source, lighting direction
 // AAA (inny ticket) show left menu, show code editor zapisane w linku
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -122,7 +121,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Atom'),
+  data: await loadPreset('Solar System'),
 };
 
 // Pipelines
