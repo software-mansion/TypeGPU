@@ -34,32 +34,32 @@ export const computeShader = tgpu['~unstable']
 
       velocity = std.add(velocity, std.mul(acc * dt, direction));
 
-      if (dist < current.radius + other.radius) {
-        velocity = std.mul(
-          0.99,
-          std.sub(
-            velocity,
-            std.mul(
-              (((2 * other.mass) / (current.mass + other.mass)) *
-                std.dot(
-                  std.sub(current.velocity, other.velocity),
-                  std.sub(current.position, other.position),
-                )) /
-                std.pow(std.distance(current.position, other.position), 2),
-              std.sub(current.position, other.position),
-            ),
-          ),
-        );
-        if (current.radius < other.radius) {
-          position = std.add(
-            other.position,
-            std.mul(
-              (current.radius + other.radius) * 1.0,
-              std.normalize(std.sub(current.position, other.position)),
-            ),
-          );
-        }
-      }
+      // if (dist < current.radius + other.radius) {
+      //   velocity = std.mul(
+      //     0.99,
+      //     std.sub(
+      //       velocity,
+      //       std.mul(
+      //         (((2 * other.mass) / (current.mass + other.mass)) *
+      //           std.dot(
+      //             std.sub(current.velocity, other.velocity),
+      //             std.sub(current.position, other.position),
+      //           )) /
+      //           std.pow(std.distance(current.position, other.position), 2),
+      //         std.sub(current.position, other.position),
+      //       ),
+      //     ),
+      //   );
+      //   if (current.radius < other.radius) {
+      //     position = std.add(
+      //       other.position,
+      //       std.mul(
+      //         (current.radius + other.radius) * 1.0,
+      //         std.normalize(std.sub(current.position, other.position)),
+      //       ),
+      //     );
+      //   }
+      // }
     }
     position = std.add(position, std.mul(dt, velocity));
 

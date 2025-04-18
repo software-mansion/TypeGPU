@@ -1,9 +1,10 @@
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import type { SkyBoxNames, SphereTextureNames } from './textures.ts';
 
 export const presetsEnum = [
-  '1k chaotic particles',
-  'Solar System',
+  'Planet rings',
+  'Test 0',
   'Test 1',
   'Test 2',
   'Test 3',
@@ -25,11 +26,11 @@ export interface PresetData {
 }
 
 export const presets: Record<Preset, PresetData> = {
-  '1k chaotic particles': {
-    skyBox: 'campsite',
+  'Planet rings': {
+    skyBox: 'milky-way',
     celestialBodies: [
       {
-        texture: 'moon',
+        texture: 'saturn',
         elements: [
           {
             position: d.vec3f(),
@@ -39,20 +40,26 @@ export const presets: Record<Preset, PresetData> = {
         ],
       },
       {
-        texture: 'earth',
+        texture: 'ceres-fictional',
         elements: Array.from(Array(1000)).map(() => {
-          const r = 10 * Math.sqrt(Math.random() + 1);
+          const r = 15 * Math.sqrt(Math.random() + 1);
           const theta = Math.random() * 2 * Math.PI;
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
           return {
-            position: d.vec3f(r * Math.cos(theta), 0, r * Math.sin(theta)),
-            mass: Math.random() * 0.01 + 0.01,
+            position: d.vec3f(x, 1 * (Math.random() - 0.5), z),
+            velocity: std.mul(
+              Math.sqrt(1000 / r),
+              std.normalize(d.vec3f(-z, 0, x)),
+            ),
+            mass: 0.01,
             radius: 0.1,
           };
         }),
       },
     ],
   },
-  'Solar System': {
+  'Test 0': {
     skyBox: 'beach',
     celestialBodies: [
       {

@@ -62,7 +62,7 @@ export const skyBoxVertices: d.Infer<typeof SkyBoxVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-export type SkyBoxNames = 'campsite' | 'beach';
+export type SkyBoxNames = 'campsite' | 'beach' | 'milky-way';
 function getSkyBoxUrls(name: SkyBoxNames) {
   return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
     (side) => `/TypeGPU/assets/gravity/skyboxes/${name}/${side}.jpg`,
@@ -96,7 +96,19 @@ export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBoxNames) {
   return texture;
 }
 
-export const sphereTextureNamesEnum = ['earth', 'moon'] as const;
+export const sphereTextureNamesEnum = [
+  'sun',
+  'mercury',
+  'venus',
+  'earth',
+  'mars',
+  'jupiter',
+  'saturn',
+  'uranus',
+  'neptune',
+  'moon',
+  'ceres-fictional',
+] as const;
 export type SphereTextureNames = (typeof sphereTextureNamesEnum)[number];
 export async function loadSphereTextures(root: TgpuRoot) {
   const texture = root['~unstable']

@@ -121,7 +121,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Solar System'),
+  data: await loadPreset('Planet rings'),
 };
 
 // Pipelines
