@@ -15,6 +15,7 @@ export const computeShader = tgpu['~unstable']
     const dt = 0.016;
 
     let velocity = current.velocity;
+    let position = current.position;
 
     for (let i = 0; i < celestialBodiesCount.value; i++) {
       const other = inState.value[i];
@@ -34,26 +35,38 @@ export const computeShader = tgpu['~unstable']
       velocity = std.add(velocity, std.mul(acc * dt, direction));
 
       if (dist < current.radius + other.radius) {
-        velocity = std.sub(
-          velocity,
-          std.mul(
-            (((2 * other.mass) / (current.mass + other.mass)) *
-              std.dot(
-                std.sub(current.velocity, other.velocity),
-                std.sub(current.position, other.position),
-              )) /
-              std.pow(std.distance(current.position, other.position), 2),
-            std.sub(current.position, other.position),
+        velocity = std.mul(
+          0.99,
+          std.sub(
+            velocity,
+            std.mul(
+              (((2 * other.mass) / (current.mass + other.mass)) *
+                std.dot(
+                  std.sub(current.velocity, other.velocity),
+                  std.sub(current.position, other.position),
+                )) /
+                std.pow(std.distance(current.position, other.position), 2),
+              std.sub(current.position, other.position),
+            ),
           ),
         );
+        if (current.radius < other.radius) {
+          position = std.add(
+            other.position,
+            std.mul(
+              (current.radius + other.radius) * 1.0,
+              std.normalize(std.sub(current.position, other.position)),
+            ),
+          );
+        }
       }
     }
-    const updatedPosition = std.add(current.position, std.mul(dt, velocity));
+    position = std.add(position, std.mul(dt, velocity));
 
     const updatedCurrent = CelestialBody({
       modelTransformationMatrix: current.modelTransformationMatrix,
       velocity: velocity,
-      position: updatedPosition,
+      position: position,
       _acceleration: current._acceleration,
       mass: current.mass,
       radius: current.radius,

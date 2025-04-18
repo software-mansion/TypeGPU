@@ -8,6 +8,7 @@ export const presetsEnum = [
   'Test 2',
   'Test 3',
   'Test 4',
+  'Test 5',
 ] as const;
 export type Preset = (typeof presetsEnum)[number];
 export interface PresetData {
@@ -180,6 +181,51 @@ export const presets: Record<Preset, PresetData> = {
             velocity: d.vec3f(0, 1, 0),
             mass: 0.001,
             radius: 0.4,
+          },
+        ],
+      },
+    ],
+  },
+  'Test 5': {
+    skyBox: 'beach',
+    celestialBodies: [
+      {
+        texture: 'earth',
+        elements: [
+          {
+            position: d.vec3f(0, -1010, 0),
+            mass: 1000000,
+            radius: 1000,
+          },
+        ],
+      },
+      {
+        texture: 'moon',
+        elements: [
+          {
+            position: d.vec3f(0, 0, 0),
+            mass: 0.0005,
+            radius: 1,
+          },
+          {
+            position: d.vec3f(0, 5, 0),
+            mass: 0.00025,
+            radius: 1,
+          },
+          {
+            position: d.vec3f(0, 10, 0),
+            mass: 0.00012,
+            radius: 1,
+          },
+          {
+            position: d.vec3f(0, 15, 0),
+            mass: 0.00006,
+            radius: 1,
+          },
+          {
+            position: d.vec3f(0, 20, 0),
+            mass: 0.00003,
+            radius: 1,
           },
         ],
       },
