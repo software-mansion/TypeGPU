@@ -40,8 +40,8 @@ We provide an abstraction that solves the most common WebGPU hurdles, yet does n
 You can granularly eject into vanilla WebGPU at any point. This means that, when building your app with TypeGPU,
 lock-in is not a concern!
 
-The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading Language) syntax in TypeScript means,
-that learning TypeGPU helps to learn WebGPU itself, with less frustrations.
+The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading Language) syntax in TypeScript means
+that learning TypeGPU helps to learn WebGPU itself, with fewer frustrations.
 
 [The Getting Started and Fundamentals guides are a great starting point for new projects!](https://docs.swmansion.com/TypeGPU/getting-started/)
 
@@ -85,7 +85,7 @@ plot.array1d(root, terrainBuffer);
 plot.array2d(root, terrainBuffer);
 ```
 
-We can pass typed values around without the need to copy anything back to CPU-accessible memory! Lets see an example of how we can construct a type-safe API:
+We can pass typed values around without the need to copy anything back to CPU-accessible memory! Let's see an example of how we can construct a type-safe API:
 
 ```ts
 import type { TgpuBuffer, TgpuRoot, StorageFlag } from 'typegpu';
