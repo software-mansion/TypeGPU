@@ -17,7 +17,7 @@ import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
-  LayoutEntryToInput,
+  BindGroupLayoutToEntries,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -289,9 +289,7 @@ class TgpuRootImpl
     >,
   >(
     layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
-    },
+    entries: BindGroupLayoutToEntries<Entries>,
   ) {
     return new TgpuBindGroupImpl(layout, entries);
   }
