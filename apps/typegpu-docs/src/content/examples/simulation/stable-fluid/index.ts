@@ -21,7 +21,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const N = 512;
+const N = 2048; // Display resolution
+const SIM_N = N / 4; // Simulation resolution
 const WORKGROUP_SIZE_X = 16;
 const WORKGROUP_SIZE_Y = 16;
 
@@ -29,7 +30,7 @@ const params = {
   dt: 0.3,
   viscosity: 0.000001,
   jacobiIter: 10,
-  showField: 'ink' as 'ink' | 'force',
+  showField: 'ink' as 'ink' | 'force' | 'image',
   boundary: true,
 };
 
@@ -45,7 +46,7 @@ const simParamBuffer = root
   .$usage('uniform');
 
 const FORCE_SCALE = 1;
-const RADIUS = 16;
+const RADIUS = SIM_N / 32;
 const INK_AMOUNT = 0.05;
 
 let isMouseDown = false;
@@ -72,10 +73,27 @@ canvas.addEventListener('mousemove', (e) => {
 
 function createField(format: 'rg32float' | 'r32float', name: string) {
   return root['~unstable']
-    .createTexture({ size: [N, N], format })
+    .createTexture({ size: [SIM_N, SIM_N], format })
     .$usage('storage', 'sampled')
     .$name(name);
 }
+
+const response = await fetch('/TypeGPU/plums.jpg');
+const plums = await createImageBitmap(await response.blob(), {
+  resizeWidth: N,
+  resizeHeight: N,
+  resizeQuality: 'high',
+});
+
+const backgroundTexture = root['~unstable']
+  .createTexture({ size: [N, N], format: 'rgba8unorm' })
+  .$usage('sampled', 'render')
+  .$name('background');
+device.queue.copyExternalImageToTexture(
+  { source: plums },
+  { texture: root.unwrap(backgroundTexture) },
+  { width: N, height: N, depthOrArrayLayers: 1 },
+);
 
 const velTex = [
   createField('rg32float', 'velocity0'),
@@ -97,6 +115,8 @@ const divergenceTex = createField('r32float', 'divergence');
 const linSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge',
 });
 
 // Add external forces to the velocity field.
@@ -164,7 +184,6 @@ const advectPipeline = root['~unstable'].withCompute(advectFn).createPipeline();
 // Jacobi diffusion step on the velocity field.
 const diffusionLayout = tgpu.bindGroupLayout({
   in: { texture: 'float' },
-  div: { texture: 'float' },
   out: { storageTexture: 'rg32float', access: 'writeonly' },
   simParams: { uniform: Params },
 });
@@ -364,36 +383,10 @@ const addInkFn = tgpu['~unstable'].computeFn({
 
 const addInkPipeline = root['~unstable'].withCompute(addInkFn).createPipeline();
 
-// Zero out velocity at the domain boundaries.
-const boundryLayout = tgpu.bindGroupLayout({
-  field: { storageTexture: 'rg32float', access: 'writeonly' },
-});
-
-const boundaryFn = tgpu['~unstable'].computeFn({
-  workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
-  in: { gid: d.builtin.globalInvocationId },
-})((input) => {
-  const dims = std.textureDimensions(boundryLayout.$.field);
-  const coords = input.gid.xy;
-
-  const atEdge =
-    coords.x === 0 ||
-    coords.x === dims.x - 1 ||
-    coords.y === 0 ||
-    coords.y === dims.y - 1;
-
-  if (atEdge) {
-    std.textureStore(boundryLayout.$.field, coords, d.vec4f(0, 0, 0, 1));
-  }
-});
-
-const boundaryPipeline = root['~unstable']
-  .withCompute(boundaryFn)
-  .createPipeline();
-
 // Rendering: fullscreen triangle with color mapping for ink.
 const renderLayout = tgpu.bindGroupLayout({
   result: { texture: 'float' },
+  background: { texture: 'float' },
 });
 
 const renderFn = tgpu['~unstable'].vertexFn({
@@ -442,43 +435,99 @@ const fragmentForceFn = tgpu['~unstable'].fragmentFn({
   return col;
 });
 
+const fragmentImageFn = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((inp) => {
+  const EPS = d.f32(0.5) / SIM_N;
+
+  const left = std.textureSample(
+    renderLayout.$.result,
+    linSampler,
+    d.vec2f(inp.uv.x - EPS, inp.uv.y),
+  ).x;
+  const right = std.textureSample(
+    renderLayout.$.result,
+    linSampler,
+    d.vec2f(inp.uv.x + EPS, inp.uv.y),
+  ).x;
+  const up = std.textureSample(
+    renderLayout.$.result,
+    linSampler,
+    d.vec2f(inp.uv.x, inp.uv.y + EPS),
+  ).x;
+  const down = std.textureSample(
+    renderLayout.$.result,
+    linSampler,
+    d.vec2f(inp.uv.x, inp.uv.y - EPS),
+  ).x;
+
+  const dx = right - left;
+  const dy = up - down;
+
+  const strength = 0.8;
+  const displacement = d.vec2f(dx, dy);
+  const offsetUV = std.add(
+    inp.uv,
+    std.mul(displacement, d.vec2f(strength, -strength)),
+  );
+
+  const color = std.textureSample(
+    renderLayout.$.background,
+    linSampler,
+    d.vec2f(offsetUV.x, 1.0 - offsetUV.y),
+  );
+
+  return d.vec4f(color.xyz, 1.0);
+});
+
 const renderPipelineInk = root['~unstable']
   .withVertex(renderFn, renderFn.shell.attributes)
-  .withFragment(fragmentInkFn, { format: 'bgra8unorm' })
+  .withFragment(fragmentInkFn, { format })
   .createPipeline();
 
 const renderPipelineForce = root['~unstable']
   .withVertex(renderFn, renderFn.shell.attributes)
-  .withFragment(fragmentForceFn, { format: 'bgra8unorm' })
+  .withFragment(fragmentForceFn, { format })
+  .createPipeline();
+
+const renderPipelineImage = root['~unstable']
+  .withVertex(renderFn, renderFn.shell.attributes)
+  .withFragment(fragmentImageFn, { format })
   .createPipeline();
 
 function toGrid(x: number, y: number) {
-  const gx = Math.floor((x / canvas.width) * N);
-  const gy = Math.floor(((canvas.height - y) / canvas.height) * N);
+  const gx = Math.floor((x / canvas.width) * SIM_N);
+  const gy = Math.floor(((canvas.height - y) / canvas.height) * SIM_N);
   return [gx, gy] as const;
 }
 
 function writeSourceTextures() {
-  const fdata = new Float32Array(N * N * 2).fill(0);
-  const idata = new Float32Array(N * N).fill(0);
+  const fdata = new Float32Array(SIM_N * SIM_N * 2).fill(0);
+  const idata = new Float32Array(SIM_N * SIM_N).fill(0);
 
   if (isMouseDown) {
     const [cx, cy] = toGrid(lastMousePos[0], lastMousePos[1]);
     const radiusSq = RADIUS * RADIUS;
+    const intRadius = Math.ceil(RADIUS);
 
-    for (let y = -RADIUS; y <= RADIUS; y++) {
-      const gy = (cy + y + N) % N;
-      for (let x = -RADIUS; x <= RADIUS; x++) {
-        const gx = (cx + x + N) % N;
+    for (let y = -intRadius; y <= intRadius; y++) {
+      const gy = cy + y;
+      for (let x = -intRadius; x <= intRadius; x++) {
+        const gx = cx + x;
+        if (gx < 0 || gx >= SIM_N || gy < 0 || gy >= SIM_N) {
+          continue;
+        }
+
         const d2 = x * x + y * y;
         if (d2 > radiusSq) continue;
 
         const w = Math.exp(-d2 / radiusSq);
-        const fidx = (gy * N + gx) * 2;
+        const fidx = (gy * SIM_N + gx) * 2;
         fdata[fidx + 0] += mouseDelta[0] * FORCE_SCALE * w;
         fdata[fidx + 1] += -mouseDelta[1] * FORCE_SCALE * w;
 
-        const iidx = gy * N + gx;
+        const iidx = gy * SIM_N + gx;
         idata[iidx] += INK_AMOUNT * w;
       }
     }
@@ -487,14 +536,14 @@ function writeSourceTextures() {
   device.queue.writeTexture(
     { texture: root.unwrap(forceTex) },
     fdata,
-    { bytesPerRow: N * 8 },
-    { width: N, height: N, depthOrArrayLayers: 1 },
+    { bytesPerRow: SIM_N * 8 },
+    { width: SIM_N, height: SIM_N, depthOrArrayLayers: 1 },
   );
   device.queue.writeTexture(
     { texture: root.unwrap(newInkTex) },
     idata,
-    { bytesPerRow: N * 4 },
-    { width: N, height: N, depthOrArrayLayers: 1 },
+    { bytesPerRow: SIM_N * 4 },
+    { width: SIM_N, height: SIM_N, depthOrArrayLayers: 1 },
   );
 
   mouseDelta = [0, 0];
@@ -530,12 +579,11 @@ const pingVel = new PingPong(velTex[0], velTex[1]);
 const pingInk = new PingPong(inkTex[0], inkTex[1]);
 const pingPressure = new PingPong(pressureTex[0], pressureTex[1]);
 
-// Select which field to render: 'ink' or 'force'
-let renderField: 'ink' | 'force' = params.showField;
-let showBoundary = params.boundary;
-
-// Pause state
+let renderField: 'ink' | 'force' | 'image' = params.showField;
 let paused = false;
+
+const dispatchX = Math.ceil(SIM_N / WORKGROUP_SIZE_X);
+const dispatchY = Math.ceil(SIM_N / WORKGROUP_SIZE_Y);
 
 function loop() {
   if (paused) {
@@ -554,7 +602,7 @@ function loop() {
         dst: pingInk.next.createView('writeonly'),
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
   pingInk.swap();
 
   // Add forces to velocity
@@ -568,7 +616,7 @@ function loop() {
         simParams: simParamBuffer,
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
 
   // Advect velocity
   advectPipeline
@@ -580,7 +628,7 @@ function loop() {
         simParams: simParamBuffer,
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
 
   // Diffuse velocity (ping-pong) using jacobiIter
   for (let i = 0; i < params.jacobiIter; i++) {
@@ -589,25 +637,12 @@ function loop() {
         diffusionLayout,
         root.createBindGroup(diffusionLayout, {
           in: pingVel.curr.createView('sampled'),
-          div: divergenceTex.createView('sampled'),
           out: pingVel.next.createView('writeonly'),
           simParams: simParamBuffer,
         }),
       )
-      .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+      .dispatchWorkgroups(dispatchX, dispatchY);
     pingVel.swap();
-  }
-
-  // Enforce boundary conditions on velocity if enabled
-  if (showBoundary) {
-    boundaryPipeline
-      .with(
-        boundryLayout,
-        root.createBindGroup(boundryLayout, {
-          field: pingVel.curr.createView('writeonly'),
-        }),
-      )
-      .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
   }
 
   // Compute divergence of velocity
@@ -619,7 +654,7 @@ function loop() {
         div: divergenceTex.createView('writeonly'),
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
 
   // Solve for pressure
   pingPressure.setCurr(0);
@@ -633,7 +668,7 @@ function loop() {
           out: pingPressure.next.createView('writeonly'),
         }),
       )
-      .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+      .dispatchWorkgroups(dispatchX, dispatchY);
     pingPressure.swap();
   }
 
@@ -647,7 +682,7 @@ function loop() {
         out: pingVel.next.createView('writeonly'),
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
   pingVel.swap();
 
   // Advect ink (scalar field)
@@ -661,23 +696,35 @@ function loop() {
         simParams: simParamBuffer,
       }),
     )
-    .dispatchWorkgroups(N / WORKGROUP_SIZE_X, N / WORKGROUP_SIZE_Y);
+    .dispatchWorkgroups(dispatchX, dispatchY);
   pingInk.swap();
 
   // Render to screen
   let renderBG: TgpuBindGroup<{
     result: { texture: 'float' };
+    background: { texture: 'float' };
   }>;
-  let pipeline: typeof renderPipelineInk | typeof renderPipelineForce;
+  let pipeline:
+    | typeof renderPipelineInk
+    | typeof renderPipelineForce
+    | typeof renderPipelineImage;
 
   if (renderField === 'ink') {
     renderBG = root.createBindGroup(renderLayout, {
       result: pingInk.curr.createView('sampled'),
+      background: backgroundTexture.createView('sampled'),
     });
     pipeline = renderPipelineInk;
+  } else if (renderField === 'image') {
+    renderBG = root.createBindGroup(renderLayout, {
+      result: pingInk.curr.createView('sampled'),
+      background: backgroundTexture.createView('sampled'),
+    });
+    pipeline = renderPipelineImage;
   } else {
     renderBG = root.createBindGroup(renderLayout, {
       result: pingVel.curr.createView('sampled'),
+      background: backgroundTexture.createView('sampled'),
     });
     pipeline = renderPipelineForce;
   }
@@ -733,15 +780,9 @@ export const controls = {
   },
   visualization: {
     initial: 'ink',
-    options: ['ink', 'force'],
+    options: ['ink', 'force', 'image'],
     onSelectChange: (value: string) => {
-      renderField = value as 'ink' | 'force';
-    },
-  },
-  'boundary wall': {
-    initial: params.boundary,
-    onToggleChange: (value: boolean) => {
-      showBoundary = value;
+      renderField = value as 'ink' | 'force' | 'image';
     },
   },
   pause: {
