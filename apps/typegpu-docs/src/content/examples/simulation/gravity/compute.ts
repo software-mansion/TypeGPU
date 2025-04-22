@@ -1,13 +1,13 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { CelestialBody, celestialBodiesBindGroupLayout } from './schemas.ts';
+import { celestialBodiesBindGroupLayout } from './schemas.ts';
 import { radiusOf } from './textures.ts';
 
 const { inState, outState, celestialBodiesCount } =
   celestialBodiesBindGroupLayout.bound;
 
-export const computeShader = tgpu['~unstable']
+export const computeGravityShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [1],
@@ -19,14 +19,49 @@ export const computeShader = tgpu['~unstable']
       return;
     }
 
-    const updatedCurrent = CelestialBody({
-      destroyed: current.destroyed,
-      position: current.position,
-      velocity: current.velocity,
-      mass: current.mass,
-      collisionBehavior: current.collisionBehavior,
-      textureIndex: current.textureIndex,
-    });
+    const updatedCurrent = current;
+    for (let i = 0; i < celestialBodiesCount.value; i++) {
+      const other = inState.value[i];
+      if (d.u32(i) === input.gid.x || other.destroyed === 1) {
+        continue;
+      }
+
+      const dist = std.max(
+        radiusOf(current.mass) + radiusOf(other.mass),
+        std.distance(current.position, other.position),
+      );
+      const gravityForce = (current.mass * other.mass) / dist / dist;
+
+      const direction = std.normalize(
+        std.sub(other.position, current.position),
+      );
+      updatedCurrent.velocity = std.add(
+        updatedCurrent.velocity,
+        std.mul((gravityForce / current.mass) * dt, direction),
+      );
+    }
+
+    updatedCurrent.position = std.add(
+      updatedCurrent.position,
+      std.mul(dt, updatedCurrent.velocity),
+    );
+
+    outState.value[input.gid.x] = updatedCurrent;
+  })
+  .$name('Compute gravity shader');
+
+export const computeCollisionsShader = tgpu['~unstable']
+  .computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [1],
+  })((input) => {
+    const current = inState.value[input.gid.x];
+
+    if (current.destroyed === 1) {
+      return;
+    }
+
+    const updatedCurrent = current;
 
     // // collisions
     // for (let i = 0; i < celestialBodiesCount.value; i++) {
@@ -80,33 +115,6 @@ export const computeShader = tgpu['~unstable']
     //   updatedCurrent.mass += other.mass;
     // }
 
-    // gravity
-    for (let i = 0; i < celestialBodiesCount.value; i++) {
-      const other = inState.value[i];
-      if (d.u32(i) === input.gid.x || other.destroyed === 1) {
-        continue;
-      }
-
-      const dist = std.max(
-        radiusOf(current.mass) + radiusOf(other.mass),
-        std.distance(current.position, other.position),
-      );
-      const gravityForce = (current.mass * other.mass) / dist / dist;
-
-      const direction = std.normalize(
-        std.sub(other.position, current.position),
-      );
-      updatedCurrent.velocity = std.add(
-        updatedCurrent.velocity,
-        std.mul((gravityForce / current.mass) * dt, direction),
-      );
-    }
-
-    updatedCurrent.position = std.add(
-      updatedCurrent.position,
-      std.mul(dt, updatedCurrent.velocity),
-    );
-
     outState.value[input.gid.x] = updatedCurrent;
   })
-  .$name('Compute shader');
+  .$name('Compute collisions shader');

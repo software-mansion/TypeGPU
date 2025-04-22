@@ -9,7 +9,7 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
+import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   type Preset,
   collisionBehavior,
@@ -47,6 +47,7 @@ import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 // AAA dynamic lighting source, lighting direction
 // AAA ecosphere
 // AAA (inny ticket) show left menu, show code editor zapisane w linku
+// AAA refactoruj (dwa compute pipeliny), potem debuguj te promienie i mrygające planety
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -105,7 +106,6 @@ const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 
 interface DynamicResources {
   celestialBodiesCount: number;
-  flip: number;
   celestialBodiesBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
     StorageFlag;
   celestialBodiesBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
@@ -127,10 +127,15 @@ const dynamicResourcesBox = {
 };
 
 // Pipelines
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
+const computeGravityPipeline = root['~unstable']
+  .withCompute(computeGravityShader)
   .createPipeline()
-  .$name('compute pipeline');
+  .$name('compute gravity pipeline');
+
+const computeCollisionsPipeline = root['~unstable']
+  .withCompute(computeCollisionsShader)
+  .createPipeline()
+  .$name('compute collisions pipeline');
 
 const skyBoxPipeline = root['~unstable']
   .withVertex(skyBoxVertex, skyBoxVertexLayout.attrib)
@@ -158,14 +163,17 @@ let depthTexture = root.device.createTexture({
 });
 
 function render() {
-  dynamicResourcesBox.data.flip = 1 - dynamicResourcesBox.data.flip;
-
-  computePipeline
+  computeCollisionsPipeline
     .with(
       celestialBodiesBindGroupLayout,
-      dynamicResourcesBox.data.flip === 1
-        ? dynamicResourcesBox.data.celestialBodiesBindGroupA
-        : dynamicResourcesBox.data.celestialBodiesBindGroupB,
+      dynamicResourcesBox.data.celestialBodiesBindGroupA,
+    )
+    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
+
+  computeGravityPipeline
+    .with(
+      celestialBodiesBindGroupLayout,
+      dynamicResourcesBox.data.celestialBodiesBindGroupB,
     )
     .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
 
@@ -198,9 +206,7 @@ function render() {
     .with(renderBindGroupLayout, renderBindGroup)
     .with(
       celestialBodiesBindGroupLayout,
-      dynamicResourcesBox.data.flip === 1
-        ? dynamicResourcesBox.data.celestialBodiesBindGroupA
-        : dynamicResourcesBox.data.celestialBodiesBindGroupB,
+      dynamicResourcesBox.data.celestialBodiesBindGroupA,
     )
     .draw(sphereVertexCount, dynamicResourcesBox.data.celestialBodiesCount);
 
@@ -276,7 +282,6 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   });
 
   return {
-    flip: 0,
     celestialBodiesCount: celestialBodies.length,
     celestialBodiesBufferA: computeBufferA,
     celestialBodiesBufferB: computeBufferB,
