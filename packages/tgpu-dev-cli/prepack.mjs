@@ -98,6 +98,10 @@ async function transformPackageJSON() {
     distPackageJson.dependencies ?? {},
     (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
+  distPackageJson.peerDependencies = mapValues(
+    distPackageJson.peerDependencies ?? {},
+    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
+  );
 
   await fs.writeFile(
     distPackageJsonUrl,
