@@ -40,6 +40,7 @@ import {
   UnknownData,
   type Wgsl,
   hasInternalDataType,
+  isSelfResolvable,
 } from '../types.ts';
 
 const swizzleableTypes = [
@@ -245,7 +246,9 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
     }
   }
 
-  return isWgslData(resource) ? resource : UnknownData;
+  return isWgslData(resource) || isSelfResolvable(resource)
+    ? (resource as unknown as AnyData)
+    : UnknownData;
 }
 
 export function numericLiteralToSnippet(value: string): Snippet | undefined {
