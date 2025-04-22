@@ -98,16 +98,16 @@ export const mul: MulOverload = createDualImpl(
   // GPU implementation
   (s, v) => {
     const returnType = isNumeric(s)
-      // Scalar * Vector/Matrix
-      ? (v.dataType as AnyWgslData)
+      ? // Scalar * Vector/Matrix
+        (v.dataType as AnyWgslData)
       : !s.dataType.type.startsWith('mat')
-      // Vector * Matrix
-      ? (s.dataType as AnyWgslData)
-      : !v.dataType.type.startsWith('mat')
-      // Matrix * Vector
-      ? (v.dataType as AnyWgslData)
-      // Vector * Vector or Matrix * Matrix
-      : (s.dataType as AnyWgslData);
+        ? // Vector * Matrix
+          (s.dataType as AnyWgslData)
+        : !v.dataType.type.startsWith('mat')
+          ? // Matrix * Vector
+            (v.dataType as AnyWgslData)
+          : // Vector * Vector or Matrix * Matrix
+            (s.dataType as AnyWgslData);
     return { value: `(${s.value} * ${v.value})`, dataType: returnType };
   },
 );
