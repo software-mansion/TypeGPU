@@ -328,6 +328,12 @@ export type ExtractBindGroupInputFromLayout<
   [K in keyof T]: LayoutEntryToInput<T[K]>;
 };
 
+export type BindGroupLayoutToEntries<
+  T extends Record<string, TgpuLayoutEntry | null>,
+> = {
+  [K in keyof T]: LayoutEntryToInput<T[K]>;
+};
+
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
     string,
