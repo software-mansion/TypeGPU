@@ -14,6 +14,7 @@ import {
   StrictNameRegistry,
 } from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   LayoutEntryToInput,
@@ -55,7 +56,6 @@ import {
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
-  type INTERNAL_TgpuRenderPipeline,
   INTERNAL_createRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
@@ -395,8 +395,7 @@ class TgpuRootImpl
     }
 
     if (isRenderPipeline(resource)) {
-      return (resource as unknown as INTERNAL_TgpuRenderPipeline).core.unwrap()
-        .pipeline;
+      return resource[$internal].core.unwrap().pipeline;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -467,16 +466,14 @@ class TgpuRootImpl
       }
     >();
 
-    let currentPipeline:
-      | (TgpuRenderPipeline & INTERNAL_TgpuRenderPipeline)
-      | undefined;
+    let currentPipeline: TgpuRenderPipeline | undefined;
 
     const setupPassBeforeDraw = () => {
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
 
-      const { core, priors } = currentPipeline;
+      const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
 
       pass.setPipeline(memo.pipeline);
@@ -558,8 +555,7 @@ class TgpuRootImpl
         pass.executeBundles(...args);
       },
       setPipeline(pipeline) {
-        currentPipeline = pipeline as TgpuRenderPipeline &
-          INTERNAL_TgpuRenderPipeline;
+        currentPipeline = pipeline;
       },
 
       setIndexBuffer: (buffer, indexFormat, offset, size) => {
