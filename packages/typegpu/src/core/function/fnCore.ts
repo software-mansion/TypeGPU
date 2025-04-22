@@ -34,7 +34,7 @@ export interface FnCore {
 
 export function createFnCore(
   shell: TgpuFnShellBase<unknown[] | Record<string, unknown>, unknown>,
-  implementation: Implementation<unknown[], unknown>,
+  implementation: Implementation,
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
