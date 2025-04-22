@@ -85,6 +85,25 @@ export const examplePresets: Record<Preset, PresetData> = {
       },
     ],
   },
+  'Dust cloud': {
+    skyBox: 'milky-way',
+    celestialBodies: [
+      {
+        texture: 'ceres-fictional',
+        elements: Array.from(Array(1000)).map(() => {
+          return {
+            position: d.vec3f(
+              (Math.random() - 0.5) * 100,
+              (Math.random() - 0.5) * 100,
+              (Math.random() - 0.5) * 100,
+            ),
+            mass: 0.1,
+            collisionBehavior: 'none',
+          };
+        }),
+      },
+    ],
+  },
   'Test 0': {
     skyBox: 'beach',
     celestialBodies: [

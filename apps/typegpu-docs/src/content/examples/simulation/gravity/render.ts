@@ -60,21 +60,22 @@ export const mainVertex = tgpu['~unstable']
   })((input) => {
     const currentBody = celestialBodiesLayout.$.inState[input.instanceIdx];
 
+    const inputPosition = std.mul(1 / input.position.w, input.position.xyz);
     const worldPosition = std.add(
-      std.mul(radiusOf(currentBody.mass), input.position),
-      d.vec4f(currentBody.position, 1),
+      std.mul(radiusOf(currentBody.mass), inputPosition),
+      currentBody.position,
     );
 
     const camera = renderLayout.$.camera;
     const positionOnCanvas = std.mul(
       camera.projection,
-      std.mul(camera.view, worldPosition),
+      std.mul(camera.view, d.vec4f(worldPosition, 1)),
     );
     return {
       position: positionOnCanvas,
       uv: input.uv,
       normals: input.normal,
-      worldPosition: std.mul(1.00001 / worldPosition.w, worldPosition.xyz),
+      worldPosition: worldPosition,
       sphereTextureIndex: currentBody.textureIndex,
       destroyed: currentBody.destroyed,
     };
@@ -132,3 +133,5 @@ export const mainFragment = tgpu['~unstable']
 //     }`)
 //   .$uses({ EXT })
 //   .$name('sampleShader');
+
+console.log(tgpu.resolve({ externals: { mainFragment } }));

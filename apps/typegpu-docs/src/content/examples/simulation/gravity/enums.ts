@@ -21,6 +21,7 @@ export type SphereTextureName = (typeof sphereTextureNames)[number];
 export const presets = [
   'Asteroid belt',
   'Asteroid belt with collisions',
+  'Dust cloud',
   'Test 0',
   'Test 1',
   'Test 2',
