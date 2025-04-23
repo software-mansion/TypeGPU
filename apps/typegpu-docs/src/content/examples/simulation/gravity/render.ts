@@ -4,7 +4,6 @@ import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import {
   VertexOutput,
-  celestialBodiesBindGroupLayout as celestialBodiesLayout,
   renderBindGroupLayout as renderLayout,
   textureBindGroupLayout as textureLayout,
 } from './schemas.ts';
@@ -58,7 +57,7 @@ export const mainVertex = tgpu['~unstable']
     },
     out: VertexOutput,
   })((input) => {
-    const currentBody = celestialBodiesLayout.$.inState[input.instanceIdx];
+    const currentBody = renderLayout.$.celestialBodies[input.instanceIdx];
 
     const inputPosition = std.mul(1 / input.position.w, input.position.xyz);
     const worldPosition = std.add(
@@ -125,13 +124,3 @@ export const mainFragment = tgpu['~unstable']
     return d.vec4f(lightedColor.xyz, 1);
   })
   .$name('mainFragment');
-
-// const sampleTexture = tgpu['~unstable']
-//   .fn([d.vec2f], d.vec4f)
-//   .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
-//         return textureSample(EXT.texture, EXT.sampler, uv);
-//     }`)
-//   .$uses({ EXT })
-//   .$name('sampleShader');
-
-console.log(tgpu.resolve({ externals: { mainFragment } }));

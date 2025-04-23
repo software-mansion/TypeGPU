@@ -65,6 +65,10 @@ export const renderBindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
   celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
+  celestialBodies: {
+    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    access: 'readonly',
+  },
 });
 
 export const renderInstanceLayout = tgpu.vertexLayout((n: number) =>

@@ -38,16 +38,15 @@ import {
 } from './schemas.ts';
 import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
-// AAA presety: atom, ziemia i księzyc, oort cloud / planet ring, solar system,
-// andromeda x milky way, particles, balls on ground, negative mass
+// AAA presety: atom, ziemia i księzyc, solar system,
+// andromeda x milky way, balls on ground, negative mass
 // AAA speed slider
 // AAA bufor z czasem
-// AAA (inny ticket) zderzenia
 // AAA mobile touch support
 // AAA dynamic lighting source, lighting direction
 // AAA ecosphere
 // AAA (inny ticket) show left menu, show code editor zapisane w linku
-// AAA refactoruj (dwa compute pipeliny), potem debuguj te promienie i mrygające planety
+// AAA refactor bind grup
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -94,12 +93,6 @@ const skyBoxVertexBuffer = root
 
 const sphereTextures = await loadSphereTextures(root);
 
-const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
-  camera: cameraBuffer,
-  sampler,
-  celestialBodyTextures: sphereTextures,
-});
-
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 
 // dynamic resources
@@ -120,6 +113,7 @@ interface DynamicResources {
     Render &
     Sampled;
   skyBoxBindGroup: TgpuBindGroup<(typeof textureBindGroupLayout)['entries']>;
+  renderBindGroup: TgpuBindGroup<(typeof renderBindGroupLayout)['entries']>;
 }
 
 const dynamicResourcesBox = {
@@ -185,7 +179,7 @@ function render() {
       storeOp: 'store',
     })
     .with(skyBoxVertexLayout, skyBoxVertexBuffer)
-    .with(renderLayout, renderBindGroup)
+    .with(renderLayout, dynamicResourcesBox.data.renderBindGroup)
     .with(textureBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
     .draw(skyBoxVertices.length);
 
@@ -203,11 +197,7 @@ function render() {
       depthStoreOp: 'store',
     })
     .with(renderInstanceLayout, sphereVertexBuffer)
-    .with(renderBindGroupLayout, renderBindGroup)
-    .with(
-      celestialBodiesBindGroupLayout,
-      dynamicResourcesBox.data.celestialBodiesBindGroupA,
-    )
+    .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
     .draw(sphereVertexCount, dynamicResourcesBox.data.celestialBodiesCount);
 
   root['~unstable'].flush();
@@ -273,6 +263,13 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
   celestialBodiesCountBuffer.write(celestialBodies.length);
 
+  const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
+    camera: cameraBuffer,
+    sampler,
+    celestialBodyTextures: sphereTextures,
+    celestialBodies: computeBufferA,
+  });
+
   const skyBoxTexture = await loadSkyBox(root, presetData.skyBox);
   const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 
@@ -289,13 +286,14 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     celestialBodiesBindGroupB,
     skyBoxTexture,
     skyBoxBindGroup: textureBindGroup,
+    renderBindGroup,
   };
 }
 
 // #region Camera controls
 
 export const controls = {
-  Preset: {
+  preset: {
     initial: 'Asteroid belt',
     options: presets,
     async onSelectChange(value: Preset) {
@@ -303,6 +301,13 @@ export const controls = {
       // AAA dispose of the oldData
       dynamicResourcesBox.data = await loadPreset(value);
     },
+  },
+  'simulation speed': {
+    initial: 0,
+    min: -5,
+    max: 5,
+    step: 1,
+    onSliderChange: (newValue: number) => {},
   },
 };
 
