@@ -128,5 +128,6 @@ export const radiusOf = tgpu['~unstable'].fn(
   [d.f32],
   d.f32,
 )((mass) => {
+  'kernel & js';
   return std.pow((mass * 0.75) / Math.PI, 0.333);
 });

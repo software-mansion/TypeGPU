@@ -22,12 +22,6 @@ export const presets = [
   'Asteroid belt',
   'Asteroid belt with collisions',
   'Dust cloud',
-  'Test 0',
-  'Test 1',
-  'Test 2',
-  'Test 3',
-  'Test 4',
-  'Test 5',
-  'Test 6',
+  'Energy preservation',
 ] as const;
 export type Preset = (typeof presets)[number];

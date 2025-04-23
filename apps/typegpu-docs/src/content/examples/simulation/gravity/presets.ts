@@ -6,6 +6,7 @@ import type {
   SkyBox,
   SphereTextureName,
 } from './enums.ts';
+import { radiusOf } from './textures.ts';
 
 export interface PresetData {
   skyBox: SkyBox;
@@ -98,198 +99,46 @@ export const examplePresets: Record<Preset, PresetData> = {
               (Math.random() - 0.5) * 100,
             ),
             mass: 0.1,
-            collisionBehavior: 'none',
+            collisionBehavior: 'bouncy',
           };
         }),
       },
     ],
   },
-  'Test 0': {
+  'Energy preservation': {
     skyBox: 'beach',
     celestialBodies: [
       {
         texture: 'earth',
         elements: [
           {
-            position: d.vec3f(1, 0, 0),
-            mass: 0,
+            position: d.vec3f(0, -radiusOf(1000), 0),
+            mass: 1000,
+            collisionBehavior: 'bouncy',
           },
         ],
       },
       {
         texture: 'moon',
         elements: [
-          {
-            position: d.vec3f(-1, 0, 0),
-            mass: 0,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 1': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(1, 0, 0),
-            mass: 1,
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(-1, 0, 0),
-            mass: 1,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 2': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(1, 0, 0),
-            velocity: d.vec3f(0, 0.1, 0),
-            mass: 1,
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(-1, 0, 0),
-            velocity: d.vec3f(0, -0.1, 0),
-            mass: 1,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 3': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(0, 0, 0),
-            mass: 10,
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(-10, 0, 0),
-            velocity: d.vec3f(0, -1, 0),
-            mass: 0.001,
-          },
-          {
-            position: d.vec3f(10.0001, 0, 0),
-            mass: 0,
-          },
-          {
-            position: d.vec3f(-10.0001, 0, 0),
-            mass: 0,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 4': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(0, 0, 0),
-            mass: 100,
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(3, 0, 0),
-            velocity: d.vec3f(0, 1, 0),
-            mass: 0.001,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 5': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(0, -1010, 0),
-            mass: 1000000,
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(0, 0, 0),
-            mass: 0.0005,
-          },
           {
             position: d.vec3f(0, 5, 0),
-            mass: 0.00025,
+            mass: 0.08,
+            collisionBehavior: 'bouncy',
           },
           {
             position: d.vec3f(0, 10, 0),
-            mass: 0.00012,
+            mass: 0.04,
+            collisionBehavior: 'bouncy',
           },
           {
             position: d.vec3f(0, 15, 0),
-            mass: 0.00006,
+            mass: 0.02,
+            collisionBehavior: 'bouncy',
           },
           {
             position: d.vec3f(0, 20, 0),
-            mass: 0.00003,
-          },
-        ],
-      },
-    ],
-  },
-  'Test 6': {
-    skyBox: 'beach',
-    celestialBodies: [
-      {
-        texture: 'earth',
-        elements: [
-          {
-            position: d.vec3f(0, 0, 0),
-            mass: 100,
-            collisionBehavior: 'merge',
-          },
-        ],
-      },
-      {
-        texture: 'moon',
-        elements: [
-          {
-            position: d.vec3f(3, 0, 0),
-            velocity: d.vec3f(0, 1, 0),
-            mass: 0.001,
+            mass: 0.01,
             collisionBehavior: 'bouncy',
           },
         ],
