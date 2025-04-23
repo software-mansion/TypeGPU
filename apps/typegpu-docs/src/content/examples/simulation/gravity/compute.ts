@@ -13,7 +13,7 @@ export const computeGravityShader = tgpu['~unstable']
     workgroupSize: [1],
   })((input) => {
     const current = gravityLayout.$.inState[input.gid.x];
-    const dt = 0.016;
+    const dt = 0.016 * gravityLayout.$.timeMultiplier;
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {

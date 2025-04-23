@@ -5,7 +5,7 @@ import * as p from './params.ts';
 import {
   VertexOutput,
   renderBindGroupLayout as renderLayout,
-  textureBindGroupLayout as textureLayout,
+  skyBoxBindGroupLayout as textureLayout,
 } from './schemas.ts';
 import { radiusOf } from './textures.ts';
 

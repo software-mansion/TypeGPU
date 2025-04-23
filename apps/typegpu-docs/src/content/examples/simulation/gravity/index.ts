@@ -33,9 +33,8 @@ import {
   computeGravityBindGroupLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
-  renderBindGroupLayout as renderLayout,
+  skyBoxBindGroupLayout,
   skyBoxVertexLayout,
-  textureBindGroupLayout,
 } from './schemas.ts';
 import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
@@ -115,7 +114,7 @@ interface DynamicResources {
   skyBoxTexture: TgpuTexture<{ size: [2048, 2048, 6]; format: 'rgba8unorm' }> &
     Render &
     Sampled;
-  skyBoxBindGroup: TgpuBindGroup<(typeof textureBindGroupLayout)['entries']>;
+  skyBoxBindGroup: TgpuBindGroup<(typeof skyBoxBindGroupLayout)['entries']>;
   renderBindGroup: TgpuBindGroup<(typeof renderBindGroupLayout)['entries']>;
 }
 
@@ -182,8 +181,8 @@ function render() {
       storeOp: 'store',
     })
     .with(skyBoxVertexLayout, skyBoxVertexBuffer)
-    .with(renderLayout, dynamicResourcesBox.data.renderBindGroup)
-    .with(textureBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
+    .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
+    .with(skyBoxBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
     .draw(skyBoxVertices.length);
 
   renderPipeline
@@ -277,7 +276,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const skyBoxTexture = await loadSkyBox(root, presetData.skyBox);
   const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 
-  const textureBindGroup = root.createBindGroup(textureBindGroupLayout, {
+  const textureBindGroup = root.createBindGroup(skyBoxBindGroupLayout, {
     skyBox: skyBox,
     sampler: sampler,
   });
@@ -306,12 +305,14 @@ export const controls = {
       dynamicResourcesBox.data = await loadPreset(value);
     },
   },
-  'simulation speed': {
+  'simulation speed modifier': {
     initial: 0,
     min: -5,
     max: 5,
     step: 1,
-    onSliderChange: (newValue: number) => {},
+    onSliderChange: (newValue: number) => {
+      timeMultiplierBuffer.write(2 ** newValue);
+    },
   },
 };
 

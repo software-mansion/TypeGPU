@@ -71,7 +71,7 @@ export const computeGravityBindGroupLayout = tgpu.bindGroupLayout({
   },
 });
 
-export const textureBindGroupLayout = tgpu.bindGroupLayout({
+export const skyBoxBindGroupLayout = tgpu.bindGroupLayout({
   skyBox: { texture: 'float', viewDimension: 'cube' },
   sampler: { sampler: 'filtering' },
 });
