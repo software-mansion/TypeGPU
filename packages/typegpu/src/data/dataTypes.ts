@@ -16,9 +16,7 @@ import * as wgsl from './wgslTypes.ts';
 
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {
-    [$internal]: {
-      implementation: TImpl | string;
-    };
+    [$internal]: true;
   };
 
 /**
@@ -30,6 +28,7 @@ export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
  * via `d.align` function.
  */
 export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
+  readonly [$internal]: true;
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -48,6 +47,7 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly label?: string | undefined;
   readonly type: 'unstruct';
@@ -65,6 +65,7 @@ export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
+  readonly [$internal]: true;
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
@@ -83,7 +84,10 @@ export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
-  return looseTypeLiterals.includes((data as AnyLooseData)?.type);
+  return (
+    (data as AnyLooseData)?.[$internal] &&
+    looseTypeLiterals.includes((data as AnyLooseData)?.type)
+  );
 }
 
 /**
@@ -102,7 +106,7 @@ export function isLooseData(data: unknown): data is AnyLooseData {
 export function isDisarray<T extends Disarray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as Disarray)?.type === 'disarray';
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'disarray';
 }
 
 /**
@@ -121,13 +125,13 @@ export function isDisarray<T extends Disarray>(
 export function isUnstruct<T extends Unstruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.type === 'unstruct';
+  return (schema as T)?.[$internal] && (schema as T)?.type === 'unstruct';
 }
 
 export function isLooseDecorated<T extends LooseDecorated>(
   value: T | unknown,
 ): value is T {
-  return (value as T)?.type === 'loose-decorated';
+  return (value as T)?.[$internal] && (value as T)?.type === 'loose-decorated';
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {

@@ -1,4 +1,4 @@
-import type * as smol from 'tinyest';
+import type * as tinyest from 'tinyest';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
   Decorated,
@@ -25,8 +25,8 @@ import type { Infer } from '../../shared/repr.ts';
  * Information extracted from transpiling a JS function.
  */
 export type TranspilationResult = {
-  argNames: smol.ArgNames;
-  body: smol.Block;
+  argNames: tinyest.ArgNames;
+  body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the
    * function itself, or in the block that is accessing that identifier.
@@ -43,10 +43,25 @@ export type InferReturn<T> = T extends undefined
     void
   : Infer<T>;
 
-export type Implementation<
-  Args extends unknown[] = unknown[],
+export type JsImplementation<
+  Args extends unknown[] | Record<string, unknown> =
+    | unknown[]
+    | Record<string, unknown>,
   Return = unknown,
-> = string | ((...args: Args) => Return);
+> = (
+  ...args: Args extends unknown[]
+    ? InferArgs<Args>
+    : Args extends Record<string, never>
+      ? []
+      : [InferIO<Args>]
+) => InferReturn<Return>;
+
+export type Implementation<
+  Args extends unknown[] | Record<string, unknown> =
+    | unknown[]
+    | Record<string, unknown>,
+  Return = unknown,
+> = string | JsImplementation<Args, Return>;
 
 export type BaseIOData =
   | F32

@@ -3,7 +3,7 @@ import type { TgpuNamable } from '../../namable.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../smol/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import {
   type Labelled,
   type ResolutionCtx,
@@ -26,6 +26,7 @@ import type {
   InferArgs,
   InferIO,
   InferReturn,
+  JsImplementation,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 
@@ -80,6 +81,9 @@ interface TgpuFnBase<
   Return extends AnyWgslData | undefined = undefined,
 > extends TgpuNamable,
     Labelled {
+  readonly [$internal]: {
+    implementation: Implementation<Args, Return>;
+  };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<Args, Return>;
   readonly '~providing'?: Providing | undefined;
@@ -102,18 +106,7 @@ export type TgpuFn<
       : Args extends Record<string, never>
         ? []
         : [InferIO<Args>]
-  ) => InferReturn<Return>) & {
-    readonly [$internal]: {
-      implementation: Implementation<
-        Args extends AnyWgslData[]
-          ? InferArgs<Args>
-          : Args extends Record<string, never>
-            ? []
-            : [InferIO<Args>],
-        InferReturn<Return>
-      >;
-    };
-  };
+  ) => InferReturn<Return>);
 
 export function fn<
   Args extends AnyWgslData[] | Record<string, AnyWgslData> | [],
@@ -164,13 +157,16 @@ function createFn<
   Return extends AnyWgslData | undefined,
 >(
   shell: TgpuFnShellHeader<Args, Return>,
-  implementation: Implementation,
+  implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return> & SelfResolvable;
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(shell, implementation as Implementation);
 
   const fnBase: This = {
+    [$internal]: {
+      implementation,
+    },
     shell,
     resourceType: 'function' as const,
 
@@ -214,8 +210,8 @@ function createFn<
     },
   };
 
-  const call = createDualImpl(
-    (...args: unknown[]): unknown => {
+  const call = createDualImpl<JsImplementation<Args, Return>>(
+    (...args) => {
       if (typeof implementation === 'string') {
         throw new Error(
           'Cannot execute on the CPU functions constructed with raw WGSL',
@@ -229,9 +225,6 @@ function createFn<
       dataType: shell.returnType ?? UnknownData,
     }),
   );
-
-  call[$internal].implementation = implementation;
-
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     Args,
     Return
@@ -256,6 +249,9 @@ function createBoundFunction<
   type This = TgpuFnBase<Args, Return>;
 
   const fnBase: This = {
+    [$internal]: {
+      implementation: innerFn[$internal].implementation,
+    },
     resourceType: 'function',
     shell: innerFn.shell,
     '~providing': {

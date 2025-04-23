@@ -1,3 +1,4 @@
+import { $internal } from '../shared/symbols.ts';
 import type { AnyData } from './dataTypes.ts';
 import type { Ptr } from './wgslTypes.ts';
 
@@ -5,6 +6,7 @@ export function ptrFn<T extends AnyData>(
   inner: T,
 ): Ptr<'function', T, 'read-write'> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'function',
@@ -16,6 +18,7 @@ export function ptrPrivate<T extends AnyData>(
   inner: T,
 ): Ptr<'private', T, 'read-write'> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'private',
@@ -27,6 +30,7 @@ export function ptrWorkgroup<T extends AnyData>(
   inner: T,
 ): Ptr<'workgroup', T, 'read-write'> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'workgroup',
@@ -39,6 +43,7 @@ export function ptrStorage<
   TAccess extends 'read' | 'read-write' = 'read',
 >(inner: T, access: TAccess = 'read' as TAccess): Ptr<'storage', T, TAccess> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'storage',
@@ -50,6 +55,7 @@ export function ptrUniform<T extends AnyData>(
   inner: T,
 ): Ptr<'uniform', T, 'read'> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'uniform',
@@ -61,6 +67,7 @@ export function ptrHandle<T extends AnyData>(
   inner: T,
 ): Ptr<'handle', T, 'read'> {
   return {
+    [$internal]: true,
     type: 'ptr',
     inner,
     addressSpace: 'handle',

@@ -2,65 +2,99 @@
 // Statement
 //
 
+export const NodeTypeCatalog = {
+  // frequent
+  block: 0,
+  binaryExpr: 1,
+  assignmentExpr: 2,
+  logicalExpr: 3,
+  unaryExpr: 4,
+  numericLiteral: 5,
+  call: 6,
+  memberAccess: 7,
+  indexAccess: 8,
+
+  // regular
+  return: 10,
+  if: 11,
+  let: 12,
+  const: 13,
+  for: 14,
+  while: 15,
+  continue: 16,
+  break: 17,
+
+  // rare
+  arrayExpr: 100,
+  preUpdate: 101,
+  postUpdate: 102,
+  stringLiteral: 103,
+  objectExpr: 104,
+} as const;
+
+export type NodeTypeCatalog = typeof NodeTypeCatalog;
+
 /**
  * Represents a return statement
  */
-export type Return = {
-  r: Expression | null;
-};
+export type Return =
+  | readonly [type: NodeTypeCatalog['return'], expr: Expression]
+  | readonly [type: NodeTypeCatalog['return']];
 
 /**
  * Represents an if statement
  */
-export type If = {
-  q:
-    | [condition: Expression, consequent: Statement]
-    | [condition: Expression, consequent: Statement, alternate: Statement];
-};
+export type If =
+  | readonly [type: NodeTypeCatalog['if'], cond: Expression, then: Statement]
+  | readonly [
+      type: NodeTypeCatalog['if'],
+      cond: Expression,
+      then: Statement,
+      alt: Statement,
+    ];
 
 /**
  * Represents a block of statements
  */
-export type Block = {
-  b: Statement[];
-};
+export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
 
 /**
  * Represents a let statement
  */
-export type Let = {
-  l: [identifier: string] | [identifier: string, value: Expression];
-};
+export type Let =
+  | readonly [type: NodeTypeCatalog['let'], identifier: string]
+  | readonly [
+      type: NodeTypeCatalog['let'],
+      identifier: string,
+      value: Expression,
+    ];
 
 /**
  * Represents a const statement
  */
-export type Const = {
-  c: [identifier: string, value: Expression];
-};
+export type Const = readonly [
+  type: NodeTypeCatalog['const'],
+  identifier: string,
+  value: Expression,
+];
 
-export type For = {
-  j: [
-    init: Statement | undefined,
-    condition: Expression | undefined,
-    update: Statement | undefined,
-    body: Statement,
-  ];
-};
+export type For = readonly [
+  type: NodeTypeCatalog['for'],
+  init: Statement | null,
+  condition: Expression | null,
+  update: Statement | null,
+  body: Statement,
+];
 
-export type While = {
-  w: [condition: Expression, body: Statement];
-};
+export type While = readonly [
+  type: NodeTypeCatalog['while'],
+  condition: Expression,
+  body: Statement,
+];
 
-export type Continue = {
-  // kontinue
-  k: null;
-};
+export type Continue = readonly [type: NodeTypeCatalog['continue']];
 
-export type Break = {
-  // demolish
-  d: null;
-};
+export type Break = readonly [type: NodeTypeCatalog['break']];
 
 /**
  * A union type of all statements
@@ -99,9 +133,12 @@ export type BinaryOperator =
   | '^'
   | '&';
 
-export type BinaryExpression = {
-  x: [lhs: Expression, op: BinaryOperator, rhs: Expression];
-};
+export type BinaryExpression = readonly [
+  type: NodeTypeCatalog['binaryExpr'],
+  lhs: Expression,
+  op: BinaryOperator,
+  rhs: Expression,
+];
 
 export type AssignmentOperator =
   | '='
@@ -119,15 +156,21 @@ export type AssignmentOperator =
   | '||='
   | '&&=';
 
-export type AssignmentExpression = {
-  x: [lhs: Expression, op: AssignmentOperator, rhs: Expression];
-};
+export type AssignmentExpression = readonly [
+  type: NodeTypeCatalog['assignmentExpr'],
+  lhs: Expression,
+  op: AssignmentOperator,
+  rhs: Expression,
+];
 
 export type LogicalOperator = '&&' | '||';
 
-export type LogicalExpression = {
-  x: [lhs: Expression, op: LogicalOperator, rhs: Expression];
-};
+export type LogicalExpression = readonly [
+  type: NodeTypeCatalog['logicalExpr'],
+  lhs: Expression,
+  op: LogicalOperator,
+  rhs: Expression,
+];
 
 export type UnaryOperator =
   | '-'
@@ -138,44 +181,57 @@ export type UnaryOperator =
   | 'void'
   | 'delete';
 
-export type UnaryExpression = {
-  u: [op: UnaryOperator, inner: Expression];
-};
+export type UnaryExpression = readonly [
+  type: NodeTypeCatalog['unaryExpr'],
+  op: UnaryOperator,
+  inner: Expression,
+];
 
-export type ObjectExpression = {
-  o: Record<string, Expression>;
-};
+export type ObjectExpression = readonly [
+  type: NodeTypeCatalog['objectExpr'],
+  Record<string, Expression>,
+];
 
-export type ArrayExpression = {
-  y: Expression[];
-};
+export type ArrayExpression = readonly [
+  type: NodeTypeCatalog['arrayExpr'],
+  values: Expression[],
+];
 
-export type MemberAccess = {
-  a: [object: Expression, member: string];
-};
+export type MemberAccess = readonly [
+  type: NodeTypeCatalog['memberAccess'],
+  object: Expression,
+  member: string,
+];
 
-export type IndexAccess = {
-  i: [object: Expression, property: Expression];
-};
+export type IndexAccess = readonly [
+  type: NodeTypeCatalog['indexAccess'],
+  object: Expression,
+  property: Expression,
+];
 
-export type Call = {
-  f: [identifier: Expression, args: Expression[]];
-};
+export type Call = readonly [
+  type: NodeTypeCatalog['call'],
+  identifier: Expression,
+  args: Expression[],
+];
 
-export type Update = {
-  // p like please update
-  p: [operator: '++' | '--', argument: Expression];
-};
+export type PostUpdate = readonly [
+  type: NodeTypeCatalog['postUpdate'],
+  operator: '++' | '--',
+  argument: Expression,
+];
+
+export type PreUpdate = readonly [
+  type: NodeTypeCatalog['preUpdate'],
+  operator: '++' | '--',
+  argument: Expression,
+];
 
 /** A numeric literal */
-export type Num = {
-  n: string;
-};
+export type Num = readonly [type: NodeTypeCatalog['numericLiteral'], string];
 
 /** A string literal */
-export type Str = {
-  s: string;
-};
+export type Str = readonly [type: NodeTypeCatalog['stringLiteral'], string];
 
 export type Literal = Num | Str | boolean;
 
@@ -190,7 +246,8 @@ export type Expression =
   | MemberAccess
   | IndexAccess
   | ArrayExpression
-  | Update
+  | PreUpdate
+  | PostUpdate
   | Call
   | Literal;
 
