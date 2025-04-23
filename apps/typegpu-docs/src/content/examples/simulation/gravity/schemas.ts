@@ -72,6 +72,7 @@ export const computeGravityBindGroupLayout = tgpu.bindGroupLayout({
 });
 
 export const skyBoxBindGroupLayout = tgpu.bindGroupLayout({
+  camera: { uniform: Camera },
   skyBox: { texture: 'float', viewDimension: 'cube' },
   sampler: { sampler: 'filtering' },
 });
@@ -90,6 +91,6 @@ export const renderBindGroupLayout = tgpu.bindGroupLayout({
   },
 });
 
-export const renderInstanceLayout = tgpu.vertexLayout((n: number) =>
+export const renderVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(d.struct(VertexInput), n),
 );

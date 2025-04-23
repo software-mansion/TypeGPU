@@ -32,7 +32,7 @@ import {
   computeCollisionsBindGroupLayout,
   computeGravityBindGroupLayout,
   renderBindGroupLayout,
-  renderInstanceLayout,
+  renderVertexLayout,
   skyBoxBindGroupLayout,
   skyBoxVertexLayout,
 } from './schemas.ts';
@@ -139,7 +139,7 @@ const skyBoxPipeline = root['~unstable']
   .createPipeline();
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVertex, renderInstanceLayout.attrib)
+  .withVertex(mainVertex, renderVertexLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
@@ -195,7 +195,7 @@ function render() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(renderInstanceLayout, sphereVertexBuffer)
+    .with(renderVertexLayout, sphereVertexBuffer)
     .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
     .draw(sphereVertexCount, dynamicResourcesBox.data.celestialBodiesCount);
 
@@ -274,6 +274,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 
   const textureBindGroup = root.createBindGroup(skyBoxBindGroupLayout, {
+    camera: cameraBuffer,
     skyBox: skyBox,
     sampler: sampler,
   });

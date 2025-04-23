@@ -5,7 +5,7 @@ import * as p from './params.ts';
 import {
   VertexOutput,
   renderBindGroupLayout as renderLayout,
-  skyBoxBindGroupLayout as textureLayout,
+  skyBoxBindGroupLayout as skyBoxLayout,
 } from './schemas.ts';
 import { radiusOf } from './textures.ts';
 
@@ -20,14 +20,14 @@ export const skyBoxVertex = tgpu['~unstable'].vertexFn({
   },
 })((input) => {
   const viewRotationMatrix = d.mat4x4f(
-    renderLayout.$.camera.view.columns[0],
-    renderLayout.$.camera.view.columns[1],
-    renderLayout.$.camera.view.columns[2],
+    skyBoxLayout.$.camera.view.columns[0],
+    skyBoxLayout.$.camera.view.columns[1],
+    skyBoxLayout.$.camera.view.columns[2],
     d.vec4f(0, 0, 0, 1),
   );
   return {
     pos: std.mul(
-      renderLayout.$.camera.projection,
+      skyBoxLayout.$.camera.projection,
       std.mul(viewRotationMatrix, input.position),
     ),
     texCoord: input.position.xyz,
@@ -41,8 +41,8 @@ export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   return std.textureSample(
-    textureLayout.$.skyBox,
-    textureLayout.$.sampler,
+    skyBoxLayout.$.skyBox,
+    skyBoxLayout.$.sampler,
     std.normalize(input.texCoord),
   );
 });
