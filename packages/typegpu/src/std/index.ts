@@ -1,4 +1,4 @@
-export { discard } from './discard.js';
+export { discard } from './discard.ts';
 export {
   // ops
   add,
@@ -26,7 +26,7 @@ export {
   pow,
   reflect,
   sin,
-} from './numeric.js';
+} from './numeric.ts';
 
 export {
   // comparison
@@ -65,19 +65,13 @@ export {
   textureBarrier,
 } from './atomic.js';
 
-export {
-  identity,
-  translate,
-  scale,
-} from './matrix.js'
-
-export { arrayLength } from './array.js';
+export { arrayLength } from './array.ts';
 
 export {
-  pack2x16float,
   pack4x8unorm,
-  unpack2x16float,
+  pack2x16float,
   unpack4x8unorm,
-} from './packing.js';
+  unpack2x16float,
+} from './packing.ts';
 
-export { textureSample } from './texture.js';
+export { textureSample } from './texture.ts';
