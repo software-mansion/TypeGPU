@@ -40,7 +40,6 @@ import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
 // AAA presety: atom, ziemia i księzyc, solar system,
 // andromeda x milky way, balls on ground, negative mass
-// AAA mobile touch support
 // AAA dynamic lighting source, lighting direction
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -54,7 +53,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// static resources
+// static resources (created on the example load)
 
 const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
   await loadModel(root, '/TypeGPU/assets/gravity/sphere.obj');
@@ -389,7 +388,19 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
+canvas.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 1) {
+    isDragging = true;
+    prevX = event.touches[0].clientX;
+    prevY = event.touches[0].clientY;
+  }
+});
+
 window.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+window.addEventListener('touchend', () => {
   isDragging = false;
 });
 
@@ -400,6 +411,18 @@ canvas.addEventListener('mousemove', (event) => {
   prevY = event.clientY;
 
   if (isDragging) {
+    updateCameraOrbit(dx, dy);
+  }
+});
+
+canvas.addEventListener('touchmove', (event) => {
+  if (isDragging && event.touches.length === 1) {
+    event.preventDefault();
+    const dx = event.touches[0].clientX - prevX;
+    const dy = event.touches[0].clientY - prevY;
+    prevX = event.touches[0].clientX;
+    prevY = event.touches[0].clientY;
+
     updateCameraOrbit(dx, dy);
   }
 });
