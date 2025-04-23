@@ -42,8 +42,6 @@ import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 // andromeda x milky way, balls on ground, negative mass
 // AAA mobile touch support
 // AAA dynamic lighting source, lighting direction
-// AAA (inny ticket) show left menu, show code editor zapisane w linku
-// AAA creditsy
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -94,7 +92,7 @@ const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 
 const timeMultiplierBuffer = root.createBuffer(d.f32).$usage('uniform');
 
-// dynamic resources
+// dynamic resources (recreated every time a preset is selected)
 
 interface DynamicResources {
   celestialBodiesCount: number;
@@ -299,8 +297,10 @@ export const controls = {
     options: presets,
     async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;
-      // AAA dispose of the oldData
       dynamicResourcesBox.data = await loadPreset(value);
+      oldData.celestialBodiesBufferA.destroy();
+      oldData.celestialBodiesBufferB.destroy();
+      oldData.skyBoxTexture.destroy();
     },
   },
   'simulation speed modifier': {
