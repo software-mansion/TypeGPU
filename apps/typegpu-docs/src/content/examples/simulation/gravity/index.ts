@@ -40,13 +40,10 @@ import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
 // AAA presety: atom, ziemia i księzyc, solar system,
 // andromeda x milky way, balls on ground, negative mass
-// AAA speed slider
-// AAA bufor z czasem
 // AAA mobile touch support
 // AAA dynamic lighting source, lighting direction
-// AAA ecosphere
 // AAA (inny ticket) show left menu, show code editor zapisane w linku
-// AAA refactor bind grup
+// AAA creditsy
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
