@@ -37,9 +37,28 @@ export const SkyBoxVertex = d.struct({
 });
 
 // layouts
-export const celestialBodiesBindGroupLayout = tgpu.bindGroupLayout({
+export const computeCollisionsBindGroupLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
     uniform: d.i32,
+    access: 'readonly',
+  },
+  inState: {
+    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    access: 'readonly',
+  },
+  outState: {
+    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    access: 'mutable',
+  },
+});
+
+export const computeGravityBindGroupLayout = tgpu.bindGroupLayout({
+  celestialBodiesCount: {
+    uniform: d.i32,
+    access: 'readonly',
+  },
+  timeMultiplier: {
+    uniform: d.f32,
     access: 'readonly',
   },
   inState: {

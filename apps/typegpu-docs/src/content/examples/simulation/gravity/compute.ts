@@ -1,39 +1,24 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { celestialBodiesBindGroupLayout } from './schemas.ts';
+import {
+  computeCollisionsBindGroupLayout as collisionsLayout,
+  computeGravityBindGroupLayout as gravityLayout,
+} from './schemas.ts';
 import { radiusOf } from './textures.ts';
-
-const { inState, outState, celestialBodiesCount } =
-  celestialBodiesBindGroupLayout.bound;
-
-const isSmaller = tgpu['~unstable'].fn(
-  { currentId: d.u32, otherId: d.u32 },
-  d.bool,
-)((args) => {
-  const current = inState.value[args.currentId];
-  const other = inState.value[args.otherId];
-  if (current.mass < other.mass) {
-    return true;
-  }
-  if (current.mass === other.mass) {
-    return args.currentId < args.otherId;
-  }
-  return false;
-});
 
 export const computeGravityShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [1],
   })((input) => {
-    const current = inState.value[input.gid.x];
+    const current = gravityLayout.$.inState[input.gid.x];
     const dt = 0.016;
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {
-      for (let i = 0; i < celestialBodiesCount.value; i++) {
-        const other = inState.value[i];
+      for (let i = 0; i < gravityLayout.$.celestialBodiesCount; i++) {
+        const other = gravityLayout.$.inState[i];
         if (d.u32(i) === input.gid.x || other.destroyed === 1) {
           continue;
         }
@@ -59,9 +44,24 @@ export const computeGravityShader = tgpu['~unstable']
       );
     }
 
-    outState.value[input.gid.x] = updatedCurrent;
+    gravityLayout.$.outState[input.gid.x] = updatedCurrent;
   })
   .$name('Compute gravity shader');
+
+const isSmaller = tgpu['~unstable'].fn(
+  { currentId: d.u32, otherId: d.u32 },
+  d.bool,
+)((args) => {
+  const current = collisionsLayout.$.inState[args.currentId];
+  const other = collisionsLayout.$.inState[args.otherId];
+  if (current.mass < other.mass) {
+    return true;
+  }
+  if (current.mass === other.mass) {
+    return args.currentId < args.otherId;
+  }
+  return false;
+});
 
 export const computeCollisionsShader = tgpu['~unstable']
   .computeFn({
@@ -69,14 +69,14 @@ export const computeCollisionsShader = tgpu['~unstable']
     workgroupSize: [1],
   })((input) => {
     const currentId = input.gid.x;
-    const current = inState.value[currentId];
+    const current = collisionsLayout.$.inState[currentId];
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {
       // collisions
-      for (let i = 0; i < celestialBodiesCount.value; i++) {
+      for (let i = 0; i < collisionsLayout.$.celestialBodiesCount; i++) {
         const otherId = d.u32(i);
-        const other = inState.value[otherId];
+        const other = collisionsLayout.$.inState[otherId];
         if (d.u32(i) === input.gid.x || other.destroyed === 1) {
           continue;
         }
@@ -140,6 +140,6 @@ export const computeCollisionsShader = tgpu['~unstable']
       }
     }
 
-    outState.value[input.gid.x] = updatedCurrent;
+    collisionsLayout.$.outState[input.gid.x] = updatedCurrent;
   })
   .$name('Compute collisions shader');

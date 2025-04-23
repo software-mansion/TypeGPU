@@ -29,7 +29,8 @@ import {
   Camera,
   CelestialBody,
   SkyBoxVertex,
-  celestialBodiesBindGroupLayout,
+  computeCollisionsBindGroupLayout,
+  computeGravityBindGroupLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
   renderBindGroupLayout as renderLayout,
@@ -95,6 +96,8 @@ const sphereTextures = await loadSphereTextures(root);
 
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 
+const timeMultiplierBuffer = root.createBuffer(d.f32).$usage('uniform');
+
 // dynamic resources
 
 interface DynamicResources {
@@ -103,11 +106,11 @@ interface DynamicResources {
     StorageFlag;
   celestialBodiesBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
     StorageFlag;
-  celestialBodiesBindGroupA: TgpuBindGroup<
-    (typeof celestialBodiesBindGroupLayout)['entries']
+  computeCollisionsBindGroup: TgpuBindGroup<
+    (typeof computeCollisionsBindGroupLayout)['entries']
   >;
-  celestialBodiesBindGroupB: TgpuBindGroup<
-    (typeof celestialBodiesBindGroupLayout)['entries']
+  computeGravityBindGroup: TgpuBindGroup<
+    (typeof computeGravityBindGroupLayout)['entries']
   >;
   skyBoxTexture: TgpuTexture<{ size: [2048, 2048, 6]; format: 'rgba8unorm' }> &
     Render &
@@ -159,15 +162,15 @@ let depthTexture = root.device.createTexture({
 function render() {
   computeCollisionsPipeline
     .with(
-      celestialBodiesBindGroupLayout,
-      dynamicResourcesBox.data.celestialBodiesBindGroupA,
+      computeCollisionsBindGroupLayout,
+      dynamicResourcesBox.data.computeCollisionsBindGroup,
     )
     .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
 
   computeGravityPipeline
     .with(
-      celestialBodiesBindGroupLayout,
-      dynamicResourcesBox.data.celestialBodiesBindGroupB,
+      computeGravityBindGroupLayout,
+      dynamicResourcesBox.data.computeGravityBindGroup,
     )
     .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
 
@@ -243,8 +246,8 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     .createBuffer(d.arrayOf(CelestialBody, celestialBodies.length))
     .$usage('storage');
 
-  const celestialBodiesBindGroupA = root.createBindGroup(
-    celestialBodiesBindGroupLayout,
+  const computeCollisionsBindGroup = root.createBindGroup(
+    computeCollisionsBindGroupLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
       inState: computeBufferA,
@@ -252,10 +255,11 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     },
   );
 
-  const celestialBodiesBindGroupB = root.createBindGroup(
-    celestialBodiesBindGroupLayout,
+  const computeGravityBindGroup = root.createBindGroup(
+    computeGravityBindGroupLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
+      timeMultiplier: timeMultiplierBuffer,
       inState: computeBufferB,
       outState: computeBufferA,
     },
@@ -282,8 +286,8 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     celestialBodiesCount: celestialBodies.length,
     celestialBodiesBufferA: computeBufferA,
     celestialBodiesBufferB: computeBufferB,
-    celestialBodiesBindGroupA,
-    celestialBodiesBindGroupB,
+    computeCollisionsBindGroup,
+    computeGravityBindGroup,
     skyBoxTexture,
     skyBoxBindGroup: textureBindGroup,
     renderBindGroup,
