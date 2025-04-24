@@ -376,8 +376,8 @@ importers:
         version: 4.3.2
     devDependencies:
       '@ark/attest':
-        specifier: ^0.45.10
-        version: 0.45.10(typescript@5.8.2)
+        specifier: ^0.46.0
+        version: 0.46.0(typescript@5.8.2)
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
@@ -538,23 +538,26 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@ark/attest@0.45.10':
-    resolution: {integrity: sha512-d2QxCZVETrMDpdmBaBCyRvdoXeVEpyZLDJUdxHR0A1+keggeTl2sHcqMG+bykh/60s+v1SyE/rq2c8gdCinn3Q==}
+  '@ark/attest@0.46.0':
+    resolution: {integrity: sha512-bDo8Mtx94oFkhozao9rjoWf1/MOV4lakpoKtPvIFfHceE3M3jVqIOVY46Xh1TibMhjQ1vMtd55PcfllHYjbm8w==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@ark/fs@0.45.10':
-    resolution: {integrity: sha512-xHHaLk77d3V7K1ZcJKgOJanmSfinezG/J8zVZ2/sx/mIOgjzMY3wPD6BQsQerlGtP4W34GrcCczhjfr8QfGyyg==}
+  '@ark/fs@0.46.0':
+    resolution: {integrity: sha512-lBW6Vv6dZ74Gcc+zvJP8gjZACMo5o6hEuOvAtX6EJ5xNYBmX7nrXQaDdRfQNGDzgaX5UHGqi/vxk5moK94K7Yw==}
 
   '@ark/schema@0.45.9':
     resolution: {integrity: sha512-rG0v/JI0sibn/0wERAHTYVLCtEqoMP2IIlxnb+S5DrEjCI5wpubbZSWMDW50tZ8tV6FANu6zzHDeeKbp6lsZdg==}
 
-  '@ark/util@0.45.10':
-    resolution: {integrity: sha512-O0tI/nCCOsTqnT0Vcunz97o66EROOXc0BOAVzBxurYkgU+Pp5I2nCaj0sRPQ1y9UCwaCwkW8qS7VTJYUTicGzg==}
+  '@ark/schema@0.46.0':
+    resolution: {integrity: sha512-c2UQdKgP2eqqDArfBqQIJppxJHvNNXuQPeuSPlDML4rjw+f1cu0qAlzOG4b8ujgm9ctIDWwhpyw6gjG5ledIVQ==}
 
   '@ark/util@0.45.9':
     resolution: {integrity: sha512-0WYNAb8aRGp7dNt6xIvIrRzL7V1XL3u3PK2vcklhtTrdaP235DjC9qJhzidrxtWr68mA5ySSjUrgrXk622bKkw==}
+
+  '@ark/util@0.46.0':
+    resolution: {integrity: sha512-JPy/NGWn/lvf1WmGCPw2VGpBg5utZraE84I7wli18EDF3p3zc/e9WolT35tINeZO3l7C77SjqRJeAUoT0CvMRg==}
 
   '@astrojs/check@0.9.4':
     resolution: {integrity: sha512-IOheHwCtpUfvogHHsvu0AbeRZEnjJg3MopdLddkJE70mULItS/Vh37BHcI00mcOJcH1vhD3odbpvWokpxam7xA==}
@@ -2418,6 +2421,9 @@ packages:
 
   arktype@2.1.19:
     resolution: {integrity: sha512-notORSuTSpfLV7rq0kYC4mTgIVlVR0xQuvtFxOaE9aKiXyON/kgoIBwZZcKeSSb4BebNcfJoGlxJicAUl/HMdw==}
+
+  arktype@2.1.20:
+    resolution: {integrity: sha512-IZCEEXaJ8g+Ijd59WtSYwtjnqXiwM8sWQ5EjGamcto7+HVN9eK0C4p0zDlCuAwWhpqr6fIBkxPuYDl4/Mcj/+Q==}
 
   array-iterate@2.0.1:
     resolution: {integrity: sha512-I1jXZMjAgCMmxT4qxXfPXa6SthSoE8h6gkSI9BGGNv8mP8G/v0blc+qFnZu6K42vTOiuME596QaLO0TP3Lk0xg==}
@@ -5553,28 +5559,32 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@ark/attest@0.45.10(typescript@5.8.2)':
+  '@ark/attest@0.46.0(typescript@5.8.2)':
     dependencies:
-      '@ark/fs': 0.45.10
-      '@ark/util': 0.45.10
+      '@ark/fs': 0.46.0
+      '@ark/util': 0.46.0
       '@prettier/sync': 0.5.5(prettier@3.5.3)
       '@typescript/analyze-trace': 0.10.1
       '@typescript/vfs': 1.6.1(typescript@5.8.2)
-      arktype: 2.1.19
+      arktype: 2.1.20
       prettier: 3.5.3
       typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
-  '@ark/fs@0.45.10': {}
+  '@ark/fs@0.46.0': {}
 
   '@ark/schema@0.45.9':
     dependencies:
       '@ark/util': 0.45.9
 
-  '@ark/util@0.45.10': {}
+  '@ark/schema@0.46.0':
+    dependencies:
+      '@ark/util': 0.46.0
 
   '@ark/util@0.45.9': {}
+
+  '@ark/util@0.46.0': {}
 
   '@astrojs/check@0.9.4(prettier@3.5.3)(typescript@5.8.2)':
     dependencies:
@@ -7394,6 +7404,11 @@ snapshots:
     dependencies:
       '@ark/schema': 0.45.9
       '@ark/util': 0.45.9
+
+  arktype@2.1.20:
+    dependencies:
+      '@ark/schema': 0.46.0
+      '@ark/util': 0.46.0
 
   array-iterate@2.0.1: {}
 
