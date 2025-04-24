@@ -202,7 +202,8 @@ export function INTERNAL_createRenderPipeline(
 }
 
 export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
-  return (value as TgpuRenderPipeline)?.resourceType === 'render-pipeline';
+  const maybe = value as TgpuRenderPipeline | undefined;
+  return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
 }
 
 // --------------
