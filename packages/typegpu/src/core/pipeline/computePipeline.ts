@@ -1,6 +1,7 @@
 import { MissingBindGroupsError } from '../../errors.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { resolve } from '../../resolutionCtx.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -13,7 +14,12 @@ import type { TgpuSlot } from '../slot/slotTypes.ts';
 // Public API
 // ----------
 
+export interface TgpuComputePipelineInternals {
+  readonly rawPipeline: GPUComputePipeline;
+}
+
 export interface TgpuComputePipeline extends TgpuNamable {
+  readonly [$internal]: TgpuComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
   readonly label: string | undefined;
 
@@ -27,10 +33,6 @@ export interface TgpuComputePipeline extends TgpuNamable {
     y?: number | undefined,
     z?: number | undefined,
   ): void;
-}
-
-export interface INTERNAL_TgpuComputePipeline {
-  readonly rawPipeline: GPUComputePipeline;
 }
 
 export function INTERNAL_createComputePipeline(
@@ -64,15 +66,20 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | null;
 };
 
-class TgpuComputePipelineImpl
-  implements TgpuComputePipeline, INTERNAL_TgpuComputePipeline
-{
+class TgpuComputePipelineImpl implements TgpuComputePipeline {
+  public readonly [$internal]: TgpuComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
 
   constructor(
     private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
-  ) {}
+  ) {
+    this[$internal] = {
+      get rawPipeline() {
+        return _core.unwrap().pipeline;
+      },
+    };
+  }
 
   get label(): string | undefined {
     return this._core.label;

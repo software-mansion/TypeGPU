@@ -49,7 +49,6 @@ import type {
 } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
-  type INTERNAL_TgpuComputePipeline,
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
   isComputePipeline,
@@ -62,11 +61,12 @@ import {
   isRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import {
-  type INTERNAL_TgpuFixedSampler,
   type TgpuComparisonSampler,
   type TgpuSampler,
-  isComparisonSampler,
-  isSampler,
+  isFixedComparisonSampler,
+  isFixedSampler,
+  isLaidOutComparisonSampler,
+  isLaidOutSampler,
 } from '../sampler/sampler.ts';
 import {
   type TgpuAccessor,
@@ -391,7 +391,7 @@ class TgpuRootImpl
     | GPUVertexBufferLayout
     | GPUSampler {
     if (isComputePipeline(resource)) {
-      return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
+      return resource[$internal].rawPipeline;
     }
 
     if (isRenderPipeline(resource)) {
@@ -428,18 +428,20 @@ class TgpuRootImpl
       return resource.vertexLayout;
     }
 
-    if (isSampler(resource)) {
-      if ('unwrap' in resource) {
-        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
-      }
+    if (isLaidOutSampler(resource)) {
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
-    if (isComparisonSampler(resource)) {
-      if ('unwrap' in resource) {
-        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
-      }
+    if (isLaidOutComparisonSampler(resource)) {
       throw new Error('Cannot unwrap laid-out comparison sampler.');
+    }
+
+    if (isFixedSampler(resource)) {
+      return resource[$internal].unwrap(this);
+    }
+
+    if (isFixedComparisonSampler(resource)) {
+      return resource[$internal].unwrap(this);
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
