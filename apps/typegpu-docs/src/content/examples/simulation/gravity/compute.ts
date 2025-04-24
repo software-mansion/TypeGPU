@@ -7,47 +7,6 @@ import {
 } from './schemas.ts';
 import { radiusOf } from './textures.ts';
 
-export const computeGravityShader = tgpu['~unstable']
-  .computeFn({
-    in: { gid: d.builtin.globalInvocationId },
-    workgroupSize: [1],
-  })((input) => {
-    const current = gravityLayout.$.inState[input.gid.x];
-    const dt = 0.016 * gravityLayout.$.timeMultiplier;
-
-    const updatedCurrent = current;
-    if (current.destroyed === 0) {
-      for (let i = 0; i < gravityLayout.$.celestialBodiesCount; i++) {
-        const other = gravityLayout.$.inState[i];
-        if (d.u32(i) === input.gid.x || other.destroyed === 1) {
-          continue;
-        }
-
-        const dist = std.max(
-          radiusOf(current) + radiusOf(other),
-          std.distance(current.position, other.position),
-        );
-        const gravityForce = (current.mass * other.mass) / dist / dist;
-
-        const direction = std.normalize(
-          std.sub(other.position, current.position),
-        );
-        updatedCurrent.velocity = std.add(
-          updatedCurrent.velocity,
-          std.mul((gravityForce / current.mass) * dt, direction),
-        );
-      }
-
-      updatedCurrent.position = std.add(
-        updatedCurrent.position,
-        std.mul(dt, updatedCurrent.velocity),
-      );
-    }
-
-    gravityLayout.$.outState[input.gid.x] = updatedCurrent;
-  })
-  .$name('Compute gravity shader');
-
 const isSmaller = tgpu['~unstable'].fn(
   { currentId: d.u32, otherId: d.u32 },
   d.bool,
@@ -149,3 +108,44 @@ export const computeCollisionsShader = tgpu['~unstable']
     collisionsLayout.$.outState[input.gid.x] = updatedCurrent;
   })
   .$name('Compute collisions shader');
+
+export const computeGravityShader = tgpu['~unstable']
+  .computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [1],
+  })((input) => {
+    const current = gravityLayout.$.inState[input.gid.x];
+    const dt = gravityLayout.$.time.passed * gravityLayout.$.time.multiplier;
+
+    const updatedCurrent = current;
+    if (current.destroyed === 0) {
+      for (let i = 0; i < gravityLayout.$.celestialBodiesCount; i++) {
+        const other = gravityLayout.$.inState[i];
+        if (d.u32(i) === input.gid.x || other.destroyed === 1) {
+          continue;
+        }
+
+        const dist = std.max(
+          radiusOf(current) + radiusOf(other),
+          std.distance(current.position, other.position),
+        );
+        const gravityForce = (current.mass * other.mass) / dist / dist;
+
+        const direction = std.normalize(
+          std.sub(other.position, current.position),
+        );
+        updatedCurrent.velocity = std.add(
+          updatedCurrent.velocity,
+          std.mul((gravityForce / current.mass) * dt, direction),
+        );
+      }
+
+      updatedCurrent.position = std.add(
+        updatedCurrent.position,
+        std.mul(dt, updatedCurrent.velocity),
+      );
+    }
+
+    gravityLayout.$.outState[input.gid.x] = updatedCurrent;
+  })
+  .$name('Compute gravity shader');

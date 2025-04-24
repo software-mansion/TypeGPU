@@ -28,6 +28,7 @@ import {
   Camera,
   CelestialBody,
   SkyBoxVertex,
+  Time,
   computeCollisionsBindGroupLayout,
   computeGravityBindGroupLayout,
   renderBindGroupLayout,
@@ -87,7 +88,7 @@ const skyBoxVertexBuffer = root
 const sphereTextures = await loadSphereTextures(root);
 
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
-const timeMultiplierBuffer = root.createBuffer(d.f32).$usage('uniform');
+const timeBuffer = root.createBuffer(Time).$usage('uniform');
 const lightSourceBuffer = root.createBuffer(d.vec3f).$usage('uniform');
 
 // dynamic resources (recreated every time a preset is selected)
@@ -199,15 +200,20 @@ function render() {
 }
 
 let destroyed = false;
+let lastTimestamp = 0;
 // Frame loop
-function frame() {
+function frame(timestamp: DOMHighResTimeStamp) {
   if (destroyed) {
     return;
   }
+  timeBuffer.writePartial({
+    passed: Math.min((timestamp - lastTimestamp) / 1000, 1),
+  });
+  lastTimestamp = timestamp;
   render();
   requestAnimationFrame(frame);
 }
-frame();
+requestAnimationFrame(frame);
 
 async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const presetData = examplePresets[preset];
@@ -253,7 +259,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     computeGravityBindGroupLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
-      timeMultiplier: timeMultiplierBuffer,
+      time: timeBuffer,
       inState: computeBufferB,
       outState: computeBufferA,
     },
@@ -313,7 +319,7 @@ export const controls = {
     max: 3,
     step: 1,
     onSliderChange: (newValue: number) => {
-      timeMultiplierBuffer.write(2 ** newValue);
+      timeBuffer.writePartial({ multiplier: 2 ** newValue });
     },
   },
 };

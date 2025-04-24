@@ -89,7 +89,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(1.0806e11, -6.1604e9, -4.9957e9),
             velocity: d.vec3f(1.5355e3, 2.7399e3, 3.5312e4),
             mass: 4.8675e24,
-            radiusMultiplier: 100,
+            radiusMultiplier: 50,
           },
         ],
       },

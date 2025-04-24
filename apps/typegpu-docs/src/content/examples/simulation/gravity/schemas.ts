@@ -39,6 +39,8 @@ export const SkyBoxVertex = d.struct({
   uv: d.vec2f,
 });
 
+export const Time = d.struct({ passed: d.f32, multiplier: d.f32 });
+
 // layouts
 export const computeCollisionsBindGroupLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
@@ -60,8 +62,8 @@ export const computeGravityBindGroupLayout = tgpu.bindGroupLayout({
     uniform: d.i32,
     access: 'readonly',
   },
-  timeMultiplier: {
-    uniform: d.f32,
+  time: {
+    uniform: Time,
     access: 'readonly',
   },
   inState: {
