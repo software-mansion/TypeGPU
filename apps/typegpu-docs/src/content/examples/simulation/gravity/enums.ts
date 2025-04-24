@@ -1,7 +1,7 @@
-export const collisionBehavior = ['none', 'bouncy', 'merge'] as const;
-export type CollisionBehavior = (typeof collisionBehavior)[number];
+export const collisionBehaviors = ['none', 'bounce', 'merge'] as const;
+export type CollisionBehavior = (typeof collisionBehaviors)[number];
 
-export type SkyBox = 'campsite' | 'beach' | 'milky-way';
+export type SkyBox = 'milky-way';
 
 export const sphereTextureNames = [
   'sun',

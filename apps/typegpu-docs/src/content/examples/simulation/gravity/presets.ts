@@ -236,7 +236,7 @@ export const examplePresets: Record<Preset, PresetData> = {
               std.normalize(d.vec3f(z, 0, -x)),
             ),
             mass: rand(0.0008, 0.0012),
-            collisionBehavior: 'bouncy',
+            collisionBehavior: 'bounce',
           };
         }),
       },
@@ -247,7 +247,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(0, 0, -80),
             velocity: d.vec3f(0, stableOrbitVelocity(100, 80, 50), 0),
             mass: 1,
-            collisionBehavior: 'bouncy',
+            collisionBehavior: 'bounce',
           },
         ],
       },
@@ -264,7 +264,7 @@ export const examplePresets: Record<Preset, PresetData> = {
           return {
             position: randInBall(0, 50),
             mass: 0.1,
-            collisionBehavior: 'bouncy',
+            collisionBehavior: 'bounce',
           };
         }),
       },

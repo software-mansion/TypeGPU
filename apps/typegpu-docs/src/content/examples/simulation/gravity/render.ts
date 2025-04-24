@@ -1,12 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { radiusOf } from './helpers.ts';
 import {
   VertexOutput,
   renderBindGroupLayout as renderLayout,
   skyBoxBindGroupLayout as skyBoxLayout,
 } from './schemas.ts';
-import { radiusOf } from './textures.ts';
 
 export const skyBoxVertex = tgpu['~unstable'].vertexFn({
   in: {

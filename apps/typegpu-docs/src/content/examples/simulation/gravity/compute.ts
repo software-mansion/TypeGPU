@@ -1,12 +1,13 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { radiusOf } from './helpers.ts';
 import {
   computeCollisionsBindGroupLayout as collisionsLayout,
   computeGravityBindGroupLayout as gravityLayout,
 } from './schemas.ts';
-import { radiusOf } from './textures.ts';
 
+// tiebreaker function for merges and bounces
 const isSmaller = tgpu['~unstable'].fn(
   { currentId: d.u32, otherId: d.u32 },
   d.bool,
@@ -32,7 +33,6 @@ export const computeCollisionsShader = tgpu['~unstable']
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {
-      // collisions
       for (let i = 0; i < collisionsLayout.$.celestialBodiesCount; i++) {
         const otherId = d.u32(i);
         const other = collisionsLayout.$.inState[otherId];
@@ -51,6 +51,16 @@ export const computeCollisionsShader = tgpu['~unstable']
         }
         // does bounce occur?
         if (current.collisionBehavior === 1 && other.collisionBehavior === 1) {
+          // push the smaller object outside
+          if (isSmaller({ currentId, otherId })) {
+            updatedCurrent.position = std.add(
+              other.position,
+              std.mul(
+                radiusOf(current) + radiusOf(other),
+                std.normalize(std.sub(current.position, other.position)),
+              ),
+            );
+          }
           // bounce with tiny damping
           updatedCurrent.velocity = std.mul(
             0.99,
@@ -67,19 +77,7 @@ export const computeCollisionsShader = tgpu['~unstable']
               ),
             ),
           );
-          // push the smaller object outside
-          if (
-            current.mass < other.mass ||
-            (current.mass === other.mass && input.gid.x < d.u32(i))
-          ) {
-            updatedCurrent.position = std.add(
-              other.position,
-              std.mul(
-                radiusOf(current) + radiusOf(other),
-                std.normalize(std.sub(current.position, other.position)),
-              ),
-            );
-          }
+
           continue;
         }
         // does merge occur?
@@ -87,7 +85,7 @@ export const computeCollisionsShader = tgpu['~unstable']
           const isCurrentAbsorbed =
             current.collisionBehavior === 1 ||
             (current.collisionBehavior === 2 &&
-              isSmaller({ currentId: currentId, otherId: otherId }));
+              isSmaller({ currentId, otherId }));
           if (isCurrentAbsorbed) {
             // absorbed by other
             updatedCurrent.destroyed = 1;

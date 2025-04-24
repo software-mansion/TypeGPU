@@ -12,11 +12,16 @@ import * as m from 'wgpu-matrix';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   type Preset,
-  collisionBehavior,
+  collisionBehaviors,
   presets,
   sphereTextureNames,
 } from './enums.ts';
-import { loadModel } from './load-model.ts';
+import {
+  loadModel,
+  loadSkyBox,
+  loadSphereTextures,
+  skyBoxVertices,
+} from './helpers.ts';
 import { examplePresets } from './presets.ts';
 import {
   mainFragment,
@@ -36,7 +41,6 @@ import {
   skyBoxBindGroupLayout,
   skyBoxVertexLayout,
 } from './schemas.ts';
-import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
 // AAA suma (inny ticket)
 
@@ -228,7 +232,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           mass: element.mass,
           radiusMultiplier: element.radiusMultiplier ?? 1,
           collisionBehavior: element.collisionBehavior
-            ? collisionBehavior.indexOf(element.collisionBehavior)
+            ? collisionBehaviors.indexOf(element.collisionBehavior)
             : 0,
           textureIndex: sphereTextureNames.indexOf(group.texture),
           ambientLightFactor: element.ambientLightFactor ?? 0.6,
