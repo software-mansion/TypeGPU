@@ -64,7 +64,7 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
-let cameraPosition = examplePresets.Asteroids.initialCameraPos;
+let cameraPosition = examplePresets['Solar System'].initialCameraPos;
 
 const cameraInitial = Camera({
   position: cameraPosition,
@@ -116,7 +116,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Asteroids'),
+  data: await loadPreset('Solar System'),
 };
 
 // Pipelines
@@ -298,7 +298,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 export const controls = {
   preset: {
-    initial: 'Asteroids',
+    initial: 'Solar System',
     options: presets,
     async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;

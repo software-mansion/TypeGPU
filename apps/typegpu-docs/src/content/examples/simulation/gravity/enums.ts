@@ -20,10 +20,10 @@ export const sphereTextureNames = [
 export type SphereTextureName = (typeof sphereTextureNames)[number];
 
 export const presets = [
+  'Solar System',
   'Asteroids',
   'Colliding asteroids',
   'Bouncy dust',
   'Merging dust',
-  'Solar System',
 ] as const;
 export type Preset = (typeof presets)[number];

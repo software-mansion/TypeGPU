@@ -52,115 +52,6 @@ function stableOrbitVelocity(
 }
 
 export const examplePresets: Record<Preset, PresetData> = {
-  Asteroids: {
-    skyBox: 'milky-way',
-    initialCameraPos: d.vec3f(30, 8, 30),
-    celestialBodies: [
-      {
-        texture: 'jupiter',
-        elements: [
-          {
-            position: d.vec3f(),
-            mass: 1000,
-          },
-        ],
-      },
-      {
-        texture: 'haumea-fictional',
-        elements: Array.from(Array(1000)).map(() => {
-          const r = rand(15, 30);
-          const theta = rand(0, 2 * Math.PI);
-          const x = r * Math.cos(theta);
-          const z = r * Math.sin(theta);
-          return {
-            position: d.vec3f(x, rand(-0.5, 0.5), z),
-            velocity: std.mul(
-              stableOrbitVelocity(1000, r),
-              std.normalize(d.vec3f(-z, 0, x)),
-            ),
-            mass: 0.01,
-          };
-        }),
-      },
-    ],
-  },
-  'Colliding asteroids': {
-    skyBox: 'milky-way',
-    initialCameraPos: d.vec3f(20, 7, 40),
-    celestialBodies: [
-      {
-        texture: 'saturn',
-        elements: [
-          {
-            position: d.vec3f(),
-            mass: 100,
-            collisionBehavior: 'merge',
-          },
-        ],
-      },
-      {
-        texture: 'ceres-fictional',
-        elements: Array.from(Array(5000)).map(() => {
-          const r = rand(10, 30);
-          const theta = rand(0, 2 * Math.PI);
-          const x = r * Math.cos(theta);
-          const z = r * Math.sin(theta);
-          return {
-            position: d.vec3f(x, rand(-0.5, 0.5), z),
-            velocity: std.mul(
-              stableOrbitVelocity(100, r),
-              std.normalize(d.vec3f(z, 0, -x)),
-            ),
-            mass: 0.001,
-            collisionBehavior: 'bouncy',
-          };
-        }),
-      },
-      {
-        texture: 'saturn',
-        elements: [
-          {
-            position: d.vec3f(0, 0, -80),
-            velocity: d.vec3f(0, stableOrbitVelocity(100, 80, 50), 0),
-            mass: 1,
-            collisionBehavior: 'bouncy',
-          },
-        ],
-      },
-    ],
-  },
-  'Merging dust': {
-    skyBox: 'milky-way',
-    initialCameraPos: d.vec3f(40, 10, 50),
-    celestialBodies: [
-      {
-        texture: 'ceres-fictional',
-        elements: Array.from(Array(1000)).map(() => {
-          return {
-            position: randInBall(0, 50),
-            mass: 0.1,
-            collisionBehavior: 'merge',
-          };
-        }),
-      },
-    ],
-  },
-  'Bouncy dust': {
-    skyBox: 'milky-way',
-    initialCameraPos: d.vec3f(40, 10, 50),
-    celestialBodies: [
-      {
-        texture: 'haumea-fictional',
-        elements: Array.from(Array(1000)).map(() => {
-          return {
-            position: randInBall(0, 50),
-            mass: 0.1,
-            collisionBehavior: 'bouncy',
-          };
-        }),
-      },
-    ],
-  },
   'Solar System': {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 10, 20),
@@ -281,5 +172,114 @@ export const examplePresets: Record<Preset, PresetData> = {
         ],
       };
     }),
+  },
+  Asteroids: {
+    skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(30, 8, 30),
+    celestialBodies: [
+      {
+        texture: 'jupiter',
+        elements: [
+          {
+            position: d.vec3f(),
+            mass: 1000,
+          },
+        ],
+      },
+      {
+        texture: 'haumea-fictional',
+        elements: Array.from(Array(1000)).map(() => {
+          const r = rand(15, 30);
+          const theta = rand(0, 2 * Math.PI);
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
+          return {
+            position: d.vec3f(x, rand(-0.5, 0.5), z),
+            velocity: std.mul(
+              stableOrbitVelocity(1000, r),
+              std.normalize(d.vec3f(-z, 0, x)),
+            ),
+            mass: 0.01,
+          };
+        }),
+      },
+    ],
+  },
+  'Colliding asteroids': {
+    skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(20, 7, 40),
+    celestialBodies: [
+      {
+        texture: 'saturn',
+        elements: [
+          {
+            position: d.vec3f(),
+            mass: 100,
+            collisionBehavior: 'merge',
+          },
+        ],
+      },
+      {
+        texture: 'ceres-fictional',
+        elements: Array.from(Array(5000)).map(() => {
+          const r = rand(10, 30);
+          const theta = rand(0, 2 * Math.PI);
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
+          return {
+            position: d.vec3f(x, rand(-0.5, 0.5), z),
+            velocity: std.mul(
+              stableOrbitVelocity(100, r),
+              std.normalize(d.vec3f(z, 0, -x)),
+            ),
+            mass: 0.001,
+            collisionBehavior: 'bouncy',
+          };
+        }),
+      },
+      {
+        texture: 'saturn',
+        elements: [
+          {
+            position: d.vec3f(0, 0, -80),
+            velocity: d.vec3f(0, stableOrbitVelocity(100, 80, 50), 0),
+            mass: 1,
+            collisionBehavior: 'bouncy',
+          },
+        ],
+      },
+    ],
+  },
+  'Merging dust': {
+    skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(40, 10, 50),
+    celestialBodies: [
+      {
+        texture: 'ceres-fictional',
+        elements: Array.from(Array(1000)).map(() => {
+          return {
+            position: randInBall(0, 50),
+            mass: 0.1,
+            collisionBehavior: 'merge',
+          };
+        }),
+      },
+    ],
+  },
+  'Bouncy dust': {
+    skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(40, 10, 50),
+    celestialBodies: [
+      {
+        texture: 'haumea-fictional',
+        elements: Array.from(Array(1000)).map(() => {
+          return {
+            position: randInBall(0, 50),
+            mass: 0.1,
+            collisionBehavior: 'bouncy',
+          };
+        }),
+      },
+    ],
   },
 };
