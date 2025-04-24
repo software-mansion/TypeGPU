@@ -63,10 +63,8 @@ import {
 import {
   type TgpuComparisonSampler,
   type TgpuSampler,
-  isFixedComparisonSampler,
-  isFixedSampler,
-  isLaidOutComparisonSampler,
-  isLaidOutSampler,
+  isComparisonSampler,
+  isSampler,
 } from '../sampler/sampler.ts';
 import {
   type TgpuAccessor,
@@ -429,20 +427,18 @@ class TgpuRootImpl
       return resource.vertexLayout;
     }
 
-    if (isLaidOutSampler(resource)) {
+    if (isSampler(resource)) {
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap(this);
+      }
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
-    if (isLaidOutComparisonSampler(resource)) {
+    if (isComparisonSampler(resource)) {
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap(this);
+      }
       throw new Error('Cannot unwrap laid-out comparison sampler.');
-    }
-
-    if (isFixedSampler(resource)) {
-      return resource[$internal].unwrap(this);
-    }
-
-    if (isFixedComparisonSampler(resource)) {
-      return resource[$internal].unwrap(this);
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

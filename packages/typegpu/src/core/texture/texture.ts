@@ -203,7 +203,7 @@ export interface TgpuMutableTexture<
 }
 
 export interface TgpuSampledTextureInternals {
-  unwrap?: undefined | (() => GPUTextureView);
+  readonly unwrap?: (() => GPUTextureView) | undefined;
 }
 
 /**
