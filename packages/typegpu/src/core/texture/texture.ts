@@ -1,3 +1,4 @@
+import { $internal } from 'src/shared/symbols.ts';
 import type {
   F32,
   I32,
@@ -201,6 +202,10 @@ export interface TgpuMutableTexture<
   readonly access: 'mutable';
 }
 
+export interface TgpuSampledTextureInternals {
+  unwrap?: undefined | (() => GPUTextureView);
+}
+
 /**
  * A texture accessed as sampled on the GPU.
  */
@@ -208,15 +213,10 @@ export interface TgpuSampledTexture<
   TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
   TData extends ChannelData = ChannelData,
 > {
+  readonly [$internal]: TgpuSampledTextureInternals;
   readonly resourceType: 'texture-sampled-view';
   readonly dimension: TDimension;
   readonly channelDataType: TData;
-}
-
-export interface INTERNAL_TgpuFixedSampledTexture
-  extends SelfResolvable,
-    TgpuNamable {
-  unwrap(): GPUTextureView;
 }
 
 export interface INTERNAL_TgpuLaidOutSampledTexture extends SelfResolvable {}
@@ -543,8 +543,9 @@ export class TgpuLaidOutStorageTextureImpl
 }
 
 class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuFixedSampledTexture
+  implements TgpuSampledTexture, SelfResolvable, TgpuNamable
 {
+  public readonly [$internal]: TgpuSampledTextureInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
@@ -558,6 +559,18 @@ class TgpuFixedSampledTextureImpl
       | undefined,
     private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
   ) {
+    this[$internal] = {
+      unwrap: () => {
+        if (!this._view) {
+          this._view = this._texture.unwrap().createView({
+            label: `${this.label ?? '<unnamed>'} - View`,
+            ...this._props,
+          });
+        }
+
+        return this._view;
+      },
+    };
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
       _props?.format ?? (_texture.props.format as GPUTextureFormat);
@@ -571,17 +584,6 @@ class TgpuFixedSampledTextureImpl
   $name(label: string): this {
     this._texture.$name(label);
     return this;
-  }
-
-  unwrap(): GPUTextureView {
-    if (!this._view) {
-      this._view = this._texture.unwrap().createView({
-        label: `${this.label ?? '<unnamed>'} - View`,
-        ...this._props,
-      });
-    }
-
-    return this._view;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -614,8 +616,9 @@ class TgpuFixedSampledTextureImpl
 }
 
 export class TgpuLaidOutSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuLaidOutSampledTexture
+  implements TgpuSampledTexture, SelfResolvable
 {
+  public readonly [$internal]: TgpuSampledTextureInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -625,6 +628,7 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _multisampled: boolean,
     private readonly _membership: LayoutMembership,
   ) {
+    this[$internal] = {};
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 

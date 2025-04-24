@@ -74,7 +74,6 @@ import {
   isAccessor,
 } from '../slot/slotTypes.ts';
 import {
-  type INTERNAL_TgpuFixedSampledTexture,
   type INTERNAL_TgpuFixedStorageTexture,
   type INTERNAL_TgpuTexture,
   INTERNAL_createTexture,
@@ -420,8 +419,10 @@ class TgpuRootImpl
     }
 
     if (isSampledTextureView(resource)) {
-      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
-      return (resource as unknown as INTERNAL_TgpuFixedSampledTexture).unwrap();
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap();
+      }
+      throw new Error('Cannot unwrap laid-out texture view.');
     }
 
     if (isVertexLayout(resource)) {
