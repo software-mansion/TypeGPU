@@ -72,8 +72,6 @@ import {
   isAccessor,
 } from '../slot/slotTypes.ts';
 import {
-  type INTERNAL_TgpuFixedStorageTexture,
-  type INTERNAL_TgpuTexture,
   INTERNAL_createTexture,
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
@@ -408,12 +406,14 @@ class TgpuRootImpl
     }
 
     if (isTexture(resource)) {
-      return (resource as unknown as INTERNAL_TgpuTexture).unwrap();
+      return resource[$internal].unwrap();
     }
 
     if (isStorageTextureView(resource)) {
-      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
-      return (resource as unknown as INTERNAL_TgpuFixedStorageTexture).unwrap();
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap();
+      }
+      throw new Error('Cannot unwrap laid-out texture view.');
     }
 
     if (isSampledTextureView(resource)) {
