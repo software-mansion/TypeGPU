@@ -1,12 +1,16 @@
-// ----------
-// Public API
-// ----------
-
 import type { TgpuNamable } from '../../namable.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
+
+export interface SamplerInternals {
+  readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
+}
+
+// ----------
+// Public API
+// ----------
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -93,17 +97,13 @@ export interface ComparisonSamplerProps {
   maxAnisotropy?: number;
 }
 
-export interface TgpuSamplerInternals {
-  readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
-}
-
 export interface TgpuSampler {
-  readonly [$internal]: TgpuSamplerInternals;
+  readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler';
 }
 
 export interface TgpuComparisonSampler {
-  readonly [$internal]: TgpuSamplerInternals;
+  readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler-comparison';
 }
 
@@ -124,23 +124,15 @@ export function comparisonSampler(
 }
 
 export function isSampler(resource: unknown): resource is TgpuSampler {
-  const maybeSampler = resource as TgpuSampler | undefined;
-
-  return maybeSampler?.resourceType === 'sampler' && !!maybeSampler[$internal];
+  const maybe = resource as TgpuSampler | undefined;
+  return maybe?.resourceType === 'sampler' && !!maybe[$internal];
 }
 
 export function isComparisonSampler(
   resource: unknown,
 ): resource is TgpuComparisonSampler {
-  const maybeSampler = resource as
-    | TgpuComparisonSampler
-    | TgpuFixedComparisonSampler
-    | undefined;
-
-  return (
-    maybeSampler?.resourceType === 'sampler-comparison' &&
-    !!maybeSampler[$internal]
-  );
+  const maybe = resource as TgpuComparisonSampler | undefined;
+  return maybe?.resourceType === 'sampler-comparison' && !!maybe[$internal];
 }
 
 // --------------
@@ -148,7 +140,7 @@ export function isComparisonSampler(
 // --------------
 
 export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
-  public readonly [$internal]: TgpuSamplerInternals;
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
   constructor(private readonly _membership: LayoutMembership) {
@@ -178,7 +170,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 export class TgpuLaidOutComparisonSamplerImpl
   implements TgpuComparisonSampler, SelfResolvable
 {
-  public readonly [$internal]: TgpuSamplerInternals;
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   constructor(private readonly _membership: LayoutMembership) {
@@ -206,7 +198,7 @@ export class TgpuLaidOutComparisonSamplerImpl
 }
 
 class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
-  public readonly [$internal]: TgpuSamplerInternals;
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
   private _label: string | undefined;
@@ -268,7 +260,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 class TgpuFixedComparisonSamplerImpl
   implements TgpuFixedComparisonSampler, SelfResolvable
 {
-  public readonly [$internal]: TgpuSamplerInternals;
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   private _label: string | undefined;

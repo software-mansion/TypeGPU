@@ -10,16 +10,16 @@ import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
+interface ComputePipelineInternals {
+  readonly rawPipeline: GPUComputePipeline;
+}
+
 // ----------
 // Public API
 // ----------
 
-export interface TgpuComputePipelineInternals {
-  readonly rawPipeline: GPUComputePipeline;
-}
-
 export interface TgpuComputePipeline extends TgpuNamable {
-  readonly [$internal]: TgpuComputePipelineInternals;
+  readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
   readonly label: string | undefined;
 
@@ -68,7 +68,7 @@ type Memo = {
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
-  public readonly [$internal]: TgpuComputePipelineInternals;
+  public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
 
   constructor(

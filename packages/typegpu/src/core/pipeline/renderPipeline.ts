@@ -30,18 +30,18 @@ import {
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
 
-// ----------
-// Public API
-// ----------
-
-export interface TgpuRenderPipelineInternals {
+interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
   readonly priors: TgpuRenderPipelinePriors;
 }
 
+// ----------
+// Public API
+// ----------
+
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   extends TgpuNamable {
-  readonly [$internal]: TgpuRenderPipelineInternals;
+  readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
   readonly label: string | undefined;
 
@@ -229,7 +229,7 @@ type Memo = {
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly resourceType = 'render-pipeline';
-  public readonly [$internal]: TgpuRenderPipelineInternals;
+  public readonly [$internal]: RenderPipelineInternals;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {
