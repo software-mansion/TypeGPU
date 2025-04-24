@@ -1,7 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as p from './params.ts';
 import {
   VertexOutput,
   renderBindGroupLayout as renderLayout,
@@ -53,11 +52,11 @@ export const mainVertex = tgpu['~unstable']
       position: d.vec4f,
       normal: d.vec3f,
       uv: d.vec2f,
-      instanceIdx: d.builtin.instanceIndex,
+      instanceIndex: d.builtin.instanceIndex,
     },
     out: VertexOutput,
   })((input) => {
-    const currentBody = renderLayout.$.celestialBodies[input.instanceIdx];
+    const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
     const inputPosition = std.mul(1 / input.position.w, input.position.xyz);
     const worldPosition = std.add(
@@ -77,6 +76,7 @@ export const mainVertex = tgpu['~unstable']
       worldPosition: worldPosition,
       sphereTextureIndex: currentBody.textureIndex,
       destroyed: currentBody.destroyed,
+      ambientLightFactor: currentBody.ambientLightFactor,
     };
   })
   .$name('mainVertex');
@@ -90,6 +90,8 @@ export const mainFragment = tgpu['~unstable']
       std.discard();
     }
 
+    const lightColor = d.vec3f(1, 0.9, 0.9);
+    const lightSource = renderLayout.$.lightSource;
     const textureColor = std.textureSample(
       renderLayout.$.celestialBodyTextures,
       renderLayout.$.sampler,
@@ -97,29 +99,22 @@ export const mainFragment = tgpu['~unstable']
       input.sphereTextureIndex,
     ).xyz;
 
+    const ambient = std.mul(
+      input.ambientLightFactor,
+      std.mul(textureColor, lightColor),
+    );
+
     const normal = input.normals;
-
-    const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
-
-    const cosTheta = std.dot(normal, p.lightDirection);
+    const lightDirection = std.normalize(
+      std.sub(lightSource, input.worldPosition),
+    );
+    const cosTheta = std.dot(normal, lightDirection);
     const diffuse = std.mul(
       std.max(0, cosTheta),
-      std.mul(textureColor, p.lightColor),
+      std.mul(textureColor, lightColor),
     );
 
-    const viewSource = std.normalize(
-      std.sub(renderLayout.$.camera.position.xyz, input.worldPosition),
-    );
-    const reflectSource = std.normalize(
-      std.reflect(std.mul(-1, p.lightDirection), normal),
-    );
-    const specularStrength = std.pow(
-      std.max(0, std.dot(viewSource, reflectSource)),
-      16,
-    );
-    const specular = std.mul(specularStrength, p.lightColor);
-
-    const lightedColor = std.add(ambient, std.add(diffuse, specular));
+    const lightedColor = std.add(ambient, diffuse);
 
     return d.vec4f(lightedColor.xyz, 1);
   })

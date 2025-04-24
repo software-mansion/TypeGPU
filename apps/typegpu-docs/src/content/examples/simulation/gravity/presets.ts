@@ -10,6 +10,7 @@ import type {
 export interface PresetData {
   skyBox: SkyBox;
   initialCameraPos: d.v3f;
+  lightSource?: d.v3f; // default: d.vec3f()
   celestialBodies: {
     texture: SphereTextureName;
     elements: {
@@ -18,6 +19,7 @@ export interface PresetData {
       mass: number;
       radiusMultiplier?: number; // default: 1
       collisionBehavior?: CollisionBehavior; // default: none
+      ambientLightFactor?: number; // default: 0.6
     }[];
   }[];
 }
@@ -64,6 +66,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             velocity: d.vec3f(0.0, 0.0, 0.0), // m/s
             mass: 1.9885e30, // kg
             radiusMultiplier: 5,
+            ambientLightFactor: 1,
           },
         ],
       },
@@ -118,7 +121,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(-7.7754e11, 1.8411e10, -7.0945e9),
             velocity: d.vec3f(8.2586e2, -2.3739e2, -1.0812e4),
             mass: 1.8982e27,
-            radiusMultiplier: 100,
+            radiusMultiplier: 40,
           },
         ],
       },
@@ -129,7 +132,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: d.vec3f(-1.3377e12, 5.525e10, 5.178e11),
             velocity: d.vec3f(-4.1998e3, 1.6286e2, -1.1454e4),
             mass: 5.6834e26,
-            radiusMultiplier: 100,
+            radiusMultiplier: 40,
           },
         ],
       },
@@ -160,22 +163,20 @@ export const examplePresets: Record<Preset, PresetData> = {
       const massPositionScale = 1e-10;
       const massVelocityScale = 1e-5;
       const body = elem.elements[0];
+      body.position = std.mul(massPositionScale, body.position);
+      body.velocity = std.mul(massVelocityScale, body.velocity);
+      body.mass = body.mass * G * massPositionScale * massVelocityScale ** 2;
+
       return {
         texture: elem.texture as SphereTextureName,
-        elements: [
-          {
-            position: std.mul(massPositionScale, body.position),
-            velocity: std.mul(massVelocityScale, body.velocity),
-            mass: body.mass * G * massPositionScale * massVelocityScale ** 2,
-            radiusMultiplier: body.radiusMultiplier,
-          },
-        ],
+        elements: [body],
       };
     }),
   },
   Asteroids: {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(30, 8, 30),
+    lightSource: d.vec3f(1000, 1000, -1000),
     celestialBodies: [
       {
         texture: 'jupiter',
@@ -208,6 +209,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   'Colliding asteroids': {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 7, 40),
+    lightSource: d.vec3f(1000, 1000, -1000),
     celestialBodies: [
       {
         texture: 'saturn',
@@ -261,6 +263,7 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: randInBall(0, 50),
             mass: 0.1,
             collisionBehavior: 'merge',
+            ambientLightFactor: 1,
           };
         }),
       },

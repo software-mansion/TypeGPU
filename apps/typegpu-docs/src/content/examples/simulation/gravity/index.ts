@@ -91,8 +91,8 @@ const skyBoxVertexBuffer = root
 const sphereTextures = await loadSphereTextures(root);
 
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
-
 const timeMultiplierBuffer = root.createBuffer(d.f32).$usage('uniform');
+const lightSourceBuffer = root.createBuffer(d.vec3f).$usage('uniform');
 
 // dynamic resources (recreated every time a preset is selected)
 
@@ -229,6 +229,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
             ? collisionBehavior.indexOf(element.collisionBehavior)
             : 0,
           textureIndex: sphereTextureNames.indexOf(group.texture),
+          ambientLightFactor: element.ambientLightFactor ?? 0.6,
         };
       }),
     );
@@ -265,6 +266,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
     camera: cameraBuffer,
     sampler,
+    lightSource: lightSourceBuffer,
     celestialBodyTextures: sphereTextures,
     celestialBodies: computeBufferA,
   });
@@ -279,6 +281,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   });
 
   celestialBodiesCountBuffer.write(celestialBodies.length);
+  lightSourceBuffer.write(presetData.lightSource ?? d.vec3f());
   cameraPosition = presetData.initialCameraPos;
   updateCameraPosition();
 

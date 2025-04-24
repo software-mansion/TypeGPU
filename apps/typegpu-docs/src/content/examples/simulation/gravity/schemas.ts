@@ -20,6 +20,7 @@ export const VertexOutput = {
   worldPosition: d.vec3f,
   sphereTextureIndex: d.interpolate('flat', d.u32),
   destroyed: d.interpolate('flat', d.u32),
+  ambientLightFactor: d.f32,
 };
 
 export const CelestialBody = d.struct({
@@ -30,6 +31,7 @@ export const CelestialBody = d.struct({
   radiusMultiplier: d.f32, // radius is calculated from the mass, and then multiplied by this
   collisionBehavior: d.u32, // index of the collisionBehavior enum
   textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
+  ambientLightFactor: d.f32,
 });
 
 export const SkyBoxVertex = d.struct({
@@ -85,6 +87,7 @@ export const skyBoxVertexLayout = tgpu.vertexLayout((n: number) =>
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
+  lightSource: { uniform: d.vec3f },
   celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
   celestialBodies: {
     storage: (n: number) => d.arrayOf(CelestialBody, n),
