@@ -144,6 +144,10 @@ export default defineConfig({
               slug: 'integration/webgpu-interoperability',
             },
             {
+              label: 'React Native',
+              slug: 'integration/react-native',
+            },
+            {
               label: 'WESL Interoperability',
               slug: 'integration/wesl-interoperability',
             },
