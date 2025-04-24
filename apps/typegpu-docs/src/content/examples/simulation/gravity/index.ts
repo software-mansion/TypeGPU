@@ -17,7 +17,6 @@ import {
   sphereTextureNames,
 } from './enums.ts';
 import { loadModel } from './load-model.ts';
-import * as p from './params.ts';
 import { examplePresets } from './presets.ts';
 import {
   mainFragment,
@@ -65,11 +64,13 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
+let cameraPosition = examplePresets.Asteroids.initialCameraPos;
+
 const cameraInitial = Camera({
-  position: p.cameraInitialPos.xyz,
+  position: cameraPosition,
   view: m.mat4.lookAt(
-    p.cameraInitialPos,
-    p.cameraTarget,
+    cameraPosition,
+    d.vec3f(0, 0, 0),
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   ),
@@ -261,8 +262,6 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     },
   );
 
-  celestialBodiesCountBuffer.write(celestialBodies.length);
-
   const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
     camera: cameraBuffer,
     sampler,
@@ -278,6 +277,10 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     skyBox: skyBox,
     sampler: sampler,
   });
+
+  celestialBodiesCountBuffer.write(celestialBodies.length);
+  cameraPosition = presetData.initialCameraPos;
+  updateCameraPosition();
 
   return {
     celestialBodiesCount: celestialBodies.length,
@@ -308,7 +311,7 @@ export const controls = {
   'simulation speed modifier': {
     initial: 0,
     min: -3,
-    max: 20,
+    max: 3,
     step: 1,
     onSliderChange: (newValue: number) => {
       timeMultiplierBuffer.write(2 ** newValue);
@@ -339,50 +342,53 @@ resizeObserver.observe(canvas);
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
-let orbitRadius = std.length(p.cameraInitialPos);
 
-// Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(p.cameraInitialPos.x, p.cameraInitialPos.z);
-let orbitPitch = Math.asin(p.cameraInitialPos.y / orbitRadius);
-
-function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += dy * orbitSensitivity;
-  // Clamp pitch to avoid flipping
-  const maxPitch = Math.PI / 2 - 0.01;
-  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // Convert spherical coordinates to cartesian coordinates
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-
+function updateCameraPosition() {
   const newView = m.mat4.lookAt(
-    newCameraPos,
+    cameraPosition,
     d.vec3f(0, 0, 0),
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.writePartial({ view: newView, position: newCameraPos.xyz });
+  cameraBuffer.writePartial({ view: newView, position: cameraPosition });
+}
+
+function updateCameraOrbit(dx: number, dy: number) {
+  const orbitSensitivity = 0.005;
+  const orbitRadius = std.length(cameraPosition);
+  const orbitYaw =
+    Math.atan2(cameraPosition.x, cameraPosition.z) - dx * orbitSensitivity;
+  const orbitPitch = std.clamp(
+    Math.asin(cameraPosition.y / orbitRadius) + dy * orbitSensitivity,
+    -(Math.PI / 2 - 0.01),
+    Math.PI / 2 - 0.01,
+  );
+  // Convert spherical coordinates to cartesian coordinates
+  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
+  const newCamY = orbitRadius * Math.sin(orbitPitch);
+  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
+
+  cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
+  updateCameraPosition();
 }
 
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
-  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 200);
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    d.vec3f(0, 0, 0),
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
+  const orbitRadius = std.length(cameraPosition);
+  const orbitYaw = Math.atan2(cameraPosition.x, cameraPosition.z);
+  const orbitPitch = Math.asin(cameraPosition.y / orbitRadius);
+  const newCamRadius = std.clamp(
+    std.length(cameraPosition) + event.deltaY * zoomSensitivity,
+    10,
+    200,
   );
-  cameraBuffer.writePartial({ view: newView, position: newCameraPos.xyz });
+  const newCamX = newCamRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
+  const newCamY = newCamRadius * Math.sin(orbitPitch);
+  const newCamZ = newCamRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
+
+  cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
+  updateCameraPosition();
 });
 
 canvas.addEventListener('mousedown', (event) => {

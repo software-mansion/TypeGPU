@@ -9,13 +9,14 @@ import type {
 
 export interface PresetData {
   skyBox: SkyBox;
+  initialCameraPos: d.v3f;
   celestialBodies: {
     texture: SphereTextureName;
     elements: {
       position: d.v3f;
       velocity?: d.v3f; // default: d.vec3f()
       mass: number;
-      radiusMultiplier?: number;
+      radiusMultiplier?: number; // default: 1
       collisionBehavior?: CollisionBehavior; // default: none
     }[];
   }[];
@@ -53,6 +54,7 @@ function stableOrbitVelocity(
 export const examplePresets: Record<Preset, PresetData> = {
   Asteroids: {
     skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(30, 8, 30),
     celestialBodies: [
       {
         texture: 'jupiter',
@@ -84,6 +86,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   },
   'Colliding asteroids': {
     skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(20, 7, 40),
     celestialBodies: [
       {
         texture: 'saturn',
@@ -128,6 +131,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   },
   'Merging dust': {
     skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(40, 10, 50),
     celestialBodies: [
       {
         texture: 'ceres-fictional',
@@ -143,6 +147,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   },
   'Bouncy dust': {
     skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(40, 10, 50),
     celestialBodies: [
       {
         texture: 'haumea-fictional',
@@ -158,6 +163,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   },
   'Solar System': {
     skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(20, 10, 20),
     celestialBodies: [
       {
         texture: 'sun',
