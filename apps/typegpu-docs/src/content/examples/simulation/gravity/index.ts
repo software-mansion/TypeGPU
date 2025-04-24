@@ -42,8 +42,6 @@ import {
   skyBoxVertexLayout,
 } from './schemas.ts';
 
-// AAA suma (inny ticket)
-
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
