@@ -57,6 +57,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   'Solar System': {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 10, 20),
+    // data from the internet, mapped to fit the simulation better
     celestialBodies: [
       {
         texture: 'sun',
@@ -200,7 +201,7 @@ export const examplePresets: Record<Preset, PresetData> = {
               stableOrbitVelocity(1000, r),
               std.normalize(d.vec3f(-z, 0, x)),
             ),
-            mass: 0.01,
+            mass: rand(0.008, 0.012),
           };
         }),
       },
@@ -209,7 +210,7 @@ export const examplePresets: Record<Preset, PresetData> = {
   'Colliding asteroids': {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 7, 40),
-    lightSource: d.vec3f(1000, 1000, -1000),
+    lightSource: d.vec3f(1000, 1000, 0),
     celestialBodies: [
       {
         texture: 'saturn',
@@ -234,7 +235,7 @@ export const examplePresets: Record<Preset, PresetData> = {
               stableOrbitVelocity(100, r),
               std.normalize(d.vec3f(z, 0, -x)),
             ),
-            mass: 0.001,
+            mass: rand(0.0008, 0.0012),
             collisionBehavior: 'bouncy',
           };
         }),
@@ -252,26 +253,10 @@ export const examplePresets: Record<Preset, PresetData> = {
       },
     ],
   },
-  'Merging dust': {
-    skyBox: 'milky-way',
-    initialCameraPos: d.vec3f(40, 10, 50),
-    celestialBodies: [
-      {
-        texture: 'ceres-fictional',
-        elements: Array.from(Array(1000)).map(() => {
-          return {
-            position: randInBall(0, 50),
-            mass: 0.1,
-            collisionBehavior: 'merge',
-            ambientLightFactor: 1,
-          };
-        }),
-      },
-    ],
-  },
   'Bouncy dust': {
     skyBox: 'milky-way',
     initialCameraPos: d.vec3f(40, 10, 50),
+    lightSource: d.vec3f(1000, 1000, 1000),
     celestialBodies: [
       {
         texture: 'haumea-fictional',
@@ -280,6 +265,23 @@ export const examplePresets: Record<Preset, PresetData> = {
             position: randInBall(0, 50),
             mass: 0.1,
             collisionBehavior: 'bouncy',
+          };
+        }),
+      },
+    ],
+  },
+  'Merging dust': {
+    skyBox: 'milky-way',
+    initialCameraPos: d.vec3f(40, 10, 50),
+    lightSource: d.vec3f(1000, 1000, 1000),
+    celestialBodies: [
+      {
+        texture: 'ceres-fictional',
+        elements: Array.from(Array(5000)).map(() => {
+          return {
+            position: randInBall(0, 50),
+            mass: rand(0.01, 0.05),
+            collisionBehavior: 'merge',
           };
         }),
       },
