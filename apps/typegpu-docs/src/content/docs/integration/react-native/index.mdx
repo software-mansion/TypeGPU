@@ -1,0 +1,179 @@
+---
+title: React Native
+description: A guide on how to use TypeGPU in React Native applications.
+---
+
+Thanks to the [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu) package,
+WebGPU and TypeGPU can be used in React Native applications,
+giving easy access to the device's GPU rendering and computing capabilities.
+
+## Example project
+
+You can check out the [typegpu-rn-examples](https://github.com/software-mansion-labs/typegpu-rn-examples) project,
+showcasing a few examples from our _live examples_ page in a simple mobile application.
+
+import FishExample from './example-fish.png';
+import Fluid1Example from './example-fluid-1.png';
+import Fluid2Example from './example-fluid-2.png';
+
+<div style="display: flex; flex-wrap: wrap;">
+  <img
+    width="200"
+    style="margin: 0;"
+    alt="example – 3d fish"
+    src={FishExample.src}
+  />
+  <img
+    width="200"
+    style="margin: 0;"
+    alt="example – fluid 1"
+    src={Fluid1Example.src}
+  />
+  <img
+    width="200"
+    style="margin: 0;"
+    alt="example – fluid 2"
+    src={Fluid2Example.src}
+  />
+</div>
+## Setup
+
+To use TypeGPU in your React Native application, install the following packages:
+
+```sh
+npm install react-native-wgpu
+npm install typegpu
+```
+
+If you use TypeScript, then it's also recommended to install WebGPU types:
+
+```sh
+npm i --save-dev @webgpu/types
+```
+
+```js title="tsconfig.json"
+{
+  "compilerOptions": {
+    "typeRoots": [
+      "./node_modules/@webgpu/types"
+    ]
+  },
+}
+```
+
+If you want to be able to use the TGSL functions feature of TypeGPU (JS functions transpiled to WGSL), you need to install the [unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) package.
+
+```sh
+npm install --save-dev unplugin-typegpu
+```
+
+And enable it in your project.
+
+```sh
+npm exec expo customize
+```
+
+Select `babel.config.js` and add `unplugin-typegpu/babel` to the list of plugins in the config file.
+
+```js title="babel.config.js"
+module.exports = (api) => {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['unplugin-typegpu/babel'],
+  };
+};
+```
+
+After adding the plugin it might be necessary to clear the Metro cache.
+
+```sh
+npm exec expo --clear
+```
+
+React Native WebGPU is not yet supported by Expo Go.
+If you previously used it for running the application, it is necessary to execute the `expo prebuild` command.
+
+```sh
+npm exec expo prebuild
+```
+
+Remember to install native dependencies.
+
+```sh
+cd ios && pod install && cd ..
+```
+
+To run React Native WebGPU on the iOS simulator, you need to disable the Metal validation API.
+In _Edit Scheme_ uncheck _Metal Validation_.
+
+## Hello world example
+
+If you want to quickly test if the installation was successful, here's a simple example component, rendering a blue triangle,
+that you can use in your app:
+
+```ts
+import { useEffect } from 'react';
+import { Canvas, useDevice, useGPUContext } from 'react-native-wgpu';
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position, uv: d.vec2f },
+})/* wgsl */ `{
+  var pos = array<vec2f, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+  var uv = array<vec2f, 3>(vec2(0.5, 1.0), vec2(0.0, 0.0), vec2(1.0, 0.0));
+  return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
+}`;
+
+const blue = d.vec4f(0.114, 0.447, 0.941, 1);
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})`{ return blue; }`.$uses({ blue });
+
+export function Triangle() {
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  const { device = null } = useDevice();
+  const root = device ? tgpu.initFromDevice({ device }) : null;
+  const { ref, context } = useGPUContext();
+
+  useEffect(() => {
+    if (!root || !device || !context) {
+      return;
+    }
+
+    context.configure({
+      device: device,
+      format: presentationFormat,
+      alphaMode: 'premultiplied',
+    });
+
+    root['~unstable']
+      .withVertex(mainVertex, {})
+      .withFragment(mainFragment, { format: presentationFormat })
+      .createPipeline()
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .draw(3);
+
+    context.present();
+  }, [root, device, context, presentationFormat]);
+
+  return (
+    <>
+      <Canvas />
+      <Canvas ref={ref} style={{ aspectRatio: 1 }} transparent />
+    </>
+  );
+}
+```
+
+## Further reading
+
+For more information about React Native WebGPU, please refer to the [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu) documentation.
