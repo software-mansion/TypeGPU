@@ -28,7 +28,7 @@ function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-function randInBall(minRadius: number, maxRadius: number) {
+function randInBall(maxRadius: number) {
   while (true) {
     const pos = d.vec3f(
       rand(-maxRadius, maxRadius),
@@ -36,12 +36,13 @@ function randInBall(minRadius: number, maxRadius: number) {
       rand(-maxRadius, maxRadius),
     );
     const dist = std.length(pos);
-    if (minRadius <= dist && dist <= maxRadius) {
+    if (dist <= maxRadius) {
       return pos;
     }
   }
 }
 
+// this function is only applicable when the currentMass is negligible when compared to otherMass
 function stableOrbitVelocity(
   otherMass: number,
   currentRadius: number,
@@ -241,7 +242,7 @@ export const examplePresets: Record<Preset, PresetData> = {
         }),
       },
       {
-        texture: 'saturn',
+        texture: 'moon',
         elements: [
           {
             position: d.vec3f(0, 0, -80),
@@ -262,7 +263,7 @@ export const examplePresets: Record<Preset, PresetData> = {
         texture: 'haumea-fictional',
         elements: Array.from(Array(1000)).map(() => {
           return {
-            position: randInBall(0, 50),
+            position: randInBall(50),
             mass: 0.1,
             collisionBehavior: 'bounce',
           };
@@ -279,7 +280,7 @@ export const examplePresets: Record<Preset, PresetData> = {
         texture: 'ceres-fictional',
         elements: Array.from(Array(5000)).map(() => {
           return {
-            position: randInBall(0, 50),
+            position: randInBall(50),
             mass: rand(0.01, 0.05),
             collisionBehavior: 'merge',
           };

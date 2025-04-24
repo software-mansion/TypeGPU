@@ -91,6 +91,7 @@ const skyBoxVertexBuffer = root
 
 const sphereTextures = await loadSphereTextures(root);
 
+let celestialBodiesCount = 0;
 const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
 const timeBuffer = root.createBuffer(Time).$usage('uniform');
 const lightSourceBuffer = root.createBuffer(d.vec3f).$usage('uniform');
@@ -98,7 +99,6 @@ const lightSourceBuffer = root.createBuffer(d.vec3f).$usage('uniform');
 // dynamic resources (recreated every time a preset is selected)
 
 interface DynamicResources {
-  celestialBodiesCount: number;
   celestialBodiesBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
     StorageFlag;
   celestialBodiesBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
@@ -121,15 +121,15 @@ const dynamicResourcesBox = {
 };
 
 // Pipelines
-const computeGravityPipeline = root['~unstable']
-  .withCompute(computeGravityShader)
-  .createPipeline()
-  .$name('compute gravity pipeline');
-
 const computeCollisionsPipeline = root['~unstable']
   .withCompute(computeCollisionsShader)
   .createPipeline()
   .$name('compute collisions pipeline');
+
+const computeGravityPipeline = root['~unstable']
+  .withCompute(computeGravityShader)
+  .createPipeline()
+  .$name('compute gravity pipeline');
 
 const skyBoxPipeline = root['~unstable']
   .withVertex(skyBoxVertex, skyBoxVertexLayout.attrib)
@@ -162,14 +162,14 @@ function render() {
       computeCollisionsBindGroupLayout,
       dynamicResourcesBox.data.computeCollisionsBindGroup,
     )
-    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
+    .dispatchWorkgroups(celestialBodiesCount);
 
   computeGravityPipeline
     .with(
       computeGravityBindGroupLayout,
       dynamicResourcesBox.data.computeGravityBindGroup,
     )
-    .dispatchWorkgroups(dynamicResourcesBox.data.celestialBodiesCount);
+    .dispatchWorkgroups(celestialBodiesCount);
 
   skyBoxPipeline
     .withColorAttachment({
@@ -198,9 +198,7 @@ function render() {
     })
     .with(renderVertexLayout, sphereVertexBuffer)
     .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
-    .draw(sphereVertexCount, dynamicResourcesBox.data.celestialBodiesCount);
-
-  root['~unstable'].flush();
+    .draw(sphereVertexCount, celestialBodiesCount);
 }
 
 let destroyed = false;
@@ -211,7 +209,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     return;
   }
   timeBuffer.writePartial({
-    passed: Math.min((timestamp - lastTimestamp) / 1000, 1),
+    passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
   render();
@@ -286,13 +284,13 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     sampler: sampler,
   });
 
+  celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
   lightSourceBuffer.write(presetData.lightSource ?? d.vec3f());
   cameraPosition = presetData.initialCameraPos;
   updateCameraPosition();
 
   return {
-    celestialBodiesCount: celestialBodies.length,
     celestialBodiesBufferA: computeBufferA,
     celestialBodiesBufferB: computeBufferB,
     computeCollisionsBindGroup,
@@ -319,8 +317,8 @@ export const controls = {
   },
   'simulation speed modifier': {
     initial: 0,
-    min: -3,
-    max: 3,
+    min: -5,
+    max: 5,
     step: 1,
     onSliderChange: (newValue: number) => {
       timeBuffer.writePartial({ multiplier: 2 ** newValue });

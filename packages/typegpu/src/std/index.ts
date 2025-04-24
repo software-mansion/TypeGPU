@@ -26,6 +26,7 @@ export {
   pow,
   reflect,
   sin,
+  neg,
 } from './numeric.ts';
 
 export {
@@ -47,7 +48,7 @@ export {
   // other
   isCloseTo,
   select,
-} from './boolean.js';
+} from './boolean.ts';
 
 export {
   atomicLoad,
@@ -63,7 +64,7 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
-} from './atomic.js';
+} from './atomic.ts';
 
 export { arrayLength } from './array.ts';
 
