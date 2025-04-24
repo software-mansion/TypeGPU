@@ -24,7 +24,7 @@ export const computeGravityShader = tgpu['~unstable']
         }
 
         const dist = std.max(
-          radiusOf(current.mass) + radiusOf(other.mass),
+          radiusOf(current) + radiusOf(other),
           std.distance(current.position, other.position),
         );
         const gravityForce = (current.mass * other.mass) / dist / dist;
@@ -83,7 +83,7 @@ export const computeCollisionsShader = tgpu['~unstable']
 
         const dist = std.distance(current.position, other.position);
         // are bodies disjoint?
-        if (dist >= radiusOf(current.mass) + radiusOf(other.mass)) {
+        if (dist >= radiusOf(current) + radiusOf(other)) {
           continue;
         }
         // is the collision skipped?
@@ -116,7 +116,7 @@ export const computeCollisionsShader = tgpu['~unstable']
             updatedCurrent.position = std.add(
               other.position,
               std.mul(
-                radiusOf(current.mass) + radiusOf(other.mass),
+                radiusOf(current) + radiusOf(other),
                 std.normalize(std.sub(current.position, other.position)),
               ),
             );
@@ -135,7 +135,13 @@ export const computeCollisionsShader = tgpu['~unstable']
             break;
           }
           // absorbs other
-          updatedCurrent.mass += other.mass;
+          const m1 = updatedCurrent.mass;
+          const m2 = other.mass;
+          updatedCurrent.velocity = std.add(
+            std.mul(m1 / (m1 + m2), updatedCurrent.velocity),
+            std.mul(m2 / (m1 + m2), other.velocity),
+          );
+          updatedCurrent.mass = m1 + m2;
         }
       }
     }

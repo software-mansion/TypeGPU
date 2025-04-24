@@ -41,6 +41,8 @@ import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 // AAA presety: atom, ziemia i księzyc, solar system,
 // andromeda x milky way, balls on ground, negative mass
 // AAA dynamic lighting source, lighting direction
+// AAA camera starting position
+// AAA suma (inny ticket)
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -113,7 +115,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Asteroid belt'),
+  data: await loadPreset('Asteroids'),
 };
 
 // Pipelines
@@ -221,6 +223,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           position: element.position,
           velocity: element.velocity ?? d.vec3f(),
           mass: element.mass,
+          radiusMultiplier: element.radiusMultiplier ?? 1,
           collisionBehavior: element.collisionBehavior
             ? collisionBehavior.indexOf(element.collisionBehavior)
             : 0,
@@ -292,7 +295,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 export const controls = {
   preset: {
-    initial: 'Asteroid belt',
+    initial: 'Asteroids',
     options: presets,
     async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;
@@ -304,8 +307,8 @@ export const controls = {
   },
   'simulation speed modifier': {
     initial: 0,
-    min: -5,
-    max: 5,
+    min: -3,
+    max: 20,
     step: 1,
     onSliderChange: (newValue: number) => {
       timeMultiplierBuffer.write(2 ** newValue);
@@ -368,7 +371,7 @@ function updateCameraOrbit(dx: number, dy: number) {
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
-  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 100);
+  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 200);
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);

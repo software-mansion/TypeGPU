@@ -61,7 +61,7 @@ export const mainVertex = tgpu['~unstable']
 
     const inputPosition = std.mul(1 / input.position.w, input.position.xyz);
     const worldPosition = std.add(
-      std.mul(radiusOf(currentBody.mass), inputPosition),
+      std.mul(radiusOf(currentBody), inputPosition),
       currentBody.position,
     );
 

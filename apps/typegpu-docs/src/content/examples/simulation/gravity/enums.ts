@@ -15,13 +15,15 @@ export const sphereTextureNames = [
   'neptune',
   'moon',
   'ceres-fictional',
+  'haumea-fictional',
 ] as const;
 export type SphereTextureName = (typeof sphereTextureNames)[number];
 
 export const presets = [
-  'Asteroid belt',
-  'Asteroid belt with collisions',
-  'Dust cloud',
-  'Energy preservation',
+  'Asteroids',
+  'Colliding asteroids',
+  'Bouncy dust',
+  'Merging dust',
+  'Solar System',
 ] as const;
 export type Preset = (typeof presets)[number];

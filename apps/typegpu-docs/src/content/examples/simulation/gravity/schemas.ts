@@ -27,6 +27,7 @@ export const CelestialBody = d.struct({
   position: d.vec3f,
   velocity: d.vec3f,
   mass: d.f32,
+  radiusMultiplier: d.f32, // radius is calculated from the mass, and then multiplied by this
   collisionBehavior: d.u32, // index of the collisionBehavior enum
   textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
 });

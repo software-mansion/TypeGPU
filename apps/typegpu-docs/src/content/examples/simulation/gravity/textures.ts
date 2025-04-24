@@ -2,7 +2,7 @@ import { type TgpuRoot, tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { type SkyBox, sphereTextureNames } from './enums.ts';
-import { SkyBoxVertex } from './schemas.ts';
+import { CelestialBody, SkyBoxVertex } from './schemas.ts';
 
 function vert(
   position: [number, number, number, number],
@@ -125,9 +125,9 @@ export async function loadSphereTextures(root: TgpuRoot) {
 }
 
 export const radiusOf = tgpu['~unstable'].fn(
-  [d.f32],
+  [CelestialBody],
   d.f32,
-)((mass) => {
+)((body) => {
   'kernel & js';
-  return std.pow((mass * 0.75) / Math.PI, 0.333);
+  return std.pow((body.mass * 0.75) / Math.PI, 0.333) * body.radiusMultiplier;
 });
