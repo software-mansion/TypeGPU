@@ -4,7 +4,7 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 
-export interface SamplerInternals {
+interface SamplerInternals {
   readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
 }
 
