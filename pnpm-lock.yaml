@@ -12,18 +12,9 @@ catalogs:
     arktype:
       specifier: ^2.1.15
       version: 2.1.19
-    tsup:
-      specifier: ^8.4.0
-      version: 8.4.0
     typescript:
       specifier: ^5.8.2
       version: 5.8.2
-    unbuild:
-      specifier: ^3.5.0
-      version: 3.5.0
-    vitest:
-      specifier: ^3.0.9
-      version: 3.1.1
 
 overrides:
   rollup: 4.34.8
@@ -83,9 +74,6 @@ importers:
       '@astrojs/tailwind':
         specifier: ^6.0.0
         version: 6.0.0(astro@5.6.1(@types/node@22.13.14)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0))(tailwindcss@3.4.17)
-      '@babel/standalone':
-        specifier: ^7.26.6
-        version: 7.27.0
       '@loaders.gl/core':
         specifier: ^4.3.3
         version: 4.3.3

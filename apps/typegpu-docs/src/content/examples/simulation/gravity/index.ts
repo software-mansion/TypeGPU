@@ -37,10 +37,6 @@ import {
 } from './schemas.ts';
 import { loadSkyBox, loadSphereTextures, skyBoxVertices } from './textures.ts';
 
-// AAA presety: atom, ziemia i księzyc, solar system,
-// andromeda x milky way, balls on ground, negative mass
-// AAA dynamic lighting source, lighting direction
-// AAA camera starting position
 // AAA suma (inny ticket)
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -384,7 +380,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCamRadius = std.clamp(
     std.length(cameraPosition) + event.deltaY * zoomSensitivity,
     10,
-    200,
+    500,
   );
   const newCamX = newCamRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = newCamRadius * Math.sin(orbitPitch);
