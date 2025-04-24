@@ -1,4 +1,3 @@
-import { $internal } from 'src/shared/symbols.ts';
 import type {
   F32,
   I32,
@@ -9,6 +8,7 @@ import type {
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import type { TgpuNamable } from '../../namable.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { Default } from '../../shared/utilityTypes.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
