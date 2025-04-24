@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/noise",
   "type": "module",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A set of noise/pseudo-random functions for use in WebGPU/TypeGPU apps.",
   "exports": {
     ".": "./src/index.ts",
@@ -31,7 +31,7 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.5.4"
+    "typegpu": "^0.5.6"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",

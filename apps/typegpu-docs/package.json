@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/react": "^4.2.3",
+    "@astrojs/react": "^4.2.5",
     "@astrojs/sitemap": "^3.2.1",
     "@astrojs/starlight": "^0.32.2",
     "@astrojs/starlight-tailwind": "^3.0.0",
@@ -27,7 +27,7 @@
     "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "astro": "^5.6.1",
+    "astro": "^5.7.4",
     "arktype": "catalog:",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.4.0",
