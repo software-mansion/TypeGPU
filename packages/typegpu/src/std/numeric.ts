@@ -1,3 +1,4 @@
+import { mat2x2f } from 'src/data/index.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
@@ -6,6 +7,7 @@ import type {
   AnyNumericVecInstance,
   AnyVecInstance,
   AnyWgslData,
+  m2x2f,
   v3f,
   v3h,
   vBaseForMat,
@@ -95,6 +97,14 @@ function cpuMul<M extends AnyMatInstance, V extends vBaseForMat<M>>(
   rhs: V,
 ): V; // matrix-column-vector
 function cpuMul<M extends AnyMatInstance>(lhs: M, rhs: M): M; // matrix multiplication
+// function cpuMul<
+//   M extends AnyMatInstance,
+//   T extends number | vBaseForMat<M> | M,
+// >(lhs: M, rhs: T): T extends AnyVecInstance ? T : M; // necessary for fluent operators
+function cpuMul(
+  lhs: number | AnyNumericVecInstance | AnyMatInstance,
+  rhs: number | AnyNumericVecInstance | AnyMatInstance,
+): number | AnyNumericVecInstance | AnyMatInstance;
 function cpuMul(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,
@@ -122,6 +132,17 @@ function cpuMul(
   }
 
   throw new Error('Mul called with invalid arguments.');
+}
+
+function test(a: m2x2f | number) {
+  return cpuMul(mat2x2f(), a);
+}
+
+function test2(a: m2x2f | number) {
+  if (typeof a === 'number') {
+    return cpuMul(mat2x2f(), a);
+  }
+  return cpuMul(mat2x2f(), a);
 }
 
 export const mul = createDualImpl(

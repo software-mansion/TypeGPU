@@ -602,6 +602,12 @@ export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
 
+export interface MatFluentOperable<T extends AnyMatInstance> {
+  mul(other: number): T;
+  mul(other: vBaseForMat<T>): vBaseForMat<T>;
+  mul(other: T): T;
+}
+
 /**
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
@@ -616,7 +622,7 @@ export interface mat2x2<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat2x2f or mat2x2<f32>
  * A matrix with 2 rows and 2 columns, with elements of type d.f32
  */
-export interface m2x2f extends mat2x2<v2f> {
+export interface m2x2f extends mat2x2<v2f>, MatFluentOperable<m2x2f> {
   readonly kind: 'mat2x2f';
 }
 
