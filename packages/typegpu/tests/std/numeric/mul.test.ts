@@ -16,6 +16,10 @@ import {
 import { mul } from '../../../src/std/index.ts';
 
 describe('mul', () => {
+  it('computes product of a number and a number', () => {
+    expect(mul(17, 23)).toEqual(17 * 23);
+  });
+
   it('computes product of a number and vec2f', () => {
     expect(mul(17, vec2f(0, 0))).toEqual(vec2f(0, 0));
     expect(mul(0.4, vec2f(0.6, 0)).x).toBeCloseTo(0.24);
@@ -65,6 +69,105 @@ describe('mul', () => {
     expect(mul(-1, vec4i(-1, -2, -3, -4))).toEqual(vec4i(1, 2, 3, 4));
     expect(mul(0, vec4i(1))).toEqual(vec4i());
     expect(mul(8, vec4i(2))).toEqual(vec4i(16));
+  });
+
+  it('computes product of a number and mat2x2f', () => {
+    expect(mul(-8, mat2x2f(1, -2, 3, -4))).toEqual(mat2x2f(-8, 16, -24, 32));
+    expect(mul(0, mat2x2f())).toEqual(mat2x2f());
+  });
+
+  it('computes product of a number and mat3x3f', () => {
+    expect(mul(-8, mat3x3f(1, -2, 3, -4, 5, -6, 7, -8, 9))).toEqual(
+      mat3x3f(-8, 16, -24, 32, -40, 48, -56, 64, -72),
+    );
+    expect(mul(0, mat3x3f())).toEqual(mat3x3f());
+  });
+
+  it('computes product of a number and mat4x4f', () => {
+    expect(
+      mul(
+        -8,
+        mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16),
+      ),
+    ).toEqual(
+      mat4x4f(
+        -8,
+        16,
+        -24,
+        32,
+        -40,
+        48,
+        -56,
+        64,
+        -72,
+        80,
+        -88,
+        96,
+        -104,
+        112,
+        -120,
+        128,
+      ),
+    );
+    expect(mul(0, mat4x4f())).toEqual(mat4x4f());
+  });
+
+  it('computes product of vec2f and a number', () => {
+    expect(mul(vec2f(0, 0), 17)).toEqual(vec2f(0, 0));
+    expect(mul(vec2f(0.6, 0), 0.4).x).toBeCloseTo(0.24);
+    expect(mul(vec2f(1, 0), 0)).toEqual(vec2f());
+  });
+
+  it('computes product of vec3u and a number', () => {
+    expect(mul(vec3u(1, 1, 1), 2)).toEqual(vec3u(2));
+    expect(mul(vec3u(1), 0)).toEqual(vec3u());
+  });
+
+  it('computes product of vec4i and a number', () => {
+    expect(mul(vec4i(-1, -2, -3, -4), -1)).toEqual(vec4i(1, 2, 3, 4));
+    expect(mul(vec4i(1), 0)).toEqual(vec4i());
+    expect(mul(vec4i(2), 8)).toEqual(vec4i(16));
+  });
+
+  it('computes product of mat2x2f and a number', () => {
+    expect(mul(mat2x2f(1, -2, 3, -4), -8)).toEqual(mat2x2f(-8, 16, -24, 32));
+    expect(mul(mat2x2f(), 0)).toEqual(mat2x2f());
+  });
+
+  it('computes product of mat3x3f and a number', () => {
+    expect(mul(mat3x3f(1, -2, 3, -4, 5, -6, 7, -8, 9), -8)).toEqual(
+      mat3x3f(-8, 16, -24, 32, -40, 48, -56, 64, -72),
+    );
+    expect(mul(mat3x3f(), 0)).toEqual(mat3x3f());
+  });
+
+  it('computes product of mat4x4f and a number', () => {
+    expect(
+      mul(
+        mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16),
+        -8,
+      ),
+    ).toEqual(
+      mat4x4f(
+        -8,
+        16,
+        -24,
+        32,
+        -40,
+        48,
+        -56,
+        64,
+        -72,
+        80,
+        -88,
+        96,
+        -104,
+        112,
+        -120,
+        128,
+      ),
+    );
+    expect(mul(mat4x4f(), 0)).toEqual(mat4x4f());
   });
 
   it('computes product of a mat2x2 and mat2x2', () => {
