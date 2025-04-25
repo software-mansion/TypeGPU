@@ -9,8 +9,8 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import { div } from '../../../src/std/index.ts';
+} from '../../../src/data/vector.ts';
+import { div } from '../../../src/std/numeric.ts';
 
 describe('div', () => {
   it('computes quotient of a vec2f and a number', () => {
