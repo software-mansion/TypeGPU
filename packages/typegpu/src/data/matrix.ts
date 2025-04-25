@@ -1,7 +1,7 @@
-import * as std from 'src/std/index.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
+import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {

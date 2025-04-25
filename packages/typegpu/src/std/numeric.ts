@@ -1,4 +1,3 @@
-import { mat2x2f } from 'src/data/index.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
@@ -8,7 +7,6 @@ import type {
   AnyNumericVecInstance,
   AnyVecInstance,
   AnyWgslData,
-  m2x2f,
   v3f,
   v3h,
   vBaseForMat,
@@ -16,8 +14,7 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-// AAA zamień type guardy na te z wgsl types
-// AAA popraw sygnaturę add i sub
+// AAA popraw sygnaturę sub
 // AAA dodaj testy do nowej sygnatury add i sub
 // AAA mul dla mat
 // AAA testy unit i example dla fluent mul
@@ -28,6 +25,8 @@ import type { Snippet } from '../types.ts';
 // AAA add, sub dla vec
 // AAA testy unit i example dla fluent add, sub
 // AAA mieszane testy (mat->vec)
+// AAA skompresuj vector opsy
+// AAA testy na typ wynikowy
 
 export function snippetIsNumeric(element: Snippet) {
   const type = element.dataType.type;
@@ -70,14 +69,50 @@ function isMat(
   return 'kind' in element && element.kind.startsWith('mat');
 }
 
+function cpuAdd(lhs: number, rhs: number): number; // default addition
+function cpuAdd<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: number,
+  rhs: T,
+): T; // mixed addition
+function cpuAdd<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: T,
+  rhs: number,
+): T; // mixed addition
+function cpuAdd<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: T,
+  rhs: T,
+): T; // component-wise addition
+function cpuAdd(
+  lhs: number | AnyNumericVecInstance | AnyMatInstance,
+  rhs: number | AnyNumericVecInstance | AnyMatInstance,
+): number | AnyNumericVecInstance | AnyMatInstance;
+function cpuAdd(
+  lhs: number | AnyNumericVecInstance | AnyMatInstance,
+  rhs: number | AnyNumericVecInstance | AnyMatInstance,
+) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs + rhs; // default addition
+  }
+  if (typeof lhs === 'number' && (isVec(rhs) || isMat(rhs))) {
+    return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
+  }
+  if ((isVec(lhs) || isMat(lhs)) && typeof rhs === 'number') {
+    return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
+  }
+  if ((isVec(lhs) || isMat(lhs)) && (isVec(rhs) || isMat(rhs))) {
+    return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
+  }
+
+  throw new Error('Mul called with invalid arguments.');
+}
+
 export const add = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
-    VectorOps.add[lhs.kind](lhs, rhs),
+  cpuAdd,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} + ${rhs.value})`,
-    dataType: lhs.dataType,
+    dataType: snippetIsNumeric(lhs) ? rhs.dataType : lhs.dataType,
   }),
 );
 
@@ -101,7 +136,7 @@ function cpuMul<MV extends AnyNumericVecInstance | AnyMatInstance>(
   lhs: MV,
   rhs: number,
 ): MV; // scale
-function cpuMul<V extends AnyNumericVecInstance>(lhs: V, rhs: V): V; // component-wise
+function cpuMul<V extends AnyNumericVecInstance>(lhs: V, rhs: V): V; // component-wise multiplication
 function cpuMul<M extends AnyMatInstance, V extends vBaseForMat<M>>(
   lhs: V,
   rhs: M,
@@ -111,10 +146,6 @@ function cpuMul<M extends AnyMatInstance, V extends vBaseForMat<M>>(
   rhs: V,
 ): V; // matrix-column-vector
 function cpuMul<M extends AnyMatInstance>(lhs: M, rhs: M): M; // matrix multiplication
-// function cpuMul<
-//   M extends AnyMatInstance,
-//   T extends number | vBaseForMat<M> | M,
-// >(lhs: M, rhs: T): T extends AnyVecInstance ? T : M; // necessary for fluent operators
 function cpuMul(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,
@@ -148,17 +179,6 @@ function cpuMul(
   throw new Error('Mul called with invalid arguments.');
 }
 
-function test(a: m2x2f | number) {
-  return cpuMul(mat2x2f(), a);
-}
-
-function test2(a: m2x2f | number) {
-  if (typeof a === 'number') {
-    return cpuMul(mat2x2f(), a);
-  }
-  return cpuMul(mat2x2f(), a);
-}
-
 export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
@@ -178,65 +198,6 @@ export const mul = createDualImpl(
     return { value: `(${s.value} * ${v.value})`, dataType: returnType };
   },
 );
-
-// type MulOverload = {
-//   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: T, v: TVec): TVec;
-//   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: TVec, v: T): TVec;
-//   <T extends AnyNumericVecInstance | AnyMatInstance>(s: number | T, v: T): T;
-// };
-
-// export const mul: MulOverload = createDualImpl(
-//   // CPU implementation
-//   (
-//     s: number | AnyNumericVecInstance | AnyMatInstance,
-//     v: AnyNumericVecInstance | AnyMatInstance,
-//   ): AnyNumericVecInstance | AnyMatInstance => {
-//     if (typeof s === 'number') {
-//       // Scalar * Vector/Matrix case
-//       return VectorOps.mulSxV[v.kind](s, v);
-//     }
-//     if (
-//       typeof s === 'object' &&
-//       typeof v === 'object' &&
-//       'kind' in s &&
-//       'kind' in v
-//     ) {
-//       const sIsVector = !s.kind.startsWith('mat');
-//       const vIsVector = !v.kind.startsWith('mat');
-//       if (!sIsVector && vIsVector) {
-//         // Matrix * Vector case
-//         return VectorOps.mulMxV[(s as AnyMatInstance).kind](
-//           s as AnyMatInstance,
-//           v as vBaseForMat<AnyMatInstance>,
-//         );
-//       }
-//       if (sIsVector && !vIsVector) {
-//         // Vector * Matrix case
-//         return VectorOps.mulVxM[(v as AnyMatInstance).kind](
-//           s as vBaseForMat<AnyMatInstance>,
-//           v as AnyMatInstance,
-//         );
-//       }
-//     }
-//     // Vector * Vector or Matrix * Matrix case
-//     return VectorOps.mulVxV[v.kind](s, v);
-//   },
-//   // GPU implementation
-//   (s, v) => {
-//     const returnType = snippetIsNumeric(s)
-//       ? // Scalar * Vector/Matrix
-//         (v.dataType as AnyWgslData)
-//       : !s.dataType.type.startsWith('mat')
-//         ? // Vector * Matrix
-//           (s.dataType as AnyWgslData)
-//         : !v.dataType.type.startsWith('mat')
-//           ? // Matrix * Vector
-//             (v.dataType as AnyWgslData)
-//           : // Vector * Vector or Matrix * Matrix
-//             (s.dataType as AnyWgslData);
-//     return { value: `(${s.value} * ${v.value})`, dataType: returnType };
-//   },
-// );
 
 export const abs = createDualImpl(
   // CPU implementation
