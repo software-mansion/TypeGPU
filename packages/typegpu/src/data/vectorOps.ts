@@ -597,7 +597,7 @@ export const VectorOps = {
   >,
 
   mulMxV: {
-    mat2x2f: (m: wgsl.m2x2f, v: wgsl.v2f) => {
+    mat2x2f: (m: wgsl.m2x2f, v: wgsl.v2f | wgsl.v2h) => {
       const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
       return vec2f(
         m_[0].x * v.x + m_[1].x * v.y,
@@ -605,7 +605,7 @@ export const VectorOps = {
       );
     },
 
-    mat3x3f: (m: wgsl.m3x3f, v: wgsl.v3f) => {
+    mat3x3f: (m: wgsl.m3x3f, v: wgsl.v3f | wgsl.v3h) => {
       const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
       return vec3f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z,
@@ -614,7 +614,7 @@ export const VectorOps = {
       );
     },
 
-    mat4x4f: (m: wgsl.m4x4f, v: wgsl.v4f) => {
+    mat4x4f: (m: wgsl.m4x4f, v: wgsl.v4f | wgsl.v4h) => {
       const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
       return vec4f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z + m_[3].x * v.w,
