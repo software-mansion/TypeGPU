@@ -17,7 +17,7 @@ The package includes the following functionalities:
   _unplugin-typegpu_ scans the project files looking for the tgpu function shell implementations.
   It transpiles the JS code into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest).
 
-  When an implementation function is passed directly to the shell creation, the plugin should have no problem identifying and processing it:
+  When an implementation function is passed directly to the shell creation, the plugin should have no problem identifying and processing it.
 
   ```ts
   import tgpu from 'typegpu';
@@ -69,8 +69,9 @@ The package includes the following functionalities:
   This is not possible when using a JIT transpiler.
 
 - **[WIP] Automatic naming of tgpu objects**
+
   Naming gpu objects via the `$name` method is very helpful for debugging. Soon it will not be necessary to do that explicitly.
-  Instead the plugin will be able to name the objects based on the variable names that they are assigned to.
+  Instead, the plugin will be able to name the objects based on the variable names that they are assigned to.
 
 :::caution
 In order for the plugin to work, the file that is to be transformed needs to import _typegpu_.
@@ -79,20 +80,22 @@ Note that unused imports may be automatically removed by bundlers, so make sure 
 
 ## Installation
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 <Tabs syncKey="package-manager">
   <TabItem label="npm" icon="seti:npm">
-    ```sh frame=none
-    npm install --save-dev unplugin-typegpu
+    ```sh frame=none 
+    npm install --save-dev unplugin-typegpu 
     ```
   </TabItem>
   <TabItem label="pnpm" icon="pnpm">
-    ```sh frame=none
-    pnpm add -D unplugin-typegpu
+    ```sh frame=none 
+    pnpm add -D unplugin-typegpu 
     ```
   </TabItem>
   <TabItem label="yarn" icon="seti:yarn">
-    ```sh frame=none
-    yarn add -D unplugin-typegpu
+    ```sh frame=none 
+    yarn add -D unplugin-typegpu 
     ```
   </TabItem>
 </Tabs>
