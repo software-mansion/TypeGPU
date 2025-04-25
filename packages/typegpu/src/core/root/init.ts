@@ -14,6 +14,7 @@ import {
   StrictNameRegistry,
 } from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   LayoutEntryToInput,
@@ -48,21 +49,18 @@ import type {
 } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
-  type INTERNAL_TgpuComputePipeline,
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
   isComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
-  type INTERNAL_TgpuRenderPipeline,
   INTERNAL_createRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
   isRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import {
-  type INTERNAL_TgpuFixedSampler,
   type TgpuComparisonSampler,
   type TgpuSampler,
   isComparisonSampler,
@@ -74,9 +72,6 @@ import {
   isAccessor,
 } from '../slot/slotTypes.ts';
 import {
-  type INTERNAL_TgpuFixedSampledTexture,
-  type INTERNAL_TgpuFixedStorageTexture,
-  type INTERNAL_TgpuTexture,
   INTERNAL_createTexture,
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
@@ -391,12 +386,11 @@ class TgpuRootImpl
     | GPUVertexBufferLayout
     | GPUSampler {
     if (isComputePipeline(resource)) {
-      return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
+      return resource[$internal].rawPipeline;
     }
 
     if (isRenderPipeline(resource)) {
-      return (resource as unknown as INTERNAL_TgpuRenderPipeline).core.unwrap()
-        .pipeline;
+      return resource[$internal].core.unwrap().pipeline;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -412,17 +406,21 @@ class TgpuRootImpl
     }
 
     if (isTexture(resource)) {
-      return (resource as unknown as INTERNAL_TgpuTexture).unwrap();
+      return resource[$internal].unwrap();
     }
 
     if (isStorageTextureView(resource)) {
-      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
-      return (resource as unknown as INTERNAL_TgpuFixedStorageTexture).unwrap();
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap();
+      }
+      throw new Error('Cannot unwrap laid-out texture view.');
     }
 
     if (isSampledTextureView(resource)) {
-      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
-      return (resource as unknown as INTERNAL_TgpuFixedSampledTexture).unwrap();
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap();
+      }
+      throw new Error('Cannot unwrap laid-out texture view.');
     }
 
     if (isVertexLayout(resource)) {
@@ -430,15 +428,15 @@ class TgpuRootImpl
     }
 
     if (isSampler(resource)) {
-      if ('unwrap' in resource) {
-        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
     if (isComparisonSampler(resource)) {
-      if ('unwrap' in resource) {
-        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
+      if (resource[$internal].unwrap) {
+        return resource[$internal].unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out comparison sampler.');
     }
@@ -467,16 +465,14 @@ class TgpuRootImpl
       }
     >();
 
-    let currentPipeline:
-      | (TgpuRenderPipeline & INTERNAL_TgpuRenderPipeline)
-      | undefined;
+    let currentPipeline: TgpuRenderPipeline | undefined;
 
     const setupPassBeforeDraw = () => {
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
 
-      const { core, priors } = currentPipeline;
+      const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
 
       pass.setPipeline(memo.pipeline);
@@ -558,8 +554,7 @@ class TgpuRootImpl
         pass.executeBundles(...args);
       },
       setPipeline(pipeline) {
-        currentPipeline = pipeline as TgpuRenderPipeline &
-          INTERNAL_TgpuRenderPipeline;
+        currentPipeline = pipeline;
       },
 
       setIndexBuffer: (buffer, indexFormat, offset, size) => {
