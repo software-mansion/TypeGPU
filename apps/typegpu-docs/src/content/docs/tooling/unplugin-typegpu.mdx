@@ -3,16 +3,13 @@ title: Build Plugin
 description: A guide on how to use the optional build plugin for TypeGPU
 ---
 
-[unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) is a tool for TypeGPU applications,
-which automatically transforms the code during build time,
-unlocking some new features, optimizations and quality-of-life perks for the developers.
-While using the plugin is not required in majority of scenarios, it is highly recommended when writing GPU programs using TypeGPU.
+[unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) is an optional (but highly recommended) tool for projects using TypeGPU. It hooks into your bundler of choice, and unlocks new features, optimizations and quality-of-life improvements.
 
-Currently the package includes the following functionalities, with potentially more coming in the future:
+The package includes the following functionalities:
 
 - **TGSL functions**
 
-  TypeGPU allows running a subset of JavaScript functions on the GPU. It is achieved by transpiling the JS code into WGSL.
+  TypeGPU allows running a subset of JavaScript (which we call TGSL) on the GPU. It is achieved by transpiling JS functions into WGSL.
   This can be done via a Just-In-Time compiler or at build time, using the plugin.
   Transpiling at build time reduces the performance overhead at runtime
   and it is also the only possible approach on React Native, as the function code string is not available during runtime there.
@@ -82,9 +79,23 @@ Note that unused imports may be automatically removed by bundlers, so make sure 
 
 ## Installation
 
-```bash
-npm install --save-dev unplugin-typegpu
-```
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install --save-dev unplugin-typegpu
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add -D unplugin-typegpu
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add -D unplugin-typegpu
+    ```
+  </TabItem>
+</Tabs>
 
 After installing the package, the exported plugin needs to be included in the list of plugins in the bundler config.
 
