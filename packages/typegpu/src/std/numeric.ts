@@ -2,6 +2,7 @@ import { mat2x2f } from 'src/data/index.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
+  AnyFloat32VecInstance,
   AnyFloatVecInstance,
   AnyMatInstance,
   AnyNumericVecInstance,
@@ -14,6 +15,19 @@ import type {
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
+
+// AAA zamień type guardy na te z wgsl types
+// AAA popraw sygnaturę add i sub
+// AAA dodaj testy do nowej sygnatury add i sub
+// AAA mul dla mat
+// AAA testy unit i example dla fluent mul
+// AAA add, sub dla mat
+// AAA testy unit i example dla fluent add, sub
+// AAA mul dla vec
+// AAA testy unit i example dla fluent mul
+// AAA add, sub dla vec
+// AAA testy unit i example dla fluent add, sub
+// AAA mieszane testy (mat->vec)
 
 export function snippetIsNumeric(element: Snippet) {
   const type = element.dataType.type;
@@ -36,9 +50,9 @@ function isVec(
   return 'kind' in element && element.kind.startsWith('vec');
 }
 
-function isFloatVec(
+function isFloat32Vec(
   element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyFloatVecInstance {
+): element is AnyFloat32VecInstance {
   if (typeof element === 'number') {
     return false;
   }
@@ -121,10 +135,10 @@ function cpuMul(
   if (isVec(lhs) && isVec(rhs)) {
     return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
   }
-  if (isFloatVec(lhs) && isMat(rhs)) {
+  if (isFloat32Vec(lhs) && isMat(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
-  if (isMat(lhs) && isFloatVec(rhs)) {
+  if (isMat(lhs) && isFloat32Vec(rhs)) {
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMat(lhs) && isMat(rhs)) {

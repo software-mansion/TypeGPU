@@ -571,6 +571,8 @@ export interface v4b extends BooleanArrayView, Swizzle4<v2b, v3b, v4b> {
   w: boolean;
 }
 
+export type AnyFloat32VecInstance = v2f | v3f | v4f;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -606,6 +608,7 @@ export interface MatFluentOperable<T extends AnyMatInstance> {
   mul(other: number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
   mul(other: T): T;
+  mul(other: number | vBaseForMat<T> | T): vBaseForMat<T> | T;
 }
 
 /**
@@ -665,10 +668,10 @@ export interface m4x4f extends mat4x4<v4f> {
 export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
 export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
-  ? v2f | v2h
+  ? v2f
   : T extends m3x3f
-    ? v3f | v3h
-    : v4f | v4h;
+    ? v3f
+    : v4f;
 
 // #endregion
 
