@@ -471,11 +471,21 @@ export const sqrt = createDualImpl(
 
 export const div = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(lhs: T, rhs: T): T => {
-    if (typeof lhs === 'number') {
-      return (lhs / (rhs as number)) as T;
+  <T extends AnyNumericVecInstance | number>(lhs: T, rhs: T | number): T => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return (lhs / rhs) as T;
     }
-    return VectorOps.div[lhs.kind](lhs, rhs as AnyNumericVecInstance) as T;
+    if (typeof rhs === 'number') {
+      return VectorOps.mulSxV[(lhs as AnyNumericVecInstance).kind](
+        1 / rhs,
+        lhs as AnyNumericVecInstance,
+      ) as T;
+    }
+    // Vector / Vector case
+    return VectorOps.div[(lhs as AnyNumericVecInstance).kind](
+      lhs as AnyNumericVecInstance,
+      rhs as AnyNumericVecInstance,
+    ) as T;
   },
   // GPU implementation
   (lhs, rhs) => ({
