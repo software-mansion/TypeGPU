@@ -4,13 +4,20 @@
 
 🚧 **Under Construction** 🚧 - [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/unplugin-typegpu)
 
+Read more about the plugin in the [TypeGPU documentation](https://docs.swmansion.com/TypeGPU/tooling/unplugin-typegpu/).
+
 </div>
 
 Build plugins for [TypeGPU](https://typegpu.com) that enable:
 - Seamless JavaScript -> WGSL transpilation
 - [🚧 TODO] Improved debugging with automatic naming of resources
 
-Currently supported:
+## Getting Started
+
+```sh
+npm install unplugin-typegpu
+```
+
 * babel
 ```js
 // babel.config.js (React Native with Expo)
@@ -25,24 +32,18 @@ module.exports = function (api) {
 
 ```
 
-* rollup
+* vite
 
 ```ts
 // vite.config.js
 
 import { defineConfig } from 'vite';
-import typegpu from 'unplugin-typegpu/rollup';
+import typegpu from 'unplugin-typegpu/vite';
 
 export default defineConfig({
   plugins: [typegpu()],
 });
 
-```
-
-## Getting Started
-
-```sh
-npm install unplugin-typegpu
 ```
 
 ## TypeGPU is created by Software Mansion
