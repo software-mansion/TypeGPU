@@ -96,7 +96,7 @@ ${example.htmlFile.content}
 }`,
         'vite.config.js': `\
 import { defineConfig } from 'vite';
-import typegpuPlugin from 'unplugin-typegpu/rollup';
+import typegpuPlugin from 'unplugin-typegpu/vite';
 
 export default defineConfig({
   plugins: [typegpuPlugin()],
