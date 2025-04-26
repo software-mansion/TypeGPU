@@ -1,0 +1,31 @@
+<style>
+  #css-probe {
+    position: absolute;
+    left: var(--x);
+    bottom: var(--y);
+    translate: -50% 50%;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 100vh;
+    border: 1px solid oklab(calc(var(--l) + 0.5) var(--a) var(--b));
+    background-color: oklab(var(--l) var(--a) var(--b));
+    pointer-events: none;
+  }
+
+  canvas:active + #css-probe {
+    border: none;
+  }
+
+  #probe-position {
+    position: absolute;
+    bottom: 0.25rem;
+    right: 0.4rem;
+    pointer-events: none;
+    color: gray;
+    font-variant-numeric: tabular-nums;
+    font-size: small;
+  }
+</style>
+<canvas></canvas>
+<div id="css-probe"></div>
+<div id="probe-position"></div>
