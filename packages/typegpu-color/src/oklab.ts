@@ -1,13 +1,22 @@
 import tgpu from 'typegpu';
 import { f32, struct, vec3f } from 'typegpu/data';
-import { clamp, length, max, min, select } from 'typegpu/std';
+import {
+  abs,
+  clamp,
+  length,
+  max,
+  min,
+  mix,
+  pow,
+  select,
+  sign,
+  sqrt,
+} from 'typegpu/std';
 
 const cbrt = tgpu['~unstable'].fn(
   [f32],
   f32,
-)(/* wgsl */ `(x: f32) -> f32 {
-  return sign(x) * pow(abs(x), 1.0 / 3);
-}`);
+)((x) => sign(x) * pow(abs(x), 1.0 / 3));
 
 export const linearRgbToOklab = tgpu['~unstable'].fn(
   [vec3f],
@@ -54,9 +63,9 @@ export const oklabToLinearRgb = tgpu['~unstable'].fn(
  */
 
 const computeMaxSaturation = tgpu['~unstable'].fn(
-  { a: f32, b: f32 },
+  [f32, f32],
   f32,
-)(({ a, b }) => {
+)((a, b) => {
   // Max saturation will be when one of r, g or b goes below zero.
 
   // Select different coefficients depending on which component goes below zero first
@@ -148,11 +157,11 @@ const LC = struct({
  * a and b must be normalized so a^2 + b^2 == 1
  */
 const findCusp = tgpu['~unstable'].fn(
-  { a: f32, b: f32 },
+  [f32, f32],
   LC,
-)(({ a, b }) => {
+)((a, b) => {
   // First, find the maximum saturation (saturation S = C/L)
-  const S_cusp = computeMaxSaturation({ a, b });
+  const S_cusp = computeMaxSaturation(a, b);
 
   // Convert to linear sRGB to find the first point where at least one of r,g or b >= 1:
   const rgb_at_max = oklabToLinearRgb(vec3f(1, S_cusp * a, S_cusp * b));
@@ -170,13 +179,10 @@ const findCusp = tgpu['~unstable'].fn(
  */
 
 const findGamutIntersection = tgpu['~unstable'].fn(
-  { a: f32, b: f32, L1: f32, C1: f32, L0: f32 },
+  [f32, f32, f32, f32, f32, LC],
   f32,
-)(({ a, b, L1, C1, L0 }) => {
+)((a, b, L1, C1, L0, cusp) => {
   const FLT_MAX = 3.40282346e38;
-
-  // Find the cusp of the gamut triangle
-  const cusp = findCusp({ a, b });
 
   // Find the intersection for upper and lower half separately
   let t = f32(0);
@@ -249,11 +255,8 @@ const findGamutIntersection = tgpu['~unstable'].fn(
         const u_b = b1 / (b1 * b1 - 0.5 * b * b2);
         let t_b = -b * u_b;
 
-        // @ts-expect-error select doesn't work on number?
         t_r = select(FLT_MAX, t_r, u_r >= 0);
-        // @ts-expect-error
         t_g = select(FLT_MAX, t_g, u_g >= 0);
-        // @ts-expect-error
         t_b = select(FLT_MAX, t_b, u_b >= 0);
 
         t += min(t_r, min(t_g, t_b));
@@ -265,50 +268,66 @@ const findGamutIntersection = tgpu['~unstable'].fn(
 });
 
 export const gamutClipPreserveChroma = tgpu['~unstable'].fn(
-  { lab: vec3f },
+  [vec3f],
   vec3f,
-)(({ lab }) => {
+)((lab) => {
   const L = lab.x;
-  const a = lab.y;
-  const b = lab.z;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
-  const a_ = a / C;
-  const b_ = b / C;
+  const a_ = lab.y / C;
+  const b_ = lab.z / C;
   const L0 = clamp(L, 0, 1);
-  const t = clamp(
-    findGamutIntersection({ a: a_, b: b_, L1: L, C1: C, L0 }),
-    0,
-    1,
-  );
-  const L_clipped = L0 * (1 - t) + t * L;
+  const cusp = findCusp(a_, b_);
+  const t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0, 1);
+  const L_clipped = mix(L0, L, t);
   const C_clipped = t * C;
 
-  return oklabToLinearRgb(vec3f(L_clipped, C_clipped * a_, C_clipped * b_));
+  return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-export const gamutClipAdaptiveL0 = tgpu['~unstable']
-  .fn(
-    { lab: vec3f, alpha: f32 },
-    vec3f,
-  )(
-    // TGSL does not have sign and sqrt yet
-    /* wgsl */ `{
-      let L = lab.x;
-      let eps = 0.00001;
-      let C = max(eps, length(lab.yz));
-      let a_ = lab.y / C;
-      let b_ = lab.z / C;
+export const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
+  [vec3f, f32],
+  vec3f,
+)((lab, alpha) => {
+  const L = lab.x;
+  const eps = 0.00001;
+  const C = max(eps, length(lab.yz));
+  const a_ = lab.y / C;
+  const b_ = lab.z / C;
 
-      let Ld = L - 0.5;
-      let e1 = 0.5 + abs(Ld) + alpha * C;
-      let L0 = 0.5 * (1 + sign(Ld)*(e1 - sqrt(max(0, e1*e1 - 2 * abs(Ld)))));
+  const Ld = L - 0.5;
+  const e1 = 0.5 + abs(Ld) + alpha * C;
+  const L0 = 0.5 * (1 + sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * abs(Ld)))));
 
-      let t = clamp(findGamutIntersection(a_, b_, L, C, L0), 0, 1);
-      let L_clipped = mix(L0, L, t);
-      let C_clipped = t * C;
+  const cusp = findCusp(a_, b_);
+  const t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0, 1);
+  const L_clipped = mix(L0, L, t);
+  const C_clipped = t * C;
 
-      return oklabToLinearRgb(vec3f(L_clipped, C_clipped * a_, C_clipped * b_));
-    }`,
-  )
-  .$uses({ oklabToLinearRgb, findGamutIntersection, linearRgbToOklab });
+  return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
+});
+
+export const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
+  [vec3f, f32],
+  vec3f,
+)((lab, alpha) => {
+  const L = lab.x;
+  const eps = 0.00001;
+  const C = max(eps, length(lab.yz));
+  const a_ = lab.y / C;
+  const b_ = lab.z / C;
+
+  const cusp = findCusp(a_, b_);
+  const Ld = L - cusp.L;
+  const k = 2 * select(cusp.L, 1 - cusp.L, Ld > 0);
+
+  const e1 = 0.5 * k + abs(Ld) + (alpha * C) / k;
+  const L0 =
+    cusp.L + 0.5 * (sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * k * abs(Ld)))));
+
+  const t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0, 1);
+  const L_clipped = mix(L0, L, t);
+  const C_clipped = t * C;
+
+  return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
+});

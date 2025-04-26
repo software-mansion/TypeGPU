@@ -5,5 +5,6 @@ export {
   oklabToLinearRgb,
   linearRgbToOklab,
   gamutClipPreserveChroma,
-  gamutClipAdaptiveL0,
+  gamutClipAdaptiveL05,
+  gamutClipAdaptiveL0cusp,
 } from './oklab.ts';
