@@ -45,6 +45,24 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
+const fluentOperatorKind = [
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+];
+
 type Operator =
   | tinyest.BinaryOperator
   | tinyest.AssignmentOperator
@@ -198,19 +216,22 @@ export function generateExpression(
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
 
-    // TODO: replace this temporary check once better wgslGenerator infrastructure is implemented
-    if (target.dataType.type === 'mat2x2f') {
+    // TODO: replace this temporary check once more fitting wgslGenerator infrastructure is implemented
+    if (fluentOperatorKind.includes(target.dataType.type)) {
+      // TODO: add
+      // TODO: sub
       if (property === 'mul') {
         return {
           value: createDualImpl(
             (other) => {
-              throw new Error('Unreachable code');
+              throw new Error('Unreachable code!');
             },
             (other: Snippet) => std.mul[$internal].gpuImpl(target, other),
           ),
           dataType: UnknownData,
         };
       }
+      // TODO: div
     }
 
     if (typeof target.value === 'string') {
