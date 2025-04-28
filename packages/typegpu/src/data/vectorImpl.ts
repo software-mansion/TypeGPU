@@ -1,4 +1,5 @@
 import { $internal } from '../shared/symbols.ts';
+import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { VecKind } from './wgslTypes.ts';
 
@@ -500,6 +501,11 @@ export class Vec2fImpl extends Vec2<number> {
 
   get kind() {
     return 'vec2f' as const;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: interface limits the usage anyway
+  mul(this: any, other: any) {
+    return std.mul(this, other);
   }
 
   get _Vec2() {

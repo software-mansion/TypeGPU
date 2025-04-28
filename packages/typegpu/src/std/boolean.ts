@@ -268,7 +268,11 @@ export const isCloseTo = createDualImpl(
       return Math.abs(lhs - rhs) < precision;
     }
     if (typeof lhs !== 'number' && typeof rhs !== 'number') {
-      return VectorOps.isCloseToZero[lhs.kind](sub(lhs, rhs), precision);
+      return VectorOps.isCloseToZero[lhs.kind](
+        // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+        sub(lhs as any, rhs as any),
+        precision,
+      );
     }
     return false;
   },

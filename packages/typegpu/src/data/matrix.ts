@@ -159,6 +159,10 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
     return vec2f(e0, e1);
   }
 
+  // add
+
+  // sub
+
   mul(this: m2x2f, other: number): m2x2f;
   mul(this: m2x2f, other: v2f): v2f;
   mul(this: m2x2f, other: m2x2f): m2x2f;

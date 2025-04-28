@@ -380,7 +380,10 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
+export interface v2f
+  extends NumberArrayView,
+    Swizzle2<v2f, v3f, v4f>,
+    vecDotNotation<v2f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
@@ -604,11 +607,24 @@ export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
 
-export interface MatFluentOperable<T extends AnyMatInstance> {
+export interface matDotNotation<T extends AnyMatInstance> {
+  // add
+
+  // sub
+
   mul(other: number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
   mul(other: T): T;
-  mul(other: number | vBaseForMat<T> | T): vBaseForMat<T> | T;
+}
+
+export interface vecDotNotation<T extends AnyVecInstance> {
+  // add
+
+  // sub
+
+  mul(other: number): T;
+  mul(other: T): T;
+  mul(other: mBaseForVec<T>): T;
 }
 
 /**
@@ -625,7 +641,7 @@ export interface mat2x2<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat2x2f or mat2x2<f32>
  * A matrix with 2 rows and 2 columns, with elements of type d.f32
  */
-export interface m2x2f extends mat2x2<v2f>, MatFluentOperable<m2x2f> {
+export interface m2x2f extends mat2x2<v2f>, matDotNotation<m2x2f> {
   readonly kind: 'mat2x2f';
 }
 
@@ -672,6 +688,14 @@ export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
   : T extends m3x3f
     ? v3f
     : v4f;
+
+export type mBaseForVec<T extends AnyVecInstance> = T extends v2f
+  ? m2x2f
+  : T extends v3f
+    ? m3x3f
+    : T extends v4f
+      ? m4x4f
+      : never;
 
 // #endregion
 
