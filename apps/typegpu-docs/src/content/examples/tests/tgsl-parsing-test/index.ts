@@ -8,6 +8,7 @@ const result = root['~unstable'].createMutable(d.i32, 0);
 
 const f = tgpu['~unstable'].fn({})(() => {
   const a = d.mat2x2f(1, 2, 3, 4).mul(2);
+  // const b = d.vec2u().mul()
 });
 console.log(tgpu.resolve({ externals: { f } }));
 console.log(d.mat2x2f(1, 2, 3, 4).mul(2));

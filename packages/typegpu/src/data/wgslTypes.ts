@@ -395,7 +395,10 @@ export interface v2f
  * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
  * A vector with 2 elements of type f16
  */
-export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
+export interface v2h
+  extends NumberArrayView,
+    Swizzle2<v2h, v3h, v4h>,
+    vecDotNotation<v2h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
@@ -407,7 +410,10 @@ export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
+export interface v2i
+  extends NumberArrayView,
+    Swizzle2<v2i, v3i, v4i>,
+    vecDotNotation<v2i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
@@ -419,7 +425,10 @@ export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
+export interface v2u
+  extends NumberArrayView,
+    Swizzle2<v2u, v3u, v4u>,
+    vecDotNotation<v2u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
@@ -443,7 +452,10 @@ export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
+export interface v3f
+  extends NumberArrayView,
+    Swizzle3<v2f, v3f, v4f>,
+    vecDotNotation<v3f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
@@ -456,7 +468,10 @@ export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
  * A vector with 3 elements of type f16
  */
-export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
+export interface v3h
+  extends NumberArrayView,
+    Swizzle3<v2h, v3h, v4h>,
+    vecDotNotation<v3h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
@@ -469,7 +484,10 @@ export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
+export interface v3i
+  extends NumberArrayView,
+    Swizzle3<v2i, v3i, v4i>,
+    vecDotNotation<v3i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
@@ -482,7 +500,10 @@ export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
+export interface v3u
+  extends NumberArrayView,
+    Swizzle3<v2u, v3u, v4u>,
+    vecDotNotation<v3u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
@@ -508,7 +529,10 @@ export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
+export interface v4f
+  extends NumberArrayView,
+    Swizzle4<v2f, v3f, v4f>,
+    vecDotNotation<v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
@@ -522,7 +546,10 @@ export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
  * A vector with 4 elements of type f16
  */
-export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
+export interface v4h
+  extends NumberArrayView,
+    Swizzle4<v2h, v3h, v4h>,
+    vecDotNotation<v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
@@ -536,7 +563,10 @@ export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
+export interface v4i
+  extends NumberArrayView,
+    Swizzle4<v2i, v3i, v4i>,
+    vecDotNotation<v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -550,7 +580,10 @@ export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
+export interface v4u
+  extends NumberArrayView,
+    Swizzle4<v2u, v3u, v4u>,
+    vecDotNotation<v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -608,25 +641,25 @@ export interface matBase<TColumn> extends NumberArrayView {
 }
 
 export interface matDotNotation<T extends AnyMatInstance> {
-  // add
+  // TODO: add
 
-  // sub
+  // TODO: sub
 
   mul(other: number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
   mul(other: T): T;
 }
 
-export interface vecDotNotation<T extends AnyVecInstance> {
-  // add
+export interface vecDotNotation<T extends AnyNumericVecInstance> {
+  // TODO: add
 
-  // sub
+  // TODO: sub
 
   mul(other: number): T;
   mul(other: T): T;
   mul(other: mBaseForVec<T>): T;
 
-  // div
+  // TODO: div
 }
 
 /**
@@ -661,7 +694,7 @@ export interface mat3x3<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat3x3f or mat3x3<f32>
  * A matrix with 3 rows and 3 columns, with elements of type d.f32
  */
-export interface m3x3f extends mat3x3<v3f> {
+export interface m3x3f extends mat3x3<v3f>, matDotNotation<m3x3f> {
   readonly kind: 'mat3x3f';
 }
 
@@ -679,7 +712,7 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat4x4f or mat4x4<f32>
  * A matrix with 4 rows and 4 columns, with elements of type d.f32
  */
-export interface m4x4f extends mat4x4<v4f> {
+export interface m4x4f extends mat4x4<v4f>, matDotNotation<m4x4f> {
   readonly kind: 'mat4x4f';
 }
 
