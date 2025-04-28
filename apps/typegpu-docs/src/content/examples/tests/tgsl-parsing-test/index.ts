@@ -11,6 +11,7 @@ const f = tgpu['~unstable'].fn({})(() => {
 });
 console.log(tgpu.resolve({ externals: { f } }));
 console.log(d.mat2x2f(1, 2, 3, 4).mul(2));
+console.log(d.vec2f(1, 4).mul(2));
 
 const computeRunTests = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
   () => {

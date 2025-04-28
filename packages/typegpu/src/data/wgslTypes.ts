@@ -625,6 +625,8 @@ export interface vecDotNotation<T extends AnyVecInstance> {
   mul(other: number): T;
   mul(other: T): T;
   mul(other: mBaseForVec<T>): T;
+
+  // div
 }
 
 /**

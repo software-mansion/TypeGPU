@@ -1,7 +1,7 @@
 import { $internal } from '../shared/symbols.ts';
 import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { VecKind, m2x2f, v2f } from './wgslTypes.ts';
+import type { VecKind } from './wgslTypes.ts';
 
 // biome-ignore format: swizzles should not expand
 export abstract class VecBase<S> extends Array implements SelfResolvable {
@@ -30,6 +30,12 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
 
   toString() {
     return this['~resolve']();
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: this avoids repeating this 16 times in the impls 
+  mul(this: any, other: any) {
+    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+    return std.mul(this, other as any);
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }
@@ -501,14 +507,6 @@ export class Vec2fImpl extends Vec2<number> {
 
   get kind() {
     return 'vec2f' as const;
-  }
-
-  mul(this: v2f, other: number): v2f;
-  mul(this: v2f, other: v2f): v2f;
-  mul(this: v2f, other: m2x2f): v2f;
-  mul(this: v2f, other: number | v2f | m2x2f): v2f {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
   }
 
   get _Vec2() {

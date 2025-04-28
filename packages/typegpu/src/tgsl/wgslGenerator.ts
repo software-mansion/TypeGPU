@@ -3,6 +3,9 @@ import type { AnyData } from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { createDualImpl } from '../shared/generators.ts';
+import { $internal } from '../shared/symbols.ts';
+import * as std from '../std/index.ts';
 import {
   type ResolutionCtx,
   type Snippet,
@@ -194,6 +197,20 @@ export function generateExpression(
     // Member Access
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
+
+    if (target.dataType.type === 'mat2x2f') {
+      if (property === 'mul') {
+        return {
+          value: createDualImpl(
+            (other) => {
+              throw new Error('Unreachable code');
+            },
+            (other: Snippet) => std.mul[$internal].gpuImpl(target, other),
+          ),
+          dataType: UnknownData,
+        };
+      }
+    }
 
     if (typeof target.value === 'string') {
       return {

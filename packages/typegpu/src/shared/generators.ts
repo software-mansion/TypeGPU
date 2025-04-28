@@ -37,7 +37,7 @@ export function createDualImpl<T extends (...args: any[]) => any>(
     return jsImpl(...(args as any));
   }) as T;
 
-  (impl as TgpuDualFn<T>)[$internal] = true;
+  (impl as TgpuDualFn<T>)[$internal] = { jsImpl, gpuImpl };
 
   return impl as TgpuDualFn<T>;
 }
