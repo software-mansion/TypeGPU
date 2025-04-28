@@ -1,11 +1,16 @@
-// ----------
-// Public API
-// ----------
-
 import type { TgpuNamable } from '../../namable.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
+
+interface SamplerInternals {
+  readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
+}
+
+// ----------
+// Public API
+// ----------
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -93,18 +98,16 @@ export interface ComparisonSamplerProps {
 }
 
 export interface TgpuSampler {
+  readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler';
 }
 
 export interface TgpuComparisonSampler {
+  readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler-comparison';
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
-
-export interface INTERNAL_TgpuFixedSampler {
-  unwrap(branch: Unwrapper): GPUSampler;
-}
 
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler,
@@ -121,15 +124,15 @@ export function comparisonSampler(
 }
 
 export function isSampler(resource: unknown): resource is TgpuSampler {
-  return (resource as TgpuSampler)?.resourceType === 'sampler';
+  const maybe = resource as TgpuSampler | undefined;
+  return maybe?.resourceType === 'sampler' && !!maybe[$internal];
 }
 
 export function isComparisonSampler(
   resource: unknown,
 ): resource is TgpuComparisonSampler {
-  return (
-    (resource as TgpuComparisonSampler)?.resourceType === 'sampler-comparison'
-  );
+  const maybe = resource as TgpuComparisonSampler | undefined;
+  return maybe?.resourceType === 'sampler-comparison' && !!maybe[$internal];
 }
 
 // --------------
@@ -137,9 +140,12 @@ export function isComparisonSampler(
 // --------------
 
 export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
-  constructor(private readonly _membership: LayoutMembership) {}
+  constructor(private readonly _membership: LayoutMembership) {
+    this[$internal] = {};
+  }
 
   get label(): string | undefined {
     return this._membership.key;
@@ -164,9 +170,12 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 export class TgpuLaidOutComparisonSamplerImpl
   implements TgpuComparisonSampler, SelfResolvable
 {
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
-  constructor(private readonly _membership: LayoutMembership) {}
+  constructor(private readonly _membership: LayoutMembership) {
+    this[$internal] = {};
+  }
 
   get label(): string | undefined {
     return this._membership.key;
@@ -188,9 +197,8 @@ export class TgpuLaidOutComparisonSamplerImpl
   }
 }
 
-class TgpuFixedSamplerImpl
-  implements TgpuFixedSampler, SelfResolvable, INTERNAL_TgpuFixedSampler
-{
+class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
   private _label: string | undefined;
@@ -198,25 +206,24 @@ class TgpuFixedSamplerImpl
   private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: SamplerProps) {
+    this[$internal] = {
+      unwrap: (branch) => {
+        if (!this._sampler) {
+          this._sampler = branch.device.createSampler({
+            ...this._props,
+            label: this._label ?? '<unnamed>',
+          });
+        }
+
+        return this._sampler;
+      },
+    };
+
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
     this._filtering =
       _props.minFilter === 'linear' ||
       _props.magFilter === 'linear' ||
       _props.mipmapFilter === 'linear';
-  }
-
-  /**
-   * NOTE: Internal use only
-   */
-  unwrap(branch: Unwrapper): GPUSampler {
-    if (!this._sampler) {
-      this._sampler = branch.device.createSampler({
-        ...this._props,
-        label: this._label ?? '<unnamed>',
-      });
-    }
-
-    return this._sampler;
   }
 
   get label() {
@@ -251,30 +258,27 @@ class TgpuFixedSamplerImpl
 }
 
 class TgpuFixedComparisonSamplerImpl
-  implements
-    TgpuFixedComparisonSampler,
-    SelfResolvable,
-    INTERNAL_TgpuFixedSampler
+  implements TgpuFixedComparisonSampler, SelfResolvable
 {
+  public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   private _label: string | undefined;
   private _sampler: GPUSampler | null = null;
 
-  constructor(private readonly _props: ComparisonSamplerProps) {}
+  constructor(private readonly _props: ComparisonSamplerProps) {
+    this[$internal] = {
+      unwrap: (branch) => {
+        if (!this._sampler) {
+          this._sampler = branch.device.createSampler({
+            ...this._props,
+            label: this._label ?? '<unnamed>',
+          });
+        }
 
-  /**
-   * NOTE: Internal use only
-   */
-  unwrap(branch: Unwrapper): GPUSampler {
-    if (!this._sampler) {
-      this._sampler = branch.device.createSampler({
-        ...this._props,
-        label: this._label ?? '<unnamed>',
-      });
-    }
-
-    return this._sampler;
+        return this._sampler;
+      },
+    };
   }
 
   get label(): string | undefined {

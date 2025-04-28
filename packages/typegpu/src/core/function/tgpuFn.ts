@@ -41,6 +41,7 @@ type TgpuFnShellHeader<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = {
+  readonly [$internal]: true;
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
   readonly isEntry: false;
@@ -122,6 +123,7 @@ export function fn<
   Return extends AnyWgslData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   const shell: TgpuFnShellHeader<Args, Return> = {
+    [$internal]: true,
     argTypes,
     returnType,
     isEntry: false,
