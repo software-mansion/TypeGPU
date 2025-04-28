@@ -198,6 +198,7 @@ export function generateExpression(
     const [_, targetId, property] = expression;
     const target = generateExpression(ctx, targetId);
 
+    // TODO: replace this temporary check once better wgslGenerator infrastructure is implemented
     if (target.dataType.type === 'mat2x2f') {
       if (property === 'mul') {
         return {

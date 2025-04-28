@@ -14,7 +14,6 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-// AAA dodaj testy do nowej sygnatury sub
 // AAA mul dla mat
 // AAA testy unit i example dla fluent mul
 // AAA add, sub dla mat
