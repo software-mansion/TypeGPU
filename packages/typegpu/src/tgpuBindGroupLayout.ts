@@ -341,7 +341,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> =
               ? StorageTextureUsageForEntry<T>
               : never;
 
-export type BindGroupLayoutToEntries<
+export type ExtractBindGroupInputFromLayout<
   T extends Record<string, TgpuLayoutEntry | null>,
 > = {
   [K in keyof T]: LayoutEntryToInput<T[K]>;

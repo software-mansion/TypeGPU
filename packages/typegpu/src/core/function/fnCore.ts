@@ -147,9 +147,7 @@ export function createFnCore(
           applyExternals(
             externalMap,
             Object.fromEntries(
-              ast.argNames.props
-                .filter(({ prop, alias }) => prop !== alias)
-                .map(({ prop, alias }) => [alias, prop]),
+              ast.argNames.props.map(({ prop, alias }) => [alias, prop]),
             ),
           );
         }

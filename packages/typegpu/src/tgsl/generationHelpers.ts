@@ -246,6 +246,7 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
     }
   }
 
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   return isWgslData(resource) || isSelfResolvable(resource)
     ? (resource as unknown as AnyData)
     : UnknownData;
