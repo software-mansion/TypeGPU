@@ -454,27 +454,6 @@ export const VectorOps = {
     <T extends vBase | mBase>(lhs: T, rhs: number) => T
   >,
 
-  sub: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x - b.x, a.y - b.y),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) => vec2h(a.x - b.x, a.y - b.y),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) => vec2i(a.x - b.x, a.y - b.y),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) => vec2u(a.x - b.x, a.y - b.y),
-
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => vec3f(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => vec3h(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => vec3i(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => vec3u(a.x - b.x, a.y - b.y, a.z - b.z),
-
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
-      vec4f(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
-      vec4h(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
-      vec4i(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
-      vec4u(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => T>,
-
   mulSxV: {
     vec2f: (s: number, v: wgsl.v2f) => vec2f(s * v.x, s * v.y),
     vec2h: (s: number, v: wgsl.v2h) => vec2h(s * v.x, s * v.y),

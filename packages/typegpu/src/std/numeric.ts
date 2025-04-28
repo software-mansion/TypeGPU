@@ -14,7 +14,6 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-// AAA popraw sygnaturę sub
 // AAA dodaj testy do nowej sygnatury add i sub
 // AAA mul dla mat
 // AAA testy unit i example dla fluent mul
@@ -103,7 +102,7 @@ function cpuAdd(
     return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
   }
 
-  throw new Error('Mul called with invalid arguments.');
+  throw new Error('Add/Sub called with invalid arguments.');
 }
 
 export const add = createDualImpl(
@@ -116,10 +115,32 @@ export const add = createDualImpl(
   }),
 );
 
+function cpuSub(lhs: number, rhs: number): number; // default subtraction
+function cpuSub<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: number,
+  rhs: T,
+): T; // mixed subtraction
+function cpuSub<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: T,
+  rhs: number,
+): T; // mixed subtraction
+function cpuSub<T extends AnyNumericVecInstance | AnyMatInstance>(
+  lhs: T,
+  rhs: T,
+): T; // component-wise subtraction
+function cpuSub(
+  lhs: number | AnyNumericVecInstance | AnyMatInstance,
+  rhs: number | AnyNumericVecInstance | AnyMatInstance,
+): number | AnyNumericVecInstance | AnyMatInstance;
+function cpuSub(
+  lhs: number | AnyNumericVecInstance | AnyMatInstance,
+  rhs: number | AnyNumericVecInstance | AnyMatInstance,
+) {
+  return cpuAdd(lhs, mul(-1, rhs));
+}
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
-    VectorOps.sub[lhs.kind](lhs, rhs),
+  cpuSub,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} - ${rhs.value})`,
