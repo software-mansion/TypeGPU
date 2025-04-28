@@ -6,11 +6,16 @@ import { logicalExpressionTests } from './logical-expressions.ts';
 const root = await tgpu.init();
 const result = root['~unstable'].createMutable(d.i32, 0);
 
+const f = tgpu['~unstable'].fn({})(() => {
+  const a = d.mat2x2f(1, 2, 3, 4).mul(2);
+});
+console.log(tgpu.resolve({ externals: { f } }));
+console.log(d.mat2x2f(1, 2, 3, 4).mul(2));
+
 const computeRunTests = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
   () => {
     let s = true;
-    const a = d.vec2f(1, 2).mul(2);
-    // const c = std.mul(d.mat2x2f(), d.vec3f());
+
     s = s && logicalExpressionTests();
 
     if (s) {
@@ -20,9 +25,6 @@ const computeRunTests = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
     }
   },
 );
-
-console.log(tgpu.resolve({ externals: { computeRunTests } }));
-console.log(d.vec2f(1, 2).mul(2));
 
 const pipeline = root['~unstable']
   .withCompute(computeRunTests)

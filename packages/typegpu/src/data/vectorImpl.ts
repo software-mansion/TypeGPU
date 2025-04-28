@@ -1,7 +1,7 @@
 import { $internal } from '../shared/symbols.ts';
 import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { VecKind } from './wgslTypes.ts';
+import type { VecKind, m2x2f, v2f } from './wgslTypes.ts';
 
 // biome-ignore format: swizzles should not expand
 export abstract class VecBase<S> extends Array implements SelfResolvable {
@@ -503,9 +503,12 @@ export class Vec2fImpl extends Vec2<number> {
     return 'vec2f' as const;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: interface limits the usage anyway
-  mul(this: any, other: any) {
-    return std.mul(this, other);
+  mul(this: v2f, other: number): v2f;
+  mul(this: v2f, other: v2f): v2f;
+  mul(this: v2f, other: m2x2f): v2f;
+  mul(this: v2f, other: number | v2f | m2x2f): v2f {
+    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+    return std.mul(this, other as any);
   }
 
   get _Vec2() {
