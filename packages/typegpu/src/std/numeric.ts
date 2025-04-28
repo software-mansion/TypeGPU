@@ -456,3 +456,40 @@ export const neg = createDualImpl(
   // GPU implementation
   (value) => ({ value: `-(${value.value})`, dataType: value.dataType }),
 );
+
+export const sqrt = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.sqrt(value) as T;
+    }
+    return VectorOps.sqrt[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `sqrt(${value.value})`, dataType: value.dataType }),
+);
+
+export const div = createDualImpl(
+  // CPU implementation
+  <T extends AnyNumericVecInstance | number>(lhs: T, rhs: T | number): T => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return (lhs / rhs) as T;
+    }
+    if (typeof rhs === 'number') {
+      return VectorOps.mulSxV[(lhs as AnyNumericVecInstance).kind](
+        1 / rhs,
+        lhs as AnyNumericVecInstance,
+      ) as T;
+    }
+    // Vector / Vector case
+    return VectorOps.div[(lhs as AnyNumericVecInstance).kind](
+      lhs as AnyNumericVecInstance,
+      rhs as AnyNumericVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} / ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
+);

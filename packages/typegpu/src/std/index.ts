@@ -28,6 +28,8 @@ export {
   pow,
   reflect,
   neg,
+  sqrt,
+  div,
 } from './numeric.js';
 
 export {

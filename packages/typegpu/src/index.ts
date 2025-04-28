@@ -153,6 +153,7 @@ export type {
   BindLayoutEntry,
   LayoutEntryToInput,
   TgpuBindGroup,
+  ExtractBindGroupInputFromLayout,
 } from './tgpuBindGroupLayout.ts';
 export type {
   TgpuFn,
