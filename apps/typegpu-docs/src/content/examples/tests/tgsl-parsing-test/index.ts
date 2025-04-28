@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+// import * as std from 'typegpu/std';
 import { logicalExpressionTests } from './logical-expressions.ts';
 
 const root = await tgpu.init();
@@ -9,6 +10,7 @@ const computeRunTests = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })
   .does(() => {
     let s = true;
+    // const c = std.mul(d.mat2x2f(), d.vec3f());
     s = s && logicalExpressionTests();
 
     if (s) {

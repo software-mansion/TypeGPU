@@ -84,10 +84,6 @@ function cpuAdd<T extends AnyNumericVecInstance | AnyMatInstance>(
 function cpuAdd(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,
-): number | AnyNumericVecInstance | AnyMatInstance;
-function cpuAdd(
-  lhs: number | AnyNumericVecInstance | AnyMatInstance,
-  rhs: number | AnyNumericVecInstance | AnyMatInstance,
 ) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs + rhs; // default addition
@@ -131,12 +127,9 @@ function cpuSub<T extends AnyNumericVecInstance | AnyMatInstance>(
 function cpuSub(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,
-): number | AnyNumericVecInstance | AnyMatInstance;
-function cpuSub(
-  lhs: number | AnyNumericVecInstance | AnyMatInstance,
-  rhs: number | AnyNumericVecInstance | AnyMatInstance,
 ) {
-  return cpuAdd(lhs, mul(-1, rhs));
+  // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+  return cpuAdd(lhs, mul(-1 as any, rhs));
 }
 export const sub = createDualImpl(
   // CPU implementation
@@ -167,10 +160,6 @@ function cpuMul<M extends AnyMatInstance, V extends vBaseForMat<M>>(
   rhs: V,
 ): V; // matrix-column-vector
 function cpuMul<M extends AnyMatInstance>(lhs: M, rhs: M): M; // matrix multiplication
-function cpuMul(
-  lhs: number | AnyNumericVecInstance | AnyMatInstance,
-  rhs: number | AnyNumericVecInstance | AnyMatInstance,
-): number | AnyNumericVecInstance | AnyMatInstance;
 function cpuMul(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,

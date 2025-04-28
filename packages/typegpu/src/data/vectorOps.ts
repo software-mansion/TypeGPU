@@ -133,7 +133,7 @@ const binaryComponentWise2x2f =
   (op: BinaryOp) => (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
     const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
     const b_ = b.columns as [wgsl.v2f, wgsl.v2f];
-    mat2x2f(
+    return mat2x2f(
       binaryComponentWise2f(op)(a_[0], b_[0]),
       binaryComponentWise2f(op)(a_[1], b_[1]),
     );
@@ -143,7 +143,7 @@ const binaryComponentWise3x3f =
   (op: BinaryOp) => (a: wgsl.m3x3f, b: wgsl.m3x3f) => {
     const a_ = a.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
     const b_ = b.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
-    mat3x3f(
+    return mat3x3f(
       binaryComponentWise3f(op)(a_[0], b_[0]),
       binaryComponentWise3f(op)(a_[1], b_[1]),
       binaryComponentWise3f(op)(a_[2], b_[2]),
@@ -154,7 +154,7 @@ const binaryComponentWise4x4f =
   (op: BinaryOp) => (a: wgsl.m4x4f, b: wgsl.m4x4f) => {
     const a_ = a.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
     const b_ = b.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
-    mat4x4f(
+    return mat4x4f(
       binaryComponentWise4f(op)(a_[0], b_[0]),
       binaryComponentWise4f(op)(a_[1], b_[1]),
       binaryComponentWise4f(op)(a_[2], b_[2]),

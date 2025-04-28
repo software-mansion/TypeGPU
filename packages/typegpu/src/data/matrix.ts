@@ -18,7 +18,6 @@ import type {
   mat4x4,
   matBase,
   v2f,
-  v2h,
   v3f,
   v4f,
 } from './wgslTypes.ts';
@@ -160,9 +159,12 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
     return vec2f(e0, e1);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: a valid use of any
-  mul(this: m2x2f, other: number | v2f | v2h | m2x2f): any {
-    return std.mul(this, other);
+  mul(this: m2x2f, other: number): m2x2f;
+  mul(this: m2x2f, other: v2f): v2f;
+  mul(this: m2x2f, other: m2x2f): m2x2f;
+  mul(this: m2x2f, other: number | v2f | m2x2f): v2f | m2x2f {
+    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+    return std.mul(this, other as any);
   }
 }
 
