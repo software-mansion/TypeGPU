@@ -24,8 +24,6 @@ import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
-import { coerceToSnippet } from './smol/generationHelpers.ts';
-import { generateFunction } from './smol/wgslGenerator.ts';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -33,6 +31,8 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout.ts';
+import { coerceToSnippet } from './tgsl/generationHelpers.ts';
+import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   FnToWgslOptions,
   ItemLayer,

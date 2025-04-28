@@ -22,6 +22,105 @@
 
 </div>
 
+<br>
+<br>
+
+**Table of contents:**
+- [⚙️ TypeGPU as a foundation](#⚙️-typegpu-as-a-foundation)
+- [🧩 TypeGPU as a piece of the puzzle](#🧩-typegpu-as-a-piece-of-the-puzzle)
+- [📚 TypeGPU for libraries](#📚-typegpu-for-libraries)
+- [Documentation](#documentation)
+- [What's next?](#whats-next)
+- [Projects using TypeGPU](#projects-using-typegpu)
+- [Repository structure](#repository-structure)
+
+## ⚙️ TypeGPU as a foundation
+
+We provide an abstraction that solves the most common WebGPU hurdles, yet does not restrict you in capability.
+You can granularly eject into vanilla WebGPU at any point. This means that, when building your app with TypeGPU,
+lock-in is not a concern!
+
+The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading Language) syntax in TypeScript means
+that learning TypeGPU helps to learn WebGPU itself, with fewer frustrations.
+
+[The Getting Started and Fundamentals guides are a great starting point for new projects!](https://docs.swmansion.com/TypeGPU/getting-started/)
+
+## 🧩 TypeGPU as a piece of the puzzle
+
+Our type-safe APIs can be used together, or in isolation. This makes partial application into existing apps just a few lines of code away, no matter the complexity of your app!
+
+[We wrote a comprehensive resource on ways TypeGPU can improve your existing codebase.](https://docs.swmansion.com/TypeGPU/integration/webgpu-interoperability/)
+
+Pick and choose which parts of TypeGPU you'd like to incorporate into your existing app!
+
+## 📚 TypeGPU for libraries
+
+When creating a type-safe WebGPU library, one can expect to encounter at least one of the following problems:
+- Serializing/deserializing data.
+- Dynamically generating parts of the WGSL shader.
+- Complex type inference.
+
+If implemented from scratch, interoperability with other libraries (ones that have a different focus, solve different problems) can be near impossible without going down to *untyped WebGPU land*, or copying data back to JS. Moreover, to keep up with demand from users, they can be tempted to go out of scope of their initial use-case, even though another library already solves that problem.
+
+> TypeGPU can be used as an interoperability layer between use-case specific libraries!
+
+Let's imagine `@xyz/gen` is a library for procedural generation using WebGPU compute shaders, and `@abc/plot` is a library for plots and visualization using WebGPU.
+
+```ts
+import tgpu from 'typegpu';
+import gen from '@xyz/gen';
+import plot from '@abc/plot';
+
+// common root for allocating resources
+const root = await tgpu.init();
+
+const terrainBuffer = await gen.generateHeightMap(root, { ... });
+//    ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
+
+// ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
+// not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
+plot.array1d(root, terrainBuffer);
+
+// SUCCESS!
+plot.array2d(root, terrainBuffer);
+```
+
+We can pass typed values around without the need to copy anything back to CPU-accessible memory! Let's see an example of how we can construct a type-safe API:
+
+```ts
+import type { TgpuBuffer, TgpuRoot, StorageFlag } from 'typegpu';
+import * as d from 'typegpu/data';
+
+// We can define schemas, or functions that return schemas...
+const HeightMap = (width: number, height: number) =>
+  d.arrayOf(d.arrayOf(d.f32, height), width);
+
+// ...then infer types from them
+type HeightMap = ReturnType<typeof HeightMap>;
+
+export async function generateHeightMap(
+  root: TgpuRoot,
+  opts: { width: number, height: number },
+): Promise<TgpuBuffer<HeightMap> & StorageFlag> {
+
+  const buffer = root
+    .createBuffer(HeightMap(opts.width, opts.height))
+    .$usage('storage');
+
+  const rawBuffer = root.unwrap(buffer); // => GPUBuffer
+
+  // Here we can do anything we would usually do with a
+  // WebGPU buffer, like populating it in a compute shader.
+  // `rawBuffer` is the WebGPU resource that is backing the
+  // typed `buffer` object, meaning any changes to it will
+  // be visible in both.
+
+  return buffer;
+}
+```
+
+[Planning to create a WebGPU library? Reach out to us!](https://discord.gg/8jpfgDqPcM) We'd love to work with you to enrich the ecosystem with type-safe WebGPU utilities!
+
 ## Documentation
 
 We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!

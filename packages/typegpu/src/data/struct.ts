@@ -1,4 +1,5 @@
-import { $structTag, type AnyWgslData, type WgslStruct } from './wgslTypes.ts';
+import { $internal } from '../shared/symbols.ts';
+import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -30,8 +31,8 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
 // --------------
 
 const WgslStructImpl = {
+  [$internal]: true,
   type: 'struct',
-  [$structTag]: true,
   _label: undefined as string | undefined,
 
   get label(): string | undefined {

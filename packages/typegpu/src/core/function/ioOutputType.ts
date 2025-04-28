@@ -2,7 +2,6 @@ import {
   type Decorate,
   type HasCustomLocation,
   type IsBuiltin,
-  attribute,
   location,
 } from '../../data/attributes.ts';
 import { isBuiltin } from '../../data/attributes.ts';
@@ -44,10 +43,7 @@ export function withLocations<T extends IOData>(
         return [key, member];
       }
 
-      return [
-        key,
-        attribute(member, { type: '@location', value: nextLocation++ }),
-      ];
+      return [key, location(nextLocation++, member)];
     }),
   );
 }

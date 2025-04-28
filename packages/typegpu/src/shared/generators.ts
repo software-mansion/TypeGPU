@@ -1,7 +1,6 @@
 import type { TgpuDualFn } from '../data/dataTypes.ts';
-import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
-import type { Snippet } from '../types.ts';
+import type { Snippet, TgpuFnArgTypes } from '../types.ts';
 import { $internal } from './symbols.ts';
 
 /**
@@ -27,11 +26,7 @@ type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 export function createDualImpl<T extends (...args: any[]) => any>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
-  argTypes?:
-    | AnyWgslData[]
-    | Record<string, AnyWgslData>
-    | ((...args: Snippet[]) => AnyWgslData[])
-    | undefined,
+  argTypes?: TgpuFnArgTypes,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inGPUMode()) {
@@ -40,12 +35,10 @@ export function createDualImpl<T extends (...args: any[]) => any>(
     return jsImpl(...args);
   }) as T;
 
-  Object.defineProperty(impl, $internal, {
-    value: {
-      implementation: jsImpl,
-      argTypes,
-    },
-  });
+  (impl as TgpuDualFn<T>)[$internal] = {
+    implementation: jsImpl,
+    argTypes,
+  };
 
   return impl as TgpuDualFn<T>;
 }

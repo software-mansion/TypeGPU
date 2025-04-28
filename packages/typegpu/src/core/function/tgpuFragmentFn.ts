@@ -11,7 +11,7 @@ import type {
   Vec4f,
 } from '../../data/wgslTypes.ts';
 import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../smol/generationHelpers.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';

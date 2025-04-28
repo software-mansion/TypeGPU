@@ -204,6 +204,12 @@ export function isWgsl(value: unknown): value is Wgsl {
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
+export type TgpuFnArgTypes =
+  | AnyWgslData[]
+  | Record<string, AnyWgslData>
+  | ((...args: Snippet[]) => AnyWgslData[])
+  | undefined;
+
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (
     !!value &&

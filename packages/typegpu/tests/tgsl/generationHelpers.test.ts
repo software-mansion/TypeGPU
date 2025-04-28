@@ -34,7 +34,7 @@ import {
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToSnippet,
-} from '../../src/smol/generationHelpers.js';
+} from '../../src/tgsl/generationHelpers.js';
 import { type Snippet, UnknownData } from '../../src/types.js';
 
 const mockCtx = {
