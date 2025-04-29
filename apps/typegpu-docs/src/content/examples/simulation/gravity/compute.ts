@@ -41,27 +41,24 @@ export const computeCollisionsShader = tgpu['~unstable']
       for (let i = 0; i < collisionsLayout.$.celestialBodiesCount; i++) {
         const otherId = d.u32(i);
         const other = collisionsLayout.$.inState[otherId];
-        if (d.u32(i) === input.gid.x || other.destroyed === 1) {
-          continue;
-        }
-
-        const dist = std.distance(current.position, other.position);
-        // are bodies disjoint?
-        if (dist >= radiusOf(current) + radiusOf(other)) {
-          continue;
-        }
-        // is the collision skipped?
+        // no collision occurs...
         if (
-          current.collisionBehavior === none ||
-          other.collisionBehavior === none
+          d.u32(i) === input.gid.x || // ...with itself
+          other.destroyed === 1 || // ...when other is destroyed
+          current.collisionBehavior === none || // ...when current behavior is none
+          other.collisionBehavior === none || // ...when other behavior is none
+          std.distance(current.position, other.position) >=
+            radiusOf(current) + radiusOf(other) // ...when other is too far away
         ) {
           continue;
         }
-        // does bounce occur?
+
+        // if we got here, a collision occurs
         if (
           current.collisionBehavior === bounce &&
           other.collisionBehavior === bounce
         ) {
+          // bounce occurs
           // push the smaller object outside
           if (isSmaller({ currentId, otherId })) {
             updatedCurrent.position = std.add(
@@ -88,30 +85,25 @@ export const computeCollisionsShader = tgpu['~unstable']
               ),
             ),
           );
-          continue;
-        }
-        // does merge occur?
-        if (
-          current.collisionBehavior === merge ||
-          other.collisionBehavior === bounce
-        ) {
+        } else {
+          // merge occurs
           const isCurrentAbsorbed =
             current.collisionBehavior === bounce ||
             (current.collisionBehavior === merge &&
               isSmaller({ currentId, otherId }));
           if (isCurrentAbsorbed) {
-            // absorbed by other
+            // absorbed by the other
             updatedCurrent.destroyed = 1;
-            break;
+          } else {
+            // absorbs the other
+            const m1 = updatedCurrent.mass;
+            const m2 = other.mass;
+            updatedCurrent.velocity = std.add(
+              std.mul(m1 / (m1 + m2), updatedCurrent.velocity),
+              std.mul(m2 / (m1 + m2), other.velocity),
+            );
+            updatedCurrent.mass = m1 + m2;
           }
-          // absorbs other
-          const m1 = updatedCurrent.mass;
-          const m2 = other.mass;
-          updatedCurrent.velocity = std.add(
-            std.mul(m1 / (m1 + m2), updatedCurrent.velocity),
-            std.mul(m2 / (m1 + m2), other.velocity),
-          );
-          updatedCurrent.mass = m1 + m2;
         }
       }
     }
