@@ -18,7 +18,6 @@ import type { Snippet } from '../types.ts';
 // AAA testy unit i example dla fluent mul dla mat
 // AAA mieszane testy (mat->vec)
 // AAA skompresuj vector opsy
-// AAA testy na typ wynikowy
 
 // AAA add, sub dla mat
 // AAA testy unit i example dla fluent add, sub dla mat
