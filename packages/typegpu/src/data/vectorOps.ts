@@ -832,12 +832,15 @@ export const VectorOps = {
   sign: {
     vec2f: unary2f(Math.sign),
     vec2h: unary2h(Math.sign),
+    vec2i: unary2i(Math.sign),
 
     vec3f: unary3f(Math.sign),
     vec3h: unary3h(Math.sign),
+    vec3i: unary3i(Math.sign),
 
     vec4f: unary4f(Math.sign),
     vec4h: unary4h(Math.sign),
+    vec4i: unary4i(Math.sign),
   } as Record<VecKind, <T extends vBase>(e: T) => T>,
 
   sqrt: {

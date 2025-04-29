@@ -5,8 +5,15 @@ import type {
   AnyMatInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  v2f,
+  v2h,
+  v2i,
   v3f,
   v3h,
+  v3i,
+  v4f,
+  v4h,
+  v4i,
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
@@ -325,7 +332,10 @@ export const min = createDualImpl(
 
 export const sign = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(e: T): T => {
+  //         \/ specifically no unsigned variants
+  <T extends v2f | v2h | v2i | v3f | v3h | v3i | v4f | v4h | v4i | number>(
+    e: T,
+  ): T => {
     if (typeof e === 'number') {
       return Math.sign(e) as T;
     }
