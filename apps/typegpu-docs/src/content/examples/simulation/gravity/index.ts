@@ -37,9 +37,9 @@ import {
   computeCollisionsBindGroupLayout,
   computeGravityBindGroupLayout,
   renderBindGroupLayout,
+  renderSkyBoxBindGroupLayout,
+  renderSkyBoxVertexLayout,
   renderVertexLayout,
-  skyBoxBindGroupLayout,
-  skyBoxVertexLayout,
 } from './schemas.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -81,18 +81,28 @@ const cameraInitial = Camera({
     d.mat4x4f(),
   ),
 });
-const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
+const cameraBuffer = root
+  .createBuffer(Camera, cameraInitial)
+  .$usage('uniform')
+  .$name('camera');
 
 const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
-  .$usage('vertex');
+  .$usage('vertex')
+  .$name('skybox vertices');
 
 const sphereTextures = await loadSphereTextures(root);
 
 let celestialBodiesCount = 0;
-const celestialBodiesCountBuffer = root.createBuffer(d.i32).$usage('uniform');
-const timeBuffer = root.createBuffer(Time).$usage('uniform');
-const lightSourceBuffer = root.createBuffer(d.vec3f).$usage('uniform');
+const celestialBodiesCountBuffer = root
+  .createBuffer(d.i32)
+  .$usage('uniform')
+  .$name('celestial bodies count');
+const timeBuffer = root.createBuffer(Time).$usage('uniform').$name('time');
+const lightSourceBuffer = root
+  .createBuffer(d.vec3f)
+  .$usage('uniform')
+  .$name('light source');
 
 // dynamic resources (recreated every time a preset is selected)
 
@@ -110,7 +120,9 @@ interface DynamicResources {
   skyBoxTexture: TgpuTexture<{ size: [2048, 2048, 6]; format: 'rgba8unorm' }> &
     Render &
     Sampled;
-  skyBoxBindGroup: TgpuBindGroup<(typeof skyBoxBindGroupLayout)['entries']>;
+  skyBoxBindGroup: TgpuBindGroup<
+    (typeof renderSkyBoxBindGroupLayout)['entries']
+  >;
   renderBindGroup: TgpuBindGroup<(typeof renderBindGroupLayout)['entries']>;
 }
 
@@ -122,20 +134,21 @@ const dynamicResourcesBox = {
 const computeCollisionsPipeline = root['~unstable']
   .withCompute(computeCollisionsShader)
   .createPipeline()
-  .$name('compute collisions pipeline');
+  .$name('compute collisions');
 
 const computeGravityPipeline = root['~unstable']
   .withCompute(computeGravityShader)
   .createPipeline()
-  .$name('compute gravity pipeline');
+  .$name('compute gravity');
 
 const skyBoxPipeline = root['~unstable']
-  .withVertex(skyBoxVertex, skyBoxVertexLayout.attrib)
+  .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
   .withPrimitive({
     cullMode: 'front',
   })
-  .createPipeline();
+  .createPipeline()
+  .$name('render skybox');
 
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, renderVertexLayout.attrib)
@@ -146,7 +159,8 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list', cullMode: 'front' })
-  .createPipeline();
+  .createPipeline()
+  .$name('render celestial bodies');
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -176,9 +190,9 @@ function render() {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(skyBoxVertexLayout, skyBoxVertexBuffer)
+    .with(renderSkyBoxVertexLayout, skyBoxVertexBuffer)
     .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
-    .with(skyBoxBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
+    .with(renderSkyBoxBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
     .draw(skyBoxVertices.length);
 
   renderPipeline
@@ -241,10 +255,12 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
       d.arrayOf(CelestialBody, celestialBodies.length),
       celestialBodies,
     )
-    .$usage('storage');
+    .$usage('storage')
+    .$name('compute A');
   const computeBufferB = root
     .createBuffer(d.arrayOf(CelestialBody, celestialBodies.length))
-    .$usage('storage');
+    .$usage('storage')
+    .$name('compute B');
 
   const computeCollisionsBindGroup = root.createBindGroup(
     computeCollisionsBindGroupLayout,
@@ -276,7 +292,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const skyBoxTexture = await loadSkyBox(root, presetData.skyBox);
   const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 
-  const textureBindGroup = root.createBindGroup(skyBoxBindGroupLayout, {
+  const textureBindGroup = root.createBindGroup(renderSkyBoxBindGroupLayout, {
     camera: cameraBuffer,
     skyBox: skyBox,
     sampler: sampler,

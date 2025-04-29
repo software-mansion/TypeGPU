@@ -8,20 +8,22 @@ import {
 } from './schemas.ts';
 
 // tiebreaker function for merges and bounces
-const isSmaller = tgpu['~unstable'].fn(
-  { currentId: d.u32, otherId: d.u32 },
-  d.bool,
-)((args) => {
-  const current = collisionsLayout.$.inState[args.currentId];
-  const other = collisionsLayout.$.inState[args.otherId];
-  if (current.mass < other.mass) {
-    return true;
-  }
-  if (current.mass === other.mass) {
-    return args.currentId < args.otherId;
-  }
-  return false;
-});
+const isSmaller = tgpu['~unstable']
+  .fn(
+    { currentId: d.u32, otherId: d.u32 },
+    d.bool,
+  )((args) => {
+    const current = collisionsLayout.$.inState[args.currentId];
+    const other = collisionsLayout.$.inState[args.otherId];
+    if (current.mass < other.mass) {
+      return true;
+    }
+    if (current.mass === other.mass) {
+      return args.currentId < args.otherId;
+    }
+    return false;
+  })
+  .$name('isSmaller');
 
 export const computeCollisionsShader = tgpu['~unstable']
   .computeFn({
@@ -105,7 +107,7 @@ export const computeCollisionsShader = tgpu['~unstable']
 
     collisionsLayout.$.outState[input.gid.x] = updatedCurrent;
   })
-  .$name('Compute collisions shader');
+  .$name('collisions');
 
 export const computeGravityShader = tgpu['~unstable']
   .computeFn({
@@ -146,4 +148,4 @@ export const computeGravityShader = tgpu['~unstable']
 
     gravityLayout.$.outState[input.gid.x] = updatedCurrent;
   })
-  .$name('Compute gravity shader');
+  .$name('gravity');

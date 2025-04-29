@@ -5,46 +5,50 @@ import { radiusOf } from './helpers.ts';
 import {
   VertexOutput,
   renderBindGroupLayout as renderLayout,
-  skyBoxBindGroupLayout as skyBoxLayout,
+  renderSkyBoxBindGroupLayout as skyBoxLayout,
 } from './schemas.ts';
 
-export const skyBoxVertex = tgpu['~unstable'].vertexFn({
-  in: {
-    position: d.vec4f,
-    uv: d.vec2f,
-  },
-  out: {
-    pos: d.builtin.position,
-    texCoord: d.vec3f,
-  },
-})((input) => {
-  const viewRotationMatrix = d.mat4x4f(
-    skyBoxLayout.$.camera.view.columns[0],
-    skyBoxLayout.$.camera.view.columns[1],
-    skyBoxLayout.$.camera.view.columns[2],
-    d.vec4f(0, 0, 0, 1),
-  );
-  return {
-    pos: std.mul(
-      skyBoxLayout.$.camera.projection,
-      std.mul(viewRotationMatrix, input.position),
-    ),
-    texCoord: input.position.xyz,
-  };
-});
+export const skyBoxVertex = tgpu['~unstable']
+  .vertexFn({
+    in: {
+      position: d.vec4f,
+      uv: d.vec2f,
+    },
+    out: {
+      pos: d.builtin.position,
+      texCoord: d.vec3f,
+    },
+  })((input) => {
+    const viewRotationMatrix = d.mat4x4f(
+      skyBoxLayout.$.camera.view.columns[0],
+      skyBoxLayout.$.camera.view.columns[1],
+      skyBoxLayout.$.camera.view.columns[2],
+      d.vec4f(0, 0, 0, 1),
+    );
+    return {
+      pos: std.mul(
+        skyBoxLayout.$.camera.projection,
+        std.mul(viewRotationMatrix, input.position),
+      ),
+      texCoord: input.position.xyz,
+    };
+  })
+  .$name('skybox');
 
-export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
-  in: {
-    texCoord: d.vec3f,
-  },
-  out: d.vec4f,
-})((input) => {
-  return std.textureSample(
-    skyBoxLayout.$.skyBox,
-    skyBoxLayout.$.sampler,
-    std.normalize(input.texCoord),
-  );
-});
+export const skyBoxFragment = tgpu['~unstable']
+  .fragmentFn({
+    in: {
+      texCoord: d.vec3f,
+    },
+    out: d.vec4f,
+  })((input) => {
+    return std.textureSample(
+      skyBoxLayout.$.skyBox,
+      skyBoxLayout.$.sampler,
+      std.normalize(input.texCoord),
+    );
+  })
+  .$name('skybox');
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({
@@ -79,7 +83,7 @@ export const mainVertex = tgpu['~unstable']
       ambientLightFactor: currentBody.ambientLightFactor,
     };
   })
-  .$name('mainVertex');
+  .$name('celestial bodies');
 
 export const mainFragment = tgpu['~unstable']
   .fragmentFn({
@@ -118,4 +122,4 @@ export const mainFragment = tgpu['~unstable']
 
     return d.vec4f(lightedColor.xyz, 1);
   })
-  .$name('mainFragment');
+  .$name('celestial bodies');
