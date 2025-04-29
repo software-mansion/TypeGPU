@@ -829,6 +829,17 @@ export const VectorOps = {
     <T extends wgsl.AnyFloatVecInstance | number>(a: T, b: T) => T
   >,
 
+  sign: {
+    vec2f: unary2f(Math.sign),
+    vec2h: unary2h(Math.sign),
+
+    vec3f: unary3f(Math.sign),
+    vec3h: unary3h(Math.sign),
+
+    vec4f: unary4f(Math.sign),
+    vec4h: unary4h(Math.sign),
+  } as Record<VecKind, <T extends vBase>(e: T) => T>,
+
   sqrt: {
     vec2f: unary2f(Math.sqrt),
     vec2h: unary2h(Math.sqrt),

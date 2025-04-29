@@ -22,6 +22,7 @@ export {
   min,
   normalize,
   distance,
+  sign,
   sin,
   exp,
   mix,
@@ -30,7 +31,7 @@ export {
   neg,
   sqrt,
   div,
-} from './numeric.js';
+} from './numeric.ts';
 
 export {
   // comparison
@@ -69,13 +70,13 @@ export {
   textureBarrier,
 } from './atomic.ts';
 
-export { arrayLength } from './array.js';
+export { arrayLength } from './array.ts';
 
 export {
   pack4x8unorm,
   pack2x16float,
   unpack4x8unorm,
   unpack2x16float,
-} from './packing.js';
+} from './packing.ts';
 
-export { textureSample } from './texture.js';
+export { textureSample } from './texture.ts';

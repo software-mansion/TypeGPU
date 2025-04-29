@@ -323,6 +323,18 @@ export const min = createDualImpl(
   (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
 
+export const sign = createDualImpl(
+  // CPU implementation
+  <T extends AnyNumericVecInstance | number>(e: T): T => {
+    if (typeof e === 'number') {
+      return Math.sign(e) as T;
+    }
+    return VectorOps.sign[e.kind](e) as T;
+  },
+  // GPU implementation
+  (e) => ({ value: `sign(${e.value})`, dataType: e.dataType }),
+);
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#sin-builtin
