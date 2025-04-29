@@ -564,6 +564,24 @@ describe('vec2h', () => {
   });
 });
 
+describe('v2f', () => {
+  it('differs structurally from other vector instances', () => {
+    expect(d.vec2f(1, 2)).toStrictEqual(d.vec2f(1, 2));
+    expect(d.vec2f(1, 2)).not.toStrictEqual(d.vec2h(1, 2));
+    expect(d.vec2f(1, 2)).not.toStrictEqual(d.vec2i(1, 2));
+    expect(d.vec2f(1, 2)).not.toStrictEqual(d.vec2u(1, 2));
+  });
+});
+
+describe('v2i', () => {
+  it('differs structurally from other vector instances', () => {
+    expect(d.vec2i(1, 2)).toStrictEqual(d.vec2i(1, 2));
+    expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2f(1, 2));
+    expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2h(1, 2));
+    expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2u(1, 2));
+  });
+});
+
 describe('v3f', () => {
   describe('(v2f, number) constructor', () => {
     it('works in JS', () => {
@@ -597,6 +615,22 @@ describe('v3f', () => {
         `),
       );
     });
+  });
+
+  it('differs structurally from other vector instances', () => {
+    expect(d.vec3f(1, 2, 3)).toStrictEqual(d.vec3f(1, 2, 3));
+    expect(d.vec3f(1, 2, 3)).not.toStrictEqual(d.vec3h(1, 2, 3));
+    expect(d.vec3f(1, 2, 3)).not.toStrictEqual(d.vec3i(1, 2, 3));
+    expect(d.vec3f(1, 2, 3)).not.toStrictEqual(d.vec3u(1, 2, 3));
+  });
+});
+
+describe('v3i', () => {
+  it('differs structurally from other vector instances', () => {
+    expect(d.vec3i(1, 2, 3)).toStrictEqual(d.vec3i(1, 2, 3));
+    expect(d.vec3i(1, 2, 3)).not.toStrictEqual(d.vec3f(1, 2, 3));
+    expect(d.vec3i(1, 2, 3)).not.toStrictEqual(d.vec3h(1, 2, 3));
+    expect(d.vec3i(1, 2, 3)).not.toStrictEqual(d.vec3u(1, 2, 3));
   });
 });
 
@@ -667,6 +701,13 @@ describe('v4f', () => {
       `),
       );
     });
+  });
+
+  it('differs structurally from other vector instances', () => {
+    expect(d.vec4f(1, 2, 3, 4)).toStrictEqual(d.vec4f(1, 2, 3, 4));
+    expect(d.vec4f(1, 2, 3, 4)).not.toStrictEqual(d.vec4h(1, 2, 3, 4));
+    expect(d.vec4f(1, 2, 3, 4)).not.toStrictEqual(d.vec4i(1, 2, 3, 4));
+    expect(d.vec4f(1, 2, 3, 4)).not.toStrictEqual(d.vec4u(1, 2, 3, 4));
   });
 });
 
