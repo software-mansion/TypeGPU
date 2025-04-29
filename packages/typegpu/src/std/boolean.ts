@@ -8,7 +8,6 @@ import type {
   AnyVec2Instance,
   AnyVec3Instance,
   AnyVecInstance,
-  ScalarData,
   v2b,
   v3b,
   v4b,
@@ -296,7 +295,7 @@ export const isCloseTo = createDualImpl(
 );
 
 export type SelectOverload = {
-  <T extends ScalarData | AnyVecInstance>(f: T, t: T, cond: boolean): T;
+  <T extends number | boolean | AnyVecInstance>(f: T, t: T, cond: boolean): T;
   <T extends AnyVecInstance>(
     f: T,
     t: T,
@@ -312,12 +311,14 @@ export type SelectOverload = {
  * Returns `t` if `cond` is `true`, and `f` otherwise.
  * Component-wise if `cond` is a vector.
  * @example
+ * select(1, 2, false) // returns 1
+ * select(1, 2, true) // returns 2
  * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
  * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
  */
 export const select: SelectOverload = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | ScalarData>(
+  <T extends number | boolean | AnyVecInstance>(
     f: T,
     t: T,
     cond: AnyBooleanVecInstance | boolean,
