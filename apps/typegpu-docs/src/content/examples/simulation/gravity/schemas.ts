@@ -14,7 +14,7 @@ export const CelestialBody = d
     velocity: d.vec3f,
     mass: d.f32,
     radiusMultiplier: d.f32, // radius is calculated from the mass, and then multiplied by this
-    collisionBehavior: d.u32, // index of the collisionBehaviors enum
+    collisionBehavior: d.u32, // value of the collisionBehaviors enum
     textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
     ambientLightFactor: d.f32,
   })

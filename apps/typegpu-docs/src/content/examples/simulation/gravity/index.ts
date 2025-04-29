@@ -242,8 +242,8 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           mass: element.mass,
           radiusMultiplier: element.radiusMultiplier ?? 1,
           collisionBehavior: element.collisionBehavior
-            ? collisionBehaviors.indexOf(element.collisionBehavior)
-            : 0,
+            ? collisionBehaviors[element.collisionBehavior]
+            : collisionBehaviors.none,
           textureIndex: sphereTextureNames.indexOf(group.texture),
           ambientLightFactor: element.ambientLightFactor ?? 0.6,
         };

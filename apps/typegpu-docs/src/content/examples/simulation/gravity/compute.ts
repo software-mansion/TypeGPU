@@ -1,11 +1,14 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { collisionBehaviors } from './enums.ts';
 import { radiusOf } from './helpers.ts';
 import {
   computeCollisionsBindGroupLayout as collisionsLayout,
   computeGravityBindGroupLayout as gravityLayout,
 } from './schemas.ts';
+
+const { none, bounce, merge } = collisionBehaviors;
 
 // tiebreaker function for merges and bounces
 const isSmaller = tgpu['~unstable']
@@ -48,11 +51,17 @@ export const computeCollisionsShader = tgpu['~unstable']
           continue;
         }
         // is the collision skipped?
-        if (current.collisionBehavior === 0 || other.collisionBehavior === 0) {
+        if (
+          current.collisionBehavior === none ||
+          other.collisionBehavior === none
+        ) {
           continue;
         }
         // does bounce occur?
-        if (current.collisionBehavior === 1 && other.collisionBehavior === 1) {
+        if (
+          current.collisionBehavior === bounce &&
+          other.collisionBehavior === bounce
+        ) {
           // push the smaller object outside
           if (isSmaller({ currentId, otherId })) {
             updatedCurrent.position = std.add(
@@ -79,14 +88,16 @@ export const computeCollisionsShader = tgpu['~unstable']
               ),
             ),
           );
-
           continue;
         }
         // does merge occur?
-        if (current.collisionBehavior === 2 || other.collisionBehavior === 2) {
+        if (
+          current.collisionBehavior === merge ||
+          other.collisionBehavior === bounce
+        ) {
           const isCurrentAbsorbed =
-            current.collisionBehavior === 1 ||
-            (current.collisionBehavior === 2 &&
+            current.collisionBehavior === bounce ||
+            (current.collisionBehavior === merge &&
               isSmaller({ currentId, otherId }));
           if (isCurrentAbsorbed) {
             // absorbed by other

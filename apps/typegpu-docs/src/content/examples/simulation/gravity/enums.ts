@@ -1,5 +1,9 @@
-export const collisionBehaviors = ['none', 'bounce', 'merge'] as const;
-export type CollisionBehavior = (typeof collisionBehaviors)[number];
+export const collisionBehaviors = {
+  none: 0,
+  bounce: 1,
+  merge: 2,
+} as const;
+export type CollisionBehavior = keyof typeof collisionBehaviors;
 
 export type SkyBox = 'milky-way';
 
