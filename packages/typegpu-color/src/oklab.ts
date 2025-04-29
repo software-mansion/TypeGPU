@@ -12,11 +12,12 @@ import {
   sign,
   sqrt,
 } from 'typegpu/std';
+import { linearToSrgb, srgbToLinear } from './srgb.ts';
 
 const cbrt = tgpu['~unstable'].fn(
   [f32],
   f32,
-)((x) => sign(x) * pow(abs(x), f32(1.0) / 3));
+)((x) => sign(x) * pow(abs(x), f32(1) / 3));
 
 export const linearRgbToOklab = tgpu['~unstable'].fn(
   [vec3f],
@@ -267,7 +268,7 @@ const findGamutIntersection = tgpu['~unstable'].fn(
   return t;
 });
 
-export const gamutClipPreserveChroma = tgpu['~unstable'].fn(
+const gamutClipPreserveChroma = tgpu['~unstable'].fn(
   [vec3f],
   vec3f,
 )((lab) => {
@@ -285,10 +286,15 @@ export const gamutClipPreserveChroma = tgpu['~unstable'].fn(
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-export const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
-  [vec3f, f32],
+export const oklabGamutClipAlphaSlot = tgpu['~unstable'].slot(
+  tgpu['~unstable'].fn([], f32)(() => 0.2),
+);
+
+const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
+  [vec3f],
   vec3f,
-)((lab, alpha) => {
+)((lab) => {
+  const alpha = oklabGamutClipAlphaSlot.value();
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -307,10 +313,11 @@ export const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-export const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
-  [vec3f, f32],
+const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
+  [vec3f],
   vec3f,
-)((lab, alpha) => {
+)((lab) => {
+  const alpha = oklabGamutClipAlphaSlot.value();
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -331,3 +338,20 @@ export const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
 
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
+
+export const oklabGamutClipSlot = tgpu['~unstable'].slot(gamutClipAdaptiveL05);
+export const oklabGamutClip = {
+  preserveChroma: gamutClipPreserveChroma,
+  adaptiveL05: gamutClipAdaptiveL05,
+  adaptiveL0Cusp: gamutClipAdaptiveL0cusp,
+};
+
+export const oklabToRgb = tgpu['~unstable'].fn(
+  [vec3f],
+  vec3f,
+)((lab) => linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.value(lab))));
+
+export const rgbToOklab = tgpu['~unstable'].fn(
+  [vec3f],
+  vec3f,
+)((rgb) => linearRgbToOklab(srgbToLinear(rgb)));

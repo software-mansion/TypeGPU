@@ -1,8 +1,9 @@
 import {
-  gamutClipAdaptiveL0cusp,
-  gamutClipAdaptiveL05,
-  linearToSrgb,
+  oklabGamutClip,
+  oklabGamutClipAlphaSlot,
+  oklabGamutClipSlot,
   oklabToLinearRgb,
+  oklabToRgb,
 } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -116,9 +117,7 @@ const patternL0ProjectionLines = tgpu['~unstable'].fn(
 }`;
 
 const patternSolid = tgpu['~unstable'].fn([d.vec2f, d.vec3f], d.f32)(() => 1);
-
 const patternSlot = tgpu['~unstable'].slot(patternSolid);
-const gamutClipSlot = tgpu['~unstable'].slot(gamutClipAdaptiveL05);
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -132,20 +131,25 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   let rgb = oklabToLinearRgb(lab);
   let outOfGamut = any(rgb < vec3f(0)) || any(rgb > vec3f(1));
 
-  let clipLab = gamutClip(lab, uniforms.alpha);
-  let color = linearToSrgb(oklabToLinearRgb(clipLab));
+  let clipLab = gamutClip(lab);
+  let color = oklabToRgb(lab);
 
   let patternScaled = pattern(in.uv, clipLab) * 0.1 + 0.9;
 
   return vec4f(select(color, color * patternScaled, outOfGamut), 1);
 }`.$uses({
   scaleView,
-  linearToSrgb,
+  oklabToRgb,
   oklabToLinearRgb,
   uniforms: uniformsBindGroupLayout.bound.uniforms,
-  gamutClip: gamutClipSlot,
+  gamutClip: oklabGamutClipSlot,
   pattern: patternSlot,
 });
+
+const alphaFromUniforms = tgpu['~unstable'].fn(
+  [],
+  d.f32,
+)(() => uniformsBindGroupLayout.bound.uniforms.value.alpha);
 
 let pipeline = root['~unstable']
   .withVertex(mainVertex, {})
@@ -159,11 +163,12 @@ function setPipeline({
   gamutClip,
 }: {
   outOfGamutPattern: d.Infer<typeof patternSlot>;
-  gamutClip: d.Infer<typeof gamutClipSlot>;
+  gamutClip: d.Infer<typeof oklabGamutClipSlot>;
 }) {
   pipeline = root['~unstable']
     .with(patternSlot, outOfGamutPattern)
-    .with(gamutClipSlot, gamutClip)
+    .with(oklabGamutClipSlot, gamutClip)
+    .with(oklabGamutClipAlphaSlot, alphaFromUniforms)
     .withVertex(mainVertex, {})
     .withFragment(mainFragment, {
       format: presentationFormat,
@@ -208,8 +213,9 @@ setTimeout(() => {
 // #region Example controls and cleanup
 
 const gamutClipOptions = {
-  'Ad. L 0.5': gamutClipAdaptiveL05,
-  'Ad. L Cusp': gamutClipAdaptiveL0cusp,
+  'Ad. L 0.5': oklabGamutClip.adaptiveL05,
+  'Ad. L Cusp': oklabGamutClip.adaptiveL0Cusp,
+  'Preserve Chroma': oklabGamutClip.preserveChroma,
 };
 
 const outOfGamutPatternOptions = {
@@ -219,7 +225,7 @@ const outOfGamutPatternOptions = {
 };
 
 const selections = {
-  gamutClip: gamutClipAdaptiveL05,
+  gamutClip: oklabGamutClip.adaptiveL05,
   outOfGamutPattern: patternL0ProjectionLines,
 };
 
