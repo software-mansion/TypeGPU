@@ -16,7 +16,7 @@ import {
 const cbrt = tgpu['~unstable'].fn(
   [f32],
   f32,
-)((x) => sign(x) * pow(abs(x), 1.0 / 3));
+)((x) => sign(x) * pow(abs(x), f32(1.0) / 3));
 
 export const linearRgbToOklab = tgpu['~unstable'].fn(
   [vec3f],
