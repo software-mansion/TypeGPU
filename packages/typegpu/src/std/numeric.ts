@@ -191,19 +191,22 @@ export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
   // GPU implementation
-  (s, v) => {
-    const returnType = snippetIsNumeric(s)
-      ? // Scalar * Vector/Matrix
-        (v.dataType as AnyWgslData)
-      : !s.dataType.type.startsWith('mat')
-        ? // Vector * Matrix
-          (s.dataType as AnyWgslData)
-        : !v.dataType.type.startsWith('mat')
-          ? // Matrix * Vector
-            (v.dataType as AnyWgslData)
-          : // Vector * Vector or Matrix * Matrix
-            (s.dataType as AnyWgslData);
-    return { value: `(${s.value} * ${v.value})`, dataType: returnType };
+  (lhs, rhs) => {
+    const returnType = snippetIsNumeric(lhs)
+      ? // Scalar * Scalar/Vector/Matrix
+        (rhs.dataType as AnyWgslData)
+      : snippetIsNumeric(rhs)
+        ? // Vector/Matrix * Scalar
+          (lhs.dataType as AnyWgslData)
+        : lhs.dataType.type.startsWith('vec')
+          ? // Vector * Vector/Matrix
+            (lhs.dataType as AnyWgslData)
+          : rhs.dataType.type.startsWith('vec')
+            ? // Matrix * Vector
+              (rhs.dataType as AnyWgslData)
+            : // Matrix * Matrix
+              (lhs.dataType as AnyWgslData);
+    return { value: `(${lhs.value} * ${rhs.value})`, dataType: returnType };
   },
 );
 
