@@ -75,17 +75,17 @@ const unary4u = (op: UnaryOp) => (a: wgsl.v4u) =>
 
 const unary2x2f = (op: UnaryOp) => (a: wgsl.m2x2f) => {
   const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
-  mat2x2f(unary2f(op)(a_[0]), unary2f(op)(a_[1]));
+  return mat2x2f(unary2f(op)(a_[0]), unary2f(op)(a_[1]));
 };
 
 const unary3x3f = (op: UnaryOp) => (a: wgsl.m3x3f) => {
   const a_ = a.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
-  mat3x3f(unary3f(op)(a_[0]), unary3f(op)(a_[1]), unary3f(op)(a_[2]));
+  return mat3x3f(unary3f(op)(a_[0]), unary3f(op)(a_[1]), unary3f(op)(a_[2]));
 };
 
 const unary4x4f = (op: UnaryOp) => (a: wgsl.m4x4f) => {
   const a_ = a.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
-  mat4x4f(
+  return mat4x4f(
     unary4f(op)(a_[0]),
     unary4f(op)(a_[1]),
     unary4f(op)(a_[2]),
@@ -431,119 +431,68 @@ export const VectorOps = {
   >,
 
   addMixed: {
-    vec2f: (a: wgsl.v2f, b: number) => unary2f((c) => c + b)(a),
-    vec2h: (a: wgsl.v2h, b: number) => unary2h((c) => c + b)(a),
-    vec2i: (a: wgsl.v2i, b: number) => unary2i((c) => c + b)(a),
-    vec2u: (a: wgsl.v2u, b: number) => unary2u((c) => c + b)(a),
+    vec2f: (a: wgsl.v2f, b: number) => unary2f((e) => e + b)(a),
+    vec2h: (a: wgsl.v2h, b: number) => unary2h((e) => e + b)(a),
+    vec2i: (a: wgsl.v2i, b: number) => unary2i((e) => e + b)(a),
+    vec2u: (a: wgsl.v2u, b: number) => unary2u((e) => e + b)(a),
 
-    vec3f: (a: wgsl.v3f, b: number) => unary3f((c) => c + b)(a),
-    vec3h: (a: wgsl.v3h, b: number) => unary3h((c) => c + b)(a),
-    vec3i: (a: wgsl.v3i, b: number) => unary3i((c) => c + b)(a),
-    vec3u: (a: wgsl.v3u, b: number) => unary3u((c) => c + b)(a),
+    vec3f: (a: wgsl.v3f, b: number) => unary3f((e) => e + b)(a),
+    vec3h: (a: wgsl.v3h, b: number) => unary3h((e) => e + b)(a),
+    vec3i: (a: wgsl.v3i, b: number) => unary3i((e) => e + b)(a),
+    vec3u: (a: wgsl.v3u, b: number) => unary3u((e) => e + b)(a),
 
-    vec4f: (a: wgsl.v4f, b: number) => unary4f((c) => c + b)(a),
-    vec4h: (a: wgsl.v4h, b: number) => unary4h((c) => c + b)(a),
-    vec4i: (a: wgsl.v4i, b: number) => unary4i((c) => c + b)(a),
-    vec4u: (a: wgsl.v4u, b: number) => unary4u((c) => c + b)(a),
+    vec4f: (a: wgsl.v4f, b: number) => unary4f((e) => e + b)(a),
+    vec4h: (a: wgsl.v4h, b: number) => unary4h((e) => e + b)(a),
+    vec4i: (a: wgsl.v4i, b: number) => unary4i((e) => e + b)(a),
+    vec4u: (a: wgsl.v4u, b: number) => unary4u((e) => e + b)(a),
 
-    mat2x2f: (a: wgsl.m2x2f, b: number) => unary2x2f((c) => c + b)(a),
-    mat3x3f: (a: wgsl.m3x3f, b: number) => unary3x3f((c) => c + b)(a),
-    mat4x4f: (a: wgsl.m4x4f, b: number) => unary4x4f((c) => c + b)(a),
+    mat2x2f: (a: wgsl.m2x2f, b: number) => unary2x2f((e) => e + b)(a),
+    mat3x3f: (a: wgsl.m3x3f, b: number) => unary3x3f((e) => e + b)(a),
+    mat4x4f: (a: wgsl.m4x4f, b: number) => unary4x4f((e) => e + b)(a),
   } as Record<
     VecKind | MatKind,
     <T extends vBase | mBase>(lhs: T, rhs: number) => T
   >,
 
   mulSxV: {
-    vec2f: (s: number, v: wgsl.v2f) => vec2f(s * v.x, s * v.y),
-    vec2h: (s: number, v: wgsl.v2h) => vec2h(s * v.x, s * v.y),
-    vec2i: (s: number, v: wgsl.v2i) => vec2i(s * v.x, s * v.y),
-    vec2u: (s: number, v: wgsl.v2u) => vec2u(s * v.x, s * v.y),
+    vec2f: (s: number, v: wgsl.v2f) => unary2f((e) => s * e)(v),
+    vec2h: (s: number, v: wgsl.v2h) => unary2h((e) => s * e)(v),
+    vec2i: (s: number, v: wgsl.v2i) => unary2i((e) => s * e)(v),
+    vec2u: (s: number, v: wgsl.v2u) => unary2u((e) => s * e)(v),
 
-    vec3f: (s: number, v: wgsl.v3f) => vec3f(s * v.x, s * v.y, s * v.z),
-    vec3h: (s: number, v: wgsl.v3h) => vec3h(s * v.x, s * v.y, s * v.z),
-    vec3i: (s: number, v: wgsl.v3i) => vec3i(s * v.x, s * v.y, s * v.z),
-    vec3u: (s: number, v: wgsl.v3u) => vec3u(s * v.x, s * v.y, s * v.z),
+    vec3f: (s: number, v: wgsl.v3f) => unary3f((e) => s * e)(v),
+    vec3h: (s: number, v: wgsl.v3h) => unary3h((e) => s * e)(v),
+    vec3i: (s: number, v: wgsl.v3i) => unary3i((e) => s * e)(v),
+    vec3u: (s: number, v: wgsl.v3u) => unary3u((e) => s * e)(v),
 
-    vec4f: (s: number, v: wgsl.v4f) =>
-      vec4f(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4h: (s: number, v: wgsl.v4h) =>
-      vec4h(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4i: (s: number, v: wgsl.v4i) =>
-      vec4i(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4u: (s: number, v: wgsl.v4u) =>
-      vec4u(s * v.x, s * v.y, s * v.z, s * v.w),
+    vec4f: (s: number, v: wgsl.v4f) => unary4f((e) => s * e)(v),
+    vec4h: (s: number, v: wgsl.v4h) => unary4h((e) => s * e)(v),
+    vec4i: (s: number, v: wgsl.v4i) => unary4i((e) => s * e)(v),
+    vec4u: (s: number, v: wgsl.v4u) => unary4u((e) => s * e)(v),
 
-    mat2x2f: (s: number, m: wgsl.m2x2f) => {
-      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
-      return mat2x2f(s * m_[0].x, s * m_[0].y, s * m_[1].x, s * m_[1].y);
-    },
-
-    mat3x3f: (s: number, m: wgsl.m3x3f) => {
-      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
-      return mat3x3f(
-        s * m_[0].x,
-        s * m_[0].y,
-        s * m_[0].z,
-
-        s * m_[1].x,
-        s * m_[1].y,
-        s * m_[1].z,
-
-        s * m_[2].x,
-        s * m_[2].y,
-        s * m_[2].z,
-      );
-    },
-
-    mat4x4f: (s: number, m: wgsl.m4x4f) => {
-      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
-      return mat4x4f(
-        s * m_[0].x,
-        s * m_[0].y,
-        s * m_[0].z,
-        s * m_[0].w,
-
-        s * m_[1].x,
-        s * m_[1].y,
-        s * m_[1].z,
-        s * m_[1].w,
-
-        s * m_[2].x,
-        s * m_[2].y,
-        s * m_[2].z,
-        s * m_[2].w,
-
-        s * m_[3].x,
-        s * m_[3].y,
-        s * m_[3].z,
-        s * m_[3].w,
-      );
-    },
+    mat2x2f: (s: number, m: wgsl.m2x2f) => unary2x2f((e) => s * e)(m),
+    mat3x3f: (s: number, m: wgsl.m3x3f) => unary3x3f((e) => s * e)(m),
+    mat4x4f: (s: number, m: wgsl.m4x4f) => unary4x4f((e) => s * e)(m),
   } as Record<
     VecKind | MatKind,
     <T extends vBase | wgsl.AnyMatInstance>(s: number, v: T) => T
   >,
 
   mulVxV: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x * b.x, a.y * b.y),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) => vec2h(a.x * b.x, a.y * b.y),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) => vec2i(a.x * b.x, a.y * b.y),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) => vec2u(a.x * b.x, a.y * b.y),
+    vec2f: binaryComponentWise2f((a, b) => a * b),
+    vec2h: binaryComponentWise2h((a, b) => a * b),
+    vec2i: binaryComponentWise2i((a, b) => a * b),
+    vec2u: binaryComponentWise2u((a, b) => a * b),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => vec3f(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => vec3h(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => vec3i(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => vec3u(a.x * b.x, a.y * b.y, a.z * b.z),
+    vec3f: binaryComponentWise3f((a, b) => a * b),
+    vec3h: binaryComponentWise3h((a, b) => a * b),
+    vec3i: binaryComponentWise3i((a, b) => a * b),
+    vec3u: binaryComponentWise3u((a, b) => a * b),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
-      vec4f(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
-      vec4h(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
-      vec4i(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
-      vec4u(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
+    vec4f: binaryComponentWise4f((a, b) => a * b),
+    vec4h: binaryComponentWise4h((a, b) => a * b),
+    vec4i: binaryComponentWise4i((a, b) => a * b),
+    vec4u: binaryComponentWise4u((a, b) => a * b),
 
     mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
       const a_ = a.columns as [wgsl.v2f, wgsl.v2f];

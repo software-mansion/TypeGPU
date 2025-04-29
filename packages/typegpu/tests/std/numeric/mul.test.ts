@@ -4,12 +4,15 @@ import {
   mat3x3f,
   mat4x4f,
   vec2f,
+  vec2h,
   vec2i,
   vec2u,
   vec3f,
+  vec3h,
   vec3i,
   vec3u,
   vec4f,
+  vec4h,
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
@@ -69,6 +72,37 @@ describe('mul', () => {
     expect(mul(-1, vec4i(-1, -2, -3, -4))).toEqual(vec4i(1, 2, 3, 4));
     expect(mul(0, vec4i(1))).toEqual(vec4i());
     expect(mul(8, vec4i(2))).toEqual(vec4i(16));
+  });
+
+  it('computes product of a vec2 and vec2', () => {
+    expect(mul(vec2f(1, 2), vec2f(3, 4))).toEqual(vec2f(3, 8));
+    expect(mul(vec2h(3, 4), vec2h(5, 6))).toEqual(vec2h(15, 24));
+    expect(mul(vec2i(5, 6), vec2i(7, 8))).toEqual(vec2i(35, 48));
+    expect(mul(vec2u(7, 8), vec2u(9, 10))).toEqual(vec2u(63, 80));
+  });
+
+  it('computes product of a vec3 and vec3', () => {
+    expect(mul(vec3f(1, 2, 3), vec3f(3, 4, 5))).toEqual(vec3f(3, 8, 15));
+    expect(mul(vec3h(3, 4, 5), vec3h(5, 6, 7))).toEqual(vec3h(15, 24, 35));
+    expect(mul(vec3i(5, 6, 7), vec3i(7, 8, 9))).toEqual(vec3i(35, 48, 63));
+    expect(mul(vec3u(7, 8, 9), vec3u(9, 10, 11))).toEqual(vec3u(63, 80, 99));
+  });
+
+  it('computes product of a vec4 and vec4', () => {
+    expect(vec2f(1, 2)).toEqual(vec2u(1, 2));
+
+    expect(mul(vec4f(1, 2, 3, 4), vec4f(3, 4, 5, 6))).toEqual(
+      vec4f(3, 8, 15, 24),
+    );
+    expect(mul(vec4h(3, 4, 5, 6), vec4h(5, 6, 7, 8))).toEqual(
+      vec4h(15, 24, 35, 48),
+    );
+    expect(mul(vec4i(5, 6, 7, 8), vec4i(7, 8, 9, 10))).toEqual(
+      vec4i(35, 48, 63, 80),
+    );
+    expect(mul(vec4u(7, 8, 9, 10), vec4u(9, 10, 11, 12))).toEqual(
+      vec4u(63, 80, 99, 120),
+    );
   });
 
   it('computes product of a number and mat2x2f', () => {

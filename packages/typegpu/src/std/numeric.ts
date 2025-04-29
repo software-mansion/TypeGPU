@@ -14,11 +14,6 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-// AAA testy unit i example dla fluent mul dla vec
-// AAA testy unit i example dla fluent mul dla mat
-// AAA mieszane testy (mat->vec)
-// AAA skompresuj vector opsy
-
 // AAA add, sub dla mat
 // AAA testy unit i example dla fluent add, sub dla mat
 // AAA add, sub, div dla vec
