@@ -29,3 +29,4 @@ export const presets = [
   'Merging dust',
 ] as const;
 export type Preset = (typeof presets)[number];
+export const initialPreset: Preset = 'Solar System';

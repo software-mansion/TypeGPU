@@ -10,6 +10,7 @@ import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   type Preset,
   collisionBehaviors,
+  initialPreset,
   presets,
   sphereTextureNames,
 } from './enums.ts';
@@ -56,7 +57,7 @@ const sampler = root.device.createSampler({
   minFilter: 'linear',
 });
 
-let cameraPosition = examplePresets['Solar System'].initialCameraPos;
+let cameraPosition = examplePresets[initialPreset].initialCameraPos;
 const cameraInitial = Camera({
   position: cameraPosition,
   view: m.mat4.lookAt(
@@ -121,7 +122,7 @@ interface DynamicResources {
 }
 
 const dynamicResourcesBox = {
-  data: await loadPreset('Solar System'),
+  data: await loadPreset(initialPreset),
 };
 
 // Pipelines
@@ -301,7 +302,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 export const controls = {
   preset: {
-    initial: 'Solar System',
+    initial: initialPreset,
     options: presets,
     async onSelectChange(value: Preset) {
       const oldData = dynamicResourcesBox.data;
