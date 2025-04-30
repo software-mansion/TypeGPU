@@ -24,7 +24,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toStrictEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       fn main() -> f32 {
         return (3 + 4);
@@ -60,7 +60,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toStrictEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       fn getDouble() -> f32 {
         return 4;
@@ -106,7 +106,7 @@ describe('TgpuDerived', () => {
       .with(gridSizeSlot, 1)
       .$name('main');
 
-    expect(parseResolved({ main })).toStrictEqual(
+    expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `
       fn fill(arr: array<f32, 1>) {}
       fn fill_1(arr: array<f32, 2>) {}
@@ -161,7 +161,7 @@ describe('TgpuDerived', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,
@@ -208,7 +208,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ mainFn })).toStrictEqual(
+    expect(parseResolved({ mainFn })).toBe(
       parse(`
         fn innerFn() -> f32 {
           return 1;

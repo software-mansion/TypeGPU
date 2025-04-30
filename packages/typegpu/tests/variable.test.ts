@@ -18,7 +18,7 @@ describe('var', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved({ fn1 })).toStrictEqual(
+    expect(parseResolved({ fn1 })).toBe(
       parse(`
         var<private> x: u32 = 2;
         fn fn1() {
@@ -34,7 +34,7 @@ describe('var', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      expect(parseResolved({ x: variable })).toStrictEqual(parse(expected));
+      expect(parseResolved({ x: variable })).toBe(parse(expected));
     }
 
     test(
@@ -127,7 +127,7 @@ describe('var', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,

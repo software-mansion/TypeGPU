@@ -30,7 +30,7 @@ describe('tgpu.accessor', () => {
           .$name('red'),
       );
 
-    expect(parseResolved({ getColor })).toStrictEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn red() -> vec3f {
           return ${RED_RESOLVED};
@@ -64,7 +64,7 @@ describe('tgpu.accessor', () => {
           .as('uniform'),
       );
 
-    expect(parseResolved({ getColor })).toStrictEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> red: vec3f;
 
@@ -93,7 +93,7 @@ describe('tgpu.accessor', () => {
       .with(colorAccessor, RED)
       .with(multiplierAccessor, 2);
 
-    expect(parseResolved({ getColor })).toStrictEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return ${RED_RESOLVED} * 2;
@@ -117,7 +117,7 @@ describe('tgpu.accessor', () => {
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(parseResolved({ getColor })).toStrictEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED_RESOLVED};
@@ -151,7 +151,7 @@ describe('tgpu.accessor', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    expect(parseResolved({ main })).toStrictEqual(
+    expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return vec3f(0, 1, 0);
@@ -225,7 +225,7 @@ describe('tgpu.accessor', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> colorUniform: vec3f;
 

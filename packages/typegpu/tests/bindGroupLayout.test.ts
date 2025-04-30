@@ -214,7 +214,7 @@ describe('TgpuBindGroupLayout', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
       @group(0) @binding(0) var fooTexture: texture_1d<f32>;
 

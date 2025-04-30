@@ -59,11 +59,11 @@ describe('mat2x2f', () => {
     );
 
     expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3]);
-    expect(mat.length).toStrictEqual(4);
-    expect(mat[0]).toStrictEqual(0);
-    expect(mat[1]).toStrictEqual(1);
-    expect(mat[2]).toStrictEqual(2);
-    expect(mat[3]).toStrictEqual(3);
+    expect(mat).toHaveLength(4);
+    expect(mat[0]).toBe(0);
+    expect(mat[1]).toBe(1);
+    expect(mat[2]).toBe(2);
+    expect(mat[3]).toBe(3);
   });
 
   it('is mutable through indexing', () => {
@@ -155,18 +155,18 @@ describe('mat3x3f', () => {
     );
 
     expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(mat.length).toStrictEqual(12);
-    expect(mat[0]).toStrictEqual(0);
-    expect(mat[1]).toStrictEqual(1);
-    expect(mat[2]).toStrictEqual(2);
-    expect(mat[3]).toStrictEqual(0);
-    expect(mat[4]).toStrictEqual(3);
-    expect(mat[5]).toStrictEqual(4);
-    expect(mat[6]).toStrictEqual(5);
-    expect(mat[7]).toStrictEqual(0);
-    expect(mat[8]).toStrictEqual(6);
-    expect(mat[9]).toStrictEqual(7);
-    expect(mat[10]).toStrictEqual(8);
+    expect(mat).toHaveLength(12);
+    expect(mat[0]).toBe(0);
+    expect(mat[1]).toBe(1);
+    expect(mat[2]).toBe(2);
+    expect(mat[3]).toBe(0);
+    expect(mat[4]).toBe(3);
+    expect(mat[5]).toBe(4);
+    expect(mat[6]).toBe(5);
+    expect(mat[7]).toBe(0);
+    expect(mat[8]).toBe(6);
+    expect(mat[9]).toBe(7);
+    expect(mat[10]).toBe(8);
   });
 
   it('is mutable through indexing', () => {
@@ -283,23 +283,23 @@ describe('mat4x4f', () => {
     expect(d.matToArray(mat)).toStrictEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
-    expect(mat.length).toStrictEqual(16);
-    expect(mat[0]).toStrictEqual(0);
-    expect(mat[1]).toStrictEqual(1);
-    expect(mat[2]).toStrictEqual(2);
-    expect(mat[3]).toStrictEqual(3);
-    expect(mat[4]).toStrictEqual(4);
-    expect(mat[5]).toStrictEqual(5);
-    expect(mat[6]).toStrictEqual(6);
-    expect(mat[7]).toStrictEqual(7);
-    expect(mat[8]).toStrictEqual(8);
-    expect(mat[9]).toStrictEqual(9);
-    expect(mat[10]).toStrictEqual(10);
-    expect(mat[11]).toStrictEqual(11);
-    expect(mat[12]).toStrictEqual(12);
-    expect(mat[13]).toStrictEqual(13);
-    expect(mat[14]).toStrictEqual(14);
-    expect(mat[15]).toStrictEqual(15);
+    expect(mat).toHaveLength(16);
+    expect(mat[0]).toBe(0);
+    expect(mat[1]).toBe(1);
+    expect(mat[2]).toBe(2);
+    expect(mat[3]).toBe(3);
+    expect(mat[4]).toBe(4);
+    expect(mat[5]).toBe(5);
+    expect(mat[6]).toBe(6);
+    expect(mat[7]).toBe(7);
+    expect(mat[8]).toBe(8);
+    expect(mat[9]).toBe(9);
+    expect(mat[10]).toBe(10);
+    expect(mat[11]).toBe(11);
+    expect(mat[12]).toBe(12);
+    expect(mat[13]).toBe(13);
+    expect(mat[14]).toBe(14);
+    expect(mat[15]).toBe(15);
   });
 
   it('is mutable through indexing', () => {

@@ -12,7 +12,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       return args.a + args.b;
     });
 
-    expect(parseResolved({ add })).toStrictEqual(
+    expect(parseResolved({ add })).toBe(
       parse(`
         fn add(a: u32, b: u32) -> u32 {
           return (a + b);
@@ -29,7 +29,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       return a + b;
     });
 
-    expect(parseResolved({ add })).toStrictEqual(
+    expect(parseResolved({ add })).toBe(
       parse(`
         fn add(a: u32, b: u32) -> u32 {
           return (a + b);
@@ -46,7 +46,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       return a + b;
     });
 
-    expect(parseResolved({ add })).toStrictEqual(
+    expect(parseResolved({ add })).toBe(
       parse(`
         fn add(a: u32, b: u32, c: u32) -> u32 {
           return (a + b);
@@ -63,7 +63,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       return aa + bb;
     });
 
-    expect(parseResolved({ add })).toStrictEqual(
+    expect(parseResolved({ add })).toBe(
       parse(`
         fn add(a: u32, b: u32) -> u32 {
           return (a + b);
@@ -84,7 +84,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       const x = add({ a: 2, b: 3 });
     });
 
-    expect(parseResolved({ f })).toStrictEqual(
+    expect(parseResolved({ f })).toBe(
       parse(`
         fn add(a: u32, b: u32) -> u32 {
           return (a + b);
@@ -111,7 +111,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       }`)
       .$uses({ add });
 
-    expect(parseResolved({ f })).toStrictEqual(
+    expect(parseResolved({ f })).toBe(
       parse(`
         fn add(a: u32, b: u32) -> u32 {
           return (a + b);
@@ -141,7 +141,7 @@ describe('tgpu.fn function with arguments passed in a record', () => {
       })
       .$name('newPointF');
 
-    expect(parseResolved({ func })).toStrictEqual(
+    expect(parseResolved({ func })).toBe(
       parse(`
       struct Point {
         a: u32,

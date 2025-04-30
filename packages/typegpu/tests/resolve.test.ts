@@ -18,7 +18,7 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(
         'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
       ),
@@ -54,7 +54,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(
         `@group(0) @binding(0) var<uniform> intensity_1: f32;
         @fragment fn fragment1() -> @location(0) vec4f {
@@ -100,7 +100,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct PlayerData {
           position: vec3f,
@@ -154,7 +154,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Random {
           seed: vec2f,
@@ -191,7 +191,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct VertexInfo {
           color: vec4f,
@@ -217,7 +217,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct VertexInfo {
           color: vec4f,
@@ -254,7 +254,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct extra {
           a: f32,
@@ -307,7 +307,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> intensity: u32;
 
@@ -382,7 +382,7 @@ describe('tgpu resolve', () => {
           names: 'strict',
         }),
       ),
-    ).toStrictEqual(parse('fn main() { let x = 2 + 3; }'));
+    ).toBe(parse('fn main() { let x = 2 + 3; }'));
   });
 
   it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
@@ -403,7 +403,7 @@ describe('tgpu resolve', () => {
           names: 'strict',
         }),
       ),
-    ).toStrictEqual(
+    ).toBe(
       parse(`
         fn main () {
           let x = 3;

@@ -13,7 +13,7 @@ describe('tgpu.const', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved({ fn1 })).toStrictEqual(
+    expect(parseResolved({ fn1 })).toBe(
       parse(`
         const x = 2;
         fn fn1() {
@@ -49,7 +49,7 @@ describe('tgpu.const', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,

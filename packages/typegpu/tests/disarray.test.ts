@@ -7,17 +7,17 @@ import { it } from './utils/extendedIt.ts';
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {
     const TestArray = d.disarrayOf(d.vec3u, 3);
-    expect(d.sizeOf(TestArray)).toStrictEqual(36);
+    expect(d.sizeOf(TestArray)).toBe(36);
   });
 
   it('takes element alignment into account when measuring with custom aligned elements', () => {
     const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
-    expect(d.sizeOf(TestArray)).toStrictEqual(48);
+    expect(d.sizeOf(TestArray)).toBe(48);
   });
 
   it('properly handles calculating nested loose array size', () => {
     const TestArray = d.disarrayOf(d.disarrayOf(d.vec3u, 3), 3);
-    expect(d.sizeOf(TestArray)).toStrictEqual(108);
+    expect(d.sizeOf(TestArray)).toBe(108);
   });
 
   it('does not align array elements when writing', () => {

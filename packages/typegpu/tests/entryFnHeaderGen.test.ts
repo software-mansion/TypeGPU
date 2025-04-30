@@ -12,7 +12,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       return vec4f(in.uv[0]);
     }`);
 
-    expect(parseResolved({ mainFragment })).toStrictEqual(
+    expect(parseResolved({ mainFragment })).toBe(
       parse(`
       struct mainFragment_Input { 
         @location(0) uv : vec2f,
@@ -32,7 +32,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       return vec4f(in.uv[0]);
     }`);
 
-    expect(parseResolved({ mainFragment })).toStrictEqual(
+    expect(parseResolved({ mainFragment })).toBe(
       parse(`
       struct mainFragment_Input { 
         @location(0) uv : vec2f,
@@ -54,7 +54,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       return Out(vec4f(in.uv[0]));
     }`);
 
-    expect(parseResolved({ mainFragment })).toStrictEqual(
+    expect(parseResolved({ mainFragment })).toBe(
       parse(`
       struct mainFragment_Input { 
         @location(0) uv : vec2f,
@@ -78,7 +78,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       let x = in.index;
     }`);
 
-    expect(parseResolved({ mainCompute })).toStrictEqual(
+    expect(parseResolved({ mainCompute })).toBe(
       parse(`
       struct mainCompute_Input { 
         @builtin(global_invocation_id) index : vec3u,
@@ -110,7 +110,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
     return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`);
 
-    expect(parseResolved({ mainVertex })).toStrictEqual(
+    expect(parseResolved({ mainVertex })).toBe(
       parse(`
       struct mainVertex_Input { 
         @builtin(vertex_index) vertexIndex : u32,

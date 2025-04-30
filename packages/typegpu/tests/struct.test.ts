@@ -25,7 +25,7 @@ describe('struct', () => {
       x: u32,
       y: vec3u,
     });
-    expect(sizeOf(TestStruct)).toStrictEqual(32);
+    expect(sizeOf(TestStruct)).toBe(32);
   });
 
   it('aligns struct properties when writing', () => {
@@ -148,8 +148,8 @@ describe('struct', () => {
       d: f16,
     });
 
-    expect(sizeOf(TestStruct)).toStrictEqual(8);
-    expect(alignmentOf(TestStruct)).toStrictEqual(2);
+    expect(sizeOf(TestStruct)).toBe(8);
+    expect(alignmentOf(TestStruct)).toBe(2);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -171,8 +171,8 @@ describe('struct', () => {
       c: u32,
     });
 
-    expect(sizeOf(TestStruct)).toStrictEqual(12);
-    expect(alignmentOf(TestStruct)).toStrictEqual(4);
+    expect(sizeOf(TestStruct)).toBe(12);
+    expect(alignmentOf(TestStruct)).toBe(4);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -192,8 +192,8 @@ describe('struct', () => {
       b: f16,
     });
 
-    expect(sizeOf(TestStruct)).toStrictEqual(8);
-    expect(alignmentOf(TestStruct)).toStrictEqual(8);
+    expect(sizeOf(TestStruct)).toBe(8);
+    expect(alignmentOf(TestStruct)).toBe(8);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -214,7 +214,7 @@ describe('struct', () => {
       c: vec2h,
     });
 
-    expect(sizeOf(TestStruct2)).toStrictEqual(40);
+    expect(sizeOf(TestStruct2)).toBe(40);
 
     const buffer2 = new ArrayBuffer(sizeOf(TestStruct2));
 

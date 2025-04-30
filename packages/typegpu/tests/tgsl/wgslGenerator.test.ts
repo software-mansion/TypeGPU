@@ -53,7 +53,7 @@ describe('wgslGenerator', () => {
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
-    expect(parse(gen)).toStrictEqual(parse('{return true;}'));
+    expect(parse(gen)).toBe(parse('{return true;}'));
   });
 
   it('creates a function body', () => {
@@ -73,7 +73,7 @@ describe('wgslGenerator', () => {
 
     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
-    expect(parse(gen)).toStrictEqual(parse('{var a = 12;a += 21;return a;}'));
+    expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
   });
 
   it('creates correct resources for numeric literals', () => {
@@ -378,7 +378,7 @@ describe('wgslGenerator', () => {
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
-    expect(parse(gen)).toStrictEqual(
+    expect(parse(gen)).toBe(
       parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
     );
   });
@@ -401,7 +401,7 @@ describe('wgslGenerator', () => {
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
-    expect(parse(gen)).toStrictEqual(
+    expect(parse(gen)).toBe(
       parse('{var i = 0;for(;(i < 10);i += 1){continue;}}'),
     );
   });
@@ -424,9 +424,7 @@ describe('wgslGenerator', () => {
 
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
-    expect(parse(gen)).toStrictEqual(
-      parse('{var i = 0;while((i < 10)){i += 1;}}'),
-    );
+    expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
   });
 
   it('creates correct resources for derived values and slots', () => {
@@ -444,7 +442,7 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    expect(parseResolved({ testFn })).toStrictEqual(
+    expect(parseResolved({ testFn })).toBe(
       parse(`
       fn testFn() -> vec4u {
         return vec4u(44, 88, 132, 176);
@@ -532,7 +530,7 @@ describe('wgslGenerator', () => {
       return arr[1] as number;
     });
 
-    expect(parseResolved({ testFn })).toStrictEqual(
+    expect(parseResolved({ testFn })).toBe(
       parse(`
       fn testFn() -> u32 {
         var arr = array<u32, 3>(1, 2, 3);
@@ -585,7 +583,7 @@ describe('wgslGenerator', () => {
       return (arr[1] as { x: number; y: number }).y;
     });
 
-    expect(parseResolved({ testFn })).toStrictEqual(
+    expect(parseResolved({ testFn })).toBe(
       parse(`
       struct TestStruct {
         x: u32,
@@ -645,7 +643,7 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    expect(parseResolved({ testFn })).toStrictEqual(
+    expect(parseResolved({ testFn })).toBe(
       parse(`
       fn testFn() -> f32 {
         var arr = array<vec2f, 2>(vec2f(44, 88), (vec2f(44, 88) * vec2f(2, 2)));
@@ -680,7 +678,7 @@ describe('wgslGenerator', () => {
       return fnOne().y.x;
     });
 
-    expect(parseResolved({ fnTwo })).toStrictEqual(
+    expect(parseResolved({ fnTwo })).toBe(
       parse(`
       struct TestStruct {
         x: u32,

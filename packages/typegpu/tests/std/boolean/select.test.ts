@@ -20,13 +20,13 @@ import { select } from '../../../src/std/boolean.ts';
 
 describe('select', () => {
   it('selects for numbers', () => {
-    expect(select(1, 2, false)).toStrictEqual(1);
-    expect(select(1, 2, true)).toStrictEqual(2);
+    expect(select(1, 2, false)).toBe(1);
+    expect(select(1, 2, true)).toBe(2);
   });
 
   it('selects for booleans', () => {
-    expect(select(true, false, false)).toStrictEqual(true);
-    expect(select(true, false, true)).toStrictEqual(false);
+    expect(select(true, false, false)).toBe(true);
+    expect(select(true, false, true)).toBe(false);
   });
 
   it('selects for f32 vectors', () => {

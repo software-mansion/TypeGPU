@@ -17,7 +17,7 @@ describe('array', () => {
 
   it('takes element alignment into account when measuring', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
-    expect(d.sizeOf(TestArray)).toStrictEqual(48);
+    expect(d.sizeOf(TestArray)).toBe(48);
   });
 
   it('aligns array elements when writing', () => {
@@ -109,7 +109,7 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toStrictEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var <storage, read_write> values: array<f32>;
 
@@ -140,7 +140,7 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toStrictEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var <storage, read_write> values: array<f32, 128>;
 

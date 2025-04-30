@@ -29,7 +29,7 @@ describe('d.size', () => {
           c: d.u32,
         }),
       ),
-    ).toStrictEqual(12);
+    ).toBe(12);
 
     expect(
       d.sizeOf(
@@ -39,7 +39,7 @@ describe('d.size', () => {
           c: d.u32,
         }),
       ),
-    ).toStrictEqual(16);
+    ).toBe(16);
 
     expect(
       d.sizeOf(
@@ -49,7 +49,7 @@ describe('d.size', () => {
           c: d.size(16, d.u32),
         }),
       ),
-    ).toStrictEqual(28);
+    ).toBe(28);
 
     // nested
     const NestedStruct = d.struct({
@@ -58,7 +58,7 @@ describe('d.size', () => {
         c: d.size(20, d.f32),
       }),
     });
-    expect(d.sizeOf(NestedStruct)).toStrictEqual(24);
+    expect(d.sizeOf(NestedStruct)).toBe(24);
 
     // taking alignment into account
     const AlignedStruct = d.struct({
@@ -67,7 +67,7 @@ describe('d.size', () => {
       }),
       b: d.u32,
     });
-    expect(d.sizeOf(AlignedStruct)).toStrictEqual(24);
+    expect(d.sizeOf(AlignedStruct)).toBe(24);
   });
 
   it('throws for invalid size values', () => {
@@ -83,7 +83,7 @@ describe('d.size', () => {
   it('changes size of loose array element', () => {
     const s1 = d.disarrayOf(d.size(11, d.u32), 10);
 
-    expect(d.sizeOf(s1)).toStrictEqual(110);
+    expect(d.sizeOf(s1)).toBe(110);
     expectTypeOf(s1).toEqualTypeOf<
       d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
@@ -96,7 +96,7 @@ describe('d.size', () => {
       c: d.u32, // 4
     });
 
-    expect(d.sizeOf(s1)).toStrictEqual(28);
+    expect(d.sizeOf(s1)).toBe(28);
     expectTypeOf(s1).toEqualTypeOf<
       d.Unstruct<{
         a: d.U32;

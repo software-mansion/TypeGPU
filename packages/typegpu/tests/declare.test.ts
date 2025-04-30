@@ -16,7 +16,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toStrictEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -38,7 +38,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toStrictEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -63,7 +63,7 @@ describe('tgpu.declare', () => {
       })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toStrictEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -94,7 +94,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toStrictEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -123,7 +123,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toStrictEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -151,7 +151,7 @@ describe('tgpu.declare', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toStrictEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 

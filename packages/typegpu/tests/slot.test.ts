@@ -23,7 +23,7 @@ describe('tgpu.slot', () => {
 
     const actual = parseResolved({ getColor });
 
-    expect(actual).toStrictEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED};
@@ -56,7 +56,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithGreen });
 
     const actual = parseResolved({ main });
-    expect(actual).toStrictEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${GREEN};
@@ -95,7 +95,7 @@ describe('tgpu.slot', () => {
     const actual = parseResolved({ main });
 
     // should be green
-    expect(actual).toStrictEqual(
+    expect(actual).toBe(
       parse(`
         fn getColor() {
           return vec3f(0., 1., 0.);
@@ -184,7 +184,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('reuses common nested functions', () => {
@@ -319,7 +319,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('unwraps layers of slots', () => {
@@ -361,7 +361,7 @@ describe('tgpu.slot', () => {
       fn main() { fn4(); }
     `);
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('allows access to value in tgsl functions through the .value property ', ({
@@ -408,7 +408,7 @@ describe('tgpu.slot', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toStrictEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,

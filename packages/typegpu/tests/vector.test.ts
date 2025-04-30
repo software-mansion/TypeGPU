@@ -8,25 +8,25 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
-    expect(sizeOf(d.vec2f)).toStrictEqual(8);
+    expect(sizeOf(d.vec2f)).toBe(8);
   });
 
   it('should create a zero 2d vector', () => {
     const zero = d.vec2f();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
   });
 
   it('should create a 2d vector with the given elements', () => {
     const vec = d.vec2f(1, 2);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
     const vec = d.vec2f(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
   });
 
   it('should encode a 2d vector', () => {
@@ -54,8 +54,8 @@ describe('vec2f', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec2f(1, 2);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
   });
 
   it('can be modified via index', () => {
@@ -68,25 +68,25 @@ describe('vec2f', () => {
 
 describe('vec2i', () => {
   it('should span 8 bytes', () => {
-    expect(sizeOf(d.vec2i)).toStrictEqual(8);
+    expect(sizeOf(d.vec2i)).toBe(8);
   });
 
   it('should create a zero 2d vector', () => {
     const zero = d.vec2i();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
   });
 
   it('should create a 2d vector with the given elements', () => {
     const vec = d.vec2i(1, 2);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
     const vec = d.vec2i(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
   });
 
   it('should encode a 2d vector', () => {
@@ -114,8 +114,8 @@ describe('vec2i', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec2i(1, 2);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
   });
 
   it('can be modified via index', () => {
@@ -129,20 +129,20 @@ describe('vec2i', () => {
 describe('vec2<bool>', () => {
   it('should create a zero 2d vector', () => {
     const zero = d.vec2b();
-    expect(zero.x).toStrictEqual(false);
-    expect(zero.y).toStrictEqual(false);
+    expect(zero.x).toBe(false);
+    expect(zero.y).toBe(false);
   });
 
   it('should create a 2d vector with the given elements', () => {
     const vec = d.vec2b(false, true);
-    expect(vec.x).toStrictEqual(false);
-    expect(vec.y).toStrictEqual(true);
+    expect(vec.x).toBe(false);
+    expect(vec.y).toBe(true);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
     const vec = d.vec2b(true);
-    expect(vec.x).toStrictEqual(true);
-    expect(vec.y).toStrictEqual(true);
+    expect(vec.x).toBe(true);
+    expect(vec.y).toBe(true);
   });
 
   it('is not host shareable', () => {
@@ -172,8 +172,8 @@ describe('vec2<bool>', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec2b(false, true);
-    expect(vec[0]).toStrictEqual(false);
-    expect(vec[1]).toStrictEqual(true);
+    expect(vec[0]).toBe(false);
+    expect(vec[1]).toBe(true);
   });
 
   it('can be modified via index', () => {
@@ -186,49 +186,49 @@ describe('vec2<bool>', () => {
   it('should create a vector using identity swizzle', () => {
     const vec = d.vec2b(false, true);
     const swizzled = vec.xy;
-    expect(swizzled.x).toStrictEqual(false);
-    expect(swizzled.y).toStrictEqual(true);
+    expect(swizzled.x).toBe(false);
+    expect(swizzled.y).toBe(true);
   });
 
   it('should create a vector using mixed swizzle', () => {
     const vec = d.vec2b(false, true);
     const swizzled = vec.yx;
-    expect(swizzled.x).toStrictEqual(true);
-    expect(swizzled.y).toStrictEqual(false);
+    expect(swizzled.x).toBe(true);
+    expect(swizzled.y).toBe(false);
   });
 
   it('should create a vector using swizzle with repeats', () => {
     const vec = d.vec2b(false, true);
     const swizzled = vec.yy;
-    expect(swizzled.x).toStrictEqual(true);
-    expect(swizzled.y).toStrictEqual(true);
+    expect(swizzled.x).toBe(true);
+    expect(swizzled.y).toBe(true);
   });
 });
 
 describe('vec3f', () => {
   it('should span 12 bytes', () => {
-    expect(sizeOf(d.vec3f)).toStrictEqual(12);
+    expect(sizeOf(d.vec3f)).toBe(12);
   });
 
   it('should create a zero 3d vector', () => {
     const zero = d.vec3f();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
-    expect(zero.z).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
+    expect(zero.z).toBe(0);
   });
 
   it('should create a 3d vector with the given elements', () => {
     const vec = d.vec3f(1, 2, 3);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
-    expect(vec.z).toStrictEqual(3);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
+    expect(vec.z).toBe(3);
   });
 
   it('should create a 3d vector from the given scalar element', () => {
     const vec = d.vec3f(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
-    expect(vec.z).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
+    expect(vec.z).toBe(5);
   });
 
   it('should encode a 3d vector', () => {
@@ -256,9 +256,9 @@ describe('vec3f', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec3f(1, 2, 3);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
-    expect(vec[2]).toStrictEqual(3);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
+    expect(vec[2]).toBe(3);
   });
 
   it('can be modified via index', () => {
@@ -272,28 +272,28 @@ describe('vec3f', () => {
 
 describe('vec3i', () => {
   it('should span 12 bytes', () => {
-    expect(sizeOf(d.vec3i)).toStrictEqual(12);
+    expect(sizeOf(d.vec3i)).toBe(12);
   });
 
   it('should create a zero 3d vector', () => {
     const zero = d.vec3i();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
-    expect(zero.z).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
+    expect(zero.z).toBe(0);
   });
 
   it('should create a 3d vector with the given elements', () => {
     const vec = d.vec3i(1, 2, 3);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
-    expect(vec.z).toStrictEqual(3);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
+    expect(vec.z).toBe(3);
   });
 
   it('should create a 3d vector from the given scalar element', () => {
     const vec = d.vec3i(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
-    expect(vec.z).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
+    expect(vec.z).toBe(5);
   });
 
   it('should encode a 3d vector', () => {
@@ -321,9 +321,9 @@ describe('vec3i', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec3i(1, 2, 3);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
-    expect(vec[2]).toStrictEqual(3);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
+    expect(vec[2]).toBe(3);
   });
 
   it('can be modified via index', () => {
@@ -338,23 +338,23 @@ describe('vec3i', () => {
 describe('vec3<bool>', () => {
   it('should create a zero 3d vector', () => {
     const zero = d.vec3b();
-    expect(zero.x).toStrictEqual(false);
-    expect(zero.y).toStrictEqual(false);
-    expect(zero.z).toStrictEqual(false);
+    expect(zero.x).toBe(false);
+    expect(zero.y).toBe(false);
+    expect(zero.z).toBe(false);
   });
 
   it('should create a 3d vector with the given elements', () => {
     const vec = d.vec3b(false, true, false);
-    expect(vec.x).toStrictEqual(false);
-    expect(vec.y).toStrictEqual(true);
-    expect(vec.z).toStrictEqual(false);
+    expect(vec.x).toBe(false);
+    expect(vec.y).toBe(true);
+    expect(vec.z).toBe(false);
   });
 
   it('should create a 3d vector from the given scalar element', () => {
     const vec = d.vec3b(true);
-    expect(vec.x).toStrictEqual(true);
-    expect(vec.y).toStrictEqual(true);
-    expect(vec.z).toStrictEqual(true);
+    expect(vec.x).toBe(true);
+    expect(vec.y).toBe(true);
+    expect(vec.z).toBe(true);
   });
 
   it('is not host shareable', () => {
@@ -384,9 +384,9 @@ describe('vec3<bool>', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec3b(false, true, false);
-    expect(vec[0]).toStrictEqual(false);
-    expect(vec[1]).toStrictEqual(true);
-    expect(vec[2]).toStrictEqual(false);
+    expect(vec[0]).toBe(false);
+    expect(vec[1]).toBe(true);
+    expect(vec[2]).toBe(false);
   });
 
   it('can be modified via index', () => {
@@ -400,55 +400,55 @@ describe('vec3<bool>', () => {
   it('should create a vector using identity swizzle', () => {
     const vec = d.vec3b(false, true, true);
     const swizzled = vec.xyz;
-    expect(swizzled.x).toStrictEqual(false);
-    expect(swizzled.y).toStrictEqual(true);
-    expect(swizzled.z).toStrictEqual(true);
+    expect(swizzled.x).toBe(false);
+    expect(swizzled.y).toBe(true);
+    expect(swizzled.z).toBe(true);
   });
 
   it('should create a vector using mixed swizzle', () => {
     const vec = d.vec3b(false, true, true);
     const swizzled = vec.zyx;
-    expect(swizzled.x).toStrictEqual(true);
-    expect(swizzled.y).toStrictEqual(true);
-    expect(swizzled.z).toStrictEqual(false);
+    expect(swizzled.x).toBe(true);
+    expect(swizzled.y).toBe(true);
+    expect(swizzled.z).toBe(false);
   });
 
   it('should create a vector using swizzle with repeats', () => {
     const vec = d.vec3b(false, true, true);
     const swizzled = vec.yyx;
-    expect(swizzled.x).toStrictEqual(true);
-    expect(swizzled.y).toStrictEqual(true);
-    expect(swizzled.z).toStrictEqual(false);
+    expect(swizzled.x).toBe(true);
+    expect(swizzled.y).toBe(true);
+    expect(swizzled.z).toBe(false);
   });
 });
 
 describe('vec4f', () => {
   it('should span 16 bytes', () => {
-    expect(sizeOf(d.vec4f)).toStrictEqual(16);
+    expect(sizeOf(d.vec4f)).toBe(16);
   });
 
   it('should create a zero 4d vector', () => {
     const zero = d.vec4f();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
-    expect(zero.z).toStrictEqual(0);
-    expect(zero.w).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
+    expect(zero.z).toBe(0);
+    expect(zero.w).toBe(0);
   });
 
   it('should create a 4d vector with the given elements', () => {
     const vec = d.vec4f(1, 2, 3, 4);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
-    expect(vec.z).toStrictEqual(3);
-    expect(vec.w).toStrictEqual(4);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
+    expect(vec.z).toBe(3);
+    expect(vec.w).toBe(4);
   });
 
   it('should create a 4d vector from the given scalar element', () => {
     const vec = d.vec4f(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
-    expect(vec.z).toStrictEqual(5);
-    expect(vec.w).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
+    expect(vec.z).toBe(5);
+    expect(vec.w).toBe(5);
   });
 
   it('should encode a 4d vector', () => {
@@ -476,10 +476,10 @@ describe('vec4f', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec4f(1, 2, 3, 4);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
-    expect(vec[2]).toStrictEqual(3);
-    expect(vec[3]).toStrictEqual(4);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
+    expect(vec[2]).toBe(3);
+    expect(vec[3]).toBe(4);
   });
 
   it('can be modified via index', () => {
@@ -495,20 +495,20 @@ describe('vec4f', () => {
 describe('vec2h', () => {
   it('should create a zero 2d vector', () => {
     const zero = d.vec2h();
-    expect(zero.x).toStrictEqual(0);
-    expect(zero.y).toStrictEqual(0);
+    expect(zero.x).toBe(0);
+    expect(zero.y).toBe(0);
   });
 
   it('should create a 2d vector with the given elements', () => {
     const vec = d.vec2h(1, 2);
-    expect(vec.x).toStrictEqual(1);
-    expect(vec.y).toStrictEqual(2);
+    expect(vec.x).toBe(1);
+    expect(vec.y).toBe(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
     const vec = d.vec2h(5);
-    expect(vec.x).toStrictEqual(5);
-    expect(vec.y).toStrictEqual(5);
+    expect(vec.x).toBe(5);
+    expect(vec.y).toBe(5);
   });
 
   it('should encode a 2d vector', () => {
@@ -552,8 +552,8 @@ describe('vec2h', () => {
 
   it('can be indexed into', () => {
     const vec = d.vec2h(1, 2);
-    expect(vec[0]).toStrictEqual(1);
-    expect(vec[1]).toStrictEqual(2);
+    expect(vec[0]).toBe(1);
+    expect(vec[1]).toBe(2);
   });
 
   it('can be modified via index', () => {
@@ -585,7 +585,7 @@ describe('v3f', () => {
         })
         .$name('main');
 
-      expect(parseResolved({ main })).toStrictEqual(
+      expect(parseResolved({ main })).toBe(
         parse(`
           fn main() {
             var planarPosLocal = vec2f(1, 2);
@@ -621,7 +621,7 @@ describe('v4f', () => {
         })
         .$name('main');
 
-      expect(parseResolved({ main })).toStrictEqual(
+      expect(parseResolved({ main })).toBe(
         parse(`
           fn main() {
             var green = vec3f(0, 1, 0);
@@ -655,7 +655,7 @@ describe('v4f', () => {
         })
         .$name('main');
 
-      expect(parseResolved({ main })).toStrictEqual(
+      expect(parseResolved({ main })).toBe(
         parse(`
         fn main() {
           var fooLocal = vec3f(0.2, 0.3, 0.4);
@@ -692,7 +692,7 @@ describe('v4b', () => {
         })
         .$name('main');
 
-      expect(parseResolved({ main })).toStrictEqual(
+      expect(parseResolved({ main })).toBe(
         parse(`
           fn main() {
             var vecLocal = vec3<bool>(true, true, true);

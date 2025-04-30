@@ -16,7 +16,7 @@ describe('tgpu.fn', () => {
 
     const expected = parse('fn empty() {}');
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('should inject function declaration only once', () => {
@@ -46,7 +46,7 @@ describe('tgpu.fn', () => {
       }
     `);
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
@@ -97,7 +97,7 @@ describe('tgpu.fn', () => {
       }
     `);
 
-    expect(actual).toStrictEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('creates typed shell from parameters', () => {
