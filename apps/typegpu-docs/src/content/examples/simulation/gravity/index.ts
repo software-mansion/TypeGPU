@@ -43,7 +43,6 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const root = await tgpu.init();
-const device = root.device;
 context.configure({
   device: root.device,
   format: presentationFormat,
@@ -52,7 +51,7 @@ context.configure({
 
 // static resources (created on the example load)
 
-const sampler = device.createSampler({
+const sampler = root.device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
