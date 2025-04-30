@@ -168,7 +168,8 @@ export const radiusOf = tgpu['~unstable']
   .fn(
     [CelestialBody],
     d.f32,
-  )((body) => {
-    return std.pow((body.mass * 0.75) / Math.PI, 0.333) * body.radiusMultiplier;
-  })
+  )(
+    (body) =>
+      std.pow((body.mass * 0.75) / Math.PI, 0.333) * body.radiusMultiplier,
+  )
   .$name('radiusOf');

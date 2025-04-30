@@ -228,20 +228,18 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
   const celestialBodies: d.Infer<typeof CelestialBody>[] =
     presetData.celestialBodies.flatMap((group) =>
-      group.elements.map((element) => {
-        return {
-          destroyed: 0,
-          position: element.position,
-          velocity: element.velocity ?? d.vec3f(),
-          mass: element.mass,
-          radiusMultiplier: element.radiusMultiplier ?? 1,
-          collisionBehavior: element.collisionBehavior
-            ? collisionBehaviors[element.collisionBehavior]
-            : collisionBehaviors.none,
-          textureIndex: sphereTextureNames.indexOf(group.texture),
-          ambientLightFactor: element.ambientLightFactor ?? 0.6,
-        };
-      }),
+      group.elements.map((element) => ({
+        destroyed: 0,
+        position: element.position,
+        velocity: element.velocity ?? d.vec3f(),
+        mass: element.mass,
+        radiusMultiplier: element.radiusMultiplier ?? 1,
+        collisionBehavior: element.collisionBehavior
+          ? collisionBehaviors[element.collisionBehavior]
+          : collisionBehaviors.none,
+        textureIndex: sphereTextureNames.indexOf(group.texture),
+        ambientLightFactor: element.ambientLightFactor ?? 0.6,
+      })),
     );
 
   const computeBufferA = root

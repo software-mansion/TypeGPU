@@ -251,13 +251,11 @@ export const examplePresets: Record<Preset, PresetData> = {
     celestialBodies: [
       {
         texture: 'haumea-fictional',
-        elements: Array.from(Array(1000)).map(() => {
-          return {
-            position: randInBall(50),
-            mass: 0.1,
-            collisionBehavior: 'bounce',
-          };
-        }),
+        elements: Array.from(Array(1000)).map(() => ({
+          position: randInBall(50),
+          mass: 0.1,
+          collisionBehavior: 'bounce',
+        })),
       },
     ],
   },
@@ -267,13 +265,11 @@ export const examplePresets: Record<Preset, PresetData> = {
     celestialBodies: [
       {
         texture: 'ceres-fictional',
-        elements: Array.from(Array(5000)).map(() => {
-          return {
-            position: randInBall(50),
-            mass: rand(0.01, 0.05),
-            collisionBehavior: 'merge',
-          };
-        }),
+        elements: Array.from(Array(5000)).map(() => ({
+          position: randInBall(50),
+          mass: rand(0.01, 0.05),
+          collisionBehavior: 'merge',
+        })),
       },
     ],
   },

@@ -41,13 +41,13 @@ export const skyBoxFragment = tgpu['~unstable']
       texCoord: d.vec3f,
     },
     out: d.vec4f,
-  })((input) => {
-    return std.textureSample(
+  })((input) =>
+    std.textureSample(
       skyBoxLayout.$.skyBox,
       skyBoxLayout.$.sampler,
       std.normalize(input.texCoord),
-    );
-  })
+    ),
+  )
   .$name('skybox');
 
 export const mainVertex = tgpu['~unstable']
