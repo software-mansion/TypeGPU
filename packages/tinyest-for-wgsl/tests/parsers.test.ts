@@ -30,12 +30,12 @@ describe('transpileFn', () => {
     dualTest((p) => {
       const { argNames, body, externalNames } = transpileFn(p('() => {}'));
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: [],
       });
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toEqual([]);
+      expect(externalNames).toStrictEqual([]);
     }),
   );
 
@@ -46,12 +46,12 @@ describe('transpileFn', () => {
         p('function example() {}'),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: [],
       });
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toEqual([]);
+      expect(externalNames).toStrictEqual([]);
     }),
   );
 
@@ -62,14 +62,14 @@ describe('transpileFn', () => {
         p('(a, b) => a + b - c'),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: ['a', 'b'],
       });
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
-      expect(externalNames).toEqual(['c']);
+      expect(externalNames).toStrictEqual(['c']);
     }),
   );
 
@@ -83,7 +83,7 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: [],
       });
@@ -91,7 +91,7 @@ describe('transpileFn', () => {
         `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
-      expect(externalNames).toEqual(['c']);
+      expect(externalNames).toStrictEqual(['c']);
     }),
   );
 
@@ -107,7 +107,7 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: [],
       });
@@ -115,7 +115,7 @@ describe('transpileFn', () => {
         `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
-      expect(externalNames).toEqual(['c']);
+      expect(externalNames).toStrictEqual(['c']);
     }),
   );
 
@@ -126,7 +126,7 @@ describe('transpileFn', () => {
         p('() => external.outside.prop'),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'identifiers',
         names: [],
       });
@@ -134,7 +134,7 @@ describe('transpileFn', () => {
         `"[0,[[10,[7,[7,"external","outside"],"prop"]]]]"`,
       );
       // Only 'external' is external.
-      expect(externalNames).toEqual(['external']);
+      expect(externalNames).toStrictEqual(['external']);
     }),
   );
 
@@ -147,7 +147,7 @@ describe('transpileFn', () => {
         }`),
       );
 
-      expect(argNames).toEqual({
+      expect(argNames).toStrictEqual({
         type: 'destructured-object',
         props: [
           {
@@ -161,7 +161,7 @@ describe('transpileFn', () => {
         ],
       } satisfies ArgNames);
 
-      expect(externalNames).toEqual([]);
+      expect(externalNames).toStrictEqual([]);
     }),
   );
 });

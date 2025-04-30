@@ -82,8 +82,8 @@ describe('tgpu.vertexLayout', () => {
       d.disarrayOf(d.vec3f, count),
     );
 
-    expect(vertexLayout.stride).toEqual(12);
-    expect(vertexLayout.attrib).toEqual({
+    expect(vertexLayout.stride).toStrictEqual(12);
+    expect(vertexLayout.attrib).toStrictEqual({
       _layout: vertexLayout,
       format: 'float32x3',
       offset: 0,
@@ -101,8 +101,8 @@ describe('tgpu.vertexLayout', () => {
       d.disarrayOf(VertexData, count),
     );
 
-    expect(vertexLayout.stride).toEqual(32);
-    expect(vertexLayout.attrib).toEqual({
+    expect(vertexLayout.stride).toStrictEqual(32);
+    expect(vertexLayout.attrib).toStrictEqual({
       a: {
         _layout: vertexLayout,
         format: 'uint32',
@@ -132,8 +132,8 @@ describe('tgpu.vertexLayout', () => {
       d.disarrayOf(VertexData, count),
     );
 
-    expect(vertexLayout.stride).toEqual(20);
-    expect(vertexLayout.attrib).toEqual({
+    expect(vertexLayout.stride).toStrictEqual(20);
+    expect(vertexLayout.attrib).toStrictEqual({
       a: {
         _layout: vertexLayout,
         format: 'uint32',
@@ -157,8 +157,8 @@ describe('tgpu.vertexLayout', () => {
       d.disarrayOf(d.float16x4, count),
     );
 
-    expect(vertexLayout.stride).toEqual(8);
-    expect(vertexLayout.attrib).toEqual({
+    expect(vertexLayout.stride).toStrictEqual(8);
+    expect(vertexLayout.attrib).toStrictEqual({
       _layout: vertexLayout,
       format: 'float16x4',
       offset: 0,
@@ -172,7 +172,7 @@ describe('connectAttributesToShader', () => {
     const layout = tgpu.vertexLayout((n: number) => d.arrayOf(d.f32, n));
     const attrib = layout.attrib;
 
-    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 4,
@@ -197,7 +197,7 @@ describe('connectAttributesToShader', () => {
     );
     const attrib = layout.attrib;
 
-    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 8,
@@ -240,7 +240,7 @@ describe('connectAttributesToShader', () => {
       a: layout.attrib.alpha,
     });
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 10,
@@ -295,7 +295,7 @@ describe('connectAttributesToShader', () => {
       a: alphaBetaLayout.attrib.alpha,
     });
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 6,
@@ -336,7 +336,7 @@ describe('connectAttributesToShader', () => {
     );
     const attrib = layout.attrib;
 
-    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 8,
@@ -382,7 +382,7 @@ describe('connectAttributesToShader', () => {
       a: layout.attrib.alpha,
     });
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       bufferDefinitions: [
         {
           arrayStride: 12,

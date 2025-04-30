@@ -43,7 +43,7 @@ function expectInstruction(
   }
 
   expect(instruction.data).toHaveLength(totalByteLength);
-  expect(instruction.data).toEqual(mergedExpected);
+  expect(instruction.data).toStrictEqual(mergedExpected);
 }
 
 describe('offsetsForProps', () => {

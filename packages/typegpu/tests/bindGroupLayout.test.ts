@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   type F32,
   type U32,
@@ -13,15 +14,13 @@ import {
 } from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
-  type TgpuBufferUniform,
-  type TgpuBufferReadonly,
   type TgpuBufferMutable,
-  type TgpuWriteonlyTexture,
-  type TgpuSampledTexture,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
   type TgpuMutableTexture,
+  type TgpuSampledTexture,
+  type TgpuWriteonlyTexture,
 } from '../src/index.ts';
-import './utils/webgpuGlobals.ts';
-import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -31,6 +30,7 @@ import {
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
+import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
@@ -214,7 +214,7 @@ describe('TgpuBindGroupLayout', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
       @group(0) @binding(0) var fooTexture: texture_1d<f32>;
 

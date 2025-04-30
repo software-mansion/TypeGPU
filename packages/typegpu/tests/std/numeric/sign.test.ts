@@ -4,9 +4,9 @@ import { isCloseTo, sign } from '../../../src/std/index.ts';
 
 describe('sign', () => {
   it('computes sign of numeric value', () => {
-    expect(sign(-1000)).toEqual(-1);
-    expect(sign(0)).toEqual(0);
-    expect(sign(2000)).toEqual(1);
+    expect(sign(-1000)).toStrictEqual(-1);
+    expect(sign(0)).toStrictEqual(0);
+    expect(sign(2000)).toStrictEqual(1);
   });
 
   it('computes sign of a numeric vector', () => {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.const', () => {
   it('should inject const declaration when used in functions', () => {
@@ -14,7 +13,7 @@ describe('tgpu.const', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved({ fn1 })).toEqual(
+    expect(parseResolved({ fn1 })).toStrictEqual(
       parse(`
         const x = 2;
         fn fn1() {
@@ -50,7 +49,7 @@ describe('tgpu.const', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         struct Boid {
           pos: vec3f,

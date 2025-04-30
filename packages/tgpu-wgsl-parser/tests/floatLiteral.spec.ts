@@ -23,7 +23,7 @@ describe('float_literal', () => {
 
   it('parses float', () => {
     for (const exampleFloat of EXAMPLE_FLOAT_LITERALS) {
-      expect(parse(exampleFloat)).toEqual({
+      expect(parse(exampleFloat)).toStrictEqual({
         type: 'float_literal',
         value: exampleFloat,
       } satisfies FloatLiteral);

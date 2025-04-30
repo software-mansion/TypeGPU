@@ -11,21 +11,21 @@ describe('d.unstruct', () => {
       c: d.float32x3, // 4 bytes * 3 = 12
       // Total: 2 + 4 + 12 = 18
     });
-    expect(d.sizeOf(s)).toEqual(18);
+    expect(d.sizeOf(s)).toStrictEqual(18);
 
     const s2 = d.unstruct({
       a: d.unorm10_10_10_2, // 4 bytes
       b: d.sint16x4, // 2 bytes * 4 = 8
       // Total: 4 + 8 = 12
     });
-    expect(d.sizeOf(s2)).toEqual(12);
+    expect(d.sizeOf(s2)).toStrictEqual(12);
 
     const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.vec3u, // 12 bytes
       // Total: 8 + 12 = 20
     });
-    expect(d.sizeOf(s3)).toEqual(20);
+    expect(d.sizeOf(s3)).toStrictEqual(20);
   });
 
   it('properly calculates size with only aligned members', () => {
@@ -35,7 +35,7 @@ describe('d.unstruct', () => {
       c: d.align(16, d.float32x3), // 12 padding bytes + 12 bytes = 24
       // Total: 2 + 18 + 24 = 44
     });
-    expect(d.sizeOf(s)).toEqual(44);
+    expect(d.sizeOf(s)).toStrictEqual(44);
 
     const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
@@ -43,7 +43,7 @@ describe('d.unstruct', () => {
       c: d.align(16, d.vec3f), // 8 padding bytes + 12 bytes = 20
       // Total: 4 + 20 + 20 = 44
     });
-    expect(d.sizeOf(s2)).toEqual(44);
+    expect(d.sizeOf(s2)).toStrictEqual(44);
   });
 
   it('properly calculates size with mixed members', () => {
@@ -53,7 +53,7 @@ describe('d.unstruct', () => {
       c: d.float32x3, // 12 bytes
       // Total: 2 + 18 + 12 = 32
     });
-    expect(d.sizeOf(s)).toEqual(32);
+    expect(d.sizeOf(s)).toStrictEqual(32);
 
     const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
@@ -61,7 +61,7 @@ describe('d.unstruct', () => {
       c: d.vec3f, // 12 bytes
       // Total: 4 + 8 + 12 = 24
     });
-    expect(d.sizeOf(s2)).toEqual(24);
+    expect(d.sizeOf(s2)).toStrictEqual(24);
 
     const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
@@ -69,7 +69,7 @@ describe('d.unstruct', () => {
       c: d.unorm10_10_10_2, // 4 bytes
       // Total: 8 + 20 + 4 = 32
     });
-    expect(d.sizeOf(s3)).toEqual(32);
+    expect(d.sizeOf(s3)).toStrictEqual(32);
   });
 
   it('properly calculates size when nested and combined with d.disarray', () => {
@@ -79,7 +79,7 @@ describe('d.unstruct', () => {
       c: d.disarrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
       // Total: 2 + 18 + 24 = 44
     });
-    expect(d.sizeOf(s)).toEqual(44);
+    expect(d.sizeOf(s)).toStrictEqual(44);
 
     const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
@@ -87,14 +87,14 @@ describe('d.unstruct', () => {
       c: d.disarrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
       // Total: 4 + 8 + 24 = 36
     });
-    expect(d.sizeOf(s2)).toEqual(36);
+    expect(d.sizeOf(s2)).toStrictEqual(36);
 
     const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.align(16, d.vec3u), // 8 padding bytes + 12 bytes = 20
       // Total: 8 + 20 = 28
     });
-    expect(d.sizeOf(s3)).toEqual(28);
+    expect(d.sizeOf(s3)).toStrictEqual(28);
 
     const s4 = d.unstruct({
       a: d.vec2f, // 8 bytes
@@ -102,7 +102,7 @@ describe('d.unstruct', () => {
       c: s2, // 4 padding bytes + 36 bytes = 40
       // Total: 8 + 20 + 40 = 68
     });
-    expect(d.sizeOf(s4)).toEqual(68);
+    expect(d.sizeOf(s4)).toStrictEqual(68);
   });
 
   it('properly writes and reads data', () => {
@@ -165,8 +165,8 @@ describe('d.unstruct', () => {
     expect(data.c.a.x).toBeCloseTo(1.0);
     expect(data.c.a.y).toBeCloseTo(2.0);
     expect(data.c.a.z).toBeCloseTo(3.0);
-    expect(data.c.b.x).toEqual(4);
-    expect(data.c.b.y).toEqual(5);
+    expect(data.c.b.x).toStrictEqual(4);
+    expect(data.c.b.y).toStrictEqual(5);
   });
 
   it('can be custom aligned and behaves properly', () => {
@@ -180,9 +180,9 @@ describe('d.unstruct', () => {
 
     const a = d.disarrayOf(s, 8);
 
-    expect(d.sizeOf(s)).toEqual(12);
+    expect(d.sizeOf(s)).toStrictEqual(12);
     // since the struct is aligned to 16 bytes, the array stride should be 16 not 12
-    expect(d.sizeOf(a)).toEqual(16 * 8);
+    expect(d.sizeOf(a)).toStrictEqual(16 * 8);
 
     const buffer = new ArrayBuffer(d.sizeOf(a));
     const writer = new BufferWriter(buffer);

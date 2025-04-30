@@ -6,11 +6,11 @@ const INDENT_SPACES_COUNT = 2;
 describe('IndentController', () => {
   it('indents properly', () => {
     const controller = new IndentController();
-    expect(controller.pre.length).toEqual(0);
+    expect(controller.pre.length).toStrictEqual(0);
 
     for (let i = 1; i < 100; i++) {
       controller.indent();
-      expect(controller.pre.length).toEqual(i * INDENT_SPACES_COUNT);
+      expect(controller.pre.length).toStrictEqual(i * INDENT_SPACES_COUNT);
     }
   });
 
@@ -31,6 +31,6 @@ describe('IndentController', () => {
     controller.dedent(); // -> 6
     controller.indent(); // -> 7
 
-    expect(controller.pre.length).toEqual(7 * INDENT_SPACES_COUNT);
+    expect(controller.pre.length).toStrictEqual(7 * INDENT_SPACES_COUNT);
   });
 });

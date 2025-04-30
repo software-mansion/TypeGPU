@@ -4,44 +4,46 @@ import { parse } from '../src/index.ts';
 
 describe('struct_decl', () => {
   it('parses struct with simple members', () => {
-    expect(parse('struct Gradient { from: vec3f, to: vec3f, };')).toEqual({
-      declarations: [
-        {
-          type: 'struct_decl',
-          ident: 'Gradient',
-          members: [
-            {
-              type: 'struct_member',
-              ident: 'from',
-              attrs: [],
-              typespec: {
-                type: 'template_elaborated_ident',
-                ident: 'vec3f',
-                template_list: null,
-              },
-            } satisfies StructMember,
-            {
-              type: 'struct_member',
-              ident: 'to',
-              attrs: [],
-              typespec: {
-                type: 'template_elaborated_ident',
-                ident: 'vec3f',
-                template_list: null,
-              },
-            } satisfies StructMember,
-          ],
-        } satisfies StructDecl,
-        null,
-      ],
-      type: 'translation_unit',
-    });
+    expect(parse('struct Gradient { from: vec3f, to: vec3f, };')).toStrictEqual(
+      {
+        declarations: [
+          {
+            type: 'struct_decl',
+            ident: 'Gradient',
+            members: [
+              {
+                type: 'struct_member',
+                ident: 'from',
+                attrs: [],
+                typespec: {
+                  type: 'template_elaborated_ident',
+                  ident: 'vec3f',
+                  template_list: null,
+                },
+              } satisfies StructMember,
+              {
+                type: 'struct_member',
+                ident: 'to',
+                attrs: [],
+                typespec: {
+                  type: 'template_elaborated_ident',
+                  ident: 'vec3f',
+                  template_list: null,
+                },
+              } satisfies StructMember,
+            ],
+          } satisfies StructDecl,
+          null,
+        ],
+        type: 'translation_unit',
+      },
+    );
   });
 
   it('parses struct with members with attributes', () => {
     expect(
       parse('struct Gradient { @size(32) from: vec3f, to: vec3f }'),
-    ).toEqual({
+    ).toStrictEqual({
       declarations: [
         {
           type: 'struct_decl',
@@ -85,7 +87,7 @@ describe('struct_decl', () => {
       parse(
         'struct Gradient { @size(32) from: vec2<f32>, @align(32) to: vec3f }',
       ),
-    ).toEqual({
+    ).toStrictEqual({
       declarations: [
         {
           type: 'struct_decl',
@@ -141,7 +143,7 @@ describe('struct_decl', () => {
       parse(
         'struct Gradient { from: vec3f, to: vec3f, }; struct Material { color: vec3f, gradient: Gradient, };',
       ),
-    ).toEqual({
+    ).toStrictEqual({
       declarations: [
         {
           type: 'struct_decl',

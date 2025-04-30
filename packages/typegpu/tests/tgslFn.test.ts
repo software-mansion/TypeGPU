@@ -15,7 +15,7 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('get_x');
 
-    expect(getX.label).toEqual('get_x');
+    expect(getX.label).toStrictEqual('get_x');
   });
 
   it('resolves fn to WGSL', () => {
@@ -35,7 +35,7 @@ describe('TGSL tgpu.fn function', () => {
         return 3;
       }`);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves externals', () => {
@@ -94,7 +94,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves structs', () => {
@@ -125,7 +125,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves deeply nested structs', () => {
@@ -180,7 +180,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves vertexFn', () => {
@@ -229,7 +229,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves computeFn', () => {
@@ -261,7 +261,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('rejects invalid arguments for computeFn', () => {
@@ -334,7 +334,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves fragmentFn with a single output', () => {
@@ -357,7 +357,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('allows for an object based on return type struct to be returned', () => {
@@ -396,7 +396,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('correctly handles object based on return type struct with a function call inside another function', () => {
@@ -453,13 +453,13 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toStrictEqual(expected);
   });
 
   it('resolves its header based on the shell, not AST, allowing passing function accepting a subset of arguments', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a) => a);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toStrictEqual(
       parse(`fn foo(a: u32, arg_1: u32) -> u32 {
         return a;
       }`),
@@ -472,7 +472,7 @@ describe('TGSL tgpu.fn function', () => {
       d.u32,
     )(({ a }) => a);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toStrictEqual(
       parse(`fn foo(a: u32, b: u32) -> u32 {
         return a;
       }`),
@@ -482,7 +482,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function with no arguments', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(() => 2);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toStrictEqual(
       parse(`fn foo(arg_0: u32, arg_1: u32) -> u32 {
         return 2;
       }`),
@@ -492,7 +492,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function with no arguments (object args)', () => {
     const foo = tgpu['~unstable'].fn({ a: d.u32, b: d.u32 }, d.u32)(() => 2);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toStrictEqual(
       parse(`fn foo(a: u32, b: u32) -> u32 {
         return 2;
       }`),
@@ -514,7 +514,7 @@ describe('TGSL tgpu.fn function', () => {
       expect(() => add({ x: 2, y: 3 })).toThrow(
         'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
-      expect(parseResolved({ add })).toEqual(
+      expect(parseResolved({ add })).toStrictEqual(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -529,9 +529,9 @@ describe('TGSL tgpu.fn function', () => {
 
       const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(addKernelJs);
 
-      expect(addKernelJs({ x: 2, y: 3 })).toEqual(5);
-      expect(add({ x: 2, y: 3 })).toEqual(5);
-      expect(parseResolved({ add })).toEqual(
+      expect(addKernelJs({ x: 2, y: 3 })).toStrictEqual(5);
+      expect(add({ x: 2, y: 3 })).toStrictEqual(5);
+      expect(parseResolved({ add })).toStrictEqual(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -547,7 +547,7 @@ describe('TGSL tgpu.fn function', () => {
       );
 
       expect(() => add({ x: 2, y: 3 })).toThrow();
-      expect(parseResolved({ add })).toEqual(
+      expect(parseResolved({ add })).toStrictEqual(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -560,7 +560,7 @@ describe('TGSL tgpu.fn function', () => {
       );
 
       expect(() => add({ x: 2, y: 3 })).toThrow();
-      expect(parseResolved({ add })).toEqual(
+      expect(parseResolved({ add })).toStrictEqual(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -575,8 +575,8 @@ describe('TGSL tgpu.fn function', () => {
         },
       );
 
-      expect(add({ x: 2, y: 3 })).toEqual(5);
-      expect(parseResolved({ add })).toEqual(
+      expect(add({ x: 2, y: 3 })).toStrictEqual(5);
+      expect(parseResolved({ add })).toStrictEqual(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -605,6 +605,6 @@ describe('TGSL tgpu.fn function', () => {
   //     }
   //   `);
 
-  //   expect(actual).toEqual(expected);
+  //   expect(actual).toStrictEqual(expected);
   // });
 });

@@ -28,7 +28,7 @@ describe('TgpuBufferUniform', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<uniform> param: f32;
 
@@ -51,7 +51,7 @@ describe('TgpuBufferUniform', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<uniform> param: f32;
 
@@ -82,7 +82,7 @@ describe('TgpuBufferUniform', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         struct Boid {
           pos: vec3f,
@@ -120,7 +120,7 @@ describe('TgpuBufferMutable', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<storage, read_write> param: f32;
 
@@ -143,7 +143,7 @@ describe('TgpuBufferMutable', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<storage, read_write> param: f32;
 
@@ -174,7 +174,7 @@ describe('TgpuBufferMutable', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         struct Boid {
           pos: vec3f,
@@ -212,7 +212,7 @@ describe('TgpuBufferReadonly', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<storage, read> param: f32;
 
@@ -235,7 +235,7 @@ describe('TgpuBufferReadonly', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         @group(0) @binding(0) var<storage, read> param: f32;
 
@@ -266,7 +266,7 @@ describe('TgpuBufferReadonly', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toStrictEqual(
       parse(`
         struct Boid {
           pos: vec3f,

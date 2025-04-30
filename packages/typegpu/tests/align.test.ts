@@ -27,7 +27,7 @@ describe('d.align', () => {
           c: d.u32,
         }),
       ),
-    ).toEqual(4);
+    ).toStrictEqual(4);
 
     expect(
       alignmentOf(
@@ -37,7 +37,7 @@ describe('d.align', () => {
           c: d.u32,
         }),
       ),
-    ).toEqual(16);
+    ).toStrictEqual(16);
   });
 
   it('changes size of a struct containing aligned member', () => {
@@ -49,7 +49,7 @@ describe('d.align', () => {
           c: d.u32,
         }),
       ),
-    ).toEqual(12);
+    ).toStrictEqual(12);
 
     expect(
       d.sizeOf(
@@ -59,7 +59,7 @@ describe('d.align', () => {
           c: d.u32,
         }),
       ),
-    ).toEqual(32);
+    ).toStrictEqual(32);
 
     expect(
       d.sizeOf(
@@ -69,7 +69,7 @@ describe('d.align', () => {
           c: d.align(16, d.u32),
         }),
       ),
-    ).toEqual(48);
+    ).toStrictEqual(48);
 
     // nested
     const FooStruct = d.struct({
@@ -79,7 +79,7 @@ describe('d.align', () => {
         d: d.align(16, d.f32),
       }),
     });
-    expect(d.sizeOf(FooStruct)).toEqual(48);
+    expect(d.sizeOf(FooStruct)).toStrictEqual(48);
 
     expect(
       d.sizeOf(
@@ -94,7 +94,7 @@ describe('d.align', () => {
           ),
         }),
       ),
-    ).toEqual(64);
+    ).toStrictEqual(64);
   });
 
   it('throws for invalid align values', () => {
@@ -113,12 +113,12 @@ describe('d.align', () => {
     expectTypeOf(alignedArray).toEqualTypeOf<
       d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>
     >();
-    expect(d.isLooseData(alignedArray)).toEqual(false);
+    expect(d.isLooseData(alignedArray)).toStrictEqual(false);
 
     expectTypeOf(alignedDisarray).toEqualTypeOf<
       d.LooseDecorated<d.Disarray<d.Vec3f>, [d.Align<16>]>
     >();
-    expect(d.isLooseData(alignedDisarray)).toEqual(true);
+    expect(d.isLooseData(alignedDisarray)).toStrictEqual(true);
   });
 
   it('does not allow aligned loose data as non-loose struct members', () => {

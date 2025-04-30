@@ -8,22 +8,22 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
     const zero2x2 = d.mat2x2f();
-    expect(zero2x2.columns[0]).toEqual(d.vec2f());
-    expect(zero2x2.columns[1]).toEqual(d.vec2f());
+    expect(zero2x2.columns[0]).toStrictEqual(d.vec2f());
+    expect(zero2x2.columns[1]).toStrictEqual(d.vec2f());
   });
 
   it('creates a 2x2 matrix with given elements', () => {
     const mat = d.mat2x2f(0, 1, 2, 3);
-    expect(mat.columns[0]).toEqual(d.vec2f(0, 1));
-    expect(mat.columns[1]).toEqual(d.vec2f(2, 3));
+    expect(mat.columns[0]).toStrictEqual(d.vec2f(0, 1));
+    expect(mat.columns[1]).toStrictEqual(d.vec2f(2, 3));
   });
 
   it('creates a 2x2 matrix with given column vectors', () => {
     const v0 = d.vec2f(0, 1);
     const v1 = d.vec2f(1, 2);
     const mat = d.mat2x2f(v0, v1);
-    expect(mat.columns[0]).toEqual(v0);
-    expect(mat.columns[1]).toEqual(v1);
+    expect(mat.columns[0]).toStrictEqual(v0);
+    expect(mat.columns[1]).toStrictEqual(v1);
   });
 
   it('encodes identity matrix properly', () => {
@@ -35,7 +35,9 @@ describe('mat2x2f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
     writeData(new BufferWriter(buffer), d.mat2x2f, identity);
-    expect(readData(new BufferReader(buffer), d.mat2x2f)).toEqual(identity);
+    expect(readData(new BufferReader(buffer), d.mat2x2f)).toStrictEqual(
+      identity,
+    );
   });
 
   it('encodes a matrix properly', () => {
@@ -47,7 +49,7 @@ describe('mat2x2f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
     writeData(new BufferWriter(buffer), d.mat2x2f, mat);
-    expect(readData(new BufferReader(buffer), d.mat2x2f)).toEqual(mat);
+    expect(readData(new BufferReader(buffer), d.mat2x2f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {
@@ -56,12 +58,12 @@ describe('mat2x2f', () => {
       d.vec2f(2, 3), // column 1
     );
 
-    expect(d.matToArray(mat)).toEqual([0, 1, 2, 3]);
-    expect(mat.length).toEqual(4);
-    expect(mat[0]).toEqual(0);
-    expect(mat[1]).toEqual(1);
-    expect(mat[2]).toEqual(2);
-    expect(mat[3]).toEqual(3);
+    expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3]);
+    expect(mat.length).toStrictEqual(4);
+    expect(mat[0]).toStrictEqual(0);
+    expect(mat[1]).toStrictEqual(1);
+    expect(mat[2]).toStrictEqual(2);
+    expect(mat[3]).toStrictEqual(3);
   });
 
   it('is mutable through indexing', () => {
@@ -75,9 +77,9 @@ describe('mat2x2f', () => {
     mat[2] = 6;
     mat[3] = 7;
 
-    expect(mat.columns[0]).toEqual(d.vec2f(4, 5));
-    expect(mat.columns[1]).toEqual(d.vec2f(6, 7));
-    expect(d.matToArray(mat)).toEqual([4, 5, 6, 7]);
+    expect(mat.columns[0]).toStrictEqual(d.vec2f(4, 5));
+    expect(mat.columns[1]).toStrictEqual(d.vec2f(6, 7));
+    expect(d.matToArray(mat)).toStrictEqual([4, 5, 6, 7]);
   });
 
   it('creates a matrix that resolves properly', () => {
@@ -95,16 +97,16 @@ describe('mat2x2f', () => {
 describe('mat3x3f', () => {
   it('creates a 3x3 matrix with zeros', () => {
     const zero3x3 = d.mat3x3f();
-    expect(zero3x3.columns[0]).toEqual(d.vec3f());
-    expect(zero3x3.columns[1]).toEqual(d.vec3f());
-    expect(zero3x3.columns[2]).toEqual(d.vec3f());
+    expect(zero3x3.columns[0]).toStrictEqual(d.vec3f());
+    expect(zero3x3.columns[1]).toStrictEqual(d.vec3f());
+    expect(zero3x3.columns[2]).toStrictEqual(d.vec3f());
   });
 
   it('creates a 3x3 matrix with given elements', () => {
     const mat = d.mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8);
-    expect(mat.columns[0]).toEqual(d.vec3f(0, 1, 2));
-    expect(mat.columns[1]).toEqual(d.vec3f(3, 4, 5));
-    expect(mat.columns[2]).toEqual(d.vec3f(6, 7, 8));
+    expect(mat.columns[0]).toStrictEqual(d.vec3f(0, 1, 2));
+    expect(mat.columns[1]).toStrictEqual(d.vec3f(3, 4, 5));
+    expect(mat.columns[2]).toStrictEqual(d.vec3f(6, 7, 8));
   });
 
   it('creates a 3x3 matrix with given column vectors', () => {
@@ -112,9 +114,9 @@ describe('mat3x3f', () => {
     const v1 = d.vec3f(3, 4, 5);
     const v2 = d.vec3f(6, 7, 8);
     const mat = d.mat3x3f(v0, v1, v2);
-    expect(mat.columns[0]).toEqual(v0);
-    expect(mat.columns[1]).toEqual(v1);
-    expect(mat.columns[2]).toEqual(v2);
+    expect(mat.columns[0]).toStrictEqual(v0);
+    expect(mat.columns[1]).toStrictEqual(v1);
+    expect(mat.columns[2]).toStrictEqual(v2);
   });
 
   it('encodes identity matrix properly', () => {
@@ -127,7 +129,9 @@ describe('mat3x3f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
     writeData(new BufferWriter(buffer), d.mat3x3f, identity);
-    expect(readData(new BufferReader(buffer), d.mat3x3f)).toEqual(identity);
+    expect(readData(new BufferReader(buffer), d.mat3x3f)).toStrictEqual(
+      identity,
+    );
   });
 
   it('encodes a matrix properly', () => {
@@ -140,7 +144,7 @@ describe('mat3x3f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
     writeData(new BufferWriter(buffer), d.mat3x3f, mat);
-    expect(readData(new BufferReader(buffer), d.mat3x3f)).toEqual(mat);
+    expect(readData(new BufferReader(buffer), d.mat3x3f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {
@@ -150,19 +154,19 @@ describe('mat3x3f', () => {
       d.vec3f(6, 7, 8), // column 2
     );
 
-    expect(d.matToArray(mat)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(mat.length).toEqual(12);
-    expect(mat[0]).toEqual(0);
-    expect(mat[1]).toEqual(1);
-    expect(mat[2]).toEqual(2);
-    expect(mat[3]).toEqual(0);
-    expect(mat[4]).toEqual(3);
-    expect(mat[5]).toEqual(4);
-    expect(mat[6]).toEqual(5);
-    expect(mat[7]).toEqual(0);
-    expect(mat[8]).toEqual(6);
-    expect(mat[9]).toEqual(7);
-    expect(mat[10]).toEqual(8);
+    expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(mat.length).toStrictEqual(12);
+    expect(mat[0]).toStrictEqual(0);
+    expect(mat[1]).toStrictEqual(1);
+    expect(mat[2]).toStrictEqual(2);
+    expect(mat[3]).toStrictEqual(0);
+    expect(mat[4]).toStrictEqual(3);
+    expect(mat[5]).toStrictEqual(4);
+    expect(mat[6]).toStrictEqual(5);
+    expect(mat[7]).toStrictEqual(0);
+    expect(mat[8]).toStrictEqual(6);
+    expect(mat[9]).toStrictEqual(7);
+    expect(mat[10]).toStrictEqual(8);
   });
 
   it('is mutable through indexing', () => {
@@ -179,19 +183,21 @@ describe('mat3x3f', () => {
     mat[5] = 13;
     mat[6] = 14;
 
-    expect(mat.columns[0]).toEqual(d.vec3f(9, 10, 11));
-    expect(mat.columns[1]).toEqual(d.vec3f(12, 13, 14));
-    expect(mat.columns[2]).toEqual(d.vec3f(6, 7, 8));
-    expect(d.matToArray(mat)).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
+    expect(mat.columns[0]).toStrictEqual(d.vec3f(9, 10, 11));
+    expect(mat.columns[1]).toStrictEqual(d.vec3f(12, 13, 14));
+    expect(mat.columns[2]).toStrictEqual(d.vec3f(6, 7, 8));
+    expect(d.matToArray(mat)).toStrictEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
 
     mat[8] = 15;
     mat[9] = 16;
     mat[10] = 17;
 
-    expect(mat.columns[0]).toEqual(d.vec3f(9, 10, 11));
-    expect(mat.columns[1]).toEqual(d.vec3f(12, 13, 14));
-    expect(mat.columns[2]).toEqual(d.vec3f(15, 16, 17));
-    expect(d.matToArray(mat)).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(mat.columns[0]).toStrictEqual(d.vec3f(9, 10, 11));
+    expect(mat.columns[1]).toStrictEqual(d.vec3f(12, 13, 14));
+    expect(mat.columns[2]).toStrictEqual(d.vec3f(15, 16, 17));
+    expect(d.matToArray(mat)).toStrictEqual([
+      9, 10, 11, 12, 13, 14, 15, 16, 17,
+    ]);
   });
 
   it('creates a matrix that resolves properly', () => {
@@ -210,18 +216,18 @@ describe('mat3x3f', () => {
 describe('mat4x4f', () => {
   it('creates a 4x4 matrix with zeros', () => {
     const zero4x4 = d.mat4x4f();
-    expect(zero4x4.columns[0]).toEqual(d.vec4f(0, 0, 0, 0));
-    expect(zero4x4.columns[1]).toEqual(d.vec4f(0, 0, 0, 0));
-    expect(zero4x4.columns[2]).toEqual(d.vec4f(0, 0, 0, 0));
-    expect(zero4x4.columns[3]).toEqual(d.vec4f(0, 0, 0, 0));
+    expect(zero4x4.columns[0]).toStrictEqual(d.vec4f(0, 0, 0, 0));
+    expect(zero4x4.columns[1]).toStrictEqual(d.vec4f(0, 0, 0, 0));
+    expect(zero4x4.columns[2]).toStrictEqual(d.vec4f(0, 0, 0, 0));
+    expect(zero4x4.columns[3]).toStrictEqual(d.vec4f(0, 0, 0, 0));
   });
 
   it('creates a 4x4 matrix with given elements', () => {
     const mat = d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-    expect(mat.columns[0]).toEqual(d.vec4f(0, 1, 2, 3));
-    expect(mat.columns[1]).toEqual(d.vec4f(4, 5, 6, 7));
-    expect(mat.columns[2]).toEqual(d.vec4f(8, 9, 10, 11));
-    expect(mat.columns[3]).toEqual(d.vec4f(12, 13, 14, 15));
+    expect(mat.columns[0]).toStrictEqual(d.vec4f(0, 1, 2, 3));
+    expect(mat.columns[1]).toStrictEqual(d.vec4f(4, 5, 6, 7));
+    expect(mat.columns[2]).toStrictEqual(d.vec4f(8, 9, 10, 11));
+    expect(mat.columns[3]).toStrictEqual(d.vec4f(12, 13, 14, 15));
   });
 
   it('creates a 4x4 matrix with given column vectors', () => {
@@ -230,10 +236,10 @@ describe('mat4x4f', () => {
     const v2 = d.vec4f(8, 9, 10, 11);
     const v3 = d.vec4f(12, 13, 14, 15);
     const mat = d.mat4x4f(v0, v1, v2, v3);
-    expect(mat.columns[0]).toEqual(v0);
-    expect(mat.columns[1]).toEqual(v1);
-    expect(mat.columns[2]).toEqual(v2);
-    expect(mat.columns[3]).toEqual(v3);
+    expect(mat.columns[0]).toStrictEqual(v0);
+    expect(mat.columns[1]).toStrictEqual(v1);
+    expect(mat.columns[2]).toStrictEqual(v2);
+    expect(mat.columns[3]).toStrictEqual(v3);
   });
 
   it('encodes identity matrix properly', () => {
@@ -247,7 +253,9 @@ describe('mat4x4f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
     writeData(new BufferWriter(buffer), d.mat4x4f, identity);
-    expect(readData(new BufferReader(buffer), d.mat4x4f)).toEqual(identity);
+    expect(readData(new BufferReader(buffer), d.mat4x4f)).toStrictEqual(
+      identity,
+    );
   });
 
   it('encodes a matrix properly', () => {
@@ -261,7 +269,7 @@ describe('mat4x4f', () => {
     const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
     writeData(new BufferWriter(buffer), d.mat4x4f, mat);
-    expect(readData(new BufferReader(buffer), d.mat4x4f)).toEqual(mat);
+    expect(readData(new BufferReader(buffer), d.mat4x4f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {
@@ -272,26 +280,26 @@ describe('mat4x4f', () => {
       d.vec4f(12, 13, 14, 15), // column 3
     );
 
-    expect(d.matToArray(mat)).toEqual([
+    expect(d.matToArray(mat)).toStrictEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
-    expect(mat.length).toEqual(16);
-    expect(mat[0]).toEqual(0);
-    expect(mat[1]).toEqual(1);
-    expect(mat[2]).toEqual(2);
-    expect(mat[3]).toEqual(3);
-    expect(mat[4]).toEqual(4);
-    expect(mat[5]).toEqual(5);
-    expect(mat[6]).toEqual(6);
-    expect(mat[7]).toEqual(7);
-    expect(mat[8]).toEqual(8);
-    expect(mat[9]).toEqual(9);
-    expect(mat[10]).toEqual(10);
-    expect(mat[11]).toEqual(11);
-    expect(mat[12]).toEqual(12);
-    expect(mat[13]).toEqual(13);
-    expect(mat[14]).toEqual(14);
-    expect(mat[15]).toEqual(15);
+    expect(mat.length).toStrictEqual(16);
+    expect(mat[0]).toStrictEqual(0);
+    expect(mat[1]).toStrictEqual(1);
+    expect(mat[2]).toStrictEqual(2);
+    expect(mat[3]).toStrictEqual(3);
+    expect(mat[4]).toStrictEqual(4);
+    expect(mat[5]).toStrictEqual(5);
+    expect(mat[6]).toStrictEqual(6);
+    expect(mat[7]).toStrictEqual(7);
+    expect(mat[8]).toStrictEqual(8);
+    expect(mat[9]).toStrictEqual(9);
+    expect(mat[10]).toStrictEqual(10);
+    expect(mat[11]).toStrictEqual(11);
+    expect(mat[12]).toStrictEqual(12);
+    expect(mat[13]).toStrictEqual(13);
+    expect(mat[14]).toStrictEqual(14);
+    expect(mat[15]).toStrictEqual(15);
   });
 
   it('is mutable through indexing', () => {
@@ -302,11 +310,11 @@ describe('mat4x4f', () => {
       d.vec4f(12, 13, 14, 15), // column 3
     );
 
-    expect(mat.columns[0]).toEqual(d.vec4f(0, 1, 2, 3));
-    expect(mat.columns[1]).toEqual(d.vec4f(4, 5, 6, 7));
-    expect(mat.columns[2]).toEqual(d.vec4f(8, 9, 10, 11));
-    expect(mat.columns[3]).toEqual(d.vec4f(12, 13, 14, 15));
-    expect(d.matToArray(mat)).toEqual([
+    expect(mat.columns[0]).toStrictEqual(d.vec4f(0, 1, 2, 3));
+    expect(mat.columns[1]).toStrictEqual(d.vec4f(4, 5, 6, 7));
+    expect(mat.columns[2]).toStrictEqual(d.vec4f(8, 9, 10, 11));
+    expect(mat.columns[3]).toStrictEqual(d.vec4f(12, 13, 14, 15));
+    expect(d.matToArray(mat)).toStrictEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
 
@@ -315,11 +323,11 @@ describe('mat4x4f', () => {
     mat[2] = 18;
     mat[3] = 19;
 
-    expect(mat.columns[0]).toEqual(d.vec4f(16, 17, 18, 19));
-    expect(mat.columns[1]).toEqual(d.vec4f(4, 5, 6, 7));
-    expect(mat.columns[2]).toEqual(d.vec4f(8, 9, 10, 11));
-    expect(mat.columns[3]).toEqual(d.vec4f(12, 13, 14, 15));
-    expect(d.matToArray(mat)).toEqual([
+    expect(mat.columns[0]).toStrictEqual(d.vec4f(16, 17, 18, 19));
+    expect(mat.columns[1]).toStrictEqual(d.vec4f(4, 5, 6, 7));
+    expect(mat.columns[2]).toStrictEqual(d.vec4f(8, 9, 10, 11));
+    expect(mat.columns[3]).toStrictEqual(d.vec4f(12, 13, 14, 15));
+    expect(d.matToArray(mat)).toStrictEqual([
       16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
   });
