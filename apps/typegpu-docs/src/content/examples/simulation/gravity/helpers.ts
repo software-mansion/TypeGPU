@@ -127,7 +127,6 @@ export async function loadModel(root: TgpuRoot, modelPath: string) {
       ),
     });
   }
-  modelVertices.reverse();
 
   vertexBuffer.write(modelVertices);
 

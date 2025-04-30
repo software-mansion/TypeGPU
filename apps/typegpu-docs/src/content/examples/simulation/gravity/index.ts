@@ -153,7 +153,7 @@ const renderPipeline = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
-  .withPrimitive({ topology: 'triangle-list', cullMode: 'front' })
+  .withPrimitive({ topology: 'triangle-list' })
   .createPipeline()
   .$name('render celestial bodies');
 
