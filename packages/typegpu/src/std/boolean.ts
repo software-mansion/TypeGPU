@@ -14,7 +14,7 @@ import type {
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
-import { isNumeric, sub } from './numeric.ts';
+import { snippetIsNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {
@@ -267,19 +267,23 @@ export const isCloseTo = createDualImpl(
       return Math.abs(lhs - rhs) < precision;
     }
     if (typeof lhs !== 'number' && typeof rhs !== 'number') {
-      return VectorOps.isCloseToZero[lhs.kind](sub(lhs, rhs), precision);
+      return VectorOps.isCloseToZero[lhs.kind](
+        // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
+        sub(lhs as any, rhs as any),
+        precision,
+      );
     }
     return false;
   },
   // GPU implementation
   (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
-    if (isNumeric(lhs) && isNumeric(rhs)) {
+    if (snippetIsNumeric(lhs) && snippetIsNumeric(rhs)) {
       return {
         value: `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
-    if (!isNumeric(lhs) && !isNumeric(rhs)) {
+    if (!snippetIsNumeric(lhs) && !snippetIsNumeric(rhs)) {
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec

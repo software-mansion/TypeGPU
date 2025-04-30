@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
   vec2f,
   vec2i,
   vec2u,
@@ -72,5 +75,37 @@ describe('add', () => {
       vec4i(3, 4, 5, 6),
     );
     expect(add(vec4i(1), vec4i(2))).toEqual(vec4i(3));
+  });
+
+  it('computes sum of two numbers', () => {
+    expect(add(12, 37)).toEqual(49);
+    expect(add(-12, 37)).toEqual(25);
+  });
+
+  it('computes sum of a vector and a number', () => {
+    expect(add(vec2u(2, 1), 1)).toEqual(vec2u(3, 2));
+    expect(add(vec3f(), 2)).toEqual(vec3f(2));
+    expect(add(vec4i(1, 2, 3, 4), -3)).toEqual(vec4i(-2, -1, 0, 1));
+  });
+
+  it('computes sum of a number and a vector', () => {
+    expect(add(1, vec2u(1, 2))).toEqual(vec2u(2, 3));
+    expect(add(3, vec3f())).toEqual(vec3f(3));
+    expect(add(-1, vec4i(1, 2, 3, 4))).toEqual(vec4i(0, 1, 2, 3));
+  });
+
+  it('computes sum of two matrices', () => {
+    expect(add(mat3x3f(), mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9))).toEqual(
+      mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9),
+    );
+    expect(add(mat2x2f(1, 2, 3, 4), mat2x2f(5, 6, 7, 8))).toEqual(
+      mat2x2f(6, 8, 10, 12),
+    );
+    expect(
+      add(
+        mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
+        mat4x4f(-1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16),
+      ),
+    ).toEqual(mat4x4f(0, 4, 0, 8, 0, 12, 0, 16, 0, 20, 0, 24, 0, 28, 0, 32));
   });
 });

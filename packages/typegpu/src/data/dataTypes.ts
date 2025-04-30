@@ -11,12 +11,17 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
+import type { Snippet } from '../types.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
+type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
   TImpl & {
-    [$internal]: true;
+    [$internal]: {
+      jsImpl: TImpl;
+      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
+    };
   };
 
 /**
