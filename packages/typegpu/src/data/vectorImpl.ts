@@ -1,12 +1,13 @@
 import { $internal } from '../shared/symbols.ts';
-import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { VecKind } from './wgslTypes.ts';
+import { mulV2xM2, mulV2xS, mulV2xV2 } from './dataVectorOps.ts';
+import type { VecKind, m2x2f } from './wgslTypes.ts';
 
 // biome-ignore format: swizzles should not expand
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   public readonly [$internal] = true;
   abstract get kind(): VecKind;
+  abstract getDefaultValue(): S;
 
   abstract get _Vec2(): new (
     x: S,
@@ -32,11 +33,6 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     return this['~resolve']();
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: this avoids repeating this 16 times in the impls 
-  mul(this: any, other: any) {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
-  }
 
   get xx() { return new this._Vec2(this[0], this[0]); }
   get xy() { return new this._Vec2(this[0], this[1]); }
@@ -382,7 +378,6 @@ type Tuple4<S> = [S, S, S, S];
 
 abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
@@ -391,6 +386,31 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
     super(2);
     this[0] = x ?? this.getDefaultValue();
     this[1] = y ?? x ?? this.getDefaultValue();
+  }
+
+  mul(this: Vec2<S>, other: number | Vec2<number> | m2x2f): Vec2<number> {
+    if (!this.isNumeric()) {
+      throw new Error('mul is only applicable to numeric vectors');
+    }
+    if (typeof other === 'number') {
+      return new this._Vec2(...mulV2xS(this, other));
+    }
+    if (other.kind.startsWith('vec')) {
+      return new this._Vec2(...mulV2xV2(this, other as Vec2<number>));
+    }
+    return new this._Vec2(
+      ...mulV2xM2(
+        this,
+        (other as m2x2f).columns as unknown as Tuple2<Tuple2<number>>,
+      ),
+    );
+  }
+
+  isNumeric(): this is Vec2<number> {
+    if (typeof this.getDefaultValue() === 'number') {
+      return true;
+    }
+    return false;
   }
 
   get x() {
@@ -412,7 +432,6 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   declare readonly length = 3;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
@@ -452,7 +471,6 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   declare readonly length = 4;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;

@@ -156,6 +156,11 @@ function cpuMul(
   lhs: number | AnyNumericVecInstance | AnyMatInstance,
   rhs: number | AnyNumericVecInstance | AnyMatInstance,
 ) {
+  // goal: always delegate mul to vec or mat
+  if (isVec(lhs) && ['vec2f', 'vec2h', 'vec2u', 'vec2i'].includes(lhs.kind)) {
+    return lhs.mul(rhs);
+  }
+
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }

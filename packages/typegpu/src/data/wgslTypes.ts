@@ -645,9 +645,8 @@ export interface matDotNotation<T extends AnyMatInstance> {
 
   // TODO: sub
 
-  mul(other: number): T;
+  mul(other: number | T): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
-  mul(other: T): T;
 }
 
 export interface vecDotNotation<T extends AnyNumericVecInstance> {
@@ -655,9 +654,7 @@ export interface vecDotNotation<T extends AnyNumericVecInstance> {
 
   // TODO: sub
 
-  mul(other: number): T;
-  mul(other: T): T;
-  mul(other: mBaseForVec<T>): T;
+  mul(other: number | T | mBaseForVec<T>): T;
 
   // TODO: div
 }
