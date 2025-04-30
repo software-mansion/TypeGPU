@@ -1,14 +1,8 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import type {
-  CollisionBehavior,
-  Preset,
-  SkyBox,
-  SphereTextureName,
-} from './enums.ts';
+import type { CollisionBehavior, Preset, SphereTextureName } from './enums.ts';
 
 export interface PresetData {
-  skyBox: SkyBox;
   initialCameraPos: d.v3f;
   lightSource?: d.v3f; // default: d.vec3f()
   celestialBodies: {
@@ -56,7 +50,6 @@ function stableOrbitVelocity(
 
 export const examplePresets: Record<Preset, PresetData> = {
   'Solar System': {
-    skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 10, 20),
     // data from the internet, mapped to fit the simulation better
     celestialBodies: [
@@ -176,7 +169,6 @@ export const examplePresets: Record<Preset, PresetData> = {
     }),
   },
   Asteroids: {
-    skyBox: 'milky-way',
     initialCameraPos: d.vec3f(30, 8, 30),
     lightSource: d.vec3f(1000, 1000, -1000),
     celestialBodies: [
@@ -209,7 +201,6 @@ export const examplePresets: Record<Preset, PresetData> = {
     ],
   },
   'Colliding asteroids': {
-    skyBox: 'milky-way',
     initialCameraPos: d.vec3f(20, 7, 40),
     lightSource: d.vec3f(1000, 1000, 0),
     celestialBodies: [
@@ -255,7 +246,6 @@ export const examplePresets: Record<Preset, PresetData> = {
     ],
   },
   'Bouncy dust': {
-    skyBox: 'milky-way',
     initialCameraPos: d.vec3f(40, 10, 50),
     lightSource: d.vec3f(1000, 1000, 1000),
     celestialBodies: [
@@ -272,7 +262,6 @@ export const examplePresets: Record<Preset, PresetData> = {
     ],
   },
   'Merging dust': {
-    skyBox: 'milky-way',
     initialCameraPos: d.vec3f(40, 10, 50),
     lightSource: d.vec3f(1000, 1000, 1000),
     celestialBodies: [

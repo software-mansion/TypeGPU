@@ -3,7 +3,7 @@ import { OBJLoader } from '@loaders.gl/obj';
 import { type TgpuRoot, tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { type SkyBox, sphereTextureNames } from './enums.ts';
+import { sphereTextureNames } from './enums.ts';
 import { CelestialBody, SkyBoxVertex, renderVertexLayout } from './schemas.ts';
 
 function vert(
@@ -66,13 +66,13 @@ export const skyBoxVertices: d.Infer<typeof SkyBoxVertex>[] = [
   vert([-1, 1, -1, 1], [1, 0]),
 ];
 
-function getSkyBoxUrls(name: SkyBox) {
+function getSkyBoxUrls() {
   return ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'].map(
-    (side) => `/TypeGPU/assets/gravity/skyboxes/${name}/${side}.jpg`,
+    (side) => `/TypeGPU/assets/gravity/skyboxes/milky-way/${side}.jpg`,
   );
 }
 
-export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBox) {
+export async function loadSkyBox(root: TgpuRoot) {
   const size = 2048;
   const texture = root['~unstable']
     .createTexture({
@@ -83,7 +83,7 @@ export async function loadSkyBox(root: TgpuRoot, selectedSkyBox: SkyBox) {
     .$usage('sampled', 'render');
 
   await Promise.all(
-    getSkyBoxUrls(selectedSkyBox).map(async (url, i) => {
+    getSkyBoxUrls().map(async (url, i) => {
       const response = await fetch(url);
       const blob = await response.blob();
       const imageBitmap = await createImageBitmap(blob);

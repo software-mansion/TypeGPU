@@ -1,10 +1,7 @@
 import tgpu, {
-  type Render,
-  type Sampled,
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuBuffer,
-  type TgpuTexture,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -55,16 +52,12 @@ context.configure({
 
 // static resources (created on the example load)
 
-const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
-  await loadModel(root, '/TypeGPU/assets/gravity/sphere.obj');
-
 const sampler = device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 let cameraPosition = examplePresets['Solar System'].initialCameraPos;
-
 const cameraInitial = Camera({
   position: cameraPosition,
   view: m.mat4.lookAt(
@@ -90,10 +83,18 @@ const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
   .$usage('vertex')
   .$name('skybox vertices');
-
-const sphereTextures = await loadSphereTextures(root);
+const skyBoxTexture = await loadSkyBox(root);
+const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
+const skyBoxBindGroup = root.createBindGroup(renderSkyBoxBindGroupLayout, {
+  camera: cameraBuffer,
+  skyBox: skyBox,
+  sampler: sampler,
+});
 
 let celestialBodiesCount = 0;
+const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
+  await loadModel(root, '/TypeGPU/assets/gravity/sphere.obj');
+const sphereTextures = await loadSphereTextures(root);
 const celestialBodiesCountBuffer = root
   .createBuffer(d.i32)
   .$usage('uniform')
@@ -116,12 +117,6 @@ interface DynamicResources {
   >;
   computeGravityBindGroup: TgpuBindGroup<
     (typeof computeGravityBindGroupLayout)['entries']
-  >;
-  skyBoxTexture: TgpuTexture<{ size: [2048, 2048, 6]; format: 'rgba8unorm' }> &
-    Render &
-    Sampled;
-  skyBoxBindGroup: TgpuBindGroup<
-    (typeof renderSkyBoxBindGroupLayout)['entries']
   >;
   renderBindGroup: TgpuBindGroup<(typeof renderBindGroupLayout)['entries']>;
 }
@@ -191,8 +186,7 @@ function render() {
       storeOp: 'store',
     })
     .with(renderSkyBoxVertexLayout, skyBoxVertexBuffer)
-    .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
-    .with(renderSkyBoxBindGroupLayout, dynamicResourcesBox.data.skyBoxBindGroup)
+    .with(renderSkyBoxBindGroupLayout, skyBoxBindGroup)
     .draw(skyBoxVertices.length);
 
   renderPipeline
@@ -289,15 +283,6 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     celestialBodies: computeBufferA,
   });
 
-  const skyBoxTexture = await loadSkyBox(root, presetData.skyBox);
-  const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
-
-  const textureBindGroup = root.createBindGroup(renderSkyBoxBindGroupLayout, {
-    camera: cameraBuffer,
-    skyBox: skyBox,
-    sampler: sampler,
-  });
-
   celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
   lightSourceBuffer.write(presetData.lightSource ?? d.vec3f());
@@ -309,8 +294,6 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     celestialBodiesBufferB: computeBufferB,
     computeCollisionsBindGroup,
     computeGravityBindGroup,
-    skyBoxTexture,
-    skyBoxBindGroup: textureBindGroup,
     renderBindGroup,
   };
 }
@@ -326,7 +309,6 @@ export const controls = {
       dynamicResourcesBox.data = await loadPreset(value);
       oldData.celestialBodiesBufferA.destroy();
       oldData.celestialBodiesBufferB.destroy();
-      oldData.skyBoxTexture.destroy();
     },
   },
   'simulation speed modifier': {

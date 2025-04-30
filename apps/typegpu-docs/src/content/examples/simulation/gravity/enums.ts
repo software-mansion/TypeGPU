@@ -5,8 +5,6 @@ export const collisionBehaviors = {
 } as const;
 export type CollisionBehavior = keyof typeof collisionBehaviors;
 
-export type SkyBox = 'milky-way';
-
 export const sphereTextureNames = [
   'sun',
   'mercury',
