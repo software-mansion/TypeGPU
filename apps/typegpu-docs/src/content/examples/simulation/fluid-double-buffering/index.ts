@@ -395,7 +395,7 @@ const getMinimumInFlow = tgpu['~unstable'].fn(
 
   if (
     std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
-    sourceRadius
+      sourceRadius
   ) {
     return sourceParamsUniform.value.intensity;
   }

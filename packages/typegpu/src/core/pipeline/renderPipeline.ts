@@ -10,22 +10,22 @@ import { resolve } from '../../resolutionCtx.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
+  isBindGroupLayout,
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
-  isBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
 import type { IOData, IOLayout } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import { type TgpuTexture, isTexture } from '../texture/texture.ts';
+import { isTexture, type TgpuTexture } from '../texture/texture.ts';
 import type { Render } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import {
-  type TgpuVertexLayout,
   isVertexLayout,
+  type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
@@ -74,13 +74,12 @@ export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
   ? GPUColorTargetState
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: GPUColorTargetState }
-    : never;
+  : never;
 
 export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData
   ? ColorAttachment
-  : T extends Record<string, unknown>
-    ? { [Key in keyof T]: ColorAttachment }
-    : never;
+  : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
+  : never;
 
 export type AnyFragmentTargets =
   | GPUColorTargetState

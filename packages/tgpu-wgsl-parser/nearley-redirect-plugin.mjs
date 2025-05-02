@@ -10,7 +10,6 @@ export default function nearleyRedirectPlugin() {
     enforce: /** @type {const} */ ('pre'),
 
     /**
-     *
      * @param {string} source
      * @param {string=} importer
      * @returns {{ id: string } | undefined}

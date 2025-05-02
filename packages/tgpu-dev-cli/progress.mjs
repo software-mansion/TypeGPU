@@ -13,8 +13,7 @@
  * @returns {Promise<T>}
  */
 export async function progress(initial, task) {
-  const ciMode =
-    typeof process.stdout.clearLine !== 'function' ||
+  const ciMode = typeof process.stdout.clearLine !== 'function' ||
     typeof process.stdout.cursorTo !== 'function';
 
   if (ciMode) {

@@ -214,13 +214,15 @@ export class IcosphereGenerator {
       let safeSize = subdivisions;
       while (
         getVertexAmount(safeSize) * d.sizeOf(Vertex) >
-        this.maxBufferSize
+          this.maxBufferSize
       ) {
         safeSize--;
       }
       if (safeSize < subdivisions) {
         console.warn(
-          `Requested icosphere of size ${getVertexAmount(subdivisions) * d.sizeOf(Vertex)} exceeds max buffer size of ${this.maxBufferSize} - reducing subdivisions to ${safeSize}`,
+          `Requested icosphere of size ${
+            getVertexAmount(subdivisions) * d.sizeOf(Vertex)
+          } exceeds max buffer size of ${this.maxBufferSize} - reducing subdivisions to ${safeSize}`,
         );
         return this.createIcosphere(safeSize, smooth);
       }

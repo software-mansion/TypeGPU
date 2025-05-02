@@ -14,9 +14,7 @@ describe('Inter-Stage Variables', () => {
       out: { pos: d.builtin.vertexIndex },
     })('');
 
-    it('allows fragment functions to use a subset of the vertex output', ({
-      root,
-    }) => {
+    it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
       const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
         '',
       );
@@ -56,9 +54,7 @@ describe('Inter-Stage Variables', () => {
       expect(pipeline4).toBeDefined();
     });
 
-    it('rejects fragment functions that use non-existent vertex output', ({
-      root,
-    }) => {
+    it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
       const fragment = tgpu['~unstable'].fragmentFn({
         in: { a: d.vec3f, c: d.f32 },
         out: {},
@@ -80,9 +76,7 @@ describe('Inter-Stage Variables', () => {
       out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
     })('');
 
-    it('allows fragment functions to use a subset of the vertex output', ({
-      root,
-    }) => {
+    it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
       const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
         '',
       );
@@ -133,9 +127,7 @@ describe('Inter-Stage Variables', () => {
       expect(pipeline5).toBeDefined();
     });
 
-    it('rejects fragment functions that use non-existent vertex output', ({
-      root,
-    }) => {
+    it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
       const fragment = tgpu['~unstable'].fragmentFn({
         in: { a: d.vec3f, c: d.f32 },
         out: {},
@@ -145,9 +137,7 @@ describe('Inter-Stage Variables', () => {
       root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
     });
 
-    it('rejects fragment functions that use mismatched vertex output data types', ({
-      root,
-    }) => {
+    it('rejects fragment functions that use mismatched vertex output data types', ({ root }) => {
       const fragment = tgpu['~unstable'].fragmentFn({
         in: { a: d.vec3f, b: d.f32 },
         out: {},

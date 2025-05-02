@@ -23,10 +23,12 @@ describe('float_literal', () => {
 
   it('parses float', () => {
     for (const exampleFloat of EXAMPLE_FLOAT_LITERALS) {
-      expect(parse(exampleFloat)).toEqual({
-        type: 'float_literal',
-        value: exampleFloat,
-      } satisfies FloatLiteral);
+      expect(parse(exampleFloat)).toEqual(
+        {
+          type: 'float_literal',
+          value: exampleFloat,
+        } satisfies FloatLiteral,
+      );
     }
   });
 });

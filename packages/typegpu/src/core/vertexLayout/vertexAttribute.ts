@@ -21,17 +21,15 @@ import type {
  */
 export type DataToContainedAttribs<T> = T extends AnyWgslStruct | AnyUnstruct
   ? {
-      [Key in keyof T['propTypes']]: DataToContainedAttribs<
-        T['propTypes'][Key]
-      >;
-    }
-  : T extends { type: VertexFormat }
-    ? TgpuVertexAttrib<T['type']>
-    : T extends { type: keyof KindToDefaultFormatMap }
-      ? TgpuVertexAttrib<KindToDefaultFormatMap[T['type']]>
-      : T extends Decorated<infer TInner>
-        ? DataToContainedAttribs<TInner>
-        : never;
+    [Key in keyof T['propTypes']]: DataToContainedAttribs<
+      T['propTypes'][Key]
+    >;
+  }
+  : T extends { type: VertexFormat } ? TgpuVertexAttrib<T['type']>
+  : T extends { type: keyof KindToDefaultFormatMap }
+    ? TgpuVertexAttrib<KindToDefaultFormatMap[T['type']]>
+  : T extends Decorated<infer TInner> ? DataToContainedAttribs<TInner>
+  : never;
 
 /**
  * Interprets an array as a set of vertex attributes.
@@ -41,8 +39,7 @@ export type ArrayToContainedAttribs<T extends WgslArray | Disarray> =
 
 export type LayoutToAllowedAttribs<T> = T extends {
   type: keyof KindToAcceptedAttribMap;
-}
-  ? KindToAcceptedAttribMap[T['type']]
+} ? KindToAcceptedAttribMap[T['type']]
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: LayoutToAllowedAttribs<T[Key]> }
-    : never;
+  : never;

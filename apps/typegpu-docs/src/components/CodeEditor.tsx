@@ -61,37 +61,36 @@ type Props = {
   shown: boolean;
 };
 
-const createCodeEditorComponent =
-  (
-    language: 'typescript' | 'html',
-    beforeMount?: BeforeMount,
-    onMount?: OnMount,
-  ) =>
-  (props: Props) => {
-    const { file, shown } = props;
+const createCodeEditorComponent = (
+  language: 'typescript' | 'html',
+  beforeMount?: BeforeMount,
+  onMount?: OnMount,
+) =>
+(props: Props) => {
+  const { file, shown } = props;
 
-    return (
-      <div
-        className={
-          shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'
-        }
-      >
-        <Editor
-          defaultLanguage={language}
-          value={file.content}
-          path={file.path}
-          beforeMount={beforeMount}
-          onMount={onMount}
-          options={{
-            minimap: {
-              enabled: false,
-            },
-            readOnly: true,
-          }}
-        />
-      </div>
-    );
-  };
+  return (
+    <div
+      className={shown
+        ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]'
+        : 'hidden'}
+    >
+      <Editor
+        defaultLanguage={language}
+        value={file.content}
+        path={file.path}
+        beforeMount={beforeMount}
+        onMount={onMount}
+        options={{
+          minimap: {
+            enabled: false,
+          },
+          readOnly: true,
+        }}
+      />
+    </div>
+  );
+};
 
 export const TsCodeEditor = createCodeEditorComponent(
   'typescript',

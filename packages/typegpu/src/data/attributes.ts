@@ -10,10 +10,10 @@ import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
   type AnyLooseData,
-  type LooseDecorated,
-  type LooseTypeLiteral,
   isLooseData,
   isLooseDecorated,
+  type LooseDecorated,
+  type LooseTypeLiteral,
 } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
 import {
@@ -26,16 +26,16 @@ import {
   type FlatInterpolationType,
   type Interpolate,
   type InterpolationType,
-  type Location,
-  type PerspectiveOrLinearInterpolatableData,
-  type PerspectiveOrLinearInterpolationType,
-  type Size,
-  type WgslTypeLiteral,
   isAlignAttrib,
   isBuiltinAttrib,
   isDecorated,
   isSizeAttrib,
   isWgslData,
+  type Location,
+  type PerspectiveOrLinearInterpolatableData,
+  type PerspectiveOrLinearInterpolationType,
+  type Size,
+  type WgslTypeLiteral,
 } from './wgslTypes.ts';
 
 // ----------
@@ -74,8 +74,7 @@ export type AnyAttribute<
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
-}
-  ? T['attribs']
+} ? T['attribs']
   : [];
 
 type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
@@ -101,19 +100,16 @@ export type Decorate<
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : TData['type'] extends LooseTypeLiteral
     ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-    : never;
+  : never;
 
-export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
-  ? false
-  : ExtractAttributes<T>[number] extends Builtin<BuiltinName>
-    ? true
-    : false;
+export type IsBuiltin<T> = ExtractAttributes<T>[number] extends [] ? false
+  : ExtractAttributes<T>[number] extends Builtin<BuiltinName> ? true
+  : false;
 
 export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
   ? false
-  : ExtractAttributes<T>[number] extends Location<number>
-    ? true
-    : false;
+  : ExtractAttributes<T>[number] extends Location<number> ? true
+  : false;
 
 export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
   data: TData,
@@ -305,7 +301,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   public readonly [$internal] = true;
-  public declare readonly [$repr]: Infer<TInner>;
+  declare public readonly [$repr]: Infer<TInner>;
 
   constructor(
     public readonly inner: TInner,
@@ -330,7 +326,9 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
       if (isWgslData(this.inner)) {
         if (alignAttrib % alignmentOf(this.inner) !== 0) {
           throw new Error(
-            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(this.inner)}.`,
+            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${
+              alignmentOf(this.inner)
+            }.`,
           );
         }
       }
@@ -339,7 +337,9 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
     if (sizeAttrib !== undefined) {
       if (sizeAttrib < sizeOf(this.inner)) {
         throw new Error(
-          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(this.inner)}.`,
+          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${
+            sizeOf(this.inner)
+          }.`,
         );
       }
 
@@ -354,8 +354,7 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 
 class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
-  implements Decorated<TInner, TAttribs>
-{
+  implements Decorated<TInner, TAttribs> {
   public readonly [$internal] = true;
   public readonly type = 'decorated';
   readonly '~gpuRepr': InferGPU<TInner>;
@@ -367,8 +366,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
 
 class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
-  implements LooseDecorated<TInner, TAttribs>
-{
+  implements LooseDecorated<TInner, TAttribs> {
   public readonly [$internal] = true;
   public readonly type = 'loose-decorated';
 }

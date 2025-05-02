@@ -43,7 +43,6 @@ import type {
 // ----------
 
 /**
- *
  * Schema representing vec2f - a vector with 2 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -58,7 +57,6 @@ import type {
 export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
 
 /**
- *
  * Schema representing vec2h - a vector with 2 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -73,7 +71,6 @@ export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
 export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
 
 /**
- *
  * Schema representing vec2i - a vector with 2 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -88,7 +85,6 @@ export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
 export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
 
 /**
- *
  * Schema representing vec2u - a vector with 2 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -103,7 +99,6 @@ export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
 export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
 
 /**
- *
  * Schema representing `vec2<bool>` - a vector with 2 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
@@ -115,7 +110,6 @@ export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
 export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
 
 /**
- *
  * Schema representing vec3f - a vector with 3 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -130,7 +124,6 @@ export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
 export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
 
 /**
- *
  * Schema representing vec3h - a vector with 3 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -145,7 +138,6 @@ export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
 export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
 
 /**
- *
  * Schema representing vec3i - a vector with 3 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -160,7 +152,6 @@ export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
 export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
 
 /**
- *
  * Schema representing vec3u - a vector with 3 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -175,7 +166,6 @@ export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
 export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
 
 /**
- *
  * Schema representing `vec3<bool>` - a vector with 3 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
@@ -187,7 +177,6 @@ export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
 export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
 
 /**
- *
  * Schema representing vec4f - a vector with 4 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -202,7 +191,6 @@ export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
 export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
 
 /**
- *
  * Schema representing vec4h - a vector with 4 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -217,7 +205,6 @@ export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
 export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
 
 /**
- *
  * Schema representing vec4i - a vector with 4 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -232,7 +219,6 @@ export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
 export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
 
 /**
- *
  * Schema representing vec4u - a vector with 4 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -247,7 +233,6 @@ export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
 export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
 
 /**
- *
  * Schema representing `vec4<bool>` - a vector with 4 elements of type `bool`.
  * Also a constructor function for this vector value.
  *

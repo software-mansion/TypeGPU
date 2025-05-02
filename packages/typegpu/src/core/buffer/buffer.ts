@@ -18,13 +18,13 @@ import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
+  asMutable,
+  asReadonly,
+  asUniform,
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
-  asMutable,
-  asReadonly,
-  asUniform,
 } from './bufferUsage.ts';
 
 // ----------
@@ -49,20 +49,16 @@ export interface VertexFlag {
  */
 export type Vertex = VertexFlag;
 
-type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
-  T extends 'uniform'
-    ? UniformFlag
-    : T extends 'storage'
-      ? StorageFlag
-      : T extends 'vertex'
-        ? VertexFlag
-        : never;
+type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> = T extends
+  'uniform' ? UniformFlag
+  : T extends 'storage' ? StorageFlag
+  : T extends 'vertex' ? VertexFlag
+  : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
-  | (boolean extends TBuffer['usableAsStorage']
-      ? never
-      : 'readonly' | 'mutable');
+  | (boolean extends TBuffer['usableAsStorage'] ? never
+    : 'readonly' | 'mutable');
 
 type UsageTypeToBufferUsage<TData extends BaseData> = {
   uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
@@ -137,14 +133,13 @@ const endianness = getSystemEndianness();
 
 type RestrictVertexUsages<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
-}
-  ? ('uniform' | 'storage' | 'vertex')[]
+} ? ('uniform' | 'storage' | 'vertex')[]
   : 'vertex'[];
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
-  public flags: GPUBufferUsageFlags =
-    GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST |
+    GPUBufferUsage.COPY_SRC;
   private _buffer: GPUBuffer | null = null;
   private _ownBuffer: boolean;
   private _destroyed = false;

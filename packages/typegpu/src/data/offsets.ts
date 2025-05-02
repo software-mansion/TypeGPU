@@ -2,7 +2,7 @@ import { Measurer } from 'typed-binary';
 import { roundUp } from '../mathUtils.ts';
 import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
-import { type AnyUnstruct, type Unstruct, isUnstruct } from './dataTypes.ts';
+import { type AnyUnstruct, isUnstruct, type Unstruct } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslStruct, BaseData, WgslStruct } from './wgslTypes.ts';
 
@@ -53,8 +53,8 @@ export function offsetsForProps<T extends Record<string, BaseData>>(
   }
 
   if (lastEntry) {
-    lastEntry.padding =
-      roundUp(sizeOf(struct), alignmentOf(struct)) - measurer.size;
+    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) -
+      measurer.size;
   }
 
   cachedOffsets.set(

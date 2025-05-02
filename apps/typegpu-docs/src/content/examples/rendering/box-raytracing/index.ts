@@ -60,13 +60,17 @@ const CanvasDimsStruct = d.struct({ width: d.u32, height: d.u32 });
 const boxMatrixBuffer = root
   .createBuffer(
     d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
-    Array.from({ length: X }, (_, i) =>
-      Array.from({ length: Y }, (_, j) =>
-        Array.from({ length: Z }, (_, k) => ({
-          isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-          albedo: d.vec4f(i / X, j / Y, k / Z, 1),
-        })),
-      ),
+    Array.from(
+      { length: X },
+      (_, i) =>
+        Array.from(
+          { length: Y },
+          (_, j) =>
+            Array.from({ length: Z }, (_, k) => ({
+              isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
+              albedo: d.vec4f(i / X, j / Y, k / Z, 1),
+            })),
+        ),
     ),
   )
   .$name('box_array')
