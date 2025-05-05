@@ -5,14 +5,14 @@ export const N = 2048;
 export const SIM_N = N / 4;
 export const [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y] = [16, 16];
 export const FORCE_SCALE = 1;
-export const RADIUS = SIM_N / 32;
-export const INK_AMOUNT = 0.05;
+export const RADIUS = SIM_N / 16;
+export const INK_AMOUNT = 0.02;
 
 export const params: SimulationParams = {
-  dt: 0.3,
+  dt: 0.5,
   viscosity: 0.000001,
   jacobiIter: 10,
-  displayMode: 'ink',
+  displayMode: 'image',
   paused: false,
 };
 

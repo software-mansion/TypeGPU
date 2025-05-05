@@ -67,7 +67,7 @@ export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((inp) => {
-  const EPS = d.f32(0.5) / SIM_N;
+  const EPS = d.f32(1) / SIM_N;
 
   const left = std.textureSample(
     renderLayout.$.result,

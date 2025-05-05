@@ -141,7 +141,7 @@ const linSampler = tgpu['~unstable'].sampler({
 });
 
 // Create compute pipelines
-const brushPipeline = root['~unstable'].withCompute(c.brushFn).createPipeline();
+const brushPipeline = createComputePipeline(c.brushFn);
 const addForcePipeline = createComputePipeline(c.addForcesFn);
 const advectPipeline = createComputePipeline(c.advectFn);
 const diffusionPipeline = createComputePipeline(c.diffusionFn);
@@ -464,8 +464,8 @@ export const controls = {
     },
   },
   visualization: {
-    initial: 'ink',
-    options: ['ink', 'velocity', 'image'],
+    initial: 'image',
+    options: ['image', 'velocity', 'ink'],
     onSelectChange: (value: DisplayMode) => {
       p.params.displayMode = value;
     },
