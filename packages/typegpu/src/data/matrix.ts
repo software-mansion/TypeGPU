@@ -5,20 +5,20 @@ import type { SelfResolvable } from '../types.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
-  Mat2x2f,
-  Mat3x3f,
-  Mat4x4f,
-  VecKind,
   m2x2f,
   m3x3f,
   m4x4f,
   mat2x2,
+  Mat2x2f,
   mat3x3,
+  Mat3x3f,
   mat4x4,
+  Mat4x4f,
   matBase,
   v2f,
   v3f,
   v4f,
+  VecKind,
 } from './wgslTypes.ts';
 
 // --------------
@@ -95,8 +95,7 @@ function createMatSchema<
 }
 
 abstract class mat2x2Impl<TColumn extends v2f>
-  implements mat2x2<TColumn>, SelfResolvable
-{
+  implements mat2x2<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
@@ -145,9 +144,11 @@ abstract class mat2x2Impl<TColumn extends v2f>
   }
 
   '~resolve'(): string {
-    return `${this.kind}(${Array.from({ length: this.length })
-      .map((_, i) => this[i])
-      .join(', ')})`;
+    return `${this.kind}(${
+      Array.from({ length: this.length })
+        .map((_, i) => this[i])
+        .join(', ')
+    })`;
   }
 }
 
@@ -160,8 +161,7 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
 }
 
 abstract class mat3x3Impl<TColumn extends v3f>
-  implements mat3x3<TColumn>, SelfResolvable
-{
+  implements mat3x3<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
@@ -281,7 +281,9 @@ abstract class mat3x3Impl<TColumn extends v3f>
   set [11](_: number) {}
 
   '~resolve'(): string {
-    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${this[5]}, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
+    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
+      this[5]
+    }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
   }
 }
 
@@ -293,8 +295,7 @@ class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
 }
 
 abstract class mat4x4Impl<TColumn extends v4f>
-  implements mat4x4<TColumn>, SelfResolvable
-{
+  implements mat4x4<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
@@ -462,9 +463,11 @@ abstract class mat4x4Impl<TColumn extends v4f>
   }
 
   '~resolve'(): string {
-    return `${this.kind}(${Array.from({ length: this.length })
-      .map((_, i) => this[i])
-      .join(', ')})`;
+    return `${this.kind}(${
+      Array.from({ length: this.length })
+        .map((_, i) => this[i])
+        .join(', ')
+    })`;
   }
 }
 
@@ -481,7 +484,6 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 // ----------
 
 /**
- *
  * Schema representing mat2x2f - a matrix with 2 rows and 2 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *
@@ -510,7 +512,6 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
 }) as Mat2x2f;
 
 /**
- *
  * Schema representing mat3x3f - a matrix with 3 rows and 3 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *
@@ -541,7 +542,6 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
 }) as Mat3x3f;
 
 /**
- *
  * Schema representing mat4x4f - a matrix with 4 rows and 4 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *

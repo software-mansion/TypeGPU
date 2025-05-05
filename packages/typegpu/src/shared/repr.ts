@@ -11,14 +11,11 @@ export const $repr = Symbol(
 export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
 export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
   ? TRepr
-  : T extends { readonly [$repr]: infer TRepr }
-    ? TRepr | undefined
-    : T extends Record<string | number | symbol, unknown>
-      ? InferPartialRecord<T>
-      : T;
+  : T extends { readonly [$repr]: infer TRepr } ? TRepr | undefined
+  : T extends Record<string | number | symbol, unknown> ? InferPartialRecord<T>
+  : T;
 
-export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr }
-  ? TRepr
+export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr } ? TRepr
   : Infer<T>;
 
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
@@ -39,8 +36,7 @@ export type InferGPURecord<
 
 export type MemIdentity<T> = T extends {
   readonly '~memIdent': infer TMemIdent;
-}
-  ? TMemIdent
+} ? TMemIdent
   : T;
 
 export type MemIdentityRecord<

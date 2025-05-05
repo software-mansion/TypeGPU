@@ -1,5 +1,6 @@
 export { discard } from './discard.ts';
 
+// deno-fmt-ignore
 export {
   // ops
   add,
@@ -33,6 +34,7 @@ export {
   div,
 } from './numeric.ts';
 
+// deno-fmt-ignore
 export {
   // comparison
   allEq,
@@ -54,6 +56,7 @@ export {
   select,
 } from './boolean.ts';
 
+// deno-fmt-ignore
 export {
   atomicLoad,
   atomicStore,
@@ -72,6 +75,7 @@ export {
 
 export { arrayLength } from './array.ts';
 
+// deno-fmt-ignore
 export {
   pack4x8unorm,
   pack2x16float,

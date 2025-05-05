@@ -46,7 +46,7 @@ function nearleyPlugin() {
         const stdout = await promiseExec(`nearleyc ${absoluteSrc}`);
 
         const code = `\
-/* eslint-disable */
+// deno-fmt-ignore-file
 // @ts-nocheck
 ${stdout}`;
 

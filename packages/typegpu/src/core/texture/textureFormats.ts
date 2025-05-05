@@ -112,16 +112,18 @@ export const texelFormatToChannelType = {
 export type TexelFormatToChannelType = typeof texelFormatToChannelType;
 
 type TexelFormatToStringChannels = {
-  [Key in keyof TexelFormatToChannelType]: TexelFormatToChannelType[Key]['type'];
+  [Key in keyof TexelFormatToChannelType]:
+    TexelFormatToChannelType[Key]['type'];
 };
 type KeysWithValue<T extends Record<string, unknown>, TValue> = keyof {
   [Key in keyof T as T[Key] extends TValue ? Key : never]: Key;
 };
 export type ChannelTypeToLegalFormats = {
-  [Key in TexelFormatToChannelType[keyof TexelFormatToChannelType]['type']]: KeysWithValue<
-    TexelFormatToStringChannels,
-    Key
-  >;
+  [Key in TexelFormatToChannelType[keyof TexelFormatToChannelType]['type']]:
+    KeysWithValue<
+      TexelFormatToStringChannels,
+      Key
+    >;
 };
 
 export type SampleTypeToStringChannelType = {
@@ -199,8 +201,8 @@ export const channelFormatToSchema = {
 export type ChannelFormatToSchema = typeof channelFormatToSchema;
 
 export type TexelFormatToDataType = typeof texelFormatToDataType;
-export type TexelFormatToDataTypeOrNever<T> =
-  T extends keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;
+export type TexelFormatToDataTypeOrNever<T> = T extends
+  keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;
 
 /**
  * Represents what formats a storage view can choose from based on its owner texture's props.

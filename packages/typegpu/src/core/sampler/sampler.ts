@@ -110,8 +110,7 @@ export interface TgpuComparisonSampler {
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 
 export interface TgpuFixedComparisonSampler
-  extends TgpuComparisonSampler,
-    TgpuNamable {}
+  extends TgpuComparisonSampler, TgpuNamable {}
 
 export function sampler(props: SamplerProps): TgpuSampler {
   return new TgpuFixedSamplerImpl(props);
@@ -168,8 +167,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 }
 
 export class TgpuLaidOutComparisonSamplerImpl
-  implements TgpuComparisonSampler, SelfResolvable
-{
+  implements TgpuComparisonSampler, SelfResolvable {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
@@ -220,8 +218,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
     };
 
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
-    this._filtering =
-      _props.minFilter === 'linear' ||
+    this._filtering = _props.minFilter === 'linear' ||
       _props.magFilter === 'linear' ||
       _props.mipmapFilter === 'linear';
   }
@@ -258,8 +255,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 }
 
 class TgpuFixedComparisonSamplerImpl
-  implements TgpuFixedComparisonSampler, SelfResolvable
-{
+  implements TgpuFixedComparisonSampler, SelfResolvable {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 

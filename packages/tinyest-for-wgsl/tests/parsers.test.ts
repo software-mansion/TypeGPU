@@ -147,19 +147,21 @@ describe('transpileFn', () => {
         }`),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'destructured-object',
-        props: [
-          {
-            alias: 'pos',
-            prop: 'pos',
-          },
-          {
-            alias: 'b',
-            prop: 'a',
-          },
-        ],
-      } satisfies ArgNames);
+      expect(argNames).toStrictEqual(
+        {
+          type: 'destructured-object',
+          props: [
+            {
+              alias: 'pos',
+              prop: 'pos',
+            },
+            {
+              alias: 'b',
+              prop: 'a',
+            },
+          ],
+        } satisfies ArgNames,
+      );
 
       expect(externalNames).toStrictEqual([]);
     }),

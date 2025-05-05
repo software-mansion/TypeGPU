@@ -17,7 +17,6 @@ const bench = new Bench({
 
 const $internal = Symbol('Internal functionality');
 
-// biome-ignore format: Long array
 const STRING_TAGS = ['aaa', 'bbb', 'ccc'] as const;
 const NUMBER_TAGS = [0, 1, 2] as const;
 const NUMBER_TAG_CATALOG = {

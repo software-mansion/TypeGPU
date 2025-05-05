@@ -196,7 +196,15 @@ describe('mat3x3f', () => {
     expect(mat.columns[1]).toStrictEqual(d.vec3f(12, 13, 14));
     expect(mat.columns[2]).toStrictEqual(d.vec3f(15, 16, 17));
     expect(d.matToArray(mat)).toStrictEqual([
-      9, 10, 11, 12, 13, 14, 15, 16, 17,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
     ]);
   });
 
@@ -280,9 +288,8 @@ describe('mat4x4f', () => {
       d.vec4f(12, 13, 14, 15), // column 3
     );
 
-    expect(d.matToArray(mat)).toStrictEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    ]);
+    // deno-fmt-ignore
+    expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     expect(mat).toHaveLength(16);
     expect(mat[0]).toBe(0);
     expect(mat[1]).toBe(1);
@@ -314,9 +321,8 @@ describe('mat4x4f', () => {
     expect(mat.columns[1]).toStrictEqual(d.vec4f(4, 5, 6, 7));
     expect(mat.columns[2]).toStrictEqual(d.vec4f(8, 9, 10, 11));
     expect(mat.columns[3]).toStrictEqual(d.vec4f(12, 13, 14, 15));
-    expect(d.matToArray(mat)).toStrictEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    ]);
+    // deno-fmt-ignore
+    expect(d.matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
 
     mat[0] = 16;
     mat[1] = 17;
@@ -327,9 +333,8 @@ describe('mat4x4f', () => {
     expect(mat.columns[1]).toStrictEqual(d.vec4f(4, 5, 6, 7));
     expect(mat.columns[2]).toStrictEqual(d.vec4f(8, 9, 10, 11));
     expect(mat.columns[3]).toStrictEqual(d.vec4f(12, 13, 14, 15));
-    expect(d.matToArray(mat)).toStrictEqual([
-      16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    ]);
+    // deno-fmt-ignore
+    expect(d.matToArray(mat)).toStrictEqual([16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   });
 
   it('creates a matrix that resolves properly', () => {

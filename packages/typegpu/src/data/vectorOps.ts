@@ -143,11 +143,9 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(
       e1: T,
       e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+      : wgsl.v4b
   >,
 
   lt: {
@@ -178,11 +176,9 @@ export const VectorOps = {
     <T extends wgsl.AnyNumericVecInstance>(
       e1: T,
       e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+      : wgsl.v4b
   >,
 
   or: {
@@ -425,11 +421,9 @@ export const VectorOps = {
         s * m_[0].x,
         s * m_[0].y,
         s * m_[0].z,
-
         s * m_[1].x,
         s * m_[1].y,
         s * m_[1].z,
-
         s * m_[2].x,
         s * m_[2].y,
         s * m_[2].z,
@@ -443,17 +437,14 @@ export const VectorOps = {
         s * m_[0].y,
         s * m_[0].z,
         s * m_[0].w,
-
         s * m_[1].x,
         s * m_[1].y,
         s * m_[1].z,
         s * m_[1].w,
-
         s * m_[2].x,
         s * m_[2].y,
         s * m_[2].z,
         s * m_[2].w,
-
         s * m_[3].x,
         s * m_[3].y,
         s * m_[3].z,
@@ -492,7 +483,6 @@ export const VectorOps = {
       return mat2x2f(
         a_[0].x * b_[0].x + a_[1].x * b_[0].y,
         a_[0].y * b_[0].x + a_[1].y * b_[0].y,
-
         a_[0].x * b_[1].x + a_[1].x * b_[1].y,
         a_[0].y * b_[1].x + a_[1].y * b_[1].y,
       );
@@ -506,11 +496,9 @@ export const VectorOps = {
         a_[0].x * b_[0].x + a_[1].x * b_[0].y + a_[2].x * b_[0].z,
         a_[0].y * b_[0].x + a_[1].y * b_[0].y + a_[2].y * b_[0].z,
         a_[0].z * b_[0].x + a_[1].z * b_[0].y + a_[2].z * b_[0].z,
-
         a_[0].x * b_[1].x + a_[1].x * b_[1].y + a_[2].x * b_[1].z,
         a_[0].y * b_[1].x + a_[1].y * b_[1].y + a_[2].y * b_[1].z,
         a_[0].z * b_[1].x + a_[1].z * b_[1].y + a_[2].z * b_[1].z,
-
         a_[0].x * b_[2].x + a_[1].x * b_[2].y + a_[2].x * b_[2].z,
         a_[0].y * b_[2].x + a_[1].y * b_[2].y + a_[2].y * b_[2].z,
         a_[0].z * b_[2].x + a_[1].z * b_[2].y + a_[2].z * b_[2].z,
@@ -538,7 +526,6 @@ export const VectorOps = {
           a_[1].w * b_[0].y +
           a_[2].w * b_[0].z +
           a_[3].w * b_[0].w,
-
         a_[0].x * b_[1].x +
           a_[1].x * b_[1].y +
           a_[2].x * b_[1].z +
@@ -555,7 +542,6 @@ export const VectorOps = {
           a_[1].w * b_[1].y +
           a_[2].w * b_[1].z +
           a_[3].w * b_[1].w,
-
         a_[0].x * b_[2].x +
           a_[1].x * b_[2].y +
           a_[2].x * b_[2].z +
@@ -572,7 +558,6 @@ export const VectorOps = {
           a_[1].w * b_[2].y +
           a_[2].w * b_[2].z +
           a_[3].w * b_[2].w,
-
         a_[0].x * b_[3].x +
           a_[1].x * b_[3].y +
           a_[2].x * b_[3].z +
@@ -1082,11 +1067,9 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(
       f: T,
       t: T,
-      c: T extends wgsl.AnyVec2Instance
-        ? wgsl.v2b
-        : T extends wgsl.AnyVec3Instance
-          ? wgsl.v3b
-          : wgsl.v4b,
+      c: T extends wgsl.AnyVec2Instance ? wgsl.v2b
+        : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+        : wgsl.v4b,
     ) => T
   >,
 };

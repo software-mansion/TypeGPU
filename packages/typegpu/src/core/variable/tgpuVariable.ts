@@ -50,8 +50,7 @@ export function workgroupVar<TDataType extends AnyWgslData>(
 // --------------
 
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
-  implements TgpuVar<TScope, TDataType>, SelfResolvable
-{
+  implements TgpuVar<TScope, TDataType>, SelfResolvable {
   private _label: string | undefined;
 
   constructor(
@@ -70,7 +69,9 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
 
     if (this._initialValue) {
       ctx.addDeclaration(
-        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${ctx.resolveValue(this._initialValue, this._dataType)};`,
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${
+          ctx.resolveValue(this._initialValue, this._dataType)
+        };`,
       );
     } else {
       ctx.addDeclaration(

@@ -177,9 +177,8 @@ describe('tgpu.accessor', () => {
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(() =>
-      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
+      .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed: 
         - <root>
         - fn:getColor

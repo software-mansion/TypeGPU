@@ -121,9 +121,8 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    expect(() =>
-      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
+      .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed: 
         - <root>
         - fn:getColor
@@ -364,9 +363,7 @@ describe('tgpu.slot', () => {
     expect(actual).toBe(expected);
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({
-    root,
-  }) => {
+  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
     const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
     const Boid = d
       .struct({

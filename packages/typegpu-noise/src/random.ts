@@ -1,34 +1,18 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import {
   type F32,
-  type Vec2f,
-  type Vec3f,
-  type Vec4f,
   f32,
+  type Vec2f,
   vec2f,
+  type Vec3f,
   vec3f,
+  type Vec4f,
   vec4f,
 } from 'typegpu/data';
-import { cos, dot, mul, sin } from 'typegpu/std';
+import { cos, dot, mul, sign, sin, sqrt } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
-
-// TODO: Contribute back to typegpu/std
-const sqrt = tgpu['~unstable'].fn(
-  [f32],
-  f32,
-)(`(value: f32) -> f32 {
-  return sqrt(value);
-}`);
-
-// TODO: Contribute back to typegpu/std
-const sign = tgpu['~unstable'].fn(
-  [f32],
-  f32,
-)(`(value: f32) -> f32 {
-  return sign(value);
-}`);
 
 export const randSeed: TgpuFn<[F32], undefined> = tgpu['~unstable'].fn([f32])(
   (seed) => {
@@ -67,7 +51,7 @@ export const randInUnitCube: TgpuFn<[], Vec3f> = tgpu['~unstable'].fn(
     randomGeneratorSlot.value.sample() * 2 - 1,
     randomGeneratorSlot.value.sample() * 2 - 1,
     randomGeneratorSlot.value.sample() * 2 - 1,
-  ),
+  )
 );
 
 export const randInUnitCircle: TgpuFn<[], Vec2f> = tgpu['~unstable'].fn(

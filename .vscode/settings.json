@@ -1,0 +1,15 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "[astro]": {
+    "editor.defaultFormatter": "astro-build.astro-vscode"
+  },
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": ".*",
+        "cmd": "echo \"Formatting ${relativeFile}\" && deno fmt ./${relativeFile}"
+      }
+    ]
+  },
+  "deno.enable": false
+}

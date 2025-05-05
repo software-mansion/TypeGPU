@@ -205,9 +205,8 @@ describe('createCompileInstructions', () => {
     });
 
     expect(arr.byteLength).toBe(48);
-    expect([...new Float32Array(arr)]).toStrictEqual([
-      0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0,
-    ]);
+    // deno-fmt-ignore
+    expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]);
   });
 
   it('should compile a writer for a mat2x2f', () => {

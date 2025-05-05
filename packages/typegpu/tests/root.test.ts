@@ -16,8 +16,7 @@ describe('TgpuRoot', () => {
         label: '<unnamed>',
         mappedAtCreation: false,
         size: 4,
-        usage:
-          global.GPUBufferUsage.UNIFORM |
+        usage: global.GPUBufferUsage.UNIFORM |
           global.GPUBufferUsage.COPY_DST |
           global.GPUBufferUsage.COPY_SRC,
       });
@@ -36,16 +35,13 @@ describe('TgpuRoot', () => {
         label: '<unnamed>',
         mappedAtCreation: true,
         size: 12,
-        usage:
-          global.GPUBufferUsage.UNIFORM |
+        usage: global.GPUBufferUsage.UNIFORM |
           global.GPUBufferUsage.COPY_DST |
           global.GPUBufferUsage.COPY_SRC,
       });
     });
 
-    it('should allocate buffer with proper size for nested structs', ({
-      root,
-    }) => {
+    it('should allocate buffer with proper size for nested structs', ({ root }) => {
       const s1 = d.struct({ a: d.u32, b: d.u32 });
       const s2 = d.struct({ a: d.u32, b: s1 });
       const dataBuffer = root.createBuffer(s2).$usage('uniform');
@@ -55,8 +51,7 @@ describe('TgpuRoot', () => {
         label: '<unnamed>',
         mappedAtCreation: false,
         size: 12,
-        usage:
-          global.GPUBufferUsage.UNIFORM |
+        usage: global.GPUBufferUsage.UNIFORM |
           global.GPUBufferUsage.COPY_DST |
           global.GPUBufferUsage.COPY_SRC,
       });
@@ -90,9 +85,7 @@ describe('TgpuRoot', () => {
       expect(() => root.unwrap(buffer)).toThrowError();
     });
 
-    it('should return the same buffer that was passed into .createBuffer', ({
-      root,
-    }) => {
+    it('should return the same buffer that was passed into .createBuffer', ({ root }) => {
       const rawBuffer = root.device.createBuffer({
         size: 4,
         usage: GPUBufferUsage.UNIFORM,
@@ -102,9 +95,7 @@ describe('TgpuRoot', () => {
       expect(root.unwrap(buffer)).toBe(rawBuffer);
     });
 
-    it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({
-      root,
-    }) => {
+    it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({ root }) => {
       const vertexLayout = tgpu.vertexLayout(
         (n: number) => d.arrayOf(d.location(0, d.vec2u), n),
         'vertex',
@@ -123,9 +114,7 @@ describe('TgpuRoot', () => {
       });
     });
 
-    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({
-      root,
-    }) => {
+    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({ root }) => {
       const VertexData = d.unstruct({
         position: d.location(0, d.float32x3),
         color: d.location(1, d.unorm10_10_10_2),
@@ -162,9 +151,7 @@ describe('TgpuRoot', () => {
   });
 
   describe('.$usage', () => {
-    it('should only allow vertex usage for buffers with loose data', ({
-      root,
-    }) => {
+    it('should only allow vertex usage for buffers with loose data', ({ root }) => {
       root.createBuffer(d.f32).$usage('storage', 'uniform', 'vertex');
       root.createBuffer(d.disarrayOf(d.f32, 1)).$usage('vertex');
 
@@ -172,13 +159,13 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('storage'),
+          .$usage('storage')
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('uniform'),
+          .$usage('uniform')
       ).toThrow();
 
       root.createBuffer(d.unstruct({ a: d.u32 })).$usage('vertex');
@@ -186,13 +173,13 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('storage'),
+          .$usage('storage')
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('uniform'),
+          .$usage('uniform')
       ).toThrow();
     });
   });
@@ -213,10 +200,7 @@ describe('TgpuRoot', () => {
 
     const mainFragment = tgpu['~unstable'].fragmentFn({ out: {} })(() => ({}));
 
-    it('ignores bind groups that are not used in the shader', ({
-      root,
-      commandEncoder,
-    }) => {
+    it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -243,10 +227,7 @@ describe('TgpuRoot', () => {
       expect(renderPassMock.setBindGroup).not.toBeCalled();
     });
 
-    it('accepts bind groups that are used in the shader', ({
-      root,
-      commandEncoder,
-    }) => {
+    it('accepts bind groups that are used in the shader', ({ root, commandEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -274,10 +255,7 @@ describe('TgpuRoot', () => {
       expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
 
-    it('respects bind groups bound directly to pipelines', ({
-      root,
-      commandEncoder,
-    }) => {
+    it('respects bind groups bound directly to pipelines', ({ root, commandEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
