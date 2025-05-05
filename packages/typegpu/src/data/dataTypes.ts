@@ -15,7 +15,8 @@ import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
 export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
-  TImpl & {
+  & TImpl
+  & {
     [$internal]: true;
   };
 

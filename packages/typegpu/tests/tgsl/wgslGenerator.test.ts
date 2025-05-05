@@ -106,9 +106,11 @@ describe('wgslGenerator', () => {
     } as const;
 
     const code = `{
-        ${Object.entries(literals)
-          .map(([key, { value }]) => `let ${key} = ${value};`)
-          .join('\n')}
+        ${
+      Object.entries(literals)
+        .map(([key, { value }]) => `let ${key} = ${value};`)
+        .join('\n')
+    }
       }`;
 
     const parsedBody = transpiler.transpile(code);
@@ -135,9 +137,7 @@ describe('wgslGenerator', () => {
     }
   });
 
-  it('generates correct resources for member access expressions', ({
-    root,
-  }) => {
+  it('generates correct resources for member access expressions', ({ root }) => {
     const testBuffer = root
       .createBuffer(
         d
@@ -181,7 +181,7 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a u32
     const res1 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
+      // deno-fmt-ignore: it's better that way
       ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
     );
 
@@ -191,8 +191,8 @@ describe('wgslGenerator', () => {
     //                                       ^ this should be a u32
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      (((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
+      // deno-fmt-ignore: it's better that way
+      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
     );
     expect(res2.dataType).toEqual(d.u32);
 
@@ -205,9 +205,7 @@ describe('wgslGenerator', () => {
     expect(sum.dataType).toEqual(d.u32);
   });
 
-  it('generates correct resources for external resource array index access', ({
-    root,
-  }) => {
+  it('generates correct resources for external resource array index access', ({ root }) => {
     const testBuffer = root
       .createBuffer(d.arrayOf(d.u32, 16))
       .$usage('uniform')
@@ -250,9 +248,7 @@ describe('wgslGenerator', () => {
     expect(res.dataType).toEqual(d.u32);
   });
 
-  it('generates correct resources for nested struct with atomics in a complex expression', ({
-    root,
-  }) => {
+  it('generates correct resources for nested struct with atomics in a complex expression', ({ root }) => {
     const testBuffer = root
       .createBuffer(
         d
@@ -321,8 +317,7 @@ describe('wgslGenerator', () => {
     //                           ^ this part should be a i32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
-      ((astInfo.ast.body)[1][0] as tinyest.Const)[2],
+      (astInfo.ast.body[1][0] as tinyest.Const)[2],
     );
 
     expect(res.dataType).toEqual(d.i32);
@@ -333,8 +328,7 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
-      ((astInfo.ast.body)[1][1] as tinyest.Const)[2],
+      (astInfo.ast.body[1][1] as tinyest.Const)[2],
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -347,13 +341,11 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
     const res3 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
-      ((astInfo.ast.body)[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
+      (astInfo.ast.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
     );
     const res4 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
-      (astInfo.ast.body)[1][2] as tinyest.Expression,
+      astInfo.ast.body[1][2] as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -430,7 +422,7 @@ describe('wgslGenerator', () => {
   it('creates correct resources for derived values and slots', () => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4)),
+      std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
     );
 
     const testFn = tgpu['~unstable']
@@ -471,8 +463,7 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      ((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.vec4u);
@@ -481,7 +472,7 @@ describe('wgslGenerator', () => {
   it('creates correct resources for indexing into a derived value', () => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2)),
+      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
     );
 
     const testFn = tgpu['~unstable']
@@ -560,8 +551,8 @@ describe('wgslGenerator', () => {
     //                        ^ this should be an array<u32, 3>
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      ((astInfo.ast.body)[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
+      // deno-fmt-ignore: it's better that way
+      (astInfo.ast.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
@@ -604,8 +595,16 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
+    const expectedAst = {
+      b: [{
+        c: ['arr', {
+          y: [
+            { f: ['testStruct', [{ o: { x: { n: '1' }, y: { n: '2' } } }]] },
+            { f: ['testStruct', [{ o: { x: { n: '3' }, y: { n: '4' } } }]] },
+          ],
+        }],
+      }, { r: { a: [{ i: ['arr', { n: '1' }] }, 'y'] } }],
+    } as const;
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
@@ -630,7 +629,7 @@ describe('wgslGenerator', () => {
   it('generates correct code for array expressions with derived elements', () => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2)),
+      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
     );
 
     const testFn = tgpu['~unstable']
@@ -716,8 +715,7 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      ((astInfo.ast.body)[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.f32);

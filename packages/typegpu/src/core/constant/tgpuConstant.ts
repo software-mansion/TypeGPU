@@ -34,8 +34,7 @@ export function constant<TDataType extends AnyWgslData>(
 // --------------
 
 class TgpuConstImpl<TDataType extends AnyWgslData>
-  implements TgpuConst<TDataType>, SelfResolvable
-{
+  implements TgpuConst<TDataType>, SelfResolvable {
   private _label: string | undefined;
   public readonly [$internal]: {
     readonly dataType: TDataType;

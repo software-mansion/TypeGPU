@@ -18,6 +18,7 @@
   "license": "MIT",
   "type": "module",
   "exports": {
+    "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./rollup": "./src/rollup.ts",
     "./babel": "./src/babel.ts",
@@ -34,6 +35,7 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
+      "./package.json": "./package.json",
       ".": {
         "types": "./dist/index.d.ts",
         "module": "./dist/index.js",

@@ -24,9 +24,8 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
  */
 export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
   ? TRepr
-  : T extends { readonly [$repr]: infer TRepr }
-    ? TRepr | undefined
-    : T;
+  : T extends { readonly [$repr]: infer TRepr } ? TRepr | undefined
+  : T;
 
 /**
  * Extracts the inferred representation of a resource (as seen by the GPU).
@@ -36,8 +35,7 @@ export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
  * type B = InferGPU<WgslArray<F32>> // => number[]
  * type C = Infer<Atomic<U32>> // => atomicU32
  */
-export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr }
-  ? TRepr
+export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr } ? TRepr
   : Infer<T>;
 
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
@@ -58,8 +56,7 @@ export type InferGPURecord<
 
 export type MemIdentity<T> = T extends {
   readonly '~memIdent': infer TMemIdent;
-}
-  ? TMemIdent
+} ? TMemIdent
   : T;
 
 export type MemIdentityRecord<

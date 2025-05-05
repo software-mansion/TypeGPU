@@ -28,19 +28,19 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import {
-  type WgslStruct,
   isDecorated,
   isWgslArray,
   isWgslData,
+  type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { getResolutionCtx } from '../gpuMode.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
+  hasInternalDataType,
+  isSelfResolvable,
   type Snippet,
   UnknownData,
   type Wgsl,
-  hasInternalDataType,
-  isSelfResolvable,
 } from '../types.ts';
 
 const swizzleableTypes = [
@@ -176,8 +176,9 @@ export function getTypeForPropAccess(
     target = target.inner as AnyData;
   }
 
-  const targetTypeStr =
-    'kind' in target ? (target.kind as string) : target.type;
+  const targetTypeStr = 'kind' in target
+    ? (target.kind as string)
+    : target.type;
 
   if (targetTypeStr === 'struct') {
     return (

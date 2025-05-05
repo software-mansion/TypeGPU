@@ -148,9 +148,8 @@ describe('vec2<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(8);
 
-    expect(() =>
-      writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()),
-    ).toThrow();
+    expect(() => writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()))
+      .toThrow();
     expect(() => readData(new BufferReader(buffer), d.vec2b)).toThrow();
   });
 
@@ -360,9 +359,8 @@ describe('vec3<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(16);
 
-    expect(() =>
-      writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()),
-    ).toThrow();
+    expect(() => writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()))
+      .toThrow();
     expect(() => readData(new BufferReader(buffer), d.vec3b)).toThrow();
   });
 

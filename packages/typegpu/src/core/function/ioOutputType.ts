@@ -11,18 +11,15 @@ import type { BaseData, Location, WgslStruct } from '../../data/wgslTypes.ts';
 import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
 
 export type WithLocations<T extends IORecord> = {
-  [Key in keyof T]: IsBuiltin<T[Key]> extends true
-    ? T[Key]
-    : HasCustomLocation<T[Key]> extends true
-      ? T[Key]
-      : Decorate<T[Key], Location<number>>;
+  [Key in keyof T]: IsBuiltin<T[Key]> extends true ? T[Key]
+    : HasCustomLocation<T[Key]> extends true ? T[Key]
+    : Decorate<T[Key], Location<number>>;
 };
 
 export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
   ? Decorate<T, Location<0>>
-  : T extends IORecord
-    ? WgslStruct<WithLocations<T>>
-    : never;
+  : T extends IORecord ? WgslStruct<WithLocations<T>>
+  : never;
 
 export function withLocations<T extends IOData>(
   members: IORecord<T>,

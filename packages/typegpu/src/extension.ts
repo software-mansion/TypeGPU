@@ -27,7 +27,9 @@ export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
 export class NotStorageError extends Error {
   constructor(value: { readonly label?: string | undefined }) {
     super(
-      `Resource '${value.label ?? '<unnamed>'}' cannot be bound as 'storage'. Use .$usage('storage') to allow it.`,
+      `Resource '${
+        value.label ?? '<unnamed>'
+      }' cannot be bound as 'storage'. Use .$usage('storage') to allow it.`,
     );
 
     // Set the prototype explicitly.
