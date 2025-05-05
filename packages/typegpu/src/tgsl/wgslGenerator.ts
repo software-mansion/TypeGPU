@@ -4,11 +4,11 @@ import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import {
+  isMarkedInternal,
+  isWgsl,
   type ResolutionCtx,
   type Snippet,
   UnknownData,
-  isMarkedInternal,
-  isWgsl,
 } from '../types.ts';
 import {
   getTypeForIndexAccess,
@@ -319,7 +319,9 @@ export function generateExpression(
 
     if (!isMarkedInternal(idValue)) {
       throw new Error(
-        `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+        `Function ${
+          String(idValue)
+        } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
@@ -375,7 +377,7 @@ export function generateExpression(
     const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
-      generateExpression(ctx, value as tinyest.Expression),
+      generateExpression(ctx, value as tinyest.Expression)
     );
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
@@ -393,12 +395,11 @@ export function generateExpression(
       throw new Error('Cannot use non-WGSL data types in array literals.');
     }
 
-    type =
-      type.type === 'abstractInt'
-        ? d.u32
-        : type.type === 'abstractFloat'
-          ? d.f32
-          : type;
+    type = type.type === 'abstractInt'
+      ? d.u32
+      : type.type === 'abstractFloat'
+      ? d.f32
+      : type;
 
     const typeId = ctx.resolve(type);
 
@@ -436,10 +437,9 @@ export function generateStatement(
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
-    const returnValue =
-      returnNode !== undefined
-        ? resolveRes(ctx, generateExpression(ctx, returnNode))
-        : undefined;
+    const returnValue = returnNode !== undefined
+      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)

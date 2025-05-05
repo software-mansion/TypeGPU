@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
-import { type StorageFlag, isUsableAsStorage } from '../../extension.ts';
+import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
@@ -71,12 +71,11 @@ class TgpuFixedBufferImpl<
   TData extends AnyWgslData,
   TUsage extends BindableBufferUsage,
 > implements
-    TgpuBufferUsage<TData, TUsage>,
-    SelfResolvable,
-    TgpuFixedBufferUsage<TData>
-{
+  TgpuBufferUsage<TData, TUsage>,
+  SelfResolvable,
+  TgpuFixedBufferUsage<TData> {
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TData>;
+  declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
 
@@ -107,9 +106,11 @@ class TgpuFixedBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(
-        this.buffer.dataType,
-      )};`,
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${
+        ctx.resolve(
+          this.buffer.dataType,
+        )
+      };`,
     );
 
     return id;
@@ -143,10 +144,9 @@ class TgpuFixedBufferImpl<
 export class TgpuLaidOutBufferImpl<
   TData extends BaseData,
   TUsage extends BindableBufferUsage,
-> implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
-{
+> implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TData>;
+  declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
 
@@ -168,9 +168,9 @@ export class TgpuLaidOutBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${
-        this._membership.idx
-      }) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
+      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${
+        ctx.resolve(this.dataType as AnyWgslData)
+      };`,
     );
 
     return id;
@@ -220,8 +220,9 @@ export function asMutable<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferMutable<TData> &
-    TgpuFixedBufferUsage<TData>;
+  return usage as unknown as
+    & TgpuBufferMutable<TData>
+    & TgpuFixedBufferUsage<TData>;
 }
 
 const readonlyUsageMap = new WeakMap<
@@ -246,8 +247,9 @@ export function asReadonly<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferReadonly<TData> &
-    TgpuFixedBufferUsage<TData>;
+  return usage as unknown as
+    & TgpuBufferReadonly<TData>
+    & TgpuFixedBufferUsage<TData>;
 }
 
 const uniformUsageMap = new WeakMap<
@@ -272,6 +274,7 @@ export function asUniform<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferUniform<TData> &
-    TgpuFixedBufferUsage<TData>;
+  return usage as unknown as
+    & TgpuBufferUniform<TData>
+    & TgpuFixedBufferUsage<TData>;
 }

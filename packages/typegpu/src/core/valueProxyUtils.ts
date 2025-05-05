@@ -2,17 +2,18 @@ import type { BaseData } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import {
+  isBufferUsage,
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
   type Wgsl,
-  isBufferUsage,
 } from '../types.ts';
 import { isAccessor, isDerived, isSlot } from './slot/slotTypes.ts';
 
 export const valueProxyHandler: ProxyHandler<
-  SelfResolvable &
-    Labelled & { readonly [$internal]: { readonly dataType: BaseData } }
+  & SelfResolvable
+  & Labelled
+  & { readonly [$internal]: { readonly dataType: BaseData } }
 > = {
   get(target, prop) {
     if (prop in target) {

@@ -8,10 +8,10 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 import {
-  type TgpuBufferMutable,
-  type TgpuBufferUniform,
   builtin,
   createRuntime,
+  type TgpuBufferMutable,
+  type TgpuBufferUniform,
   wgsl,
 } from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
@@ -152,7 +152,7 @@ const renderPipelines = [0, 1].map((idx) =>
     primitive: {
       topology: 'triangle-list',
     },
-  }),
+  })
 );
 
 const computePipelines = [0, 1].map((idx) =>
@@ -217,7 +217,7 @@ const computePipelines = [0, 1].map((idx) =>
   `
       .with(readSlot, pairs[idx][0])
       .with(writeSlot, pairs[idx][1]),
-  }),
+  })
 );
 
 randomizeTriangles();

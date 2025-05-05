@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type ExternalMap,
   addArgTypesToExternals,
+  type ExternalMap,
 } from '../src/core/resolve/externals.ts';
 import * as d from '../src/data/index.ts';
 

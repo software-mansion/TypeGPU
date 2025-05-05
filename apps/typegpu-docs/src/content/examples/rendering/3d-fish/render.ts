@@ -39,7 +39,7 @@ export const vertexShader = tgpu['~unstable']
     const direction = std.normalize(currentModelData.direction);
 
     const yaw = std.atan2(direction.z, direction.x) + Math.PI;
-    // biome-ignore format:
+    // deno-fmt-ignore
     const yawMatrix = d.mat3x3f(
       std.cos(yaw),  0, std.sin(yaw),
       0,             1, 0,           
@@ -47,7 +47,7 @@ export const vertexShader = tgpu['~unstable']
     );
 
     const pitch = -std.asin(-direction.y);
-    // biome-ignore format:
+    // deno-fmt-ignore
     const pitchMatrix = d.mat3x3f(
       std.cos(pitch), -std.sin(pitch), 0,
       std.sin(pitch), std.cos(pitch),  0,
@@ -136,8 +136,8 @@ export const fragmentShader = tgpu['~unstable']
 
     let desaturatedColor = lightedColor;
     if (input.applySeaDesaturation === 1) {
-      const desaturationFactor =
-        -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
+      const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
+        3;
       const hsv = rgbToHsv(desaturatedColor);
       hsv.y += desaturationFactor / 2;
       hsv.z += desaturationFactor;

@@ -1,8 +1,8 @@
 import {
-  Void,
   type atomicI32,
   type atomicU32,
   isWgslData,
+  Void,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 

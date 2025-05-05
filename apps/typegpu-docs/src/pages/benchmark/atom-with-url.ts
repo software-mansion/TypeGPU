@@ -1,4 +1,4 @@
-import { type ExtractAtomArgs, atom } from 'jotai';
+import { atom, type ExtractAtomArgs } from 'jotai';
 import { atomWithLocation } from 'jotai-location';
 
 type Location = {
@@ -41,8 +41,7 @@ export const atomWithUrl = <T>(
   defaultValue: T,
   options?: { encode: (val: T) => string; decode: (val: string) => unknown },
 ) => {
-  const optionsOrInferred =
-    options ??
+  const optionsOrInferred = options ??
     typeToParam[typeof defaultValue as keyof typeof typeToParam] ??
     objParam;
 

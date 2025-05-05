@@ -19,7 +19,7 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
   public readonly resourceType = 'slot';
   public label?: string | undefined;
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<T>;
+  declare public readonly [$repr]: Infer<T>;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 

@@ -133,7 +133,7 @@ let textureBindGroup = root.createBindGroup(textureLayout, {
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(CubeVertex, n),
+  d.arrayOf(CubeVertex, n)
 );
 
 // Shader Functions
