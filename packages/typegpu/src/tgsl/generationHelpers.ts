@@ -27,6 +27,7 @@ import {
   vec4h,
   vec4i,
   vec4u,
+  vecTypeToPrimitive,
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
@@ -316,23 +317,8 @@ function unwrapDecorated(data: AnyData): AnyData {
   return data;
 }
 
-const vecComponentMap: Readonly<Record<string, AnyData>> = {
-  [vec2f.type]: f32,
-  [vec3f.type]: f32,
-  [vec4f.type]: f32,
-  [vec2h.type]: f16,
-  [vec3h.type]: f16,
-  [vec4h.type]: f16,
-  [vec2i.type]: i32,
-  [vec3i.type]: i32,
-  [vec4i.type]: i32,
-  [vec2u.type]: u32,
-  [vec3u.type]: u32,
-  [vec4u.type]: u32,
-};
-
 function getVectorComponent(type: AnyData): AnyData | undefined {
-  return vecComponentMap[type.type];
+  return isVec(type) ? vecTypeToPrimitive[type.type] : undefined;
 }
 
 function getAutoConversionRank(
