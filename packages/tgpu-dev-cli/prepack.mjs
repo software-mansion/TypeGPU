@@ -199,7 +199,7 @@ async function main() {
     const $ = execa({ all: true });
 
     const results = await Promise.allSettled([
-      withStatusUpdate('biome', $`biome check .`),
+      withStatusUpdate('biome', $`pnpm check`),
       withStatusUpdate('build', $`pnpm build`),
       withStatusUpdate('spec', $`pnpm -w test:spec`),
       withStatusUpdate('types', $`pnpm -w test:types`),
