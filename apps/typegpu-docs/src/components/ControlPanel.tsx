@@ -134,10 +134,10 @@ function ColorPickerRow({
   onChange,
 }: {
   label: string;
-  initial?: [number, number, number];
-  onChange: (value: [number, number, number]) => void;
+  initial?: readonly [number, number, number];
+  onChange: (value: readonly [number, number, number]) => void;
 }) {
-  const [value, setValue] = useState<[number, number, number]>(
+  const [value, setValue] = useState<readonly [number, number, number]>(
     initial ?? [0, 0, 0],
   );
   const runWithCatch = useSetAtom(runWithCatchAtom);

@@ -1,9 +1,9 @@
-function hexToRgb(hex: string): [number, number, number] {
+function hexToRgb(hex: string) {
   return [
     Number.parseInt(hex.slice(1, 3), 16) / 255,
     Number.parseInt(hex.slice(3, 5), 16) / 255,
     Number.parseInt(hex.slice(5, 7), 16) / 255,
-  ];
+  ] as const;
 }
 
 function componentToHex(c: number) {
@@ -11,13 +11,13 @@ function componentToHex(c: number) {
   return hex.length === 1 ? `0${hex}` : hex;
 }
 
-function rgbToHex(rgb: [number, number, number]) {
+function rgbToHex(rgb: readonly [number, number, number]) {
   return `#${rgb.map(componentToHex).join('')}`;
 }
 
 type Props = {
-  value: [number, number, number];
-  onChange: (value: [number, number, number]) => void;
+  value: readonly [number, number, number];
+  onChange: (value: readonly [number, number, number]) => void;
 };
 
 export function ColorPicker({ value, onChange }: Props) {
