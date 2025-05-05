@@ -9,26 +9,10 @@ import {
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import { cos, dot, mul, sin } from 'typegpu/std';
+import { cos, dot, mul, sign, sin, sqrt } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
-
-// TODO: Contribute back to typegpu/std
-const sqrt = tgpu['~unstable'].fn(
-  [f32],
-  f32,
-)(`(value: f32) -> f32 {
-  return sqrt(value);
-}`);
-
-// TODO: Contribute back to typegpu/std
-const sign = tgpu['~unstable'].fn(
-  [f32],
-  f32,
-)(`(value: f32) -> f32 {
-  return sign(value);
-}`);
 
 export const randSeed: TgpuFn<[F32], undefined> = tgpu['~unstable'].fn([f32])(
   (seed) => {
