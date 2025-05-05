@@ -567,6 +567,28 @@ describe('wgslGenerator', () => {
     expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
   });
 
+  it('generates correct code for complex array expressions', () => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
+      const arr = [
+        d.vec2u(1, 2),
+        d.vec2u(3, 4),
+        std.min(d.vec2u(5, 6), d.vec2u(7, 8)),
+      ] as [d.v2u, d.v2u, d.v2u];
+      return arr[1].x;
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() -> u32 {
+        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), min(vec2u(5, 6), vec2u(7, 8)));
+        return arr[1].x;
+      }`),
+    );
+  });
+
   it('generates correct code for array expressions with struct elements', () => {
     const testStruct = d
       .struct({
@@ -603,9 +625,6 @@ describe('wgslGenerator', () => {
     if (!astInfo) {
       throw new Error('Expected prebuilt AST to be present');
     }
-
-    // biome-ignore format: <it's better that way>
-    const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
@@ -721,5 +740,60 @@ describe('wgslGenerator', () => {
     );
 
     expect(res.dataType).toEqual(d.f32);
+  });
+
+  it('properly handles .value struct properties in slots', ({ root }) => {
+    const UnfortunateStruct = d
+      .struct({
+        value: d.vec3f,
+      })
+      .$name('UnfortunateStruct');
+
+    const testBuffer = root
+      .createBuffer(UnfortunateStruct)
+      .$usage('storage')
+      .$name('testBuffer');
+
+    const testUsage = testBuffer.as('mutable');
+    const testSlot = tgpu['~unstable'].slot(testUsage);
+    const testFn = tgpu['~unstable']
+      .fn(
+        [],
+        d.f32,
+      )(() => {
+        const value = testSlot.value.value;
+        return value.x + value.y + value.z;
+      })
+      .$name('testFn');
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
+    );
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+    console.log('astInfo.externals', astInfo.externals);
+
+    // Check for: const value = testSlot.value.value;
+    //                  ^ this should be a vec3f
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      (
+        astInfo.ast.body[1][0] as tinyest.Const
+      )[2] as unknown as tinyest.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.vec3f);
   });
 });

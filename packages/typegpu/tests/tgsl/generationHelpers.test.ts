@@ -440,11 +440,11 @@ describe('generationHelpers', () => {
       // since WGSL handles all abstract types automatically, this should be basically identity
       expect(result).toBeDefined();
       expect(result?.length).toBe(3);
-      expect(result?.[0]?.dataType).toBe(abstractFloat); // abstractFloat -> f32 is auto
+      expect(result?.[0]?.dataType).toBe(f32);
       expect(result?.[0]?.value).toBe('1.1');
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('2.22');
-      expect(result?.[2]?.dataType).toBe(abstractInt); // abstractInt -> f32 is auto
+      expect(result?.[2]?.dataType).toBe(f32);
       expect(result?.[2]?.value).toBe('1');
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
@@ -458,9 +458,6 @@ describe('generationHelpers', () => {
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('2.22');
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Implicit conversions from [i32, f32] to f32'),
-      );
     });
 
     it('performs pointer dereferencing', () => {
@@ -500,11 +497,11 @@ describe('generationHelpers', () => {
       );
       expect(result).toBeDefined();
       expect(result?.length).toBe(2);
-      expect(result?.[0]?.dataType).toBe(abstractInt); // abstractInt -> f32 is auto
-      expect(result?.[0]?.value).toBe('1'); // abstractInt -> f32 is auto
+      expect(result?.[0]?.dataType).toBe(f32);
+      expect(result?.[0]?.value).toBe('1');
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('f32(-12)'); // Cast applied
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1); // Warns for the cast
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1); // Warns about the cast
     });
 
     it('fails if restrictTo is incompatible', () => {

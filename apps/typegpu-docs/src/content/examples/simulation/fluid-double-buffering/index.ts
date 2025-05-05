@@ -486,8 +486,8 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const y = d.i32(input.uv.y * d.f32(gridSizeUniform.value));
 
   const index = coordsToIndex(x, y);
-  const cell = inputGridSlot.value[index];
-  const density = std.max(0, cell.z);
+  const henlo = inputGridSlot.value[index];
+  const density = std.max(0, henlo.z);
 
   const obstacleColor = d.vec4f(0.1, 0.1, 0.1, 1);
 

@@ -5,10 +5,10 @@ import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import {
+  type FnArgsConversionHint,
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
-  type TgpuFnArgTypes,
   UnknownData,
   type Wgsl,
 } from '../../types.ts';
@@ -85,7 +85,7 @@ interface TgpuFnBase<
     Labelled {
   readonly [$internal]: {
     implementation: Implementation<Args, Return>;
-    argTypes: TgpuFnArgTypes;
+    argTypes: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<Args, Return>;

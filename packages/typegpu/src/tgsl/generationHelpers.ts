@@ -237,8 +237,8 @@ export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
 }
 
 export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
-  if (isDerived(resource) || isSlot(resource)) {
-    return getTypeFromWgsl(resource.value as Wgsl);
+  if (hasInternalDataType(resource)) {
+    return resource[$internal].dataType as AnyData;
   }
 
   if (typeof resource === 'string') {
@@ -505,7 +505,7 @@ function findBestType(
   return { targetType: bestType, actions, hasImplicitConversions: hasCasts };
 }
 
-function concretize(type: AnyWgslData): AnyWgslData {
+export function concretize(type: AnyWgslData): AnyWgslData {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -595,7 +595,10 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return value;
+    return {
+      value: value.value,
+      dataType: targetType,
+    };
   }
 
   const resolvedValue = resolveRes(ctx, value);
@@ -635,7 +638,12 @@ export function convertToCommonType(
 
   if (conversion.hasImplicitConversions) {
     console.warn(
-      `Implicit conversions from [${types.map((t) => t.type).join(', ')}] to ${conversion.targetType.type} are supported, but they are not recommended. Consider using explicit conversions.`,
+      `Implicit conversions from [\n${values
+        .map((v) => `  ${v.value}: ${v.dataType.type}`)
+        .join(
+          ',\n',
+        )}\n] to ${conversion.targetType.type} are supported, but not recommended.
+Consider using explicit conversions instead.`,
     );
   }
 

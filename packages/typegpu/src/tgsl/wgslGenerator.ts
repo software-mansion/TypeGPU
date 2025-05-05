@@ -6,6 +6,7 @@ import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
+  type FnArgsConversionHint,
   type Snippet,
   UnknownData,
   isMarkedInternal,
@@ -13,6 +14,7 @@ import {
 } from '../types.ts';
 import {
   type GenerationCtx,
+  concretize,
   convertStructValues,
   convertToCommonType,
   getTypeForIndexAccess,
@@ -139,9 +141,14 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
-    const lhsStr = resolveRes(ctx, lhsExpr);
-    const rhsStr = resolveRes(ctx, rhsExpr);
-    const type = operatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
+    const converted = convertToCommonType(ctx, [lhsExpr, rhsExpr]) as
+      | [Snippet, Snippet]
+      | undefined;
+    const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
+
+    const lhsStr = resolveRes(ctx, convLhs);
+    const rhsStr = resolveRes(ctx, convRhs);
+    const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
     return {
       value: parenthesizedOps.includes(op)
@@ -239,6 +246,7 @@ export function generateExpression(
         dataType: getTypeForPropAccess(target.value, property),
       };
     }
+
     if (typeof target.value === 'object') {
       const dataType = isWgsl(propValue)
         ? getTypeFromWgsl(propValue)
@@ -325,51 +333,45 @@ export function generateExpression(
         `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
-    console.log('idValue', idValue);
 
-    const argTypes = idValue[$internal]?.argTypes;
+    const argTypes = idValue[$internal]?.argTypes as
+      | FnArgsConversionHint
+      | undefined;
+    let convertedResources: Snippet[];
 
-    let typePairs: [wgsl.AnyWgslData, Snippet][] = [];
-    if (Array.isArray(argTypes)) {
-      typePairs = argTypes
-        .filter((_, index) => index < resolvedSnippets.length)
-        .map((type, index) => [type, resolvedSnippets[index]]) as [
-        wgsl.AnyWgslData,
-        Snippet,
-      ][];
-    } else if (typeof argTypes === 'function') {
-      const types = argTypes(...resolvedSnippets) as wgsl.AnyWgslData[];
-      typePairs = types
-        .filter((_, index) => index < resolvedSnippets.length)
-        .map((type, index) => [type, resolvedSnippets[index]]) as [
-        wgsl.AnyWgslData,
-        Snippet,
-      ][];
-    } else if (typeof argTypes === 'object' && argTypes !== null) {
-      typePairs = Object.entries(argTypes).map(([key, type]) => {
-        const res = (
-          argSnippets[0]?.value as unknown as Record<string, Snippet>
-        )[key];
-        if (!res) {
-          throw new Error(`Missing argument ${key} in function call`);
+    if (!argTypes || argTypes === 'keep') {
+      convertedResources = resolvedSnippets;
+    } else if (argTypes === 'coerce') {
+      convertedResources =
+        convertToCommonType(ctx, resolvedSnippets) ?? resolvedSnippets;
+    } else {
+      const pairs: [wgsl.AnyWgslData, Snippet][] = Array.isArray(argTypes)
+        ? (argTypes
+            .map((type, i) => [type, resolvedSnippets[i]])
+            .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
+        : typeof argTypes === 'function'
+          ? ((argTypes(...resolvedSnippets) as wgsl.AnyWgslData[])
+              .map((type, i) => [type, resolvedSnippets[i]])
+              .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
+          : Object.entries(argTypes).map(([key, type]) => {
+              const sn = (argSnippets[0]?.value as Record<string, Snippet>)[
+                key
+              ];
+              if (!sn)
+                throw new Error(`Missing argument ${key} in function call`);
+              return [type, sn] as [wgsl.AnyWgslData, Snippet];
+            });
+
+      convertedResources = pairs.map(([type, sn]) => {
+        const conv = convertToCommonType(ctx, [sn], [type])?.[0];
+        if (!conv) {
+          throw new Error(
+            `Cannot convert ${ctx.resolve(sn.dataType)} to ${ctx.resolve(type)}`,
+          );
         }
-        return [type, res] as [wgsl.AnyWgslData, Snippet];
+        return conv;
       });
     }
-
-    const convertedResources = argTypes
-      ? typePairs.map(([type, res]) => {
-          const conversion = convertToCommonType(ctx, [res], [type]);
-          if (!conversion) {
-            throw new Error(
-              `Cannot convert ${ctx.resolve(res.dataType)} to ${ctx.resolve(
-                type,
-              )}`,
-            );
-          }
-          return conversion[0];
-        })
-      : resolvedSnippets;
 
     // Assuming that `id` is callable
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
@@ -577,7 +579,11 @@ ${alternate}`;
       throw new Error('Cannot create variable with loose data type.');
     }
 
-    registerBlockVariable(ctx, rawId, eq.dataType);
+    registerBlockVariable(
+      ctx,
+      rawId,
+      concretize(eq.dataType as wgsl.AnyWgslData),
+    );
     const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
 
     // If the value is a plain JS object it has to be an output struct

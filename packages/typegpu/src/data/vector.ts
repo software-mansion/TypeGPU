@@ -1,6 +1,5 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -284,7 +283,7 @@ const vecTypeToConstructor = {
   'vec4<bool>': vec4b,
 } as const;
 
-const vecTypeToPrimitive = {
+export const vecTypeToPrimitive = {
   vec2f: f32,
   vec2h: f16,
   vec2i: i32,
@@ -357,7 +356,6 @@ function makeVecSchema<TValue, S extends number | boolean>(
   );
 
   return Object.assign(construct, {
-    [$internal]: true,
     type,
     [$repr]: undefined as TValue,
   });
