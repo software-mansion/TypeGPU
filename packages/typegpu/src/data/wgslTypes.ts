@@ -1030,7 +1030,9 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   readonly [$repr]: Infer<TElement>[];
   readonly '~gpuRepr': InferGPU<TElement>[];
-  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  readonly '~reprPartial':
+    | { idx: number; value: InferPartial<TElement> }[]
+    | undefined;
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
@@ -1056,7 +1058,9 @@ export interface WgslStruct<
   /** Type-token, not available at runtime */
   readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   /** Type-token, not available at runtime */
-  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+  readonly '~reprPartial':
+    | Prettify<Partial<InferPartialRecord<TProps>>>
+    | undefined;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
