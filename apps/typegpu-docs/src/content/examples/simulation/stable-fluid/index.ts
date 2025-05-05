@@ -252,7 +252,7 @@ const projectBindGroups = [0, 1].map((velIdx) =>
       p: pressureTex[srcPIdx].createView('sampled'),
       out: velTex[dstVelIdx].createView('writeonly'),
     });
-  }),
+  })
 );
 
 const advectInkBindGroups = [0, 1].map((velIdx) =>
@@ -267,7 +267,7 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
       simParams: simParamBuffer,
       linSampler,
     });
-  }),
+  })
 );
 
 const renderBindGroups = {

@@ -84,9 +84,9 @@ export {
 } from './packing.ts';
 
 export {
-  textureSample,
-  textureLoad,
-  textureStore,
   textureDimensions,
+  textureLoad,
+  textureSample,
   textureSampleLevel,
+  textureStore,
 } from './texture.ts';

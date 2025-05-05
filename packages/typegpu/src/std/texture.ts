@@ -7,7 +7,6 @@ import type { ChannelData, TexelData } from '../core/texture/texture.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
-  Void,
   type v2f,
   type v2i,
   type v2u,
@@ -17,6 +16,7 @@ import {
   type v4f,
   type v4i,
   type v4u,
+  Void,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 

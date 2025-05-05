@@ -176,8 +176,9 @@ export function getTypeForPropAccess(
     target = target.inner as AnyData;
   }
 
-  const targetTypeStr =
-    'kind' in target ? (target.kind as string) : target.type;
+  const targetTypeStr = 'kind' in target
+    ? (target.kind as string)
+    : target.type;
 
   if (targetTypeStr === 'struct') {
     return (
