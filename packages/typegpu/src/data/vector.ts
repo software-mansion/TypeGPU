@@ -1,6 +1,6 @@
-import { createDualImpl } from '../shared/generators.ts';
-import { $repr } from '../shared/repr.ts';
-import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import { createDualImpl } from "../shared/generators.ts";
+import { $repr } from "../shared/repr.ts";
+import { bool, f16, f32, i32, u32 } from "./numeric.ts";
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -18,7 +18,7 @@ import {
   Vec4iImpl,
   Vec4uImpl,
   type VecBase,
-} from './vectorImpl.ts';
+} from "./vectorImpl.ts";
 import type {
   AnyVecInstance,
   AnyWgslData,
@@ -38,15 +38,14 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
-} from './wgslTypes.ts';
-import { isDecorated, isVec } from './wgslTypes.ts';
+} from "./wgslTypes.ts";
+import { isDecorated, isVec } from "./wgslTypes.ts";
 
 // ----------
 // Public API
 // ----------
 
 /**
- *
  * Schema representing vec2f - a vector with 2 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -61,7 +60,6 @@ import { isDecorated, isVec } from './wgslTypes.ts';
 export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
 
 /**
- *
  * Schema representing vec2h - a vector with 2 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -76,7 +74,6 @@ export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
 export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
 
 /**
- *
  * Schema representing vec2i - a vector with 2 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -91,7 +88,6 @@ export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
 export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
 
 /**
- *
  * Schema representing vec2u - a vector with 2 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -106,7 +102,6 @@ export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
 export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
 
 /**
- *
  * Schema representing `vec2<bool>` - a vector with 2 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
@@ -118,7 +113,6 @@ export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
 export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
 
 /**
- *
  * Schema representing vec3f - a vector with 3 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -133,7 +127,6 @@ export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
 export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
 
 /**
- *
  * Schema representing vec3h - a vector with 3 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -148,7 +141,6 @@ export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
 export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
 
 /**
- *
  * Schema representing vec3i - a vector with 3 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -163,7 +155,6 @@ export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
 export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
 
 /**
- *
  * Schema representing vec3u - a vector with 3 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -178,7 +169,6 @@ export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
 export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
 
 /**
- *
  * Schema representing `vec3<bool>` - a vector with 3 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
@@ -190,7 +180,6 @@ export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
 export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
 
 /**
- *
  * Schema representing vec4f - a vector with 4 elements of type f32.
  * Also a constructor function for this vector value.
  *
@@ -205,7 +194,6 @@ export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
 export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
 
 /**
- *
  * Schema representing vec4h - a vector with 4 elements of type f16.
  * Also a constructor function for this vector value.
  *
@@ -220,7 +208,6 @@ export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
 export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
 
 /**
- *
  * Schema representing vec4i - a vector with 4 elements of type i32.
  * Also a constructor function for this vector value.
  *
@@ -235,7 +222,6 @@ export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
 export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
 
 /**
- *
  * Schema representing vec4u - a vector with 4 elements of type u32.
  * Also a constructor function for this vector value.
  *
@@ -250,7 +236,6 @@ export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
 export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
 
 /**
- *
  * Schema representing `vec4<bool>` - a vector with 4 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
@@ -270,17 +255,17 @@ const vecTypeToConstructor = {
   vec2h,
   vec2i,
   vec2u,
-  'vec2<bool>': vec2b,
+  "vec2<bool>": vec2b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
-  'vec3<bool>': vec3b,
+  "vec3<bool>": vec3b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
-  'vec4<bool>': vec4b,
+  "vec4<bool>": vec4b,
 } as const;
 
 export const vecTypeToPrimitive = {
@@ -288,17 +273,17 @@ export const vecTypeToPrimitive = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
-  'vec2<bool>': bool,
+  "vec2<bool>": bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
-  'vec3<bool>': bool,
+  "vec3<bool>": bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
-  'vec4<bool>': bool,
+  "vec4<bool>": bool,
 } as const;
 
 type VecSchemaBase<TValue> = {
@@ -317,7 +302,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
       let j = 0;
       for (const arg of args) {
-        if (typeof arg === 'number' || typeof arg === 'boolean') {
+        if (typeof arg === "number" || typeof arg === "boolean") {
           values[j++] = arg;
         } else {
           for (let c = 0; c < arg.length; ++c) {
@@ -335,24 +320,18 @@ function makeVecSchema<TValue, S extends number | boolean>(
       );
     },
     (...args) => ({
-      value: `${type}(${args.map((v) => v.value).join(', ')})`,
+      value: `${type}(${args.map((v) => v.value).join(", ")})`,
       dataType: vecTypeToConstructor[type],
     }),
-    (...args) => {
-      const argTypes = new Array<AnyWgslData>(args.length);
-
-      for (let i = 0; i < args.length; ++i) {
-        // biome-ignore lint/style/noNonNullAssertion: <I mean cmon TS we are iterating over args using its length>
-        let argType = args[i]!.dataType;
-        while (isDecorated(argType)) {
+    (...args) =>
+      args.map((arg) => {
+        let argType = arg.dataType;
+        if (isDecorated(argType)) {
           argType = (argType as Decorated).inner as AnyWgslData;
         }
 
-        argTypes[i] = isVec(argType) ? argType : vecTypeToPrimitive[type];
-      }
-
-      return argTypes;
-    },
+        return isVec(argType) ? argType : vecTypeToPrimitive[type];
+      }),
   );
 
   return Object.assign(construct, {
