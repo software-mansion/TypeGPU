@@ -139,9 +139,6 @@ const computeGravityPipeline = root['~unstable']
 const skyBoxPipeline = root['~unstable']
   .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
-  .withPrimitive({
-    cullMode: 'front',
-  })
   .createPipeline()
   .$name('render skybox');
 
@@ -153,7 +150,7 @@ const renderPipeline = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
-  .withPrimitive({ topology: 'triangle-list' })
+  .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
   .createPipeline()
   .$name('render celestial bodies');
 
