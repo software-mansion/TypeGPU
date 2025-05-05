@@ -414,7 +414,7 @@ window.addEventListener('touchend', () => {
   isDragging = false;
 });
 
-canvas.addEventListener('mousemove', (event) => {
+window.addEventListener('mousemove', (event) => {
   const dx = event.clientX - prevX;
   const dy = event.clientY - prevY;
   prevX = event.clientX;
