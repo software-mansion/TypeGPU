@@ -372,11 +372,30 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   get wwww() { return new this._Vec4(this[3], this[3], this[3], this[3]); }
 }
 
+export function generateOperatorVec2<S>(
+  opVxS: (lhs: Vec2<number>, rhs: number) => Vec2<number>,
+  opVxV: (lhs: Vec2<number>, rhs: Vec2<number>) => Vec2<number>,
+  opVxM: (lhs: Vec2<number>, rhs: m2x2f) => Vec2<number>,
+): (lhs: Vec2<S>, rhs: number | Vec2<number> | m2x2f) => Vec2<number> {
+  return (lhs: Vec2<S>, rhs: number | Vec2<number> | m2x2f) => {
+    if (!lhs.isNumeric()) {
+      throw new Error('mul is only applicable to numeric vectors');
+    }
+    if (typeof rhs === 'number') {
+      return opVxS(lhs, rhs);
+    }
+    if (rhs.kind.startsWith('vec')) {
+      return opVxV(lhs, rhs as Vec2<number>);
+    }
+    return opVxM(lhs, rhs as m2x2f);
+  };
+}
+
 type Tuple2<S> = [S, S];
 type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
 
-abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
+export abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
 
   0: S;
@@ -389,21 +408,7 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   mul(this: Vec2<S>, other: number | Vec2<number> | m2x2f): Vec2<number> {
-    if (!this.isNumeric()) {
-      throw new Error('mul is only applicable to numeric vectors');
-    }
-    if (typeof other === 'number') {
-      return new this._Vec2(...mulV2xS(this, other));
-    }
-    if (other.kind.startsWith('vec')) {
-      return new this._Vec2(...mulV2xV2(this, other as Vec2<number>));
-    }
-    return new this._Vec2(
-      ...mulV2xM2(
-        this,
-        (other as m2x2f).columns as unknown as Tuple2<Tuple2<number>>,
-      ),
-    );
+    return generateOperatorVec2<S>(mulV2xS, mulV2xV2, mulV2xM2)(this, other);
   }
 
   isNumeric(): this is Vec2<number> {
