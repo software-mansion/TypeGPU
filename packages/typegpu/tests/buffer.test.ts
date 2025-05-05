@@ -47,8 +47,7 @@ describe('TgpuBuffer', () => {
       label: '<unnamed>',
       mappedAtCreation: false,
       size: 64,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
+      usage: global.GPUBufferUsage.UNIFORM |
         global.GPUBufferUsage.COPY_DST |
         global.GPUBufferUsage.COPY_SRC,
     });
@@ -132,7 +131,7 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3));
     const data = await buffer.read();
 
-    expect(device.mock.createBuffer.mock.calls).toEqual([
+    expect(device.mock.createBuffer.mock.calls).toStrictEqual([
       // First call (raw buffer)
       [
         {
@@ -182,9 +181,7 @@ describe('TgpuBuffer', () => {
     expect(rawBuffer.destroy).not.toHaveBeenCalled();
   });
 
-  it('should destroy inner buffer if it was responsible for creating it', ({
-    root,
-  }) => {
+  it('should destroy inner buffer if it was responsible for creating it', ({ root }) => {
     const buffer = root.createBuffer(d.f32);
     const rawBuffer = root.unwrap(buffer); // Triggering the creation of a buffer
     buffer.destroy();
@@ -210,30 +207,27 @@ describe('TgpuBuffer', () => {
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
     ]);
 
     buffer.writePartial({ b: 4 });
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
       [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
     ]);
 
     buffer.writePartial({ a: 5, b: 6 }); // should merge the writes
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
       [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
       [rawBuffer, 0, toUint8Array(new Uint32Array([5, 6])), 0, 8],
     ]);
   });
 
-  it('should allow for partial writes with complex data', ({
-    root,
-    device,
-  }) => {
+  it('should allow for partial writes with complex data', ({ root, device }) => {
     const buffer = root.createBuffer(
       d.struct({
         a: d.u32,
@@ -329,9 +323,7 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
-  it('should be able to copy from a buffer identical on the byte level', ({
-    root,
-  }) => {
+  it('should be able to copy from a buffer identical on the byte level', ({ root }) => {
     const buffer = root.createBuffer(d.u32);
     const copy = root.createBuffer(d.atomic(d.u32));
 
@@ -390,10 +382,7 @@ describe('TgpuBuffer', () => {
     buffer3.copyFrom(copy32);
   });
 
-  it('should be able to write to a buffer with atomic data', ({
-    root,
-    device,
-  }) => {
+  it('should be able to write to a buffer with atomic data', ({ root, device }) => {
     const buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 3));
     const NestedSchema = d.struct({
       a: d.struct({
@@ -421,10 +410,7 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
-  it('should be able to write to a buffer with decorated data', ({
-    root,
-    device,
-  }) => {
+  it('should be able to write to a buffer with decorated data', ({ root, device }) => {
     const DecoratedSchema = d.struct({
       a: d.size(12, d.f32),
       b: d.align(16, d.u32),

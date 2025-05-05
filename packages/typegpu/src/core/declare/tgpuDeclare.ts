@@ -1,7 +1,7 @@
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import {
-  type ExternalMap,
   applyExternals,
+  type ExternalMap,
   replaceExternalsInWgsl,
 } from '../resolve/externals.ts';
 

@@ -24,11 +24,10 @@ export interface TgpuVertexFormatData<T extends VertexFormat> {
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
-  implements TgpuVertexFormatData<T>
-{
+  implements TgpuVertexFormatData<T> {
   public readonly [$internal] = true;
   /** Used as a type-token for the `Infer<T>` functionality. */
-  public declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
+  declare public readonly [$repr]: Infer<FormatToWGSLType<T>>;
 
   constructor(public readonly type: T) {}
 }

@@ -8,11 +8,11 @@ import * as p from './params.ts';
 import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
+  computeBindGroupLayout,
   type ModelData,
   ModelDataArray,
-  MouseRay,
-  computeBindGroupLayout,
   modelVertexLayout,
+  MouseRay,
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
@@ -53,8 +53,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'vertex')
-    .$name(`fish data buffer ${idx}`),
-);
+    .$name(`fish data buffer ${idx}`));
 
 const randomizeFishPositions = () => {
   const positions: d.Infer<typeof ModelData>[] = Array.from(
@@ -182,7 +181,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
     modelTexture: fishModel.texture,
     sampler: sampler,
     currentTime: currentTimeBuffer,
-  }),
+  })
 );
 
 const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
@@ -199,7 +198,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
-  }),
+  })
 );
 
 // frame

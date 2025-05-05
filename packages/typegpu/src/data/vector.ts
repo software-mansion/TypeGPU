@@ -1,6 +1,6 @@
-import { createDualImpl } from "../shared/generators.ts";
-import { $repr } from "../shared/repr.ts";
-import { bool, f16, f32, i32, u32 } from "./numeric.ts";
+import { createDualImpl } from '../shared/generators.ts';
+import { $repr } from '../shared/repr.ts';
+import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -18,7 +18,7 @@ import {
   Vec4iImpl,
   Vec4uImpl,
   type VecBase,
-} from "./vectorImpl.ts";
+} from './vectorImpl.ts';
 import type {
   AnyVecInstance,
   AnyWgslData,
@@ -38,8 +38,8 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
-} from "./wgslTypes.ts";
-import { isDecorated, isVec } from "./wgslTypes.ts";
+} from './wgslTypes.ts';
+import { isDecorated, isVec } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -255,17 +255,17 @@ const vecTypeToConstructor = {
   vec2h,
   vec2i,
   vec2u,
-  "vec2<bool>": vec2b,
+  'vec2<bool>': vec2b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
-  "vec3<bool>": vec3b,
+  'vec3<bool>': vec3b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
-  "vec4<bool>": vec4b,
+  'vec4<bool>': vec4b,
 } as const;
 
 export const vecTypeToPrimitive = {
@@ -273,17 +273,17 @@ export const vecTypeToPrimitive = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
-  "vec2<bool>": bool,
+  'vec2<bool>': bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
-  "vec3<bool>": bool,
+  'vec3<bool>': bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
-  "vec4<bool>": bool,
+  'vec4<bool>': bool,
 } as const;
 
 type VecSchemaBase<TValue> = {
@@ -302,7 +302,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
       let j = 0;
       for (const arg of args) {
-        if (typeof arg === "number" || typeof arg === "boolean") {
+        if (typeof arg === 'number' || typeof arg === 'boolean') {
           values[j++] = arg;
         } else {
           for (let c = 0; c < arg.length; ++c) {
@@ -320,7 +320,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       );
     },
     (...args) => ({
-      value: `${type}(${args.map((v) => v.value).join(", ")})`,
+      value: `${type}(${args.map((v) => v.value).join(', ')})`,
       dataType: vecTypeToConstructor[type],
     }),
     (...args) =>

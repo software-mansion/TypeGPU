@@ -7,16 +7,16 @@ import * as wgsl from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
   type FnArgsConversionHint,
-  type Snippet,
-  UnknownData,
   isMarkedInternal,
   isWgsl,
+  type Snippet,
+  UnknownData,
 } from '../types.ts';
 import {
-  type GenerationCtx,
   concretize,
   convertStructValues,
   convertToCommonType,
+  type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
@@ -330,7 +330,9 @@ export function generateExpression(
 
     if (!isMarkedInternal(idValue)) {
       throw new Error(
-        `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+        `Function ${
+          String(idValue)
+        } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
@@ -342,31 +344,34 @@ export function generateExpression(
     if (!argTypes || argTypes === 'keep') {
       convertedResources = resolvedSnippets;
     } else if (argTypes === 'coerce') {
-      convertedResources =
-        convertToCommonType(ctx, resolvedSnippets) ?? resolvedSnippets;
+      convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
+        resolvedSnippets;
     } else {
       const pairs: [wgsl.AnyWgslData, Snippet][] = Array.isArray(argTypes)
         ? (argTypes
-            .map((type, i) => [type, resolvedSnippets[i]])
-            .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
+          .map((type, i) => [type, resolvedSnippets[i]])
+          .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
         : typeof argTypes === 'function'
-          ? ((argTypes(...resolvedSnippets) as wgsl.AnyWgslData[])
-              .map((type, i) => [type, resolvedSnippets[i]])
-              .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
-          : Object.entries(argTypes).map(([key, type]) => {
-              const sn = (argSnippets[0]?.value as Record<string, Snippet>)[
-                key
-              ];
-              if (!sn)
-                throw new Error(`Missing argument ${key} in function call`);
-              return [type, sn] as [wgsl.AnyWgslData, Snippet];
-            });
+        ? ((argTypes(...resolvedSnippets) as wgsl.AnyWgslData[])
+          .map((type, i) => [type, resolvedSnippets[i]])
+          .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
+        : Object.entries(argTypes).map(([key, type]) => {
+          const sn = (argSnippets[0]?.value as Record<string, Snippet>)[
+            key
+          ];
+          if (!sn) {
+            throw new Error(`Missing argument ${key} in function call`);
+          }
+          return [type, sn] as [wgsl.AnyWgslData, Snippet];
+        });
 
       convertedResources = pairs.map(([type, sn]) => {
         const conv = convertToCommonType(ctx, [sn], [type])?.[0];
         if (!conv) {
           throw new Error(
-            `Cannot convert ${ctx.resolve(sn.dataType)} to ${ctx.resolve(type)}`,
+            `Cannot convert ${ctx.resolve(sn.dataType)} to ${
+              ctx.resolve(type)
+            }`,
           );
         }
         return conv;
@@ -453,7 +458,7 @@ export function generateExpression(
     const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
-      generateExpression(ctx, value as tinyest.Expression),
+      generateExpression(ctx, value as tinyest.Expression)
     );
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
@@ -467,12 +472,11 @@ export function generateExpression(
     }
 
     const targetType = convertedValues[0]?.dataType as AnyData;
-    const type =
-      targetType.type === 'abstractFloat'
-        ? d.f32
-        : targetType.type === 'abstractInt'
-          ? d.i32
-          : targetType;
+    const type = targetType.type === 'abstractFloat'
+      ? d.f32
+      : targetType.type === 'abstractInt'
+      ? d.i32
+      : targetType;
 
     const typeId = ctx.resolve(type);
 
@@ -513,10 +517,9 @@ export function generateStatement(
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
-    const returnValue =
-      returnNode !== undefined
-        ? resolveRes(ctx, generateExpression(ctx, returnNode))
-        : undefined;
+    const returnValue = returnNode !== undefined
+      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
@@ -607,7 +610,9 @@ ${alternate}`;
 
       const convertedValues = convertStructValues(ctx, structType, entries);
       const resolvedStruct = ctx.resolve(structType);
-      return `${ctx.pre}var ${id} = ${resolvedStruct}(${convertedValues.map((v) => resolveRes(ctx, v)).join(', ')});`;
+      return `${ctx.pre}var ${id} = ${resolvedStruct}(${
+        convertedValues.map((v) => resolveRes(ctx, v)).join(', ')
+      });`;
     }
 
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;

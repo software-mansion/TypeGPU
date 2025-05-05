@@ -1,10 +1,10 @@
 import { i32, u32 } from '../data/numeric.ts';
 import {
   type AnyWgslData,
-  Void,
   type atomicI32,
   type atomicU32,
   isWgslData,
+  Void,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';

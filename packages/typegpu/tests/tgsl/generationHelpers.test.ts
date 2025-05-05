@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { arrayOf } from '../../src/data/array.js';
-import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.js';
+import { arrayOf } from '../../src/data/array.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
   abstractFloat,
   abstractInt,
@@ -9,9 +9,9 @@ import {
   f32,
   i32,
   u32,
-} from '../../src/data/numeric.js';
-import { ptrPrivate } from '../../src/data/ptr.js';
-import { struct } from '../../src/data/struct.js';
+} from '../../src/data/numeric.ts';
+import { ptrPrivate } from '../../src/data/ptr.ts';
+import { struct } from '../../src/data/struct.ts';
 import {
   vec2f,
   vec2i,
@@ -21,21 +21,21 @@ import {
   vec4f,
   vec4h,
   vec4i,
-} from '../../src/data/vector.js';
-import type { WgslArray } from '../../src/data/wgslTypes.js';
+} from '../../src/data/vector.ts';
+import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import {
-  type GenerationCtx,
   coerceToSnippet,
   convertStructValues,
   convertToCommonType,
   convertType,
+  type GenerationCtx,
   getBestConversion,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToSnippet,
-} from '../../src/tgsl/generationHelpers.js';
-import { type Snippet, UnknownData } from '../../src/types.js';
+} from '../../src/tgsl/generationHelpers.ts';
+import { type Snippet, UnknownData } from '../../src/types.ts';
 
 const mockCtx = {
   indent: () => '',

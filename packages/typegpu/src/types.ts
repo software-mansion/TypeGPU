@@ -16,12 +16,12 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
-  type SlotValuePair,
-  type TgpuAccessor,
-  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
+  type SlotValuePair,
+  type TgpuAccessor,
+  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type {

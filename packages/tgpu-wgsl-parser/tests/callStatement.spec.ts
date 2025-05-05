@@ -14,7 +14,7 @@ describe('call_statement', () => {
       args: [],
     } satisfies CallStatement;
 
-    expect(parse('perform();')).toEqual(expected);
+    expect(parse('perform();')).toStrictEqual(expected);
   });
 
   it('parses function call with one arg', () => {
@@ -33,7 +33,7 @@ describe('call_statement', () => {
       ],
     } satisfies CallStatement;
 
-    expect(parse('perform(true);')).toEqual(expected);
+    expect(parse('perform(true);')).toStrictEqual(expected);
   });
 
   it('parses function call with two args', () => {
@@ -56,6 +56,6 @@ describe('call_statement', () => {
       ],
     } satisfies CallStatement;
 
-    expect(parse('perform(true, 0.15);')).toEqual(expected);
+    expect(parse('perform(true, 0.15);')).toStrictEqual(expected);
   });
 });

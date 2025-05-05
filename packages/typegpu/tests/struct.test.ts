@@ -25,7 +25,7 @@ describe('struct', () => {
       x: u32,
       y: vec3u,
     });
-    expect(sizeOf(TestStruct)).toEqual(32);
+    expect(sizeOf(TestStruct)).toBe(32);
   });
 
   it('aligns struct properties when writing', () => {
@@ -38,7 +38,10 @@ describe('struct', () => {
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
-    expect([...new Uint32Array(buffer)]).toEqual([1, 0, 0, 0, 1, 2, 3, 0]);
+    // deno-fmt-ignore
+    expect([...new Uint32Array(buffer)]).toStrictEqual([
+      1, 0, 0, 0, 1, 2, 3, 0,
+    ]);
   });
 
   it('aligns struct properties when reading', () => {
@@ -52,7 +55,10 @@ describe('struct', () => {
 
     new Uint32Array(buffer).set([3, 0, 0, 0, 4, 5, 6]);
 
-    expect(readData(reader, TestStruct)).toEqual({ x: 3, y: vec3u(4, 5, 6) });
+    expect(readData(reader, TestStruct)).toStrictEqual({
+      x: 3,
+      y: vec3u(4, 5, 6),
+    });
   });
 
   it('encodes and decodes structures properly', () => {
@@ -87,7 +93,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
   });
 
   it('allows for runtime sized arrays as last property', () => {
@@ -143,8 +149,8 @@ describe('struct', () => {
       d: f16,
     });
 
-    expect(sizeOf(TestStruct)).toEqual(8);
-    expect(alignmentOf(TestStruct)).toEqual(2);
+    expect(sizeOf(TestStruct)).toBe(8);
+    expect(alignmentOf(TestStruct)).toBe(2);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -156,7 +162,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
   });
 
   it('properly aligns with f16', () => {
@@ -166,8 +172,8 @@ describe('struct', () => {
       c: u32,
     });
 
-    expect(sizeOf(TestStruct)).toEqual(12);
-    expect(alignmentOf(TestStruct)).toEqual(4);
+    expect(sizeOf(TestStruct)).toBe(12);
+    expect(alignmentOf(TestStruct)).toBe(4);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -178,7 +184,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
   });
 
   it('supports and properly aligns with vectors of f16', () => {
@@ -187,8 +193,8 @@ describe('struct', () => {
       b: f16,
     });
 
-    expect(sizeOf(TestStruct)).toEqual(8);
-    expect(alignmentOf(TestStruct)).toEqual(8);
+    expect(sizeOf(TestStruct)).toBe(8);
+    expect(alignmentOf(TestStruct)).toBe(8);
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
@@ -198,7 +204,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
 
     const TestStruct2 = struct({
       a: vec2h,
@@ -209,7 +215,7 @@ describe('struct', () => {
       c: vec2h,
     });
 
-    expect(sizeOf(TestStruct2)).toEqual(40);
+    expect(sizeOf(TestStruct2)).toBe(40);
 
     const buffer2 = new ArrayBuffer(sizeOf(TestStruct2));
 
@@ -223,7 +229,9 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer2), TestStruct2, value2);
-    expect(readData(new BufferReader(buffer2), TestStruct2)).toEqual(value2);
+    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(
+      value2,
+    );
   });
 
   it('can be called to create an object', () => {
@@ -234,7 +242,7 @@ describe('struct', () => {
 
     const obj = TestStruct({ x: 1, y: vec3u(1, 2, 3) });
 
-    expect(obj).toEqual({ x: 1, y: vec3u(1, 2, 3) });
+    expect(obj).toStrictEqual({ x: 1, y: vec3u(1, 2, 3) });
     expectTypeOf(obj).toEqualTypeOf<{ x: number; y: v3u }>();
   });
 

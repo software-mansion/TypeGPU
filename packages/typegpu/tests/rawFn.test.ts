@@ -14,7 +14,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }`)
       .$name('get_x');
 
-    expect(getX.label).toEqual('get_x');
+    expect(getX.label).toBe('get_x');
   });
 
   it('resolves rawFn to WGSL', () => {
@@ -35,7 +35,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves externals and replaces their usages in code', () => {
@@ -90,7 +90,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('replaces external usage just for exact identifier matches', () => {
@@ -137,7 +137,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it("doesn't replace property access identifiers when replacing externals", () => {
@@ -167,7 +167,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       names: 'strict',
     });
 
-    expect(parse(shaderCode)).toEqual(
+    expect(parse(shaderCode)).toBe(
       parse(`
         struct HighlightedCircle {
           index: u32,
@@ -257,7 +257,7 @@ struct fragment_Output {
       }`)
       .$name('fragment');
 
-    expect(parseResolved({ fragmentFunction })).toEqual(
+    expect(parseResolved({ fragmentFunction })).toBe(
       parse(`
     struct fragment_Input {
       @builtin(position) position: vec4f,
@@ -288,7 +288,7 @@ struct fragment_Output {
       }`)
       .$name('newPointF');
 
-    expect(parseResolved({ func })).toEqual(
+    expect(parseResolved({ func })).toBe(
       parse(`
     struct Point {
       a: u32,
@@ -319,7 +319,7 @@ struct fragment_Output {
       }`)
       .$name('newPointF');
 
-    expect(parseResolved({ func })).toEqual(
+    expect(parseResolved({ func })).toBe(
       parse(`
     struct Point {
       a: u32,
@@ -353,7 +353,7 @@ struct fragment_Output {
         }`)
       .$name('newPointF');
 
-    expect(parseResolved({ func })).toEqual(
+    expect(parseResolved({ func })).toBe(
       parse(`
     struct P {
       a: u32,
@@ -386,7 +386,7 @@ struct fragment_Output {
       }`)
       .$name('newPointF');
 
-    expect(parseResolved({ func })).toEqual(
+    expect(parseResolved({ func })).toBe(
       parse(`
     struct P {
       a: u32,
@@ -423,7 +423,7 @@ struct fragment_Output {
       .$name('main')
       .$uses({ functions: { getColor } });
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       fn get_color() {
         let color = vec3f();
@@ -450,7 +450,7 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
       var result: array<f32, 4>;
     }`);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(`
       struct foo_Input {
         @builtin(global_invocation_id) gid: vec3u,

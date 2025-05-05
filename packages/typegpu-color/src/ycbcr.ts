@@ -7,7 +7,6 @@ import { mul } from 'typegpu/std';
  * import { rgbToYcbcrMatrix } from '@typegpu/color';
  *
  * const redInYcbcr = mul(d.vec3f(1, 0, 0), rgbToYcbcrMatrix);
- *
  */
 export const rgbToYcbcrMatrix = tgpu['~unstable'].const(
   mat3x3f,

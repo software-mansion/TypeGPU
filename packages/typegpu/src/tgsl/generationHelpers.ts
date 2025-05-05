@@ -1,7 +1,7 @@
-import { isDerived, isSlot } from "../core/slot/slotTypes.ts";
-import { arrayOf } from "../data/array.ts";
-import type { AnyData } from "../data/dataTypes.ts";
-import { mat2x2f, mat3x3f, mat4x4f } from "../data/matrix.ts";
+import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
+import { arrayOf } from '../data/array.ts';
+import type { AnyData } from '../data/dataTypes.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
   abstractInt,
@@ -10,7 +10,7 @@ import {
   f32,
   i32,
   u32,
-} from "../data/numeric.ts";
+} from '../data/numeric.ts';
 import {
   vec2b,
   vec2f,
@@ -27,7 +27,7 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from "../data/vector.ts";
+} from '../data/vector.ts';
 import {
   type AnyWgslData,
   type AnyWgslStruct,
@@ -41,40 +41,41 @@ import {
   isWgslData,
   type U32,
   type WgslStruct,
-} from "../data/wgslTypes.ts";
-import { invariant } from "../errors.ts";
-import { getResolutionCtx } from "../gpuMode.ts";
-import { $internal } from "../shared/symbols.ts";
-import { assertExhaustive } from "../shared/utilityTypes.ts";
+} from '../data/wgslTypes.ts';
+import { invariant } from '../errors.ts';
+import { getResolutionCtx } from '../gpuMode.ts';
+import { $internal } from '../shared/symbols.ts';
+import { assertExhaustive } from '../shared/utilityTypes.ts';
 import {
   hasInternalDataType,
+  isSelfResolvable,
   isWgsl,
   type ResolutionCtx,
   type Snippet,
   UnknownData,
   type Wgsl,
-} from "../types.ts";
+} from '../types.ts';
 
 const swizzleableTypes = [
-  "vec2f",
-  "vec2h",
-  "vec2i",
-  "vec2u",
-  "vec2<bool>",
-  "vec3f",
-  "vec3h",
-  "vec3i",
-  "vec3u",
-  "vec3<bool>",
-  "vec4f",
-  "vec4h",
-  "vec4i",
-  "vec4u",
-  "vec4<bool>",
-  "struct",
+  'vec2f',
+  'vec2h',
+  'vec2i',
+  'vec2u',
+  'vec2<bool>',
+  'vec3f',
+  'vec3h',
+  'vec3i',
+  'vec3u',
+  'vec3<bool>',
+  'vec4f',
+  'vec4h',
+  'vec4i',
+  'vec4u',
+  'vec4<bool>',
+  'struct',
 ] as const;
 
-type SwizzleableType = "f" | "h" | "i" | "u" | "b";
+type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
@@ -118,17 +119,17 @@ const kindToSchema = {
   vec2h: vec2h,
   vec2i: vec2i,
   vec2u: vec2u,
-  "vec2<bool>": vec2b,
+  'vec2<bool>': vec2b,
   vec3f: vec3f,
   vec3h: vec3h,
   vec3i: vec3i,
   vec3u: vec3u,
-  "vec3<bool>": vec3b,
+  'vec3<bool>': vec3b,
   vec4f: vec4f,
   vec4h: vec4h,
   vec4i: vec4i,
   vec4u: vec4u,
-  "vec4<bool>": vec4b,
+  'vec4<bool>': vec4b,
   mat2x2f: mat2x2f,
   mat3x3f: mat3x3f,
   mat4x4f: mat4x4f,
@@ -139,17 +140,17 @@ const indexableTypeToResult = {
   vec2h: f16,
   vec2i: i32,
   vec2u: u32,
-  "vec2<bool>": bool,
+  'vec2<bool>': bool,
   vec3f: f32,
   vec3h: f16,
   vec3i: i32,
   vec3u: u32,
-  "vec3<bool>": bool,
+  'vec3<bool>': bool,
   vec4f: f32,
   vec4h: f16,
   vec4i: i32,
   vec4u: u32,
-  "vec4<bool>": bool,
+  'vec4<bool>': bool,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
@@ -160,9 +161,9 @@ export function getTypeForPropAccess(
   propName: string,
 ): AnyData | UnknownData {
   if (
-    typeof targetType === "string" ||
-    typeof targetType === "number" ||
-    typeof targetType === "boolean"
+    typeof targetType === 'string' ||
+    typeof targetType === 'number' ||
+    typeof targetType === 'boolean'
   ) {
     return UnknownData;
   }
@@ -171,7 +172,7 @@ export function getTypeForPropAccess(
     const ctx = getResolutionCtx();
     if (!ctx) {
       throw new Error(
-        "Resolution context not found when unwrapping slot or derived",
+        'Resolution context not found when unwrapping slot or derived',
       );
     }
     const unwrapped = ctx.unwrap(targetType);
@@ -188,11 +189,11 @@ export function getTypeForPropAccess(
     target = target.inner as AnyData;
   }
 
-  const targetTypeStr = "kind" in target
+  const targetTypeStr = 'kind' in target
     ? (target.kind as string)
     : target.type;
 
-  if (targetTypeStr === "struct") {
+  if (targetTypeStr === 'struct') {
     return (
       ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
     );
@@ -206,8 +207,8 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr.includes("bool")
-      ? "b"
+    const swizzleTypeChar = targetTypeStr.includes('bool')
+      ? 'b'
       : (targetTypeStr[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
@@ -242,24 +243,27 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
     return resource[$internal].dataType as AnyData;
   }
 
-  if (typeof resource === "string") {
+  if (typeof resource === 'string') {
     return UnknownData;
   }
-  if (typeof resource === "number") {
+  if (typeof resource === 'number') {
     return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
   }
-  if (typeof resource === "boolean") {
+  if (typeof resource === 'boolean') {
     return bool;
   }
 
-  if ("kind" in resource) {
+  if ('kind' in resource) {
     const kind = resource.kind;
     if (kind in kindToSchema) {
       return kindToSchema[kind];
     }
   }
 
-  return isWgslData(resource) ? resource : UnknownData;
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  return isWgslData(resource) || isSelfResolvable(resource)
+    ? (resource as unknown as AnyData)
+    : UnknownData;
 }
 
 export function numericLiteralToSnippet(value: string): Snippet | undefined {
@@ -294,19 +298,19 @@ export function numericLiteralToSnippet(value: string): Snippet | undefined {
   return undefined;
 }
 
-type ConversionAction = "ref" | "deref" | "cast" | "none";
+type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
 type ConversionRankInfo =
-  | { rank: number; action: "cast"; targetType: AnyData }
-  | { rank: number; action: Exclude<ConversionAction, "cast"> };
+  | { rank: number; action: 'cast'; targetType: AnyData }
+  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
   rank: Number.POSITIVE_INFINITY,
-  action: "none",
+  action: 'none',
 };
 
 function unwrapDecorated(data: AnyData): AnyData {
-  if (data.type === "decorated") {
+  if (data.type === 'decorated') {
     return data.inner as AnyData;
   }
   return data;
@@ -339,20 +343,20 @@ function getAutoConversionRank(
   const trueDst = unwrapDecorated(dest);
 
   if (trueSrc.type === trueDst.type) {
-    return { rank: 0, action: "none" };
+    return { rank: 0, action: 'none' };
   }
 
-  if (trueSrc.type === "abstractFloat") {
-    if (trueDst.type === "f32") return { rank: 1, action: "none" };
-    if (trueDst.type === "f16") return { rank: 2, action: "none" };
+  if (trueSrc.type === 'abstractFloat') {
+    if (trueDst.type === 'f32') return { rank: 1, action: 'none' };
+    if (trueDst.type === 'f16') return { rank: 2, action: 'none' };
   }
 
-  if (trueSrc.type === "abstractInt") {
-    if (trueDst.type === "i32") return { rank: 3, action: "none" };
-    if (trueDst.type === "u32") return { rank: 4, action: "none" };
-    if (trueDst.type === "abstractFloat") return { rank: 5, action: "none" };
-    if (trueDst.type === "f32") return { rank: 6, action: "none" };
-    if (trueDst.type === "f16") return { rank: 7, action: "none" };
+  if (trueSrc.type === 'abstractInt') {
+    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
+    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
+    if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
+    if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
+    if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
   }
 
   if (isVec(trueSrc) && isVec(trueDst)) {
@@ -365,7 +369,7 @@ function getAutoConversionRank(
 
   if (isMat(trueSrc) && isMat(trueDst)) {
     // Matrix conversion rank depends only on component type (always f32 for now)
-    return { rank: 0, action: "none" };
+    return { rank: 0, action: 'none' };
   }
 
   return INFINITE_RANK;
@@ -379,19 +383,19 @@ function getImplicitConversionRank(
   const trueDst = unwrapDecorated(dest);
 
   if (
-    trueSrc.type === "ptr" &&
+    trueSrc.type === 'ptr' &&
     getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
-    return { rank: 0, action: "deref" };
+    return { rank: 0, action: 'deref' };
   }
 
   if (
-    trueDst.type === "ptr" &&
+    trueDst.type === 'ptr' &&
     getAutoConversionRank(trueSrc, trueDst.inner as AnyData).rank <
       Number.POSITIVE_INFINITY
   ) {
-    return { rank: 1, action: "ref" };
+    return { rank: 1, action: 'ref' };
   }
 
   const primitivePreference = {
@@ -416,7 +420,7 @@ function getImplicitConversionRank(
 
       const rank = destPref < srcPref ? 10 : 20;
 
-      return { rank: rank, action: "cast", targetType: trueDst };
+      return { rank: rank, action: 'cast', targetType: trueDst };
     }
   }
 
@@ -494,23 +498,23 @@ function findBestType(
     (detail, index) => ({
       sourceIndex: index,
       action: detail.action,
-      ...(detail.action === "cast" && {
+      ...(detail.action === 'cast' && {
         targetType: detail.targetType as U32 | F32 | I32 | F16,
       }),
     }),
   );
 
-  const hasCasts = actions.some((action) => action.action === "cast");
+  const hasCasts = actions.some((action) => action.action === 'cast');
 
   return { targetType: bestType, actions, hasImplicitConversions: hasCasts };
 }
 
 export function concretize(type: AnyWgslData): AnyWgslData {
-  if (type.type === "abstractFloat") {
+  if (type.type === 'abstractFloat') {
     return f32;
   }
 
-  if (type.type === "abstractInt") {
+  if (type.type === 'abstractInt') {
     return i32;
   }
 
@@ -536,7 +540,7 @@ export function getBestConversion(
   const implicitResult = findBestType(types, uniqueTargetTypes, true);
   if (implicitResult) {
     implicitResult.hasImplicitConversions = implicitResult.actions.some(
-      (action) => action.action === "cast",
+      (action) => action.action === 'cast',
     );
     return implicitResult;
   }
@@ -556,13 +560,13 @@ export function convertType(
       sourceIndex: 0,
       action: conversion.action,
     };
-    if (conversion.action === "cast") {
+    if (conversion.action === 'cast') {
       actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
     }
     return {
       targetType: unwrapDecorated(targetType),
       actions: [actionDetail],
-      hasImplicitConversions: conversion.action === "cast",
+      hasImplicitConversions: conversion.action === 'cast',
     };
   }
 
@@ -594,7 +598,7 @@ function applyActionToSnippet(
   action: ConversionResultAction,
   targetType: AnyData,
 ): Snippet {
-  if (action.action === "none") {
+  if (action.action === 'none') {
     return {
       value: value.value,
       dataType: targetType,
@@ -604,18 +608,18 @@ function applyActionToSnippet(
   const resolvedValue = resolveRes(ctx, value);
 
   switch (action.action) {
-    case "ref":
+    case 'ref':
       return { value: `&${resolvedValue}`, dataType: targetType };
-    case "deref":
+    case 'deref':
       return { value: `*${resolvedValue}`, dataType: targetType };
-    case "cast": {
+    case 'cast': {
       return {
         value: `${ctx.resolve(targetType)}(${resolvedValue})`,
         dataType: targetType,
       };
     }
     default: {
-      assertExhaustive(action.action, "applyActionToSnippet");
+      assertExhaustive(action.action, 'applyActionToSnippet');
     }
   }
 }
@@ -642,7 +646,7 @@ export function convertToCommonType(
         values
           .map((v) => `  ${v.value}: ${v.dataType.type}`)
           .join(
-            ",\n",
+            ',\n',
           )
       }\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
@@ -651,7 +655,7 @@ Consider using explicit conversions instead.`,
 
   return values.map((value, index) => {
     const action = conversion.actions[index];
-    invariant(action, "Action should not be undefined");
+    invariant(action, 'Action should not be undefined');
     return applyActionToSnippet(ctx, value, action, conversion.targetType);
   });
 }
@@ -687,7 +691,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     const coerced = value.map(coerceToSnippet).filter(Boolean);
     const context = getResolutionCtx() as GenerationCtx | undefined;
     if (!context) {
-      throw new Error("Tried to coerce array without a context");
+      throw new Error('Tried to coerce array without a context');
     }
 
     const converted = convertToCommonType(context, coerced as Snippet[]);
@@ -703,12 +707,12 @@ export function coerceToSnippet(value: unknown): Snippet {
     }
 
     return {
-      value: converted.map((v) => v.value).join(", "),
+      value: converted.map((v) => v.value).join(', '),
       dataType: arrayOf(concretize(commonType), value.length),
     };
   }
 
-  if (typeof value !== "object") {
+  if (typeof value !== 'object') {
     const maybeNumeric = numericLiteralToSnippet(String(value));
 
     if (maybeNumeric) {

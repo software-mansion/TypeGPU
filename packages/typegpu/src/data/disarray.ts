@@ -38,7 +38,7 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   public readonly [$internal] = true;
   public readonly type = 'disarray';
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TElement>[];
+  declare public readonly [$repr]: Infer<TElement>[];
   /** Type-token, not available at runtime */
   public readonly '~reprPartial'!: {
     idx: number;

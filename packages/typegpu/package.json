@@ -6,6 +6,7 @@
   "license": "MIT",
   "type": "module",
   "exports": {
+    "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts"
@@ -16,7 +17,7 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
-      "./package.json": "./package.json",
+      "./package.json": "./dist/package.json",
       ".": {
         "types": "./dist/index.d.ts",
         "module": "./dist/index.js",
