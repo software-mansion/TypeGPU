@@ -181,10 +181,8 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a u32
     const res1 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      ((astInfo.ast.body[1][0] as tinyest.Return)[
-        1
-      ] as tinyest.BinaryExpression)[1],
+      // deno-fmt-ignore: it's better that way
+      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
     );
 
     expect(res1.dataType).toEqual(d.u32);
@@ -193,10 +191,8 @@ describe('wgslGenerator', () => {
     //                                       ^ this should be a u32
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      ((astInfo.ast.body[1][0] as tinyest.Return)[
-        1
-      ] as tinyest.BinaryExpression)[3],
+      // deno-fmt-ignore: it's better that way
+      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
     );
     expect(res2.dataType).toEqual(d.u32);
 
@@ -321,7 +317,6 @@ describe('wgslGenerator', () => {
     //                           ^ this part should be a i32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
       (astInfo.ast.body[1][0] as tinyest.Const)[2],
     );
 
@@ -333,7 +328,6 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
       (astInfo.ast.body[1][1] as tinyest.Const)[2],
     );
     ctx[$internal].itemStateStack.popBlockScope();
@@ -347,12 +341,10 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
     const res3 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
       (astInfo.ast.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
     );
     const res4 = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <good luck with this formatted>
       astInfo.ast.body[1][2] as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
@@ -471,7 +463,6 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
       (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
@@ -560,10 +551,8 @@ describe('wgslGenerator', () => {
     //                        ^ this should be an array<u32, 3>
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
-      (astInfo.ast.body[1][0] as tinyest.Const)[
-        2
-      ] as unknown as tinyest.Expression,
+      // deno-fmt-ignore: it's better that way
+      (astInfo.ast.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
@@ -606,7 +595,6 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    // biome-ignore format: <it's better that way>
     const expectedAst = {
       b: [{
         c: ['arr', {
@@ -727,7 +715,6 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      // biome-ignore format: <it's better that way>
       (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 

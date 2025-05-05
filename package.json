@@ -19,14 +19,6 @@
   "engines": {
     "node": ">=12.20.0"
   },
-  "prettier": {
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "all",
-    "bracketSameLine": true,
-    "tabWidth": 2,
-    "printWidth": 80
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
