@@ -8,6 +8,7 @@ import type {
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import type { TgpuNamable } from '../../namable.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { Default } from '../../shared/utilityTypes.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -48,6 +49,14 @@ type ViewUsages<
     ? 'sampled'
     : 'readonly' | 'writeonly' | 'mutable' | 'sampled';
 
+interface TextureInternals {
+  unwrap(): GPUTexture;
+}
+
+interface TextureViewInternals {
+  readonly unwrap?: (() => GPUTextureView) | undefined;
+}
+
 // ----------
 // Public API
 // ----------
@@ -60,6 +69,7 @@ export type TexelData = Vec4u | Vec4i | Vec4f;
  */
 export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   extends TgpuNamable {
+  readonly [$internal]: TextureInternals;
   readonly resourceType: 'texture';
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
   readonly label: string | undefined;
@@ -122,10 +132,6 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   destroy(): void;
 }
 
-export interface INTERNAL_TgpuTexture {
-  unwrap(): GPUTexture;
-}
-
 export type StorageTextureAccess = 'readonly' | 'writeonly' | 'mutable';
 
 /**
@@ -157,19 +163,12 @@ export interface TgpuStorageTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
 > {
+  readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-storage-view';
   readonly dimension: TDimension;
   readonly texelDataType: TData;
   readonly access: StorageTextureAccess;
 }
-
-export interface INTERNAL_TgpuFixedStorageTexture
-  extends SelfResolvable,
-    TgpuNamable {
-  unwrap(): GPUTextureView;
-}
-
-export interface INTERNAL_TgpuLaidOutStorageTexture extends SelfResolvable {}
 
 /**
  * A texture accessed as "readonly" storage on the GPU.
@@ -208,45 +207,41 @@ export interface TgpuSampledTexture<
   TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
   TData extends ChannelData = ChannelData,
 > {
+  readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-sampled-view';
   readonly dimension: TDimension;
   readonly channelDataType: TData;
 }
 
-export interface INTERNAL_TgpuFixedSampledTexture
-  extends SelfResolvable,
-    TgpuNamable {
-  unwrap(): GPUTextureView;
-}
-
-export interface INTERNAL_TgpuLaidOutSampledTexture extends SelfResolvable {}
-
 export function INTERNAL_createTexture(
   props: TextureProps,
   branch: ExperimentalTgpuRoot,
 ): TgpuTexture<TextureProps> {
-  return new TgpuTextureImpl(
-    props,
-    branch,
-  ) as unknown as TgpuTexture<TextureProps>;
+  return new TgpuTextureImpl(props, branch);
 }
 
 export function isTexture<T extends TgpuTexture>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.resourceType === 'texture';
+  return (value as T)?.resourceType === 'texture' && !!(value as T)[$internal];
 }
 
 export function isStorageTextureView<
   T extends TgpuReadonlyTexture | TgpuWriteonlyTexture | TgpuMutableTexture,
 >(value: unknown | T): value is T {
-  return (value as T)?.resourceType === 'texture-storage-view';
+  return (
+    (value as T)?.resourceType === 'texture-storage-view' &&
+    !!(value as T)[$internal]
+  );
 }
 
 export function isSampledTextureView<T extends TgpuSampledTexture>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.resourceType === 'texture-sampled-view';
+  return (
+    (value as T)?.resourceType === 'texture-sampled-view' &&
+    !!(value as T)[$internal]
+  );
 }
 
 export type TgpuAnyTextureView =
@@ -265,7 +260,8 @@ const accessMap = {
   writeonly: 'write',
 } as const;
 
-class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
+class TgpuTextureImpl implements TgpuTexture {
+  public readonly [$internal]: TextureInternals;
   public readonly resourceType = 'texture';
   public usableAsSampled = false;
   public usableAsStorage = false;
@@ -279,7 +275,30 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   constructor(
     public readonly props: TextureProps,
     private readonly _branch: ExperimentalTgpuRoot,
-  ) {}
+  ) {
+    this[$internal] = {
+      unwrap: () => {
+        if (this._destroyed) {
+          throw new Error('This texture has been destroyed');
+        }
+
+        if (!this._texture) {
+          this._texture = this._branch.device.createTexture({
+            label: this._label ?? '<unnamed>',
+            format: this.props.format,
+            size: this.props.size,
+            usage: this._flags,
+            dimension: this.props.dimension ?? '2d',
+            viewFormats: this.props.viewFormats ?? [],
+            mipLevelCount: this.props.mipLevelCount ?? 1,
+            sampleCount: this.props.sampleCount ?? 1,
+          });
+        }
+
+        return this._texture;
+      },
+    };
+  }
 
   get label() {
     return this._label;
@@ -288,30 +307,6 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   $name(label: string) {
     this._label = label;
     return this;
-  }
-
-  /**
-   * NOTE: Internal use only, use this and you'll get fired. Use `root.unwrap` instead.
-   */
-  unwrap(): GPUTexture {
-    if (this._destroyed) {
-      throw new Error('This texture has been destroyed');
-    }
-
-    if (!this._texture) {
-      this._texture = this._branch.device.createTexture({
-        label: this._label ?? '<unnamed>',
-        format: this.props.format,
-        size: this.props.size,
-        usage: this._flags,
-        dimension: this.props.dimension ?? '2d',
-        viewFormats: this.props.viewFormats ?? [],
-        mipLevelCount: this.props.mipLevelCount ?? 1,
-        sampleCount: this.props.sampleCount ?? 1,
-      });
-    }
-
-    return this._texture;
   }
 
   $usage<T extends ('sampled' | 'storage' | 'render')[]>(
@@ -437,8 +432,9 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuFixedStorageTextureImpl
-  implements TgpuStorageTexture, INTERNAL_TgpuFixedStorageTexture
+  implements TgpuStorageTexture, SelfResolvable, TgpuNamable
 {
+  public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
   public readonly dimension: StorageTextureDimension;
@@ -451,8 +447,22 @@ class TgpuFixedStorageTextureImpl
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
       | undefined,
     public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture,
   ) {
+    this[$internal] = {
+      unwrap: () => {
+        if (!this._view) {
+          this._view = this._texture[$internal].unwrap().createView({
+            label: `${this.label ?? '<unnamed>'} - View`,
+            format: this._format,
+            dimension: this.dimension,
+          });
+        }
+
+        return this._view;
+      },
+    };
+
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
       props?.format ?? (_texture.props.format as StorageTextureTexelFormat);
@@ -466,18 +476,6 @@ class TgpuFixedStorageTextureImpl
   $name(label: string): this {
     this._texture.$name(label);
     return this;
-  }
-
-  unwrap(): GPUTextureView {
-    if (!this._view) {
-      this._view = this._texture.unwrap().createView({
-        label: `${this.label ?? '<unnamed>'} - View`,
-        format: this._format,
-        dimension: this.dimension,
-      });
-    }
-
-    return this._view;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -507,8 +505,9 @@ class TgpuFixedStorageTextureImpl
 }
 
 export class TgpuLaidOutStorageTextureImpl
-  implements TgpuStorageTexture, INTERNAL_TgpuLaidOutStorageTexture
+  implements TgpuStorageTexture, SelfResolvable
 {
+  public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -518,6 +517,7 @@ export class TgpuLaidOutStorageTextureImpl
     public readonly access: StorageTextureAccess,
     private readonly _membership: LayoutMembership,
   ) {
+    this[$internal] = {};
     this.texelDataType = texelFormatToDataType[this._format];
   }
 
@@ -543,8 +543,9 @@ export class TgpuLaidOutStorageTextureImpl
 }
 
 class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuFixedSampledTexture
+  implements TgpuSampledTexture, SelfResolvable, TgpuNamable
 {
+  public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
@@ -556,8 +557,20 @@ class TgpuFixedSampledTextureImpl
     private readonly _props:
       | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
       | undefined,
-    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture,
   ) {
+    this[$internal] = {
+      unwrap: () => {
+        if (!this._view) {
+          this._view = this._texture[$internal].unwrap().createView({
+            label: `${this.label ?? '<unnamed>'} - View`,
+            ...this._props,
+          });
+        }
+
+        return this._view;
+      },
+    };
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
       _props?.format ?? (_texture.props.format as GPUTextureFormat);
@@ -571,17 +584,6 @@ class TgpuFixedSampledTextureImpl
   $name(label: string): this {
     this._texture.$name(label);
     return this;
-  }
-
-  unwrap(): GPUTextureView {
-    if (!this._view) {
-      this._view = this._texture.unwrap().createView({
-        label: `${this.label ?? '<unnamed>'} - View`,
-        ...this._props,
-      });
-    }
-
-    return this._view;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -614,8 +616,9 @@ class TgpuFixedSampledTextureImpl
 }
 
 export class TgpuLaidOutSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuLaidOutSampledTexture
+  implements TgpuSampledTexture, SelfResolvable
 {
+  public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -625,6 +628,7 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _multisampled: boolean,
     private readonly _membership: LayoutMembership,
   ) {
+    this[$internal] = {};
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 

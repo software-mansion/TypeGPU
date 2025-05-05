@@ -142,11 +142,18 @@ We created a set of guides and tutorials to get you up and running fast. Check o
 <!-- /automd -->
 
 ## Repository structure
-**Packages**:
+**Packages:**
+
 - [packages/typegpu](/packages/typegpu) - The core library.
-- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Build plugins for TypeGPU.
-- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation.
+- [packages/typegpu-color](/packages/typegpu-color) - A set of color helper functions for use in WebGPU/TypeGPU apps.
+- [packages/typegpu-noise](/packages/typegpu-noise) - A set of noise/pseudo-random functions for use in WebGPU/TypeGPU apps.
+
+**Tooling:**
+- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Plugin for your favorite bundler, enabling TypeGPU shader functions to be written in JS.
 - [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU.
+- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation.
+
+**Internals:**
 - [packages/tinyest](/packages/tinyest) - Type definitions for a JS embeddable syntax tree.
 - [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - Transforms JavaScript into its *tinyest* form, to be used in generating equivalent (or close to) WGSL code.
 - [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser.
@@ -154,6 +161,7 @@ We created a set of guides and tutorials to get you up and running fast. Check o
 
 **Apps**:
 - [apps/typegpu-docs](/apps/typegpu-docs) - The documentation, examples and benchmarks webpage.
+- [apps/infra-benchmarks](/apps/infra-benchmarks) - Headless benchmarks.
 
 ## TypeGPU is created by Software Mansion
 

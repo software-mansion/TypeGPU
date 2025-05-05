@@ -1,19 +1,18 @@
 export { discard } from './discard.ts';
 export {
-  // ops
-  add,
-  sub,
-  mul,
+  abs,
   // builtin functions
   acos,
+  // ops
+  add,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
   cross,
   distance,
+  div,
   dot,
   exp,
   floor,
@@ -21,58 +20,62 @@ export {
   length,
   max,
   min,
-  normalize,
   mix,
+  mul,
+  neg,
+  normalize,
   pow,
   reflect,
+  sign,
   sin,
-  neg,
+  sqrt,
+  sub,
 } from './numeric.ts';
 
 export {
+  // logical aggregation
+  all,
   // comparison
   allEq,
+  and,
+  any,
   eq,
-  ne,
-  lt,
-  le,
-  gt,
   ge,
+  gt,
+  // other
+  isCloseTo,
+  le,
+  lt,
+  ne,
   // logical ops
   not,
   or,
-  and,
-  // logical aggregation
-  all,
-  any,
-  // other
-  isCloseTo,
   select,
 } from './boolean.ts';
 
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
-  // synchronization
-  workgroupBarrier,
   storageBarrier,
   textureBarrier,
+  // synchronization
+  workgroupBarrier,
 } from './atomic.ts';
 
 export { arrayLength } from './array.ts';
 
 export {
-  pack4x8unorm,
   pack2x16float,
-  unpack4x8unorm,
+  pack4x8unorm,
   unpack2x16float,
+  unpack4x8unorm,
 } from './packing.ts';
 
 export { textureSample } from './texture.ts';
