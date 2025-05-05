@@ -3,17 +3,17 @@
  * Used as a pre-publishing step.
  */
 
-import * as fs from "node:fs/promises";
-import process from "node:process";
-import arg from "arg";
-import { consola } from "consola";
-import { execa } from "execa";
-import { entries, mapValues } from "remeda";
-import color from "./colors.mjs";
-import { FAIL, IN_PROGRESS, SUCCESS } from "./icons.mjs";
-import { Frog } from "./log.mjs";
-import { progress } from "./progress.mjs";
-import { verifyPublishTag } from "./verify-publish-tag.mjs";
+import * as fs from 'node:fs/promises';
+import process from 'node:process';
+import arg from 'arg';
+import { consola } from 'consola';
+import { execa } from 'execa';
+import { entries, mapValues } from 'remeda';
+import color from './colors.mjs';
+import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
+import { Frog } from './log.mjs';
+import { progress } from './progress.mjs';
+import { verifyPublishTag } from './verify-publish-tag.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
@@ -23,7 +23,7 @@ const cwd = new URL(`file:${process.cwd()}/`);
  * @param {string=} path
  * @returns {*}
  */
-function deepMapStrings(value, transform, path = "") {
+function deepMapStrings(value, transform, path = '') {
   if (value === undefined || value === null) {
     return value;
   }
@@ -32,7 +32,7 @@ function deepMapStrings(value, transform, path = "") {
     return value;
   }
 
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, val]) => [
         key,
@@ -41,7 +41,7 @@ function deepMapStrings(value, transform, path = "") {
     );
   }
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return transform(path, value);
   }
 
@@ -49,10 +49,10 @@ function deepMapStrings(value, transform, path = "") {
 }
 
 async function transformPackageJSON() {
-  const packageJsonUrl = new URL("./package.json", cwd);
-  const distPackageJsonUrl = new URL("./dist/package.json", cwd);
+  const packageJsonUrl = new URL('./package.json', cwd);
+  const distPackageJsonUrl = new URL('./dist/package.json', cwd);
 
-  const packageJson = JSON.parse(await fs.readFile(packageJsonUrl, "utf-8"));
+  const packageJson = JSON.parse(await fs.readFile(packageJsonUrl, 'utf-8'));
   let distPackageJson = structuredClone(packageJson);
 
   // Replacing `exports`, `main`, and `types` with `publishConfig.*`
@@ -69,11 +69,11 @@ async function transformPackageJSON() {
 
   // Altering paths in the package.json
   distPackageJson = deepMapStrings(distPackageJson, (_path, value) => {
-    if (value.startsWith("./dist/")) {
-      return value.replace(/^\.\/dist/, ".");
+    if (value.startsWith('./dist/')) {
+      return value.replace(/^\.\/dist/, '.');
     }
-    if (value.startsWith("./src/")) {
-      return value.replace(/^\.\/src/, ".");
+    if (value.startsWith('./src/')) {
+      return value.replace(/^\.\/src/, '.');
     }
     return value;
   });
@@ -84,7 +84,7 @@ async function transformPackageJSON() {
       ...entries(distPackageJson.dependencies ?? {}),
     ]
   ) {
-    if (versionSpec === "*" || versionSpec === "workspace:*") {
+    if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
         `Cannot depend on a module with a wildcard version. (${moduleKey}: ${versionSpec})`,
       );
@@ -98,30 +98,30 @@ async function transformPackageJSON() {
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
     distPackageJson.dependencies ?? {},
-    (/** @type {string} */ value) => value.replace(/^workspace:/, ""),
+    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
   distPackageJson.peerDependencies = mapValues(
     distPackageJson.peerDependencies ?? {},
-    (/** @type {string} */ value) => value.replace(/^workspace:/, ""),
+    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
 
   await fs.writeFile(
     distPackageJsonUrl,
     JSON.stringify(distPackageJson, undefined, 2),
-    "utf-8",
+    'utf-8',
   );
 }
 
 async function transformReadme() {
-  const readmeUrl = new URL("./README.md", cwd);
-  const distReadmeUrl = new URL("./dist/README.md", cwd);
+  const readmeUrl = new URL('./README.md', cwd);
+  const distReadmeUrl = new URL('./dist/README.md', cwd);
 
-  let readme = await fs.readFile(readmeUrl, "utf-8");
+  let readme = await fs.readFile(readmeUrl, 'utf-8');
 
   // npmjs.com does not handle multiple logos well, remove the dark mode only one.
-  readme = readme.replace(/!.*#gh-dark-mode-only\)/, "");
+  readme = readme.replace(/!.*#gh-dark-mode-only\)/, '');
 
-  await fs.writeFile(distReadmeUrl, readme, "utf-8");
+  await fs.writeFile(distReadmeUrl, readme, 'utf-8');
 }
 
 /**
@@ -136,25 +136,25 @@ const ICON = {
 };
 
 async function main() {
-  consola.start("Preparing the package for publishing");
-  console.log("");
+  consola.start('Preparing the package for publishing');
+  console.log('');
 
-  const args = arg({ "--skip-publish-tag-check": Boolean });
+  const args = arg({ '--skip-publish-tag-check': Boolean });
 
-  if (!args["--skip-publish-tag-check"]) {
+  if (!args['--skip-publish-tag-check']) {
     verifyPublishTag();
   }
 
   /** @type {PromiseSettledResult<*>[]} */
-  const results = await progress("", async (update) => {
+  const results = await progress('', async (update) => {
     /** @typedef {'biome' | 'build' | 'spec' | 'types'} TaskName */
 
     /** @type {Record<TaskName, TaskStatus>} */
     const status = {
-      biome: "in_progress",
-      build: "in_progress",
-      spec: "in_progress",
-      types: "in_progress",
+      biome: 'in_progress',
+      build: 'in_progress',
+      spec: 'in_progress',
+      types: 'in_progress',
     };
 
     const taskString = (/** @type {TaskName} */ name) =>
@@ -169,9 +169,9 @@ async function main() {
     const updateMsg = () =>
       update(
         `${color.BgBrightMagenta}${color.Black}${Frog} working on tasks...${color.Reset}  ${
-          taskString("biome")
-        }, ${taskString("build")}, ${taskString("spec")}, ${
-          taskString("types")
+          taskString('biome')
+        }, ${taskString('build')}, ${taskString('spec')}, ${
+          taskString('types')
         }`,
       );
 
@@ -184,12 +184,12 @@ async function main() {
     const withStatusUpdate = (name, promise) => /** @type {T} */ (
       promise
         .then((result) => {
-          status[name] = "success";
+          status[name] = 'success';
           updateMsg();
           return result;
         })
         .catch((err) => {
-          status[name] = "fail";
+          status[name] = 'fail';
           updateMsg();
           err.taskName = name;
           throw err;
@@ -199,25 +199,25 @@ async function main() {
     const $ = execa({ all: true });
 
     const results = await Promise.allSettled([
-      withStatusUpdate("biome", $`pnpm -w check`),
-      withStatusUpdate("build", $`pnpm build`),
-      withStatusUpdate("spec", $`pnpm -w test:spec`),
-      withStatusUpdate("types", $`pnpm -w test:types`),
+      withStatusUpdate('biome', $`pnpm -w check`),
+      withStatusUpdate('build', $`pnpm build`),
+      withStatusUpdate('spec', $`pnpm -w test:spec`),
+      withStatusUpdate('types', $`pnpm -w test:types`),
     ]);
 
     update(
       `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${
-        taskString("biome")
-      }, ${taskString("build")}, ${taskString("spec")}, ${taskString("types")}`,
+        taskString('biome')
+      }, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
     );
 
     return results;
   });
 
-  console.log("");
+  console.log('');
 
   const rejected = /** @type {PromiseRejectedResult[]} */ (
-    results.filter((result) => result.status === "rejected")
+    results.filter((result) => result.status === 'rejected')
   );
 
   for (const rej of rejected) {
@@ -227,11 +227,11 @@ async function main() {
     process.exit(1);
   }
 
-  consola.start("Transforming miscellaneous files...");
+  consola.start('Transforming miscellaneous files...');
 
   await Promise.all([transformPackageJSON(), transformReadme()]);
 
-  consola.success("Package prepared!");
+  consola.success('Package prepared!');
 }
 
 export default main;
