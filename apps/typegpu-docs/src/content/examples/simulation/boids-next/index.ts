@@ -162,8 +162,7 @@ const triangleVertexBuffer = root
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(d.arrayOf(TriangleData, triangleAmount))
-    .$usage('storage', 'uniform', 'vertex'),
-);
+    .$usage('storage', 'uniform', 'vertex'));
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
@@ -290,14 +289,14 @@ const computePipeline = root['~unstable']
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     colorPalette: colorPaletteBuffer,
-  }),
+  })
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
-  }),
+  })
 );
 
 let even = false;

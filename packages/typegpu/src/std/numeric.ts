@@ -5,8 +5,15 @@ import type {
   AnyMatInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  v2f,
+  v2h,
+  v2i,
   v3f,
   v3h,
+  v3i,
+  v4f,
+  v4h,
+  v4i,
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
@@ -91,16 +98,16 @@ export const mul: MulOverload = createDualImpl(
   // GPU implementation
   (s, v) => {
     const returnType = isNumeric(s)
-      ? // Scalar * Vector/Matrix
-        (v.dataType as AnyWgslData)
+      // Scalar * Vector/Matrix
+      ? (v.dataType as AnyWgslData)
       : !s.dataType.type.startsWith('mat')
-        ? // Vector * Matrix
-          (s.dataType as AnyWgslData)
-        : !v.dataType.type.startsWith('mat')
-          ? // Matrix * Vector
-            (v.dataType as AnyWgslData)
-          : // Vector * Vector or Matrix * Matrix
-            (s.dataType as AnyWgslData);
+      // Vector * Matrix
+      ? (s.dataType as AnyWgslData)
+      : !v.dataType.type.startsWith('mat')
+      // Matrix * Vector
+      ? (v.dataType as AnyWgslData)
+      // Vector * Vector or Matrix * Matrix
+      : (s.dataType as AnyWgslData);
     return { value: `(${s.value} * ${v.value})`, dataType: returnType };
   },
 );
@@ -321,6 +328,21 @@ export const min = createDualImpl(
   },
   // GPU implementation
   (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
+);
+
+export const sign = createDualImpl(
+  // CPU implementation
+  //         \/ specifically no unsigned variants
+  <T extends v2f | v2h | v2i | v3f | v3h | v3i | v4f | v4h | v4i | number>(
+    e: T,
+  ): T => {
+    if (typeof e === 'number') {
+      return Math.sign(e) as T;
+    }
+    return VectorOps.sign[e.kind](e) as T;
+  },
+  // GPU implementation
+  (e) => ({ value: `sign(${e.value})`, dataType: e.dataType }),
 );
 
 /**

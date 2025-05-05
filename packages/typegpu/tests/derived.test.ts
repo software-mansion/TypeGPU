@@ -122,9 +122,7 @@ describe('TgpuDerived', () => {
     );
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({
-    root,
-  }) => {
+  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
     const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
     const doubledVectorSlot = tgpu['~unstable'].derived(() => {
       const vec = vectorSlot.value;

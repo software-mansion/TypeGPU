@@ -2,12 +2,12 @@ import type { ArgNames, Block } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
-  type SlotValuePair,
-  type TgpuDerived,
-  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
+  type SlotValuePair,
+  type TgpuDerived,
+  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
 import { isData } from './data/dataTypes.ts';
@@ -18,18 +18,18 @@ import {
   isWgslStruct,
 } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode.ts';
+import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
 import type { JitTranspiler } from './jitTranspiler.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import {
+  bindGroupLayout,
   type TgpuBindGroup,
   TgpuBindGroupImpl,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
-  bindGroupLayout,
 } from './tgpuBindGroupLayout.ts';
 import { getTypeFromWgsl } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
@@ -41,7 +41,7 @@ import type {
   Snippet,
   Wgsl,
 } from './types.ts';
-import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
+import { isSelfResolvable, isWgsl, UnknownData } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -260,8 +260,8 @@ export class IndentController {
   get pre(): string {
     return (
       INDENT[this.identLevel] ??
-      (INDENT[N] as string).repeat(this.identLevel / N) +
-        INDENT[this.identLevel % N]
+        (INDENT[N] as string).repeat(this.identLevel / N) +
+          INDENT[this.identLevel % N]
     );
   }
 
@@ -402,7 +402,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
-      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this
+        ._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }
 
@@ -478,7 +479,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
           )
         ) {
           return instance.result as T;
@@ -531,7 +532,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
           )
         ) {
           return instance.result;
@@ -573,8 +574,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(item: unknown): string {
     if (isProviding(item)) {
-      return this.withSlots(item['~providing'].pairs, () =>
-        this.resolve(item['~providing'].inner),
+      return this.withSlots(
+        item['~providing'].pairs,
+        () => this.resolve(item['~providing'].inner),
       );
     }
 
@@ -604,7 +606,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (schema && isWgslArray(schema)) {
-      return `array(${(value as unknown[]).map((element) => this.resolveValue(element, schema.elementType))})`;
+      return `array(${
+        (value as unknown[]).map((element) =>
+          this.resolveValue(element, schema.elementType)
+        )
+      })`;
     }
 
     if (Array.isArray(value)) {
@@ -612,11 +618,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (schema && isWgslStruct(schema)) {
-      return `${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, type_]) => this.resolveValue((value as Infer<typeof schema>)[key], type_))})`;
+      return `${this.resolve(schema)}(${
+        Object.entries(schema.propTypes).map(([key, type_]) =>
+          this.resolveValue((value as Infer<typeof schema>)[key], type_)
+        )
+      })`;
     }
 
     throw new Error(
-      `Value ${value} (as json: ${JSON.stringify(value)}) of schema ${schema} is not resolvable to WGSL`,
+      `Value ${value} (as json: ${
+        JSON.stringify(value)
+      }) of schema ${schema} is not resolvable to WGSL`,
     );
   }
 }
@@ -697,6 +709,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType !== undefined
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${ctx.resolve(returnType)}`
+    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+      ctx.resolve(returnType)
+    }`
     : `(${argList})`;
 }

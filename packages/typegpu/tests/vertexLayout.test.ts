@@ -79,7 +79,7 @@ describe('ArrayToContainedAttribs', () => {
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {
     const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(d.vec3f, count),
+      d.disarrayOf(d.vec3f, count)
     );
 
     expect(vertexLayout.stride).toEqual(12);
@@ -98,7 +98,7 @@ describe('tgpu.vertexLayout', () => {
     });
 
     const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(VertexData, count),
+      d.disarrayOf(VertexData, count)
     );
 
     expect(vertexLayout.stride).toEqual(32);
@@ -129,7 +129,7 @@ describe('tgpu.vertexLayout', () => {
     });
 
     const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(VertexData, count),
+      d.disarrayOf(VertexData, count)
     );
 
     expect(vertexLayout.stride).toEqual(20);
@@ -154,7 +154,7 @@ describe('tgpu.vertexLayout', () => {
 
   it('creates attributes from loose array with f16 variants', () => {
     const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(d.float16x4, count),
+      d.disarrayOf(d.float16x4, count)
     );
 
     expect(vertexLayout.stride).toEqual(8);
@@ -193,7 +193,7 @@ describe('connectAttributesToShader', () => {
   it('connects a single vec4f attribute (with custom shader location)', () => {
     const shaderInputLayout = d.location(3, d.vec4f);
     const layout = tgpu.vertexLayout((n: number) =>
-      d.disarrayOf(d.unorm16x4, n),
+      d.disarrayOf(d.unorm16x4, n)
     );
     const attrib = layout.attrib;
 
@@ -219,7 +219,7 @@ describe('connectAttributesToShader', () => {
     const shaderInputLayout = {
       a: d.f32,
       b: d.location(3, d.vec2f),
-      c: d.u32 /* should get @location(4) automatically */,
+      c: d.u32, /* should get @location(4) automatically */
     };
 
     const layout = tgpu.vertexLayout((n: number) =>
@@ -230,7 +230,7 @@ describe('connectAttributesToShader', () => {
           gamma: d.u32, // 4 bytes
         }),
         n,
-      ),
+      )
     );
 
     const result = connectAttributesToShader(shaderInputLayout, {
@@ -273,7 +273,7 @@ describe('connectAttributesToShader', () => {
       vi: d.builtin.vertexIndex, // should be omitted
       a: d.f32,
       b: d.location(3, d.vec2f),
-      c: d.u32 /* should get @location(4) automatically */,
+      c: d.u32, /* should get @location(4) automatically */
     };
 
     const alphaBetaLayout = tgpu.vertexLayout((n: number) =>
@@ -283,7 +283,7 @@ describe('connectAttributesToShader', () => {
           beta: d.unorm8x2, // 2 bytes
         }),
         n,
-      ),
+      )
     );
 
     const gammaLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.u32, n));
@@ -332,7 +332,7 @@ describe('connectAttributesToShader', () => {
   it('connects a single vec4h attribute', () => {
     const shaderInputLayout = d.vec4h;
     const layout = tgpu.vertexLayout((n: number) =>
-      d.disarrayOf(d.float16x4, n),
+      d.disarrayOf(d.float16x4, n)
     );
     const attrib = layout.attrib;
 
@@ -358,7 +358,7 @@ describe('connectAttributesToShader', () => {
     const shaderInputLayout = {
       a: d.f16,
       b: d.location(3, d.vec2h),
-      c: d.u32 /* should get @location(4) automatically */,
+      c: d.u32, /* should get @location(4) automatically */
       d: d.f32,
     };
 
@@ -371,7 +371,7 @@ describe('connectAttributesToShader', () => {
           delta: d.float16, // 2 bytes
         }),
         n,
-      ),
+      )
     );
 
     const result = connectAttributesToShader(shaderInputLayout, {
@@ -416,8 +416,7 @@ describe('connectAttributesToShader', () => {
   });
 
   it('throws when trying to use type that has no attribute representation', () => {
-    expect(() =>
-      tgpu.vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)),
-    ).toThrow();
+    expect(() => tgpu.vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)))
+      .toThrow();
   });
 });

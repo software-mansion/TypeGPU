@@ -57,7 +57,7 @@ export function getFilteredSuites(selectedTests: TestIdentifier[]) {
         tests,
         entries(),
         filter((entry) =>
-          selectedTests.includes(identifierOf(suiteName, entry[0])),
+          selectedTests.includes(identifierOf(suiteName, entry[0]))
         ),
         fromEntries(),
       );

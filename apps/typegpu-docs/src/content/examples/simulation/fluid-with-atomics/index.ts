@@ -296,14 +296,13 @@ const vertex = tgpu['~unstable'].vertexFn({
 })((input) => {
   const w = sizeUniform.value.x;
   const h = sizeUniform.value.y;
-  const x =
-    (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
-      2 *
-      d.f32(w)) /
+  const x = (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
+    2 *
+    d.f32(w)) /
     d.f32(std.max(w, h));
   const y =
     ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
-      d.f32(h) -
+        d.f32(h) -
       0.5) *
       2 *
       d.f32(h)) /
@@ -512,8 +511,7 @@ canvas.onmousemove = (event) => {
 
   const cellSize = canvas.width / options.size;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y =
-    options.size -
+  const y = options.size -
     Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
     1;
 
@@ -549,8 +547,7 @@ canvas.ontouchmove = (event) => {
   const x = Math.floor(
     ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
   );
-  const y =
-    options.size -
+  const y = options.size -
     Math.floor(
       ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
     ) -
@@ -578,8 +575,7 @@ const createSampleScene = () => {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
         drawCanvasData.push({
-          idx:
-            (middlePoint + j + options.size / 4) * options.size +
+          idx: (middlePoint + j + options.size / 4) * options.size +
             middlePoint +
             i,
           value: 2 << 24,

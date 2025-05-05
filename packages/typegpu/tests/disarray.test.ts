@@ -43,9 +43,8 @@ describe('disarray', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-    expect([...new Uint32Array(buffer)]).toEqual([
-      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
-    ]);
+    // deno-fmt-ignore
+    expect([...new Uint32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('does not align array elements when reading', () => {

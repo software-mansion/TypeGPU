@@ -19,6 +19,16 @@ import {
 import { select } from '../../../src/std/boolean.ts';
 
 describe('select', () => {
+  it('selects for numbers', () => {
+    expect(select(1, 2, false)).toEqual(1);
+    expect(select(1, 2, true)).toEqual(2);
+  });
+
+  it('selects for booleans', () => {
+    expect(select(true, false, false)).toEqual(true);
+    expect(select(true, false, true)).toEqual(false);
+  });
+
   it('selects for f32 vectors', () => {
     expect(
       select(vec2f(-1.1, -2.2), vec2f(1.1, 2.2), vec2b(false, true)),

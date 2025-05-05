@@ -14,9 +14,7 @@ import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuTexture', () => {
-  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
-    root,
-  }) => {
+  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
     const commonProps = {
       size: [512, 512],
       format: 'rgba8unorm',
@@ -110,9 +108,7 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('makes a readonly size tuple mutable in the resulting type', ({
-    root,
-  }) => {
+  it('makes a readonly size tuple mutable in the resulting type', ({ root }) => {
     // This is because there should be no difference between a texture
     // that was created with a readonly size tuple, and one created
     // with a mutable size tuple.
@@ -202,9 +198,7 @@ describe('TgpuTexture', () => {
     );
   });
 
-  it('does not allow for creation of view when usage requirement is not met', ({
-    root,
-  }) => {
+  it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
     const texture = root.createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -294,9 +288,7 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
     >();
   });
 
-  it('rejects formats different than those specified when defining the texture', ({
-    root,
-  }) => {
+  it('rejects formats different than those specified when defining the texture', ({ root }) => {
     const texture = root
       .createTexture({
         size: [512, 512],
@@ -361,9 +353,7 @@ describe('TgpuSampledTexture', () => {
     >();
   });
 
-  it('rejects formats different than those specified when defining the texture', ({
-    root,
-  }) => {
+  it('rejects formats different than those specified when defining the texture', ({ root }) => {
     const texture = root
       .createTexture({
         size: [512, 512],

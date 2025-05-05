@@ -1,6 +1,6 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
+import { isNamable, type TgpuNamable } from '../../namable.ts';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
@@ -30,36 +30,37 @@ type TgpuComputeFnShellHeader<
  */
 export type TgpuComputeFnShell<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
-> = TgpuComputeFnShellHeader<ComputeIn> /**
- * Creates a type-safe implementation of this signature
- */ &
-  ((
+> =
+  & TgpuComputeFnShellHeader<ComputeIn> /**
+   * Creates a type-safe implementation of this signature
+   */
+  & ((
     implementation: (input: InferIO<ComputeIn>) => undefined,
-  ) => TgpuComputeFn<ComputeIn>) &
-  /**
+  ) => TgpuComputeFn<ComputeIn>)
+  & /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
-   */
-  ((implementation: string) => TgpuComputeFn<ComputeIn>) &
-  ((
+   */ ((implementation: string) => TgpuComputeFn<ComputeIn>)
+  & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuComputeFn<ComputeIn>) & {
+  ) => TgpuComputeFn<ComputeIn>)
+  & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: ((
-      implementation: (input: InferIO<ComputeIn>) => undefined,
-    ) => TgpuComputeFn<ComputeIn>) &
-      /**
+    does:
+      & ((
+        implementation: (input: InferIO<ComputeIn>) => undefined,
+      ) => TgpuComputeFn<ComputeIn>)
+      & /**
        * @param implementation
        *   Raw WGSL function implementation with header and body
        *   without `fn` keyword and function name
        *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */
-      ((implementation: string) => TgpuComputeFn<ComputeIn>);
+       */ ((implementation: string) => TgpuComputeFn<ComputeIn>);
   };
 
 export interface TgpuComputeFn<
@@ -105,10 +106,9 @@ export function computeFn<
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
-    argTypes:
-      options.in && Object.keys(options.in).length !== 0
-        ? [createStructFromIO(options.in)]
-        : [],
+    argTypes: options.in && Object.keys(options.in).length !== 0
+      ? [createStructFromIO(options.in)]
+      : [],
     returnType: undefined,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,

@@ -4,34 +4,38 @@ import { parse } from '../src/index.ts';
 
 describe('variable_decl', () => {
   it('parses unassigned', () => {
-    expect(parse('var example: u32;')).toEqual({
-      type: 'variable_decl',
-      ident: 'example',
-      typespec: {
-        type: 'template_elaborated_ident',
-        ident: 'u32',
+    expect(parse('var example: u32;')).toEqual(
+      {
+        type: 'variable_decl',
+        ident: 'example',
+        typespec: {
+          type: 'template_elaborated_ident',
+          ident: 'u32',
+          template_list: null,
+        },
+        expr: null,
         template_list: null,
-      },
-      expr: null,
-      template_list: null,
-    } satisfies VariableDecl);
+      } satisfies VariableDecl,
+    );
   });
 
   it('parses assigned', () => {
-    expect(parse('var example: u32 = 123;')).toEqual({
-      type: 'variable_decl',
-      ident: 'example',
-      typespec: {
-        type: 'template_elaborated_ident',
-        ident: 'u32',
+    expect(parse('var example: u32 = 123;')).toEqual(
+      {
+        type: 'variable_decl',
+        ident: 'example',
+        typespec: {
+          type: 'template_elaborated_ident',
+          ident: 'u32',
+          template_list: null,
+        },
+        expr: {
+          type: 'int_literal',
+          value: '123',
+        },
         template_list: null,
-      },
-      expr: {
-        type: 'int_literal',
-        value: '123',
-      },
-      template_list: null,
-    } satisfies VariableDecl);
+      } satisfies VariableDecl,
+    );
   });
 });
 

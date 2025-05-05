@@ -1,5 +1,6 @@
 export { discard } from './discard.ts';
 
+// deno-fmt-ignore
 export {
   // ops
   add,
@@ -22,6 +23,7 @@ export {
   min,
   normalize,
   distance,
+  sign,
   sin,
   exp,
   mix,
@@ -30,8 +32,9 @@ export {
   neg,
   sqrt,
   div,
-} from './numeric.js';
+} from './numeric.ts';
 
+// deno-fmt-ignore
 export {
   // comparison
   allEq,
@@ -53,6 +56,7 @@ export {
   select,
 } from './boolean.ts';
 
+// deno-fmt-ignore
 export {
   atomicLoad,
   atomicStore,
@@ -69,13 +73,14 @@ export {
   textureBarrier,
 } from './atomic.ts';
 
-export { arrayLength } from './array.js';
+export { arrayLength } from './array.ts';
 
+// deno-fmt-ignore
 export {
   pack4x8unorm,
   pack2x16float,
   unpack4x8unorm,
   unpack2x16float,
-} from './packing.js';
+} from './packing.ts';
 
-export { textureSample } from './texture.js';
+export { textureSample } from './texture.ts';

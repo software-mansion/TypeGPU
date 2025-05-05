@@ -94,7 +94,7 @@ export const examplesStable = R.pipe(
   R.filter(([_, example]) =>
     example.metadata.tags?.includes('camera')
       ? typeof MediaStreamTrackProcessor === 'undefined'
-      : true,
+      : true
   ),
   R.fromEntries(),
 );

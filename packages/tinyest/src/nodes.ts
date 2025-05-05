@@ -47,11 +47,11 @@ export type Return =
 export type If =
   | readonly [type: NodeTypeCatalog['if'], cond: Expression, then: Statement]
   | readonly [
-      type: NodeTypeCatalog['if'],
-      cond: Expression,
-      then: Statement,
-      alt: Statement,
-    ];
+    type: NodeTypeCatalog['if'],
+    cond: Expression,
+    then: Statement,
+    alt: Statement,
+  ];
 
 /**
  * Represents a block of statements
@@ -64,10 +64,10 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
 export type Let =
   | readonly [type: NodeTypeCatalog['let'], identifier: string]
   | readonly [
-      type: NodeTypeCatalog['let'],
-      identifier: string,
-      value: Expression,
-    ];
+    type: NodeTypeCatalog['let'],
+    identifier: string,
+    value: Expression,
+  ];
 
 /**
  * Represents a const statement
@@ -255,13 +255,13 @@ export type AnyNode = Statement | Expression;
 
 export type ArgNames =
   | {
-      type: 'identifiers';
-      names: string[];
-    }
+    type: 'identifiers';
+    names: string[];
+  }
   | {
-      type: 'destructured-object';
-      props: {
-        prop: string;
-        alias: string;
-      }[];
-    };
+    type: 'destructured-object';
+    props: {
+      prop: string;
+      alias: string;
+    }[];
+  };

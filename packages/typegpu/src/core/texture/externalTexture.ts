@@ -20,8 +20,7 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 // --------------
 
 export class TgpuExternalTextureImpl
-  implements TgpuExternalTexture, SelfResolvable
-{
+  implements TgpuExternalTexture, SelfResolvable {
   public readonly resourceType = 'external-texture';
 
   constructor(private readonly _membership: LayoutMembership) {}
