@@ -13,6 +13,7 @@ import {
 import { menuShownAtom } from '../utils/examples/menuShownAtom.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
+import { ColorPicker } from './design/ColorPicker.tsx';
 import { Select } from './design/Select.tsx';
 import { Slider } from './design/Slider.tsx';
 import { TextArea } from './design/TextArea.tsx';
@@ -127,6 +128,35 @@ function VectorSliderRow({
   );
 }
 
+function ColorPickerRow({
+  label,
+  initial,
+  onChange,
+}: {
+  label: string;
+  initial?: [number, number, number];
+  onChange: (value: [number, number, number]) => void;
+}) {
+  const [value, setValue] = useState<[number, number, number]>(
+    initial ?? [0, 0, 0],
+  );
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+
+  return (
+    <>
+      <div className="text-sm">{label}</div>
+
+      <ColorPicker
+        value={value}
+        onChange={(newValue) => {
+          setValue(newValue);
+          runWithCatch(() => onChange(newValue));
+        }}
+      />
+    </>
+  );
+}
+
 function TextAreaRow({
   label,
   initial,
@@ -228,6 +258,13 @@ function paramToControlRow(param: ExampleControlParam) {
       min={param.min}
       max={param.max}
       step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onColorChange' in param ? (
+    <ColorPickerRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onColorChange}
       initial={param.initial}
     />
   ) : 'onButtonClick' in param ? (

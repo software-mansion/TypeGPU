@@ -42,12 +42,19 @@ export type TextAreaControlParam = {
   label: string;
 };
 
+export type ColorPickerControlParam = {
+  onColorChange: (newValue: [number, number, number]) => void;
+  initial?: [number, number, number];
+  label: string;
+};
+
 export type ExampleControlParam =
   | SelectControlParam
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam;
+  | VectorSliderControlParam
+  | ColorPickerControlParam;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);
