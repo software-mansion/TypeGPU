@@ -26,7 +26,7 @@ describe('function_decl', () => {
       ],
     } satisfies TranslationUnit;
 
-    expect(parse(code)).toEqual(expected);
+    expect(parse(code)).toStrictEqual(expected);
   });
 
   it('parses function with one statement', () => {
@@ -58,7 +58,7 @@ describe('function_decl', () => {
       ],
     } satisfies TranslationUnit;
 
-    expect(parse(code)).toEqual(expected);
+    expect(parse(code)).toStrictEqual(expected);
   });
 
   it('parses function with attributes', () => {
@@ -106,7 +106,7 @@ describe('function_decl', () => {
       ],
     } satisfies TranslationUnit;
 
-    expect(parse(code)).toEqual(expected);
+    expect(parse(code)).toStrictEqual(expected);
   });
 
   it('parses function with explicit return type', () => {
@@ -146,7 +146,7 @@ describe('function_decl', () => {
       ],
     } satisfies TranslationUnit;
 
-    expect(parse(code)).toEqual(expected);
+    expect(parse(code)).toStrictEqual(expected);
   });
 
   it('parses function with arguments', () => {
@@ -197,6 +197,6 @@ describe('function_decl', () => {
       ],
     } satisfies TranslationUnit;
 
-    expect(parse(code)).toEqual(expected);
+    expect(parse(code)).toStrictEqual(expected);
   });
 });

@@ -5,8 +5,7 @@ import type {
 } from '../src/core/variable/tgpuVariable.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('var', () => {
   it('should inject variable declaration when used in functions', () => {
@@ -19,7 +18,7 @@ describe('var', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved({ fn1 })).toEqual(
+    expect(parseResolved({ fn1 })).toBe(
       parse(`
         var<private> x: u32 = 2;
         fn fn1() {
@@ -35,7 +34,7 @@ describe('var', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      expect(parseResolved({ x: variable })).toEqual(parse(expected));
+      expect(parseResolved({ x: variable })).toBe(parse(expected));
     }
 
     test(
@@ -128,7 +127,7 @@ describe('var', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,
