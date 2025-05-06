@@ -33,14 +33,12 @@ import {
   type TgpuWriteonlyTexture,
 } from './core/texture/texture.ts';
 import type {
-  SampleTypeToStringChannelType,
-  ViewDimensionToDimension,
-} from './core/texture/textureFormats.ts';
-import type {
   ChannelFormatToSchema,
   ChannelTypeToLegalFormats,
+  SampleTypeToStringChannelType,
   StorageTextureTexelFormat,
   TexelFormatToDataType,
+  ViewDimensionToDimension,
 } from './core/texture/textureFormats.ts';
 import type { TextureProps } from './core/texture/textureProps.ts';
 import {
@@ -57,6 +55,7 @@ import {
   type StorageFlag,
 } from './extension.ts';
 import type { TgpuNamable } from './namable.ts';
+import { getName, setName } from './shared/name.ts';
 import type { Infer } from './shared/repr.ts';
 import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
@@ -387,7 +386,6 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  private _label: string | undefined;
   private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
@@ -496,11 +494,11 @@ class TgpuBindGroupLayoutImpl<
   }
 
   toString(): string {
-    return `bindGroupLayout:${this._label ?? '<unnamed>'}`;
+    return `bindGroupLayout:${this.label ?? '<unnamed>'}`;
   }
 
   get label(): string | undefined {
-    return this._label;
+    return getName(this);
   }
 
   get index(): number | undefined {
@@ -508,7 +506,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   $name(label?: string | undefined): this {
-    this._label = label;
+    setName(this, label);
     return this;
   }
 
