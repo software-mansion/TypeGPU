@@ -11,5 +11,6 @@
       }
     ]
   },
-  "deno.enable": false
+  "deno.enable": false,
+  "typescript.preferences.importModuleSpecifier": "relative"
 }
