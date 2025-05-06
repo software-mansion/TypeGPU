@@ -16,6 +16,9 @@ function rgbToHex(rgb: readonly [number, number, number]) {
 }
 
 type Props = {
+  /**
+   * RGB 0-1
+   */
   value: readonly [number, number, number];
   onChange: (value: readonly [number, number, number]) => void;
 };
