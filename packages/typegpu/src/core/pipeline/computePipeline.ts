@@ -1,6 +1,7 @@
 import { MissingBindGroupsError } from '../../errors.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { resolve } from '../../resolutionCtx.ts';
+import { getName, setName } from '../../shared/name.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
@@ -147,7 +148,13 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 }
 
 class ComputePipelineCore {
-  public label: string | undefined;
+  get label(): string | undefined {
+    return getName(this);
+  }
+  set label(name: string | undefined) {
+    setName(this, name);
+  }
+
   private _memo: Memo | undefined;
 
   constructor(
