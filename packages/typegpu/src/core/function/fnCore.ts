@@ -6,6 +6,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { resolveFunctionHeader } from '../../resolutionCtx.ts';
+import { getName, setName } from '../../shared/name.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
   addArgTypesToExternals,
@@ -74,7 +75,12 @@ export function createFnCore(
   }
 
   return {
-    label: undefined as string | undefined,
+    get label(): string | undefined {
+      return getName(this);
+    },
+    set label(name: string | undefined) {
+      setName(this, name);
+    },
 
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
