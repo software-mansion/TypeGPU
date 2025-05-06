@@ -1,5 +1,6 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../gpuMode.ts';
+import { getName, setName } from '../../shared/name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import {
@@ -32,7 +33,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable {
   public readonly resourceType = 'accessor';
   declare public readonly [$repr]: Infer<T>;
-  public label?: string | undefined;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 
   constructor(
@@ -47,13 +47,13 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   $name(label: string) {
-    this.label = label;
+    setName(this, label);
     this.slot.$name(label);
     return this;
   }
 
   toString(): string {
-    return `accessor:${this.label ?? '<unnamed>'}`;
+    return `accessor:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<T> {
@@ -67,7 +67,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.schema,
         },

@@ -8,9 +8,12 @@ import type {
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import type { TgpuNamable } from '../../namable.ts';
+import { getName, setName } from '../../shared/name.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { Default } from '../../shared/utilityTypes.ts';
-import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
+import type {
+  Default,
+  UnionToIntersection,
+} from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -69,7 +72,6 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   readonly [$internal]: TextureInternals;
   readonly resourceType: 'texture';
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
-  readonly label: string | undefined;
 
   // Extensions
   readonly usableAsStorage: boolean;
@@ -261,7 +263,6 @@ class TgpuTextureImpl implements TgpuTexture {
   public usableAsRender = false;
 
   private _destroyed = false;
-  private _label: string | undefined;
   private _flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   private _texture: GPUTexture | null = null;
 
@@ -277,7 +278,7 @@ class TgpuTextureImpl implements TgpuTexture {
 
         if (!this._texture) {
           this._texture = this._branch.device.createTexture({
-            label: this._label ?? '<unnamed>',
+            label: getName(this) ?? '<unnamed>',
             format: this.props.format,
             size: this.props.size,
             usage: this._flags,
@@ -293,12 +294,8 @@ class TgpuTextureImpl implements TgpuTexture {
     };
   }
 
-  get label() {
-    return this._label;
-  }
-
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   }
 
@@ -445,7 +442,7 @@ class TgpuFixedStorageTextureImpl
       unwrap: () => {
         if (!this._view) {
           this._view = this._texture[$internal].unwrap().createView({
-            label: `${this.label ?? '<unnamed>'} - View`,
+            label: `${getName(this) ?? '<unnamed>'} - View`,
             format: this._format,
             dimension: this.dimension,
           });
@@ -461,17 +458,14 @@ class TgpuFixedStorageTextureImpl
     this.texelDataType = texelFormatToDataType[this._format];
   }
 
-  get label(): string | undefined {
-    return this._texture.label;
-  }
-
   $name(label: string): this {
+    setName(this, label);
     this._texture.$name(label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       {
         storageTexture: this._format,
@@ -492,7 +486,7 @@ class TgpuFixedStorageTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
@@ -555,7 +549,7 @@ class TgpuFixedSampledTextureImpl
       unwrap: () => {
         if (!this._view) {
           this._view = this._texture[$internal].unwrap().createView({
-            label: `${this.label ?? '<unnamed>'} - View`,
+            label: `${getName(this) ?? '<unnamed>'} - View`,
             ...this._props,
           });
         }
@@ -569,17 +563,14 @@ class TgpuFixedSampledTextureImpl
     this.channelDataType = texelFormatToChannelType[this._format];
   }
 
-  get label(): string | undefined {
-    return this._texture.label;
-  }
-
   $name(label: string): this {
+    setName(this, label);
     this._texture.$name(label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
     const { group, binding } = ctx.allocateFixedEntry(
@@ -605,7 +596,7 @@ class TgpuFixedSampledTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
