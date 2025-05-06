@@ -23,11 +23,13 @@ export function applyExternals(
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
-    if (
-      isNamable(value) &&
-      (!('label' in value) || value.label === undefined)
-    ) {
-      value.$name(key);
+    if (isNamable(value)) {
+      // setNameIfMissing(value, key);
+      if (
+        (!('label' in value) || value.label === undefined)
+      ) {
+        value.$name(key);
+      }
     }
   }
 }
