@@ -1,3 +1,4 @@
+import { getName, setName } from '../shared/name.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 
@@ -33,18 +34,13 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
 const WgslStructImpl = {
   [$internal]: true,
   type: 'struct',
-  _label: undefined as string | undefined,
-
-  get label(): string | undefined {
-    return this._label;
-  },
 
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   },
 
   toString(): string {
-    return `struct:${this.label ?? '<unnamed>'}`;
+    return `struct:${getName(this) ?? '<unnamed>'}`;
   },
 };

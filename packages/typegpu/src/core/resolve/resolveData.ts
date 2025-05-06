@@ -35,6 +35,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { getName } from '../../shared/name.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { isAttribute } from '../vertexLayout/connectAttributesToShader.ts';
@@ -123,7 +124,7 @@ function resolveStructProperty(
  * @returns The resolved struct name.
  */
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
-  const id = ctx.names.makeUnique(struct.label);
+  const id = ctx.names.makeUnique(getName(struct));
 
   ctx.addDeclaration(`
 struct ${id} {
