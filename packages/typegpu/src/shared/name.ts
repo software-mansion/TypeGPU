@@ -16,8 +16,7 @@ export function setName(definition: object, name: string | undefined): void {
 }
 
 export function setNameIfMissing(definition: object, name: string): void {
-  const map = globalThis.__TYPEGPU_META__ ??= new WeakMap();
-  if (map.get(definition)?.name === undefined) {
-    map.set(definition, { ...map.get(definition), name });
+  if (getName(definition) === undefined) {
+    setName(definition, name);
   }
 }

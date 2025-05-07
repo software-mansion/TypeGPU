@@ -26,10 +26,11 @@ export function applyExternals(
     // Giving name to external value, if it does not already have one.
     if (isNamable(value)) {
       if (
-        (!('label' in value) || value.label === undefined) &&
-        getName(value) === undefined
+        (('label' in value && value.label === undefined) &&
+          getName(value) === undefined)
       ) {
         value.$name(key);
+        continue;
       }
       setNameIfMissing(value, key);
     }

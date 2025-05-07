@@ -493,11 +493,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   toString(): string {
-    return `bindGroupLayout:${this.label ?? '<unnamed>'}`;
-  }
-
-  get label(): string | undefined {
-    return getName(this);
+    return `bindGroupLayout:${getName(this) ?? '<unnamed>'}`;
   }
 
   get index(): number | undefined {
@@ -516,7 +512,7 @@ class TgpuBindGroupLayoutImpl<
 
   unwrap(unwrapper: Unwrapper) {
     const unwrapped = unwrapper.device.createBindGroupLayout({
-      label: this.label ?? '<unnamed>',
+      label: getName(this) ?? '<unnamed>',
       entries: Object.values(this.entries)
         .map((entry, idx) => {
           if (entry === null) {

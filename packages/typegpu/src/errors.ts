@@ -134,7 +134,7 @@ export class MissingVertexBuffersError extends Error {
     super(
       `Missing vertex buffers for layouts: '${
         [...layouts].map((layout) =>
-          ('label' in layout ? layout.label : '<unnamed>') ?? '<unnamed>'
+          ('label' in layout ? layout.label : getName(layout)) ?? '<unnamed>'
         ).join(', ')
       }'. Please provide it using pipeline.with(layout, buffer).(...)`,
     );
