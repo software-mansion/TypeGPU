@@ -3,6 +3,7 @@ import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../namable.ts';
+import { getName } from '../../shared/name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -87,7 +88,7 @@ class TgpuFixedBufferImpl<
   }
 
   get label() {
-    return this.buffer.label;
+    return getName(this.buffer);
   }
 
   $name(label: string) {

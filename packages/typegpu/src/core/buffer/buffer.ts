@@ -75,7 +75,6 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
-  readonly label: string | undefined;
 
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
@@ -144,7 +143,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
 
-  private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
 
   usableAsUniform = false;
@@ -166,10 +164,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
   }
 
-  get label() {
-    return getName(this);
-  }
-
   get buffer() {
     const device = this._group.device;
 
@@ -182,7 +176,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
         size: sizeOf(this.dataType),
         usage: this.flags,
         mappedAtCreation: !!this.initial,
-        label: this.label ?? '<unnamed>',
+        label: getName(this) ?? '<unnamed>',
       });
 
       if (this.initial) {
@@ -203,6 +197,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     setName(this, label);
     if (this._buffer) {
       // AAA untested
+      this._buffer.label = label;
       setName(this._buffer, label);
     }
     return this;
@@ -390,6 +385,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   toString(): string {
-    return `buffer:${this._label ?? '<unnamed>'}`;
+    return `buffer:${getName(this) ?? '<unnamed>'}`;
   }
 }
