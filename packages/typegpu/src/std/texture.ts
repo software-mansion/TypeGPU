@@ -349,22 +349,14 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     throw new Error('Texture storing is not supported outside of GPU mode.');
   },
   // GPU implementation
-  (texture, coords, arrayIndexOrValue, maybeValue) => {
-    const args = [texture, coords];
-
-    if (arrayIndexOrValue !== undefined) {
-      args.push(arrayIndexOrValue);
-    }
-
-    if (maybeValue !== undefined) {
-      args.push(maybeValue);
-    }
-
-    return {
-      value: `textureStore(${args.map((v) => v.value).join(', ')})`,
-      dataType: Void,
-    };
-  },
+  (texture, coords, arrayIndexOrValue, maybeValue) => ({
+    value: `textureStore(${
+      [texture, coords, arrayIndexOrValue, maybeValue].filter(
+        (arg) => arg !== undefined,
+      ).map((v) => v.value).join(', ')
+    })`,
+    dataType: Void,
+  }),
 );
 
 type TextureDimensionsOverload = {
@@ -410,24 +402,14 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   },
   // GPU implementation
   (texture, level) => {
-    const args = [texture];
-
-    if (level !== undefined) {
-      args.push(level);
-    }
-
-    const textureInfo = texture.dataType as unknown as
-      | TgpuSampledTexture
-      | TgpuStorageTexture;
-
-    const is1D = textureInfo.dimension === '1d';
-    const is2D = ['2d', '2d-array', 'cube', 'cube-array'].includes(
-      textureInfo.dimension,
-    );
-
+    const dim =
+      (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
+        .dimension;
     return {
-      value: `textureDimensions(${args.map((v) => v.value).join(', ')})`,
-      dataType: is1D ? u32 : is2D ? vec2u : vec3u,
+      value: `textureDimensions(${texture.value}${
+        level !== undefined ? `, ${level.value}` : ''
+      })`,
+      dataType: dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     };
   },
 );

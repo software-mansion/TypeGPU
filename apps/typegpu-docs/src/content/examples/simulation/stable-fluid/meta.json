@@ -1,4 +1,5 @@
 {
   "title": "Stable Fluids",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }
