@@ -47,17 +47,13 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     this[$internal] = { dataType };
   }
 
-  get label() {
-    return getName(this);
-  }
-
   $name(label: string) {
     setName(this, label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const resolvedValue = ctx.resolveValue(this._value, this.dataType);
 
     ctx.addDeclaration(`const ${id} = ${resolvedValue};`);
@@ -66,7 +62,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   }
 
   toString() {
-    return `const:${this.label ?? '<unnamed>'}`;
+    return `const:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<TDataType> {
@@ -77,7 +73,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.dataType,
         },
