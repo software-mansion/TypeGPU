@@ -1,4 +1,4 @@
-import { atom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils'
 
-export const codeEditorShownAtom = atom(true);
-export const codeEditorShownMobileAtom = atom(false);
+export const codeEditorShownAtom = atomWithStorage('code-editor-shown', true);
+export const codeEditorShownMobileAtom = atomWithStorage('code-editor-mobile-shown', false);
