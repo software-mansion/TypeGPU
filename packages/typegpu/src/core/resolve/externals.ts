@@ -30,7 +30,6 @@ export function applyExternals(
           getName(value) === undefined)
       ) {
         value.$name(key);
-        continue;
       }
       setNameIfMissing(value, key);
     }

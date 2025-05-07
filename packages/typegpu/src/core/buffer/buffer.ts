@@ -198,7 +198,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     if (this._buffer) {
       // AAA untested
       this._buffer.label = label;
-      setName(this._buffer, label);
     }
     return this;
   }
