@@ -159,7 +159,6 @@ export interface TgpuBindGroupLayout<
   >,
 > extends TgpuNamable {
   readonly resourceType: 'bind-group-layout';
-  readonly label: string | undefined;
   readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
@@ -620,14 +619,14 @@ export class TgpuBindGroupImpl<
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
       if (layout.entries[key] !== null && !(key in entries)) {
-        throw new MissingBindingError(layout.label, key);
+        throw new MissingBindingError(getName(layout), key);
       }
     }
   }
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
     const unwrapped = unwrapper.device.createBindGroup({
-      label: this.layout.label ?? '<unnamed>',
+      label: getName(this.layout) ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
       entries: Object.entries(this.layout.entries)
         .map(([key, entry], idx) => {
@@ -640,7 +639,7 @@ export class TgpuBindGroupImpl<
           if (value === undefined) {
             throw new Error(
               `'${key}' is a resource required to populate bind group layout '${
-                this.layout.label ?? '<unnamed>'
+                getName(this.layout) ?? '<unnamed>'
               }'.`,
             );
           }
