@@ -182,7 +182,11 @@ describe('wgslGenerator', () => {
     const res1 = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
+      (
+        (
+          astInfo.ast.body[1][0] as tinyest.Return
+        )[1] as tinyest.BinaryExpression
+      )[1],
     );
 
     expect(res1.dataType).toStrictEqual(d.u32);
@@ -192,7 +196,11 @@ describe('wgslGenerator', () => {
     const res2 = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
+      (
+        (
+          astInfo.ast.body[1][0] as tinyest.Return
+        )[1] as tinyest.BinaryExpression
+      )[3],
     );
     expect(res2.dataType).toStrictEqual(d.u32);
 
@@ -552,7 +560,9 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      (astInfo.ast.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
+      (
+        astInfo.ast.body[1][0] as tinyest.Const
+      )[2] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
@@ -785,5 +795,135 @@ describe('wgslGenerator', () => {
     );
 
     expect(res.dataType).toEqual(d.vec3f);
+    it('generates correct code for conditionals with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          if (true) return 0;
+          return 1;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(
+        parse(`{
+        if (true) {
+          return 0;
+        }
+        return 1;
+      }`),
+      );
+
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          if (true) {
+            return 0;
+          }
+          return 1;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(
+        parse(`{
+        if (true) {
+          return 0;
+        }
+        return 1;
+      }`),
+      );
+
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          let y = 0;
+          if (true) y = 1;
+          else y = 2;
+          return y;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(
+        parse(`{
+        var y = 0;
+        if (true) {
+          y = 1;
+        } else {
+         y = 2;
+        }
+        return y;
+      }`),
+      );
+
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          let y = 0;
+          if (true) {
+            y = 1;
+          }
+          else y = 2;
+          return y;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(
+        parse(`{
+        var y = 0;
+        if (true) {
+          y = 1;
+        } else {
+         y = 2;
+        }
+        return y;
+      }`),
+      );
+    });
+
+    it('generates correct code for for loops with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          for (let i = 0; i < 10; i += 1) continue;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(parse('{for(var i = 0;(i < 10);i += 1){continue;}}'));
+    });
+
+    it('generates correct code for while loops with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
+        function main() {
+          let i = 0;
+          while (i < 10) i += 1;
+        }
+    `).body,
+          ),
+        ),
+      ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+    });
   });
 });

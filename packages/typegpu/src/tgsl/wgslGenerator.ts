@@ -497,6 +497,13 @@ export function generateExpression(
   assertExhaustive(expression);
 }
 
+function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
+  return typeof statement !== 'object' ||
+      statement[0] !== NODE.block
+    ? [NODE.block, [statement]]
+    : statement;
+}
+
 export function generateStatement(
   ctx: GenerationCtx,
   statement: tinyest.Statement,
@@ -544,11 +551,13 @@ export function generateStatement(
     const condition = resolveRes(ctx, condSnippet);
 
     ctx.indent(); // {
-    const consequent = generateStatement(ctx, cons);
+    const consequent = generateStatement(ctx, blockifySingleStatement(cons));
     ctx.dedent(); // }
 
     ctx.indent(); // {
-    const alternate = alt ? generateStatement(ctx, alt) : undefined;
+    const alternate = alt
+      ? generateStatement(ctx, blockifySingleStatement(alt))
+      : undefined;
     ctx.dedent(); // }
 
     if (!alternate) {
@@ -638,7 +647,7 @@ ${alternate}`;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
     ctx.indent();
-    const bodyStr = generateStatement(ctx, body);
+    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
     ctx.dedent();
 
     return `\
@@ -659,7 +668,7 @@ ${bodyStr}`;
     const conditionStr = resolveRes(ctx, condSnippet);
 
     ctx.indent();
-    const bodyStr = generateStatement(ctx, body);
+    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
     ctx.dedent();
 
     return `\
