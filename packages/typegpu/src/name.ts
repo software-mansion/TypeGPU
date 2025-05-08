@@ -37,12 +37,6 @@ export function setName(definition: object, name: string): void {
   map.set(definition, { ...map.get(definition), name });
 }
 
-export function setNameIfMissing(definition: object, name: string): void {
-  if (getName(definition) === undefined) {
-    setName(definition, name);
-  }
-}
-
 /**
  * Can be assigned a name. Not to be confused with
  * being able to HAVE a name.

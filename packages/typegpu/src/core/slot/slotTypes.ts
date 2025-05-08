@@ -1,5 +1,5 @@
-import type { TgpuNamable } from 'src/name.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { TgpuNamable } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';

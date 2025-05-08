@@ -1,6 +1,6 @@
-import type { TgpuNamable } from 'src/name.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
+import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';

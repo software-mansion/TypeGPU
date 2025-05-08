@@ -1,5 +1,5 @@
-import type { TgpuNamable } from 'src/name.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
+import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import { $internal, $labelForward } from '../../shared/symbols.ts';

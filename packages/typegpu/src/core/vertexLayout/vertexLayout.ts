@@ -1,4 +1,3 @@
-import type { TgpuNamable } from 'src/name.ts';
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import {
@@ -10,6 +9,7 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
+import type { TgpuNamable } from '../../name.ts';
 import { setName } from '../../name.ts';
 import {
   kindToDefaultFormatMap,

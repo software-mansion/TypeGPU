@@ -1,8 +1,8 @@
-import type { TgpuNamable } from 'src/name.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
+import type { TgpuNamable } from '../../name.ts';
 import { getName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
 import { $internal, $labelForward } from '../../shared/symbols.ts';
