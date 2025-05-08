@@ -494,6 +494,7 @@ class TgpuFixedStorageTextureImpl
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
+  public readonly [$labelForward]: object;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -505,10 +506,11 @@ export class TgpuLaidOutStorageTextureImpl
   ) {
     this[$internal] = {};
     this.texelDataType = texelFormatToDataType[this._format];
+    this[$labelForward] = _membership;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this._membership.key);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
@@ -522,7 +524,7 @@ export class TgpuLaidOutStorageTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this._membership.key ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
@@ -601,6 +603,7 @@ class TgpuFixedSampledTextureImpl
 export class TgpuLaidOutSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
+  public readonly [$labelForward]: object;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -611,15 +614,12 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = {};
+    this[$labelForward] = _membership;
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 
-  get label(): string | undefined {
-    return this._membership.key;
-  }
-
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this._membership.key);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     const type = this._multisampled
@@ -636,6 +636,6 @@ export class TgpuLaidOutSampledTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this._membership.key ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }

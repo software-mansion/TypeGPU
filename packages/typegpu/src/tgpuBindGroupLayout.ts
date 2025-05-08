@@ -65,11 +65,18 @@ import type { Unwrapper } from './unwrapper.ts';
 // Public API
 // ----------
 
-export type LayoutMembership = {
+export class LayoutMembership {
   layout: TgpuBindGroupLayout;
   key: string;
   idx: number;
-};
+
+  constructor(layout: TgpuBindGroupLayout, key: string, idx: number) {
+    this.layout = layout;
+    this.key = key;
+    this.idx = idx;
+    setName(this, key);
+  }
+}
 
 export type TgpuLayoutEntryBase = {
   /**
@@ -410,7 +417,7 @@ class TgpuBindGroupLayoutImpl<
         continue;
       }
 
-      const membership = { idx, key, layout: this };
+      const membership = new LayoutMembership(this, key, idx);
 
       if ('uniform' in entry) {
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>

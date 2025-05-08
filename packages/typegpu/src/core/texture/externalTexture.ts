@@ -1,4 +1,5 @@
 import { getName } from '../../shared/name.ts';
+import { $labelForward } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 
@@ -23,8 +24,11 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
   public readonly resourceType = 'external-texture';
+  public readonly [$labelForward]: object;
 
-  constructor(private readonly _membership: LayoutMembership) {}
+  constructor(private readonly _membership: LayoutMembership) {
+    this[$labelForward] = _membership;
+  }
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
@@ -38,6 +42,6 @@ export class TgpuExternalTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this._membership.key ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
