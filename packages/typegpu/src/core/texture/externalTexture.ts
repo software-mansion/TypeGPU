@@ -1,4 +1,4 @@
-import { getName } from '../../shared/name.ts';
+import { getName } from '../../name.ts';
 import { $labelForward } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';

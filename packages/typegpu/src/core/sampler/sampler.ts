@@ -1,5 +1,5 @@
-import type { TgpuNamable } from '../../namable.ts';
-import { getName, setName } from '../../shared/name.ts';
+import type { TgpuNamable } from 'src/name.ts';
+import { getName, setName } from '../../name.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';

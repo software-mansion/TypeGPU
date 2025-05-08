@@ -1,4 +1,4 @@
-import { getName, setName } from '../shared/name.ts';
+import { getName, setName } from '../name.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Unstruct } from './dataTypes.ts';
 import type { BaseData } from './wgslTypes.ts';

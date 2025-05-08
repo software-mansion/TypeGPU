@@ -1,5 +1,5 @@
 import type { StorageFlag } from '../../extension.ts';
-import { getName } from '../../shared/name.ts';
+import { getName } from '../../name.ts';
 import type { StorageTextureTexelFormat } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 

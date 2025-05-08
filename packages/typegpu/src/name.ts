@@ -1,4 +1,4 @@
-import { $labelForward } from './symbols.ts';
+import { $labelForward } from './shared/symbols.ts';
 
 interface MetaData {
   name: string | undefined;
@@ -43,4 +43,19 @@ export function setNameIfMissing(definition: object, name: string): void {
   }
 }
 
-// AAA move this to other file
+/**
+ * Can be assigned a name. Not to be confused with
+ * being able to HAVE a name.
+ * The `$name` function should use `setName` to rename the object itself,
+ * or the object `$labelForward` symbol points to if applicable.
+ */
+export interface TgpuNamable {
+  $name(label?: string | undefined): this;
+}
+export function isNamable(value: unknown): value is TgpuNamable {
+  return (
+    !!value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    '$name' in value
+  );
+}

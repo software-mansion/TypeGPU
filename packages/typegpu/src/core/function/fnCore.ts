@@ -5,8 +5,8 @@ import {
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
+import { getName, setName } from '../../name.ts';
 import { resolveFunctionHeader } from '../../resolutionCtx.ts';
-import { getName, setName } from '../../shared/name.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
   addArgTypesToExternals,

@@ -1,7 +1,7 @@
+import { isNamable } from 'src/name.ts';
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable } from '../../namable.ts';
-import { getName } from '../../shared/name.ts';
+import { getName } from '../../name.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**

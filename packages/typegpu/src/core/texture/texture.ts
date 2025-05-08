@@ -1,3 +1,4 @@
+import type { TgpuNamable } from 'src/name.ts';
 import type {
   F32,
   I32,
@@ -7,8 +8,7 @@ import type {
   Vec4u,
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import { getName, setName } from '../../shared/name.ts';
+import { getName, setName } from '../../name.ts';
 import { $internal, $labelForward } from '../../shared/symbols.ts';
 import type {
   Default,

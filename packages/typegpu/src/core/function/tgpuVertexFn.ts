@@ -1,7 +1,7 @@
+import { isNamable, type TgpuNamable } from 'src/name.ts';
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable, type TgpuNamable } from '../../namable.ts';
-import { getName, setName } from '../../shared/name.ts';
+import { getName, setName } from '../../name.ts';
 import { $labelForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';

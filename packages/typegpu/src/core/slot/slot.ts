@@ -1,5 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName, setName } from '../../shared/name.ts';
+import { getName, setName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import { unwrapProxy } from '../valueProxyUtils.ts';
 import type { TgpuSlot } from './slotTypes.ts';

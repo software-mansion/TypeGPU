@@ -1,6 +1,6 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName } from '../../shared/name.ts';
+import { getName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import { $internal, $labelForward } from '../../shared/symbols.ts';
 import {

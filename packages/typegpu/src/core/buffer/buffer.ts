@@ -1,3 +1,4 @@
+import type { TgpuNamable } from 'src/name.ts';
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import {
   EVAL_ALLOWED_IN_ENV,
@@ -10,8 +11,7 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
 import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import { getName, setName } from '../../shared/name.ts';
+import { getName, setName } from '../../name.ts';
 import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';

@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.ts';
+import type { TgpuNamable } from 'src/name.ts';
 import type {
   Infer,
   InferGPU,

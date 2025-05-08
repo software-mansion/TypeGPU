@@ -1,4 +1,4 @@
-import { getName } from './shared/name';
+import { getName } from './name';
 
 export interface NotAllowed<TMsg> {
   reason: TMsg;

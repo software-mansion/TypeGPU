@@ -1,3 +1,4 @@
+import type { TgpuNamable } from 'src/name.ts';
 import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
@@ -5,9 +6,8 @@ import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import { getName, setName } from '../../name.ts';
 import { resolve } from '../../resolutionCtx.ts';
-import { getName, setName } from '../../shared/name.ts';
 import { $internal, $labelForward } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
