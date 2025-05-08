@@ -429,6 +429,16 @@ canvas.addEventListener('mousemove', (e) => {
   brushState.pos = [newX, newY];
 });
 
+function hideHelp() {
+  const helpElem = document.getElementById('help');
+  if (helpElem) {
+    helpElem.style.opacity = '0';
+  }
+}
+for (const eventName of ['click', 'touchstart']) {
+  window.addEventListener(eventName, hideHelp, { once: true });
+}
+
 export const controls = {
   'timestep (dt)': {
     initial: p.params.dt,
