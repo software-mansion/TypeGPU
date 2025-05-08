@@ -28,4 +28,5 @@ export type Example = {
   tsImport: () => Promise<unknown>;
   htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
+  thumbnailUrl?: string;
 };

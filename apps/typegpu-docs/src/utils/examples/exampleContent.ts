@@ -73,6 +73,15 @@ const htmlFiles = R.pipe(
   globToExampleFiles,
 );
 
+const thumbnailFiles = R.pipe(
+  import.meta.glob('../../content/examples/**/thumbnail.png', {
+    eager: true,
+    import: 'default',
+    query: 'url',
+  }) as Record<string, string>,
+  R.mapKeys(pathToExampleKey),
+);
+
 export const examples = R.pipe(
   metaFiles,
   R.mapValues(
@@ -83,6 +92,7 @@ export const examples = R.pipe(
         tsFiles: readonlyTsFiles[key] ?? [],
         tsImport: tsFilesImportFunctions[key],
         htmlFile: htmlFiles[key][0] ?? '',
+        thumbnailUrl: thumbnailFiles[key],
       }) satisfies Example,
   ),
 );

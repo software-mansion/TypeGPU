@@ -9,7 +9,7 @@ import {
   menuShownAtom,
   menuShownMobileAtom,
 } from '../utils/examples/menuShownAtom.ts';
-import ExampleList from './ExampleList.tsx';
+import { SearchableExampleList } from './SearchableExampleList.tsx';
 import ExamplePage from './ExamplePage.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
@@ -66,10 +66,10 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5 overflow-auto',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] pl-5 py-5 gap-5 overflow-y-auto',
       )}
     >
-      <header className='grid gap-5'>
+      <header className='mr-5'>
         <div className='grid place-items-center'>
           <a href='/TypeGPU' className='block box-border py-4 cursor-pointer'>
             <img
@@ -79,10 +79,14 @@ function SideMenu() {
             />
           </a>
         </div>
+      </header>
 
+      <div className='box-border w-full pr-5'>
         <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+      </div>
 
-        <div className='grid gap-6'>
+      <div className='flex-1 overflow-y-auto min-h-0 hide-scrollbar pr-3'>
+        <section className='mb-6 pb-6 border-b border-tameplum-100 space-y-2'>
           <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
           <p className='m-0 text-sm'>
             Test out the power of our TypeScript library and get to know
@@ -94,23 +98,23 @@ function SideMenu() {
           >
             Learn more about TypeGPU here
           </a>
-        </div>
-      </header>
+        </section>
 
-      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+        <SearchableExampleList
+          excludeTags={[
+            experimentalShowing ? [] : ['experimental'],
+            typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
+          ].flat()}
+        />
+      </div>
 
-      <ExampleList
-        excludeTags={[
-          experimentalShowing ? [] : ['experimental'],
-          typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
-        ].flat()}
-      />
-
-      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+      <div className='box-border w-full pr-5'>
+        <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+      </div>
 
       <label
         htmlFor={experimentalExamplesToggleId}
-        className='flex items-center justify-between gap-3 text-sm cursor-pointer'
+        className='flex items-center justify-between gap-3 text-sm cursor-pointer pr-5'
       >
         <span>Experimental examples</span>
         <Toggle
@@ -127,7 +131,7 @@ function SideMenu() {
         />
       </label>
 
-      <div className='flex justify-between text-tameplum-800 text-xs'>
+      <div className='flex justify-between text-tameplum-800 text-xs pr-5'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className='flex gap-3 items-center'>
           <a
