@@ -233,25 +233,25 @@ const findGamutIntersection = tgpu['~unstable'].fn(
 
         const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s - 1;
         const r1 = 4.0767416621 * ldt - 3.3077115913 * mdt + 0.2309699292 * sdt;
-        const r2 =
-          4.0767416621 * ldt2 - 3.3077115913 * mdt2 + 0.2309699292 * sdt2;
+        const r2 = 4.0767416621 * ldt2 - 3.3077115913 * mdt2 +
+          0.2309699292 * sdt2;
 
         const u_r = r1 / (r1 * r1 - 0.5 * r * r2);
         let t_r = -r * u_r;
 
         const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s - 1;
-        const g1 =
-          -1.2684380046 * ldt + 2.6097574011 * mdt - 0.3413193965 * sdt;
-        const g2 =
-          -1.2684380046 * ldt2 + 2.6097574011 * mdt2 - 0.3413193965 * sdt2;
+        const g1 = -1.2684380046 * ldt + 2.6097574011 * mdt -
+          0.3413193965 * sdt;
+        const g2 = -1.2684380046 * ldt2 + 2.6097574011 * mdt2 -
+          0.3413193965 * sdt2;
 
         const u_g = g1 / (g1 * g1 - 0.5 * g * g2);
         let t_g = -g * u_g;
 
         const b = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s - 1;
         const b1 = -0.0041960863 * ldt - 0.7034186147 * mdt + 1.707614701 * sdt;
-        const b2 =
-          -0.0041960863 * ldt2 - 0.7034186147 * mdt2 + 1.707614701 * sdt2;
+        const b2 = -0.0041960863 * ldt2 - 0.7034186147 * mdt2 +
+          1.707614701 * sdt2;
 
         const u_b = b1 / (b1 * b1 - 0.5 * b * b2);
         let t_b = -b * u_b;
@@ -329,8 +329,8 @@ const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
   const k = 2 * select(cusp.L, 1 - cusp.L, Ld > 0);
 
   const e1 = 0.5 * k + abs(Ld) + (alpha * C) / k;
-  const L0 =
-    cusp.L + 0.5 * (sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * k * abs(Ld)))));
+  const L0 = cusp.L +
+    0.5 * (sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * k * abs(Ld)))));
 
   const t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0, 1);
   const L_clipped = mix(L0, L, t);

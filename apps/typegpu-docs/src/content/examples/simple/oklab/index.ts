@@ -7,6 +7,7 @@ import {
 } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { floor, mul } from 'typegpu/std';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
@@ -16,8 +17,11 @@ const cssProbe = document.querySelector('#css-probe') as HTMLDivElement;
 const probePositionText = document.querySelector(
   '#probe-position',
 ) as HTMLDivElement;
-canvas.parentElement?.appendChild(cssProbe);
-canvas.parentElement?.appendChild(probePositionText);
+if (canvas.parentElement) {
+  canvas.parentElement.style.overflow = 'hidden';
+  canvas.parentElement.appendChild(cssProbe);
+  canvas.parentElement.appendChild(probePositionText);
+}
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const cleanupController = new AbortController();
@@ -75,21 +79,6 @@ const uniformsBindGroup = root.createBindGroup(uniformsBindGroupLayout, {
   uniforms: uniformsBuffer,
 });
 
-const modulo = tgpu['~unstable'].fn(
-  [d.f32, d.f32],
-  d.f32,
-)((a, b) => {
-  let m = a % b;
-  if (m < 0.0) {
-    if (b < 0.0) {
-      m -= b;
-    } else {
-      m += b;
-    }
-  }
-  return m;
-});
-
 const scaleView = tgpu['~unstable'].fn(
   [d.vec2f],
   d.vec2f,
@@ -102,9 +91,8 @@ const patternCheckers = tgpu['~unstable'].fn(
   [d.vec2f, d.vec3f],
   d.f32,
 )((uv, _clipLab) => {
-  const stripeX = modulo(uv.x, 0.1) / 0.1 > 0.5;
-  const stripeY = modulo(uv.y, 0.1) / 0.1 > 0.5;
-  return d.f32(stripeX !== stripeY);
+  const suv = floor(mul(20, uv));
+  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
 });
 
 const patternL0ProjectionLines = tgpu['~unstable'].fn(
