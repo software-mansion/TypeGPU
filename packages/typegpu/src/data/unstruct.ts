@@ -1,3 +1,4 @@
+import { getName, setName } from '../shared/name.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Unstruct } from './dataTypes.ts';
 import type { BaseData } from './wgslTypes.ts';
@@ -41,18 +42,13 @@ export function unstruct<TProps extends Record<string, BaseData>>(
 const UnstructImpl = {
   [$internal]: true,
   type: 'unstruct',
-  _label: undefined as string | undefined,
-
-  get label(): string | undefined {
-    return this._label;
-  },
 
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   },
 
   toString(): string {
-    return `unstruct:${this.label ?? '<unnamed>'}`;
+    return `unstruct:${getName(this) ?? '<unnamed>'}`;
   },
 };

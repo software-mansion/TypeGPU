@@ -11,8 +11,10 @@ import type {
   Vec4f,
 } from '../../data/wgslTypes.ts';
 import { isNamable, type TgpuNamable } from '../../namable.ts';
+import { getName, setName } from '../../shared/name.ts';
+import { $labelForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';
 import type {
@@ -182,7 +184,7 @@ function createFragmentFn(
   >,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & Labelled & SelfResolvable;
+  type This = TgpuFragmentFn & SelfResolvable & { [$labelForward]: object };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType as IOLayoutToSchema<
@@ -201,17 +203,14 @@ function createFragmentFn(
     shell,
     outputType,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$labelForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
@@ -242,7 +241,7 @@ function createFragmentFn(
     },
 
     toString() {
-      return `fragmentFn:${this.label ?? '<unnamed>'}`;
+      return `fragmentFn:${getName(this) ?? '<unnamed>'}`;
     },
   };
 

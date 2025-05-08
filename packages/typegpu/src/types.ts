@@ -180,10 +180,6 @@ export interface SelfResolvable {
   toString(): string;
 }
 
-export interface Labelled {
-  readonly label?: string | undefined;
-}
-
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
   return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }

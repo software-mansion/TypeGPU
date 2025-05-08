@@ -5,7 +5,7 @@ import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { getName, setName } from '../../shared/name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $labelForward } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -79,17 +79,17 @@ class TgpuFixedBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
+  public readonly [$labelForward]: object;
 
   constructor(
     public readonly usage: TUsage,
     public readonly buffer: TgpuBuffer<TData>,
   ) {
     this[$internal] = { dataType: buffer.dataType };
+    this[$labelForward] = buffer;
   }
 
   $name(label: string) {
-    // in this case, this object is not named via this method
-    // instead, the underlying buffer is named
     this.buffer.$name(label);
     return this;
   }

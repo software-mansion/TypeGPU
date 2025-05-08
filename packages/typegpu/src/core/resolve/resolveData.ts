@@ -154,7 +154,7 @@ ${
  * ```
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
-  const id = ctx.names.makeUnique(unstruct.label);
+  const id = ctx.names.makeUnique(getName(unstruct));
 
   ctx.addDeclaration(`
 struct ${id} {

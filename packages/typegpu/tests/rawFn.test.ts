@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { getName } from '../src/shared/name.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
@@ -14,7 +15,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }`)
       .$name('get_x');
 
-    expect(getX.label).toBe('get_x');
+    expect(getName(getX)).toBe('get_x');
   });
 
   it('resolves rawFn to WGSL', () => {

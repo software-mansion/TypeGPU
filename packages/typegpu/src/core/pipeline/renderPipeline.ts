@@ -8,7 +8,7 @@ import {
 import type { TgpuNamable } from '../../namable.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import { getName, setName } from '../../shared/name.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $labelForward } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroupLayout,
@@ -44,7 +44,6 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   extends TgpuNamable {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
-  readonly label: string | undefined;
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
@@ -230,20 +229,18 @@ type Memo = {
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
+  [$labelForward]: object;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {
       core,
       priors,
     };
-  }
-
-  get label() {
-    return this[$internal].core.label;
+    this[$labelForward] = core;
   }
 
   $name(label?: string | undefined): this {
-    this[$internal].core.label = label;
+    setName(this[$internal].core, label);
     return this;
   }
 
@@ -335,8 +332,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       colorAttachments,
     };
 
-    if (internals.core.label !== undefined) {
-      renderPassDescriptor.label = internals.core.label;
+    const label = getName(this);
+    if (label !== undefined) {
+      renderPassDescriptor.label = label;
     }
 
     if (internals.priors.depthStencilAttachment !== undefined) {
@@ -399,12 +397,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 }
 
 class RenderPipelineCore {
-  get label(): string | undefined {
-    return getName(this);
-  }
-  set label(name: string | undefined) {
-    setName(this, name);
-  }
   public readonly usedVertexLayouts: TgpuVertexLayout[];
 
   private _memo: Memo | undefined;
@@ -449,7 +441,7 @@ class RenderPipelineCore {
             return '';
           },
 
-          toString: () => `renderPipeline:${this.label ?? '<unnamed>'}`,
+          toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
         },
         {
           names: branch.nameRegistry,
@@ -459,20 +451,20 @@ class RenderPipelineCore {
 
       if (catchall !== null) {
         bindGroupLayouts[catchall[0]]?.$name(
-          `${this.label ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
 
       const device = branch.device;
 
       const module = device.createShaderModule({
-        label: `${this.label ?? '<unnamed>'} - Shader`,
+        label: `${getName(this) ?? '<unnamed>'} - Shader`,
         code,
       });
 
       const descriptor: GPURenderPipelineDescriptor = {
         layout: device.createPipelineLayout({
-          label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
+          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
           bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
         }),
         vertex: {
@@ -485,8 +477,9 @@ class RenderPipelineCore {
         },
       };
 
-      if (this.label !== undefined) {
-        descriptor.label = this.label;
+      const label = getName(this);
+      if (label !== undefined) {
+        descriptor.label = label;
       }
 
       if (primitiveState) {

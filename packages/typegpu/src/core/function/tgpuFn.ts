@@ -1,11 +1,11 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import { createDualImpl } from '../../shared/generators.ts';
+import { getName, setName } from '../../shared/name.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $labelForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import {
-  type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
   UnknownData,
@@ -84,7 +84,7 @@ export type TgpuFnShell<
 interface TgpuFnBase<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = undefined,
-> extends TgpuNamable, Labelled {
+> extends TgpuNamable {
   readonly [$internal]: {
     implementation: Implementation<Args, Return>;
   };
@@ -153,7 +153,7 @@ export function isTgpuFn<
 // --------------
 
 function stringifyPair([slot, value]: SlotValuePair): string {
-  return `${slot.label ?? '<unnamed>'}=${value}`;
+  return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
 function createFn<
@@ -163,7 +163,9 @@ function createFn<
   shell: TgpuFnShellHeader<Args, Return>,
   implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & SelfResolvable;
+  type This = TgpuFnBase<Args, Return> & SelfResolvable & {
+    [$labelForward]: object;
+  };
 
   const core = createFnCore(shell, implementation as Implementation);
 
@@ -179,8 +181,9 @@ function createFn<
       return this;
     },
 
-    $name(newLabel: string): This {
-      core.label = newLabel;
+    [$labelForward]: core,
+    $name(label: string): This {
+      setName(core, label);
       return this;
     },
 
@@ -234,13 +237,10 @@ function createFn<
     Return
   >;
 
-  // Making the label available as a readonly property.
-  Object.defineProperty(fn, 'label', {
-    get: () => core.label,
-  });
-
   Object.defineProperty(fn, 'toString', {
-    value: () => `fn:${core.label ?? '<unnamed>'}`,
+    value() {
+      return `fn:${getName(this) ?? '<unnamed>'}`;
+    },
   });
 
   return fn;
@@ -250,7 +250,7 @@ function createBoundFunction<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 >(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return>;
+  type This = TgpuFnBase<Args, Return> & { [$labelForward]: object };
 
   const fnBase: This = {
     [$internal]: {
@@ -268,8 +268,9 @@ function createBoundFunction<
       return this;
     },
 
-    $name(newLabel: string): This {
-      innerFn.$name(newLabel);
+    [$labelForward]: innerFn,
+    $name(label: string): This {
+      innerFn.$name(label);
       return this;
     },
 
@@ -300,14 +301,9 @@ function createBoundFunction<
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
 
-  // Making the label available as a readonly property.
-  Object.defineProperty(fn, 'label', {
-    get: () => innerFn.label,
-  });
-
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = innerFn.label ?? '<unnamed>';
+      const fnLabel = getName(this) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
@@ -322,13 +318,12 @@ class FnCall<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 > implements SelfResolvable {
+  readonly [$labelForward]: object;
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],
-  ) {}
-
-  get label() {
-    return this._fn.label;
+  ) {
+    this[$labelForward] = _fn;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -340,6 +335,6 @@ class FnCall<
   }
 
   toString() {
-    return `call:${this.label ?? '<unnamed>'}`;
+    return `call:${getName(this) ?? '<unnamed>'}`;
   }
 }

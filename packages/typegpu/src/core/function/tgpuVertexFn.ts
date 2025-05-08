@@ -1,8 +1,10 @@
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { isNamable, type TgpuNamable } from '../../namable.ts';
+import { getName, setName } from '../../shared/name.ts';
+import { $labelForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
@@ -139,7 +141,9 @@ function createVertexFn(
   shell: TgpuVertexFnShellHeader<IOLayout, IOLayout>,
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
-  type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;
+  type This = TgpuVertexFn<IOLayout, IOLayout> & SelfResolvable & {
+    [$labelForward]: object;
+  };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType;
@@ -157,17 +161,14 @@ function createVertexFn(
     outputType,
     inputType,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$labelForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
@@ -198,7 +199,7 @@ function createVertexFn(
     },
 
     toString() {
-      return `vertexFn:${this.label ?? '<unnamed>'}`;
+      return `vertexFn:${getName(this) ?? '<unnamed>'}`;
     },
   } as This;
 }

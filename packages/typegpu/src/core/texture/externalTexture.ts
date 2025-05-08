@@ -1,3 +1,4 @@
+import { getName } from '../../shared/name.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 
@@ -25,12 +26,8 @@ export class TgpuExternalTextureImpl
 
   constructor(private readonly _membership: LayoutMembership) {}
 
-  get label(): string | undefined {
-    return this._membership.key;
-  }
-
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -41,6 +38,6 @@ export class TgpuExternalTextureImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${this._membership.key ?? '<unnamed>'}`;
   }
 }

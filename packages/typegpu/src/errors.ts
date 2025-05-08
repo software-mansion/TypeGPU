@@ -133,9 +133,7 @@ export class MissingVertexBuffersError extends Error {
   constructor(layouts: Iterable<TgpuVertexLayout<WgslArray | Disarray>>) {
     super(
       `Missing vertex buffers for layouts: '${
-        [...layouts].map((layout) =>
-          ('label' in layout ? layout.label : getName(layout)) ?? '<unnamed>'
-        ).join(', ')
+        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
       }'. Please provide it using pipeline.with(layout, buffer).(...)`,
     );
 
