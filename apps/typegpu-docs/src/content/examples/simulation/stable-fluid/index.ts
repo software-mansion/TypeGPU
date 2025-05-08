@@ -417,7 +417,7 @@ canvas.addEventListener('mousedown', (e) => {
     isDown: true,
   };
 });
-canvas.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => {
   brushState.isDown = false;
 });
 canvas.addEventListener('mousemove', (e) => {

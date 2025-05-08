@@ -141,13 +141,7 @@ type TextureSampleLevelOverload = {
     sampler: TgpuSampler,
     coords: v2f,
     level: number,
-  ): v4f;
-  <T extends TgpuSampledTexture<'2d'>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v2f,
-    level: number,
-    offset: v2i,
+    offset?: v2i,
   ): v4f;
   <T extends TgpuSampledTexture<'2d-array'>>(
     texture: T,
@@ -155,33 +149,14 @@ type TextureSampleLevelOverload = {
     coords: v2f,
     arrayIndex: number,
     level: number,
+    offset?: v2i,
   ): v4f;
-  <T extends TgpuSampledTexture<'2d-array'>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v2f,
-    arrayIndex: number,
-    level: number,
-    offset: v2i,
-  ): v4f;
-  <T extends TgpuSampledTexture<'3d'>>(
+  <T extends TgpuSampledTexture<'3d' | 'cube'>>(
     texture: T,
     sampler: TgpuSampler,
     coords: v3f,
     level: number,
-  ): v4f;
-  <T extends TgpuSampledTexture<'cube'>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v3f,
-    level: number,
-  ): v4f;
-  <T extends TgpuSampledTexture<'3d'>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v3f,
-    level: number,
-    offset: v3i,
+    offset?: v3i,
   ): v4f;
   <T extends TgpuSampledTexture<'cube-array'>>(
     texture: T,
@@ -300,16 +275,11 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
       | TgpuStorageTexture
       | TgpuSampledTexture;
 
-    if ('texelDataType' in textureInfo) {
-      return {
-        value: `textureLoad(${args.map((v) => v.value).join(', ')})`,
-        dataType: textureInfo.texelDataType,
-      };
-    }
-
     return {
       value: `textureLoad(${args.map((v) => v.value).join(', ')})`,
-      dataType: channelDataToInstance[textureInfo.channelDataType.type],
+      dataType: 'texelDataType' in textureInfo
+        ? textureInfo.texelDataType
+        : channelDataToInstance[textureInfo.channelDataType.type],
     };
   },
 );
