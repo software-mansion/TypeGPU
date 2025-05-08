@@ -95,7 +95,7 @@ class TgpuFixedBufferImpl<
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this.buffer));
+    const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
         ? { uniform: this.buffer.dataType }
