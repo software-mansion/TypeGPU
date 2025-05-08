@@ -1,4 +1,5 @@
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/name.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import {
@@ -303,6 +304,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       dataType: vecTypeToConstructor[type],
     }),
   );
+  setName(construct, type);
 
   return Object.assign(construct, {
     [$internal]: true,

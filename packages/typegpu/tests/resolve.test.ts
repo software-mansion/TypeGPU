@@ -27,8 +27,6 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      label: 'intensity',
-
       get value() {
         return this;
       },

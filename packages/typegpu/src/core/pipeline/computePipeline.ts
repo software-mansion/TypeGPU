@@ -106,10 +106,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     z?: number | undefined,
   ): void {
     const memo = this._core.unwrap();
-    const { branch, label } = this._core;
+    const { branch } = this._core;
 
     const pass = branch.commandEncoder.beginComputePass({
-      label: label ?? '<unnamed>',
+      label: getName(this._core) ?? '<unnamed>',
     });
 
     pass.setPipeline(memo.pipeline);
@@ -145,13 +145,6 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 }
 
 class ComputePipelineCore {
-  get label(): string | undefined {
-    return getName(this);
-  }
-  set label(name: string) {
-    setName(this, name);
-  }
-
   private _memo: Memo | undefined;
 
   constructor(
