@@ -443,15 +443,9 @@ export function generateExpression(
       }
     }
 
-    return {
-      value: Object.values(obj)
-        .map((value) => {
-          const valueRes = generateExpression(ctx, value);
-          return resolveRes(ctx, valueRes);
-        })
-        .join(', '),
-      dataType: UnknownData,
-    };
+    throw new Error(
+      'Object expressions are only allowed as return values of functions or as arguments to structs.',
+    );
   }
 
   if (expression[0] === NODE.arrayExpr) {
