@@ -202,7 +202,7 @@ export function createFnCore(
 
   // The implementation could have been given a name by a bundler plugin,
   // so we try to transfer it to the core.
-  let maybeName = getName(implementation);
+  const maybeName = getName(implementation);
   if (maybeName !== undefined) {
     setName(core, maybeName);
   }

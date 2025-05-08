@@ -20,7 +20,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
-import { createFnCore, FnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   Implementation,
   InferArgs,

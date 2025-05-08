@@ -3,7 +3,7 @@ import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $labelForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore, FnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
 import { createStructFromIO } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
