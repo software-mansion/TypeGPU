@@ -2,8 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -24,7 +23,7 @@ describe('tgpu.slot', () => {
 
     const actual = parseResolved({ getColor });
 
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED};
@@ -57,7 +56,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithGreen });
 
     const actual = parseResolved({ main });
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${GREEN};
@@ -96,7 +95,7 @@ describe('tgpu.slot', () => {
     const actual = parseResolved({ main });
 
     // should be green
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(`
         fn getColor() {
           return vec3f(0., 1., 0.);
@@ -184,7 +183,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('reuses common nested functions', () => {
@@ -319,7 +318,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('unwraps layers of slots', () => {
@@ -361,7 +360,7 @@ describe('tgpu.slot', () => {
       fn main() { fn4(); }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
@@ -406,7 +405,7 @@ describe('tgpu.slot', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,

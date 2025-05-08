@@ -7,17 +7,17 @@ import { it } from './utils/extendedIt.ts';
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {
     const TestArray = d.disarrayOf(d.vec3u, 3);
-    expect(d.sizeOf(TestArray)).toEqual(36);
+    expect(d.sizeOf(TestArray)).toBe(36);
   });
 
   it('takes element alignment into account when measuring with custom aligned elements', () => {
     const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
-    expect(d.sizeOf(TestArray)).toEqual(48);
+    expect(d.sizeOf(TestArray)).toBe(48);
   });
 
   it('properly handles calculating nested loose array size', () => {
     const TestArray = d.disarrayOf(d.disarrayOf(d.vec3u, 3), 3);
-    expect(d.sizeOf(TestArray)).toEqual(108);
+    expect(d.sizeOf(TestArray)).toBe(108);
   });
 
   it('does not align array elements when writing', () => {
@@ -30,7 +30,17 @@ describe('disarray', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-    expect([...new Uint32Array(buffer)]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+    ]);
   });
 
   it('aligns array elements when writing with custom aligned elements', () => {
@@ -44,7 +54,7 @@ describe('disarray', () => {
       d.vec3u(7, 8, 9),
     ]);
     // deno-fmt-ignore
-    expect([...new Uint32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('does not align array elements when reading', () => {
@@ -54,7 +64,7 @@ describe('disarray', () => {
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7]);
 
-    expect(readData(reader, TestArray)).toEqual([
+    expect(readData(reader, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(0, 4, 5),
       d.vec3u(6, 0, 7),
@@ -68,7 +78,7 @@ describe('disarray', () => {
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toEqual([
+    expect(readData(reader, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -82,7 +92,7 @@ describe('disarray', () => {
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toEqual([
+    expect(readData(reader, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -103,6 +113,6 @@ describe('disarray', () => {
     ];
 
     writeData(new BufferWriter(buffer), TestArray, value);
-    expect(readData(new BufferReader(buffer), TestArray)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
   });
 });
