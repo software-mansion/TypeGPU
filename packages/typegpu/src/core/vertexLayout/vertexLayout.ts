@@ -231,7 +231,7 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     };
   }
 
-  $name(label?: string | undefined): this {
+  $name(label: string): this {
     setName(this, label);
     return this;
   }

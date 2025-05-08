@@ -507,7 +507,7 @@ class TgpuBindGroupLayoutImpl<
     return this._index;
   }
 
-  $name(label?: string | undefined): this {
+  $name(label: string): this {
     setName(this, label);
     return this;
   }

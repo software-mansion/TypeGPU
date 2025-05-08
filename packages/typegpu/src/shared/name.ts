@@ -29,7 +29,7 @@ export function getName(definition: unknown): string | undefined {
   return globalThis.__TYPEGPU_META__?.get(definition)?.name;
 }
 
-export function setName(definition: object, name: string | undefined): void {
+export function setName(definition: object, name: string): void {
   if (isForwarded(definition)) {
     return setName(definition[$labelForward], name);
   }
@@ -44,5 +44,5 @@ export function setNameIfMissing(definition: object, name: string): void {
 }
 
 // AAA move this to other file
-// AAA disallow undefined
 // AAA narrow the types of { [$labelForward]: object }
+// AAA go through remaining get label()

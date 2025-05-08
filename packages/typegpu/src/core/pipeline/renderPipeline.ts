@@ -239,7 +239,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$labelForward] = core;
   }
 
-  $name(label?: string | undefined): this {
+  $name(label: string): this {
     setName(this[$internal].core, label);
     return this;
   }

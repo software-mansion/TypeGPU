@@ -138,7 +138,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.end();
   }
 
-  $name(label?: string | undefined): this {
+  $name(label: string): this {
     setName(this._core, label);
     return this;
   }
@@ -148,7 +148,7 @@ class ComputePipelineCore {
   get label(): string | undefined {
     return getName(this);
   }
-  set label(name: string | undefined) {
+  set label(name: string) {
     setName(this, name);
   }
 
