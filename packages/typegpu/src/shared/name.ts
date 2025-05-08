@@ -8,18 +8,21 @@ declare global {
   var __TYPEGPU_META__: WeakMap<object, MetaData>;
 }
 
+function isObject(value: unknown): value is object {
+  return !!value && (typeof value === 'object' || typeof value === 'function');
+}
+
 function isForwarded(value: object): value is { [$labelForward]: object } {
   if (!($labelForward in value)) {
     return false;
   }
-  const maybeObj = value[$labelForward];
-  if (maybeObj === null || maybeObj === undefined) {
-    return false;
-  }
-  return typeof maybeObj === 'object' || typeof maybeObj === 'function';
+  return isObject(value[$labelForward]);
 }
 
-export function getName(definition: object): string | undefined {
+export function getName(definition: unknown): string | undefined {
+  if (!isObject(definition)) {
+    return undefined;
+  }
   if (isForwarded(definition)) {
     return getName(definition[$labelForward]);
   }
@@ -41,7 +44,6 @@ export function setNameIfMissing(definition: object, name: string): void {
 }
 
 // AAA move this to other file
-// AAA test for $name?
 // AAA disallow undefined
 // AAA narrow the types of { [$labelForward]: object }
 // AAA this._membership.key
