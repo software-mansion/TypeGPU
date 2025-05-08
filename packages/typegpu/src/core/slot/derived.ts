@@ -25,6 +25,12 @@ function stringifyPair([slot, value]: SlotValuePair): string {
 }
 
 function createDerived<T>(compute: () => T): TgpuDerived<T> {
+  if (getResolutionCtx()) {
+    throw new Error(
+      'Cannot create tgpu.derived objects at the resolution stage.',
+    );
+  }
+
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
@@ -60,6 +66,12 @@ function createBoundDerived<T>(
   innerDerived: TgpuDerived<T>,
   pairs: SlotValuePair[],
 ): TgpuDerived<T> {
+  if (getResolutionCtx()) {
+    throw new Error(
+      'Cannot create tgpu.derived objects at the resolution stage.',
+    );
+  }
+
   const result = {
     resourceType: 'derived' as const,
     [$repr]: undefined as Infer<T>,
