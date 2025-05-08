@@ -4,7 +4,7 @@ import { isNamable, type TgpuNamable } from '../../namable.ts';
 import { getName, setName } from '../../shared/name.ts';
 import { $labelForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
 import { createStructFromIO } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
@@ -145,7 +145,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
-    [$labelForward]: object;
+    [$labelForward]: FnCore;
   };
 
   const core = createFnCore(shell, implementation);

@@ -424,7 +424,7 @@ const dimensionToCodeMap = {
 class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: TgpuTexture<TextureProps>;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
   public readonly dimension: StorageTextureDimension;
@@ -494,7 +494,7 @@ class TgpuFixedStorageTextureImpl
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: LayoutMembership;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -531,7 +531,7 @@ export class TgpuLaidOutStorageTextureImpl
 class TgpuFixedSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable, TgpuNamable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: TgpuTexture<TextureProps>;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
@@ -603,7 +603,7 @@ class TgpuFixedSampledTextureImpl
 export class TgpuLaidOutSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: LayoutMembership;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 

@@ -34,7 +34,9 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   public readonly resourceType = 'accessor';
   declare public readonly [$repr]: Infer<T>;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
-  readonly [$labelForward]: object;
+  readonly [$labelForward]: TgpuSlot<
+    TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>
+  >;
 
   constructor(
     public readonly schema: T,

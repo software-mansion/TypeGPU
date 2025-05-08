@@ -44,4 +44,3 @@ export function setNameIfMissing(definition: object, name: string): void {
 }
 
 // AAA move this to other file
-// AAA narrow the types of { [$labelForward]: object }

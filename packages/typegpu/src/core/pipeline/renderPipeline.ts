@@ -229,7 +229,7 @@ type Memo = {
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
-  [$labelForward]: object;
+  [$labelForward]: RenderPipelineCore;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {

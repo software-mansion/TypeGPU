@@ -79,7 +79,7 @@ class TgpuFixedBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: TgpuBuffer<TData>;
 
   constructor(
     public readonly usage: TUsage,

@@ -70,7 +70,7 @@ type Memo = {
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
-  readonly [$labelForward]: object;
+  readonly [$labelForward]: ComputePipelineCore;
 
   constructor(
     private readonly _core: ComputePipelineCore,

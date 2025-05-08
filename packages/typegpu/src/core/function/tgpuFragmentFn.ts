@@ -16,7 +16,7 @@ import { $labelForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
   Implementation,
@@ -184,7 +184,7 @@ function createFragmentFn(
   >,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & SelfResolvable & { [$labelForward]: object };
+  type This = TgpuFragmentFn & SelfResolvable & { [$labelForward]: FnCore };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType as IOLayoutToSchema<

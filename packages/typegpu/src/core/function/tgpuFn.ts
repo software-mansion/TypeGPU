@@ -20,7 +20,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, FnCore } from './fnCore.ts';
 import type {
   Implementation,
   InferArgs,
@@ -164,7 +164,7 @@ function createFn<
   implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return> & SelfResolvable & {
-    [$labelForward]: object;
+    [$labelForward]: FnCore;
   };
 
   const core = createFnCore(shell, implementation as Implementation);
@@ -250,7 +250,9 @@ function createBoundFunction<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 >(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & { [$labelForward]: object };
+  type This = TgpuFnBase<Args, Return> & {
+    [$labelForward]: TgpuFn<Args, Return>;
+  };
 
   const fnBase: This = {
     [$internal]: {
@@ -318,7 +320,7 @@ class FnCall<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 > implements SelfResolvable {
-  readonly [$labelForward]: object;
+  readonly [$labelForward]: TgpuFnBase<Args, Return>;
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],

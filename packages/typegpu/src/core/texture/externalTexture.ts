@@ -24,7 +24,7 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
   public readonly resourceType = 'external-texture';
-  public readonly [$labelForward]: object;
+  public readonly [$labelForward]: LayoutMembership;
 
   constructor(private readonly _membership: LayoutMembership) {
     this[$labelForward] = _membership;
