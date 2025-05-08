@@ -196,7 +196,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   $name(label: string) {
     setName(this, label);
     if (this._buffer) {
-      // AAA untested
       this._buffer.label = label;
     }
     return this;
