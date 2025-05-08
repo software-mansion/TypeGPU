@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { examples } from '../utils/examples/exampleContent.ts';
 import type { Example } from '../utils/examples/types.ts';
 import { ExampleLink } from './ExampleLink.tsx';
+import Fuse from 'fuse.js';
 
 export function SearchableExampleList(
   { excludeTags = [] }: { excludeTags?: string[] },
@@ -13,19 +14,21 @@ export function SearchableExampleList(
         !excludeTags.some((tag) => ex.metadata.tags?.includes(tag))
       ), [excludeTags]);
 
+  const fuse = useMemo(
+    () =>
+      new Fuse(allExamples, {
+        keys: [
+          { name: 'metadata.title', weight: 0.7 },
+          { name: 'metadata.tags', weight: 0.3 },
+        ],
+      }),
+    [allExamples],
+  );
+
   const filteredExamples = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) {
-      return allExamples;
-    }
-    return allExamples.filter(({ metadata }) => {
-      const { title, tags = [] } = metadata;
-      if (title.toLowerCase().includes(q)) {
-        return true;
-      }
-      return tags.some((tag) => tag.toLowerCase().includes(q));
-    });
-  }, [query, allExamples]);
+    const term = query.trim();
+    return term ? fuse.search(term).map((result) => result.item) : allExamples;
+  }, [query, allExamples, fuse]);
 
   return (
     <div className='flex flex-col w-full max-w-full'>
