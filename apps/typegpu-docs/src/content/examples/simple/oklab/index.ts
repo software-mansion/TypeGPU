@@ -1,13 +1,13 @@
 import {
   oklabGamutClip,
-  oklabGamutClipAlphaSlot,
+  oklabGamutClipAlphaAccess,
   oklabGamutClipSlot,
   oklabToLinearRgb,
   oklabToRgb,
 } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { floor, mul } from 'typegpu/std';
+import { any, cos, floor, gt, lt, mul, select, sin } from 'typegpu/std';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
@@ -39,6 +39,89 @@ document.addEventListener(
   },
 );
 
+const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})((input) => {
+  const pos = [
+    d.vec2f(-1, -1),
+    d.vec2f(3, -1),
+    d.vec2f(-1, 3),
+  ];
+
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
+    uv: pos[input.vertexIndex],
+  };
+});
+
+const Uniforms = d.struct({
+  hue: d.f32,
+  alpha: d.f32,
+});
+
+const layout = tgpu.bindGroupLayout({
+  uniforms: { uniform: Uniforms },
+});
+
+const scaleView = tgpu['~unstable'].fn([d.vec2f], d.vec2f)((pos) => {
+  'kernel & js';
+  return d.vec2f(0.3 * pos.x, (pos.y * 1.2 + 1) * 0.5);
+});
+
+// #region Patterns
+
+const patternFn = tgpu['~unstable'].fn([d.vec2f, d.vec3f], d.f32);
+
+const patternCheckers = patternFn(
+  (uv, _clipLab) => {
+    'kernel';
+    const suv = floor(mul(20, uv));
+    return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
+  },
+);
+
+const patternL0ProjectionLines =
+  patternFn /* wgsl */`(uv: vec2f, clipLab: vec3f) -> f32 {
+    let thickness = fwidth(clipLab.x);
+    let Lgrid = 0.02 - thickness - abs(clipLab.x % 0.04 - 0.02);
+    return select(clamp(Lgrid / fwidth(Lgrid), 0, 1), 1, thickness < 0.0002);
+  }`;
+
+const patternSolid = patternFn((_uv, _clipLab) => {
+  'kernel';
+  return 1;
+});
+
+const patternSlot = tgpu['~unstable'].slot(patternSolid);
+
+// #endregion
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const hue = layout.$.uniforms.hue;
+  const pos = scaleView(input.uv);
+  const lab = d.vec3f(
+    pos.y,
+    mul(pos.x, d.vec2f(cos(hue), sin(hue))),
+  );
+  const rgb = oklabToLinearRgb(lab);
+  const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
+
+  const clipLab = oklabGamutClipSlot.value(lab);
+  const color = oklabToRgb(lab);
+
+  const patternScaled = patternSlot.value(input.uv, clipLab) * 0.1 + 0.9;
+
+  return d.vec4f(select(color, mul(patternScaled, color), outOfGamut), 1);
+});
+
+const alphaFromUniforms = tgpu['~unstable'].fn([], d.f32)(
+  () => layout.$.uniforms.alpha,
+);
+
 const root = await tgpu.init();
 
 context.configure({
@@ -47,100 +130,18 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const mainVertex = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position, uv: d.vec2f },
-}) /* wgsl */`{
-    var pos = array<vec2f, 3>(
-      vec2(-1, -1),
-      vec2(3, -1),
-      vec2(-1, 3)
-    );
-
-    return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), pos[in.vertexIndex]);
-  }`;
-
-const Uniforms = d.struct({
-  hue: d.f32,
-  alpha: d.f32,
-});
-
 const uniforms = Uniforms({
   hue: 0.7,
   alpha: 0.05,
 });
 
-const uniformsBindGroupLayout = tgpu.bindGroupLayout({
-  uniforms: { uniform: Uniforms },
-});
-
 const uniformsBuffer = root.createBuffer(Uniforms, uniforms).$usage('uniform');
-const uniformsBindGroup = root.createBindGroup(uniformsBindGroupLayout, {
+const bindGroup = root.createBindGroup(layout, {
   uniforms: uniformsBuffer,
 });
 
-const scaleView = tgpu['~unstable'].fn(
-  [d.vec2f],
-  d.vec2f,
-)((pos) => {
-  'kernel & js';
-  return d.vec2f(0.3 * pos.x, (pos.y * 1.2 + 1) * 0.5);
-});
-
-const patternCheckers = tgpu['~unstable'].fn(
-  [d.vec2f, d.vec3f],
-  d.f32,
-)((uv, _clipLab) => {
-  const suv = floor(mul(20, uv));
-  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
-});
-
-const patternL0ProjectionLines = tgpu['~unstable'].fn(
-  [d.vec2f, d.vec3f],
-  d.f32,
-) /* wgsl */`(uv: vec2f, clipLab: vec3f) -> f32 {
-  let thickness = fwidth(clipLab.x);
-  let Lgrid = 0.02 - thickness - abs(clipLab.x % 0.04 - 0.02);
-  return select(clamp(Lgrid / fwidth(Lgrid), 0, 1), 1, thickness < 0.0002);
-}`;
-
-const patternSolid = tgpu['~unstable'].fn([d.vec2f, d.vec3f], d.f32)(() => 1);
-const patternSlot = tgpu['~unstable'].slot(patternSolid);
-
-const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-}) /* wgsl */`{
-  let pos = scaleView(in.uv);
-  let lab = vec3f(
-    pos.y,
-    pos.x * vec2f(cos(uniforms.hue), sin(uniforms.hue))
-  );
-  let rgb = oklabToLinearRgb(lab);
-  let outOfGamut = any(rgb < vec3f(0)) || any(rgb > vec3f(1));
-
-  let clipLab = gamutClip(lab);
-  let color = oklabToRgb(lab);
-
-  let patternScaled = pattern(in.uv, clipLab) * 0.1 + 0.9;
-
-  return vec4f(select(color, color * patternScaled, outOfGamut), 1);
-}`.$uses({
-  scaleView,
-  oklabToRgb,
-  oklabToLinearRgb,
-  uniforms: uniformsBindGroupLayout.bound.uniforms,
-  gamutClip: oklabGamutClipSlot,
-  pattern: patternSlot,
-});
-
-const alphaFromUniforms = tgpu['~unstable'].fn(
-  [],
-  d.f32,
-)(() => uniformsBindGroupLayout.bound.uniforms.value.alpha);
-
 let pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
+  .withVertex(fullScreenTriangle, {})
   .withFragment(mainFragment, {
     format: presentationFormat,
   })
@@ -156,8 +157,8 @@ function setPipeline({
   pipeline = root['~unstable']
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
-    .with(oklabGamutClipAlphaSlot, alphaFromUniforms)
-    .withVertex(mainVertex, {})
+    .with(oklabGamutClipAlphaAccess, alphaFromUniforms)
+    .withVertex(fullScreenTriangle, {})
     .withFragment(mainFragment, {
       format: presentationFormat,
     })
@@ -184,7 +185,7 @@ function draw() {
   `;
 
   pipeline
-    .with(uniformsBindGroupLayout, uniformsBindGroup)
+    .with(layout, bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
