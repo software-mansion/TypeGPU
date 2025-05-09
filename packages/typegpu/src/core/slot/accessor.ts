@@ -3,12 +3,12 @@ import { getResolutionCtx } from '../../gpuMode.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import {
+  isBufferUsage,
   type ResolutionCtx,
   type SelfResolvable,
-  isBufferUsage,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
-import { type TgpuFn, isTgpuFn } from '../function/tgpuFn.ts';
+import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
@@ -29,10 +29,9 @@ export function accessor<T extends AnyWgslData>(
 // --------------
 
 export class TgpuAccessorImpl<T extends AnyWgslData>
-  implements TgpuAccessor<T>, SelfResolvable
-{
+  implements TgpuAccessor<T>, SelfResolvable {
   public readonly resourceType = 'accessor';
-  public declare readonly [$repr]: Infer<T>;
+  declare public readonly [$repr]: Infer<T>;
   public label?: string | undefined;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 

@@ -76,8 +76,8 @@ const execute = async () => {
   const existingFileStrategy = args['--overwrite']
     ? 'overwrite'
     : args['--keep']
-      ? 'keep'
-      : undefined;
+    ? 'keep'
+    : undefined;
 
   const extension = path.extname(output);
 
@@ -86,11 +86,11 @@ const execute = async () => {
     !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
   ) {
     console.error(
-      `${
-        color.Red
-      }Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(
-        ', ',
-      )}`,
+      `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${
+        ALLOWED_EXTENSIONS.join(
+          ', ',
+        )
+      }`,
     );
     exit(1);
   }
@@ -107,9 +107,11 @@ const execute = async () => {
 
   if (allMatchedFiles.length > 1 && !output.includes('*')) {
     console.error(
-      `${color.Red}Error: More than one file found (${allMatchedFiles.join(
-        ', ',
-      )}), while a non-pattern output name was provided ${color.Reset}`,
+      `${color.Red}Error: More than one file found (${
+        allMatchedFiles.join(
+          ', ',
+        )
+      }), while a non-pattern output name was provided ${color.Reset}`,
     );
     exit(1);
   }
@@ -124,53 +126,53 @@ const execute = async () => {
     !/\*\*\/.*\*.*/.test(output)
   ) {
     console.error(
-      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(
-        ', ',
-      )}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${
-        color.Reset
-      }`,
+      `${color.Red}Error: Duplicates found with name(s): [${
+        duplicates.join(
+          ', ',
+        )
+      }], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
     );
     exit(1);
   }
 
   const outputPathCompiler = createOutputPathCompiler(input, output);
 
-  const existingFilesIO =
-    existingFileStrategy === 'overwrite'
-      ? []
-      : await Promise.all(
-          allMatchedFiles
-            .map((input) => ({ input, output: outputPathCompiler(input) }))
-            .map(({ input, output }) =>
-              access(output)
-                .then(() => ({ input, output }))
-                .catch(() => null),
-            ),
-        ).then((existsResultsIO) =>
-          existsResultsIO.filter(
-            /** @returns {file is {input: string, output: string}} */ (file) =>
-              !!file,
-          ),
-        );
+  const existingFilesIO = existingFileStrategy === 'overwrite'
+    ? []
+    : await Promise.all(
+      allMatchedFiles
+        .map((input) => ({ input, output: outputPathCompiler(input) }))
+        .map(({ input, output }) =>
+          access(output)
+            .then(() => ({ input, output }))
+            .catch(() => null)
+        ),
+    ).then((existsResultsIO) =>
+      existsResultsIO.filter(
+        /** @returns {file is {input: string, output: string}} */ (file) =>
+          !!file,
+      )
+    );
 
   if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
     console.error(
-      `Error: The following file(s) already exist: [${existingFilesIO
-        .map(({ output }) => output)
-        .join(
-          ', ',
-        )}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+      `Error: The following file(s) already exist: [${
+        existingFilesIO
+          .map(({ output }) => output)
+          .join(
+            ', ',
+          )
+      }]. Use --overwrite option to replace existing files or --keep to skip them.`,
     );
 
     exit(1);
   }
 
-  const inputFiles =
-    existingFileStrategy === 'keep'
-      ? allMatchedFiles.filter(
-          (file) => !existingFilesIO.map(({ input }) => input).includes(file),
-        )
-      : allMatchedFiles;
+  const inputFiles = existingFileStrategy === 'keep'
+    ? allMatchedFiles.filter(
+      (file) => !existingFilesIO.map(({ input }) => input).includes(file),
+    )
+    : allMatchedFiles;
 
   if (inputFiles.length === 0) {
     console.warn(
@@ -202,7 +204,7 @@ const execute = async () => {
     );
 
     const errors = results.flatMap((result) =>
-      result.status === 'rejected' ? [result.reason] : [],
+      result.status === 'rejected' ? [result.reason] : []
     );
 
     if (errors.length > 0) {

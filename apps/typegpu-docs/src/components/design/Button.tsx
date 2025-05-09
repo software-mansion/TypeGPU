@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { type ReactNode, forwardRef } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 
 type Props = {
   accent?: boolean;
@@ -18,7 +18,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
           ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
           : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
       )}
-      type="button"
+      type='button'
       ref={ref}
       onClick={onClick}
     >

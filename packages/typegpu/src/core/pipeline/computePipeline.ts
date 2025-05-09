@@ -190,7 +190,7 @@ class ComputePipelineCore {
           layout: device.createPipelineLayout({
             label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: bindGroupLayouts.map((l) =>
-              this.branch.unwrap(l),
+              this.branch.unwrap(l)
             ),
           }),
           compute: {

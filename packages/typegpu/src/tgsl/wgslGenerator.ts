@@ -4,11 +4,11 @@ import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import {
+  isMarkedInternal,
+  isWgsl,
   type ResolutionCtx,
   type Snippet,
   UnknownData,
-  isMarkedInternal,
-  isWgsl,
 } from '../types.ts';
 import {
   getTypeForIndexAccess,
@@ -319,7 +319,9 @@ export function generateExpression(
 
     if (!isMarkedInternal(idValue)) {
       throw new Error(
-        `Function ${String(idValue)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+        `Function ${
+          String(idValue)
+        } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
@@ -375,7 +377,7 @@ export function generateExpression(
     const [_, valuesRaw] = expression;
     // Array Expression
     const values = valuesRaw.map((value) =>
-      generateExpression(ctx, value as tinyest.Expression),
+      generateExpression(ctx, value as tinyest.Expression)
     );
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
@@ -393,12 +395,11 @@ export function generateExpression(
       throw new Error('Cannot use non-WGSL data types in array literals.');
     }
 
-    type =
-      type.type === 'abstractInt'
-        ? d.u32
-        : type.type === 'abstractFloat'
-          ? d.f32
-          : type;
+    type = type.type === 'abstractInt'
+      ? d.u32
+      : type.type === 'abstractFloat'
+      ? d.f32
+      : type;
 
     const typeId = ctx.resolve(type);
 
@@ -422,6 +423,13 @@ export function generateExpression(
   assertExhaustive(expression);
 }
 
+function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
+  return typeof statement !== 'object' ||
+      statement[0] !== NODE.block
+    ? [NODE.block, [statement]]
+    : statement;
+}
+
 export function generateStatement(
   ctx: GenerationCtx,
   statement: tinyest.Statement,
@@ -436,10 +444,9 @@ export function generateStatement(
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
-    const returnValue =
-      returnNode !== undefined
-        ? resolveRes(ctx, generateExpression(ctx, returnNode))
-        : undefined;
+    const returnValue = returnNode !== undefined
+      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
@@ -464,11 +471,13 @@ export function generateStatement(
     const condition = resolveRes(ctx, generateExpression(ctx, cond));
 
     ctx.indent(); // {
-    const consequent = generateStatement(ctx, cons);
+    const consequent = generateStatement(ctx, blockifySingleStatement(cons));
     ctx.dedent(); // }
 
     ctx.indent(); // {
-    const alternate = alt ? generateStatement(ctx, alt) : undefined;
+    const alternate = alt
+      ? generateStatement(ctx, blockifySingleStatement(alt))
+      : undefined;
     ctx.dedent(); // }
 
     if (!alternate) {
@@ -533,7 +542,7 @@ ${alternate}`;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
     ctx.indent();
-    const bodyStr = generateStatement(ctx, body);
+    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
     ctx.dedent();
 
     return `\
@@ -546,7 +555,7 @@ ${bodyStr}`;
     const conditionStr = resolveRes(ctx, generateExpression(ctx, condition));
 
     ctx.indent();
-    const bodyStr = generateStatement(ctx, body);
+    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
     ctx.dedent();
 
     return `\

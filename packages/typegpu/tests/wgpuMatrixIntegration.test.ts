@@ -20,13 +20,11 @@ describe('mat4x4f', () => {
 
     expect(m.mat4.equals(mat, mat)).toBe(true);
 
-    expect(matToArray(mat)).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    ]);
+    // deno-fmt-ignore
+    expect(matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     m.mat4.identity(mat);
-    expect(matToArray(mat)).toEqual([
-      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
-    ]);
+    // deno-fmt-ignore
+    expect(matToArray(mat)).toStrictEqual([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   });
 });
 
@@ -40,9 +38,9 @@ describe('mat3x3f', () => {
 
     expect(m.mat3.equals(mat, mat)).toBe(true);
 
-    expect(matToArray(mat)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     m.mat3.identity(mat);
-    expect(matToArray(mat)).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    expect(matToArray(mat)).toStrictEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   });
 });
 
@@ -52,9 +50,9 @@ describe('vec4f', () => {
 
     expect(m.vec4.equals(vec, vec)).toBe(true);
 
-    expect([vec.x, vec.y, vec.z, vec.w]).toEqual([1, 2, 3, 4]);
+    expect([vec.x, vec.y, vec.z, vec.w]).toStrictEqual([1, 2, 3, 4]);
     m.vec4.zero(vec);
-    expect([vec.x, vec.y, vec.z, vec.w]).toEqual([0, 0, 0, 0]);
+    expect([vec.x, vec.y, vec.z, vec.w]).toStrictEqual([0, 0, 0, 0]);
   });
 });
 
@@ -64,9 +62,9 @@ describe('vec3f', () => {
 
     expect(m.vec3.equals(vec, vec)).toBe(true);
 
-    expect([vec.x, vec.y, vec.z]).toEqual([1, 2, 3]);
+    expect([vec.x, vec.y, vec.z]).toStrictEqual([1, 2, 3]);
     m.vec3.negate(vec, vec);
-    expect([vec.x, vec.y, vec.z]).toEqual([-1, -2, -3]);
+    expect([vec.x, vec.y, vec.z]).toStrictEqual([-1, -2, -3]);
   });
 });
 
@@ -76,9 +74,9 @@ describe('vec2f', () => {
 
     expect(m.vec2.equals(vec, vec)).toBe(true);
 
-    expect([vec.x, vec.y]).toEqual([1, 2]);
+    expect([vec.x, vec.y]).toStrictEqual([1, 2]);
     m.vec2.negate(vec, vec);
-    expect([vec.x, vec.y]).toEqual([-1, -2]);
+    expect([vec.x, vec.y]).toStrictEqual([-1, -2]);
   });
 });
 
@@ -93,7 +91,7 @@ describe('mat and vec interaction', () => {
 
     const vec = vec4f(1, 2, 3, 4);
     m.vec4.transformMat4(vec, mat, vec);
-    expect([vec.x, vec.y, vec.z, vec.w]).toEqual([4, 6, 6, 4]);
+    expect([vec.x, vec.y, vec.z, vec.w]).toStrictEqual([4, 6, 6, 4]);
   });
 
   it('can translate a matrix to look at a point', () => {
@@ -107,8 +105,7 @@ describe('mat and vec interaction', () => {
     const vec = vec3f(0, 0, 0);
     const up = vec3f(0, 0, 1);
     m.mat4.lookAt(mat, vec, up, mat);
-    expect(matToArray(mat)).toEqual([
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0, -0, -0, 1,
-    ]);
+    // deno-fmt-ignore
+    expect(matToArray(mat)).toStrictEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0, -0, -0, 1]);
   });
 });

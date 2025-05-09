@@ -3,8 +3,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
@@ -25,7 +24,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       fn main() -> f32 {
         return (3 + 4);
@@ -61,7 +60,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       fn getDouble() -> f32 {
         return 4;
@@ -107,7 +106,7 @@ describe('TgpuDerived', () => {
       .with(gridSizeSlot, 1)
       .$name('main');
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `
       fn fill(arr: array<f32, 1>) {}
       fn fill_1(arr: array<f32, 2>) {}
@@ -122,9 +121,7 @@ describe('TgpuDerived', () => {
     );
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({
-    root,
-  }) => {
+  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
     const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
     const doubledVectorSlot = tgpu['~unstable'].derived(() => {
       const vec = vectorSlot.value;
@@ -162,7 +159,7 @@ describe('TgpuDerived', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,
@@ -209,7 +206,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ mainFn })).toEqual(
+    expect(parseResolved({ mainFn })).toBe(
       parse(`
         fn innerFn() -> f32 {
           return 1;

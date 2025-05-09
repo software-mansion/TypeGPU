@@ -14,11 +14,11 @@ import {
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   type Eventual,
+  isAccessor,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
   type TgpuSlot,
-  isAccessor,
 } from '../slot/slotTypes.ts';
 import { createFnCore } from './fnCore.ts';
 import type {
@@ -55,33 +55,36 @@ type TgpuFnShellHeader<
 export type TgpuFnShell<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
-> = TgpuFnShellHeader<Args, Return> &
-  ((
+> =
+  & TgpuFnShellHeader<Args, Return>
+  & ((
     implementation: (
       ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
     ) => InferReturn<Return>,
-  ) => TgpuFn<Args, Return>) &
-  ((implementation: string) => TgpuFn<Args, Return>) &
-  ((
+  ) => TgpuFn<Args, Return>)
+  & ((implementation: string) => TgpuFn<Args, Return>)
+  & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFn<Args, Return>) & {
+  ) => TgpuFn<Args, Return>)
+  & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: ((
-      implementation: (
-        ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
-      ) => InferReturn<Return>,
-    ) => TgpuFn<Args, Return>) &
-      ((implementation: string) => TgpuFn<Args, Return>);
+    does:
+      & ((
+        implementation: (
+          ...args: Args extends AnyWgslData[] ? InferArgs<Args>
+            : [InferIO<Args>]
+        ) => InferReturn<Return>,
+      ) => TgpuFn<Args, Return>)
+      & ((implementation: string) => TgpuFn<Args, Return>);
   };
 
 interface TgpuFnBase<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = undefined,
-> extends TgpuNamable,
-    Labelled {
+> extends TgpuNamable, Labelled {
   readonly [$internal]: {
     implementation: Implementation<Args, Return>;
   };
@@ -100,13 +103,12 @@ interface TgpuFnBase<
 export type TgpuFn<
   Args extends AnyWgslData[] | Record<string, AnyWgslData> = AnyWgslData[],
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
-> = TgpuFnBase<Args, Return> &
-  ((
-    ...args: Args extends AnyWgslData[]
-      ? InferArgs<Args>
-      : Args extends Record<string, never>
-        ? []
-        : [InferIO<Args>]
+> =
+  & TgpuFnBase<Args, Return>
+  & ((
+    ...args: Args extends AnyWgslData[] ? InferArgs<Args>
+      : Args extends Record<string, never> ? []
+      : [InferIO<Args>]
   ) => InferReturn<Return>);
 
 export function fn<
@@ -284,11 +286,9 @@ function createBoundFunction<
 
   const call = createDualImpl(
     (
-      ...args: Args extends AnyWgslData[]
-        ? InferArgs<Args>
-        : Args extends Record<string, never>
-          ? []
-          : [InferIO<Args>]
+      ...args: Args extends AnyWgslData[] ? InferArgs<Args>
+        : Args extends Record<string, never> ? []
+        : [InferIO<Args>]
     ): unknown => innerFn(...args),
     (...args) => {
       return {
@@ -321,8 +321,7 @@ function createBoundFunction<
 class FnCall<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
-> implements SelfResolvable
-{
+> implements SelfResolvable {
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],
@@ -334,7 +333,9 @@ class FnCall<
 
   '~resolve'(ctx: ResolutionCtx): string {
     return ctx.resolve(
-      `${ctx.resolve(this._fn)}(${this._params.map((param) => ctx.resolve(param)).join(', ')})`,
+      `${ctx.resolve(this._fn)}(${
+        this._params.map((param) => ctx.resolve(param)).join(', ')
+      })`,
     );
   }
 

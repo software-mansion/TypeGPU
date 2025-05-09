@@ -275,7 +275,8 @@ export const isCloseTo = createDualImpl(
   (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
     if (isNumeric(lhs) && isNumeric(rhs)) {
       return {
-        value: `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
+        value:
+          `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
@@ -283,7 +284,8 @@ export const isCloseTo = createDualImpl(
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        value: `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
+        value:
+          `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
         dataType: bool,
       };
     }
@@ -299,11 +301,9 @@ export type SelectOverload = {
   <T extends AnyVecInstance>(
     f: T,
     t: T,
-    cond: T extends AnyVec2Instance
-      ? v2b
-      : T extends AnyVec3Instance
-        ? v3b
-        : v4b,
+    cond: T extends AnyVec2Instance ? v2b
+      : T extends AnyVec3Instance ? v3b
+      : v4b,
   ): T;
 };
 

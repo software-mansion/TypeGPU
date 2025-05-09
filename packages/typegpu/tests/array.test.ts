@@ -17,7 +17,7 @@ describe('array', () => {
 
   it('takes element alignment into account when measuring', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
-    expect(d.sizeOf(TestArray)).toEqual(48);
+    expect(d.sizeOf(TestArray)).toBe(48);
   });
 
   it('aligns array elements when writing', () => {
@@ -30,9 +30,8 @@ describe('array', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-    expect([...new Uint32Array(buffer)]).toEqual([
-      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
-    ]);
+    // deno-fmt-ignore
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('aligns array elements when reading', () => {
@@ -42,7 +41,7 @@ describe('array', () => {
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toEqual([
+    expect(readData(reader, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -63,7 +62,7 @@ describe('array', () => {
     ];
 
     writeData(new BufferWriter(buffer), TestArray, value);
-    expect(readData(new BufferReader(buffer), TestArray)).toEqual(value);
+    expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
   });
 
   it('throws when trying to read/write a runtime-sized array', () => {
@@ -75,12 +74,11 @@ describe('array', () => {
       writeData(new BufferWriter(new ArrayBuffer(0)), TestArray, [
         d.vec3f(),
         d.vec3f(),
-      ]),
+      ])
     ).toThrow();
 
-    expect(() =>
-      readData(new BufferReader(new ArrayBuffer(0)), TestArray),
-    ).toThrow();
+    expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray))
+      .toThrow();
 
     const opts = { names: new StrictNameRegistry() };
 
@@ -109,7 +107,7 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var <storage, read_write> values: array<f32>;
 
@@ -140,7 +138,7 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var <storage, read_write> values: array<f32, 128>;
 

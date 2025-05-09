@@ -11,9 +11,9 @@ import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
 import type { TgpuNamable } from '../../namable.ts';
 import {
+  kindToDefaultFormatMap,
   type TgpuVertexAttrib,
   type VertexFormat,
-  kindToDefaultFormatMap,
   vertexFormats,
 } from '../../shared/vertexFormat.ts';
 import type { Labelled } from '../../types.ts';
@@ -28,8 +28,7 @@ import type {
 
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
-> extends TgpuNamable,
-    Labelled {
+> extends TgpuNamable, Labelled {
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
@@ -157,8 +156,7 @@ function dataToContainedAttribs<
 }
 
 class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
-  implements TgpuVertexLayout<TData>
-{
+  implements TgpuVertexLayout<TData> {
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;

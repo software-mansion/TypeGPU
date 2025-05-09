@@ -1,4 +1,6 @@
 export { discard } from './discard.ts';
+
+// deno-fmt-ignore
 export {
   abs,
   // builtin functions
@@ -29,9 +31,10 @@ export {
   sign,
   sin,
   sqrt,
-  sub,
+  sub
 } from './numeric.ts';
 
+// deno-fmt-ignore
 export {
   // logical aggregation
   all,
@@ -50,9 +53,10 @@ export {
   // logical ops
   not,
   or,
-  select,
+  select
 } from './boolean.ts';
 
+// deno-fmt-ignore
 export {
   atomicAdd,
   atomicAnd,
@@ -66,16 +70,17 @@ export {
   storageBarrier,
   textureBarrier,
   // synchronization
-  workgroupBarrier,
+  workgroupBarrier
 } from './atomic.ts';
 
 export { arrayLength } from './array.ts';
 
+// deno-fmt-ignore
 export {
   pack2x16float,
   pack4x8unorm,
   unpack2x16float,
-  unpack4x8unorm,
+  unpack4x8unorm
 } from './packing.ts';
 
 export { textureSample } from './texture.ts';

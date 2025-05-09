@@ -1,27 +1,26 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
+  arrayOf,
   type F32,
+  f32,
   type U32,
+  u32,
   type Vec3f,
+  vec3f,
   type Vec4f,
   type Vec4i,
   type WgslArray,
-  arrayOf,
-  f32,
-  u32,
-  vec3f,
 } from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
-  type TgpuBufferUniform,
-  type TgpuBufferReadonly,
   type TgpuBufferMutable,
-  type TgpuWriteonlyTexture,
-  type TgpuSampledTexture,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
   type TgpuMutableTexture,
+  type TgpuSampledTexture,
+  type TgpuWriteonlyTexture,
 } from '../src/index.ts';
-import './utils/webgpuGlobals.ts';
-import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -31,9 +30,10 @@ import {
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
+import './utils/webgpuGlobals.ts';
 
-const DEFAULT_READONLY_VISIBILITY_FLAGS =
-  GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
+  GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
   it('infers the bound type of a uniform entry', () => {
@@ -214,7 +214,7 @@ describe('TgpuBindGroupLayout', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
       @group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
@@ -343,9 +343,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
-      root,
-    }) => {
+    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({ root }) => {
       root.createBindGroup(layout, {
         foo: sampler({ minFilter: 'linear' }),
       });
@@ -424,9 +422,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({
-      root,
-    }) => {
+    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({ root }) => {
       root.createBindGroup(layout, {
         foo: comparisonSampler({ compare: 'equal' }),
       });
@@ -717,9 +713,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('populates a simple layout with a typed storage texture view', ({
-      root,
-    }) => {
+    it('populates a simple layout with a typed storage texture view', ({ root }) => {
       const texture = root
         .createTexture({
           size: [32, 32, 32],
@@ -903,9 +897,7 @@ describe('TgpuBindGroup', () => {
       }).toThrow(new MissingBindingError('example', 'd'));
     });
 
-    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({
-      root,
-    }) => {
+    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({ root }) => {
       const aBuffer = root.createBuffer(vec3f).$usage('uniform');
       const bBuffer = root.createBuffer(u32).$usage('storage');
       const dBuffer = root.createBuffer(f32).$usage('storage');

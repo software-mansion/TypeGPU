@@ -2,8 +2,8 @@ import { getAttributesString } from '../../data/attributes.ts';
 import {
   type AnyData,
   type Disarray,
-  type Unstruct,
   isLooseData,
+  type Unstruct,
 } from '../../data/dataTypes.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
@@ -110,7 +110,9 @@ function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseData],
 ) {
-  return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
+  return `  ${getAttributesString(property)}${key}: ${
+    ctx.resolve(property as AnyWgslData)
+  },\n`;
 }
 
 /**
@@ -125,9 +127,11 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
 
   ctx.addDeclaration(`
 struct ${id} {
-${Object.entries(struct.propTypes)
-  .map((prop) => resolveStructProperty(ctx, prop))
-  .join('')}\
+${
+    Object.entries(struct.propTypes)
+      .map((prop) => resolveStructProperty(ctx, prop))
+      .join('')
+  }\
 }\n`);
 
   return id;
@@ -153,13 +157,18 @@ function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
 
   ctx.addDeclaration(`
 struct ${id} {
-${Object.entries(unstruct.propTypes)
-  .map((prop) =>
-    isAttribute(prop[1])
-      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
-      : resolveStructProperty(ctx, prop),
-  )
-  .join('')}
+${
+    Object.entries(unstruct.propTypes)
+      .map((prop) =>
+        isAttribute(prop[1])
+          ? resolveStructProperty(ctx, [
+            prop[0],
+            formatToWGSLType[prop[1].format],
+          ])
+          : resolveStructProperty(ctx, prop)
+      )
+      .join('')
+  }
 }\n`);
 
   return id;
@@ -248,7 +257,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
 
   if (data.type === 'ptr') {
     if (data.addressSpace === 'storage') {
-      return `ptr<storage, ${ctx.resolve(data.inner)}, ${data.access === 'read-write' ? 'read_write' : data.access}>`;
+      return `ptr<storage, ${ctx.resolve(data.inner)}, ${
+        data.access === 'read-write' ? 'read_write' : data.access
+      }>`;
     }
     return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
   }

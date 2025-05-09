@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { IOLayout, InferIO } from '../src/core/function/fnTypes.ts';
+import type { InferIO, IOLayout } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
@@ -16,7 +16,7 @@ describe('tgpu.fn', () => {
 
     const expected = parse('fn empty() {}');
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('should inject function declaration only once', () => {
@@ -46,7 +46,7 @@ describe('tgpu.fn', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
@@ -97,7 +97,7 @@ describe('tgpu.fn', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('creates typed shell from parameters', () => {
@@ -148,7 +148,7 @@ describe('tgpu.computeFn', () => {
     });
 
     expect(parseResolved({ foo })).not.toContain('struct');
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
@@ -159,7 +159,7 @@ describe('tgpu.computeFn', () => {
     );
 
     expect(parseResolved({ foo })).not.toContain(parse('struct'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 });
 
@@ -172,7 +172,7 @@ describe('tgpu.vertexFn', () => {
     }));
     expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
@@ -186,7 +186,7 @@ describe('tgpu.vertexFn', () => {
     });
     expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
@@ -200,7 +200,7 @@ describe('tgpu.vertexFn', () => {
     });
     expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create Out struct when the are no output parameters', () => {
@@ -220,7 +220,7 @@ describe('tgpu.fragmentFn', () => {
     })(() => d.vec4f(0));
 
     expect(parseResolved({ foo })).not.toContain(parse('struct'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
@@ -230,7 +230,7 @@ describe('tgpu.fragmentFn', () => {
     })(() => d.vec4f(0));
 
     expect(parseResolved({ foo })).not.toContain(parse('struct'));
-    expect(foo.shell.argTypes).toEqual([]);
+    expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
   it('does not create Out struct when the are no output parameters', () => {
