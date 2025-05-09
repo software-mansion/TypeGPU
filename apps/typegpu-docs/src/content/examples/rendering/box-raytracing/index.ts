@@ -36,7 +36,12 @@ const BoxStruct = d.struct({
   albedo: d.vec4f,
 });
 
-const RayStruct = d.struct({
+const AxisAlignedBounds = d.struct({
+  min: d.vec3f,
+  max: d.vec3f,
+});
+
+const Ray = d.struct({
   origin: d.vec3f,
   direction: d.vec3f,
 });
@@ -111,9 +116,9 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 // functions
 
 const getBoxIntersection = tgpu['~unstable'].fn(
-  { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
+  [AxisAlignedBounds, Ray],
   IntersectionStruct,
-) /* wgsl */`{
+) /* wgsl */`(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -122,19 +127,19 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   var tMaxZ: f32;
 
   if (ray.direction.x >= 0) {
-    tMin = (boundMin.x - ray.origin.x) / ray.direction.x;
-    tMax = (boundMax.x - ray.origin.x) / ray.direction.x;
+    tMin = (bounds.min.x - ray.origin.x) / ray.direction.x;
+    tMax = (bounds.max.x - ray.origin.x) / ray.direction.x;
   } else {
-    tMin = (boundMax.x - ray.origin.x) / ray.direction.x;
-    tMax = (boundMin.x - ray.origin.x) / ray.direction.x;
+    tMin = (bounds.max.x - ray.origin.x) / ray.direction.x;
+    tMax = (bounds.min.x - ray.origin.x) / ray.direction.x;
   }
 
   if (ray.direction.y >= 0) {
-    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y;
-    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y;
+    tMinY = (bounds.min.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (bounds.max.y - ray.origin.y) / ray.direction.y;
   } else {
-    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y;
-    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y;
+    tMinY = (bounds.max.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (bounds.min.y - ray.origin.y) / ray.direction.y;
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
@@ -150,11 +155,11 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   }
 
   if (ray.direction.z >= 0) {
-    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z;
-    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+    tMinZ = (bounds.min.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (bounds.max.z - ray.origin.z) / ray.direction.z;
   } else {
-    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z;
-    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+    tMinZ = (bounds.max.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (bounds.min.z - ray.origin.z) / ray.direction.z;
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
@@ -171,7 +176,7 @@ const getBoxIntersection = tgpu['~unstable'].fn(
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`
-  .$uses({ IntersectionStruct })
+  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct })
   .$name('box_intersection');
 
 const vertexFunction = tgpu['~unstable'].vertexFn({
@@ -199,7 +204,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 }) /* wgsl */`{
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
-  var ray: RayStruct;
+  var ray: Ray;
   ray.origin = cameraPosition;
   ray.direction += cameraAxes.right * (in.position.x - f32(canvasDims.width)/2)/minDim;
   ray.direction += cameraAxes.up * (in.position.y - f32(canvasDims.height)/2)/minDim;
@@ -207,12 +212,14 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   ray.direction = normalize(ray.direction);
 
   let bigBoxIntersection = getBoxIntersection(
-    -vec3f(f32(boxSize))/2,
-    vec3f(
-      cubeSize.x,
-      cubeSize.y,
-      cubeSize.z,
-    ) + vec3f(f32(boxSize))/2,
+    AxisAlignedBounds(
+      -vec3f(f32(boxSize))/2,
+      vec3f(
+        cubeSize.x,
+        cubeSize.y,
+        cubeSize.z,
+      ) + vec3f(f32(boxSize))/2,
+    ),
     ray,
   );
 
@@ -230,8 +237,10 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
           }
 
           let intersection = getBoxIntersection(
-            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE - vec3f(f32(boxSize))/2,
-            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE + vec3f(f32(boxSize))/2,
+            AxisAlignedBounds(
+              vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE - vec3f(f32(boxSize))/2,
+              vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE + vec3f(f32(boxSize))/2,
+            ),
             ray,
           );
 
@@ -249,7 +258,8 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 }`
   .$uses({
     ...renderLayout.bound,
-    RayStruct,
+    Ray,
+    AxisAlignedBounds,
     getBoxIntersection,
     X,
     Y,
@@ -266,9 +276,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 const pipeline = root['~unstable']
   .with(
     boxSizeAccessor,
-    tgpu['~unstable'].fn([], d.u32)`() -> u32 { return boxSize; }`.$uses({
-      boxSize: boxSizeUniform,
-    }),
+    boxSizeUniform,
   )
   .with(canvasDimsAccessor, canvasDimsUniform)
   .withVertex(vertexFunction, {})
