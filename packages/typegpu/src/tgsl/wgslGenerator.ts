@@ -495,14 +495,20 @@ ${alternate}`;
 
   if (statement[0] === NODE.let || statement[0] === NODE.const) {
     const [_, rawId, rawValue] = statement;
-    const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
+    const eq = rawValue !== undefined
+      ? generateExpression(ctx, rawValue)
+      : undefined;
 
-    if (!eq || !rawValue) {
-      throw new Error('Cannot create variable without an initial value.');
+    if (!eq) {
+      throw new Error(
+        `Cannot create variable '${rawId}' without an initial value.`,
+      );
     }
 
     if (d.isLooseData(eq.dataType)) {
-      throw new Error('Cannot create variable with loose data type.');
+      throw new Error(
+        `Cannot create variable '${rawId}' with loose data type.`,
+      );
     }
 
     registerBlockVariable(ctx, rawId, eq.dataType);

@@ -279,7 +279,7 @@ const Transpilers: Partial<
       return [NODE.const, id, init];
     }
 
-    return init ? [NODE.let, id, init] : [NODE.let, id];
+    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
   },
 
   IfStatement(ctx, node) {
