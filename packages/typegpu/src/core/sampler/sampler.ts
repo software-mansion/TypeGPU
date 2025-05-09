@@ -145,6 +145,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 
   constructor(private readonly _membership: LayoutMembership) {
     this[$internal] = {};
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -170,6 +171,7 @@ export class TgpuLaidOutComparisonSamplerImpl
 
   constructor(private readonly _membership: LayoutMembership) {
     this[$internal] = {};
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

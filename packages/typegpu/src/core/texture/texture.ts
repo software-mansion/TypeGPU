@@ -494,7 +494,6 @@ class TgpuFixedStorageTextureImpl
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$getNameForward]: LayoutMembership;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -506,7 +505,7 @@ export class TgpuLaidOutStorageTextureImpl
   ) {
     this[$internal] = {};
     this.texelDataType = texelFormatToDataType[this._format];
-    this[$getNameForward] = _membership;
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -603,7 +602,6 @@ class TgpuFixedSampledTextureImpl
 export class TgpuLaidOutSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$getNameForward]: LayoutMembership;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -614,7 +612,7 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = {};
-    this[$getNameForward] = _membership;
+    setName(this, _membership.key);
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 

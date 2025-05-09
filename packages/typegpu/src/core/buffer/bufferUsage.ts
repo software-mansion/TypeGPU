@@ -3,7 +3,7 @@ import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../name.ts';
-import { getName } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -148,7 +148,6 @@ export class TgpuLaidOutBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
-  public readonly [$getNameForward]: LayoutMembership;
 
   constructor(
     public readonly usage: TUsage,
@@ -156,7 +155,7 @@ export class TgpuLaidOutBufferImpl<
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = { dataType };
-    this[$getNameForward] = _membership;
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
