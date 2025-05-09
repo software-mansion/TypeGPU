@@ -18,11 +18,13 @@ type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
+  [Symbol.iterator]: () => Iterator<number>;
 }
 
 export interface BooleanArrayView {
   readonly length: number;
   [n: number]: boolean;
+  [Symbol.iterator]: () => Iterator<boolean>;
 }
 
 export interface BaseData {

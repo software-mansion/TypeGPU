@@ -64,6 +64,16 @@ describe('vec2f', () => {
     vec[1] = 4;
     expect(vec).toStrictEqual(d.vec2f(3, 4));
   });
+
+  it('should work with for...of', () => {
+    const vec = d.vec2f(0, 1);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+  });
 });
 
 describe('vec2i', () => {
@@ -123,6 +133,16 @@ describe('vec2i', () => {
     vec[0] = 3;
     vec[1] = 4;
     expect(vec).toStrictEqual(d.vec2i(3, 4));
+  });
+
+  it('should work with for...of', () => {
+    const vec = d.vec2i(0, 1);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
   });
 });
 
@@ -202,6 +222,16 @@ describe('vec2<bool>', () => {
     expect(swizzled.x).toBe(true);
     expect(swizzled.y).toBe(true);
   });
+
+  it('should work with for...of', () => {
+    const vec = d.vec2b(true, false);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+  });
 });
 
 describe('vec3f', () => {
@@ -267,6 +297,16 @@ describe('vec3f', () => {
     vec[2] = 6;
     expect(vec).toStrictEqual(d.vec3f(4, 5, 6));
   });
+
+  it('should work with for...of', () => {
+    const vec = d.vec3f(1, 2, 3);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+  });
 });
 
 describe('vec3i', () => {
@@ -331,6 +371,16 @@ describe('vec3i', () => {
     vec[1] = 5;
     vec[2] = 6;
     expect(vec).toStrictEqual(d.vec3i(4, 5, 6));
+  });
+
+  it('should work with for...of', () => {
+    const vec = d.vec3i(1, 2, 3);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
   });
 });
 
@@ -418,6 +468,16 @@ describe('vec3<bool>', () => {
     expect(swizzled.y).toBe(true);
     expect(swizzled.z).toBe(false);
   });
+
+  it('should work with for...of', () => {
+    const vec = d.vec3b(true, false, true);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+  });
 });
 
 describe('vec4f', () => {
@@ -487,6 +547,16 @@ describe('vec4f', () => {
     vec[2] = 7;
     vec[3] = 8;
     expect(vec).toStrictEqual(d.vec4f(5, 6, 7, 8));
+  });
+
+  it('should work with for...of', () => {
+    const vec = d.vec4f(1, 2, 3, 4);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
   });
 });
 
@@ -577,6 +647,16 @@ describe('v2i', () => {
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2f(1, 2));
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2h(1, 2));
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2u(1, 2));
+  });
+
+  it('should work with for...of', () => {
+    const vec = d.vec2h(1, 2);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
   });
 });
 
