@@ -87,8 +87,7 @@ export const computeCollisionsShader = tgpu['~unstable']
           );
         } else {
           // merge occurs
-          const isCurrentAbsorbed =
-            current.collisionBehavior === bounce ||
+          const isCurrentAbsorbed = current.collisionBehavior === bounce ||
             (current.collisionBehavior === merge &&
               isSmaller({ currentId, otherId }));
           if (isCurrentAbsorbed) {

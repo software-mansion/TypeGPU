@@ -8,9 +8,9 @@ import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
-  type Preset,
   collisionBehaviors,
   initialPreset,
+  type Preset,
   presets,
   sphereTextureNames,
 } from './enums.ts';
@@ -30,14 +30,14 @@ import {
 import {
   Camera,
   CelestialBody,
-  SkyBoxVertex,
-  Time,
   computeCollisionsBindGroupLayout,
   computeGravityBindGroupLayout,
   renderBindGroupLayout,
   renderSkyBoxBindGroupLayout,
   renderSkyBoxVertexLayout,
   renderVertexLayout,
+  SkyBoxVertex,
+  Time,
 } from './schemas.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -108,10 +108,12 @@ const lightSourceBuffer = root
 // dynamic resources (recreated every time a preset is selected)
 
 interface DynamicResources {
-  celestialBodiesBufferA: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
-    StorageFlag;
-  celestialBodiesBufferB: TgpuBuffer<d.WgslArray<typeof CelestialBody>> &
-    StorageFlag;
+  celestialBodiesBufferA:
+    & TgpuBuffer<d.WgslArray<typeof CelestialBody>>
+    & StorageFlag;
+  celestialBodiesBufferB:
+    & TgpuBuffer<d.WgslArray<typeof CelestialBody>>
+    & StorageFlag;
   computeCollisionsBindGroup: TgpuBindGroup<
     (typeof computeCollisionsBindGroupLayout)['entries']
   >;
@@ -223,8 +225,8 @@ requestAnimationFrame(frame);
 async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const presetData = examplePresets[preset];
 
-  const celestialBodies: d.Infer<typeof CelestialBody>[] =
-    presetData.celestialBodies.flatMap((group) =>
+  const celestialBodies: d.Infer<typeof CelestialBody>[] = presetData
+    .celestialBodies.flatMap((group) =>
       group.elements.map((element) => ({
         destroyed: 0,
         position: element.position,
@@ -236,7 +238,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
           : collisionBehaviors.none,
         textureIndex: sphereTextureNames.indexOf(group.texture),
         ambientLightFactor: element.ambientLightFactor ?? 0.6,
-      })),
+      }))
     );
 
   const computeBufferA = root
@@ -354,8 +356,8 @@ function updateCameraPosition() {
 function updateCameraOrbit(dx: number, dy: number) {
   const orbitSensitivity = 0.005;
   const orbitRadius = std.length(cameraPosition);
-  const orbitYaw =
-    Math.atan2(cameraPosition.x, cameraPosition.z) - dx * orbitSensitivity;
+  const orbitYaw = Math.atan2(cameraPosition.x, cameraPosition.z) -
+    dx * orbitSensitivity;
   const orbitPitch = std.clamp(
     Math.asin(cameraPosition.y / orbitRadius) + dy * orbitSensitivity,
     -(Math.PI / 2 - 0.01),

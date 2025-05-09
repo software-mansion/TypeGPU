@@ -1,10 +1,10 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
-import { type TgpuRoot, tgpu } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { sphereTextureNames } from './enums.ts';
-import { CelestialBody, SkyBoxVertex, renderVertexLayout } from './schemas.ts';
+import { CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
 
 function vert(
   position: [number, number, number, number],

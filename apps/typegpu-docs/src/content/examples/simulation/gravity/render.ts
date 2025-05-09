@@ -3,9 +3,9 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { radiusOf } from './helpers.ts';
 import {
-  VertexOutput,
   renderBindGroupLayout as renderLayout,
   renderSkyBoxBindGroupLayout as skyBoxLayout,
+  VertexOutput,
 } from './schemas.ts';
 
 export const skyBoxVertex = tgpu['~unstable']
@@ -46,7 +46,7 @@ export const skyBoxFragment = tgpu['~unstable']
       skyBoxLayout.$.skyBox,
       skyBoxLayout.$.sampler,
       std.normalize(input.texCoord),
-    ),
+    )
   )
   .$name('skybox');
 

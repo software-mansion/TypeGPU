@@ -44,7 +44,7 @@ function stableOrbitVelocity(
 ) {
   return (
     (otherMass * (2 / currentRadius - 1 / (averageRadius ?? currentRadius))) **
-    0.5
+      0.5
   );
 }
 
