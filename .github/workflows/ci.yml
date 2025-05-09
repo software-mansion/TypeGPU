@@ -50,6 +50,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Download large files from Git LFS
+        run: git lfs install --local; git lfs pull
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
