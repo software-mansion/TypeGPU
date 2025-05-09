@@ -286,7 +286,7 @@ const computePipeline = root['~unstable']
   .withCompute(mainCompute)
   .createPipeline();
 
-const renderBindGroups = [0, 1].map((idx) =>
+const renderBindGroups = [0, 1].map(() =>
   root.createBindGroup(renderBindGroupLayout, {
     colorPalette: colorPaletteBuffer,
   })
