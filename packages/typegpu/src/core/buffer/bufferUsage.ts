@@ -5,7 +5,7 @@ import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -79,14 +79,14 @@ class TgpuFixedBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
-  public readonly [$labelForward]: TgpuBuffer<TData>;
+  public readonly [$getNameForward]: TgpuBuffer<TData>;
 
   constructor(
     public readonly usage: TUsage,
     public readonly buffer: TgpuBuffer<TData>,
   ) {
     this[$internal] = { dataType: buffer.dataType };
-    this[$labelForward] = buffer;
+    this[$getNameForward] = buffer;
   }
 
   $name(label: string) {
@@ -148,7 +148,7 @@ export class TgpuLaidOutBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
-  public readonly [$labelForward]: LayoutMembership;
+  public readonly [$getNameForward]: LayoutMembership;
 
   constructor(
     public readonly usage: TUsage,
@@ -156,7 +156,7 @@ export class TgpuLaidOutBufferImpl<
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = { dataType };
-    this[$labelForward] = _membership;
+    this[$getNameForward] = _membership;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

@@ -2,7 +2,7 @@ import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../gpuMode.ts';
 import { getName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import {
   isBufferUsage,
   type ResolutionCtx,
@@ -34,7 +34,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   public readonly resourceType = 'accessor';
   declare public readonly [$repr]: Infer<T>;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
-  readonly [$labelForward]: TgpuSlot<
+  readonly [$getNameForward]: TgpuSlot<
     TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>
   >;
 
@@ -47,7 +47,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       | undefined = undefined,
   ) {
     this.slot = slot(defaultValue);
-    this[$labelForward] = this.slot;
+    this[$getNameForward] = this.slot;
   }
 
   $name(label: string) {

@@ -1,4 +1,4 @@
-import { $labelForward } from './shared/symbols.ts';
+import { $getNameForward } from './shared/symbols.ts';
 
 interface MetaData {
   name: string | undefined;
@@ -12,11 +12,11 @@ function isObject(value: unknown): value is object {
   return !!value && (typeof value === 'object' || typeof value === 'function');
 }
 
-function isForwarded(value: object): value is { [$labelForward]: object } {
-  if (!($labelForward in value)) {
+function isForwarded(value: object): value is { [$getNameForward]: object } {
+  if (!($getNameForward in value)) {
     return false;
   }
-  return isObject(value[$labelForward]);
+  return isObject(value[$getNameForward]);
 }
 
 export function getName(definition: unknown): string | undefined {
@@ -24,7 +24,7 @@ export function getName(definition: unknown): string | undefined {
     return undefined;
   }
   if (isForwarded(definition)) {
-    return getName(definition[$labelForward]);
+    return getName(definition[$getNameForward]);
   }
   return globalThis.__TYPEGPU_META__?.get(definition)?.name;
 }

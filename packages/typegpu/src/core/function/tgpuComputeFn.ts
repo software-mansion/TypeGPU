@@ -1,7 +1,7 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
-import { $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
@@ -144,7 +144,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
-    [$labelForward]: FnCore;
+    [$getNameForward]: FnCore;
   };
 
   const core = createFnCore(shell, implementation);
@@ -158,7 +158,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
       return this;
     },
 
-    [$labelForward]: core,
+    [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
       if (isNamable(inputType)) {

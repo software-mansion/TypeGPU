@@ -8,7 +8,7 @@ import {
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import { resolve } from '../../resolutionCtx.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroupLayout,
@@ -229,14 +229,14 @@ type Memo = {
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
-  [$labelForward]: RenderPipelineCore;
+  [$getNameForward]: RenderPipelineCore;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {
       core,
       priors,
     };
-    this[$labelForward] = core;
+    this[$getNameForward] = core;
   }
 
   $name(label: string): this {

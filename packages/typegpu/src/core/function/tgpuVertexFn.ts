@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
-import { $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
@@ -141,7 +141,7 @@ function createVertexFn(
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
   type This = TgpuVertexFn<IOLayout, IOLayout> & SelfResolvable & {
-    [$labelForward]: FnCore;
+    [$getNameForward]: FnCore;
   };
 
   const core = createFnCore(shell, implementation);
@@ -165,7 +165,7 @@ function createVertexFn(
       return this;
     },
 
-    [$labelForward]: core,
+    [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
       if (isNamable(outputType)) {

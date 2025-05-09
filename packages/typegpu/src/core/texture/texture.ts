@@ -9,7 +9,7 @@ import type {
 import { invariant } from '../../errors.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   Default,
   UnionToIntersection,
@@ -424,7 +424,7 @@ const dimensionToCodeMap = {
 class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: TgpuTexture<TextureProps>;
+  public readonly [$getNameForward]: TgpuTexture<TextureProps>;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
   public readonly dimension: StorageTextureDimension;
@@ -452,7 +452,7 @@ class TgpuFixedStorageTextureImpl
         return this._view;
       },
     };
-    this[$labelForward] = _texture;
+    this[$getNameForward] = _texture;
 
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format = props?.format ??
@@ -494,7 +494,7 @@ class TgpuFixedStorageTextureImpl
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: LayoutMembership;
+  public readonly [$getNameForward]: LayoutMembership;
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -506,7 +506,7 @@ export class TgpuLaidOutStorageTextureImpl
   ) {
     this[$internal] = {};
     this.texelDataType = texelFormatToDataType[this._format];
-    this[$labelForward] = _membership;
+    this[$getNameForward] = _membership;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -531,7 +531,7 @@ export class TgpuLaidOutStorageTextureImpl
 class TgpuFixedSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable, TgpuNamable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: TgpuTexture<TextureProps>;
+  public readonly [$getNameForward]: TgpuTexture<TextureProps>;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
@@ -557,7 +557,7 @@ class TgpuFixedSampledTextureImpl
         return this._view;
       },
     };
-    this[$labelForward] = _texture;
+    this[$getNameForward] = _texture;
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format = _props?.format ??
       (_texture.props.format as GPUTextureFormat);
@@ -603,7 +603,7 @@ class TgpuFixedSampledTextureImpl
 export class TgpuLaidOutSampledTextureImpl
   implements TgpuSampledTexture, SelfResolvable {
   public readonly [$internal]: TextureViewInternals;
-  public readonly [$labelForward]: LayoutMembership;
+  public readonly [$getNameForward]: LayoutMembership;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -614,7 +614,7 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = {};
-    this[$labelForward] = _membership;
+    this[$getNameForward] = _membership;
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 

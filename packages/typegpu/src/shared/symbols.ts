@@ -1,2 +1,2 @@
 export const $internal = Symbol('internal');
-export const $labelForward = Symbol('label forward');
+export const $getNameForward = Symbol('get name forward');

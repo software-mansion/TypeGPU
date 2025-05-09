@@ -2,7 +2,7 @@ import { MissingBindGroupsError } from '../../errors.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import { resolve } from '../../resolutionCtx.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -70,7 +70,7 @@ type Memo = {
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
-  readonly [$labelForward]: ComputePipelineCore;
+  readonly [$getNameForward]: ComputePipelineCore;
 
   constructor(
     private readonly _core: ComputePipelineCore,
@@ -81,7 +81,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         return _core.unwrap().pipeline;
       },
     };
-    this[$labelForward] = _core;
+    this[$getNameForward] = _core;
   }
 
   get rawPipeline(): GPUComputePipeline {

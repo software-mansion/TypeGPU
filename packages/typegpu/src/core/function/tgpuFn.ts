@@ -3,7 +3,7 @@ import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal, $labelForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
 import {
   type ResolutionCtx,
@@ -164,7 +164,7 @@ function createFn<
   implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return> & SelfResolvable & {
-    [$labelForward]: FnCore;
+    [$getNameForward]: FnCore;
   };
 
   const core = createFnCore(shell, implementation as Implementation);
@@ -181,7 +181,7 @@ function createFn<
       return this;
     },
 
-    [$labelForward]: core,
+    [$getNameForward]: core,
     $name(label: string): This {
       setName(core, label);
       return this;
@@ -251,7 +251,7 @@ function createBoundFunction<
   Return extends AnyWgslData | undefined,
 >(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return> & {
-    [$labelForward]: TgpuFn<Args, Return>;
+    [$getNameForward]: TgpuFn<Args, Return>;
   };
 
   const fnBase: This = {
@@ -270,7 +270,7 @@ function createBoundFunction<
       return this;
     },
 
-    [$labelForward]: innerFn,
+    [$getNameForward]: innerFn,
     $name(label: string): This {
       innerFn.$name(label);
       return this;
@@ -320,12 +320,12 @@ class FnCall<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 > implements SelfResolvable {
-  readonly [$labelForward]: TgpuFnBase<Args, Return>;
+  readonly [$getNameForward]: TgpuFnBase<Args, Return>;
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],
   ) {
-    this[$labelForward] = _fn;
+    this[$getNameForward] = _fn;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
