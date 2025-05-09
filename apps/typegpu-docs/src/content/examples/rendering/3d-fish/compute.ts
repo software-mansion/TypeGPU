@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout } from './schemas.ts';
-import { Line3, projectPointOnLine } from './tgsl-helpers.ts';
+import { projectPointOnLine } from './tgsl-helpers.ts';
 
 export const computeShader = tgpu['~unstable']
   .computeFn({
@@ -71,13 +71,10 @@ export const computeShader = tgpu['~unstable']
     }
 
     if (layout.$.mouseRay.activated === 1) {
-      const ray = Line3({
-        origin: layout.$.mouseRay.pointX,
-        dir: std.normalize(
-          std.sub(layout.$.mouseRay.pointY, layout.$.mouseRay.pointX),
-        ),
-      });
-      const proj = projectPointOnLine(fishData.position, ray);
+      const proj = projectPointOnLine(
+        fishData.position,
+        layout.$.mouseRay.line,
+      );
       const diff = std.sub(fishData.position, proj);
       const limit = p.fishMouseRayRepulsionDistance;
       const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;

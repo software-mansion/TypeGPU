@@ -1,17 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-
-export const Line3 = d.struct({
-  /**
-   * A point on the line
-   */
-  origin: d.vec3f,
-  /**
-   * Normalized direction along the line
-   */
-  dir: d.vec3f,
-});
+import { Line3 } from './schemas.ts';
 
 export const projectPointOnLine = tgpu['~unstable'].fn(
   [d.vec3f, Line3],
