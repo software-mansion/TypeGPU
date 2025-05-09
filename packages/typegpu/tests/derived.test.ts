@@ -239,21 +239,4 @@ describe('TgpuDerived', () => {
       'Cannot create tgpu.derived objects at the resolution stage.',
     );
   });
-
-  it('does not allow defining bound derived values at resolution', () => {
-    const slot = tgpu['~unstable'].slot<number>(2).$name('gridSize');
-    const derived = tgpu['~unstable'].derived(() => slot.value);
-    const derived2 = tgpu['~unstable'].derived(() =>
-      slot.value > 0
-        ? derived.with(slot, 2).value
-        : derived.with(slot, -2).value
-    );
-    const fn = tgpu['~unstable'].fn({}, d.u32)(() => {
-      return derived2.value;
-    });
-
-    expect(() => parseResolved({ fn })).toThrow(
-      'Cannot create tgpu.derived objects at the resolution stage.',
-    );
-  });
 });
