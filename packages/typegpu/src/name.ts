@@ -30,10 +30,6 @@ export function getName(definition: unknown): string | undefined {
 }
 
 export function setName(definition: object, name: string): void {
-  if (isForwarded(definition)) {
-    setName(definition[$labelForward], name);
-    return;
-  }
   globalThis.__TYPEGPU_META__ ??= new WeakMap();
   const map = globalThis.__TYPEGPU_META__;
   map.set(definition, { ...map.get(definition), name });
