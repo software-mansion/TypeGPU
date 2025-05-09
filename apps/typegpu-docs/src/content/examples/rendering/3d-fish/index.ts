@@ -114,12 +114,12 @@ const mouseRayBuffer = root
   .$name('mouse buffer');
 
 const timePassedBuffer = root
-  .createBuffer(d.u32)
+  .createBuffer(d.f32)
   .$usage('uniform')
   .$name('time passed buffer');
 
 const currentTimeBuffer = root
-  .createBuffer(d.u32)
+  .createBuffer(d.f32)
   .$usage('uniform')
   .$name('current time buffer');
 
