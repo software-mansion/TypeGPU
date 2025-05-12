@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('variable_decl', () => {
   it('parses unassigned', () => {
-    expect(parse('var example: u32;')).toEqual(
+    expect(parse('var example: u32;')).toStrictEqual(
       {
         type: 'variable_decl',
         ident: 'example',
@@ -20,7 +20,7 @@ describe('variable_decl', () => {
   });
 
   it('parses assigned', () => {
-    expect(parse('var example: u32 = 123;')).toEqual(
+    expect(parse('var example: u32 = 123;')).toStrictEqual(
       {
         type: 'variable_decl',
         ident: 'example',
@@ -41,64 +41,66 @@ describe('variable_decl', () => {
 
 describe('global_variable_decl', () => {
   it('parses a buffer', () => {
-    expect(parse('@group(0) @binding(0) var<storage, read> buf: u32;')).toEqual(
-      {
-        declarations: [
-          {
-            type: 'global_variable_decl',
-            attributes: [
-              {
-                type: 'attribute',
-                ident: 'group',
-                args: [
-                  {
-                    type: 'int_literal',
-                    value: '0',
-                  },
-                ],
-              },
-              {
-                type: 'attribute',
-                ident: 'binding',
-                args: [
-                  {
-                    type: 'int_literal',
-                    value: '0',
-                  },
-                ],
-              },
-            ],
-            variable_decl: {
-              type: 'variable_decl',
-              ident: 'buf',
-              typespec: {
-                type: 'template_elaborated_ident',
-                ident: 'u32',
-                template_list: null,
-              },
-              expr: null,
-              template_list: [
+    expect(
+      parse('@group(0) @binding(0) var<storage, read> buf: u32;'),
+    ).toStrictEqual({
+      declarations: [
+        {
+          type: 'global_variable_decl',
+          attributes: [
+            {
+              type: 'attribute',
+              ident: 'group',
+              args: [
                 {
-                  type: 'template_elaborated_ident',
-                  ident: 'storage',
-                  template_list: null,
-                },
-                {
-                  type: 'template_elaborated_ident',
-                  ident: 'read',
-                  template_list: null,
+                  type: 'int_literal',
+                  value: '0',
                 },
               ],
             },
-          } satisfies GlobalVariableDecl,
-        ],
-        type: 'translation_unit',
-      },
-    );
+            {
+              type: 'attribute',
+              ident: 'binding',
+              args: [
+                {
+                  type: 'int_literal',
+                  value: '0',
+                },
+              ],
+            },
+          ],
+          variable_decl: {
+            type: 'variable_decl',
+            ident: 'buf',
+            typespec: {
+              type: 'template_elaborated_ident',
+              ident: 'u32',
+              template_list: null,
+            },
+            expr: null,
+            template_list: [
+              {
+                type: 'template_elaborated_ident',
+                ident: 'storage',
+                template_list: null,
+              },
+              {
+                type: 'template_elaborated_ident',
+                ident: 'read',
+                template_list: null,
+              },
+            ],
+          },
+        } satisfies GlobalVariableDecl,
+      ],
+      type: 'translation_unit',
+    });
   });
 
   it('parses a texture', () => {
-    expect(parse('@group(0) @binding(0) var tex: texture_2d<f32>;')).toEqual({
+    expect(
+      parse('@group(0) @binding(0) var tex: texture_2d<f32>;'),
+    ).toStrictEqual({
       declarations: [
         {
           type: 'global_variable_decl',
@@ -150,7 +152,7 @@ describe('global_variable_decl', () => {
       parse(
         '@group(0) @binding(0) var tex: texture_storage_2d<rgba8unorm, write>;',
       ),
-    ).toEqual({
+    ).toStrictEqual({
       declarations: [
         {
           type: 'global_variable_decl',

@@ -23,7 +23,7 @@ describe('addArgTypesToExternals', () => {
       [d.vec4f, Particle, Light],
       (result) => externals.push(result),
     );
-    expect(externals).toEqual([{ Particle, Light }]);
+    expect(externals).toStrictEqual([{ Particle, Light }]);
   });
 
   it('gets the names from argument list in WGSL implementation', () => {
@@ -33,7 +33,7 @@ describe('addArgTypesToExternals', () => {
       [Particle, d.vec4f, Light],
       (result) => externals.push(result),
     );
-    expect(externals).toEqual([{ P: Particle, L: Light }]);
+    expect(externals).toStrictEqual([{ P: Particle, L: Light }]);
   });
 
   it('works when builtins are present', () => {
@@ -43,7 +43,7 @@ describe('addArgTypesToExternals', () => {
       [d.vec3u, d.vec4f, Particle, Light],
       (result) => externals.push(result),
     );
-    expect(externals).toEqual([{ Particle, Light }]);
+    expect(externals).toStrictEqual([{ Particle, Light }]);
   });
 
   it('works with unusual whitespace', () => {
@@ -61,6 +61,8 @@ describe('addArgTypesToExternals', () => {
       [d.vec3u, Particle, Particle, Particle],
       (result) => externals.push(result),
     );
-    expect(externals).toEqual([{ A: Particle, B: Particle, C: Particle }]);
+    expect(externals).toStrictEqual([
+      { A: Particle, B: Particle, C: Particle },
+    ]);
   });
 });

@@ -13,7 +13,7 @@ describe('withLocations', () => {
         pos: d.builtin.position,
         b: d.vec4f,
       }),
-    ).toEqual({
+    ).toStrictEqual({
       a: d.location(0, d.f32),
       pos: d.builtin.position,
       b: d.location(1, d.vec4f),
@@ -25,7 +25,7 @@ describe('withLocations', () => {
         b: d.vec4f,
         pos: d.builtin.position,
       }),
-    ).toEqual({
+    ).toStrictEqual({
       a: d.location(5, d.vec4f),
       b: d.location(6, d.vec4f),
       pos: d.builtin.position,

@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('bool_literal', () => {
   it('parses "true"', () => {
-    expect(parse('true')).toEqual(
+    expect(parse('true')).toStrictEqual(
       {
         type: 'bool_literal',
         value: 'true',
@@ -13,7 +13,7 @@ describe('bool_literal', () => {
   });
 
   it('parses "false"', () => {
-    expect(parse('false')).toEqual(
+    expect(parse('false')).toStrictEqual(
       {
         type: 'bool_literal',
         value: 'false',

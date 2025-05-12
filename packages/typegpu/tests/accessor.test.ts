@@ -2,8 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
@@ -31,7 +30,7 @@ describe('tgpu.accessor', () => {
           .$name('red'),
       );
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn red() -> vec3f {
           return ${RED_RESOLVED};
@@ -65,7 +64,7 @@ describe('tgpu.accessor', () => {
           .as('uniform'),
       );
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> red: vec3f;
 
@@ -94,7 +93,7 @@ describe('tgpu.accessor', () => {
       .with(colorAccessor, RED)
       .with(multiplierAccessor, 2);
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return ${RED_RESOLVED} * 2;
@@ -118,7 +117,7 @@ describe('tgpu.accessor', () => {
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED_RESOLVED};
@@ -152,7 +151,7 @@ describe('tgpu.accessor', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return vec3f(0, 1, 0);
@@ -225,7 +224,7 @@ describe('tgpu.accessor', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> colorUniform: vec3f;
 

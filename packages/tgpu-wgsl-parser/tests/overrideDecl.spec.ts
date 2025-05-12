@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('override_decl', () => {
   it('parses untyped, unassigned', () => {
-    expect(parse('override example;')).toEqual(
+    expect(parse('override example;')).toStrictEqual(
       {
         type: 'translation_unit',
         declarations: [
@@ -39,10 +39,49 @@ describe('override_decl', () => {
         ],
       } satisfies TranslationUnit,
     );
+    expect(parse('override example: u32;')).toStrictEqual(
+      {
+        type: 'translation_unit',
+        declarations: [
+          {
+            type: 'override_decl',
+            attrs: [],
+            ident: 'example',
+            typespec: {
+              type: 'template_elaborated_ident',
+              ident: 'u32',
+              template_list: null,
+            },
+            expr: null,
+          },
+        ],
+      } satisfies TranslationUnit,
+    );
   });
 
   it('parses typed, assigned', () => {
     expect(parse('override example: u32 = 123;')).toEqual(
+      {
+        type: 'translation_unit',
+        declarations: [
+          {
+            type: 'override_decl',
+            attrs: [],
+            ident: 'example',
+            typespec: {
+              type: 'template_elaborated_ident',
+              ident: 'u32',
+              template_list: null,
+            },
+            expr: {
+              type: 'int_literal',
+              value: '123',
+            },
+          },
+        ],
+      } satisfies TranslationUnit,
+    );
+    expect(parse('override example: u32 = 123;')).toStrictEqual(
       {
         type: 'translation_unit',
         declarations: [

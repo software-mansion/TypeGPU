@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('return_statement', () => {
   it('parses empty return', () => {
-    expect(parse('return;')).toEqual(
+    expect(parse('return;')).toStrictEqual(
       {
         type: 'return_statement',
         expression: null,
@@ -13,7 +13,7 @@ describe('return_statement', () => {
   });
 
   it('parses return of literal', () => {
-    expect(parse('return 123;')).toEqual(
+    expect(parse('return 123;')).toStrictEqual(
       {
         type: 'return_statement',
         expression: {
@@ -25,7 +25,7 @@ describe('return_statement', () => {
   });
 
   it('parses return of math operation', () => {
-    expect(parse('return 10. * 0.5;')).toEqual(
+    expect(parse('return 10. * 0.5;')).toStrictEqual(
       {
         type: 'return_statement',
         expression: {

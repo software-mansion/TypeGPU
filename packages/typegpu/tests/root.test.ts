@@ -101,7 +101,7 @@ describe('TgpuRoot', () => {
         'vertex',
       );
 
-      expect(root.unwrap(vertexLayout)).toEqual({
+      expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 8,
         stepMode: 'vertex',
         attributes: [
@@ -126,7 +126,7 @@ describe('TgpuRoot', () => {
         'instance',
       );
 
-      expect(root.unwrap(vertexLayout)).toEqual({
+      expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 20,
         stepMode: 'instance',
         attributes: [
@@ -446,7 +446,7 @@ describe('TgpuRoot', () => {
 
   //   const buffer = asVertex(bufferData, 'vertex');
 
-  //   expect(buffer.vertexLayout).toEqual({
+  //   expect(buffer.vertexLayout).toStrictEqual({
   //     arrayStride: 4,
   //     stepMode: 'vertex',
   //   });

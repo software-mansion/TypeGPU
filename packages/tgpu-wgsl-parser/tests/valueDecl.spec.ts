@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('value_decl', () => {
   it('parses non-typed', () => {
-    expect(parse('const example = 123;')).toEqual(
+    expect(parse('const example = 123;')).toStrictEqual(
       {
         type: 'value_decl',
         ident: 'example',
@@ -18,7 +18,7 @@ describe('value_decl', () => {
   });
 
   it('parses typed', () => {
-    expect(parse('const example: i32 = 123;')).toEqual(
+    expect(parse('const example: i32 = 123;')).toStrictEqual(
       {
         type: 'value_decl',
         ident: 'example',

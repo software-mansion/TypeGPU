@@ -131,7 +131,7 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3));
     const data = await buffer.read();
 
-    expect(device.mock.createBuffer.mock.calls).toEqual([
+    expect(device.mock.createBuffer.mock.calls).toStrictEqual([
       // First call (raw buffer)
       [
         {
@@ -207,20 +207,20 @@ describe('TgpuBuffer', () => {
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
     ]);
 
     buffer.writePartial({ b: 4 });
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
       [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
     ]);
 
     buffer.writePartial({ a: 5, b: 6 }); // should merge the writes
 
-    expect(device.mock.queue.writeBuffer.mock.calls).toEqual([
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
       [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
       [rawBuffer, 0, toUint8Array(new Uint32Array([5, 6])), 0, 8],

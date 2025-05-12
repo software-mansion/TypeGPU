@@ -4,7 +4,7 @@ import { parse } from '../src/index.ts';
 
 describe('for_statement', () => {
   it('parses for loop with empty body', () => {
-    expect(parse('for (var i = 0; i < 10; i += 1) {}')).toEqual(
+    expect(parse('for (var i = 0; i < 10; i += 1) {}')).toStrictEqual(
       {
         type: 'for_statement',
         attrs: [],
