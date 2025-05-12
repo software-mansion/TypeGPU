@@ -148,7 +148,6 @@ abstract class mat2x2Impl<TColumn extends v2f>
     yield this[1];
     yield this[2];
     yield this[3];
-    return undefined;
   }
 
   '~resolve'(): string {
@@ -292,7 +291,6 @@ abstract class mat3x3Impl<TColumn extends v3f>
     for (let i = 0; i < 12; i++) {
       yield this[i] as number;
     }
-    return undefined;
   }
 
   '~resolve'(): string {
@@ -481,7 +479,6 @@ abstract class mat4x4Impl<TColumn extends v4f>
     for (let i = 0; i < 16; i++) {
       yield this[i] as number;
     }
-    return undefined;
   }
 
   '~resolve'(): string {
