@@ -2,7 +2,6 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import {
   add,
-  cross,
   discard,
   div,
   max,
@@ -13,6 +12,7 @@ import {
   sub,
 } from 'typegpu/std';
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
+import { mat4 } from 'wgpu-matrix';
 
 // init canvas and values
 
@@ -47,7 +47,7 @@ const BoxStruct = d.struct({
 });
 
 const Uniforms = d.struct({
-  viewMatrix: d.mat3x3f,
+  invViewMatrix: d.mat4x4f,
   materialDensity: d.f32,
 });
 
@@ -65,12 +65,6 @@ const IntersectionStruct = d.struct({
   intersects: d.bool,
   tMin: d.f32,
   tMax: d.f32,
-});
-
-const CameraAxesStruct = d.struct({
-  right: d.vec3f,
-  up: d.vec3f,
-  forward: d.vec3f,
 });
 
 // buffers
@@ -96,16 +90,6 @@ const boxMatrixBuffer = root
   .$name('box_array')
   .$usage('storage');
 
-const cameraPositionBuffer = root
-  .createBuffer(d.vec3f)
-  .$name('camera_position')
-  .$usage('storage');
-
-const cameraAxesBuffer = root
-  .createBuffer(CameraAxesStruct)
-  .$name('camera_axes')
-  .$usage('storage');
-
 const canvasDimsUniform = root['~unstable']
   .createUniform(d.vec2f)
   .$name('canvas_dims');
@@ -120,14 +104,10 @@ const uniforms = root['~unstable'].createUniform(Uniforms);
 
 const renderLayout = tgpu.bindGroupLayout({
   boxMatrix: { storage: boxMatrixBuffer.dataType },
-  cameraPosition: { storage: cameraPositionBuffer.dataType },
-  cameraAxes: { storage: cameraAxesBuffer.dataType },
 });
 
 const renderBindGroup = root.createBindGroup(renderLayout, {
   boxMatrix: boxMatrixBuffer,
-  cameraPosition: cameraPositionBuffer,
-  cameraAxes: cameraAxesBuffer,
 });
 
 // functions
@@ -196,45 +176,47 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   .$uses({ AxisAlignedBounds, Ray, IntersectionStruct })
   .$name('box_intersection');
 
-const vertexFunction = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position },
-}) /* wgsl */`{
-  var pos = array<vec2f, 6>(
-    vec2<f32>( 1,  1),
-    vec2<f32>( 1, -1),
-    vec2<f32>(-1, -1),
-    vec2<f32>( 1,  1),
-    vec2<f32>(-1, -1),
-    vec2<f32>(-1,  1)
-  );
+const Varying = {
+  rayWorldOrigin: d.vec3f,
+};
 
-  return Out(vec4f(pos[in.vertexIndex], 0, 1));
-}`.$name('vertex_main');
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, ...Varying },
+})((input) => {
+  const pos = [
+    d.vec2f(-1, -1),
+    d.vec2f(3, -1),
+    d.vec2f(-1, 3),
+  ];
+
+  const rayWorldOrigin =
+    mul(uniforms.value.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
+
+  return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
+});
 
 const boxSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const canvasDimsAccess = tgpu['~unstable'].accessor(d.vec2f);
 
 const fragmentFunction = tgpu['~unstable'].fragmentFn({
-  in: { position: d.builtin.position },
+  in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
   const boxSize3 = d.vec3f(d.f32(boxSizeAccess.value));
   const halfBoxSize3 = mul(0.5, boxSize3);
   const halfCanvasDims = mul(0.5, canvasDimsAccess.value);
-  const cameraAxes = renderLayout.$.cameraAxes;
-  const minDim = min(canvasDimsAccess.value.x, canvasDimsAccess.value.y);
 
+  const minDim = min(canvasDimsAccess.value.x, canvasDimsAccess.value.y);
   const viewCoords = mul(1 / minDim, sub(input.position.xy, halfCanvasDims));
 
   const ray = Ray({
-    origin: renderLayout.$.cameraPosition,
-    direction: d.vec3f(),
+    origin: input.rayWorldOrigin,
+    direction: mul(
+      uniforms.value.invViewMatrix,
+      d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0),
+    ).xyz,
   });
-  ray.direction = add(ray.direction, mul(viewCoords.x, cameraAxes.right));
-  ray.direction = add(ray.direction, mul(viewCoords.y, cameraAxes.up));
-  ray.direction = add(ray.direction, cameraAxes.forward);
-  ray.direction = normalize(ray.direction);
 
   const bigBoxIntersection = getBoxIntersection(
     AxisAlignedBounds({
@@ -310,7 +292,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 const pipeline = root['~unstable']
   .with(boxSizeAccess, boxSizeUniform)
   .with(canvasDimsAccess, canvasDimsUniform)
-  .withVertex(vertexFunction, {})
+  .withVertex(mainVertex, {})
   .withFragment(fragmentFunction, {
     format: presentationFormat,
     blend: {
@@ -358,19 +340,14 @@ onFrame((deltaTime) => {
     Math.sin(frame) * cameraDistance + cameraAnchor.z,
   );
 
-  const cameraAxes = (() => {
-    const forwardAxis = normalize(sub(cameraAnchor, cameraPosition));
-    const rightAxis = cross(d.vec3f(0, 1, 0), forwardAxis);
-    const upAxis = cross(forwardAxis, rightAxis);
-    return {
-      forward: forwardAxis,
-      up: upAxis,
-      right: rightAxis,
-    };
-  })();
-
-  cameraPositionBuffer.write(cameraPosition);
-  cameraAxesBuffer.write(cameraAxes);
+  uniforms.buffer.writePartial({
+    invViewMatrix: mat4.aim(
+      cameraPosition,
+      cameraAnchor,
+      d.vec3f(0, 1, 0),
+      d.mat4x4f(),
+    ),
+  });
   canvasDimsUniform.write(d.vec2f(width, height));
 
   frame += (rotationSpeed * deltaTime) / 1000;
