@@ -12,7 +12,7 @@
     "@astrojs/check": "^0.9.4",
     "@astrojs/react": "^4.2.5",
     "@astrojs/sitemap": "^3.2.1",
-    "@astrojs/starlight": "^0.32.2",
+    "@astrojs/starlight": "^0.34.3",
     "@astrojs/starlight-tailwind": "^3.0.0",
     "@astrojs/tailwind": "^6.0.0",
     "@loaders.gl/core": "^4.3.3",
