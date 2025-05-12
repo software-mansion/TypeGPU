@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractArgs } from '../src/utils';
+import { extractArgs } from '../src/utils.ts';
 
 // for better formatting and less boilerplate
 function createArg(

@@ -217,48 +217,62 @@ interface FunctionArgsInfo {
   };
 }
 
-export function extractArgs(
-  code: string,
-): FunctionArgsInfo {
-  const { strippedCode, argRange: range } = strip(code);
-  const args: ArgInfo[] = [];
-
-  let position = 0;
-  while (position < strippedCode.length) {
-    const attributes = [];
-    while (strippedCode[position] === '@') {
-      const { attribute, endPosition } = extractAttribute(
-        strippedCode,
-        position,
-      );
-      attributes.push(attribute);
-      position = endPosition;
-    }
-
-    const { identifier, endPosition } = extractIdentifier(
-      strippedCode,
-      position,
-    );
-    position = endPosition;
-
-    let maybeType;
-    if (strippedCode[position] === ':') {
-      position += 1; // colon before type
-      const { type, endPosition } = extractType(
-        strippedCode,
-        position,
-      );
-      maybeType = type;
-      position = endPosition;
-    }
-    args.push({
-      identifier,
-      attributes,
-      type: maybeType,
-    });
-
-    position += 1; // comma before the next argument
+class ArgumentExtractor {
+  // position: number;
+  constructor(private readonly code: string) {
+    // this.position = 0;
   }
 
-  return { args, range: { begin: range[0], end: range[1] } };
+  // _advanceBy(chars: number) {
+  //   this.position += chars;
+  // }
+
+  extract(): FunctionArgsInfo {
+    const { strippedCode, argRange: range } = strip(this.code);
+    const args: ArgInfo[] = [];
+
+    let position = 0;
+    while (position < strippedCode.length) {
+      const attributes = [];
+      while (strippedCode[position] === '@') {
+        const { attribute, endPosition } = extractAttribute(
+          strippedCode,
+          position,
+        );
+        attributes.push(attribute);
+        position = endPosition;
+      }
+
+      const { identifier, endPosition } = extractIdentifier(
+        strippedCode,
+        position,
+      );
+      position = endPosition;
+
+      let maybeType;
+      if (strippedCode[position] === ':') {
+        position += 1; // colon before type
+        const { type, endPosition } = extractType(
+          strippedCode,
+          position,
+        );
+        maybeType = type;
+        position = endPosition;
+      }
+      args.push({
+        identifier,
+        attributes,
+        type: maybeType,
+      });
+
+      position += 1; // comma before the next argument
+    }
+
+    return { args, range: { begin: range[0], end: range[1] } };
+  }
+}
+
+export function extractArgs(code: string): FunctionArgsInfo {
+  const extractor = new ArgumentExtractor(code);
+  return extractor.extract();
 }
