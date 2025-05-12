@@ -61,6 +61,7 @@
     "@types/babel__traverse": "^7.20.7",
     "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
-    "tailwindcss-motion": "^1.0.1"
+    "tailwindcss-motion": "^1.0.1",
+    "vite-imagetools": "^7.1.0"
   }
 }

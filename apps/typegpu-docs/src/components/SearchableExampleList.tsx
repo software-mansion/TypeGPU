@@ -90,13 +90,23 @@ export function SearchableExampleList(
                   {examplesByCategories[category.key]?.map((ex: Example) => (
                     <ExampleLink exampleKey={ex.key} key={ex.key}>
                       <div className='h-36 bg-gray-100 flex items-center justify-center overflow-hidden'>
-                        {ex.thumbnailUrl
+                        {ex.thumbnails
                           ? (
-                            <img
-                              src={ex.thumbnailUrl}
-                              alt={ex.metadata.title}
-                              className='object-cover w-full h-full'
-                            />
+                            <picture>
+                              <source
+                                media='(min-width: 1026px)'
+                                srcSet={ex.thumbnails.small}
+                              />
+                              <source
+                                media='(max-width: 1025px)'
+                                srcSet={ex.thumbnails.large}
+                              />
+                              <img
+                                src={ex.thumbnails.large}
+                                alt={ex.metadata.title}
+                                className='object-cover w-full h-full'
+                              />
+                            </picture>
                           )
                           : (
                             <span className='text-gray-400 fallback'>

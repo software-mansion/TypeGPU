@@ -22,11 +22,16 @@ export type ExampleSrcFile = {
   content: string;
 };
 
+export interface ThumbnailPair {
+  small: string;
+  large: string;
+}
+
 export type Example = {
   key: string;
   tsFiles: ExampleSrcFile[];
   tsImport: () => Promise<unknown>;
   htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
-  thumbnailUrl?: string;
+  thumbnails?: ThumbnailPair;
 };
