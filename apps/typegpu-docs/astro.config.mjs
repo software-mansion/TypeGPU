@@ -81,6 +81,11 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
+              label: 'TGSL',
+              slug: 'fundamentals/tgsl',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
@@ -99,7 +104,6 @@ export default defineConfig({
             {
               label: 'Vertex Layouts',
               slug: 'fundamentals/vertex-layouts',
-              badge: { text: '0.4' },
             },
             DEV && {
               label: 'Slots',
@@ -146,6 +150,7 @@ export default defineConfig({
             {
               label: 'React Native',
               slug: 'integration/react-native',
+              badge: { text: 'new' },
             },
             {
               label: 'WESL Interoperability',
@@ -163,6 +168,7 @@ export default defineConfig({
             {
               label: 'Build Plugin',
               slug: 'tooling/unplugin-typegpu',
+              badge: { text: 'new' },
             },
             {
               label: 'Generator CLI',
