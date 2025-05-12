@@ -49,9 +49,11 @@ function findEitherOf(
     if (brackets && isAt(code, position, brackets[1])) {
       openedBrackets -= 1;
     }
-    for (const s of toFind) {
-      if (isAt(code, position, s)) {
-        return position;
+    if (openedBrackets === 0) {
+      for (const s of toFind) {
+        if (isAt(code, position, s)) {
+          return position;
+        }
       }
     }
     position += 1;
@@ -60,15 +62,6 @@ function findEitherOf(
     return code.length;
   }
   throw new Error('Invalid wgsl syntax!');
-}
-
-function findNextBlockComment(code: string, startAt: number): number {
-  for (let i = startAt; i < code.length; i++) {
-    if (['/*', '*/'].includes(code.slice(i, i + 2))) {
-      return i;
-    }
-  }
-  return code.length;
 }
 
 // Strips comments, whitespaces, name and body of the function,
@@ -87,30 +80,25 @@ function strip(
       blankSpaces.has(code[position] as string) ||
       lineBreaks.has(code[position] as string)
     ) {
-      position += 1;
+      position += 1; // the whitespace character
       continue;
     }
 
     // skip line comments
     if (code.slice(position, position + 2) === '//') {
-      position += 2;
-      position = findEitherOf(code, position, lineBreaks) + 1;
+      position += 2; // '//'
+      position = findEitherOf(code, position, lineBreaks);
+      position += 1; // the line break
       continue;
     }
 
     // skip block comments
     if (code[position] === '/' && code[position + 1] === '*') {
-      position += 2;
-      let nestedBlocks = 1;
-      while (position < code.length && nestedBlocks > 0) {
-        position = findNextBlockComment(code, position);
-        if (code.slice(position, position + 2) === '/*') {
-          nestedBlocks += 1;
-        } else {
-          nestedBlocks -= 1;
-        }
-        position += 2;
-      }
+      position = findEitherOf(code, position, new Set('*/'), false, [
+        '/*',
+        '*/',
+      ]);
+      position += 2; // the last '*/'
       continue;
     }
 
