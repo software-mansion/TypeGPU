@@ -18,9 +18,9 @@ const blankSpaces = new Set<string>([
   '\u200F', // right-to-left mark
 ]);
 
-function isAt(code: string, position: number, substr: string): boolean {
+function isAt(code: string, pos: number, substr: string): boolean {
   for (let i = 0; i < substr.length; i++) {
-    if (code[position + i] !== substr[i]) {
+    if (code[pos + i] !== substr[i]) {
       return false;
     }
   }
@@ -42,22 +42,22 @@ function findEitherOf(
   brackets?: [string, string],
 ): number {
   let openedBrackets = 0;
-  let position = startAt;
-  while (position < code.length) {
-    if (brackets && isAt(code, position, brackets[0])) {
+  let pos = startAt;
+  while (pos < code.length) {
+    if (brackets && isAt(code, pos, brackets[0])) {
       openedBrackets += 1;
     }
-    if (brackets && isAt(code, position, brackets[1])) {
+    if (brackets && isAt(code, pos, brackets[1])) {
       openedBrackets -= 1;
     }
     if (openedBrackets === 0) {
       for (const s of toFind) {
-        if (isAt(code, position, s)) {
-          return position;
+        if (isAt(code, pos, s)) {
+          return pos;
         }
       }
     }
-    position += 1;
+    pos += 1;
   }
   if (allowEndOfString && openedBrackets === 0) {
     return code.length;
@@ -73,46 +73,46 @@ function strip(
   let strippedCode = '';
   const argsStart = code.indexOf('(') + 1;
 
-  let position = argsStart;
+  let pos = argsStart;
   let openedParentheses = 1;
-  while (position < code.length) {
+  while (pos < code.length) {
     // skip any blankspace
-    if (blankSpaces.has(code[position] as string)) {
-      position += 1; // the whitespace character
+    if (blankSpaces.has(code[pos] as string)) {
+      pos += 1; // the whitespace character
       continue;
     }
 
     // skip line comments
-    if (isAt(code, position, '//')) {
-      position += 2; // '//'
-      position = findEitherOf(code, position, lineBreaks);
-      position += 1; // the line break
+    if (isAt(code, pos, '//')) {
+      pos += 2; // '//'
+      pos = findEitherOf(code, pos, lineBreaks);
+      pos += 1; // the line break
       continue;
     }
 
     // skip block comments
-    if (isAt(code, position, '/*')) {
-      position = findEitherOf(code, position, new Set('*/'), false, [
+    if (isAt(code, pos, '/*')) {
+      pos = findEitherOf(code, pos, new Set('*/'), false, [
         '/*',
         '*/',
       ]);
-      position += 2; // the last '*/'
+      pos += 2; // the last '*/'
       continue;
     }
 
-    if (code[position] === '(') {
+    if (code[pos] === '(') {
       openedParentheses += 1;
     }
 
-    if (code[position] === ')') {
+    if (code[pos] === ')') {
       openedParentheses -= 1;
       if (openedParentheses === 0) {
-        return { strippedCode, argRange: [argsStart, position] };
+        return { strippedCode, argRange: [argsStart, pos] };
       }
     }
 
-    strippedCode += code[position];
-    position += 1;
+    strippedCode += code[pos];
+    pos += 1;
   }
   throw new Error('Invalid wgsl code!');
 }
@@ -131,77 +131,66 @@ interface FunctionArgsInfo {
   };
 }
 
-class ArgumentExtractor {
-  position: number;
-  constructor(private readonly rawCode: string) {
-    this.position = 0;
-  }
+export function extractArgs(rawCode: string): FunctionArgsInfo {
+  const { strippedCode, argRange: range } = strip(rawCode);
+  const args: ArgInfo[] = [];
 
-  extract(): FunctionArgsInfo {
-    const { strippedCode, argRange: range } = strip(this.rawCode);
-    const args: ArgInfo[] = [];
-
-    while (this.position < strippedCode.length) {
-      const attributes = [];
-      while (strippedCode[this.position] === '@') {
-        const lastParenthesesPosition = findEitherOf(
-          strippedCode,
-          this.position,
-          new Set(')'),
-          false,
-          ['(', ')'],
-        );
-        const attribute = strippedCode.slice(
-          this.position,
-          lastParenthesesPosition + 1,
-        );
-        attributes.push(attribute);
-        this.position = lastParenthesesPosition;
-        this.position += 1; // ')'
-      }
-
-      const identifierSeparatorPosition = findEitherOf(
+  let pos = 0;
+  while (pos < strippedCode.length) {
+    const attributes = [];
+    while (strippedCode[pos] === '@') {
+      const lastParenthesesPos = findEitherOf(
         strippedCode,
-        this.position,
-        new Set([':', ',']),
-        true,
+        pos,
+        new Set(')'),
+        false,
+        ['(', ')'],
       );
-      const identifier = strippedCode.slice(
-        this.position,
-        identifierSeparatorPosition,
+      const attribute = strippedCode.slice(
+        pos,
+        lastParenthesesPos + 1,
       );
-      this.position = identifierSeparatorPosition;
-
-      let maybeType;
-      if (strippedCode[this.position] === ':') {
-        this.position += 1; // colon before type
-        const typeSeparatorPosition = findEitherOf(
-          strippedCode,
-          this.position,
-          new Set(','),
-          true,
-          ['<', '>'],
-        );
-        maybeType = strippedCode.slice(
-          this.position,
-          typeSeparatorPosition,
-        );
-        this.position = typeSeparatorPosition;
-      }
-      args.push({
-        identifier,
-        attributes,
-        type: maybeType,
-      });
-
-      this.position += 1; // comma before the next argument
+      attributes.push(attribute);
+      pos = lastParenthesesPos;
+      pos += 1; // ')'
     }
 
-    return { args, range: { begin: range[0], end: range[1] } };
-  }
-}
+    const identifierSeparatorPos = findEitherOf(
+      strippedCode,
+      pos,
+      new Set([':', ',']),
+      true,
+    );
+    const identifier = strippedCode.slice(
+      pos,
+      identifierSeparatorPos,
+    );
+    pos = identifierSeparatorPos;
 
-export function extractArgs(code: string): FunctionArgsInfo {
-  const extractor = new ArgumentExtractor(code);
-  return extractor.extract();
+    let maybeType;
+    if (strippedCode[pos] === ':') {
+      pos += 1; // colon before type
+      const typeSeparatorPos = findEitherOf(
+        strippedCode,
+        pos,
+        new Set(','),
+        true,
+        ['<', '>'],
+      );
+      maybeType = strippedCode.slice(
+        pos,
+        typeSeparatorPos,
+      );
+      pos = typeSeparatorPos;
+    }
+    args.push({
+      identifier,
+      attributes,
+      type: maybeType,
+    });
+
+    pos += 1; // comma before the next argument
+  }
+
+  return { args, range: { begin: range[0], end: range[1] } };
 }
