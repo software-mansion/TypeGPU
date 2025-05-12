@@ -137,51 +137,23 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
 
   let pos = 0;
   while (pos < strippedCode.length) {
+    // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
     while (strippedCode[pos] === '@') {
-      const lastParenthesesPos = findEitherOf(
-        strippedCode,
-        pos,
-        new Set(')'),
-        false,
-        ['(', ')'],
-      );
-      const attribute = strippedCode.slice(
-        pos,
-        lastParenthesesPos + 1,
-      );
+      const { attribute, newPos } = processAttribute(strippedCode, pos);
       attributes.push(attribute);
-      pos = lastParenthesesPos;
-      pos += 1; // ')'
+      pos = newPos;
     }
 
-    const identifierSeparatorPos = findEitherOf(
-      strippedCode,
-      pos,
-      new Set([':', ',']),
-      true,
-    );
-    const identifier = strippedCode.slice(
-      pos,
-      identifierSeparatorPos,
-    );
-    pos = identifierSeparatorPos;
+    const { identifier, newPos } = processIdentifier(strippedCode, pos);
+    pos = newPos;
 
     let maybeType;
     if (strippedCode[pos] === ':') {
       pos += 1; // colon before type
-      const typeSeparatorPos = findEitherOf(
-        strippedCode,
-        pos,
-        new Set(','),
-        true,
-        ['<', '>'],
-      );
-      maybeType = strippedCode.slice(
-        pos,
-        typeSeparatorPos,
-      );
-      pos = typeSeparatorPos;
+      const { type, newPos } = processType(strippedCode, pos);
+      maybeType = type;
+      pos = newPos;
     }
     args.push({
       identifier,
@@ -193,4 +165,51 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   }
 
   return { args, range: { begin: range[0], end: range[1] } };
+}
+
+function processAttribute(
+  strippedCode: string,
+  pos: number,
+): { attribute: string; newPos: number } {
+  const lastParenthesesPos = findEitherOf(
+    strippedCode,
+    pos,
+    new Set(')'),
+    false,
+    ['(', ')'],
+  );
+  const attribute = strippedCode.slice(
+    pos,
+    lastParenthesesPos + 1,
+  );
+  return { attribute, newPos: lastParenthesesPos + 1 };
+}
+
+function processIdentifier(
+  strippedCode: string,
+  pos: number,
+): { identifier: string; newPos: number } {
+  const identifierSeparatorPos = findEitherOf(
+    strippedCode,
+    pos,
+    new Set([':', ',']),
+    true,
+  );
+  const identifier = strippedCode.slice(pos, identifierSeparatorPos);
+  return { identifier, newPos: identifierSeparatorPos };
+}
+
+function processType(
+  strippedCode: string,
+  pos: number,
+): { type: string; newPos: number } {
+  const typeSeparatorPos = findEitherOf(
+    strippedCode,
+    pos,
+    new Set(','),
+    true,
+    ['<', '>'],
+  );
+  const type = strippedCode.slice(pos, typeSeparatorPos);
+  return { type, newPos: typeSeparatorPos };
 }
