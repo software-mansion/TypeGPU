@@ -41,17 +41,22 @@ describe('parseArguments', () => {
     expect(args).toStrictEqual([createArg('a', [], 'i32')]);
   });
 
-  // it('should parse multiple arguments', () => {
-  //   const wgslFn = /* wgsl */ `
-  //         fn add(a: i32, b: i32, c: i32) -> i32 {
-  //             return a + b + c;
-  //         }
-  //     `;
+  it('should parse multiple arguments', () => {
+    const wgslFn = /* wgsl */ `
+      fn add(a: i32, b: i32, c: i32) -> i32 {
+        return a + b + c;
+      }
+    `;
 
-  //   const { args, range } = extractArgs(wgslFn);
+    const { args, range } = extractArgs(wgslFn);
 
-  //   expect(true).toBe(false);
-  // });
+    expect(range).toStrictEqual({ begin: 14, end: 36 });
+    expect(args).toStrictEqual([
+      createArg('a', [], 'i32'),
+      createArg('b', [], 'i32'),
+      createArg('c', [], 'i32'),
+    ]);
+  });
 
   // it('should parse attributes', () => {
   //   const wgslFn = /* wgsl */ `

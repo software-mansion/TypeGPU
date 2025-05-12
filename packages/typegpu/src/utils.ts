@@ -1,5 +1,3 @@
-// nie mogę stripować komentarzy bo lokacja???
-// przecinki nie w nawiasach dzielą argumenty
 // AAA slice na znaki
 
 const blankSpaces = new Set<string>([
@@ -18,6 +16,45 @@ const lineBreaks = new Set<string>([
   '\u2028', // line separator
   '\u2029', // paragraph separator
 ]);
+
+// function isAt(code: string, position: number, substr: string): boolean {
+//   for (let i = 0; i < substr.length; i++) {
+//     if (code[position + i] !== substr[i]) {
+//       return false;
+//     }
+//   }
+//   return true;
+// }
+
+// /**
+//  * @param code the string to look through,
+//  * @param startAt first character to consider,
+//  * @param toFind a set of strings either of which satisfy the search,
+//  * @param brackets a pair of brackets that has to be closed for result to be valid.
+//  */
+// function findEitherOf(
+//   code: string,
+//   startAt: number,
+//   toFind: Set<string>,
+//   brackets?: [string, string],
+// ): [string, number] | undefined {
+//   let openedBrackets = 0;
+//   let position = startAt;
+//   while (position < code.length) {
+//     if (brackets && code[position] === brackets[0]) {
+//       openedBrackets += 1;
+//     }
+//     if (brackets && code[position] === brackets[1]) {
+//       openedBrackets -= 1;
+//     }
+//     for (const s of toFind) {
+//       if (isAt(code, position, s)) {
+//         return [s, position];
+//       }
+//     }
+//   }
+//   return undefined;
+// }
 
 function findNextLineBreak(code: string, startAt: number): number {
   for (let i = startAt; i < code.length; i++) {
