@@ -1,5 +1,5 @@
 {
   "title": "TGSL parsing test",
   "category": "tests",
-  "tags": ["experimental"]
+  "tags": ["experimental", "test"]
 }
