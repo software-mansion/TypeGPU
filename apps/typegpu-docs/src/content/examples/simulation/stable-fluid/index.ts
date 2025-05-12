@@ -1,4 +1,8 @@
-import tgpu, { type TgpuBindGroup, type TgpuComputeFn } from 'typegpu';
+import tgpu, {
+  type TgpuBindGroup,
+  type TgpuComputeFn,
+  type TgpuFragmentFn,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import * as p from './params.ts';
 import {
@@ -152,20 +156,23 @@ const advectInkPipeline = createComputePipeline(c.advectInkFn);
 const addInkPipeline = createComputePipeline(c.addInkFn);
 
 // Create render pipelines
-const renderPipelineInk = root['~unstable']
-  .withVertex(renderFn, renderFn.shell.attributes)
-  .withFragment(fragmentInkFn, { format })
-  .createPipeline();
+function createRenderPipeline(
+  fragmentFn: TgpuFragmentFn<{
+    uv: d.Vec2f;
+  }, d.Vec4f>,
+) {
+  return root['~unstable']
+    .withVertex(renderFn, renderFn.shell.attributes)
+    .withFragment(fragmentFn, { format })
+    .withPrimitive({
+      topology: 'triangle-strip',
+    })
+    .createPipeline();
+}
 
-const renderPipelineVel = root['~unstable']
-  .withVertex(renderFn, renderFn.shell.attributes)
-  .withFragment(fragmentVelFn, { format })
-  .createPipeline();
-
-const renderPipelineImage = root['~unstable']
-  .withVertex(renderFn, renderFn.shell.attributes)
-  .withFragment(fragmentImageFn, { format })
-  .createPipeline();
+const renderPipelineInk = createRenderPipeline(fragmentInkFn);
+const renderPipelineVel = createRenderPipeline(fragmentVelFn);
+const renderPipelineImage = createRenderPipeline(fragmentImageFn);
 
 // Setup simulation buffers
 const velBuffer = new DoubleBuffer(velTex[0], velTex[1]);
@@ -400,7 +407,6 @@ function loop() {
     .with(renderLayout, renderBG)
     .draw(6);
 
-  root['~unstable'].flush();
   requestAnimationFrame(loop);
 }
 

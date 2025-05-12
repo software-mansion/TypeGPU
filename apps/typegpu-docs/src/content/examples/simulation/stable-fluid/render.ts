@@ -17,17 +17,13 @@ export const renderFn = tgpu['~unstable'].vertexFn({
     d.vec4f(-1, -1, 0, 1),
     d.vec4f(1, -1, 0, 1),
     d.vec4f(-1, 1, 0, 1),
-    d.vec4f(1, -1, 0, 1),
     d.vec4f(1, 1, 0, 1),
-    d.vec4f(-1, 1, 0, 1),
   ];
   const uvs = [
     d.vec2f(0, 0),
     d.vec2f(1, 0),
     d.vec2f(0, 1),
-    d.vec2f(1, 0),
     d.vec2f(1, 1),
-    d.vec2f(0, 1),
   ];
   return { pos: verts[i.idx], uv: uvs[i.idx] };
 });
