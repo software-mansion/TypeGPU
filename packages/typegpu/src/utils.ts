@@ -206,11 +206,17 @@ class ArgumentExtractor {
         this.position += 1; // ')'
       }
 
-      const { identifier, endPosition } = extractIdentifier(
+      const identifierSeparatorPosition = findEitherOf(
         strippedCode,
         this.position,
+        new Set([':', ',']),
+        true,
       );
-      this.position = endPosition;
+      const identifier = strippedCode.slice(
+        this.position,
+        identifierSeparatorPosition,
+      );
+      this.position = identifierSeparatorPosition;
 
       let maybeType;
       if (strippedCode[this.position] === ':') {
