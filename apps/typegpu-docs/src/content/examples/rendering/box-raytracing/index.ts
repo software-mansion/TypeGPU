@@ -9,8 +9,10 @@ import {
   min,
   mul,
   normalize,
+  pow,
   sub,
 } from 'typegpu/std';
+import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 
 // init canvas and values
 
@@ -20,7 +22,7 @@ const Z = 7;
 
 const cubeSize = d.vec3f(X, Y, Z);
 const cameraAnchor = mul(0.5, sub(cubeSize, d.vec3f(1)));
-let rotationSpeed = 0.5;
+let rotationSpeed = 1.2;
 let cameraDistance = 16;
 
 let frame = 0;
@@ -42,6 +44,11 @@ context.configure({
 const BoxStruct = d.struct({
   isActive: d.u32,
   albedo: d.vec3f,
+});
+
+const Uniforms = d.struct({
+  viewMatrix: d.mat3x3f,
+  materialDensity: d.f32,
 });
 
 const AxisAlignedBounds = d.struct({
@@ -79,7 +86,9 @@ const boxMatrixBuffer = root
           (_, j) =>
             Array.from({ length: Z }, (_, k) => ({
               isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-              albedo: d.vec3f(i / X, j / Y, k / Z),
+              albedo: srgbToLinear(
+                d.vec3f(i / X, j / Y, k / Z * 0.8 + 0.1 + (X - i) / X * 0.6),
+              ),
             })),
         ),
     ),
@@ -104,6 +113,8 @@ const canvasDimsUniform = root['~unstable']
 const boxSizeUniform = root['~unstable']
   .createUniform(d.f32, 1)
   .$name('box_size');
+
+const uniforms = root['~unstable'].createUniform(Uniforms);
 
 // bind groups and layouts
 
@@ -261,12 +272,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
         );
 
         if (intersection.intersects) {
-          const depth = max(0, intersection.tMax - intersection.tMin) * 0.5;
-          density += depth;
+          const boxDensity = max(0, intersection.tMax - intersection.tMin) *
+            pow(uniforms.value.materialDensity, 2);
+          density += boxDensity;
           invColor = add(
             invColor,
             mul(
-              depth,
+              boxDensity,
               div(d.vec3f(1), renderLayout.$.boxMatrix[i][j][k].albedo),
             ),
           );
@@ -277,12 +289,15 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
     }
   }
 
-  const avgInvColor = mul(1 / density, invColor);
+  const linear = div(d.vec3f(1), invColor);
+  const srgb = linearToSrgb(linear);
+  const gamma = 2.2;
+  const corrected = pow(srgb, d.vec3f(1.0 / gamma));
 
   if (intersectionFound) {
     return mul(
       min(density, 1),
-      d.vec4f(min(div(d.vec3f(1), avgInvColor), d.vec3f(1)), 1),
+      d.vec4f(min(corrected, d.vec3f(1)), 1),
     );
   }
 
@@ -385,7 +400,7 @@ export const controls = {
 
   'camera distance': {
     initial: cameraDistance,
-    min: 1,
+    min: 10,
     max: 100,
     onSliderChange: (value: number) => {
       cameraDistance = value;
@@ -398,6 +413,17 @@ export const controls = {
     max: 1,
     onSliderChange: (value: number) => {
       boxSizeUniform.write(value);
+    },
+  },
+
+  'material density': {
+    initial: 2,
+    min: 0.2,
+    max: 2,
+    onSliderChange: (value: number) => {
+      uniforms.buffer.writePartial({
+        materialDensity: value,
+      });
     },
   },
 };
