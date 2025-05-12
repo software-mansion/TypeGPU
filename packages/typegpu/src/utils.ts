@@ -117,52 +117,6 @@ function strip(
   throw new Error('Invalid wgsl code!');
 }
 
-function extractIdentifier(
-  code: string,
-  startAt: number,
-): { identifier: string; endPosition: number } {
-  // the identifier ends when we see a colon, a comma or a closing parenthesis
-  let position = startAt;
-  while (true) {
-    if (
-      position >= code.length || [',', ':'].includes(code[position] as string)
-    ) {
-      return {
-        identifier: code.slice(startAt, position),
-        endPosition: position,
-      };
-    }
-    position += 1;
-  }
-}
-
-function extractType(
-  code: string,
-  startAt: number,
-): { type: string; endPosition: number } {
-  // the type ends when we see a comma or a closing parenthesis and no angle brackets are open
-  let position = startAt;
-  let openedBrackets = 0;
-  while (true) {
-    if (code[position] === '<') {
-      openedBrackets += 1;
-    }
-    if (code[position] === '>') {
-      openedBrackets -= 1;
-    }
-    if (
-      (position >= code.length || ',' === (code[position] as string)) &&
-      openedBrackets === 0
-    ) {
-      return {
-        type: code.slice(startAt, position),
-        endPosition: position,
-      };
-    }
-    position += 1;
-  }
-}
-
 interface ArgInfo {
   identifier: string;
   attributes: string[];
@@ -221,12 +175,18 @@ class ArgumentExtractor {
       let maybeType;
       if (strippedCode[this.position] === ':') {
         this.position += 1; // colon before type
-        const { type, endPosition } = extractType(
+        const typeSeparatorPosition = findEitherOf(
           strippedCode,
           this.position,
+          new Set(','),
+          true,
+          ['<', '>'],
         );
-        maybeType = type;
-        this.position = endPosition;
+        maybeType = strippedCode.slice(
+          this.position,
+          typeSeparatorPosition,
+        );
+        this.position = typeSeparatorPosition;
       }
       args.push({
         identifier,
