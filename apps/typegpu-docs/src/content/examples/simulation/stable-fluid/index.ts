@@ -157,9 +157,7 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 
 // Create render pipelines
 function createRenderPipeline(
-  fragmentFn: TgpuFragmentFn<{
-    uv: d.Vec2f;
-  }, d.Vec4f>,
+  fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
   return root['~unstable']
     .withVertex(renderFn, renderFn.shell.attributes)
