@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
@@ -71,8 +71,18 @@ describe('vec2f', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec2f(5, 6);
+    const [x, y] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
   });
 });
 
@@ -141,8 +151,18 @@ describe('vec2i', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec2i(5, 6);
+    const [x, y] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
   });
 });
 
@@ -229,8 +249,18 @@ describe('vec2<bool>', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeBoolean();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec2b(false, true);
+    const [x, y] = vec;
+    expect(x).toBe(false);
+    expect(y).toBe(true);
+    expectTypeOf(x).toBeBoolean();
+    expectTypeOf(y).toBeBoolean();
   });
 });
 
@@ -304,8 +334,20 @@ describe('vec3f', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec3f(5, 6, 7);
+    const [x, y, z] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expect(z).toBe(7);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
+    expectTypeOf(z).toBeNumber();
   });
 });
 
@@ -379,8 +421,20 @@ describe('vec3i', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec3i(5, 6, 7);
+    const [x, y, z] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expect(z).toBe(7);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
+    expectTypeOf(z).toBeNumber();
   });
 });
 
@@ -475,8 +529,20 @@ describe('vec3<bool>', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeBoolean();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec3b(true, false, false);
+    const [x, y, z] = vec;
+    expect(x).toBe(true);
+    expect(y).toBe(false);
+    expect(z).toBe(false);
+    expectTypeOf(x).toBeBoolean();
+    expectTypeOf(y).toBeBoolean();
+    expectTypeOf(z).toBeBoolean();
   });
 });
 
@@ -555,8 +621,22 @@ describe('vec4f', () => {
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec4f(5, 6, 7, 8);
+    const [x, y, z, w] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expect(z).toBe(7);
+    expect(w).toBe(8);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
+    expectTypeOf(z).toBeNumber();
+    expectTypeOf(w).toBeNumber();
   });
 });
 
@@ -630,6 +710,26 @@ describe('vec2h', () => {
     vec[1] = 4;
     expect(vec).toStrictEqual(d.vec2h(3, 4));
   });
+
+  it('should work with for...of', () => {
+    const vec = d.vec2h(1, 2);
+    let i = 0;
+    for (const x of vec) {
+      expect(x).toBe(vec[i]);
+      expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
+      i++;
+    }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec2h(5, 6);
+    const [x, y] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
+  });
 });
 
 describe('v2f', () => {
@@ -650,13 +750,23 @@ describe('v2i', () => {
   });
 
   it('should work with for...of', () => {
-    const vec = d.vec2h(1, 2);
+    const vec = d.vec2i(1, 2);
     let i = 0;
     for (const x of vec) {
       expect(x).toBe(vec[i]);
       expect(x).toBeDefined();
+      expectTypeOf(x).toBeNumber();
       i++;
     }
+  });
+
+  it('can be destructured', () => {
+    const vec = d.vec2i(5, 6);
+    const [x, y] = vec;
+    expect(x).toBe(5);
+    expect(y).toBe(6);
+    expectTypeOf(x).toBeNumber();
+    expectTypeOf(y).toBeNumber();
   });
 });
 

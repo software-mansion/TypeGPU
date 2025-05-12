@@ -401,12 +401,6 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   set y(value: S) {
     this[1] = value;
   }
-
-  *[Symbol.iterator]() {
-    yield this[0];
-    yield this[1];
-    return undefined;
-  }
 }
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
@@ -446,13 +440,6 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
 
   set z(value: S) {
     this[2] = value;
-  }
-
-  *[Symbol.iterator]() {
-    yield this[0];
-    yield this[1];
-    yield this[2];
-    return undefined;
   }
 }
 
@@ -503,14 +490,6 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 
   set w(value: S) {
     this[3] = value;
-  }
-
-  *[Symbol.iterator]() {
-    yield this[0];
-    yield this[1];
-    yield this[2];
-    yield this[3];
-    return undefined;
   }
 }
 
