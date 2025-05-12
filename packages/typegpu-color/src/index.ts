@@ -4,7 +4,7 @@ export { linearToSrgb, srgbToLinear } from './srgb.ts';
 export {
   linearRgbToOklab,
   oklabGamutClip,
-  oklabGamutClipAlphaSlot,
+  oklabGamutClipAlphaAccess,
   oklabGamutClipSlot,
   oklabToLinearRgb,
   oklabToRgb,
