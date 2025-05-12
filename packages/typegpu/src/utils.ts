@@ -41,10 +41,10 @@ const lineBreaks = new Set<string>([
 //   let openedBrackets = 0;
 //   let position = startAt;
 //   while (position < code.length) {
-//     if (brackets && code[position] === brackets[0]) {
+//     if (brackets && isAt(code, position, brackets[0])) {
 //       openedBrackets += 1;
 //     }
-//     if (brackets && code[position] === brackets[1]) {
+//     if (brackets && isAt(code, position, brackets[1])) {
 //       openedBrackets -= 1;
 //     }
 //     for (const s of toFind) {
@@ -221,16 +221,12 @@ export function extractArgs(
   code: string,
 ): FunctionArgsInfo {
   const { strippedCode, argRange: range } = strip(code);
-  console.log('POST STRIP');
   const args: ArgInfo[] = [];
 
-  console.log(strippedCode);
   let position = 0;
   while (position < strippedCode.length) {
-    console.log('MAIN LOOP', position);
     const attributes = [];
     while (strippedCode[position] === '@') {
-      console.log('ATTR LOOP', position);
       const { attribute, endPosition } = extractAttribute(
         strippedCode,
         position,
@@ -239,7 +235,6 @@ export function extractArgs(
       position = endPosition;
     }
 
-    console.log('IDENT', position);
     const { identifier, endPosition } = extractIdentifier(
       strippedCode,
       position,
@@ -248,8 +243,7 @@ export function extractArgs(
 
     let maybeType;
     if (strippedCode[position] === ':') {
-      position += 1;
-      console.log('TYPE', position);
+      position += 1; // colon before type
       const { type, endPosition } = extractType(
         strippedCode,
         position,
@@ -262,9 +256,9 @@ export function extractArgs(
       attributes,
       type: maybeType,
     });
-  }
 
-  console.log(args);
+    position += 1; // comma before the next argument
+  }
 
   return { args, range: { begin: range[0], end: range[1] } };
 }
