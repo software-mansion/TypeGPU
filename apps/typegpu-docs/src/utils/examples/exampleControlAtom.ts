@@ -31,6 +31,12 @@ export type VectorSliderControlParam = {
   label: string;
 };
 
+export type ColorPickerControlParam = {
+  onColorChange: (newValue: readonly [number, number, number]) => void;
+  initial?: readonly [number, number, number];
+  label: string;
+};
+
 export type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
   label: string;
@@ -48,6 +54,7 @@ export type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam;
+  | VectorSliderControlParam
+  | ColorPickerControlParam;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);

@@ -165,6 +165,21 @@ for (const controls of Object.values(example)) {
         controlRow.appendChild(sliderContainer);
       }
 
+      if ('onColorChange' in params) {
+        const input = document.createElement('input');
+        input.type = 'color';
+
+        const initial = params.initial ?? [0, 0, 0];
+        input.value = rgbToHex(initial);
+
+        input.addEventListener('input', () => {
+          params.onColorChange(hexToRgb(input.value));
+        });
+
+        params.onColorChange(initial);
+        controlRow.appendChild(input);
+      }
+
       if ('onToggleChange' in params) {
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
@@ -222,6 +237,11 @@ type VectorSliderControlParam = {
   step: number[];
 };
 
+type ColorPickerControlParam = {
+  onColorChange: (newValue: readonly [number, number, number]) => void;
+  initial?: readonly [number, number, number];
+};
+
 type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
 };
@@ -237,4 +257,22 @@ type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam;
+  | VectorSliderControlParam
+  | ColorPickerControlParam;
+
+function hexToRgb(hex: string): readonly [number, number, number] {
+  return [
+    Number.parseInt(hex.slice(1, 3), 16) / 255,
+    Number.parseInt(hex.slice(3, 5), 16) / 255,
+    Number.parseInt(hex.slice(5, 7), 16) / 255,
+  ];
+}
+
+function componentToHex(c: number) {
+  const hex = (c * 255).toString(16);
+  return hex.length === 1 ? `0${hex}` : hex;
+}
+
+function rgbToHex(rgb: readonly [number, number, number]) {
+  return `#${rgb.map(componentToHex).join('')}`;
+}
