@@ -6,23 +6,23 @@ const triangleAmount = 1000;
 const triangleSize = 0.03;
 
 const rotate = tgpu['~unstable'].fn(
-  { v: d.vec2f, angle: d.f32 },
+  [d.vec2f, d.f32],
   d.vec2f,
-)(/* wgsl */ `{
+) /*wgsl*/`(v: vec2f, angle: f32) -> vec2f {
   let pos = vec2(
     (v.x * cos(angle)) - (v.y * sin(angle)),
     (v.x * sin(angle)) + (v.y * cos(angle))
   );
 
   return pos;
-}`);
+}`;
 
 const getRotationFromVelocity = tgpu['~unstable'].fn(
-  { velocity: d.vec2f },
+  [d.vec2f],
   d.f32,
-)(/* wgsl */ `{
+) /*wgsl*/`(velocity: vec2f) -> f32 {
   return -atan2(velocity.x, velocity.y);
-}`);
+}`;
 
 const TriangleData = d.struct({
   position: d.vec2f,

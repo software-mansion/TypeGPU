@@ -82,13 +82,11 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
         ...faceVertices.map((v) => Vertex({ position: v, normal: v })),
       );
     } else {
-      const normal = helpers.getNormal({
-        v1: faceVertices[0],
-        v2: faceVertices[1],
-        v3: faceVertices[2],
-        smoothNormals: 0,
-        vertexPos: faceVertices[0],
-      });
+      const normal = helpers.getAverageNormal(
+        faceVertices[0],
+        faceVertices[1],
+        faceVertices[2],
+      );
 
       vertices.push(
         ...faceVertices.map((v) => Vertex({ position: v, normal })),
@@ -186,13 +184,14 @@ export class IcosphereGenerator {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % d.u32(3));
-        const normal = helpers.getNormal({
-          v1: newVertices[triBase],
-          v2: newVertices[triBase + d.u32(1)],
-          v3: newVertices[triBase + d.u32(2)],
-          smoothNormals: smoothFlag.value,
-          vertexPos: reprojectedVertex,
-        });
+        let normal = reprojectedVertex;
+        if (smoothFlag.value === 0) {
+          normal = helpers.getAverageNormal(
+            newVertices[triBase],
+            newVertices[triBase + d.u32(1)],
+            newVertices[triBase + d.u32(2)],
+          );
+        }
 
         const outIndex = baseIndexNext + i;
         const nextVertex = nextVertices.value[outIndex];

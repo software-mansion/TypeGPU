@@ -288,6 +288,9 @@ const pipeline = root['~unstable']
       },
     },
   })
+  .withPrimitive({
+    topology: 'triangle-strip',
+  })
   .createPipeline();
 
 // UI
@@ -339,7 +342,7 @@ onFrame((deltaTime) => {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .draw(6);
+    .draw(3);
 });
 
 // #region Example controls and cleanup
