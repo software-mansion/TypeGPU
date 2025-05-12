@@ -1,6 +1,16 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { add, cross, discard, min, mul, normalize, sub } from 'typegpu/std';
+import {
+  add,
+  cross,
+  discard,
+  div,
+  max,
+  min,
+  mul,
+  normalize,
+  sub,
+} from 'typegpu/std';
 
 // init canvas and values
 
@@ -8,12 +18,10 @@ const X = 7;
 const Y = 7;
 const Z = 7;
 
-const MAX_BOX_SIZE = 15;
-const cubeSize = d.vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
-const boxCenter = mul(0.5, cubeSize);
-const upAxis = d.vec3f(0, 1, 0);
-let rotationSpeed = 2;
-let cameraDistance = 250;
+const cubeSize = d.vec3f(X, Y, Z);
+const cameraAnchor = mul(0.5, sub(cubeSize, d.vec3f(1)));
+let rotationSpeed = 0.5;
+let cameraDistance = 16;
 
 let frame = 0;
 
@@ -33,7 +41,7 @@ context.configure({
 
 const BoxStruct = d.struct({
   isActive: d.u32,
-  albedo: d.vec4f,
+  albedo: d.vec3f,
 });
 
 const AxisAlignedBounds = d.struct({
@@ -71,7 +79,7 @@ const boxMatrixBuffer = root
           (_, j) =>
             Array.from({ length: Z }, (_, k) => ({
               isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-              albedo: d.vec4f(i / X, j / Y, k / Z, 1),
+              albedo: d.vec3f(i / X, j / Y, k / Z),
             })),
         ),
     ),
@@ -94,7 +102,7 @@ const canvasDimsUniform = root['~unstable']
   .$name('canvas_dims');
 
 const boxSizeUniform = root['~unstable']
-  .createUniform(d.u32, MAX_BOX_SIZE)
+  .createUniform(d.f32, 1)
   .$name('box_size');
 
 // bind groups and layouts
@@ -193,7 +201,7 @@ const vertexFunction = tgpu['~unstable'].vertexFn({
   return Out(vec4f(pos[in.vertexIndex], 0, 1));
 }`.$name('vertex_main');
 
-const boxSizeAccess = tgpu['~unstable'].accessor(d.u32);
+const boxSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const canvasDimsAccess = tgpu['~unstable'].accessor(d.vec2f);
 
 const fragmentFunction = tgpu['~unstable'].fragmentFn({
@@ -227,9 +235,11 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
   if (!bigBoxIntersection.intersects) {
     discard();
+    return d.vec4f(0, 0, 0, 0);
   }
 
-  let color = d.vec4f(0);
+  let density = d.f32(0);
+  let invColor = d.vec3f(0, 0, 0);
   let tMin = d.f32(0);
   let intersectionFound = false;
 
@@ -240,10 +250,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
           continue;
         }
 
-        const ijkScaled = mul(
-          MAX_BOX_SIZE,
-          d.vec3f(d.f32(i), d.f32(j), d.f32(k)),
-        );
+        const ijkScaled = d.vec3f(d.f32(i), d.f32(j), d.f32(k));
 
         const intersection = getBoxIntersection(
           AxisAlignedBounds({
@@ -253,11 +260,16 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
           ray,
         );
 
-        if (
-          intersection.intersects &&
-          (!intersectionFound || intersection.tMin < tMin)
-        ) {
-          color = renderLayout.$.boxMatrix[i][j][k].albedo;
+        if (intersection.intersects) {
+          const depth = max(0, intersection.tMax - intersection.tMin) * 0.5;
+          density += depth;
+          invColor = add(
+            invColor,
+            mul(
+              depth,
+              div(d.vec3f(1), renderLayout.$.boxMatrix[i][j][k].albedo),
+            ),
+          );
           tMin = intersection.tMin;
           intersectionFound = true;
         }
@@ -265,7 +277,17 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
     }
   }
 
-  return color;
+  const avgInvColor = mul(1 / density, invColor);
+
+  if (intersectionFound) {
+    return mul(
+      min(density, 1),
+      d.vec4f(min(div(d.vec3f(1), avgInvColor), d.vec3f(1)), 1),
+    );
+  }
+
+  discard();
+  return d.vec4f(0, 0, 0, 0);
 });
 
 // pipeline
@@ -274,7 +296,21 @@ const pipeline = root['~unstable']
   .with(boxSizeAccess, boxSizeUniform)
   .with(canvasDimsAccess, canvasDimsUniform)
   .withVertex(vertexFunction, {})
-  .withFragment(fragmentFunction, { format: presentationFormat })
+  .withFragment(fragmentFunction, {
+    format: presentationFormat,
+    blend: {
+      color: {
+        srcFactor: 'one',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+      alpha: {
+        srcFactor: 'one',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+    },
+  })
   .createPipeline()
   .with(renderLayout, renderBindGroup);
 
@@ -302,17 +338,19 @@ onFrame((deltaTime) => {
   const height = canvas.height;
 
   const cameraPosition = d.vec3f(
-    Math.cos(frame) * cameraDistance + boxCenter.x,
-    boxCenter.y,
-    Math.sin(frame) * cameraDistance + boxCenter.z,
+    Math.cos(frame) * cameraDistance + cameraAnchor.x,
+    cameraAnchor.y - 5,
+    Math.sin(frame) * cameraDistance + cameraAnchor.z,
   );
 
   const cameraAxes = (() => {
-    const forwardAxis = normalize(sub(boxCenter, cameraPosition));
+    const forwardAxis = normalize(sub(cameraAnchor, cameraPosition));
+    const rightAxis = cross(d.vec3f(0, 1, 0), forwardAxis);
+    const upAxis = cross(forwardAxis, rightAxis);
     return {
       forward: forwardAxis,
       up: upAxis,
-      right: cross(upAxis, forwardAxis),
+      right: rightAxis,
     };
   })();
 
@@ -347,17 +385,17 @@ export const controls = {
 
   'camera distance': {
     initial: cameraDistance,
-    min: 100,
-    max: 1200,
+    min: 1,
+    max: 100,
     onSliderChange: (value: number) => {
       cameraDistance = value;
     },
   },
 
   'box size': {
-    initial: MAX_BOX_SIZE,
-    min: 1,
-    max: MAX_BOX_SIZE,
+    initial: 1,
+    min: 0.1,
+    max: 1,
     onSliderChange: (value: number) => {
       boxSizeUniform.write(value);
     },
