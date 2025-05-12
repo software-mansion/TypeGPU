@@ -17,52 +17,49 @@ const lineBreaks = new Set<string>([
   '\u2029', // paragraph separator
 ]);
 
-// function isAt(code: string, position: number, substr: string): boolean {
-//   for (let i = 0; i < substr.length; i++) {
-//     if (code[position + i] !== substr[i]) {
-//       return false;
-//     }
-//   }
-//   return true;
-// }
-
-// /**
-//  * @param code the string to look through,
-//  * @param startAt first character to consider,
-//  * @param toFind a set of strings either of which satisfy the search,
-//  * @param brackets a pair of brackets that has to be closed for result to be valid.
-//  */
-// function findEitherOf(
-//   code: string,
-//   startAt: number,
-//   toFind: Set<string>,
-//   brackets?: [string, string],
-// ): [string, number] | undefined {
-//   let openedBrackets = 0;
-//   let position = startAt;
-//   while (position < code.length) {
-//     if (brackets && isAt(code, position, brackets[0])) {
-//       openedBrackets += 1;
-//     }
-//     if (brackets && isAt(code, position, brackets[1])) {
-//       openedBrackets -= 1;
-//     }
-//     for (const s of toFind) {
-//       if (isAt(code, position, s)) {
-//         return [s, position];
-//       }
-//     }
-//   }
-//   return undefined;
-// }
-
-function findNextLineBreak(code: string, startAt: number): number {
-  for (let i = startAt; i < code.length; i++) {
-    if (lineBreaks.has(code[i] as string)) {
-      return i;
+function isAt(code: string, position: number, substr: string): boolean {
+  for (let i = 0; i < substr.length; i++) {
+    if (code[position + i] !== substr[i]) {
+      return false;
     }
   }
-  return code.length;
+  return true;
+}
+
+/**
+ * @param code the string to look through,
+ * @param startAt first character to consider,
+ * @param toFind a set of strings either of which satisfy the search,
+ * @param allowEndOfString if set to true, the method returns `code.length` instead of throwing when it reaches the end of the string,
+ * @param brackets a pair of brackets that has to be closed for result to be valid.
+ */
+function findEitherOf(
+  code: string,
+  startAt: number,
+  toFind: Set<string>,
+  allowEndOfString = false,
+  brackets?: [string, string],
+): number {
+  let openedBrackets = 0;
+  let position = startAt;
+  while (position < code.length) {
+    if (brackets && isAt(code, position, brackets[0])) {
+      openedBrackets += 1;
+    }
+    if (brackets && isAt(code, position, brackets[1])) {
+      openedBrackets -= 1;
+    }
+    for (const s of toFind) {
+      if (isAt(code, position, s)) {
+        return position;
+      }
+    }
+    position += 1;
+  }
+  if (allowEndOfString) {
+    return code.length;
+  }
+  throw new Error('Invalid wgsl syntax!');
 }
 
 function findNextBlockComment(code: string, startAt: number): number {
@@ -74,7 +71,8 @@ function findNextBlockComment(code: string, startAt: number): number {
   return code.length;
 }
 
-// strips comments, whitespaces, name and body of the function
+// Strips comments, whitespaces, name and body of the function,
+// then wraps the result in `specialCharacter` from the beginning and the end.
 function strip(
   code: string,
 ): { strippedCode: string; argRange: [number, number] } {
@@ -95,7 +93,8 @@ function strip(
 
     // skip line comments
     if (code.slice(position, position + 2) === '//') {
-      position = findNextLineBreak(code, position + 2) + 1;
+      position += 2;
+      position = findEitherOf(code, position, lineBreaks) + 1;
       continue;
     }
 
@@ -218,46 +217,41 @@ interface FunctionArgsInfo {
 }
 
 class ArgumentExtractor {
-  // position: number;
-  constructor(private readonly code: string) {
-    // this.position = 0;
+  position: number;
+  constructor(private readonly rawCode: string) {
+    this.position = 0;
   }
 
-  // _advanceBy(chars: number) {
-  //   this.position += chars;
-  // }
-
   extract(): FunctionArgsInfo {
-    const { strippedCode, argRange: range } = strip(this.code);
+    const { strippedCode, argRange: range } = strip(this.rawCode);
     const args: ArgInfo[] = [];
 
-    let position = 0;
-    while (position < strippedCode.length) {
+    while (this.position < strippedCode.length) {
       const attributes = [];
-      while (strippedCode[position] === '@') {
+      while (strippedCode[this.position] === '@') {
         const { attribute, endPosition } = extractAttribute(
           strippedCode,
-          position,
+          this.position,
         );
         attributes.push(attribute);
-        position = endPosition;
+        this.position = endPosition;
       }
 
       const { identifier, endPosition } = extractIdentifier(
         strippedCode,
-        position,
+        this.position,
       );
-      position = endPosition;
+      this.position = endPosition;
 
       let maybeType;
-      if (strippedCode[position] === ':') {
-        position += 1; // colon before type
+      if (strippedCode[this.position] === ':') {
+        this.position += 1; // colon before type
         const { type, endPosition } = extractType(
           strippedCode,
-          position,
+          this.position,
         );
         maybeType = type;
-        position = endPosition;
+        this.position = endPosition;
       }
       args.push({
         identifier,
@@ -265,7 +259,7 @@ class ArgumentExtractor {
         type: maybeType,
       });
 
-      position += 1; // comma before the next argument
+      this.position += 1; // comma before the next argument
     }
 
     return { args, range: { begin: range[0], end: range[1] } };
