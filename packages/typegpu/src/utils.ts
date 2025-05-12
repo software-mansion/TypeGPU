@@ -18,55 +18,57 @@ const blankSpaces = new Set<string>([
   '\u200F', // right-to-left mark
 ]);
 
-function isAt(code: string, pos: number, substr: string): boolean {
-  for (let i = 0; i < substr.length; i++) {
-    if (code[pos + i] !== substr[i]) {
-      return false;
-    }
-  }
-  return true;
+interface ArgInfo {
+  identifier: string;
+  attributes: string[];
+  type: string | undefined;
 }
 
-/**
- * @param code the string to look through,
- * @param startAt first character to consider,
- * @param toFind a set of strings either of which satisfy the search,
- * @param allowEndOfString if set to true, the method returns `code.length` instead of throwing when it reaches the end of the string,
- * @param brackets a pair of brackets that has to be closed for result to be valid.
- */
-function findEitherOf(
-  code: string,
-  startAt: number,
-  toFind: Set<string>,
-  allowEndOfString = false,
-  brackets?: [string, string],
-): number {
-  let openedBrackets = 0;
-  let pos = startAt;
-  while (pos < code.length) {
-    if (brackets && isAt(code, pos, brackets[0])) {
-      openedBrackets += 1;
-    }
-    if (brackets && isAt(code, pos, brackets[1])) {
-      openedBrackets -= 1;
-    }
-    if (openedBrackets === 0) {
-      for (const s of toFind) {
-        if (isAt(code, pos, s)) {
-          return pos;
-        }
-      }
-    }
-    pos += 1;
-  }
-  if (allowEndOfString && openedBrackets === 0) {
-    return code.length;
-  }
-  throw new Error('Invalid wgsl syntax!');
+interface FunctionArgsInfo {
+  args: ArgInfo[];
+  range: {
+    begin: number;
+    end: number;
+  };
 }
 
-// Strips comments, whitespaces, name and body of the function,
-// then wraps the result in `specialCharacter` from the beginning and the end.
+export function extractArgs(rawCode: string): FunctionArgsInfo {
+  const { strippedCode, argRange: range } = strip(rawCode);
+  const args: ArgInfo[] = [];
+
+  let pos = 0;
+  while (pos < strippedCode.length) {
+    // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
+    const attributes = [];
+    while (strippedCode[pos] === '@') {
+      const { attribute, newPos } = processAttribute(strippedCode, pos);
+      attributes.push(attribute);
+      pos = newPos;
+    }
+
+    const { identifier, newPos } = processIdentifier(strippedCode, pos);
+    pos = newPos;
+
+    let maybeType;
+    if (strippedCode[pos] === ':') {
+      pos += 1; // colon before type
+      const { type, newPos } = processType(strippedCode, pos);
+      maybeType = type;
+      pos = newPos;
+    }
+    args.push({
+      identifier,
+      attributes,
+      type: maybeType,
+    });
+
+    pos += 1; // comma before the next argument
+  }
+
+  return { args, range: { begin: range[0], end: range[1] } };
+}
+
+// Strips comments, whitespaces, the name and the body of the function.
 function strip(
   code: string,
 ): { strippedCode: string; argRange: [number, number] } {
@@ -117,54 +119,51 @@ function strip(
   throw new Error('Invalid wgsl code!');
 }
 
-interface ArgInfo {
-  identifier: string;
-  attributes: string[];
-  type: string | undefined;
-}
-
-interface FunctionArgsInfo {
-  args: ArgInfo[];
-  range: {
-    begin: number;
-    end: number;
-  };
-}
-
-export function extractArgs(rawCode: string): FunctionArgsInfo {
-  const { strippedCode, argRange: range } = strip(rawCode);
-  const args: ArgInfo[] = [];
-
-  let pos = 0;
-  while (pos < strippedCode.length) {
-    // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
-    const attributes = [];
-    while (strippedCode[pos] === '@') {
-      const { attribute, newPos } = processAttribute(strippedCode, pos);
-      attributes.push(attribute);
-      pos = newPos;
+function isAt(code: string, pos: number, substr: string): boolean {
+  for (let i = 0; i < substr.length; i++) {
+    if (code[pos + i] !== substr[i]) {
+      return false;
     }
-
-    const { identifier, newPos } = processIdentifier(strippedCode, pos);
-    pos = newPos;
-
-    let maybeType;
-    if (strippedCode[pos] === ':') {
-      pos += 1; // colon before type
-      const { type, newPos } = processType(strippedCode, pos);
-      maybeType = type;
-      pos = newPos;
-    }
-    args.push({
-      identifier,
-      attributes,
-      type: maybeType,
-    });
-
-    pos += 1; // comma before the next argument
   }
+  return true;
+}
 
-  return { args, range: { begin: range[0], end: range[1] } };
+/**
+ * @param code the string to look through,
+ * @param startAt first character to consider,
+ * @param toFind a set of strings either of which satisfy the search,
+ * @param allowEndOfString if set to true, the method returns `code.length` instead of throwing when it reaches the end of the string,
+ * @param brackets a pair of brackets that has to be closed for result to be valid.
+ */
+function findEitherOf(
+  code: string,
+  startAt: number,
+  toFind: Set<string>,
+  allowEndOfString = false,
+  brackets?: [string, string],
+): number {
+  let openedBrackets = 0;
+  let pos = startAt;
+  while (pos < code.length) {
+    if (brackets && isAt(code, pos, brackets[0])) {
+      openedBrackets += 1;
+    }
+    if (brackets && isAt(code, pos, brackets[1])) {
+      openedBrackets -= 1;
+    }
+    if (openedBrackets === 0) {
+      for (const s of toFind) {
+        if (isAt(code, pos, s)) {
+          return pos;
+        }
+      }
+    }
+    pos += 1;
+  }
+  if (allowEndOfString && openedBrackets === 0) {
+    return code.length;
+  }
+  throw new Error('Invalid wgsl syntax!');
 }
 
 function processAttribute(
