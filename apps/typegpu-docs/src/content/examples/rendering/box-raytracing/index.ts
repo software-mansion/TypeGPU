@@ -41,14 +41,16 @@ context.configure({
 
 // structs
 
+const Uniforms = d.struct({
+  canvasDims: d.vec2f,
+  invViewMatrix: d.mat4x4f,
+  materialDensity: d.f32,
+  boxSize: d.f32,
+});
+
 const BoxStruct = d.struct({
   isActive: d.u32,
   albedo: d.vec3f,
-});
-
-const Uniforms = d.struct({
-  invViewMatrix: d.mat4x4f,
-  materialDensity: d.f32,
 });
 
 const AxisAlignedBounds = d.struct({
@@ -89,26 +91,9 @@ const boxMatrixBuffer = root
   )
   .$name('box_array')
   .$usage('storage');
-
-const canvasDimsUniform = root['~unstable']
-  .createUniform(d.vec2f)
-  .$name('canvas_dims');
-
-const boxSizeUniform = root['~unstable']
-  .createUniform(d.f32, 1)
-  .$name('box_size');
+const boxMatrixReadonly = boxMatrixBuffer.as('readonly');
 
 const uniforms = root['~unstable'].createUniform(Uniforms);
-
-// bind groups and layouts
-
-const renderLayout = tgpu.bindGroupLayout({
-  boxMatrix: { storage: boxMatrixBuffer.dataType },
-});
-
-const renderBindGroup = root.createBindGroup(renderLayout, {
-  boxMatrix: boxMatrixBuffer,
-});
 
 // functions
 
@@ -196,18 +181,15 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
 });
 
-const boxSizeAccess = tgpu['~unstable'].accessor(d.f32);
-const canvasDimsAccess = tgpu['~unstable'].accessor(d.vec2f);
-
 const fragmentFunction = tgpu['~unstable'].fragmentFn({
   in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
-  const boxSize3 = d.vec3f(d.f32(boxSizeAccess.value));
+  const boxSize3 = d.vec3f(d.f32(uniforms.value.boxSize));
   const halfBoxSize3 = mul(0.5, boxSize3);
-  const halfCanvasDims = mul(0.5, canvasDimsAccess.value);
+  const halfCanvasDims = mul(0.5, uniforms.value.canvasDims);
 
-  const minDim = min(canvasDimsAccess.value.x, canvasDimsAccess.value.y);
+  const minDim = min(uniforms.value.canvasDims.x, uniforms.value.canvasDims.y);
   const viewCoords = mul(1 / minDim, sub(input.position.xy, halfCanvasDims));
 
   const ray = Ray({
@@ -239,7 +221,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   for (let i = 0; i < X; i++) {
     for (let j = 0; j < Y; j++) {
       for (let k = 0; k < Z; k++) {
-        if (renderLayout.$.boxMatrix[i][j][k].isActive === 0) {
+        if (boxMatrixReadonly.value[i][j][k].isActive === 0) {
           continue;
         }
 
@@ -261,7 +243,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
             invColor,
             mul(
               boxDensity,
-              div(d.vec3f(1), renderLayout.$.boxMatrix[i][j][k].albedo),
+              div(d.vec3f(1), boxMatrixReadonly.value[i][j][k].albedo),
             ),
           );
           tMin = intersection.tMin;
@@ -290,8 +272,6 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 // pipeline
 
 const pipeline = root['~unstable']
-  .with(boxSizeAccess, boxSizeUniform)
-  .with(canvasDimsAccess, canvasDimsUniform)
   .withVertex(mainVertex, {})
   .withFragment(fragmentFunction, {
     format: presentationFormat,
@@ -308,8 +288,7 @@ const pipeline = root['~unstable']
       },
     },
   })
-  .createPipeline()
-  .with(renderLayout, renderBindGroup);
+  .createPipeline();
 
 // UI
 
@@ -341,6 +320,7 @@ onFrame((deltaTime) => {
   );
 
   uniforms.buffer.writePartial({
+    canvasDims: d.vec2f(width, height),
     invViewMatrix: mat4.aim(
       cameraPosition,
       cameraAnchor,
@@ -348,7 +328,6 @@ onFrame((deltaTime) => {
       d.mat4x4f(),
     ),
   });
-  canvasDimsUniform.write(d.vec2f(width, height));
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
@@ -389,7 +368,9 @@ export const controls = {
     min: 0.1,
     max: 1,
     onSliderChange: (value: number) => {
-      boxSizeUniform.write(value);
+      uniforms.buffer.writePartial({
+        boxSize: value,
+      });
     },
   },
 
