@@ -1,12 +1,5 @@
 // AAA slice na znaki
 
-const blankSpaces = new Set<string>([
-  '\u0020', // space
-  '\u0009', // horizontal tab
-  '\u200E', // left-to-right mark
-  '\u200F', // right-to-left mark
-]);
-
 const lineBreaks = new Set<string>([
   '\u000A', // line feed
   '\u000B', // vertical tab
@@ -15,6 +8,14 @@ const lineBreaks = new Set<string>([
   '\u0085', // next line
   '\u2028', // line separator
   '\u2029', // paragraph separator
+]);
+
+const blankSpaces = new Set<string>([
+  ...lineBreaks,
+  '\u0020', // space
+  '\u0009', // horizontal tab
+  '\u200E', // left-to-right mark
+  '\u200F', // right-to-left mark
 ]);
 
 function isAt(code: string, position: number, substr: string): boolean {
@@ -58,7 +59,7 @@ function findEitherOf(
     }
     position += 1;
   }
-  if (allowEndOfString) {
+  if (allowEndOfString && openedBrackets === 0) {
     return code.length;
   }
   throw new Error('Invalid wgsl syntax!');
@@ -76,16 +77,13 @@ function strip(
   let openedParentheses = 1;
   while (position < code.length) {
     // skip any blankspace
-    if (
-      blankSpaces.has(code[position] as string) ||
-      lineBreaks.has(code[position] as string)
-    ) {
+    if (blankSpaces.has(code[position] as string)) {
       position += 1; // the whitespace character
       continue;
     }
 
     // skip line comments
-    if (code.slice(position, position + 2) === '//') {
+    if (isAt(code, position, '//')) {
       position += 2; // '//'
       position = findEitherOf(code, position, lineBreaks);
       position += 1; // the line break
@@ -93,7 +91,7 @@ function strip(
     }
 
     // skip block comments
-    if (code[position] === '/' && code[position + 1] === '*') {
+    if (isAt(code, position, '/*')) {
       position = findEitherOf(code, position, new Set('*/'), false, [
         '/*',
         '*/',
@@ -114,31 +112,6 @@ function strip(
     }
 
     strippedCode += code[position];
-    position += 1;
-  }
-  throw new Error('Invalid wgsl code!');
-}
-
-function extractAttribute(
-  code: string,
-  startAt: number,
-): { attribute: string; endPosition: number } {
-  // the attribute ends when we close all opened parentheses
-  let position = startAt;
-  let openedParentheses = 0;
-  while (position < code.length) {
-    if (code[position] === '(') {
-      openedParentheses += 1;
-    }
-    if (code[position] === ')') {
-      openedParentheses -= 1;
-      if (openedParentheses === 0) {
-        return {
-          attribute: code.slice(startAt, position + 1),
-          endPosition: position + 1,
-        };
-      }
-    }
     position += 1;
   }
   throw new Error('Invalid wgsl code!');
@@ -217,12 +190,20 @@ class ArgumentExtractor {
     while (this.position < strippedCode.length) {
       const attributes = [];
       while (strippedCode[this.position] === '@') {
-        const { attribute, endPosition } = extractAttribute(
+        const lastParenthesesPosition = findEitherOf(
           strippedCode,
           this.position,
+          new Set(')'),
+          false,
+          ['(', ')'],
+        );
+        const attribute = strippedCode.slice(
+          this.position,
+          lastParenthesesPosition + 1,
         );
         attributes.push(attribute);
-        this.position = endPosition;
+        this.position = lastParenthesesPosition;
+        this.position += 1; // ')'
       }
 
       const { identifier, endPosition } = extractIdentifier(
