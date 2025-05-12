@@ -43,11 +43,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
-  const pos = [
-    d.vec2f(-1, -1),
-    d.vec2f(3, -1),
-    d.vec2f(-1, 3),
-  ];
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
@@ -73,13 +69,11 @@ const scaleView = tgpu['~unstable'].fn([d.vec2f], d.vec2f)((pos) => {
 
 const patternFn = tgpu['~unstable'].fn([d.vec2f, d.vec3f], d.f32);
 
-const patternCheckers = patternFn(
-  (uv, _clipLab) => {
-    'kernel';
-    const suv = floor(mul(20, uv));
-    return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
-  },
-);
+const patternCheckers = patternFn((uv) => {
+  'kernel';
+  const suv = floor(mul(20, uv));
+  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
+});
 
 const patternL0ProjectionLines =
   patternFn /* wgsl */`(uv: vec2f, clipLab: vec3f) -> f32 {
@@ -88,7 +82,7 @@ const patternL0ProjectionLines =
     return select(clamp(Lgrid / fwidth(Lgrid), 0, 1), 1, thickness < 0.0002);
   }`;
 
-const patternSolid = patternFn((_uv, _clipLab) => {
+const patternSolid = patternFn(() => {
   'kernel';
   return 1;
 });
@@ -103,10 +97,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 })((input) => {
   const hue = layout.$.uniforms.hue;
   const pos = scaleView(input.uv);
-  const lab = d.vec3f(
-    pos.y,
-    mul(pos.x, d.vec2f(cos(hue), sin(hue))),
-  );
+  const lab = d.vec3f(pos.y, mul(pos.x, d.vec2f(cos(hue), sin(hue))));
   const rgb = oklabToLinearRgb(lab);
   const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
 
