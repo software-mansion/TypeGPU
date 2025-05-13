@@ -1,6 +1,8 @@
 // AAA sprawdź czy te funkcje z testów są poprawne
+// AAA więcej testów
 // AAA range z nawiasami i potencjalnym typem zwracanym
 // AAA dawaj tez typ zwracany
+// AAA benchmarki?
 
 const lineBreaks = new Set<string>([
   '\u000A', // line feed
@@ -43,23 +45,21 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
     while (code.isAt('@')) {
-      const oldPos = code.pos;
       code.parseUntil(new Set(')'), false, ['(', ')']);
       code.advanceBy(1); // ')'
-      attributes.push(code.str.slice(oldPos, code.pos));
+      attributes.push(code.lastParsed);
     }
 
-    const oldPos = code.pos;
     code.parseUntil(new Set([':', ',']), true);
-    const identifier = code.str.slice(oldPos, code.pos);
+    const identifier = code.lastParsed;
 
     let maybeType;
     if (code.isAt(':')) {
       code.advanceBy(1); // colon before type
-      const oldPos = code.pos;
       code.parseUntil(new Set(','), true, ['<', '>']);
-      maybeType = code.str.slice(oldPos, code.pos);
+      maybeType = code.lastParsed;
     }
+
     args.push({
       identifier,
       attributes,
@@ -125,13 +125,25 @@ function strip(
 }
 
 class ParsableString {
+  _parseStartPos: number | undefined;
   _pos: number;
   constructor(public readonly str: string) {
     this._pos = 0;
   }
 
-  get pos() {
+  get pos(): number {
     return this._pos;
+  }
+
+  /**
+   * This property is equivalent to the substring of `this.str`
+   * from the position of the last `parseUntil` call, to the current position.
+   */
+  get lastParsed(): string {
+    if (this._parseStartPos === undefined) {
+      throw new Error('Parse was not called yet!');
+    }
+    return this.str.slice(this._parseStartPos, this.pos);
   }
 
   isFinished() {
@@ -169,6 +181,7 @@ class ParsableString {
     allowEndOfString = false,
     brackets?: [string, string],
   ): number {
+    this._parseStartPos = this._pos;
     let openedBrackets = 0;
     while (this._pos < this.str.length) {
       if (brackets && this.isAt(brackets[0])) {
