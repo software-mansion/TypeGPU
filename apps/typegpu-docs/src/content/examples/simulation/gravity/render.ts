@@ -11,7 +11,7 @@ import {
 export const skyBoxVertex = tgpu['~unstable']
   .vertexFn({
     in: {
-      position: d.vec4f,
+      position: d.vec3f,
       uv: d.vec2f,
     },
     out: {
@@ -19,16 +19,13 @@ export const skyBoxVertex = tgpu['~unstable']
       texCoord: d.vec3f,
     },
   })((input) => {
+    const viewPos =
+      std.mul(skyBoxLayout.$.camera.view, d.vec4f(input.position, 0)).xyz;
+
     return {
       pos: std.mul(
         skyBoxLayout.$.camera.projection,
-        d.vec4f(
-          std.mul(
-            skyBoxLayout.$.camera.view,
-            d.vec4f(std.div(input.position.xyz, input.position.w), 0),
-          ).xyz,
-          1,
-        ),
+        d.vec4f(viewPos, 1),
       ),
       texCoord: input.position.xyz,
     };

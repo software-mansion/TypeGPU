@@ -38,7 +38,7 @@ export const VertexOutput = {
 
 export const SkyBoxVertex = d
   .struct({
-    position: d.vec4f,
+    position: d.vec3f,
     uv: d.vec2f,
   })
   .$name('SkyBoxVertex');

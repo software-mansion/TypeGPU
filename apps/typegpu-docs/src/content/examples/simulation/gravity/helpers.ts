@@ -7,63 +7,63 @@ import { sphereTextureNames } from './enums.ts';
 import { CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
 
 function vert(
-  position: [number, number, number, number],
+  position: [number, number, number],
   uv: [number, number],
 ) {
   return SkyBoxVertex({
-    position: d.vec4f(...position),
+    position: d.vec3f(...position),
     uv: d.vec2f(...uv),
   });
 }
 
 export const skyBoxVertices: d.Infer<typeof SkyBoxVertex>[] = [
   // Bottom face
-  vert([-1, -1, -1, 1], [0, 0]),
-  vert([1, -1, -1, 1], [1, 0]),
-  vert([1, -1, 1, 1], [1, 1]),
-  vert([1, -1, 1, 1], [1, 1]),
-  vert([-1, -1, 1, 1], [0, 1]),
-  vert([-1, -1, -1, 1], [0, 0]),
+  vert([-1, -1, -1], [0, 0]),
+  vert([1, -1, -1], [1, 0]),
+  vert([1, -1, 1], [1, 1]),
+  vert([1, -1, 1], [1, 1]),
+  vert([-1, -1, 1], [0, 1]),
+  vert([-1, -1, -1], [0, 0]),
 
   // Right face
-  vert([1, 1, 1, 1], [0, 1]),
-  vert([1, -1, 1, 1], [1, 1]),
-  vert([1, -1, -1, 1], [1, 0]),
-  vert([1, 1, -1, 1], [0, 0]),
-  vert([1, 1, 1, 1], [0, 1]),
-  vert([1, -1, -1, 1], [1, 0]),
+  vert([1, 1, 1], [0, 1]),
+  vert([1, -1, 1], [1, 1]),
+  vert([1, -1, -1], [1, 0]),
+  vert([1, 1, -1], [0, 0]),
+  vert([1, 1, 1], [0, 1]),
+  vert([1, -1, -1], [1, 0]),
 
   // Top face
-  vert([-1, 1, 1, 1], [0, 1]),
-  vert([1, 1, 1, 1], [1, 1]),
-  vert([1, 1, -1, 1], [1, 0]),
-  vert([-1, 1, -1, 1], [0, 0]),
-  vert([-1, 1, 1, 1], [0, 1]),
-  vert([1, 1, -1, 1], [1, 0]),
+  vert([-1, 1, 1], [0, 1]),
+  vert([1, 1, 1], [1, 1]),
+  vert([1, 1, -1], [1, 0]),
+  vert([-1, 1, -1], [0, 0]),
+  vert([-1, 1, 1], [0, 1]),
+  vert([1, 1, -1], [1, 0]),
 
   // Left face
-  vert([-1, -1, 1, 1], [0, 1]),
-  vert([-1, 1, 1, 1], [1, 1]),
-  vert([-1, 1, -1, 1], [1, 0]),
-  vert([-1, -1, -1, 1], [0, 0]),
-  vert([-1, -1, 1, 1], [0, 1]),
-  vert([-1, 1, -1, 1], [1, 0]),
+  vert([-1, -1, 1], [0, 1]),
+  vert([-1, 1, 1], [1, 1]),
+  vert([-1, 1, -1], [1, 0]),
+  vert([-1, -1, -1], [0, 0]),
+  vert([-1, -1, 1], [0, 1]),
+  vert([-1, 1, -1], [1, 0]),
 
   // Front face
-  vert([1, 1, 1, 1], [0, 1]),
-  vert([-1, 1, 1, 1], [1, 1]),
-  vert([-1, -1, 1, 1], [1, 0]),
-  vert([-1, -1, 1, 1], [1, 0]),
-  vert([1, -1, 1, 1], [0, 0]),
-  vert([1, 1, 1, 1], [0, 1]),
+  vert([1, 1, 1], [0, 1]),
+  vert([-1, 1, 1], [1, 1]),
+  vert([-1, -1, 1], [1, 0]),
+  vert([-1, -1, 1], [1, 0]),
+  vert([1, -1, 1], [0, 0]),
+  vert([1, 1, 1], [0, 1]),
 
   // Back face
-  vert([1, -1, -1, 1], [0, 1]),
-  vert([-1, -1, -1, 1], [1, 1]),
-  vert([-1, 1, -1, 1], [1, 0]),
-  vert([1, 1, -1, 1], [0, 0]),
-  vert([1, -1, -1, 1], [0, 1]),
-  vert([-1, 1, -1, 1], [1, 0]),
+  vert([1, -1, -1], [0, 1]),
+  vert([-1, -1, -1], [1, 1]),
+  vert([-1, 1, -1], [1, 0]),
+  vert([1, 1, -1], [0, 0]),
+  vert([1, -1, -1], [0, 1]),
+  vert([-1, 1, -1], [1, 0]),
 ];
 
 function getSkyBoxUrls() {
