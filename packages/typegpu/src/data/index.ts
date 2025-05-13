@@ -20,6 +20,7 @@ export type {
   Align,
   AnyVecInstance,
   AnyWgslData,
+  AnyWgslStruct,
   Atomic,
   BaseData,
   BaseData as BaseWgslData,
@@ -145,4 +146,4 @@ export type {
   BuiltinVertexIndex,
   BuiltinWorkgroupId,
 } from '../builtin.ts';
-export type { Infer } from '../shared/repr.ts';
+export type { Infer, InferGPU, InferPartial } from '../shared/repr.ts';

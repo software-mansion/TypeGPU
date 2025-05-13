@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.ts';
+import type { TgpuNamable } from '../name.ts';
 import type {
   Infer,
   InferGPU,
@@ -50,7 +50,8 @@ export interface AbstractFloat {
 export interface Void {
   readonly [$internal]: true;
   readonly type: 'void';
-  readonly [$repr]: undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: <void is void>
+  readonly [$repr]: void;
 }
 export const Void: Void = {
   [$internal]: true,
@@ -1028,7 +1029,9 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   readonly [$repr]: Infer<TElement>[];
   readonly '~gpuRepr': InferGPU<TElement>[];
-  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  readonly '~reprPartial':
+    | { idx: number; value: InferPartial<TElement> }[]
+    | undefined;
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
@@ -1045,7 +1048,6 @@ export interface WgslStruct<
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly [$internal]: true;
   readonly type: 'struct';
-  readonly label?: string | undefined;
   readonly propTypes: TProps;
 
   readonly [$repr]: Prettify<InferRecord<TProps>>;
@@ -1054,7 +1056,9 @@ export interface WgslStruct<
   /** Type-token, not available at runtime */
   readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   /** Type-token, not available at runtime */
-  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+  readonly '~reprPartial':
+    | Prettify<Partial<InferPartialRecord<TProps>>>
+    | undefined;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
@@ -1446,4 +1450,8 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
     (value as AbstractInt)?.[$internal] &&
     (value as AbstractInt).type === 'abstractInt'
   );
+}
+
+export function isVoid(value: unknown): value is Void {
+  return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }
