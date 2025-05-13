@@ -144,7 +144,7 @@ function run() {
   if (!(video.currentTime > 0)) {
     return;
   }
-  
+
   // Updating the target render texture
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
