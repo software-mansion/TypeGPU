@@ -3,6 +3,7 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
+import { getName } from './name.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
@@ -93,7 +94,7 @@ export class NotUniformError extends Error {
   constructor(value: TgpuBuffer<AnyData>) {
     super(
       `Buffer '${
-        value.label ?? '<unnamed>'
+        getName(value) ?? '<unnamed>'
       }' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
 
@@ -119,7 +120,7 @@ export class MissingBindGroupsError extends Error {
   constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(
       `Missing bind groups for layouts: '${
-        [...layouts].map((layout) => layout.label ?? '<unnamed>').join(', ')
+        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
       }'. Please provide it using pipeline.with(layout, bindGroup).(...)`,
     );
 
@@ -132,7 +133,7 @@ export class MissingVertexBuffersError extends Error {
   constructor(layouts: Iterable<TgpuVertexLayout<WgslArray | Disarray>>) {
     super(
       `Missing vertex buffers for layouts: '${
-        [...layouts].map((layout) => layout.label ?? '<unnamed>').join(', ')
+        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
       }'. Please provide it using pipeline.with(layout, buffer).(...)`,
     );
 

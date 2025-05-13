@@ -16,20 +16,12 @@ export const packVec2u = tgpu['~unstable'].fn([d.vec4f], d.vec2u)((toPack) => {
   return d.vec2u(xy, zw);
 });
 
-export const getNormal = tgpu['~unstable'].fn(
-  {
-    v1: d.vec4f,
-    v2: d.vec4f,
-    v3: d.vec4f,
-    smoothNormals: d.u32,
-    vertexPos: d.vec4f,
-  },
+export const getAverageNormal = tgpu['~unstable'].fn([
   d.vec4f,
-)(({ v1, v2, v3, smoothNormals, vertexPos }) => {
+  d.vec4f,
+  d.vec4f,
+], d.vec4f)((v1, v2, v3) => {
   'kernel & js';
-  if (smoothNormals === 1) {
-    return vertexPos;
-  }
   const edge1 = std.sub(v2.xyz, v1.xyz);
   const edge2 = std.sub(v3.xyz, v1.xyz);
   return std.normalize(d.vec4f(std.cross(edge1, edge2), 0));

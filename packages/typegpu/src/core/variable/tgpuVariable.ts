@@ -1,6 +1,7 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -51,21 +52,14 @@ export function workgroupVar<TDataType extends AnyWgslData>(
 
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
-  private _label: string | undefined;
-
   constructor(
     readonly scope: TScope,
     private readonly _dataType: TDataType,
     private readonly _initialValue?: Infer<TDataType> | undefined,
   ) {}
 
-  $name(label: string) {
-    this._label = label;
-    return this;
-  }
-
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this._label);
+    const id = ctx.names.makeUnique(getName(this));
 
     if (this._initialValue) {
       ctx.addDeclaration(
@@ -82,12 +76,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return id;
   }
 
-  get label() {
-    return this._label;
+  $name(label: string) {
+    setName(this, label);
+    return this;
   }
 
   toString() {
-    return `var:${this.label ?? '<unnamed>'}`;
+    return `var:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<TDataType> {
@@ -98,7 +93,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this._dataType,
         },

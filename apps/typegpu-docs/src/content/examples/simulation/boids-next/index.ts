@@ -6,18 +6,18 @@ const triangleAmount = 1000;
 const triangleSize = 0.03;
 
 const rotate = tgpu['~unstable'].fn(
-  { v: d.vec2f, angle: d.f32 },
+  [d.vec2f, d.f32],
   d.vec2f,
-)(({ v, angle }) => {
+)((v, angle) => {
   const cos = std.cos(angle);
   const sin = std.sin(angle);
   return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
 });
 
 const getRotationFromVelocity = tgpu['~unstable'].fn(
-  { velocity: d.vec2f },
+  [d.vec2f],
   d.f32,
-)(({ velocity }) => {
+)((velocity) => {
   return -std.atan2(velocity.x, velocity.y);
 });
 
@@ -41,11 +41,8 @@ const mainVert = tgpu['~unstable'].vertexFn({
   in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
   out: VertexOutput,
 })((input) => {
-  const angle = getRotationFromVelocity({ velocity: input.velocity });
-  const rotated = rotate({
-    v: input.v,
-    angle,
-  });
+  const angle = getRotationFromVelocity(input.velocity);
+  const rotated = rotate(input.v, angle);
 
   const pos = d.vec4f(
     rotated.x + input.center.x,

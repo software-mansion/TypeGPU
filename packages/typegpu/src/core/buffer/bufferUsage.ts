@@ -2,9 +2,10 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -78,16 +79,14 @@ class TgpuFixedBufferImpl<
   declare public readonly [$repr]: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
   public readonly [$internal]: { readonly dataType: TData };
+  public readonly [$getNameForward]: TgpuBuffer<TData>;
 
   constructor(
     public readonly usage: TUsage,
     public readonly buffer: TgpuBuffer<TData>,
   ) {
     this[$internal] = { dataType: buffer.dataType };
-  }
-
-  get label() {
-    return this.buffer.label;
+    this[$getNameForward] = buffer;
   }
 
   $name(label: string) {
@@ -96,7 +95,7 @@ class TgpuFixedBufferImpl<
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
         ? { uniform: this.buffer.dataType }
@@ -121,7 +120,7 @@ class TgpuFixedBufferImpl<
   }
 
   toString(): string {
-    return `${this.usage}:${this.label ?? '<unnamed>'}`;
+    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): InferGPU<TData> {
@@ -132,7 +131,7 @@ class TgpuFixedBufferImpl<
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.buffer.dataType,
         },
@@ -156,14 +155,11 @@ export class TgpuLaidOutBufferImpl<
     private readonly _membership: LayoutMembership,
   ) {
     this[$internal] = { dataType };
-  }
-
-  get label() {
-    return this._membership.key;
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
@@ -177,7 +173,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   toString(): string {
-    return `${this.usage}:${this.label ?? '<unnamed>'}`;
+    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): InferGPU<TData> {
@@ -188,7 +184,7 @@ export class TgpuLaidOutBufferImpl<
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.dataType,
         },

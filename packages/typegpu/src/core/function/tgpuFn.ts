@@ -1,12 +1,12 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import {
   type FnArgsConversionHint,
-  type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
   UnknownData,
@@ -21,7 +21,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   Implementation,
   InferArgs,
@@ -85,7 +85,7 @@ export type TgpuFnShell<
 interface TgpuFnBase<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = undefined,
-> extends TgpuNamable, Labelled {
+> extends TgpuNamable {
   readonly [$internal]: {
     implementation: Implementation<Args, Return>;
     argTypes: FnArgsConversionHint;
@@ -157,7 +157,7 @@ export function isTgpuFn<
 // --------------
 
 function stringifyPair([slot, value]: SlotValuePair): string {
-  return `${slot.label ?? '<unnamed>'}=${value}`;
+  return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
 function createFn<
@@ -167,7 +167,9 @@ function createFn<
   shell: TgpuFnShellHeader<Args, Return>,
   implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & SelfResolvable;
+  type This = TgpuFnBase<Args, Return> & SelfResolvable & {
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(shell, implementation as Implementation);
 
@@ -184,8 +186,9 @@ function createFn<
       return this;
     },
 
-    $name(newLabel: string): This {
-      core.label = newLabel;
+    [$getNameForward]: core,
+    $name(label: string): This {
+      setName(core, label);
       return this;
     },
 
@@ -243,13 +246,10 @@ function createFn<
     Return
   >;
 
-  // Making the label available as a readonly property.
-  Object.defineProperty(fn, 'label', {
-    get: () => core.label,
-  });
-
   Object.defineProperty(fn, 'toString', {
-    value: () => `fn:${core.label ?? '<unnamed>'}`,
+    value() {
+      return `fn:${getName(core) ?? '<unnamed>'}`;
+    },
   });
 
   return fn;
@@ -259,7 +259,9 @@ function createBoundFunction<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 >(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return>;
+  type This = TgpuFnBase<Args, Return> & {
+    [$getNameForward]: TgpuFn<Args, Return>;
+  };
 
   const fnBase: This = {
     [$internal]: {
@@ -278,8 +280,9 @@ function createBoundFunction<
       return this;
     },
 
-    $name(newLabel: string): This {
-      innerFn.$name(newLabel);
+    [$getNameForward]: innerFn,
+    $name(label: string): This {
+      innerFn.$name(label);
       return this;
     },
 
@@ -311,14 +314,9 @@ function createBoundFunction<
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
 
-  // Making the label available as a readonly property.
-  Object.defineProperty(fn, 'label', {
-    get: () => innerFn.label,
-  });
-
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = innerFn.label ?? '<unnamed>';
+      const fnLabel = getName(innerFn) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
@@ -333,13 +331,12 @@ class FnCall<
   Args extends AnyWgslData[] | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined,
 > implements SelfResolvable {
+  readonly [$getNameForward]: TgpuFnBase<Args, Return>;
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],
-  ) {}
-
-  get label() {
-    return this._fn.label;
+  ) {
+    this[$getNameForward] = _fn;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -351,6 +348,6 @@ class FnCall<
   }
 
   toString() {
-    return `call:${this.label ?? '<unnamed>'}`;
+    return `call:${getName(this) ?? '<unnamed>'}`;
   }
 }

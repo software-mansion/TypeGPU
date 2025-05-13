@@ -1,4 +1,5 @@
 import type { StorageFlag } from '../../extension.ts';
+import { getName } from '../../name.ts';
 import type { StorageTextureTexelFormat } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 
@@ -35,10 +36,10 @@ export function isUsableAsRender<T>(value: T): value is T & Render {
  * @category Errors
  */
 export class NotSampledError extends Error {
-  constructor(value: { readonly label?: string | undefined }) {
+  constructor(value: object) {
     super(
       `Resource '${
-        value.label ?? '<unnamed>'
+        getName(value) ?? '<unnamed>'
       }' cannot be bound as 'sampled'. Use .$usage('sampled') to allow it.`,
     );
 
@@ -51,10 +52,10 @@ export class NotSampledError extends Error {
  * @category Errors
  */
 export class NotRenderError extends Error {
-  constructor(value: { readonly label?: string | undefined }) {
+  constructor(value: object) {
     super(
       `Resource '${
-        value.label ?? '<unnamed>'
+        getName(value) ?? '<unnamed>'
       }' cannot be bound as 'render'. Use .$usage('render') to allow it.`,
     );
 
