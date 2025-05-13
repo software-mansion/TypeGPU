@@ -190,7 +190,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   const halfCanvasDims = mul(0.5, uniforms.value.canvasDims);
 
   const minDim = min(uniforms.value.canvasDims.x, uniforms.value.canvasDims.y);
-  const viewCoords = mul(1 / minDim, sub(input.position.xy, halfCanvasDims));
+  const viewCoords = div(sub(input.position.xy, halfCanvasDims), minDim);
 
   const ray = Ray({
     origin: input.rayWorldOrigin,
@@ -266,7 +266,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   }
 
   discard();
-  return d.vec4f(0, 0, 0, 0);
+  return d.vec4f();
 });
 
 // pipeline
