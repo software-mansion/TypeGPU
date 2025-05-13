@@ -230,7 +230,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
 const cubeVertexFn = tgpu['~unstable'].vertexFn({
   in: {
-    position: d.vec4f,
+    position: d.vec3f,
     uv: d.vec2f,
   },
   out: {
@@ -238,16 +238,13 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
+  const viewPos =
+    std.mul(camera.value.view, d.vec4f(input.position.xyz, 0)).xyz;
+
   return {
     pos: std.mul(
       camera.value.projection,
-      d.vec4f(
-        std.mul(
-          camera.value.view,
-          d.vec4f(std.div(input.position.xyz, input.position.w), 0),
-        ).xyz,
-        1,
-      ),
+      d.vec4f(viewPos, 1),
     ),
     texCoord: input.position.xyz,
   };
