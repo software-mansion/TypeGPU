@@ -144,6 +144,13 @@ abstract class mat2x2Impl<TColumn extends v2f>
     this.columns[1].y = value;
   }
 
+  *[Symbol.iterator]() {
+    yield this[0];
+    yield this[1];
+    yield this[2];
+    yield this[3];
+  }
+
   '~resolve'(): string {
     return `${this.kind}(${
       Array.from({ length: this.length })
@@ -280,6 +287,12 @@ abstract class mat3x3Impl<TColumn extends v3f>
   }
 
   set [11](_: number) {}
+
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 12; i++) {
+      yield this[i] as number;
+    }
+  }
 
   '~resolve'(): string {
     return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
@@ -461,6 +474,12 @@ abstract class mat4x4Impl<TColumn extends v4f>
 
   set [15](value: number) {
     this.columns[3].w = value;
+  }
+
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 16; i++) {
+      yield this[i] as number;
+    }
   }
 
   '~resolve'(): string {
