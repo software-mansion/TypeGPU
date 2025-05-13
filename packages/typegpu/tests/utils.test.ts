@@ -60,16 +60,16 @@ describe('extract args works in the case of', () => {
 
   it('attributes', () => {
     const wgslFn = /* wgsl */ `
-      fn add(@builtin('vertex_index') a: i32, @location(0) b: i32, c: i32) -> i32 {
+      fn add(@builtin(vertex_index) a: i32, @location(0) b: i32, c: i32) -> i32 {
         return a + b + c;
       }
     `;
 
     const { args, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 14, end: 74 });
+    expect(range).toStrictEqual({ begin: 14, end: 72 });
     expect(args).toStrictEqual([
-      createArg('a', [`@builtin('vertex_index')`], 'i32'),
+      createArg('a', [`@builtin(vertex_index)`], 'i32'),
       createArg('b', [`@location(0)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
@@ -77,34 +77,34 @@ describe('extract args works in the case of', () => {
 
   it('multiple attributes', () => {
     const wgslFn = /* wgsl */ `
-      fn add(a: i32, @location(0) @interpolate('flat') b: i32, c: i32) -> i32 {
+      fn add(a: i32, @location(0) @interpolate(flat) b: i32, c: i32) -> i32 {
         return a + b + c;
       }
     `;
 
     const { args, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 14, end: 70 });
+    expect(range).toStrictEqual({ begin: 14, end: 68 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
-      createArg('b', [`@location(0)`, `@interpolate('flat')`], 'i32'),
+      createArg('b', [`@location(0)`, `@interpolate(flat)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
   });
 
   it('commas in attributes', () => {
     const wgslFn = /* wgsl */ `
-      fn add(a: i32, @interpolate('flat', 'center') b: i32, c: i32) -> i32 {
+      fn add(a: i32, @interpolate(flat, center) b: i32, c: i32) -> i32 {
         return a + b + c;
       }
     `;
 
     const { args, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 14, end: 67 });
+    expect(range).toStrictEqual({ begin: 14, end: 63 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
-      createArg('b', [`@interpolate('flat','center')`], 'i32'),
+      createArg('b', [`@interpolate(flat,center)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
   });
