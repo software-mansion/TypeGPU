@@ -2,13 +2,20 @@ import { useMemo, useState } from 'react';
 import Fuse from 'fuse.js';
 import { examples } from '../utils/examples/exampleContent.ts';
 import { type Example, exampleCategories } from '../utils/examples/types.ts';
-import { ExampleLink } from './ExampleLink.tsx';
+import { ExampleCard } from './ExampleCard.tsx';
+
+function ExamplesGrid({ examples }: { examples: Example[] }) {
+  return (
+    <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6'>
+      {examples.map((ex) => <ExampleCard example={ex} key={ex.key} />)}
+    </div>
+  );
+}
 
 export function SearchableExampleList(
   { excludeTags = [] }: { excludeTags?: string[] },
 ) {
   const [query, setQuery] = useState('');
-  const trimmedQuery = query.trim();
 
   const allExamples = useMemo<Example[]>(
     () =>
@@ -30,11 +37,8 @@ export function SearchableExampleList(
   );
 
   const filteredExamples = useMemo<Example[]>(
-    () =>
-      trimmedQuery
-        ? fuse.search(trimmedQuery).map((result) => result.item)
-        : allExamples,
-    [trimmedQuery, fuse, allExamples],
+    () => query ? fuse.search(query).map((result) => result.item) : allExamples,
+    [query, fuse, allExamples],
   );
 
   const examplesByCategories = useMemo<Record<string, Example[]>>(
@@ -70,77 +74,42 @@ export function SearchableExampleList(
           type='text'
           placeholder='Search examples by name or tag...'
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.target.value.trim())}
           className='w-full box-border border border-purple-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
         />
       </div>
-      <div className='flex flex-col gap-10 flex-1 overflow-y-auto min-h-0'>
-        {categoriesToShow.length > 0
+      <div className='flex flex-col gap-10 flex-1 overflow-y-hidden min-h-0'>
+        {query
           ? (
-            categoriesToShow.map((category) => (
-              <div key={category.key} className='flex flex-col gap-5'>
-                <div className='flex items-center justify-center w-full'>
-                  <div className='h-px bg-gray-200 flex-grow' />
-                  <h2 className='text-2xl font-bold text-black px-6 py-2 text-center'>
-                    {category.label}
-                  </h2>
-                  <div className='h-px bg-gray-200 flex-grow' />
+            filteredExamples.length > 0
+              ? (
+                <div className='flex flex-col gap-5'>
+                  <ExamplesGrid examples={filteredExamples} />
                 </div>
-                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6'>
-                  {examplesByCategories[category.key]?.map((ex: Example) => (
-                    <ExampleLink exampleKey={ex.key} key={ex.key}>
-                      <div className='h-36 bg-gray-100 flex items-center justify-center overflow-hidden'>
-                        {ex.thumbnails
-                          ? (
-                            <picture>
-                              <source
-                                media='(min-width: 1026px)'
-                                srcSet={ex.thumbnails.small}
-                              />
-                              <source
-                                media='(max-width: 1025px)'
-                                srcSet={ex.thumbnails.large}
-                              />
-                              <img
-                                src={ex.thumbnails.large}
-                                alt={ex.metadata.title}
-                                className='object-cover w-full h-full'
-                              />
-                            </picture>
-                          )
-                          : (
-                            <span className='text-gray-400 fallback'>
-                              No thumbnail
-                            </span>
-                          )}
-                      </div>
-                      <div className='p-3'>
-                        <h3 className='text-lg font-semibold mb-2 text-black'>
-                          {ex.metadata.title}
-                        </h3>
-                        {ex.metadata.tags && ex.metadata.tags.length > 0 && (
-                          <div className='flex flex-wrap gap-1'>
-                            {ex.metadata.tags.map((tag: string) => (
-                              <span
-                                key={tag}
-                                className='text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full'
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </ExampleLink>
-                  ))}
+              )
+              : (
+                <div className='text-center text-gray-500'>
+                  No examples match your search.
                 </div>
-              </div>
-            ))
+              )
           )
           : (
-            <div className='text-center text-gray-500'>
-              No examples match your search.
-            </div>
+            categoriesToShow.length > 0 && (
+              categoriesToShow.map((category) => (
+                <div key={category.key} className='flex flex-col gap-5'>
+                  <div className='flex items-center justify-center w-full'>
+                    <div className='h-px bg-gray-200 flex-grow' />
+                    <h2 className='text-2xl font-bold text-black px-6 py-2 text-center'>
+                      {category.label}
+                    </h2>
+                    <div className='h-px bg-gray-200 flex-grow' />
+                  </div>
+                  <ExamplesGrid
+                    examples={examplesByCategories[category.key] || []}
+                  />
+                </div>
+              ))
+            )
           )}
       </div>
     </div>

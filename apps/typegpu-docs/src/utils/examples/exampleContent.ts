@@ -90,7 +90,6 @@ const thumbnailFiles = R.pipe(
     large: value[1],
   })),
 );
-console.log(thumbnailFiles);
 
 export const examples = R.pipe(
   metaFiles,
