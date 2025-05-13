@@ -21,14 +21,13 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.3.2",
     "@stackblitz/sdk": "^1.11.0",
-    "@std/yaml": "npm:@jsr/std__yaml@^1.0.5",
     "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "astro": "^5.7.4",
     "arktype": "catalog:",
+    "astro": "^5.7.4",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.4.0",
     "jotai": "^2.8.4",
@@ -54,14 +53,16 @@
     "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.6",
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
     "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
-    "tailwindcss": "^4.1.6",
-    "postcss": "^8.4.29",
     "autoprefixer": "^10.4.16",
-    "tailwindcss-motion": "^1.0.1"
+    "postcss": "^8.4.29",
+    "tailwindcss": "^4.1.6",
+    "tailwindcss-motion": "^1.0.1",
+    "yaml": "^2.7.0"
   }
 }
