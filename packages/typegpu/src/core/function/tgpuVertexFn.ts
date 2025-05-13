@@ -198,7 +198,7 @@ function createVertexFn(
     },
 
     toString() {
-      return `vertexFn:${getName(this) ?? '<unnamed>'}`;
+      return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
   } as This;
 }

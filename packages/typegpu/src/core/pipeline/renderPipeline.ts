@@ -332,7 +332,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       colorAttachments,
     };
 
-    const label = getName(this);
+    const label = getName(internals.core);
     if (label !== undefined) {
       renderPassDescriptor.label = label;
     }

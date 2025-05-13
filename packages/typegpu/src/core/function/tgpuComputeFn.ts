@@ -175,7 +175,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     },
 
     toString() {
-      return `computeFn:${getName(this) ?? '<unnamed>'}`;
+      return `computeFn:${getName(core) ?? '<unnamed>'}`;
     },
   } as This;
 }

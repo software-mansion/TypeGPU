@@ -240,7 +240,7 @@ function createFragmentFn(
     },
 
     toString() {
-      return `fragmentFn:${getName(this) ?? '<unnamed>'}`;
+      return `fragmentFn:${getName(core) ?? '<unnamed>'}`;
     },
   };
 

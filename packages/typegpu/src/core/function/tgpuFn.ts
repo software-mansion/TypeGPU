@@ -239,7 +239,7 @@ function createFn<
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      return `fn:${getName(this) ?? '<unnamed>'}`;
+      return `fn:${getName(core) ?? '<unnamed>'}`;
     },
   });
 
@@ -305,7 +305,7 @@ function createBoundFunction<
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = getName(this) ?? '<unnamed>';
+      const fnLabel = getName(innerFn) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },

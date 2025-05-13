@@ -9,9 +9,7 @@ interface GlobalWithMeta {
 }
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
-  return !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    $getNameForward in value;
+  return !!(value as { [$getNameForward]?: unknown })?.[$getNameForward];
 }
 
 export function getName(definition: unknown): string | undefined {
@@ -39,10 +37,7 @@ export function setName(definition: object, name: string): void {
 export interface TgpuNamable {
   $name(label: string): this;
 }
+
 export function isNamable(value: unknown): value is TgpuNamable {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    '$name' in value
-  );
+  return !!(value as TgpuNamable)?.['~name'];
 }

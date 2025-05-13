@@ -109,7 +109,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const { branch } = this._core;
 
     const pass = branch.commandEncoder.beginComputePass({
-      label: getName(this) ?? '<unnamed>',
+      label: getName(this._core) ?? '<unnamed>',
     });
 
     pass.setPipeline(memo.pipeline);
