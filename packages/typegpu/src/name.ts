@@ -39,5 +39,5 @@ export interface TgpuNamable {
 }
 
 export function isNamable(value: unknown): value is TgpuNamable {
-  return !!(value as TgpuNamable)?.['~name'];
+  return !!(value as TgpuNamable)?.['$name'];
 }
