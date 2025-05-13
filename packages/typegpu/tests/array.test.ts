@@ -101,7 +101,7 @@ describe('array.length', () => {
 
     const foo = tgpu['~unstable'].fn([])(() => {
       let acc = d.f32(1);
-      for (let i = 0; i < layout.bound.values.value.length; i++) {
+      for (let i = d.u32(0); i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
         acc *= 2;
       }
@@ -113,7 +113,7 @@ describe('array.length', () => {
 
         fn foo() {
           var acc = f32(1);
-          for (var i = 0; (i < arrayLength(&values)); i++) {
+          for (var i = u32(0); (i < arrayLength(&values)); i++) {
             values[i] = acc;
             acc *= 2;
           }

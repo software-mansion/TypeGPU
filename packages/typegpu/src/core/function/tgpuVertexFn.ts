@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { isNamable, type TgpuNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore } from './fnCore.ts';

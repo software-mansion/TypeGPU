@@ -3,8 +3,9 @@ import type { TgpuNamable } from '../../namable.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import {
+  type FnArgsConversionHint,
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
@@ -87,6 +88,7 @@ interface TgpuFnBase<
 > extends TgpuNamable, Labelled {
   readonly [$internal]: {
     implementation: Implementation<Args, Return>;
+    argTypes: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<Args, Return>;
@@ -101,7 +103,9 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyWgslData[] | Record<string, AnyWgslData> = AnyWgslData[],
+  Args extends AnyWgslData[] | Record<string, AnyWgslData> =
+    | AnyWgslData[]
+    | Record<string, AnyWgslData>,
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > =
   & TgpuFnBase<Args, Return>
@@ -170,6 +174,7 @@ function createFn<
   const fnBase: This = {
     [$internal]: {
       implementation,
+      argTypes: shell.argTypes,
     },
     shell,
     resourceType: 'function' as const,
@@ -228,7 +233,11 @@ function createFn<
       value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
       dataType: shell.returnType ?? UnknownData,
     }),
+    shell.argTypes,
   );
+
+  call[$internal].implementation = implementation;
+
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     Args,
     Return
@@ -255,6 +264,7 @@ function createBoundFunction<
   const fnBase: This = {
     [$internal]: {
       implementation: innerFn[$internal].implementation,
+      argTypes: innerFn[$internal].argTypes,
     },
     resourceType: 'function',
     shell: innerFn.shell,
@@ -296,6 +306,7 @@ function createBoundFunction<
         dataType: innerFn.shell.returnType ?? UnknownData,
       };
     },
+    innerFn.shell.argTypes,
   );
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
