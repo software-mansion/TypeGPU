@@ -14,8 +14,8 @@ function createArg(
   };
 }
 
-describe('parseArguments', () => {
-  it('should extract no arguments', () => {
+describe('extract args works in the case of', () => {
+  it('no arguments', () => {
     const wgslFn = /* wgsl */ `
       fn constant() -> i32 {
         return 42;
@@ -28,7 +28,7 @@ describe('parseArguments', () => {
     expect(args).toStrictEqual([]);
   });
 
-  it('should extract one argument', () => {
+  it('one argument', () => {
     const wgslFn = /* wgsl */ `
       fn identity(a: i32) -> i32 {
         return a;
@@ -41,7 +41,7 @@ describe('parseArguments', () => {
     expect(args).toStrictEqual([createArg('a', [], 'i32')]);
   });
 
-  it('should extract multiple arguments', () => {
+  it('multiple arguments', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: i32, b: i32, c: i32) -> i32 {
         return a + b + c;
@@ -58,7 +58,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract attributes', () => {
+  it('attributes', () => {
     const wgslFn = /* wgsl */ `
       fn add(@builtin('vertex_index') a: i32, @location(0) b: i32, c: i32) -> i32 {
         return a + b + c;
@@ -75,7 +75,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract multiple attributes', () => {
+  it('multiple attributes', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: i32, @location(0) @interpolate('flat') b: i32, c: i32) -> i32 {
         return a + b + c;
@@ -92,7 +92,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract commas in attributes', () => {
+  it('commas in attributes', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: i32, @interpolate('flat', 'center') b: i32, c: i32) -> i32 {
         return a + b + c;
@@ -109,7 +109,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract commas in templates', () => {
+  it('commas in templates', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: array<f32, 4>, b: f32) -> f32 {
         return a[0] + b;
@@ -125,7 +125,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract inlined comments', () => {
+  it('inlined comments', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: f32, /* bait: f32, */ b: f32) -> f32 {
         return a + b;
@@ -141,7 +141,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract inlined nested comments', () => {
+  it('inlined nested comments', () => {
     const wgslFn = /* wgsl */ `
       fn add(a: f32, /* bait1: f32, /* bait2: f32, */ bait3: f32, */ b: f32) -> f32 {
         return a + b;
@@ -157,7 +157,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract missing argument types', () => {
+  it('missing argument types', () => {
     const wgslFn = /* wgsl */ `
       fn add(a, b: f32) -> f32 {
         return a + b;
@@ -173,7 +173,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract missing return type', () => {
+  it('missing return type', () => {
     const wgslFn = /* wgsl */ `
       fn add(a, b) {
         return a + b;
@@ -189,7 +189,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  it('should extract excessive whitespaces', () => {
+  it('excessive whitespaces', () => {
     const wgslFn = /* wgsl */ `
           fn add(a: i32,                b   :     i32,
   c: i32,
@@ -211,7 +211,7 @@ describe('parseArguments', () => {
     ]);
   });
 
-  // it('should extract comment at the beginning', () => {
+  // it('comment at the beginning', () => {
   //   const wgslFn = /* wgsl */ `/* () */
   //     fn add(a, b) {
   //       return a + b;

@@ -1,5 +1,3 @@
-// AAA slice na znaki
-
 const lineBreaks = new Set<string>([
   '\u000A', // line feed
   '\u000B', // vertical tab
@@ -73,6 +71,7 @@ function strip(
   code: string,
 ): { strippedCode: string; argRange: [number, number] } {
   let strippedCode = '';
+  // assumption: the first opening parentheses is the beginning of the arguments list
   const argsStart = code.indexOf('(') + 1;
 
   let pos = argsStart;
@@ -94,10 +93,7 @@ function strip(
 
     // skip block comments
     if (isAt(code, pos, '/*')) {
-      pos = findEitherOf(code, pos, new Set('*/'), false, [
-        '/*',
-        '*/',
-      ]);
+      pos = findEitherOf(code, pos, new Set('*/'), false, ['/*', '*/']);
       pos += 2; // the last '*/'
       continue;
     }
