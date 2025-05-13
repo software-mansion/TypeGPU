@@ -356,6 +356,14 @@ const Transpilers: Partial<
   BreakStatement() {
     return [NODE.break];
   },
+
+  TSAsExpression(ctx, node) {
+    return transpile(ctx, node.expression);
+  },
+
+  TSSatisfiesExpression(ctx, node) {
+    return transpile(ctx, node.expression);
+  },
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
