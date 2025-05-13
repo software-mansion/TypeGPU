@@ -50,7 +50,8 @@ export interface AbstractFloat {
 export interface Void {
   readonly [$internal]: true;
   readonly type: 'void';
-  readonly [$repr]: undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: <void is void>
+  readonly [$repr]: void;
 }
 export const Void: Void = {
   [$internal]: true,
@@ -1446,4 +1447,8 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
     (value as AbstractInt)?.[$internal] &&
     (value as AbstractInt).type === 'abstractInt'
   );
+}
+
+export function isVoid(value: unknown): value is Void {
+  return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }

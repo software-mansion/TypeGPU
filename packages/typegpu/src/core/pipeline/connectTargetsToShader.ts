@@ -1,3 +1,4 @@
+import { isVoid } from '../../data/wgslTypes.ts';
 import { isData } from '../../data/dataTypes.ts';
 import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
 import type { AnyFragmentTargets } from './renderPipeline.ts';
@@ -13,6 +14,10 @@ export function connectTargetsToShader(
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
   if (isData(shaderOutputLayout)) {
+    if (isVoid(shaderOutputLayout)) {
+      return [];
+    }
+
     if (!isColorTargetState(targets)) {
       throw new Error(
         'Expected a single color target configuration, not a record.',

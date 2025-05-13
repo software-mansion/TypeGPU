@@ -74,6 +74,7 @@ export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
   ? GPUColorTargetState
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: GPUColorTargetState }
+  : T extends { type: 'void' } ? Record<string, never>
   : never;
 
 export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData

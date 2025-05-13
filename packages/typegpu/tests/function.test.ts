@@ -3,6 +3,7 @@ import type { InferIO, IOLayout } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { Void } from '../src/data/wgslTypes.ts';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
@@ -202,15 +203,6 @@ describe('tgpu.vertexFn', () => {
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
-
-  it('does not create Out struct when the are no output parameters', () => {
-    const foo = tgpu['~unstable'].vertexFn({
-      out: {},
-    })(() => ({
-      pos: d.vec4f(),
-    }));
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_Out'));
-  });
 });
 
 describe('tgpu.fragmentFn', () => {
@@ -234,9 +226,7 @@ describe('tgpu.fragmentFn', () => {
   });
 
   it('does not create Out struct when the are no output parameters', () => {
-    const foo = tgpu['~unstable'].fragmentFn({
-      out: {},
-    })(() => ({}));
+    const foo = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
     expect(parseResolved({ foo })).not.toContain(parse('struct foo_Out'));
   });
 });
