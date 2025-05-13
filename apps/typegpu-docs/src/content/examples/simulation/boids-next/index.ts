@@ -8,7 +8,7 @@ const triangleSize = 0.03;
 const rotate = tgpu['~unstable'].fn(
   [d.vec2f, d.f32],
   d.vec2f,
-) /*wgsl*/`(v: vec2f, angle: f32) -> vec2f {
+) /* wgsl */`(v: vec2f, angle: f32) -> vec2f {
   let pos = vec2(
     (v.x * cos(angle)) - (v.y * sin(angle)),
     (v.x * sin(angle)) + (v.y * cos(angle))
@@ -20,7 +20,7 @@ const rotate = tgpu['~unstable'].fn(
 const getRotationFromVelocity = tgpu['~unstable'].fn(
   [d.vec2f],
   d.f32,
-) /*wgsl*/`(velocity: vec2f) -> f32 {
+) /* wgsl */`(velocity: vec2f) -> f32 {
   return -atan2(velocity.x, velocity.y);
 }`;
 
