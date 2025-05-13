@@ -36,28 +36,29 @@ interface FunctionArgsInfo {
 
 export function extractArgs(rawCode: string): FunctionArgsInfo {
   const { strippedCode, argRange: range } = strip(rawCode);
-  console.log(strippedCode);
+  const code = new ParsableString(strippedCode);
   const args: ArgInfo[] = [];
 
-  let pos = 0;
-  while (pos < strippedCode.length) {
+  while (!code.isFinished()) {
     // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
-    while (strippedCode[pos] === '@') {
-      const { attribute, newPos } = processAttribute(strippedCode, pos);
-      attributes.push(attribute);
-      pos = newPos;
+    while (code.isAt('@')) {
+      const oldPos = code.pos;
+      code.parseUntil(new Set(')'), false, ['(', ')']);
+      code.advanceBy(1); // ')'
+      attributes.push(code.str.slice(oldPos, code.pos));
     }
 
-    const { identifier, newPos } = processIdentifier(strippedCode, pos);
-    pos = newPos;
+    const oldPos = code.pos;
+    code.parseUntil(new Set([':', ',']), true);
+    const identifier = code.str.slice(oldPos, code.pos);
 
     let maybeType;
-    if (strippedCode[pos] === ':') {
-      pos += 1; // colon before type
-      const { type, newPos } = processType(strippedCode, pos);
-      maybeType = type;
-      pos = newPos;
+    if (code.isAt(':')) {
+      code.advanceBy(1); // colon before type
+      const oldPos = code.pos;
+      code.parseUntil(new Set(','), true, ['<', '>']);
+      maybeType = code.str.slice(oldPos, code.pos);
     }
     args.push({
       identifier,
@@ -65,7 +66,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
       type: maybeType,
     });
 
-    pos += 1; // comma before the next argument
+    code.advanceBy(1); // comma before the next argument
   }
 
   return { args, range: { begin: range[0], end: range[1] } };
@@ -121,100 +122,6 @@ function strip(
     code.advanceBy(1); // parsed character
   }
   throw new Error('Invalid wgsl code!');
-}
-
-function isAt(code: string, pos: number, substr: string): boolean {
-  for (let i = 0; i < substr.length; i++) {
-    if (code[pos + i] !== substr[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * @param code the string to look through,
- * @param startAt first character to consider,
- * @param toFind a set of strings either of which satisfy the search,
- * @param allowEndOfString if set to true, the method returns `code.length` instead of throwing when it reaches the end of the string,
- * @param brackets a pair of brackets that has to be closed for result to be valid.
- */
-function findEitherOf(
-  code: string,
-  startAt: number,
-  toFind: Set<string>,
-  allowEndOfString = false,
-  brackets?: [string, string],
-): number {
-  let openedBrackets = 0;
-  let pos = startAt;
-  while (pos < code.length) {
-    if (brackets && isAt(code, pos, brackets[0])) {
-      openedBrackets += 1;
-    }
-    if (brackets && isAt(code, pos, brackets[1])) {
-      openedBrackets -= 1;
-    }
-    if (openedBrackets === 0) {
-      for (const s of toFind) {
-        if (isAt(code, pos, s)) {
-          return pos;
-        }
-      }
-    }
-    pos += 1;
-  }
-  if (allowEndOfString && openedBrackets === 0) {
-    return code.length;
-  }
-  throw new Error('Invalid wgsl syntax!');
-}
-
-function processAttribute(
-  strippedCode: string,
-  pos: number,
-): { attribute: string; newPos: number } {
-  const lastParenthesesPos = findEitherOf(
-    strippedCode,
-    pos,
-    new Set(')'),
-    false,
-    ['(', ')'],
-  );
-  const attribute = strippedCode.slice(
-    pos,
-    lastParenthesesPos + 1,
-  );
-  return { attribute, newPos: lastParenthesesPos + 1 };
-}
-
-function processIdentifier(
-  strippedCode: string,
-  pos: number,
-): { identifier: string; newPos: number } {
-  const identifierSeparatorPos = findEitherOf(
-    strippedCode,
-    pos,
-    new Set([':', ',']),
-    true,
-  );
-  const identifier = strippedCode.slice(pos, identifierSeparatorPos);
-  return { identifier, newPos: identifierSeparatorPos };
-}
-
-function processType(
-  strippedCode: string,
-  pos: number,
-): { type: string; newPos: number } {
-  const typeSeparatorPos = findEitherOf(
-    strippedCode,
-    pos,
-    new Set(','),
-    true,
-    ['<', '>'],
-  );
-  const type = strippedCode.slice(pos, typeSeparatorPos);
-  return { type, newPos: typeSeparatorPos };
 }
 
 class ParsableString {
