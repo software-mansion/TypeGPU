@@ -38,7 +38,9 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly elementCount: number;
   readonly elementType: TElement;
   readonly [$repr]: Infer<TElement>[];
-  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  readonly '~reprPartial':
+    | { idx: number; value: InferPartial<TElement> }[]
+    | undefined;
 }
 
 /**
@@ -60,7 +62,9 @@ export interface Unstruct<
   readonly [$repr]: Prettify<InferRecord<TProps>>;
   readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
   readonly '~memIdent': Unstruct<Prettify<MemIdentityRecord<TProps>>>;
-  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+  readonly '~reprPartial':
+    | Prettify<Partial<InferPartialRecord<TProps>>>
+    | undefined;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
