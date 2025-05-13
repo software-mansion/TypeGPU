@@ -231,7 +231,7 @@ describe('TgpuDerived', () => {
         ? tgpu['~unstable'].derived(() => slot.value).value
         : tgpu['~unstable'].derived(() => -slot.value).value
     );
-    const fn = tgpu['~unstable'].fn({}, d.u32)(() => {
+    const fn = tgpu['~unstable'].fn([], d.u32)(() => {
       return derived.value;
     });
 

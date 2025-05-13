@@ -7,10 +7,7 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(`() {
+      .fn([], d.f32)(`() {
         return 3.0f;
       }`)
       .$name('get_x');
@@ -20,10 +17,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('resolves rawFn to WGSL', () => {
     const getY = tgpu['~unstable']
-      .fn(
-        {},
-        d.f32,
-      )(`{
+      .fn([], d.f32)(`() -> f32 {
         return 3.0f;
       }`)
       .$name('get_y');
@@ -41,20 +35,14 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('resolves externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        {},
-        d.vec3f,
-      )(`{
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getX = tgpu['~unstable']
-      .fn(
-        {},
-        d.f32,
-      )(`{
+      .fn([], d.f32)(`() -> f32 {
         let color = get_color();
         return 3.0f;
       }`)
@@ -62,10 +50,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$uses({ get_color: getColor });
 
     const getY = tgpu['~unstable']
-      .fn(
-        {},
-        d.f32,
-      )(`{
+      .fn([], d.f32)(`() -> f32 {
         let c = color();
         return getX();
       }`)
@@ -96,19 +81,13 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('replaces external usage just for exact identifier matches', () => {
     const getx = tgpu['~unstable']
-      .fn(
-        {},
-        d.f32,
-      )(` {
+      .fn([], d.f32)(`() -> f32 {
         return 3.0f;
       }`)
       .$name('external');
 
     const getY = tgpu['~unstable']
-      .fn(
-        {},
-        d.f32,
-      )(`{
+      .fn([], d.f32)(`() -> f32 {
         let x = getx();
         let y = getx() + getx();
         let z = hellogetx();
@@ -303,36 +282,6 @@ struct fragment_Output {
     );
   });
 
-  it('automatically adds struct definitions of argument types when resolving wgsl-defined record argTypes functions', () => {
-    const Point = d
-      .struct({
-        a: d.u32,
-        b: d.u32,
-      })
-      .$name('Point');
-
-    const func = tgpu['~unstable']
-      .fn(
-        { a: d.vec4f, b: Point },
-        undefined,
-      )(/* wgsl */ `{
-        let x = a;
-      }`)
-      .$name('newPointF');
-
-    expect(parseResolved({ func })).toBe(
-      parse(`
-    struct Point {
-      a: u32,
-      b: u32,
-    }
-
-    fn newPointF(a: vec4f, b: Point) {
-      let x = a;
-    }`),
-    );
-  });
-
   it('replaces references when adding struct definitions of argument types when resolving wgsl-defined functions', () => {
     const Point = d
       .struct({
@@ -342,12 +291,9 @@ struct fragment_Output {
       .$name('P');
 
     const func = tgpu['~unstable']
-      .fn(
-        [d.vec4f, Point],
-        d.vec2f,
-      )(/* wgsl */ `(
+      .fn([d.vec4f, Point], d.vec2f)(/* wgsl */ `(
           a: vec4f,
-          b : PointStruct
+          b: PointStruct
         ) -> vec2f {
           var newPoint: PointStruct;
           newPoint = b;
@@ -377,10 +323,7 @@ struct fragment_Output {
       .$name('P');
 
     const func = tgpu['~unstable']
-      .fn(
-        [d.vec4f],
-        Point,
-      )(/* wgsl */ `(a: vec4f) -> PointStruct {
+      .fn([d.vec4f], Point)(/* wgsl */ `(a: vec4f) -> PointStruct {
         var newPoint: PointStruct;
         newPoint = b;
         return newPoint;
@@ -404,36 +347,30 @@ struct fragment_Output {
 
   it('resolves object externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const main = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(`() {
+      .fn([], d.f32)(`() -> f32 {
         let c = functions.getColor();
-        return c;
+        return c.x;
       }`)
       .$name('main')
       .$uses({ functions: { getColor } });
 
     expect(parseResolved({ main })).toBe(
       parse(`
-      fn get_color() {
+      fn get_color() -> vec3f {
         let color = vec3f();
         return color;
       }
 
-      fn main() {
+      fn main() -> f32 {
         let c = get_color();
-        return c;
+        return c.x;
       }
     `),
     );

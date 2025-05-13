@@ -3,10 +3,10 @@ import {
   type AnyWgslData,
   isWgslData,
   isWgslStruct,
+  Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getName, setName } from '../../name.ts';
-import { resolveFunctionHeader } from '../../resolutionCtx.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
   addArgTypesToExternals,
@@ -18,12 +18,9 @@ import {
 import { getPrebuiltAstFor } from './astUtils.ts';
 import type { Implementation } from './fnTypes.ts';
 
-export interface TgpuFnShellBase<
-  Args extends unknown[] | Record<string, unknown>,
-  Return,
-> {
+export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
   readonly isEntry: boolean;
 }
 
@@ -33,7 +30,7 @@ export interface FnCore {
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[] | Record<string, unknown>, unknown>,
+  shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation,
 ): FnCore {
   /**
@@ -90,25 +87,13 @@ export function createFnCore(
       if (typeof implementation === 'string') {
         let header = '';
 
-        if (!shell.isEntry) {
-          header = Array.isArray(shell.argTypes) ? '' : resolveFunctionHeader(
-            ctx,
-            Object.entries(shell.argTypes).map(([value, dataType]) => ({
-              value,
-              dataType: dataType as AnyWgslData,
-            })),
-            shell.returnType as AnyWgslData,
-          );
-        } else {
-          const input =
-            Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])
-              ? '(in: In)'
-              : '()';
+        if (shell.isEntry) {
+          const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
 
           const attributes = isWgslData(shell.returnType)
             ? getAttributesString(shell.returnType)
             : '';
-          const output = shell.returnType !== undefined
+          const output = shell.returnType !== Void
             ? isWgslStruct(shell.returnType)
               ? '-> Out'
               : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
