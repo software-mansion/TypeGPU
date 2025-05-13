@@ -197,8 +197,8 @@ describe('TGSL tgpu.fn function', () => {
           uv: d.vec2f,
         },
       })((input) => {
-        const vi = input.vi;
-        const ii = input.ii;
+        const vi = d.f32(input.vi);
+        const ii = d.f32(input.ii);
         const color = input.color;
 
         return {
@@ -216,15 +216,15 @@ describe('TGSL tgpu.fn function', () => {
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
       }
-        
+
       struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output{
-        var vi = input.vi;
-        var ii = input.ii;
+        var vi = f32(input.vi);
+        var ii = f32(input.ii);
         var color = input.color;
         return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
       }
@@ -585,27 +585,47 @@ describe('TGSL tgpu.fn function', () => {
     });
   });
 
-  // TODO: Add this back when we can properly infer ast types (and implement appropriate behavior for pointers)
-  // it('resolves a function with a pointer parameter', () => {
-  //   const addOnes = tgpu['~unstable']
-  //     .fn([ptrStorage(vec3f, 'read-write')])
-  //     ((ptr) => {
-  //       ptr.x += 1;
-  //       ptr.y += 1;
-  //       ptr.z += 1;
-  //     });
+  it('resolves a function with a pointer parameter', () => {
+    const addOnes = tgpu['~unstable'].fn([d.ptrStorage(d.vec3f, 'read-write')])(
+      (ptr) => {
+        ptr.x += 1;
+        ptr.y += 1;
+        ptr.z += 1;
+      },
+    );
 
-  //   const actual = parseResolved({ addOnes });
-  //   console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
+    const actual = parseResolved({ addOnes });
 
-  //   const expected = parse(`
-  //     fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-  //       (*ptr).x += 1;
-  //       (*ptr).y += 1;
-  //       (*ptr).z += 1;
-  //     }
-  //   `);
+    const expected = parse(`
+      fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+        (*ptr).x += 1;
+        (*ptr).y += 1;
+        (*ptr).z += 1;
+      }
+    `);
 
-  //   expect(actual).toBe(expected);
-  // });
+    expect(actual).toEqual(expected);
+
+    const callAddOnes = tgpu['~unstable'].fn({})(() => {
+      const someVec = d.vec3f(1, 2, 3);
+      addOnes(someVec);
+    });
+
+    const actualCall = parseResolved({ callAddOnes });
+
+    const expectedCall = parse(`
+      fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+        (*ptr).x += 1;
+        (*ptr).y += 1;
+        (*ptr).z += 1;
+      }
+
+      fn callAddOnes() {
+        var someVec = vec3f(1, 2, 3);
+        addOnes(&someVec);
+      }
+    `);
+
+    expect(actualCall).toEqual(expectedCall);
+  });
 });

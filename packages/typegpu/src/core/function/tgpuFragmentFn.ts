@@ -9,10 +9,11 @@ import type {
   Decorated,
   Location,
   Vec4f,
+  Void,
 } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -34,6 +35,7 @@ import { stripTemplate } from './templateUtils.ts';
 // ----------
 
 export type FragmentOutConstrained =
+  | Void
   | Vec4f
   | Decorated<Vec4f, [Location<number>]>
   | AnyFragmentOutputBuiltin
@@ -155,10 +157,7 @@ export function fragmentFn<
       ? [createStructFromIO(options.in)]
       : [],
     targets: options.out,
-    returnType:
-      (Object.keys(options.out).length !== 0
-        ? createOutputType(options.out)
-        : undefined) as FragmentOut,
+    returnType: createOutputType(options.out) as FragmentOut,
     isEntry: true,
   };
 
