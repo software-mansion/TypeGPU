@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { getName } from '../src/name.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
@@ -15,7 +16,7 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('get_x');
 
-    expect(getX.label).toBe('get_x');
+    expect(getName(getX)).toBe('get_x');
   });
 
   it('resolves fn to WGSL', () => {

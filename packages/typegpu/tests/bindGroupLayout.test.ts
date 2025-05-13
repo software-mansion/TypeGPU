@@ -21,6 +21,7 @@ import tgpu, {
   type TgpuSampledTexture,
   type TgpuWriteonlyTexture,
 } from '../src/index.ts';
+import { getName } from '../src/name.ts';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -36,6 +37,26 @@ const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
   GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
+  it('names bound elements', () => {
+    const layout = tgpu.bindGroupLayout({
+      uniBuffer: { uniform: vec3f },
+      stoBuffer: { storage: vec3f },
+      defTexture: { texture: 'depth' },
+      stoTexture: { storageTexture: 'bgra8unorm' },
+      extTexture: { externalTexture: {} },
+      compSampler: { sampler: 'comparison' },
+      filtSampler: { sampler: 'filtering' },
+    });
+
+    expect(getName(layout.bound.uniBuffer)).toBe('uniBuffer');
+    expect(getName(layout.bound.stoBuffer)).toBe('stoBuffer');
+    expect(getName(layout.bound.defTexture)).toBe('defTexture');
+    expect(getName(layout.bound.stoTexture)).toBe('stoTexture');
+    expect(getName(layout.bound.extTexture)).toBe('extTexture');
+    expect(getName(layout.bound.compSampler)).toBe('compSampler');
+    expect(getName(layout.bound.filtSampler)).toBe('filtSampler');
+  });
+
   it('infers the bound type of a uniform entry', () => {
     const layout = tgpu.bindGroupLayout({
       position: { uniform: vec3f },

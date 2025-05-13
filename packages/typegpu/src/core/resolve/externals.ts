@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable } from '../../namable.ts';
+import { getName, isNamable } from '../../name.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -23,10 +23,7 @@ export function applyExternals(
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
-    if (
-      isNamable(value) &&
-      (!('label' in value) || value.label === undefined)
-    ) {
+    if (isNamable(value) && getName(value) === undefined) {
       value.$name(key);
     }
   }

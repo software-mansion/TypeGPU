@@ -1,5 +1,4 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
-import { getSystemEndianness } from 'typed-binary';
+import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import {
   EVAL_ALLOWED_IN_ENV,
   getCompiledWriterForSchema,
@@ -8,12 +7,12 @@ import { readData, writeData } from '../../data/dataIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { isWgslData } from '../../data/wgslTypes.ts';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
+import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
-import type { TgpuNamable } from '../../namable.ts';
-import type { Infer, InferPartial } from '../../shared/repr.ts';
-import type { MemIdentity } from '../../shared/repr.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
+import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -76,7 +75,6 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
-  readonly label: string | undefined;
 
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
@@ -145,7 +143,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
 
-  private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
 
   usableAsUniform = false;
@@ -167,10 +164,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
   }
 
-  get label() {
-    return this._label;
-  }
-
   get buffer() {
     const device = this._group.device;
 
@@ -183,7 +176,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
         size: sizeOf(this.dataType),
         usage: this.flags,
         mappedAtCreation: !!this.initial,
-        label: this.label ?? '<unnamed>',
+        label: getName(this) ?? '<unnamed>',
       });
 
       if (this.initial) {
@@ -201,7 +194,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     if (this._buffer) {
       this._buffer.label = label;
     }
@@ -390,6 +383,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   toString(): string {
-    return `buffer:${this._label ?? '<unnamed>'}`;
+    return `buffer:${getName(this) ?? '<unnamed>'}`;
   }
 }

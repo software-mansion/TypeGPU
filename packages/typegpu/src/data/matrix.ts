@@ -1,3 +1,4 @@
+import { setName } from '../name.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -54,8 +55,8 @@ function createMatSchema<
     [$internal]: true,
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
-    label: options.type,
   } as unknown as AnyWgslData;
+  setName(MatSchema, options.type);
 
   const construct = createDualImpl(
     // CPU implementation

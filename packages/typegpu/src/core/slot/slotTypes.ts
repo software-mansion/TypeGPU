@@ -1,11 +1,10 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
-import type { Labelled } from '../../types.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
-export interface TgpuSlot<T> extends TgpuNamable, Labelled {
+export interface TgpuSlot<T> extends TgpuNamable {
   readonly resourceType: 'slot';
   [$repr]: Infer<T>;
 
@@ -35,7 +34,7 @@ export interface TgpuDerived<T> {
 }
 
 export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
-  extends TgpuNamable, Labelled {
+  extends TgpuNamable {
   readonly resourceType: 'accessor';
   [$repr]: Infer<T>;
 

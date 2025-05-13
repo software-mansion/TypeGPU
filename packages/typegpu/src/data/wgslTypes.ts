@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.ts';
+import type { TgpuNamable } from '../name.ts';
 import type {
   Infer,
   InferGPU,
@@ -1048,7 +1048,6 @@ export interface WgslStruct<
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly [$internal]: true;
   readonly type: 'struct';
-  readonly label?: string | undefined;
   readonly propTypes: TProps;
 
   readonly [$repr]: Prettify<InferRecord<TProps>>;

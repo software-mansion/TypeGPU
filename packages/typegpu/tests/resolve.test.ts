@@ -5,6 +5,7 @@ import tgpu from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
+import { setName } from '../src/name.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -28,8 +29,6 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      label: 'intensity',
-
       [$internal]: {
         dataType: d.f32,
       },
@@ -45,6 +44,7 @@ describe('tgpu resolve', () => {
         return 'intensity_1';
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
+    setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1))

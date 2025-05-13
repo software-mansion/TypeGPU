@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
+import { getName } from '../src/name.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -23,6 +24,16 @@ function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
 }
 
 describe('TgpuBuffer', () => {
+  it('should be namable', ({ root, device }) => {
+    const buffer = root.createBuffer(d.u32).$name('myBuffer');
+
+    const rawBuffer = root.unwrap(buffer);
+
+    expect(getName(buffer)).toBe('myBuffer');
+    expect(rawBuffer).toBeDefined();
+    expect(rawBuffer.label).toBe('myBuffer');
+  });
+
   it('should properly write to buffer', ({ root, device }) => {
     const buffer = root.createBuffer(d.u32);
 

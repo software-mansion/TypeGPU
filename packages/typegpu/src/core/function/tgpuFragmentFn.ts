@@ -11,11 +11,12 @@ import type {
   Vec4f,
   Void,
 } from '../../data/wgslTypes.ts';
-import { isNamable, type TgpuNamable } from '../../namable.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
   Implementation,
@@ -181,7 +182,7 @@ function createFragmentFn(
   >,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & Labelled & SelfResolvable;
+  type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType as IOLayoutToSchema<
@@ -200,17 +201,14 @@ function createFragmentFn(
     shell,
     outputType,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$getNameForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
@@ -241,7 +239,7 @@ function createFragmentFn(
     },
 
     toString() {
-      return `fragmentFn:${this.label ?? '<unnamed>'}`;
+      return `fragmentFn:${getName(core) ?? '<unnamed>'}`;
     },
   };
 

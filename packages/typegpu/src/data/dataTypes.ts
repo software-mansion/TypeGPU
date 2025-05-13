@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../namable.ts';
+import type { TgpuNamable } from '../name.ts';
 import type {
   $repr,
   Infer,
@@ -56,7 +56,6 @@ export interface Unstruct<
 > extends TgpuNamable {
   readonly [$internal]: true;
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly [$repr]: Prettify<InferRecord<TProps>>;
