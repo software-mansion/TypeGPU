@@ -74,6 +74,7 @@ describe('vec2f', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(2);
   });
 
   it('can be destructured', () => {
@@ -154,6 +155,7 @@ describe('vec2i', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(2);
   });
 
   it('can be destructured', () => {
@@ -252,6 +254,7 @@ describe('vec2<bool>', () => {
       expectTypeOf(x).toBeBoolean();
       i++;
     }
+    expect(i).toBe(2);
   });
 
   it('can be destructured', () => {
@@ -337,6 +340,7 @@ describe('vec3f', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(3);
   });
 
   it('can be destructured', () => {
@@ -424,6 +428,7 @@ describe('vec3i', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(3);
   });
 
   it('can be destructured', () => {
@@ -532,6 +537,7 @@ describe('vec3<bool>', () => {
       expectTypeOf(x).toBeBoolean();
       i++;
     }
+    expect(i).toBe(3);
   });
 
   it('can be destructured', () => {
@@ -624,6 +630,7 @@ describe('vec4f', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(4);
   });
 
   it('can be destructured', () => {
@@ -720,6 +727,7 @@ describe('vec2h', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(2);
   });
 
   it('can be destructured', () => {
@@ -758,6 +766,7 @@ describe('v2i', () => {
       expectTypeOf(x).toBeNumber();
       i++;
     }
+    expect(i).toBe(2);
   });
 
   it('can be destructured', () => {

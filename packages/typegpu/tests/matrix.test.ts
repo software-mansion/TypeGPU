@@ -101,6 +101,7 @@ describe('mat2x2f', () => {
       expect(x).toBeDefined();
       i++;
     }
+    expect(i).toBe(4);
   });
 });
 
@@ -238,6 +239,7 @@ describe('mat3x3f', () => {
       expect(x).toBeDefined();
       i++;
     }
+    expect(i).toBe(12);
   });
 });
 
@@ -378,5 +380,6 @@ describe('mat4x4f', () => {
       expect(x).toBeDefined();
       i++;
     }
+    expect(i).toBe(16);
   });
 });
