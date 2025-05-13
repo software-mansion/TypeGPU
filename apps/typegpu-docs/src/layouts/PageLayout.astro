@@ -57,6 +57,14 @@ const { title, theme = 'light' } = Astro.props;
       [data-theme='light'] body {
         background-color: white;
       }
+
+      input[type="color"]::-webkit-color-swatch {
+        border: none;
+      }
+      
+      input[type="color"]::-moz-color-swatch  {
+        border: none;
+      }
     </style>
   </head>
   <body>
