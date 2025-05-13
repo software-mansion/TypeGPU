@@ -19,16 +19,13 @@ export const skyBoxVertex = tgpu['~unstable']
       texCoord: d.vec3f,
     },
   })((input) => {
-    const viewRotationMatrix = d.mat4x4f(
-      skyBoxLayout.$.camera.view.columns[0],
-      skyBoxLayout.$.camera.view.columns[1],
-      skyBoxLayout.$.camera.view.columns[2],
-      d.vec4f(0, 0, 0, 1),
-    );
     return {
       pos: std.mul(
         skyBoxLayout.$.camera.projection,
-        std.mul(viewRotationMatrix, input.position),
+        std.mul(
+          skyBoxLayout.$.camera.view,
+          d.vec4f(input.position.xyz, 0),
+        ),
       ),
       texCoord: input.position.xyz,
     };
@@ -118,8 +115,8 @@ export const mainFragment = tgpu['~unstable']
       std.mul(textureColor, lightColor),
     );
 
-    const lightedColor = std.add(ambient, diffuse);
+    const litColor = std.add(ambient, diffuse);
 
-    return d.vec4f(lightedColor.xyz, 1);
+    return d.vec4f(litColor.xyz, 1);
   })
   .$name('celestial bodies');
