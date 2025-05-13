@@ -25,7 +25,10 @@ export default defineConfig({
   base: 'TypeGPU',
   vite: {
     // Allowing query params, for invalidation
-    plugins: [typegpu({ include: [/\.m?[jt]sx?/] }), imagetools()],
+    plugins: [
+      typegpu({ include: [/\.m?[jt]sx?/] }),
+      /** @type {any} */ (imagetools()),
+    ],
   },
   integrations: [
     starlight({
