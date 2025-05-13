@@ -2,11 +2,14 @@ export { discard } from './discard.ts';
 
 // deno-fmt-ignore
 export {
-  abs,
-  // builtin functions
-  acos,
   // ops
   add,
+  sub,
+  mul,
+  div,
+  // builtin functions
+  abs,
+  acos,
   asin,
   atan2,
   ceil,
@@ -14,7 +17,6 @@ export {
   cos,
   cross,
   distance,
-  div,
   dot,
   exp,
   floor,
@@ -23,7 +25,6 @@ export {
   max,
   min,
   mix,
-  mul,
   neg,
   normalize,
   pow,
@@ -31,29 +32,28 @@ export {
   sign,
   sin,
   sqrt,
-  sub
 } from './numeric.ts';
 
 // deno-fmt-ignore
 export {
-  // logical aggregation
-  all,
   // comparison
   allEq,
-  and,
-  any,
   eq,
-  ge,
-  gt,
-  // other
-  isCloseTo,
-  le,
-  lt,
   ne,
+  lt,
+  le,
+  gt,
+  ge,
   // logical ops
   not,
   or,
-  select
+  and,
+  // logical aggregation
+  all,
+  any,
+  // other
+  isCloseTo,
+  select,
 } from './boolean.ts';
 
 // deno-fmt-ignore
@@ -67,20 +67,20 @@ export {
   atomicStore,
   atomicSub,
   atomicXor,
+  // synchronization
+  workgroupBarrier,
   storageBarrier,
   textureBarrier,
-  // synchronization
-  workgroupBarrier
 } from './atomic.ts';
 
 export { arrayLength } from './array.ts';
 
 // deno-fmt-ignore
 export {
-  pack2x16float,
   pack4x8unorm,
+  pack2x16float,
+  unpack4x8unorm,
   unpack2x16float,
-  unpack4x8unorm
 } from './packing.ts';
 
 export { textureSample } from './texture.ts';
