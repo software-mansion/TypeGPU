@@ -76,6 +76,15 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 
+video.addEventListener('resize', () => {
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+});
+
 const width = video.width;
 const height = video.height;
 
@@ -170,15 +179,6 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
     },
   ],
 };
-
-video.addEventListener('resize', () => {
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-});
 
 async function drawFrame() {
   const frame = await getFrame();
