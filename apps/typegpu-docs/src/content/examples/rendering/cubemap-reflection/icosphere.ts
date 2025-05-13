@@ -130,21 +130,21 @@ export class IcosphereGenerator {
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
       const triangleCount = std.arrayLength(prevVertices.value) / d.u32(3);
-      const triangleIndex = input.gid.x + input.gid.y * d.u32(MAX_DISPATCH);
+      const triangleIndex = input.gid.x + input.gid.y * MAX_DISPATCH;
       if (triangleIndex >= triangleCount) {
         return;
       }
 
-      const baseIndexPrev = triangleIndex * d.u32(3);
+      const baseIndexPrev = triangleIndex * 3;
 
       const v1 = helpers.unpackVec2u(
         prevVertices.value[baseIndexPrev].position,
       );
       const v2 = helpers.unpackVec2u(
-        prevVertices.value[baseIndexPrev + d.u32(1)].position,
+        prevVertices.value[baseIndexPrev + 1].position,
       );
       const v3 = helpers.unpackVec2u(
-        prevVertices.value[baseIndexPrev + d.u32(2)].position,
+        prevVertices.value[baseIndexPrev + 2].position,
       );
 
       const v12 = d.vec4f(
@@ -179,17 +179,17 @@ export class IcosphereGenerator {
         v31,
       ];
 
-      const baseIndexNext = triangleIndex * d.u32(12);
+      const baseIndexNext = triangleIndex * 12;
       for (let i = d.u32(0); i < 12; i++) {
         const reprojectedVertex = newVertices[i];
 
-        const triBase = i - (i % d.u32(3));
+        const triBase = i - (i % 3);
         let normal = reprojectedVertex;
         if (smoothFlag.value === 0) {
           normal = helpers.getAverageNormal(
             newVertices[triBase],
-            newVertices[triBase + d.u32(1)],
-            newVertices[triBase + d.u32(2)],
+            newVertices[triBase + 1],
+            newVertices[triBase + 2],
           );
         }
 

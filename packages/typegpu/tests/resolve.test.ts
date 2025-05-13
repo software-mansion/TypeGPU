@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { $internal } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
 
@@ -28,6 +29,10 @@ describe('tgpu resolve', () => {
   it('should deduplicate dependencies', () => {
     const intensity = {
       label: 'intensity',
+
+      [$internal]: {
+        dataType: d.f32,
+      },
 
       get value() {
         return this;

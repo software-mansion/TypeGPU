@@ -1,6 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
+import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -21,6 +21,8 @@ import {
 } from './vectorImpl.ts';
 import type {
   AnyVecInstance,
+  AnyWgslData,
+  Decorated,
   Vec2b,
   Vec2f,
   Vec2h,
@@ -37,6 +39,7 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes.ts';
+import { isDecorated, isVec } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -265,6 +268,24 @@ const vecTypeToConstructor = {
   'vec4<bool>': vec4b,
 } as const;
 
+export const vecTypeToPrimitive = {
+  vec2f: f32,
+  vec2h: f16,
+  vec2i: i32,
+  vec2u: u32,
+  'vec2<bool>': bool,
+  vec3f: f32,
+  vec3h: f16,
+  vec3i: i32,
+  vec3u: u32,
+  'vec3<bool>': bool,
+  vec4f: f32,
+  vec4h: f16,
+  vec4i: i32,
+  vec4u: u32,
+  'vec4<bool>': bool,
+} as const;
+
 type VecSchemaBase<TValue> = {
   readonly type: string;
   readonly [$repr]: TValue;
@@ -302,10 +323,18 @@ function makeVecSchema<TValue, S extends number | boolean>(
       value: `${type}(${args.map((v) => v.value).join(', ')})`,
       dataType: vecTypeToConstructor[type],
     }),
+    (...args) =>
+      args.map((arg) => {
+        let argType = arg.dataType;
+        if (isDecorated(argType)) {
+          argType = (argType as Decorated).inner as AnyWgslData;
+        }
+
+        return isVec(argType) ? argType : vecTypeToPrimitive[type];
+      }),
   );
 
   return Object.assign(construct, {
-    [$internal]: true,
     type,
     [$repr]: undefined as TValue,
   });

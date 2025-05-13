@@ -18,11 +18,7 @@ type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
-}
-
-export interface BooleanArrayView {
-  readonly length: number;
-  [n: number]: boolean;
+  [Symbol.iterator]: () => Iterator<number>;
 }
 
 export interface BaseData {
@@ -54,7 +50,8 @@ export interface AbstractFloat {
 export interface Void {
   readonly [$internal]: true;
   readonly type: 'void';
-  readonly [$repr]: undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: <void is void>
+  readonly [$repr]: void;
 }
 export const Void: Void = {
   [$internal]: true,
@@ -376,11 +373,15 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
+type Tuple2<S> = [S, S];
+type Tuple3<S> = [S, S, S];
+type Tuple4<S> = [S, S, S, S];
+
 /**
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
+export interface v2f extends Tuple2<number>, Swizzle2<v2f, v3f, v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
@@ -392,7 +393,7 @@ export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
  * A vector with 2 elements of type f16
  */
-export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
+export interface v2h extends Tuple2<number>, Swizzle2<v2h, v3h, v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
@@ -404,7 +405,7 @@ export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
+export interface v2i extends Tuple2<number>, Swizzle2<v2i, v3i, v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
@@ -416,7 +417,7 @@ export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
+export interface v2u extends Tuple2<number>, Swizzle2<v2u, v3u, v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
@@ -428,7 +429,7 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: `vec2<bool>`.
  * A vector with 2 elements of type `bool`
  */
-export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
+export interface v2b extends Tuple2<boolean>, Swizzle2<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2<bool>';
@@ -440,7 +441,7 @@ export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
+export interface v3f extends Tuple3<number>, Swizzle3<v2f, v3f, v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
@@ -453,7 +454,7 @@ export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
  * A vector with 3 elements of type f16
  */
-export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
+export interface v3h extends Tuple3<number>, Swizzle3<v2h, v3h, v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
@@ -466,7 +467,7 @@ export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
+export interface v3i extends Tuple3<number>, Swizzle3<v2i, v3i, v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
@@ -479,7 +480,7 @@ export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
+export interface v3u extends Tuple3<number>, Swizzle3<v2u, v3u, v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
@@ -492,7 +493,7 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
  * A vector with 3 elements of type `bool`
  */
-export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
+export interface v3b extends Tuple3<boolean>, Swizzle3<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3<bool>';
@@ -505,7 +506,7 @@ export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
+export interface v4f extends Tuple4<number>, Swizzle4<v2f, v3f, v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
@@ -519,7 +520,7 @@ export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
  * A vector with 4 elements of type f16
  */
-export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
+export interface v4h extends Tuple4<number>, Swizzle4<v2h, v3h, v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
@@ -533,7 +534,7 @@ export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
+export interface v4i extends Tuple4<number>, Swizzle4<v2i, v3i, v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -547,7 +548,7 @@ export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
+export interface v4u extends Tuple4<number>, Swizzle4<v2u, v3u, v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -561,7 +562,7 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
  * A vector with 4 elements of type `bool`
  */
-export interface v4b extends BooleanArrayView, Swizzle4<v2b, v3b, v4b> {
+export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4<bool>';
@@ -1446,4 +1447,8 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
     (value as AbstractInt)?.[$internal] &&
     (value as AbstractInt).type === 'abstractInt'
   );
+}
+
+export function isVoid(value: unknown): value is Void {
+  return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }

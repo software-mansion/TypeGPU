@@ -12,9 +12,6 @@ catalogs:
     arktype:
       specifier: ^2.1.15
       version: 2.1.19
-    tsup:
-      specifier: ^8.4.0
-      version: 8.4.0
     typescript:
       specifier: ^5.8.2
       version: 5.8.3
