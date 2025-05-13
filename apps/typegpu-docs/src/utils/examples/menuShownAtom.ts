@@ -1,4 +1,4 @@
-import { atom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
 
-export const menuShownAtom = atom(true);
-export const menuShownMobileAtom = atom(false);
+export const menuShownAtom = atomWithStorage('menu-shown', true);
+export const menuShownMobileAtom = atomWithStorage('menu-shown-mobile', false);

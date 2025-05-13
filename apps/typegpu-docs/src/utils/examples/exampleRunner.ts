@@ -46,6 +46,15 @@ export async function executeExample(
     if ('onSliderChange' in param) {
       return param.onSliderChange(param.initial ?? param.min ?? 0);
     }
+    if ('onVectorSliderChange' in param) {
+      return param.onVectorSliderChange(param.initial ?? [0, 0, 0]);
+    }
+    if ('onColorChange' in param) {
+      return param.onColorChange(param.initial ?? [0, 0, 0]);
+    }
+    if ('onTextChange' in param) {
+      return param.onTextChange(param.initial ?? '');
+    }
   }
 
   function extractUrlFromViteImport(

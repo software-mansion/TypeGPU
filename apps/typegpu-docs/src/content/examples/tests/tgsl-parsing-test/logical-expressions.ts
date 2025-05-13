@@ -9,11 +9,11 @@ const Schema = d.struct({
   bool: d.bool,
 });
 
-const negate = tgpu['~unstable'].fn([d.vec3b], d.vec3b).does((input) => {
+const negate = tgpu['~unstable'].fn([d.vec3b], d.vec3b)((input) => {
   return d.vec3b(!input.x, !input.y, !input.z);
 });
 
-const negateStruct = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
+const negateStruct = tgpu['~unstable'].fn([Schema], Schema)((input) => {
   const result = Schema({
     vec2b: std.not(input.vec2b),
     vec4b: std.not(input.vec4b),
@@ -25,8 +25,7 @@ const negateStruct = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
 export const logicalExpressionTests = tgpu['~unstable']
-  .fn([], d.bool)
-  .does(() => {
+  .fn([], d.bool)(() => {
     let s = true;
 
     s = s && std.eq(d.vec2i(1, 3), d.vec2i(1, 3)).x === true;
