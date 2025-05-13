@@ -57,9 +57,13 @@ export default defineConfig({
         ThemeSelect: './src/components/starlight/ThemeSelect.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',
       },
-      social: {
-        github: 'https://github.com/software-mansion/TypeGPU',
-      },
+      social: [
+        { 
+          label: 'GitHub',
+          href: 'https://github.com/software-mansion/TypeGPU',
+          icon: 'github'
+        },
+      ],
       sidebar: stripFalsy([
         {
           label: 'Why TypeGPU?',
