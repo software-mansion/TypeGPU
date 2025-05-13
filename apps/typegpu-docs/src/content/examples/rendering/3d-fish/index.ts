@@ -9,6 +9,7 @@ import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   computeBindGroupLayout,
+  Line3,
   type ModelData,
   ModelDataArray,
   modelVertexLayout,
@@ -104,24 +105,21 @@ const cameraBuffer = root
   .$usage('uniform')
   .$name('camera buffer');
 
-let mouseRay = MouseRay({
-  activated: 0,
-  pointX: d.vec3f(),
-  pointY: d.vec3f(),
-});
-
 const mouseRayBuffer = root
-  .createBuffer(MouseRay, mouseRay)
+  .createBuffer(MouseRay, {
+    activated: 0,
+    line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
+  })
   .$usage('uniform')
   .$name('mouse buffer');
 
 const timePassedBuffer = root
-  .createBuffer(d.u32)
+  .createBuffer(d.f32)
   .$usage('uniform')
   .$name('time passed buffer');
 
 const currentTimeBuffer = root
-  .createBuffer(d.u32)
+  .createBuffer(d.f32)
   .$usage('uniform')
   .$name('current time buffer');
 
@@ -217,7 +215,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
   timePassedBuffer.write(timestamp - lastTimestamp);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
-  mouseRayBuffer.write(mouseRay);
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
@@ -347,11 +344,15 @@ async function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  mouseRay = {
+  mouseRayBuffer.write({
     activated: 1,
-    pointX: camera.position.xyz,
-    pointY: worldPosNonUniform,
-  };
+    line: Line3({
+      origin: camera.position.xyz,
+      dir: std.normalize(
+        std.sub(worldPosNonUniform, camera.position.xyz),
+      ),
+    }),
+  });
 }
 
 // Prevent the context menu from appearing on right click.
@@ -380,11 +381,9 @@ window.addEventListener('mouseup', (event) => {
   }
   if (event.button === 2) {
     isRightPressed = false;
-    mouseRay = {
+    mouseRayBuffer.writePartial({
       activated: 0,
-      pointX: d.vec3f(),
-      pointY: d.vec3f(),
-    };
+    });
   }
 });
 
