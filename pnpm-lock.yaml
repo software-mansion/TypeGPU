@@ -12,6 +12,9 @@ catalogs:
     arktype:
       specifier: ^2.1.15
       version: 2.1.19
+    tsup:
+      specifier: ^8.4.0
+      version: 8.4.0
     typescript:
       specifier: ^5.8.2
       version: 5.8.3
@@ -272,7 +275,7 @@ importers:
         specifier: workspace:~0.1.0
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0
+        specifier: workspace:~0.1.1
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -478,7 +481,7 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0
+        specifier: workspace:~0.1.1
         version: link:../tinyest-for-wgsl
       typegpu:
         specifier: workspace:^0.5.6
@@ -7607,9 +7610,9 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
-  bundle-require@5.1.0(esbuild@0.25.2):
+  bundle-require@5.1.0(esbuild@0.25.3):
     dependencies:
-      esbuild: 0.25.2
+      esbuild: 0.25.3
       load-tsconfig: 0.2.5
 
   cac@6.7.14: {}
@@ -10495,12 +10498,12 @@ snapshots:
 
   tsup@8.4.0(jiti@2.4.2)(postcss@8.5.3)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0):
     dependencies:
-      bundle-require: 5.1.0(esbuild@0.25.2)
+      bundle-require: 5.1.0(esbuild@0.25.3)
       cac: 6.7.14
       chokidar: 4.0.3
       consola: 3.4.0
       debug: 4.4.0
-      esbuild: 0.25.2
+      esbuild: 0.25.3
       joycon: 3.1.1
       picocolors: 1.1.1
       postcss-load-config: 6.0.1(jiti@2.4.2)(postcss@8.5.3)(tsx@4.19.3)(yaml@2.7.0)
@@ -10509,7 +10512,7 @@ snapshots:
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tinyexec: 0.3.2
-      tinyglobby: 0.2.12
+      tinyglobby: 0.2.13
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.5.3
