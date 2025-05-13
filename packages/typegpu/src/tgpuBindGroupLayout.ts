@@ -33,14 +33,12 @@ import {
   type TgpuWriteonlyTexture,
 } from './core/texture/texture.ts';
 import type {
-  SampleTypeToStringChannelType,
-  ViewDimensionToDimension,
-} from './core/texture/textureFormats.ts';
-import type {
   ChannelFormatToSchema,
   ChannelTypeToLegalFormats,
+  SampleTypeToStringChannelType,
   StorageTextureTexelFormat,
   TexelFormatToDataType,
+  ViewDimensionToDimension,
 } from './core/texture/textureFormats.ts';
 import type { TextureProps } from './core/texture/textureProps.ts';
 import {
@@ -316,7 +314,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
   : T extends TgpuLayoutTexture ? TgpuSampledTexture<
-      Default<GetDimension<T['viewDimension']>, '2d'>,
+      Default<T['viewDimension'], '2d'>,
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
