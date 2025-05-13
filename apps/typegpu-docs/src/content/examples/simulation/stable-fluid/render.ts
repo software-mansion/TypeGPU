@@ -12,95 +12,86 @@ export const renderLayout = tgpu.bindGroupLayout({
 export const renderFn = tgpu['~unstable'].vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
-})((i) => {
-  const verts = [
-    d.vec4f(-1, -1, 0, 1),
-    d.vec4f(1, -1, 0, 1),
-    d.vec4f(-1, 1, 0, 1),
-    d.vec4f(1, 1, 0, 1),
-  ];
-  const uvs = [
-    d.vec2f(0, 0),
-    d.vec2f(1, 0),
-    d.vec2f(0, 1),
-    d.vec2f(1, 1),
-  ];
-  return { pos: verts[i.idx], uv: uvs[i.idx] };
+})((input) => {
+  const vertices = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const texCoords = [d.vec2f(0, 0), d.vec2f(2, 0), d.vec2f(0, 2)];
+
+  return { pos: d.vec4f(vertices[input.idx], 0, 1), uv: texCoords[input.idx] };
 });
 
 export const fragmentInkFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((inp) => {
-  const dens = std.textureSample(
+})((input) => {
+  const density = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    inp.uv,
+    input.uv,
   ).x;
-  return d.vec4f(dens, dens * 0.8, dens * 0.5, d.f32(1.0));
+  return d.vec4f(density, density * 0.8, density * 0.5, d.f32(1.0));
 });
 
 export const fragmentVelFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((inp) => {
-  const f = std.textureSample(
+})((input) => {
+  const velocity = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    inp.uv,
+    input.uv,
   ).xy;
-  const mag = std.length(f);
-  const col = d.vec4f(
-    (f.x + 1.0) * 0.5,
-    (f.y + 1.0) * 0.5,
-    mag * 0.4,
+  const magnitude = std.length(velocity);
+  const outColor = d.vec4f(
+    (velocity.x + 1.0) * 0.5,
+    (velocity.y + 1.0) * 0.5,
+    magnitude * 0.4,
     d.f32(1.0),
   );
-  return col;
+  return outColor;
 });
 
 export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((inp) => {
-  const EPS = d.f32(1) / SIM_N;
+})((input) => {
+  const pixelStep = d.f32(1) / SIM_N;
 
-  const left = std.textureSample(
+  const leftSample = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    d.vec2f(inp.uv.x - EPS, inp.uv.y),
+    d.vec2f(input.uv.x - pixelStep, input.uv.y),
   ).x;
-  const right = std.textureSample(
+  const rightSample = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    d.vec2f(inp.uv.x + EPS, inp.uv.y),
+    d.vec2f(input.uv.x + pixelStep, input.uv.y),
   ).x;
-  const up = std.textureSample(
+  const upSample = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    d.vec2f(inp.uv.x, inp.uv.y + EPS),
+    d.vec2f(input.uv.x, input.uv.y + pixelStep),
   ).x;
-  const down = std.textureSample(
+  const downSample = std.textureSample(
     renderLayout.$.result,
     renderLayout.$.linSampler,
-    d.vec2f(inp.uv.x, inp.uv.y - EPS),
+    d.vec2f(input.uv.x, input.uv.y - pixelStep),
   ).x;
 
-  const dx = right - left;
-  const dy = up - down;
+  const gradientX = rightSample - leftSample;
+  const gradientY = upSample - downSample;
 
-  const strength = 0.8;
-  const displacement = d.vec2f(dx, dy);
-  const offsetUV = std.add(
-    inp.uv,
-    std.mul(displacement, d.vec2f(strength, -strength)),
+  const distortStrength = 0.8;
+  const distortVector = d.vec2f(gradientX, gradientY);
+  const distortedUV = std.add(
+    input.uv,
+    std.mul(distortVector, d.vec2f(distortStrength, -distortStrength)),
   );
 
-  const color = std.textureSample(
+  const outputColor = std.textureSample(
     renderLayout.$.background,
     renderLayout.$.linSampler,
-    d.vec2f(offsetUV.x, 1.0 - offsetUV.y),
+    d.vec2f(distortedUV.x, 1.0 - distortedUV.y),
   );
 
-  return d.vec4f(color.xyz, 1.0);
+  return d.vec4f(outputColor.xyz, 1.0);
 });

@@ -7,15 +7,20 @@ const getNeighbors = tgpu['~unstable'].fn(
   { coords: d.vec2i, bounds: d.vec2i },
   d.arrayOf(d.vec2i, 4),
 )(({ coords, bounds }) => {
-  const res = [d.vec2i(-1, 0), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(0, 1)];
+  const adjacentOffsets = [
+    d.vec2i(-1, 0),
+    d.vec2i(0, -1),
+    d.vec2i(1, 0),
+    d.vec2i(0, 1),
+  ];
   for (let i = 0; i < 4; i++) {
-    res[i] = std.clamp(
-      std.add(coords, res[i]),
+    adjacentOffsets[i] = std.clamp(
+      std.add(coords, adjacentOffsets[i]),
       d.vec2i(0),
       std.sub(bounds, d.vec2i(1)),
     );
   }
-  return res;
+  return adjacentOffsets;
 });
 
 export const brushLayout = tgpu.bindGroupLayout({
@@ -28,25 +33,36 @@ export const brushFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = input.gid.xy;
-  const params = brushLayout.$.brushParams;
+  const pixelPos = input.gid.xy;
+  const brushSettings = brushLayout.$.brushParams;
 
-  let force = d.vec2f(0.0);
-  let ink = d.f32(0.0);
+  let forceVec = d.vec2f(0.0);
+  let inkAmount = d.f32(0.0);
 
-  const dx = d.f32(coords.x) - d.f32(params.pos.x);
-  const dy = d.f32(coords.y) - d.f32(params.pos.y);
-  const distSq = dx * dx + dy * dy;
-  const radiusSq = params.radius * params.radius;
+  const deltaX = d.f32(pixelPos.x) - d.f32(brushSettings.pos.x);
+  const deltaY = d.f32(pixelPos.y) - d.f32(brushSettings.pos.y);
+  const distSquared = deltaX * deltaX + deltaY * deltaY;
+  const radiusSquared = brushSettings.radius * brushSettings.radius;
 
-  if (distSq < radiusSq) {
-    const weight = std.exp(-distSq / radiusSq);
-    force = std.mul(params.forceScale * weight, params.delta);
-    ink = params.inkAmount * weight;
+  if (distSquared < radiusSquared) {
+    const brushWeight = std.exp(-distSquared / radiusSquared);
+    forceVec = std.mul(
+      brushSettings.forceScale * brushWeight,
+      brushSettings.delta,
+    );
+    inkAmount = brushSettings.inkAmount * brushWeight;
   }
 
-  std.textureStore(brushLayout.$.forceDst, coords, d.vec4f(force, 0.0, 1.0));
-  std.textureStore(brushLayout.$.inkDst, coords, d.vec4f(ink, 0.0, 0.0, 1.0));
+  std.textureStore(
+    brushLayout.$.forceDst,
+    pixelPos,
+    d.vec4f(forceVec, 0.0, 1.0),
+  );
+  std.textureStore(
+    brushLayout.$.inkDst,
+    pixelPos,
+    d.vec4f(inkAmount, 0.0, 0.0, 1.0),
+  );
 });
 
 export const addForcesLayout = tgpu.bindGroupLayout({
@@ -60,12 +76,12 @@ export const addForcesFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = input.gid.xy;
-  const u = std.textureLoad(addForcesLayout.$.src, coords, 0).xy;
-  const f = std.textureLoad(addForcesLayout.$.force, coords, 0).xy;
-  const dt = addForcesLayout.$.simParams.dt;
-  const u2 = std.add(u, std.mul(dt, f));
-  std.textureStore(addForcesLayout.$.dst, coords, d.vec4f(u2, 0, 1));
+  const pixelPos = input.gid.xy;
+  const currentVel = std.textureLoad(addForcesLayout.$.src, pixelPos, 0).xy;
+  const forceVec = std.textureLoad(addForcesLayout.$.force, pixelPos, 0).xy;
+  const timeStep = addForcesLayout.$.simParams.dt;
+  const newVel = std.add(currentVel, std.mul(timeStep, forceVec));
+  std.textureStore(addForcesLayout.$.dst, pixelPos, d.vec4f(newVel, 0, 1));
 });
 
 export const advectLayout = tgpu.bindGroupLayout({
@@ -79,29 +95,38 @@ export const advectFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const textureDimensions = std.textureDimensions(advectLayout.$.src);
-  const coords = input.gid.xy;
-  const oldVel = std.textureLoad(advectLayout.$.src, coords, 0);
-  const dt = advectLayout.$.simParams.dt;
-  const oldCoords = std.sub(d.vec2f(coords), std.mul(dt, oldVel.xy));
-  const oldCoordsClamped = std.clamp(
-    oldCoords,
+  const texSize = std.textureDimensions(advectLayout.$.src);
+  const pixelPos = input.gid.xy;
+
+  if (
+    pixelPos.x >= texSize.x - 1 || pixelPos.y >= texSize.y - 1 ||
+    pixelPos.x <= 0 || pixelPos.y <= 0
+  ) {
+    std.textureStore(advectLayout.$.dst, pixelPos, d.vec4f(0, 0, 0, 1));
+    return;
+  }
+
+  const velocity = std.textureLoad(advectLayout.$.src, pixelPos, 0);
+  const timeStep = advectLayout.$.simParams.dt;
+  const prevPos = std.sub(d.vec2f(pixelPos), std.mul(timeStep, velocity.xy));
+  const clampedPos = std.clamp(
+    prevPos,
     d.vec2f(-0.5),
-    d.vec2f(std.sub(d.vec2f(textureDimensions.xy), d.vec2f(0.5))),
+    d.vec2f(std.sub(d.vec2f(texSize.xy), d.vec2f(0.5))),
   );
-  const oldCoordsNormalized = std.div(
-    std.add(oldCoordsClamped, d.vec2f(0.5)),
-    d.vec2f(textureDimensions.xy),
+  const normalizedPos = std.div(
+    std.add(clampedPos, d.vec2f(0.5)),
+    d.vec2f(texSize.xy),
   );
 
-  const velAtOldCoords = std.textureSampleLevel(
+  const prevVelocity = std.textureSampleLevel(
     advectLayout.$.src,
     advectLayout.$.linSampler,
-    oldCoordsNormalized,
+    normalizedPos,
     0,
   );
 
-  std.textureStore(advectLayout.$.dst, coords, velAtOldCoords);
+  std.textureStore(advectLayout.$.dst, pixelPos, prevVelocity);
 });
 
 export const diffusionLayout = tgpu.bindGroupLayout({
@@ -114,33 +139,33 @@ export const diffusionFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = d.vec2i(input.gid.xy);
-  const textureDimensions = d.vec2i(
+  const pixelPos = d.vec2i(input.gid.xy);
+  const texSize = d.vec2i(
     std.textureDimensions(diffusionLayout.$.in),
   );
-  const inputValue = std.textureLoad(diffusionLayout.$.in, coords, 0);
+  const centerVal = std.textureLoad(diffusionLayout.$.in, pixelPos, 0);
 
-  const neighbors = getNeighbors({ coords, bounds: textureDimensions });
+  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
 
-  const left = std.textureLoad(diffusionLayout.$.in, neighbors[0], 0);
-  const up = std.textureLoad(diffusionLayout.$.in, neighbors[1], 0);
-  const right = std.textureLoad(diffusionLayout.$.in, neighbors[2], 0);
-  const down = std.textureLoad(diffusionLayout.$.in, neighbors[3], 0);
+  const leftVal = std.textureLoad(diffusionLayout.$.in, neighbors[0], 0);
+  const upVal = std.textureLoad(diffusionLayout.$.in, neighbors[1], 0);
+  const rightVal = std.textureLoad(diffusionLayout.$.in, neighbors[2], 0);
+  const downVal = std.textureLoad(diffusionLayout.$.in, neighbors[3], 0);
 
-  const dt = diffusionLayout.$.simParams.dt;
+  const timeStep = diffusionLayout.$.simParams.dt;
   const viscosity = diffusionLayout.$.simParams.viscosity;
 
-  const alpha = viscosity * dt;
-  const beta = 1.0 / (4.0 + alpha);
-  const newValue = std.mul(
-    d.vec4f(beta),
+  const diffuseRate = viscosity * timeStep;
+  const blendFactor = 1.0 / (4.0 + diffuseRate);
+  const diffusedVal = std.mul(
+    d.vec4f(blendFactor),
     std.add(
-      std.add(std.add(left, right), std.add(up, down)),
-      std.mul(d.f32(alpha), inputValue),
+      std.add(std.add(leftVal, rightVal), std.add(upVal, downVal)),
+      std.mul(d.f32(diffuseRate), centerVal),
     ),
   );
 
-  std.textureStore(diffusionLayout.$.out, coords, newValue);
+  std.textureStore(diffusionLayout.$.out, pixelPos, diffusedVal);
 });
 
 export const divergenceLayout = tgpu.bindGroupLayout({
@@ -152,20 +177,25 @@ export const divergenceFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = d.vec2i(input.gid.xy);
-  const textureDimensions = d.vec2i(
+  const pixelPos = d.vec2i(input.gid.xy);
+  const texSize = d.vec2i(
     std.textureDimensions(divergenceLayout.$.vel),
   );
 
-  const neighbors = getNeighbors({ coords, bounds: textureDimensions });
+  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
 
-  const left = std.textureLoad(divergenceLayout.$.vel, neighbors[0], 0);
-  const up = std.textureLoad(divergenceLayout.$.vel, neighbors[1], 0);
-  const right = std.textureLoad(divergenceLayout.$.vel, neighbors[2], 0);
-  const down = std.textureLoad(divergenceLayout.$.vel, neighbors[3], 0);
+  const leftVel = std.textureLoad(divergenceLayout.$.vel, neighbors[0], 0);
+  const upVel = std.textureLoad(divergenceLayout.$.vel, neighbors[1], 0);
+  const rightVel = std.textureLoad(divergenceLayout.$.vel, neighbors[2], 0);
+  const downVel = std.textureLoad(divergenceLayout.$.vel, neighbors[3], 0);
 
-  const div = d.f32(0.5) * (right.x - left.x + (down.y - up.y));
-  std.textureStore(divergenceLayout.$.div, coords, d.vec4f(div, 0, 0, 1));
+  const divergence = d.f32(0.5) *
+    (rightVel.x - leftVel.x + (downVel.y - upVel.y));
+  std.textureStore(
+    divergenceLayout.$.div,
+    pixelPos,
+    d.vec4f(divergence, 0, 0, 1),
+  );
 });
 
 export const pressureLayout = tgpu.bindGroupLayout({
@@ -178,19 +208,25 @@ export const pressureFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = d.vec2i(input.gid.xy);
-  const textureDimensions = d.vec2i(std.textureDimensions(pressureLayout.$.x));
+  const pixelPos = d.vec2i(input.gid.xy);
+  const texSize = d.vec2i(std.textureDimensions(pressureLayout.$.x));
 
-  const neighbors = getNeighbors({ coords, bounds: textureDimensions });
+  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
 
-  const left = std.textureLoad(pressureLayout.$.x, neighbors[0], 0);
-  const up = std.textureLoad(pressureLayout.$.x, neighbors[1], 0);
-  const right = std.textureLoad(pressureLayout.$.x, neighbors[2], 0);
-  const down = std.textureLoad(pressureLayout.$.x, neighbors[3], 0);
+  const leftPressure = std.textureLoad(pressureLayout.$.x, neighbors[0], 0);
+  const upPressure = std.textureLoad(pressureLayout.$.x, neighbors[1], 0);
+  const rightPressure = std.textureLoad(pressureLayout.$.x, neighbors[2], 0);
+  const downPressure = std.textureLoad(pressureLayout.$.x, neighbors[3], 0);
 
-  const div = std.textureLoad(pressureLayout.$.b, coords, 0).x;
-  const newP = d.f32(0.25) * (left.x + right.x + up.x + down.x - div);
-  std.textureStore(pressureLayout.$.out, coords, d.vec4f(newP, 0, 0, 1));
+  const divergence = std.textureLoad(pressureLayout.$.b, pixelPos, 0).x;
+  const newPressure = d.f32(0.25) *
+    (leftPressure.x + rightPressure.x + upPressure.x + downPressure.x -
+      divergence);
+  std.textureStore(
+    pressureLayout.$.out,
+    pixelPos,
+    d.vec4f(newPressure, 0, 0, 1),
+  );
 });
 
 export const projectLayout = tgpu.bindGroupLayout({
@@ -203,20 +239,23 @@ export const projectFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const coords = d.vec2i(input.gid.xy);
-  const textureDimensions = d.vec2i(std.textureDimensions(projectLayout.$.vel));
-  const vel = std.textureLoad(projectLayout.$.vel, coords, 0);
+  const pixelPos = d.vec2i(input.gid.xy);
+  const texSize = d.vec2i(std.textureDimensions(projectLayout.$.vel));
+  const velocity = std.textureLoad(projectLayout.$.vel, pixelPos, 0);
 
-  const neighbors = getNeighbors({ coords, bounds: textureDimensions });
+  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
 
-  const left = std.textureLoad(projectLayout.$.p, neighbors[0], 0);
-  const up = std.textureLoad(projectLayout.$.p, neighbors[1], 0);
-  const right = std.textureLoad(projectLayout.$.p, neighbors[2], 0);
-  const down = std.textureLoad(projectLayout.$.p, neighbors[3], 0);
+  const leftPressure = std.textureLoad(projectLayout.$.p, neighbors[0], 0);
+  const upPressure = std.textureLoad(projectLayout.$.p, neighbors[1], 0);
+  const rightPressure = std.textureLoad(projectLayout.$.p, neighbors[2], 0);
+  const downPressure = std.textureLoad(projectLayout.$.p, neighbors[3], 0);
 
-  const grad = d.vec2f(0.5 * (right.x - left.x), 0.5 * (down.x - up.x));
-  const newVel = std.sub(vel.xy, grad);
-  std.textureStore(projectLayout.$.out, coords, d.vec4f(newVel, 0, 1));
+  const pressureGrad = d.vec2f(
+    0.5 * (rightPressure.x - leftPressure.x),
+    0.5 * (downPressure.x - upPressure.x),
+  );
+  const projectedVel = std.sub(velocity.xy, pressureGrad);
+  std.textureStore(projectLayout.$.out, pixelPos, d.vec4f(projectedVel, 0, 1));
 });
 
 export const advectInkLayout = tgpu.bindGroupLayout({
@@ -231,26 +270,29 @@ export const advectInkFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const dims = std.textureDimensions(advectInkLayout.$.src);
-  const coords = input.gid.xy;
+  const texSize = std.textureDimensions(advectInkLayout.$.src);
+  const pixelPos = input.gid.xy;
 
-  const vel = std.textureLoad(advectInkLayout.$.vel, coords, 0).xy;
-  const dt = advectInkLayout.$.simParams.dt;
-  const oldCoords = std.sub(d.vec2f(coords), std.mul(dt, vel));
-  const clamped = std.clamp(
-    oldCoords,
+  const velocity = std.textureLoad(advectInkLayout.$.vel, pixelPos, 0).xy;
+  const timeStep = advectInkLayout.$.simParams.dt;
+  const prevPos = std.sub(d.vec2f(pixelPos), std.mul(timeStep, velocity));
+  const clampedPos = std.clamp(
+    prevPos,
     d.vec2f(-0.5),
-    std.sub(d.vec2f(dims.xy), d.vec2f(0.5)),
+    std.sub(d.vec2f(texSize.xy), d.vec2f(0.5)),
   );
-  const uv = std.div(std.add(clamped, d.vec2f(0.5)), d.vec2f(dims.xy));
+  const normalizedPos = std.div(
+    std.add(clampedPos, d.vec2f(0.5)),
+    d.vec2f(texSize.xy),
+  );
 
-  const ink = std.textureSampleLevel(
+  const inkVal = std.textureSampleLevel(
     advectInkLayout.$.src,
     advectInkLayout.$.linSampler,
-    uv,
+    normalizedPos,
     0,
   );
-  std.textureStore(advectInkLayout.$.dst, coords, ink);
+  std.textureStore(advectInkLayout.$.dst, pixelPos, inkVal);
 });
 
 export const addInkLayout = tgpu.bindGroupLayout({
@@ -263,8 +305,12 @@ export const addInkFn = tgpu['~unstable'].computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const c = input.gid.xy;
-  const a = std.textureLoad(addInkLayout.$.add, c, 0).x;
-  const s = std.textureLoad(addInkLayout.$.src, c, 0).x;
-  std.textureStore(addInkLayout.$.dst, c, d.vec4f(a + s, 0, 0, 1));
+  const pixelPos = input.gid.xy;
+  const addVal = std.textureLoad(addInkLayout.$.add, pixelPos, 0).x;
+  const srcVal = std.textureLoad(addInkLayout.$.src, pixelPos, 0).x;
+  std.textureStore(
+    addInkLayout.$.dst,
+    pixelPos,
+    d.vec4f(addVal + srcVal, 0, 0, 1),
+  );
 });

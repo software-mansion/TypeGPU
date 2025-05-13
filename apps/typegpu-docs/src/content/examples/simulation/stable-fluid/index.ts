@@ -140,8 +140,6 @@ const divergenceTex = createField('r32float', 'divergence');
 const linSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
 });
 
 // Create compute pipelines
@@ -403,7 +401,7 @@ function loop() {
       storeOp: 'store',
     })
     .with(renderLayout, renderBG)
-    .draw(6);
+    .draw(3);
 
   requestAnimationFrame(loop);
 }
