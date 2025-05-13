@@ -6,7 +6,7 @@ export function Snackbar(props: { text: string }) {
       className='absolute bottom-8 right-8 z-40 flex items-center gap-4 max-w-[min(28rem,calc(100vw-4rem))] p-4 text-gray-500 bg-red-100 rounded-lg box-border'
       role='alert'
     >
-      <div className='inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500'>
+      <div className='inline-flex items-center justify-center shrink-0 w-8 h-8 text-red-500'>
         <svg
           className='w-5 h-5'
           aria-hidden='true'

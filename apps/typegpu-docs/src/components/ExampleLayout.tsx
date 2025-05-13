@@ -40,7 +40,7 @@ export function ExampleLayout() {
         </Button>
       </div>
 
-      <div className='box-border flex h-[100dvh] p-4 gap-4 bg-tameplum-50'>
+      <div className='box-border flex h-dvh p-4 gap-4 bg-tameplum-50'>
         {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
@@ -66,7 +66,7 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5 overflow-auto',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-75 p-5 gap-5 overflow-auto',
       )}
     >
       <header className='grid gap-5'>
@@ -90,7 +90,7 @@ function SideMenu() {
           </p>
           <a
             href='/TypeGPU/why-typegpu'
-            className='underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
+            className='underline text-sm bg-linear-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
           >
             Learn more about TypeGPU here
           </a>

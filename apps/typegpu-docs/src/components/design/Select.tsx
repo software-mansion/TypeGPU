@@ -19,14 +19,14 @@ export function Select({
       <RadixSelect.Portal>
         <RadixSelect.Content
           position='popper'
-          className='relative -top-4 min-w-[7.5rem]'
+          className='relative -top-4 min-w-30'
         >
           <RadixSelect.Viewport className='rounded bg-tameplum-50'>
             {options.map((option) => (
               <RadixSelect.Item
                 key={option}
                 value={option}
-                className='flex items-center justify-between p-3 text-sm hover:bg-gradient-to-br hover:from-gradient-purple hover:to-gradient-blue hover:text-grayscale-0'
+                className='flex items-center justify-between p-3 text-sm hover:bg-linear-to-br hover:from-gradient-purple hover:to-gradient-blue hover:text-grayscale-0'
               >
                 <RadixSelect.ItemText>{option}</RadixSelect.ItemText>
                 {option === value && (

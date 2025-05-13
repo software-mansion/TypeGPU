@@ -21,7 +21,7 @@ export function Slider({ min, max, step, value, onChange }: Props) {
       className='bg-grayscale-20 h-10 rounded relative flex overflow-hidden'
     >
       <RadixSlider.Track className='flex-1 h-full bg-tameplum-50'>
-        <RadixSlider.Range className='absolute h-full bg-gradient-to-br from-gradient-purple to-gradient-blue' />
+        <RadixSlider.Range className='absolute h-full bg-linear-to-br from-gradient-purple to-gradient-blue' />
       </RadixSlider.Track>
       <div className='absolute left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] text-xs text-center'>
         {value}

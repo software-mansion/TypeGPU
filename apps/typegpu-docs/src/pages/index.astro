@@ -25,11 +25,11 @@ const showcaseVideoResolution = [2048, 1200];
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
   <main
-    class="flex flex-col items-center bg-tameplum-50 lg:gap-[7.5rem] gap-10 md:gap-20">
+    class="flex flex-col items-center bg-tameplum-50 lg:gap-30 gap-10 md:gap-20">
     <section
-      class="box-border relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-[22.5rem] lg:pb-[30rem] md:max-h-[125vh]">
+      class="box-border relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]">
       <header
-        class="self-stretch flex-shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-[1.875rem] md:px-10 lg:px-[3.125rem]">
+        class="self-stretch shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-7.5 md:px-10 lg:px-12.5">
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
           <Image
             src={SwmLogoSvg}
@@ -63,14 +63,14 @@ const showcaseVideoResolution = [2048, 1200];
       </header>
 
       <div
-        class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-[34.25rem] md:max-h-[28rem] items-center max-w-7xl lg:min-h-[40vh]">
+        class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]">
         <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
           {/* Blurred background */}
         </div>
         <Image
           src={TypeGPULogoLight}
           alt="TypeGPU Logo"
-          class="w-[14.5rem] md:w-[20rem] lg:w-[24rem]"
+          class="w-58 md:w-[20rem] lg:w-[24rem]"
         />
         <h1 class="text-center font-normal text-pretty mb-4">
           TypeScript library that enhances the WebGPU <br
@@ -91,7 +91,7 @@ const showcaseVideoResolution = [2048, 1200];
       </div>
 
       <div
-        class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-[34.5rem] md:w-[58.5rem] lg:w-[70rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative md:top-[100%] md:-translate-y-[50%] sm:mb-[2.5rem]">
+        class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-138 md:w-234 lg:w-280 lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl relative md:top-full md:-translate-y-[50%] sm:mb-10">
         <video
           src="/TypeGPU/assets/migration.mp4"
           style={{
@@ -108,10 +108,10 @@ const showcaseVideoResolution = [2048, 1200];
       </div>
     </section>
 
-    <div class="lg:h-[16rem] md:h-[13rem] md:block hidden"></div>
+    <div class="lg:h-64 md:h-52 md:block hidden"></div>
 
     <section
-      class="box-border flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+      class="box-border flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138">
       <div>
         <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
           Get to know TypeGPU
@@ -152,7 +152,7 @@ const showcaseVideoResolution = [2048, 1200];
         >
 
         <article
-          class="box-border flex justify-center items-center lg:h-[28rem] md:h-[22rem] h-[12.5rem] md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] opacity-50 md:translate-y-20">
+          class="box-border flex justify-center items-center lg:h-112 md:h-88 h-50 md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl opacity-50 md:translate-y-20">
           <h3 class="font-normal text-grayscale-80">More coming soon...</h3>
         </article>
       </div>
@@ -162,17 +162,17 @@ const showcaseVideoResolution = [2048, 1200];
     <div
       class="box-border flex flex-col items-center bg-white w-full md:my-8 lg:my-20 py-12 md:p-20 lg:p-32 md:rounded-[5rem] rounded-[2.5rem] overflow-hidden">
       <section
-        class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+        class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138">
         <div>
           <h2 class="mb-4 font-normal text-center md:mb-8 center">Roadmap</h2>
-          <p class="text-center text-pretty max-w-[60rem]">
+          <p class="text-center text-pretty max-w-240">
             The road to end-to-end type safety on the GPU involves implementing
             several interoperating primitives. Below is our roadmap of features
             that aim to fulfill that goal.
           </p>
         </div>
 
-        <div class="max-w-[50rem]">
+        <div class="max-w-200">
           <ol class="flex flex-col m-0 p-0">
             <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
               <MilestoneBuffersBadge slot="visual" />
@@ -221,7 +221,7 @@ const showcaseVideoResolution = [2048, 1200];
             class="absolute -inset-x-40 inset-y-0 -bottom-20 bg-blurred-radial-tameplum -z-10">
             {/* Blurred background */}
           </div>
-          <p class="text-center text-pretty max-w-[50rem]">
+          <p class="text-center text-pretty max-w-200">
             Take active part in the development by joining our discussions.
           </p>
           <div class="flex flex-col items-center sm:flex-row gap-3">
@@ -254,7 +254,7 @@ const showcaseVideoResolution = [2048, 1200];
     </div>
 
     <section
-      class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-[3.75rem] gap-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
+      class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-15 gap-10 w-full max-w-138 lg:max-w-340">
       <div>
         <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">
           Got hooked?
@@ -268,7 +268,7 @@ const showcaseVideoResolution = [2048, 1200];
 
       <Image
         src={Illustration}
-        class="hidden md:block lg:w-[56rem] w-[38.5rem] max-w-full"
+        class="hidden md:block lg:w-4xl w-154 max-w-full"
         alt="An illustration showing the TypeGPU plums in a bowl."
       />
     </section>
@@ -280,7 +280,7 @@ const showcaseVideoResolution = [2048, 1200];
     <div
       class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20">
       <div
-        class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[58.5rem] w-full max-w-[34.5rem]">
+        class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-340 md:max-w-234 w-full max-w-138">
         <div class="w-full">
           <Image
             src={TypeGPULogomarkMonolight}
@@ -289,14 +289,14 @@ const showcaseVideoResolution = [2048, 1200];
           />
           <div
             class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
-            <div class="text-pretty md:max-w-[23.5rem] lg:max-w-[27rem]">
+            <div class="text-pretty md:max-w-94 lg:max-w-108">
               <span class="font-medium">TypeGPU</span>
               <span class="text-grayscale-100">&mdash;</span> TypeScript library
               that enhances the WebGPU API, allowing resource management in a type-safe,
               declarative way.
             </div>
 
-            <div class="grid gap-6 md:w-[24rem] lg:w-[27rem]">
+            <div class="grid gap-6 md:w-[24rem] lg:w-108">
               <FooterLink
                 label="Made by Software Mansion"
                 callToAction="Learn more about us"
@@ -325,7 +325,7 @@ const showcaseVideoResolution = [2048, 1200];
 
         <div class="hidden md:grid">
           <div
-            class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]">
+            class="col-start-1 row-start-1 z-10 bg-linear-to-b from-[#FFF0] to-[#FFF]">
           </div>
           <Image
             class="w-full h-auto col-start-1 row-start-1"
