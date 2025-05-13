@@ -223,4 +223,20 @@ describe('TgpuDerived', () => {
       `),
     );
   });
+
+  it('does not allow defining derived values at resolution', () => {
+    const slot = tgpu['~unstable'].slot<number>(2).$name('gridSize');
+    const derived = tgpu['~unstable'].derived(() =>
+      slot.value > 0
+        ? tgpu['~unstable'].derived(() => slot.value).value
+        : tgpu['~unstable'].derived(() => -slot.value).value
+    );
+    const fn = tgpu['~unstable'].fn({}, d.u32)(() => {
+      return derived.value;
+    });
+
+    expect(() => parseResolved({ fn })).toThrow(
+      'Cannot create tgpu.derived objects at the resolution stage.',
+    );
+  });
 });
