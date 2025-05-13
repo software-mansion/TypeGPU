@@ -496,11 +496,8 @@ export const controls = {
       materialProps.ambient.x,
       materialProps.ambient.y,
       materialProps.ambient.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ ambient: materialProps.ambient });
     },
@@ -510,11 +507,8 @@ export const controls = {
       materialProps.diffuse.x,
       materialProps.diffuse.y,
       materialProps.diffuse.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ diffuse: materialProps.diffuse });
     },
@@ -524,11 +518,8 @@ export const controls = {
       materialProps.specular.x,
       materialProps.specular.y,
       materialProps.specular.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.specular = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ specular: materialProps.specular });
     },

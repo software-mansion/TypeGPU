@@ -161,6 +161,10 @@ export default defineConfig({
           label: 'Tooling',
           items: stripFalsy([
             {
+              label: 'Build Plugin',
+              slug: 'tooling/unplugin-typegpu',
+            },
+            {
               label: 'Generator CLI',
               slug: 'tooling/tgpu-gen',
             },
