@@ -8,7 +8,7 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout as layout,
 } from './schemas.ts';
-import { applySinWave } from './tgsl-helpers.ts';
+import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
@@ -21,17 +21,19 @@ export const vertexShader = tgpu['~unstable']
 
     // apply sin wave
 
-    let wavedPosition = input.modelPosition;
-    let wavedNormal = input.modelNormal;
+    let wavedVertex = PosAndNormal({
+      position: input.modelPosition,
+      normal: input.modelNormal,
+    });
     if (currentModelData.applySinWave === 1) {
-      const wavedResults = applySinWave({
-        index: input.instanceIndex,
-        time: layout.$.currentTime,
-        position: input.modelPosition,
-        normal: input.modelNormal,
-      });
-      wavedPosition = wavedResults.position;
-      wavedNormal = wavedResults.normal;
+      wavedVertex = applySinWave(
+        input.instanceIndex,
+        PosAndNormal({
+          position: input.modelPosition,
+          normal: input.modelNormal,
+        }),
+        layout.$.currentTime,
+      );
     }
 
     // rotate model
@@ -57,14 +59,17 @@ export const vertexShader = tgpu['~unstable']
     const worldPosition = std.add(
       std.mul(
         yawMatrix,
-        std.mul(pitchMatrix, std.mul(currentModelData.scale, wavedPosition)),
+        std.mul(
+          pitchMatrix,
+          std.mul(currentModelData.scale, wavedVertex.position),
+        ),
       ),
       currentModelData.position,
     );
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.mul(pitchMatrix, std.mul(yawMatrix, wavedNormal)),
+      std.mul(pitchMatrix, std.mul(yawMatrix, wavedVertex.normal)),
     );
 
     // project the world position into the camera
@@ -87,13 +92,12 @@ export const vertexShader = tgpu['~unstable']
   .$name('vertexShader');
 
 const sampleTexture = tgpu['~unstable'].fn(
-  { uv: d.vec2f },
+  [d.vec2f],
   d.vec4f,
-) /* wgsl */`{
+) /* wgsl */`(uv: vec2f) -> vec4f {
   return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
-}`
-  .$uses({ layout })
-  .$name('sampleTexture');
+}
+`.$uses({ layout });
 
 export const fragmentShader = tgpu['~unstable']
   .fragmentFn({
@@ -104,7 +108,7 @@ export const fragmentShader = tgpu['~unstable']
     // https://en.wikipedia.org/wiki/Phong_reflection_model
     // then apply sea fog and sea desaturation
 
-    const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
+    const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));

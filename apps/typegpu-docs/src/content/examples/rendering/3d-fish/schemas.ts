@@ -3,6 +3,17 @@ import * as d from 'typegpu/data';
 
 // schemas
 
+export const Line3 = d.struct({
+  /**
+   * A point on the line
+   */
+  origin: d.vec3f,
+  /**
+   * Normalized direction along the line
+   */
+  dir: d.vec3f,
+});
+
 export const Camera = d
   .struct({
     position: d.vec4f,
@@ -45,8 +56,7 @@ export const ModelVertexOutput = {
 export const MouseRay = d
   .struct({
     activated: d.u32,
-    pointX: d.vec3f,
-    pointY: d.vec3f,
+    line: Line3,
   })
   .$name('mouse ray');
 
@@ -66,7 +76,7 @@ export const renderBindGroupLayout = tgpu
     modelTexture: { texture: 'float' },
     camera: { uniform: Camera },
     sampler: { sampler: 'filtering' },
-    currentTime: { uniform: d.u32 },
+    currentTime: { uniform: d.f32 },
   })
   .$name('render bind group layout');
 
@@ -78,6 +88,6 @@ export const computeBindGroupLayout = tgpu
       access: 'mutable',
     },
     mouseRay: { uniform: MouseRay },
-    timePassed: { uniform: d.u32 },
+    timePassed: { uniform: d.f32 },
   })
   .$name('compute bind group layout');

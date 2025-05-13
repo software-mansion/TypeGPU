@@ -20,6 +20,7 @@ export type {
   Align,
   AnyVecInstance,
   AnyWgslData,
+  AnyWgslStruct,
   Atomic,
   BaseData,
   BaseData as BaseWgslData,

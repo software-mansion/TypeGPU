@@ -40,6 +40,7 @@ export const add = createDualImpl(
     value: `(${lhs.value} + ${rhs.value})`,
     dataType: lhs.dataType,
   }),
+  'coerce',
 );
 
 export const sub = createDualImpl(
@@ -51,6 +52,7 @@ export const sub = createDualImpl(
     value: `(${lhs.value} - ${rhs.value})`,
     dataType: lhs.dataType,
   }),
+  'coerce',
 );
 
 type MulOverload = {
@@ -312,6 +314,7 @@ export const max = createDualImpl(
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
+  'coerce',
 );
 
 /**
@@ -327,7 +330,11 @@ export const min = createDualImpl(
     return VectorOps.min[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
-  (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
+  (a, b) => ({
+    value: `min(${a.value}, ${b.value})`,
+    dataType: a.dataType,
+  }),
+  'coerce',
 );
 
 export const sign = createDualImpl(
