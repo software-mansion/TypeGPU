@@ -59,6 +59,15 @@ const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 canvas.parentElement?.appendChild(video);
 
+video.addEventListener('resize', () => {
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+});
+
 const root = await tgpu.init();
 const device = root.device;
 
@@ -135,14 +144,7 @@ function run() {
   if (!(video.currentTime > 0)) {
     return;
   }
-
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-
+  
   // Updating the target render texture
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
