@@ -238,16 +238,16 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewRotationMatrix = d.mat4x4f(
-    camera.value.view.columns[0],
-    camera.value.view.columns[1],
-    camera.value.view.columns[2],
-    d.vec4f(0, 0, 0, 1),
-  );
   return {
     pos: std.mul(
       camera.value.projection,
-      std.mul(viewRotationMatrix, input.position),
+      d.vec4f(
+        std.mul(
+          camera.value.view,
+          d.vec4f(std.div(input.position.xyz, input.position.w), 0),
+        ).xyz,
+        1,
+      ),
     ),
     texCoord: input.position.xyz,
   };

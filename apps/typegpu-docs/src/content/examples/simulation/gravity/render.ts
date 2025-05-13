@@ -22,9 +22,12 @@ export const skyBoxVertex = tgpu['~unstable']
     return {
       pos: std.mul(
         skyBoxLayout.$.camera.projection,
-        std.mul(
-          skyBoxLayout.$.camera.view,
-          d.vec4f(input.position.xyz, 0),
+        d.vec4f(
+          std.mul(
+            skyBoxLayout.$.camera.view,
+            d.vec4f(std.div(input.position.xyz, input.position.w), 0),
+          ).xyz,
+          1,
         ),
       ),
       texCoord: input.position.xyz,
