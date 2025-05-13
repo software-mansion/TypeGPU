@@ -92,6 +92,17 @@ describe('mat2x2f', () => {
       'mat2x2f(0, 1, 2, 3)',
     );
   });
+
+  it('should work with for...of', () => {
+    const mat = d.mat2x2f(1, 2, 3, 4);
+    let i = 0;
+    for (const x of mat) {
+      expect(x).toBe(mat[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+    expect(i).toBe(4);
+  });
 });
 
 describe('mat3x3f', () => {
@@ -218,6 +229,17 @@ describe('mat3x3f', () => {
     expect(tgpu.resolve({ template: 'mat', externals: { mat } })).toContain(
       'mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8)',
     );
+  });
+
+  it('should work with for...of', () => {
+    const mat = d.mat3x3f(...Array(9).keys());
+    let i = 0;
+    for (const x of mat) {
+      expect(x).toBe(mat[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+    expect(i).toBe(12);
   });
 });
 
@@ -348,5 +370,16 @@ describe('mat4x4f', () => {
     expect(tgpu.resolve({ template: 'mat', externals: { mat } })).toContain(
       'mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)',
     );
+  });
+
+  it('should work with for...of', () => {
+    const mat = d.mat4x4f(...Array(16).keys());
+    let i = 0;
+    for (const x of mat) {
+      expect(x).toBe(mat[i]);
+      expect(x).toBeDefined();
+      i++;
+    }
+    expect(i).toBe(16);
   });
 });
