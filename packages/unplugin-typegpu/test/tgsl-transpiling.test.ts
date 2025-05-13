@@ -84,6 +84,37 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       tgpu.x()(n => d.arrayOf(d.u32, n));"
     `);
   });
+
+  it('works with some typescript features', () => {
+    const code = `\
+        import tgpu from 'typegpu';
+
+        const fun = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+          const x = true;
+        });
+
+        const funcWithAs = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+          const x = true as boolean;
+        });
+
+        const funcWithSatisfies = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+          const x = true satisfies boolean;
+        });
+    `;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      const fun = tgpu['~unstable'].computeFn({
+        workgroupSize: [1]
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
+      const funcWithAs = tgpu['~unstable'].computeFn({
+        workgroupSize: [1]
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
+      const funcWithSatisfies = tgpu['~unstable'].computeFn({
+        workgroupSize: [1]
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));"
+    `);
+  });
 });
 
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
