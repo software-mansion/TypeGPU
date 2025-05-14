@@ -101,11 +101,11 @@ export function SearchableExampleList(
                     className='sticky z-10 bg-white flex items-center justify-center w-full top-8'
                     style={{
                       background:
-                        'linear-gradient(to bottom, white 50%, transparent 100%)',
+                        'linear-gradient(to bottom, white 70%, transparent 100%)',
                     }}
                   >
                     <div className='h-px bg-gray-200 flex-grow' />
-                    <h2 className='text-2xl font-bold px-6 py-2'>
+                    <h2 className='text-2xl font-bold px-3 py-2'>
                       {category.label}
                     </h2>
                     <div className='h-px bg-gray-200 flex-grow' />
