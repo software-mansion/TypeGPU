@@ -256,7 +256,7 @@ importers:
         specifier: ^2.21.2
         version: 2.21.2
       typegpu:
-        specifier: workspace:^0.5.6
+        specifier: workspace:^0.5.7
         version: link:../typegpu
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -484,7 +484,7 @@ importers:
         specifier: workspace:~0.1.1
         version: link:../tinyest-for-wgsl
       typegpu:
-        specifier: workspace:^0.5.6
+        specifier: workspace:^0.5.7
         version: link:../typegpu
       unplugin:
         specifier: ^2.3.1
