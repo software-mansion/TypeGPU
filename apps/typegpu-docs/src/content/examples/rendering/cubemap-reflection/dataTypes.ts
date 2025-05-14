@@ -17,7 +17,7 @@ export const ComputeVertex = d.struct({
 });
 
 export const CubeVertex = d.struct({
-  position: d.vec4f,
+  position: d.vec3f,
   uv: d.vec2f,
 });
 

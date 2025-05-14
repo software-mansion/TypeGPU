@@ -1,35 +1,40 @@
 export { discard } from './discard.ts';
 
+// deno-fmt-ignore
 export {
   // ops
   add,
   sub,
   mul,
+  div,
   // builtin functions
+  abs,
   acos,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
   cross,
+  distance,
   dot,
+  exp,
   floor,
   fract,
   length,
   max,
   min,
-  normalize,
-  distance,
-  sin,
-  exp,
   mix,
+  neg,
+  normalize,
   pow,
   reflect,
-  neg,
-} from './numeric.js';
+  sign,
+  sin,
+  sqrt,
+} from './numeric.ts';
 
+// deno-fmt-ignore
 export {
   // comparison
   allEq,
@@ -51,15 +56,16 @@ export {
   select,
 } from './boolean.ts';
 
+// deno-fmt-ignore
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
   // synchronization
   workgroupBarrier,
@@ -67,13 +73,20 @@ export {
   textureBarrier,
 } from './atomic.ts';
 
-export { arrayLength } from './array.js';
+export { arrayLength } from './array.ts';
 
+// deno-fmt-ignore
 export {
   pack4x8unorm,
   pack2x16float,
   unpack4x8unorm,
   unpack2x16float,
-} from './packing.js';
+} from './packing.ts';
 
-export { textureSample } from './texture.js';
+export {
+  textureDimensions,
+  textureLoad,
+  textureSample,
+  textureSampleLevel,
+  textureStore,
+} from './texture.ts';

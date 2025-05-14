@@ -3,11 +3,13 @@
 ![TypeGPU (light mode)](./apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
 ![TypeGPU (dark mode)](./apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
 
-[Website](https://docs.swmansion.com/TypeGPU) — [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
+[Website](https://docs.swmansion.com/TypeGPU) —
+[Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
 
 </div>
 
-**TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing resource management in a type-safe, declarative way.
+**TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing
+resource management in a type-safe, declarative way.
 
 <div align="center">
 <video width="512" autoplay muted loop playsinline src="https://github.com/user-attachments/assets/5bca716d-477d-44a1-a839-5df0c8d9044c"></video>
@@ -26,6 +28,7 @@
 <br>
 
 **Table of contents:**
+
 - [⚙️ TypeGPU as a foundation](#⚙️-typegpu-as-a-foundation)
 - [🧩 TypeGPU as a piece of the puzzle](#🧩-typegpu-as-a-piece-of-the-puzzle)
 - [📚 TypeGPU for libraries](#📚-typegpu-for-libraries)
@@ -36,35 +39,49 @@
 
 ## ⚙️ TypeGPU as a foundation
 
-We provide an abstraction that solves the most common WebGPU hurdles, yet does not restrict you in capability.
-You can granularly eject into vanilla WebGPU at any point. This means that, when building your app with TypeGPU,
-lock-in is not a concern!
+We provide an abstraction that solves the most common WebGPU hurdles, yet does
+not restrict you in capability. You can granularly eject into vanilla WebGPU at
+any point. This means that, when building your app with TypeGPU, lock-in is not
+a concern!
 
-The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading Language) syntax in TypeScript means
-that learning TypeGPU helps to learn WebGPU itself, with fewer frustrations.
+The low-level nature of TypeGPU and it's mirroring of WGSL (WebGPU Shading
+Language) syntax in TypeScript means that learning TypeGPU helps to learn WebGPU
+itself, with fewer frustrations.
 
 [The Getting Started and Fundamentals guides are a great starting point for new projects!](https://docs.swmansion.com/TypeGPU/getting-started/)
 
 ## 🧩 TypeGPU as a piece of the puzzle
 
-Our type-safe APIs can be used together, or in isolation. This makes partial application into existing apps just a few lines of code away, no matter the complexity of your app!
+Our type-safe APIs can be used together, or in isolation. This makes partial
+application into existing apps just a few lines of code away, no matter the
+complexity of your app!
 
 [We wrote a comprehensive resource on ways TypeGPU can improve your existing codebase.](https://docs.swmansion.com/TypeGPU/integration/webgpu-interoperability/)
 
-Pick and choose which parts of TypeGPU you'd like to incorporate into your existing app!
+Pick and choose which parts of TypeGPU you'd like to incorporate into your
+existing app!
 
 ## 📚 TypeGPU for libraries
 
-When creating a type-safe WebGPU library, one can expect to encounter at least one of the following problems:
+When creating a type-safe WebGPU library, one can expect to encounter at least
+one of the following problems:
+
 - Serializing/deserializing data.
 - Dynamically generating parts of the WGSL shader.
 - Complex type inference.
 
-If implemented from scratch, interoperability with other libraries (ones that have a different focus, solve different problems) can be near impossible without going down to *untyped WebGPU land*, or copying data back to JS. Moreover, to keep up with demand from users, they can be tempted to go out of scope of their initial use-case, even though another library already solves that problem.
+If implemented from scratch, interoperability with other libraries (ones that
+have a different focus, solve different problems) can be near impossible without
+going down to _untyped WebGPU land_, or copying data back to JS. Moreover, to
+keep up with demand from users, they can be tempted to go out of scope of their
+initial use-case, even though another library already solves that problem.
 
-> TypeGPU can be used as an interoperability layer between use-case specific libraries!
+> TypeGPU can be used as an interoperability layer between use-case specific
+> libraries!
 
-Let's imagine `@xyz/gen` is a library for procedural generation using WebGPU compute shaders, and `@abc/plot` is a library for plots and visualization using WebGPU.
+Let's imagine `@xyz/gen` is a library for procedural generation using WebGPU
+compute shaders, and `@abc/plot` is a library for plots and visualization using
+WebGPU.
 
 ```ts
 import tgpu from 'typegpu';
@@ -85,10 +102,12 @@ plot.array1d(root, terrainBuffer);
 plot.array2d(root, terrainBuffer);
 ```
 
-We can pass typed values around without the need to copy anything back to CPU-accessible memory! Let's see an example of how we can construct a type-safe API:
+We can pass typed values around without the need to copy anything back to
+CPU-accessible memory! Let's see an example of how we can construct a type-safe
+API:
 
 ```ts
-import type { TgpuBuffer, TgpuRoot, StorageFlag } from 'typegpu';
+import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 // We can define schemas, or functions that return schemas...
@@ -100,9 +119,8 @@ type HeightMap = ReturnType<typeof HeightMap>;
 
 export async function generateHeightMap(
   root: TgpuRoot,
-  opts: { width: number, height: number },
+  opts: { width: number; height: number },
 ): Promise<TgpuBuffer<HeightMap> & StorageFlag> {
-
   const buffer = root
     .createBuffer(HeightMap(opts.width, opts.height))
     .$usage('storage');
@@ -119,51 +137,84 @@ export async function generateHeightMap(
 }
 ```
 
-[Planning to create a WebGPU library? Reach out to us!](https://discord.gg/8jpfgDqPcM) We'd love to work with you to enrich the ecosystem with type-safe WebGPU utilities!
+[Planning to create a WebGPU library? Reach out to us!](https://discord.gg/8jpfgDqPcM)
+We'd love to work with you to enrich the ecosystem with type-safe WebGPU
+utilities!
 
 ## Documentation
 
-We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
+We created a set of guides and tutorials to get you up and running fast. Check
+out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
 
 ## What's next?
 
-- [Join the Software Mansion Community Discord](https://discord.gg/8jpfgDqPcM) to chat about TypeGPU or other Software Mansion libraries.
+- [Join the Software Mansion Community Discord](https://discord.gg/8jpfgDqPcM)
+  to chat about TypeGPU or other Software Mansion libraries.
 
 ## Projects using TypeGPU
 
 <!-- automd:file src="./projects-using-typegpu.md" -->
 
 - [Chaos Master](https://chaos-master.vercel.app) by deluksic & Komediruzecki
-- [Apollonian Circles](https://deluksic.github.io/apollonian-circles/) by deluksic
+- [Apollonian Circles](https://deluksic.github.io/apollonian-circles/) by
+  deluksic
 - [Strange Forms](https://github.com/loganzartman/strangeforms) by Logan Zartman
-- [WebGPU Stable Fluids](https://github.com/loganzartman/webgpu-stable-fluids) by Logan Zartman
-- [Visual timer: Calm Jar](https://apps.apple.com/us/app/visual-timer-calm-jar/id6741375962) by Nathan Schmidt
+- [WebGPU Stable Fluids](https://github.com/loganzartman/webgpu-stable-fluids)
+  by Logan Zartman
+- [Visual timer: Calm Jar](https://apps.apple.com/us/app/visual-timer-calm-jar/id6741375962)
+  by Nathan Schmidt
 
 <!-- /automd -->
 
 ## Repository structure
-**Packages**:
+
+**Packages:**
+
 - [packages/typegpu](/packages/typegpu) - The core library.
-- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Build plugins for TypeGPU.
-- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation.
+- [packages/typegpu-color](/packages/typegpu-color) - A set of color helper
+  functions for use in WebGPU/TypeGPU apps.
+- [packages/typegpu-noise](/packages/typegpu-noise) - A set of
+  noise/pseudo-random functions for use in WebGPU/TypeGPU apps.
+
+**Tooling:**
+
+- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Plugin for your
+  favorite bundler, enabling TypeGPU shader functions to be written in JS.
 - [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU.
-- [packages/tinyest](/packages/tinyest) - Type definitions for a JS embeddable syntax tree.
-- [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - Transforms JavaScript into its *tinyest* form, to be used in generating equivalent (or close to) WGSL code.
+- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code
+  generation.
+
+**Internals:**
+
+- [packages/tinyest](/packages/tinyest) - Type definitions for a JS embeddable
+  syntax tree.
+- [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - Transforms
+  JavaScript into its _tinyest_ form, to be used in generating equivalent (or
+  close to) WGSL code.
 - [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser.
-- [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - Development tools for packages in the monorepo.
+- [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - Development tools for
+  packages in the monorepo.
 
 **Apps**:
-- [apps/typegpu-docs](/apps/typegpu-docs) - The documentation, examples and benchmarks webpage.
+
+- [apps/typegpu-docs](/apps/typegpu-docs) - The documentation, examples and
+  benchmarks webpage.
+- [apps/infra-benchmarks](/apps/infra-benchmarks) - Headless benchmarks.
 
 ## TypeGPU is created by Software Mansion
 
 [![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
 
-Since 2012 [Software Mansion](https://swmansion.com) is a software agency with experience in building web and mobile apps. We are Core React Native Contributors and experts in dealing with all kinds of React Native issues. We can help you build your next dream product – [Hire us](https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=readme).
+Since 2012 [Software Mansion](https://swmansion.com) is a software agency with
+experience in building web and mobile apps. We are Core React Native
+Contributors and experts in dealing with all kinds of React Native issues. We
+can help you build your next dream product –
+[Hire us](https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=readme).
 
 <!-- automd:contributors author="software-mansion" -->
 
-Made by [@software-mansion](https://github.com/software-mansion) and [community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
+Made by [@software-mansion](https://github.com/software-mansion) and
+[community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
 <br><br>
 <a href="https://github.com/software-mansion/TypeGPU/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=software-mansion/TypeGPU" />

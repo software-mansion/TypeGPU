@@ -1,20 +1,20 @@
 import type * as acorn from 'acorn';
 import defu from 'defu';
 import { type Node, walk } from 'estree-walker';
-import { MagicStringAST, generateTransform } from 'magic-string-ast';
+import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { transpileFn } from 'tinyest-for-wgsl';
-import { type UnpluginInstance, createUnplugin } from 'unplugin';
+import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
-  type Context,
-  type KernelDirective,
-  type Options,
   codeFilterRegexes,
+  type Context,
   defaultOptions,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
+  type KernelDirective,
   kernelDirectives,
+  type Options,
 } from './common.ts';
 
 type FunctionNode =
@@ -120,15 +120,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                 if (directive) {
                   tgslFunctionDefs.push({
                     def: removeKernelDirective(node),
-                    name:
-                      node.type === 'FunctionDeclaration' ||
-                      node.type === 'FunctionExpression'
-                        ? node.id?.name
-                        : _parent?.type === 'VariableDeclarator'
-                          ? _parent.id.type === 'Identifier'
-                            ? _parent.id.name
-                            : undefined
-                          : undefined,
+                    name: node.type === 'FunctionDeclaration' ||
+                        node.type === 'FunctionExpression'
+                      ? node.id?.name
+                      : _parent?.type === 'VariableDeclarator'
+                      ? _parent.id.type === 'Identifier'
+                        ? _parent.id.name
+                        : undefined
+                      : undefined,
                     removeJsImplementation: directive !== 'kernel & js',
                   });
                   this.skip();
@@ -145,11 +144,13 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             );
           }
 
-          for (const {
-            def,
-            name,
-            removeJsImplementation,
-          } of tgslFunctionDefs) {
+          for (
+            const {
+              def,
+              name,
+              removeJsImplementation,
+            } of tgslFunctionDefs
+          ) {
             const { argNames, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
@@ -157,18 +158,22 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               isFunctionStatement &&
               name &&
               code
-                .slice(0, def.start)
-                .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
+                  .slice(0, def.start)
+                  .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
             ) {
               throw new Error(
-                `File ${id}: function "${name}", containing ${removeJsImplementation ? 'kernel' : 'kernel & js'} directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+                `File ${id}: function "${name}", containing ${
+                  removeJsImplementation ? 'kernel' : 'kernel & js'
+                } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
               );
             }
 
             // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
             magicString.appendLeft(
               def.start,
-              `${isFunctionStatement && name ? `const ${name} = ` : ''}${tgpuAlias}.__assignAst(`,
+              `${
+                isFunctionStatement && name ? `const ${name} = ` : ''
+              }${tgpuAlias}.__assignAst(`,
             );
             magicString.appendRight(
               def.end,

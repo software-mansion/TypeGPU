@@ -33,18 +33,18 @@ export default defineConfig({
       plugins: stripFalsy([
         starlightBlog(),
         DEV &&
-          starlightTypeDoc({
-            entryPoints: [
-              '../../packages/typegpu/src/index.ts',
-              '../../packages/typegpu/src/data/index.ts',
-              '../../packages/typegpu/src/std/index.ts',
-            ],
-            tsconfig: '../../packages/typegpu/tsconfig.json',
-            typeDoc: {
-              excludeInternal: true,
-              excludeReferences: true,
-            },
-          }),
+        starlightTypeDoc({
+          entryPoints: [
+            '../../packages/typegpu/src/index.ts',
+            '../../packages/typegpu/src/data/index.ts',
+            '../../packages/typegpu/src/std/index.ts',
+          ],
+          tsconfig: '../../packages/typegpu/tsconfig.json',
+          typeDoc: {
+            excludeInternal: true,
+            excludeReferences: true,
+          },
+        }),
       ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',

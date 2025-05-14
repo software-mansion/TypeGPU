@@ -9,11 +9,11 @@ const Schema = d.struct({
   bool: d.bool,
 });
 
-const negate = tgpu['~unstable'].fn([d.vec3b], d.vec3b).does((input) => {
+const negate = tgpu['~unstable'].fn([d.vec3b], d.vec3b)((input) => {
   return d.vec3b(!input.x, !input.y, !input.z);
 });
 
-const negateStruct = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
+const negateStruct = tgpu['~unstable'].fn([Schema], Schema)((input) => {
   const result = Schema({
     vec2b: std.not(input.vec2b),
     vec4b: std.not(input.vec4b),
@@ -25,8 +25,7 @@ const negateStruct = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
 export const logicalExpressionTests = tgpu['~unstable']
-  .fn([], d.bool)
-  .does(() => {
+  .fn([], d.bool)(() => {
     let s = true;
 
     s = s && std.eq(d.vec2i(1, 3), d.vec2i(1, 3)).x === true;
@@ -43,36 +42,31 @@ export const logicalExpressionTests = tgpu['~unstable']
     s = s && std.allEq(d.vec2i(1, 3), d.vec2i(1, 3));
     s = s && !std.allEq(d.vec2i(1, 3), d.vec2i(1, 2));
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.ne(d.vec3i(1, 2, 3), d.vec3i(1, 2, 4)),
         d.vec3b(false, false, true),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.lt(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(false, true, false),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.le(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, true, false),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.gt(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(false, false, true),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.ge(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, false, true),
@@ -80,8 +74,7 @@ export const logicalExpressionTests = tgpu['~unstable']
 
     s = s && std.allEq(std.not(d.vec2b(false, true)), d.vec2b(true, false));
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.or(
           d.vec4b(true, true, false, false),
@@ -90,8 +83,7 @@ export const logicalExpressionTests = tgpu['~unstable']
         d.vec4b(true, true, true, false),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.and(
           d.vec4b(true, true, false, false),
@@ -103,18 +95,16 @@ export const logicalExpressionTests = tgpu['~unstable']
     s = s && std.isCloseTo(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.999, 1.0, 1.001));
     s = s && !std.isCloseTo(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.9, 1.0, 1.1));
     s = s && std.isCloseTo(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.9, 1.0, 1.1), 0.2);
-    s =
-      s && !std.isCloseTo(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.7, 1.0, 1.3), 0.2);
+    s = s &&
+      !std.isCloseTo(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.7, 1.0, 1.3), 0.2);
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.select(d.vec2i(-1, -2), d.vec2i(1, 2), true),
         d.vec2i(1, 2),
       );
 
-    s =
-      s &&
+    s = s &&
       std.allEq(
         std.select(
           d.vec4i(-1, -2, -3, -4),

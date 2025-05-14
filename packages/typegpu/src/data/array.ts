@@ -39,16 +39,16 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly [$internal] = true;
   public readonly type = 'array';
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TElement>[];
+  declare public readonly [$repr]: Infer<TElement>[];
   /** Type-token, not available at runtime */
-  public declare readonly '~gpuRepr': InferGPU<TElement>[];
+  declare public readonly '~gpuRepr': InferGPU<TElement>[];
   /** Type-token, not available at runtime */
-  public declare readonly '~reprPartial': {
+  declare public readonly '~reprPartial': {
     idx: number;
     value: InferPartial<TElement>;
   }[];
   /** Type-token, not available at runtime */
-  public declare readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
+  declare public readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 
   constructor(
     public readonly elementType: TElement,

@@ -33,12 +33,12 @@ export const randf: {
 };
 
 export {
-  randomGeneratorShell,
-  randomGeneratorSlot,
-  // ---
   // Generators
   BPETER,
   // ---
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
+  // ---
+  randomGeneratorShell,
+  randomGeneratorSlot,
 } from './generator.ts';

@@ -9,14 +9,14 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { setName } from '../../name.ts';
 import {
+  kindToDefaultFormatMap,
   type TgpuVertexAttrib,
   type VertexFormat,
-  kindToDefaultFormatMap,
   vertexFormats,
 } from '../../shared/vertexFormat.ts';
-import type { Labelled } from '../../types.ts';
 import type {
   ArrayToContainedAttribs,
   DataToContainedAttribs,
@@ -28,8 +28,7 @@ import type {
 
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
-> extends TgpuNamable,
-    Labelled {
+> extends TgpuNamable {
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
@@ -157,14 +156,11 @@ function dataToContainedAttribs<
 }
 
 class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
-  implements TgpuVertexLayout<TData>
-{
+  implements TgpuVertexLayout<TData> {
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;
   private readonly _customLocationMap = {} as Record<string | symbol, number>;
-
-  private _label: string | undefined;
 
   constructor(
     public readonly schemaForCount: (count: number) => TData,
@@ -183,10 +179,6 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
       0,
       this._customLocationMap,
     );
-  }
-
-  get label(): string | undefined {
-    return this._label;
   }
 
   get vertexLayout(): GPUVertexBufferLayout {
@@ -239,8 +231,8 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     };
   }
 
-  $name(label?: string | undefined): this {
-    this._label = label;
+  $name(label: string): this {
+    setName(this, label);
     return this;
   }
 }

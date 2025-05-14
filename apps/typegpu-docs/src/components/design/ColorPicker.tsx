@@ -27,8 +27,8 @@ export function ColorPicker({ value, onChange }: Props) {
   return (
     <input
       value={rgbToHex(value)}
-      className="w-full h-10 p-1 rounded bg-tameplum-50"
-      type="color"
+      className='w-full h-10 p-1 rounded bg-tameplum-50'
+      type='color'
       onChange={(e) => onChange(hexToRgb(e.target.value))}
     />
   );

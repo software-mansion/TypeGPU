@@ -1,15 +1,16 @@
 import type { OmitBuiltins } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
-import { createFnCore } from './fnCore.ts';
-import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
+import type { Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
 import {
-  type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
+  type IOLayoutToSchema,
 } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
@@ -38,24 +39,27 @@ type TgpuVertexFnShellHeader<
 export type TgpuVertexFnShell<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
-> = TgpuVertexFnShellHeader<VertexIn, VertexOut> &
-  ((
+> =
+  & TgpuVertexFnShellHeader<VertexIn, VertexOut>
+  & ((
     implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-  ((
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
+  & ((
     implementation: string,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-  ((
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
+  & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
+  & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: ((
-      implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-    ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
-      ((
+    does:
+      & ((
+        implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
+      & ((
         implementation: string,
       ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
   };
@@ -108,13 +112,13 @@ export function vertexFn<
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType: (Object.keys(options.out).length !== 0
-      ? createOutputType(options.out)
-      : undefined) as unknown as VertexOut,
-    argTypes:
-      options.in && Object.keys(options.in).length !== 0
-        ? [createStructFromIO(options.in)]
-        : [],
+    returnType:
+      (Object.keys(options.out).length !== 0
+        ? createOutputType(options.out)
+        : undefined) as unknown as VertexOut,
+    argTypes: options.in && Object.keys(options.in).length !== 0
+      ? [createStructFromIO(options.in)]
+      : [],
     isEntry: true,
   };
 
@@ -136,14 +140,18 @@ function createVertexFn(
   shell: TgpuVertexFnShellHeader<IOLayout, IOLayout>,
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
-  type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;
+  type This = TgpuVertexFn<IOLayout, IOLayout> & SelfResolvable & {
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType;
   const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
-    addReturnTypeToExternals(implementation, outputType, (externals) =>
-      core.applyExternals(externals),
+    addReturnTypeToExternals(
+      implementation,
+      outputType,
+      (externals) => core.applyExternals(externals),
     );
   }
 
@@ -152,17 +160,14 @@ function createVertexFn(
     outputType,
     inputType,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$getNameForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
@@ -193,7 +198,7 @@ function createVertexFn(
     },
 
     toString() {
-      return `vertexFn:${this.label ?? '<unnamed>'}`;
+      return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
   } as This;
 }
