@@ -39,7 +39,7 @@ export function ExampleLink(props: Props) {
       className={cs(
         'flex justify-between items-center cursor-pointer no-underline',
         active
-          ? 'bg-clip-text bg-linear-to-r from-gradient-purple-dark to-gradient-blue-dark text-transparent'
+          ? 'bg-clip-text bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark'
           : isExperimental
           ? 'text-gray-400'
           : 'text-black',

@@ -26,7 +26,7 @@ export function Select({
               <RadixSelect.Item
                 key={option}
                 value={option}
-                className='flex items-center justify-between p-3 text-sm hover:bg-linear-to-br hover:from-gradient-purple hover:to-gradient-blue hover:text-grayscale-0'
+                className='flex items-center justify-between p-3 text-sm hover:bg-gradient-to-br hover:from-gradient-purple hover:to-gradient-blue hover:text-grayscale-0'
               >
                 <RadixSelect.ItemText>{option}</RadixSelect.ItemText>
                 {option === value && (

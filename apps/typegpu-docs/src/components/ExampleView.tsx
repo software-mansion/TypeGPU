@@ -1,20 +1,20 @@
-import cs from 'classnames';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import cs from "classnames";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
-} from '../utils/examples/codeEditorShownAtom.ts';
-import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
-import { ExecutionCancelledError } from '../utils/examples/errors.ts';
-import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
-import { executeExample } from '../utils/examples/exampleRunner.ts';
-import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example } from '../utils/examples/types.ts';
-import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
-import { ControlPanel } from './ControlPanel.tsx';
-import { Snackbar } from './design/Snackbar.tsx';
+} from "../utils/examples/codeEditorShownAtom.ts";
+import { currentSnackbarAtom } from "../utils/examples/currentSnackbarAtom.ts";
+import { ExecutionCancelledError } from "../utils/examples/errors.ts";
+import { exampleControlsAtom } from "../utils/examples/exampleControlAtom.ts";
+import { executeExample } from "../utils/examples/exampleRunner.ts";
+import type { ExampleState } from "../utils/examples/exampleState.ts";
+import type { Example } from "../utils/examples/types.ts";
+import { isGPUSupported } from "../utils/isGPUSupported.ts";
+import { HtmlCodeEditor, TsCodeEditor } from "./CodeEditor.tsx";
+import { ControlPanel } from "./ControlPanel.tsx";
+import { Snackbar } from "./design/Snackbar.tsx";
 
 type Props = {
   example: Example;
@@ -23,7 +23,7 @@ type Props = {
 
 function useExample(
   tsImport: () => Promise<unknown>,
-  setSnackbarText: (text: string | undefined) => void,
+  setSnackbarText: (text: string | undefined) => void
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
@@ -68,7 +68,7 @@ export function ExampleView({ example }: Props) {
   const { tsFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState<string>("index.ts");
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
@@ -76,9 +76,9 @@ export function ExampleView({ example }: Props) {
 
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
-    'index.ts',
-    ...filePaths.filter((name) => name !== 'index.ts'),
-    'index.html',
+    "index.ts",
+    ...filePaths.filter((name) => name !== "index.ts"),
+    "index.html",
   ];
 
   useEffect(() => {
@@ -95,81 +95,79 @@ export function ExampleView({ example }: Props) {
     <>
       {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
 
-      <div className='flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full'>
+      <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
         <div
           className={cs(
-            'flex-1 grid gap-4',
-            codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
+            "flex-1 grid gap-4",
+            codeEditorShowing ? "md:grid-rows-[2fr_3fr]" : ""
           )}
         >
-          {isGPUSupported
-            ? (
-              <div
-                style={{
-                  scrollbarGutter: 'stable both-edges',
-                }}
-                className={cs(
-                  'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
-                  codeEditorShowing
-                    ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
-                    : '',
-                )}
-              >
-                <div ref={exampleHtmlRef} className='contents w-full h-full' />
-              </div>
-            )
-            : <GPUUnsupportedPanel />}
+          {isGPUSupported ? (
+            <div
+              style={{
+                scrollbarGutter: "stable both-edges",
+              }}
+              className={cs(
+                "flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4",
+                codeEditorShowing
+                  ? "md:max-h-[calc(40vh-1.25rem)] md:overflow-auto"
+                  : ""
+              )}
+            >
+              <div ref={exampleHtmlRef} className="contents w-full h-full" />
+            </div>
+          ) : (
+            <GPUUnsupportedPanel />
+          )}
 
-          {codeEditorShowing || codeEditorMobileShowing
-            ? (
-              <div
-                className={cs(
-                  codeEditorShowing && !codeEditorMobileShowing
-                    ? 'hidden md:block'
-                    : '',
-                  !codeEditorShowing && codeEditorMobileShowing
-                    ? 'md:hidden'
-                    : '',
-                  'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
-                )}
-              >
-                <div className='absolute inset-0 flex flex-col justify-between'>
-                  <div className='h-12 pt-16 md:pt-0'>
-                    <div className='flex overflow-x-auto border-gray-300 h-full'>
-                      {editorTabsList.map((fileName) => (
-                        <button
-                          key={fileName}
-                          type='button'
-                          onClick={() => setCurrentFilePath(fileName)}
-                          className={cs(
-                            'px-4 rounded-t-lg rounded-b-none text-nowrap',
-                            currentFilePath === fileName
-                              ? 'bg-linear-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                              : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
-                          )}
-                        >
-                          {fileName}
-                        </button>
-                      ))}
-                    </div>
+          {codeEditorShowing || codeEditorMobileShowing ? (
+            <div
+              className={cs(
+                codeEditorShowing && !codeEditorMobileShowing
+                  ? "hidden md:block"
+                  : "",
+                !codeEditorShowing && codeEditorMobileShowing
+                  ? "md:hidden"
+                  : "",
+                "absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full"
+              )}
+            >
+              <div className="absolute inset-0 flex flex-col justify-between">
+                <div className="h-12 pt-16 md:pt-0">
+                  <div className="flex overflow-x-auto border-gray-300 h-full">
+                    {editorTabsList.map((fileName) => (
+                      <button
+                        key={fileName}
+                        type="button"
+                        onClick={() => setCurrentFilePath(fileName)}
+                        className={cs(
+                          "px-4 rounded-t-lg rounded-b-none text-nowrap",
+                          currentFilePath === fileName
+                            ? "bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark"
+                            : "bg-white border-tameplum-100 border-2 hover:bg-tameplum-20"
+                        )}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
                   </div>
-
-                  <HtmlCodeEditor
-                    shown={currentFilePath === 'index.html'}
-                    file={htmlFile}
-                  />
-
-                  {tsFiles.map((file) => (
-                    <TsCodeEditor
-                      key={file.path}
-                      shown={file.path === currentFilePath}
-                      file={file}
-                    />
-                  ))}
                 </div>
+
+                <HtmlCodeEditor
+                  shown={currentFilePath === "index.html"}
+                  file={htmlFile}
+                />
+
+                {tsFiles.map((file) => (
+                  <TsCodeEditor
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    file={file}
+                  />
+                ))}
               </div>
-            )
-            : null}
+            </div>
+          ) : null}
         </div>
         <ControlPanel />
       </div>
@@ -179,15 +177,15 @@ export function ExampleView({ example }: Props) {
 
 function GPUUnsupportedPanel() {
   return (
-    <div className='grid gap-6 text-xl leading-tight text-center place-content-center'>
-      <div className='text-3xl'>
+    <div className="grid gap-6 text-xl leading-tight text-center place-content-center">
+      <div className="text-3xl">
         WebGPU is not enabled/supported in this browser 😔
       </div>
       <div>Maybe it's hidden under an experimental flag? 🤔</div>
 
       <a
-        href='/TypeGPU/blog/troubleshooting'
-        className='text-transparent underline bg-linear-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text'
+        href="/TypeGPU/blog/troubleshooting"
+        className="underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text"
       >
         Read more about the availability
       </a>
@@ -197,37 +195,36 @@ function GPUUnsupportedPanel() {
 
 function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
+    const canvases = exampleHtmlRef.current?.querySelectorAll("canvas") as
       | HTMLCanvasElement[]
       | undefined;
     const observers: ResizeObserver[] = [];
 
     for (const canvas of canvases ?? []) {
-      if ('width' in canvas.attributes || 'height' in canvas.attributes) {
+      if ("width" in canvas.attributes || "height" in canvas.attributes) {
         continue; // custom canvas, not replacing with resizable
       }
 
-      const newCanvas = document.createElement('canvas');
-      const container = document.createElement('div');
-      const frame = document.createElement('div');
+      const newCanvas = document.createElement("canvas");
+      const container = document.createElement("div");
+      const frame = document.createElement("div");
 
       frame.appendChild(newCanvas);
       container.appendChild(frame);
 
       container.className =
-        'flex flex-1 justify-center items-center w-full md:h-full md:w-auto';
-      container.style.containerType = 'size';
+        "flex flex-1 justify-center items-center w-full md:h-full md:w-auto";
+      container.style.containerType = "size";
 
-      frame.className = 'relative';
+      frame.className = "relative";
 
       if (canvas.dataset.fitToContainer !== undefined) {
-        frame.style.width = '100%';
-        frame.style.height = '100%';
+        frame.style.width = "100%";
+        frame.style.height = "100%";
       } else {
-        const aspectRatio = canvas.dataset.aspectRatio ?? '1';
+        const aspectRatio = canvas.dataset.aspectRatio ?? "1";
         frame.style.aspectRatio = aspectRatio;
-        frame.style.height =
-          `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+        frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
       }
 
       for (const prop of canvas.style) {
@@ -238,7 +235,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
         // @ts-ignore
         newCanvas[attribute.name] = attribute.value;
       }
-      newCanvas.className = 'absolute w-full h-full';
+      newCanvas.className = "absolute w-full h-full";
 
       canvas.parentElement?.replaceChild(container, canvas);
 

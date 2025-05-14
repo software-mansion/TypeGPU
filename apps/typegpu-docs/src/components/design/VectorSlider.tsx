@@ -25,7 +25,7 @@ export function VectorSlider({ min, max, step, value, onChange }: Props) {
         className='bg-grayscale-20 h-10 rounded relative flex overflow-hidden flex-1'
       >
         <RadixSlider.Track className='flex-1 h-full'>
-          <RadixSlider.Range className='absolute h-full bg-linear-to-br from-gradient-purple to-gradient-blue' />
+          <RadixSlider.Range className='absolute h-full bg-gradient-to-br from-gradient-purple to-gradient-blue' />
         </RadixSlider.Track>
         <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-center'>
           {value[index].toFixed(2)}

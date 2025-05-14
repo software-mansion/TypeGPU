@@ -90,7 +90,7 @@ function SideMenu() {
           </p>
           <a
             href='/TypeGPU/why-typegpu'
-            className='underline text-sm bg-linear-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
+            className='underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text'
           >
             Learn more about TypeGPU here
           </a>
