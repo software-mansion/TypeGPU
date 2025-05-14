@@ -1,3 +1,4 @@
+import { setName } from '../name.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -54,8 +55,8 @@ function createMatSchema<
     [$internal]: true,
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
-    label: options.type,
   } as unknown as AnyWgslData;
+  setName(MatSchema, options.type);
 
   const construct = createDualImpl(
     // CPU implementation
@@ -141,6 +142,13 @@ abstract class mat2x2Impl<TColumn extends v2f>
 
   set [3](value: number) {
     this.columns[1].y = value;
+  }
+
+  *[Symbol.iterator]() {
+    yield this[0];
+    yield this[1];
+    yield this[2];
+    yield this[3];
   }
 
   '~resolve'(): string {
@@ -279,6 +287,12 @@ abstract class mat3x3Impl<TColumn extends v3f>
   }
 
   set [11](_: number) {}
+
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 12; i++) {
+      yield this[i] as number;
+    }
+  }
 
   '~resolve'(): string {
     return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
@@ -462,6 +476,12 @@ abstract class mat4x4Impl<TColumn extends v4f>
     this.columns[3].w = value;
   }
 
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 16; i++) {
+      yield this[i] as number;
+    }
+  }
+
   '~resolve'(): string {
     return `${this.kind}(${
       Array.from({ length: this.length })
@@ -549,14 +569,14 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
  * const zero4x4 = mat4x4f(); // filled with zeros
  *
  * @example
- * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+ * const mat = mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
  * mat.columns[0] // vec4f(0, 1, 2, 3)
  * mat.columns[1] // vec4f(4, 5, 6, 7)
  * mat.columns[2] // vec4f(8, 9, 10, 11)
  * mat.columns[3] // vec4f(12, 13, 14, 15)
  *
  * @example
- * const mat = mat3x3f(
+ * const mat = mat4x4f(
  *  vec4f(0, 1, 2, 3),     // column 0
  *  vec4f(4, 5, 6, 7),     // column 1
  *  vec4f(8, 9, 10, 11),   // column 2

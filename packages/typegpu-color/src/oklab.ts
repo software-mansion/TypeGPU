@@ -14,15 +14,13 @@ import {
 } from 'typegpu/std';
 import { linearToSrgb, srgbToLinear } from './srgb.ts';
 
-const cbrt = tgpu['~unstable'].fn(
-  [f32],
-  f32,
-)((x) => sign(x) * pow(abs(x), f32(1) / 3));
+const cbrt = tgpu['~unstable'].fn([f32], f32)((x) => {
+  'kernel & js';
+  return sign(x) * pow(abs(x), f32(1) / 3);
+});
 
-export const linearRgbToOklab = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((rgb) => {
+export const linearRgbToOklab = tgpu['~unstable'].fn([vec3f], vec3f)((rgb) => {
+  'kernel & js';
   const l = 0.4122214708 * rgb.x + 0.5363325363 * rgb.y + 0.0514459929 * rgb.z;
   const m = 0.2119034982 * rgb.x + 0.6806995451 * rgb.y + 0.1073969566 * rgb.z;
   const s = 0.0883024619 * rgb.x + 0.2817188376 * rgb.y + 0.6299787005 * rgb.z;
@@ -38,10 +36,8 @@ export const linearRgbToOklab = tgpu['~unstable'].fn(
   );
 });
 
-export const oklabToLinearRgb = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((lab) => {
+export const oklabToLinearRgb = tgpu['~unstable'].fn([vec3f], vec3f)((lab) => {
+  'kernel & js';
   const l_ = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
   const m_ = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
   const s_ = lab.x - 0.0894841775 * lab.y - 1.291485548 * lab.z;
@@ -63,10 +59,8 @@ export const oklabToLinearRgb = tgpu['~unstable'].fn(
  * a and b must be normalized so a^2 + b^2 == 1
  */
 
-const computeMaxSaturation = tgpu['~unstable'].fn(
-  [f32, f32],
-  f32,
-)((a, b) => {
+const computeMaxSaturation = tgpu['~unstable'].fn([f32, f32], f32)((a, b) => {
+  'kernel & js';
   // Max saturation will be when one of r, g or b goes below zero.
 
   // Select different coefficients depending on which component goes below zero first
@@ -157,10 +151,8 @@ const LC = struct({
  * Finds L_cusp and C_cusp for a given hue
  * a and b must be normalized so a^2 + b^2 == 1
  */
-const findCusp = tgpu['~unstable'].fn(
-  [f32, f32],
-  LC,
-)((a, b) => {
+const findCusp = tgpu['~unstable'].fn([f32, f32], LC)((a, b) => {
+  'kernel & js';
   // First, find the maximum saturation (saturation S = C/L)
   const S_cusp = computeMaxSaturation(a, b);
 
@@ -183,6 +175,7 @@ const findGamutIntersection = tgpu['~unstable'].fn(
   [f32, f32, f32, f32, f32, LC],
   f32,
 )((a, b, L1, C1, L0, cusp) => {
+  'kernel & js';
   const FLT_MAX = 3.40282346e38;
 
   // Find the intersection for upper and lower half separately
@@ -268,10 +261,8 @@ const findGamutIntersection = tgpu['~unstable'].fn(
   return t;
 });
 
-const gamutClipPreserveChroma = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((lab) => {
+const gamutClipPreserveChroma = tgpu['~unstable'].fn([vec3f], vec3f)((lab) => {
+  'kernel & js';
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -286,15 +277,11 @@ const gamutClipPreserveChroma = tgpu['~unstable'].fn(
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-export const oklabGamutClipAlphaSlot = tgpu['~unstable'].slot(
-  tgpu['~unstable'].fn([], f32)(() => 0.2),
-);
+export const oklabGamutClipAlphaAccess = tgpu['~unstable'].accessor(f32, 0.2);
 
-const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((lab) => {
-  const alpha = oklabGamutClipAlphaSlot.value();
+const gamutClipAdaptiveL05 = tgpu['~unstable'].fn([vec3f], vec3f)((lab) => {
+  'kernel & js';
+  const alpha = oklabGamutClipAlphaAccess.value;
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -313,11 +300,9 @@ const gamutClipAdaptiveL05 = tgpu['~unstable'].fn(
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((lab) => {
-  const alpha = oklabGamutClipAlphaSlot.value();
+const gamutClipAdaptiveL0cusp = tgpu['~unstable'].fn([vec3f], vec3f)((lab) => {
+  'kernel & js';
+  const alpha = oklabGamutClipAlphaAccess.value;
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -346,12 +331,12 @@ export const oklabGamutClip = {
   adaptiveL0Cusp: gamutClipAdaptiveL0cusp,
 };
 
-export const oklabToRgb = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((lab) => linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.value(lab))));
+export const oklabToRgb = tgpu['~unstable'].fn([vec3f], vec3f)((lab) => {
+  'kernel & js';
+  return linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.value(lab)));
+});
 
-export const rgbToOklab = tgpu['~unstable'].fn(
-  [vec3f],
-  vec3f,
-)((rgb) => linearRgbToOklab(srgbToLinear(rgb)));
+export const rgbToOklab = tgpu['~unstable'].fn([vec3f], vec3f)((rgb) => {
+  'kernel & js';
+  return linearRgbToOklab(srgbToLinear(rgb));
+});

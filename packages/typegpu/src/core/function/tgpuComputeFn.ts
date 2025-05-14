@@ -1,8 +1,9 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable, type TgpuNamable } from '../../namable.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore } from './fnCore.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
 import { createStructFromIO } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
@@ -142,7 +143,9 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   workgroupSize: number[],
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
-  type This = TgpuComputeFn<ComputeIn> & Labelled & SelfResolvable;
+  type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(shell, implementation);
   const inputType = shell.argTypes[0];
@@ -150,17 +153,14 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   return {
     shell,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$getNameForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
@@ -175,7 +175,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     },
 
     toString() {
-      return `computeFn:${this.label ?? '<unnamed>'}`;
+      return `computeFn:${getName(core) ?? '<unnamed>'}`;
     },
   } as This;
 }

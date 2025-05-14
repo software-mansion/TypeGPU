@@ -279,7 +279,7 @@ const Transpilers: Partial<
       return [NODE.const, id, init];
     }
 
-    return init ? [NODE.let, id, init] : [NODE.let, id];
+    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
   },
 
   IfStatement(ctx, node) {
@@ -355,6 +355,14 @@ const Transpilers: Partial<
 
   BreakStatement() {
     return [NODE.break];
+  },
+
+  TSAsExpression(ctx, node) {
+    return transpile(ctx, node.expression);
+  },
+
+  TSSatisfiesExpression(ctx, node) {
+    return transpile(ctx, node.expression);
   },
 };
 

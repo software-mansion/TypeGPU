@@ -31,7 +31,7 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { getTypeFromWgsl } from './tgsl/generationHelpers.ts';
+import { coerceToSnippet } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   FnToWgslOptions,
@@ -41,7 +41,7 @@ import type {
   Snippet,
   Wgsl,
 } from './types.ts';
-import { isSelfResolvable, isWgsl, UnknownData } from './types.ts';
+import { isSelfResolvable, isWgsl, type UnknownData } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -198,13 +198,8 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
-        if (external !== undefined) {
-          return {
-            value: external,
-            dataType: isWgsl(external)
-              ? getTypeFromWgsl(external)
-              : UnknownData,
-          };
+        if (external !== undefined && external !== null) {
+          return coerceToSnippet(external);
         }
 
         // Since functions cannot access resources from the calling scope, we

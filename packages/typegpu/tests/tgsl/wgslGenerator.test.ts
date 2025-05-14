@@ -18,6 +18,14 @@ const { NodeTypeCatalog: NODE } = tinyest;
 
 const transpiler = new JitTranspiler();
 
+const numberSlot = tgpu['~unstable'].slot(44);
+const derivedV4u = tgpu['~unstable'].derived(() =>
+  std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
+);
+const derivedV2f = tgpu['~unstable'].derived(() =>
+  std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
+);
+
 const createContext = () => {
   return new ResolutionCtxImpl({
     names: new StrictNameRegistry(),
@@ -182,7 +190,11 @@ describe('wgslGenerator', () => {
     const res1 = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
+      (
+        (
+          astInfo.ast.body[1][0] as tinyest.Return
+        )[1] as tinyest.BinaryExpression
+      )[1],
     );
 
     expect(res1.dataType).toStrictEqual(d.u32);
@@ -192,7 +204,11 @@ describe('wgslGenerator', () => {
     const res2 = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      ((astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
+      (
+        (
+          astInfo.ast.body[1][0] as tinyest.Return
+        )[1] as tinyest.BinaryExpression
+      )[3],
     );
     expect(res2.dataType).toStrictEqual(d.u32);
 
@@ -420,17 +436,12 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for derived values and slots', () => {
-    const numberSlot = tgpu['~unstable'].slot(44);
-    const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
-    );
-
     const testFn = tgpu['~unstable']
       .fn(
         [],
         d.vec4u,
       )(() => {
-        return derived.value;
+        return derivedV4u.value;
       })
       .$name('testFn');
 
@@ -450,7 +461,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[7,"derived","value"]]]]"`,
+      `"[0,[[10,[7,"derivedV4u","value"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -459,7 +470,7 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: return derived.value;
+    // Check for: return derivedV4u.value;
     //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
@@ -470,17 +481,12 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for indexing into a derived value', () => {
-    const numberSlot = tgpu['~unstable'].slot(44);
-    const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
-    );
-
     const testFn = tgpu['~unstable']
       .fn(
         [d.u32],
         d.f32,
       )((idx) => {
-        return derived.value[idx] as number;
+        return derivedV2f.value[idx] as number;
       })
       .$name('testFn');
 
@@ -493,7 +499,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"derived","value"],"idx"]]]]"`,
+      `"[0,[[10,[8,[7,"derivedV2f","value"],"idx"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -502,7 +508,7 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: return derived.value[idx];
+    // Check for: return derivedV2f.value[idx];
     //                      ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
@@ -517,14 +523,14 @@ describe('wgslGenerator', () => {
       [],
       d.u32,
     )(() => {
-      const arr = [1, 2, 3];
+      const arr = [d.u32(1), 2, 3];
       return arr[1] as number;
     });
 
     expect(parseResolved({ testFn })).toBe(
       parse(`
       fn testFn() -> u32 {
-        var arr = array<u32, 3>(1, 2, 3);
+        var arr = array<u32, 3>(u32(1), 2, 3);
         return arr[1];
       }`),
     );
@@ -538,7 +544,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
+      `"[0,[[13,"arr",[100,[[6,[7,"d","u32"],[[5,"1"]]],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -552,10 +558,34 @@ describe('wgslGenerator', () => {
     const res = wgslGenerator.generateExpression(
       ctx,
       // deno-fmt-ignore: it's better that way
-      (astInfo.ast.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
+      (
+        astInfo.ast.body[1][0] as tinyest.Const
+      )[2] as unknown as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
+  });
+
+  it('generates correct code for complex array expressions', () => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
+      const arr = [
+        d.vec2u(1, 2),
+        d.vec2u(3, 4),
+        std.min(d.vec2u(5, 6), d.vec2u(7, 8)),
+      ] as [d.v2u, d.v2u, d.v2u];
+      return arr[1].x;
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() -> u32 {
+        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), min(vec2u(5, 6), vec2u(7, 8)));
+        return arr[1].x;
+      }`),
+    );
   });
 
   it('generates correct code for array expressions with struct elements', () => {
@@ -595,17 +625,6 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    const expectedAst = {
-      b: [{
-        c: ['arr', {
-          y: [
-            { f: ['testStruct', [{ o: { x: { n: '1' }, y: { n: '2' } } }]] },
-            { f: ['testStruct', [{ o: { x: { n: '3' }, y: { n: '4' } } }]] },
-          ],
-        }],
-      }, { r: { a: [{ i: ['arr', { n: '1' }] }, 'y'] } }],
-    } as const;
-
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
@@ -627,17 +646,15 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions with derived elements', () => {
-    const numberSlot = tgpu['~unstable'].slot(44);
-    const derived = tgpu['~unstable'].derived(() =>
-      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
-    );
-
     const testFn = tgpu['~unstable']
       .fn(
         [],
         d.f32,
       )(() => {
-        const arr = [derived.value, std.mul(derived.value, d.vec2f(2, 2))];
+        const arr = [
+          derivedV2f.value,
+          std.mul(derivedV2f.value, d.vec2f(2, 2)),
+        ];
         return (arr[1] as { x: number; y: number }).y;
       })
       .$name('testFn');
@@ -659,7 +676,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[7,"derived","value"],[6,[7,"std","mul"],[[7,"derived","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"derivedV2f","value"],[6,[7,"std","mul"],[[7,"derivedV2f","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 
@@ -721,27 +738,86 @@ describe('wgslGenerator', () => {
     expect(res.dataType).toStrictEqual(d.f32);
   });
 
-  it('generates correct code for conditionals with single statements', () => {
-    expect(parse(wgslGenerator.generateFunction(
+  it('properly handles .value struct properties in slots', ({ root }) => {
+    const UnfortunateStruct = d
+      .struct({
+        value: d.vec3f,
+      })
+      .$name('UnfortunateStruct');
+
+    const testBuffer = root
+      .createBuffer(UnfortunateStruct)
+      .$usage('storage')
+      .$name('testBuffer');
+
+    const testUsage = testBuffer.as('mutable');
+    const testSlot = tgpu['~unstable'].slot(testUsage);
+    const testFn = tgpu['~unstable']
+      .fn(
+        [],
+        d.f32,
+      )(() => {
+        const value = testSlot.value.value;
+        return value.x + value.y + value.z;
+      })
+      .$name('testFn');
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
+    );
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+    console.log('astInfo.externals', astInfo.externals);
+
+    // Check for: const value = testSlot.value.value;
+    //                  ^ this should be a vec3f
+    const res = wgslGenerator.generateExpression(
       ctx,
-      transpiler.transpileFn(`
+      (
+        astInfo.ast.body[1][0] as tinyest.Const
+      )[2] as unknown as tinyest.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.vec3f);
+    it('generates correct code for conditionals with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           if (true) return 0;
           return 1;
         }
     `).body,
-    ))).toBe(
-      parse(`{
+          ),
+        ),
+      ).toBe(
+        parse(`{
         if (true) {
           return 0;
-        } 
+        }
         return 1;
       }`),
-    );
+      );
 
-    expect(parse(wgslGenerator.generateFunction(
-      ctx,
-      transpiler.transpileFn(`
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           if (true) {
             return 0;
@@ -749,18 +825,22 @@ describe('wgslGenerator', () => {
           return 1;
         }
     `).body,
-    ))).toBe(
-      parse(`{
+          ),
+        ),
+      ).toBe(
+        parse(`{
         if (true) {
           return 0;
-        } 
+        }
         return 1;
       }`),
-    );
+      );
 
-    expect(parse(wgslGenerator.generateFunction(
-      ctx,
-      transpiler.transpileFn(`
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           let y = 0;
           if (true) y = 1;
@@ -768,8 +848,10 @@ describe('wgslGenerator', () => {
           return y;
         }
     `).body,
-    ))).toBe(
-      parse(`{
+          ),
+        ),
+      ).toBe(
+        parse(`{
         var y = 0;
         if (true) {
           y = 1;
@@ -778,11 +860,13 @@ describe('wgslGenerator', () => {
         }
         return y;
       }`),
-    );
+      );
 
-    expect(parse(wgslGenerator.generateFunction(
-      ctx,
-      transpiler.transpileFn(`
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           let y = 0;
           if (true) {
@@ -792,8 +876,10 @@ describe('wgslGenerator', () => {
           return y;
         }
     `).body,
-    ))).toBe(
-      parse(`{
+          ),
+        ),
+      ).toBe(
+        parse(`{
         var y = 0;
         if (true) {
           y = 1;
@@ -802,33 +888,38 @@ describe('wgslGenerator', () => {
         }
         return y;
       }`),
-    );
-  });
+      );
+    });
 
-  it('generates correct code for for loops with single statements', () => {
-    expect(parse(wgslGenerator.generateFunction(
-      ctx,
-      transpiler.transpileFn(`
+    it('generates correct code for for loops with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           for (let i = 0; i < 10; i += 1) continue;
         }
     `).body,
-    ))).toBe(
-      parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
-    );
-  });
+          ),
+        ),
+      ).toBe(parse('{for(var i = 0;(i < 10);i += 1){continue;}}'));
+    });
 
-  it('generates correct code for while loops with single statements', () => {
-    expect(parse(wgslGenerator.generateFunction(
-      ctx,
-      transpiler.transpileFn(`
+    it('generates correct code for while loops with single statements', () => {
+      expect(
+        parse(
+          wgslGenerator.generateFunction(
+            ctx,
+            transpiler.transpileFn(`
         function main() {
           let i = 0;
           while (i < 10) i += 1;
         }
     `).body,
-    ))).toBe(
-      parse('{var i = 0;while((i < 10)){i += 1;}}'),
-    );
+          ),
+        ),
+      ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+    });
   });
 });

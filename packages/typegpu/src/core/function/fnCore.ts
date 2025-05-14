@@ -5,6 +5,7 @@ import {
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
+import { getName, setName } from '../../name.ts';
 import { resolveFunctionHeader } from '../../resolutionCtx.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
@@ -27,7 +28,6 @@ export interface TgpuFnShellBase<
 }
 
 export interface FnCore {
-  label: string | undefined;
   applyExternals(newExternals: ExternalMap): void;
   resolve(ctx: ResolutionCtx, fnAttribute?: string): string;
 }
@@ -73,9 +73,7 @@ export function createFnCore(
     }
   }
 
-  return {
-    label: undefined as string | undefined,
-
+  const core = {
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
@@ -87,7 +85,7 @@ export function createFnCore(
         applyExternals(externalMap, externals);
       }
 
-      const id = ctx.names.makeUnique(this.label);
+      const id = ctx.names.makeUnique(getName(this));
 
       if (typeof implementation === 'string') {
         let header = '';
@@ -169,7 +167,7 @@ export function createFnCore(
         );
 
         if (missingExternals.length > 0) {
-          throw new MissingLinksError(this.label, missingExternals);
+          throw new MissingLinksError(getName(this), missingExternals);
         }
 
         const args: Snippet[] = Array.isArray(shell.argTypes)
@@ -201,4 +199,13 @@ export function createFnCore(
       return id;
     },
   };
+
+  // The implementation could have been given a name by a bundler plugin,
+  // so we try to transfer it to the core.
+  const maybeName = getName(implementation);
+  if (maybeName !== undefined) {
+    setName(core, maybeName);
+  }
+
+  return core;
 }

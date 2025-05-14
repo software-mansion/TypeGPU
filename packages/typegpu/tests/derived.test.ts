@@ -95,7 +95,7 @@ describe('TgpuDerived', () => {
     const fillWith2 = fill.with(gridSizeSlot, 2);
     const fillWith3 = fill.with(gridSizeSlot, 3);
 
-    const exampleArray: number[] = [];
+    const exampleArray: number[] = [1, 2, 3];
 
     const main = tgpu['~unstable']
       .fn([])(() => {
@@ -113,9 +113,9 @@ describe('TgpuDerived', () => {
       fn fill_2(arr: array<f32, 3>) {}
 
       fn main() {
-        fill();
-        fill_1();
-        fill_2();
+        fill(1, 2, 3);
+        fill_1(1, 2, 3);
+        fill_2(1, 2, 3);
       }
     `),
     );
@@ -221,6 +221,22 @@ describe('TgpuDerived', () => {
           innerFn_1();
         }
       `),
+    );
+  });
+
+  it('does not allow defining derived values at resolution', () => {
+    const slot = tgpu['~unstable'].slot<number>(2).$name('gridSize');
+    const derived = tgpu['~unstable'].derived(() =>
+      slot.value > 0
+        ? tgpu['~unstable'].derived(() => slot.value).value
+        : tgpu['~unstable'].derived(() => -slot.value).value
+    );
+    const fn = tgpu['~unstable'].fn({}, d.u32)(() => {
+      return derived.value;
+    });
+
+    expect(() => parseResolved({ fn })).toThrow(
+      'Cannot create tgpu.derived objects at the resolution stage.',
     );
   });
 });

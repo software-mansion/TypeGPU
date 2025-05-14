@@ -20,6 +20,7 @@ export type {
   Align,
   AnyVecInstance,
   AnyWgslData,
+  AnyWgslStruct,
   Atomic,
   BaseData,
   BaseData as BaseWgslData,
@@ -40,12 +41,15 @@ export type {
   Ptr,
   Size,
   U32,
+  v2b,
   v2f,
   v2i,
   v2u,
+  v3b,
   v3f,
   v3i,
   v3u,
+  v4b,
   v4f,
   v4i,
   v4u,
@@ -142,4 +146,4 @@ export type {
   BuiltinVertexIndex,
   BuiltinWorkgroupId,
 } from '../builtin.ts';
-export type { Infer } from '../shared/repr.ts';
+export type { Infer, InferGPU, InferPartial } from '../shared/repr.ts';

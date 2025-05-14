@@ -1,4 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
+import { getName } from '../../name.ts';
 import { $repr, type Infer } from '../../shared/repr.ts';
 import { unwrapProxy } from '../valueProxyUtils.ts';
 import type {
@@ -21,10 +22,16 @@ export function derived<T>(compute: () => T): TgpuDerived<T> {
 // --------------
 
 function stringifyPair([slot, value]: SlotValuePair): string {
-  return `${slot.label ?? '<unnamed>'}=${value}`;
+  return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
 function createDerived<T>(compute: () => T): TgpuDerived<T> {
+  if (getResolutionCtx()) {
+    throw new Error(
+      'Cannot create tgpu.derived objects at the resolution stage.',
+    );
+  }
+
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
