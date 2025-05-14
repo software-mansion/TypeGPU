@@ -48,7 +48,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
     while (code.isAt('@')) {
-      code.parseUntil(new Set(')'), false, ['(', ')']);
+      code.parseUntil(new Set(')'), ['(', ')']);
       code.advanceBy(1); // ')'
       attributes.push(code.lastParsed);
     }
@@ -59,7 +59,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     let maybeType;
     if (code.isAt(':')) {
       code.advanceBy(1); // ':'
-      code.parseUntil(new Set([',', ')']), false, ['<', '>']);
+      code.parseUntil(new Set([',', ')']), ['<', '>']);
       maybeType = code.lastParsed;
     }
 
@@ -120,7 +120,7 @@ function strip(
 
     // skip block comments
     if (code.isAt('/*')) {
-      code.parseUntil(new Set('*/'), false, ['/*', '*/']);
+      code.parseUntil(new Set('*/'), ['/*', '*/']);
       code.advanceBy(2); // the last '*/'
       continue;
     }
@@ -198,7 +198,6 @@ class ParsableString {
    */
   parseUntil(
     toFind: Set<string>,
-    allowEndOfString = false,
     brackets?: [string, string],
   ): number {
     this.#parseStartPos = this.#pos;
@@ -216,9 +215,6 @@ class ParsableString {
         }
       }
       this.#pos += 1;
-    }
-    if (allowEndOfString && openedBrackets === 0) {
-      return this.str.length;
     }
     throw new Error('Reached the end of the string without finding a match!');
   }
