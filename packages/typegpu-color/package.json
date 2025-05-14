@@ -32,7 +32,7 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.5.6"
+    "typegpu": "^0.5.7"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
