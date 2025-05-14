@@ -1,18 +1,22 @@
 interface FunctionArgsInfo {
-  args: {
-    identifier: string;
-    attributes: string[];
-    type: string | undefined;
-  }[];
-  ret: {
-    attributes: string[];
-    type: string;
-  } | undefined;
+  args: ArgInfo[];
+  ret: ReturnInfo;
   range: {
     begin: number;
     end: number;
   };
 }
+
+interface ArgInfo {
+  identifier: string;
+  attributes: string[];
+  type: string | undefined;
+}
+
+type ReturnInfo = {
+  attributes: string[];
+  type: string;
+} | undefined;
 
 /**
  * Extracts info about arguments of a given WGSL function string.
@@ -38,11 +42,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   const code = new ParsableString(strippedCode);
   code.advanceBy(1); // '('
 
-  const args: {
-    identifier: string;
-    attributes: string[];
-    type: string | undefined;
-  }[] = [];
+  const args: ArgInfo[] = [];
   while (!code.isAt(')')) {
     // In each loop iteration, process all the attributes, the identifier and the potential type of a single argument.
 
@@ -75,10 +75,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   }
   code.advanceBy(1); // ')'
 
-  let maybeRet: {
-    attributes: string[];
-    type: string;
-  } | undefined;
+  let maybeRet: ReturnInfo;
   if (code.isAt('->')) {
     code.advanceBy(2); // '->'
 
