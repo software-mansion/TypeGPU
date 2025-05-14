@@ -1,15 +1,16 @@
 // AAA sprawdź czy te funkcje z testów są poprawne
 // AAA więcej testów
 
-interface ArgInfo {
-  identifier: string;
-  attributes: string[];
-  type: string | undefined;
-}
-
 interface FunctionArgsInfo {
-  args: ArgInfo[];
-  returnType: string | undefined;
+  args: {
+    identifier: string;
+    attributes: string[];
+    type: string | undefined;
+  }[];
+  ret: {
+    attributes: string[];
+    type: string;
+  } | undefined;
   range: {
     begin: number;
     end: number;
@@ -21,9 +22,10 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   const code = new ParsableString(strippedCode);
   code.advanceBy(1); // '('
 
-  const args: ArgInfo[] = [];
+  const args = [];
   while (!code.isAt(')')) {
-    // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
+    // In each loop iteration, process all the attributes, the identifier and the potential type of a single argument.
+
     const attributes = [];
     while (code.isAt('@')) {
       code.parseUntil(closingParenthesis, parentheses);
@@ -53,15 +55,23 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   }
   code.advanceBy(1); // ')'
 
-  let maybeReturnType;
+  let maybeRet;
   if (code.isAt('->')) {
     code.advanceBy(2); // '->'
-    maybeReturnType = code.str.slice(code.pos);
+
+    const attributes = [];
+    while (code.isAt('@')) {
+      code.parseUntil(closingParenthesis, parentheses);
+      code.advanceBy(1); // ')'
+      attributes.push(code.lastParsed);
+    }
+
+    maybeRet = { type: code.str.slice(code.pos), attributes };
   }
 
   return {
     args,
-    returnType: maybeReturnType,
+    ret: maybeRet,
     range: { begin: range[0], end: range[1] },
   };
 }

@@ -13,6 +13,12 @@ function createArg(
     type,
   };
 }
+function createReturn(
+  attributes: string[],
+  type: string,
+) {
+  return { attributes, type };
+}
 
 describe('extract args', () => {
   it('extracts when no arguments', () => {
@@ -22,10 +28,10 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 18, end: 28 });
   });
 
@@ -36,10 +42,10 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([createArg('a', [], 'i32')]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 18, end: 34 });
   });
 
@@ -50,15 +56,50 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [], 'i32'),
       createArg('c', [], 'i32'),
     ]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 13, end: 45 });
+  });
+
+  it('extracts when trailing comma', () => {
+    const wgslFn = /* wgsl */ `
+      fn add(a: i32, b: i32,) -> i32 {
+        return a + b;
+      }
+    `;
+
+    const { args, ret, range } = extractArgs(wgslFn);
+
+    expect(args).toStrictEqual([
+      createArg('a', [], 'i32'),
+      createArg('b', [], 'i32'),
+    ]);
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
+    expect(range).toStrictEqual({ begin: 13, end: 38 });
+  });
+
+  it('extracts when attributes in return type', () => {
+    const wgslFn = /* wgsl */ `
+      @fragment fn frag(@location(0) pos: vec4f) -> @location(0) @builtin(sample_mask) vec4f {
+        return pos;
+      }
+    `;
+
+    const { args, ret, range } = extractArgs(wgslFn);
+
+    expect(args).toStrictEqual([
+      createArg('pos', ['@location(0)'], 'vec4f'),
+    ]);
+    expect(ret).toStrictEqual(
+      createReturn(['@location(0)', '@builtin(sample_mask)'], 'vec4f'),
+    );
+    expect(range).toStrictEqual({ begin: 24, end: 94 });
   });
 
   it('extracts when attributes', () => {
@@ -68,14 +109,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [`@builtin(vertex_index)`], 'i32'),
       createArg('b', [`@location(0)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 13, end: 81 });
   });
 
@@ -86,14 +127,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [`@location(0)`, `@interpolate(flat)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 13, end: 77 });
   });
 
@@ -104,14 +145,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [`@interpolate(flat,center)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
-    expect(returnType).toBe('i32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 13, end: 72 });
   });
 
@@ -122,14 +163,34 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'array<f32,4>'),
       createArg('b', [], 'f32'),
     ]);
-    expect(returnType).toBe('f32');
+    expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 47 });
+  });
+
+  it('extracts when end of line comments', () => {
+    const wgslFn = /* wgsl */ `// ()
+      fn add(
+        a: f32, // , bait: f32
+        b: f32) -> f32//another comment
+      {
+        return a + b;
+      }
+    `;
+
+    const { args, ret, range } = extractArgs(wgslFn);
+
+    expect(args).toStrictEqual([
+      createArg('a', [], 'f32'),
+      createArg('b', [], 'f32'),
+    ]);
+    expect(ret).toStrictEqual(createReturn([], 'f32'));
+    expect(range).toStrictEqual({ begin: 18, end: 97 });
   });
 
   it('extracts when inlined comments', () => {
@@ -139,13 +200,13 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'f32'),
       createArg('b', [], 'f32'),
     ]);
-    expect(returnType).toBe('f32');
+    expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 54 });
   });
 
@@ -156,13 +217,13 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'f32'),
       createArg('b', [], 'f32'),
     ]);
-    expect(returnType).toBe('f32');
+    expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 85 });
   });
 
@@ -173,13 +234,13 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], 'f32'),
     ]);
-    expect(returnType).toBe('f32');
+    expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 32 });
   });
 
@@ -190,13 +251,13 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], undefined),
     ]);
-    expect(returnType).toBeUndefined();
+    expect(ret).toBeUndefined();
     expect(range).toStrictEqual({ begin: 13, end: 20 });
   });
 
@@ -205,13 +266,13 @@ describe('extract args', () => {
           fn add(a: i32,                b   :     i32,
   c: i32,
 
-                  d: i32)  ->  f32  
+                  d: i32)  ->  i32  
    {
               return a + b;
           }
       `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
@@ -219,7 +280,7 @@ describe('extract args', () => {
       createArg('c', [], 'i32'),
       createArg('d', [], 'i32'),
     ]);
-    expect(returnType).toBe('f32');
+    expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 17, end: 107 });
   });
 
@@ -230,13 +291,34 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, returnType, range } = extractArgs(wgslFn);
+    const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], undefined),
     ]);
-    expect(returnType).toBeUndefined();
+    expect(ret).toBeUndefined();
     expect(range).toStrictEqual({ begin: 21, end: 28 });
+  });
+
+  it('extracts when non-ascii characters present', () => {
+    const wgslFn = /* wgsl */ `
+      fn hieroglyphs(🧀🧀🧀, سلام, 검정, שָׁלוֹם, गुलाबी, փիրուզ) {
+        return;
+      }
+    `;
+
+    const { args, ret, range } = extractArgs(wgslFn);
+
+    expect(args).toStrictEqual([
+      createArg('🧀🧀🧀', [], undefined),
+      createArg('سلام', [], undefined),
+      createArg('검정', [], undefined),
+      createArg('שָׁלוֹם', [], undefined),
+      createArg('गुलाबी', [], undefined),
+      createArg('փիրուզ', [], undefined),
+    ]);
+    expect(ret).toBeUndefined();
+    expect(range).toStrictEqual({ begin: 21, end: 65 }); // cheese is of length 2
   });
 });
