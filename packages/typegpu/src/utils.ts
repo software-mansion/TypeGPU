@@ -14,6 +14,25 @@ interface FunctionArgsInfo {
   };
 }
 
+/**
+ * Extracts info about arguments of a given WGSL function string.
+ * @example
+ * const code = `
+ *   fn add(a: i32, ＠location(0) b: i32, c) -> i32 {
+ *     return a + b + c;
+ *   }`;
+ *
+ * extractArgs(code);
+ * // {
+ * //   args: [
+ * //     { identifier: 'a', attributes: [], type: 'i32' },
+ * //     { identifier: 'b', attributes: ['＠location(0)'], type: 'i32' },
+ * //     { identifier: 'c', attributes: [], type: undefined }
+ * //   ],
+ * //   ret: { type: 'i32', attributes: [] },
+ * //   range: { begin: 11, end: 51 }
+ * // }
+ */
 export function extractArgs(rawCode: string): FunctionArgsInfo {
   const { strippedCode, argRange: range } = strip(rawCode);
   const code = new ParsableString(strippedCode);
@@ -88,7 +107,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
  *        return a + b; // returns the sum
  *  }`;
  *
- * const stripped = strip(code); // "(a,@location(0)b:i32)->i32"
+ * strip(code); // "(a,@location(0)b:i32)->i32"
  */
 function strip(
   rawCode: string,
