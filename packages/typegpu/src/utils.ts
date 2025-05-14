@@ -3,6 +3,7 @@
 // AAA range z nawiasami i potencjalnym typem zwracanym
 // AAA dawaj tez typ zwracany
 // AAA benchmarki?
+// AAA [] -> ""
 
 const lineBreaks = new Set<string>([
   '\u000A', // line feed
@@ -30,6 +31,7 @@ interface ArgInfo {
 
 interface FunctionArgsInfo {
   args: ArgInfo[];
+  // returnType: string;
   range: {
     begin: number;
     end: number;
@@ -39,9 +41,10 @@ interface FunctionArgsInfo {
 export function extractArgs(rawCode: string): FunctionArgsInfo {
   const { strippedCode, argRange: range } = strip(rawCode);
   const code = new ParsableString(strippedCode);
-  const args: ArgInfo[] = [];
+  code.advanceBy(1); // '('
 
-  while (!code.isFinished()) {
+  const args: ArgInfo[] = [];
+  while (!code.isAt(')')) {
     // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
     while (code.isAt('@')) {
@@ -50,13 +53,13 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
       attributes.push(code.lastParsed);
     }
 
-    code.parseUntil(new Set([':', ',']), true);
+    code.parseUntil(new Set([':', ',', ')']));
     const identifier = code.lastParsed;
 
     let maybeType;
     if (code.isAt(':')) {
-      code.advanceBy(1); // colon before type
-      code.parseUntil(new Set(','), true, ['<', '>']);
+      code.advanceBy(1); // ':'
+      code.parseUntil(new Set([',', ')']), false, ['<', '>']);
       maybeType = code.lastParsed;
     }
 
@@ -66,23 +69,41 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
       type: maybeType,
     });
 
-    code.advanceBy(1); // comma before the next argument
+    if (code.isAt(',')) {
+      code.advanceBy(1); // ',' before the next argument
+    }
+  }
+
+  let maybeReturnType;
+  if (code.isAt('->')) {
+    code.advanceBy(2); // '->'
+    maybeReturnType = code.str.slice(code.pos);
   }
 
   return { args, range: { begin: range[0], end: range[1] } };
 }
 
-// Strips comments, whitespaces, the name and the body of the function.
+/**
+ * Strips comments, whitespaces, the name and the body of the function.
+ * @example
+ * const code = `
+ *    fn add( a, /* comment *\/ ＠location(0) b : i32 ) -> i32   {
+ *        return a + b;
+ *  }`;
+ *
+ * const stripped = strip(code); // "(a,@location(0)b:i32)->i32"
+ */
 function strip(
   rawCode: string,
 ): { strippedCode: string; argRange: [number, number] } {
-  let strippedCode = '';
-  // assumption: the first opening parentheses is the beginning of the arguments list
   const code = new ParsableString(rawCode);
-  const argsStart = code.parseUntil(new Set('(')) + 1;
+  let strippedCode = '';
+  let argsStart;
 
-  let openedParentheses = 0;
   while (!code.isFinished()) {
+    // parse character by character while ignoring comments and blankspaces
+    // until you find a `{` and `openedParentheses === 0`.
+
     // skip any blankspace
     if (code.isAt(blankSpaces)) {
       code.advanceBy(1); // the blankspace character
@@ -104,35 +125,34 @@ function strip(
       continue;
     }
 
-    if (code.isAt('(')) {
-      openedParentheses += 1;
+    if (code.isAt('{')) {
+      return {
+        strippedCode,
+        argRange: [argsStart as number, code.pos],
+      };
     }
 
-    if (code.isAt(')')) {
-      openedParentheses -= 1;
-      if (openedParentheses === 0) {
-        return {
-          strippedCode: strippedCode.slice(1),
-          argRange: [argsStart, code.pos],
-        };
-      }
+    if (code.isAt('(') && !argsStart) {
+      argsStart = code.pos;
     }
 
-    strippedCode += code.str[code.pos];
+    if (argsStart) {
+      strippedCode += code.str[code.pos];
+    }
     code.advanceBy(1); // parsed character
   }
   throw new Error('Invalid wgsl code!');
 }
 
 class ParsableString {
-  _parseStartPos: number | undefined;
-  _pos: number;
+  #parseStartPos: number | undefined;
+  #pos: number;
   constructor(public readonly str: string) {
-    this._pos = 0;
+    this.#pos = 0;
   }
 
   get pos(): number {
-    return this._pos;
+    return this.#pos;
   }
 
   /**
@@ -140,24 +160,24 @@ class ParsableString {
    * from the position of the last `parseUntil` call, to the current position.
    */
   get lastParsed(): string {
-    if (this._parseStartPos === undefined) {
+    if (this.#parseStartPos === undefined) {
       throw new Error('Parse was not called yet!');
     }
-    return this.str.slice(this._parseStartPos, this.pos);
+    return this.str.slice(this.#parseStartPos, this.pos);
   }
 
   isFinished() {
-    return this._pos >= this.str.length;
+    return this.#pos >= this.str.length;
   }
 
   advanceBy(steps: number) {
-    this._pos += steps;
+    this.#pos += steps;
   }
 
   isAt(substr: string | Set<string>): boolean {
     if (typeof substr === 'string') {
       for (let i = 0; i < substr.length; i++) {
-        if (this.str[this._pos + i] !== substr[i]) {
+        if (this.str[this.#pos + i] !== substr[i]) {
           return false;
         }
       }
@@ -181,9 +201,9 @@ class ParsableString {
     allowEndOfString = false,
     brackets?: [string, string],
   ): number {
-    this._parseStartPos = this._pos;
+    this.#parseStartPos = this.#pos;
     let openedBrackets = 0;
-    while (this._pos < this.str.length) {
+    while (this.#pos < this.str.length) {
       if (brackets && this.isAt(brackets[0])) {
         openedBrackets += 1;
       }
@@ -192,14 +212,14 @@ class ParsableString {
       }
       if (openedBrackets === 0) {
         if (this.isAt(toFind)) {
-          return this._pos;
+          return this.#pos;
         }
       }
-      this._pos += 1;
+      this.#pos += 1;
     }
     if (allowEndOfString && openedBrackets === 0) {
       return this.str.length;
     }
-    throw new Error('Invalid wgsl syntax!');
+    throw new Error('Reached the end of the string without finding a match!');
   }
 }
