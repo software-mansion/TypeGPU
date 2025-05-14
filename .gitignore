@@ -9,7 +9,6 @@ coverage
 # development
 .devcontainer
 .attest
-.vscode
 .zed
 
 # production
