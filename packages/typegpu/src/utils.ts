@@ -114,8 +114,7 @@ function strip(
   let argsStart: number | undefined;
 
   while (!code.isFinished()) {
-    // parse character by character while ignoring comments and blankspaces
-    // until you find a `{` and `openedParentheses === 0`.
+    // parse character by character while ignoring comments and blankspaces until you find a `{`.
 
     // skip any blankspace
     if (code.isAt(blankSpaces)) {
@@ -205,9 +204,16 @@ class ParsableString {
   }
 
   /**
-   * @param toFind a set of strings either of which satisfy the search,
-   * @param allowEndOfString if set to true, the method returns `code.length` instead of throwing when it reaches the end of the string,
-   * @param brackets a pair of brackets that has to be closed for result to be valid.
+   * @param toFind a set of strings either of which satisfy the search.
+   * @param brackets a pair of brackets that has to be closed for result to be valid. This includes the found character(s).
+   * @example
+   * // internal state:
+   * // '(@attribute(0) identifier: type)'
+   * //   ^
+   * this.parse(new Set(')'), ['(', ')']);
+   * // internal state:
+   * // '(@attribute(0) identifier: type)'
+   * //               ^
    */
   parseUntil(
     toFind: Set<string>,
