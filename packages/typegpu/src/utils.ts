@@ -1,6 +1,3 @@
-// AAA sprawdź czy te funkcje z testów są poprawne
-// AAA więcej testów
-
 interface FunctionArgsInfo {
   args: {
     identifier: string;
@@ -22,7 +19,11 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   const code = new ParsableString(strippedCode);
   code.advanceBy(1); // '('
 
-  const args = [];
+  const args: {
+    identifier: string;
+    attributes: string[];
+    type: string | undefined;
+  }[] = [];
   while (!code.isAt(')')) {
     // In each loop iteration, process all the attributes, the identifier and the potential type of a single argument.
 
@@ -36,7 +37,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     code.parseUntil(identifierEndSymbols);
     const identifier = code.lastParsed;
 
-    let maybeType;
+    let maybeType: string | undefined;
     if (code.isAt(':')) {
       code.advanceBy(1); // ':'
       code.parseUntil(typeEndSymbols, angleBrackets);
@@ -55,7 +56,10 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   }
   code.advanceBy(1); // ')'
 
-  let maybeRet;
+  let maybeRet: {
+    attributes: string[];
+    type: string;
+  } | undefined;
   if (code.isAt('->')) {
     code.advanceBy(2); // '->'
 
@@ -91,7 +95,7 @@ function strip(
 ): { strippedCode: string; argRange: [number, number] } {
   const code = new ParsableString(rawCode);
   let strippedCode = '';
-  let argsStart;
+  let argsStart: number | undefined;
 
   while (!code.isFinished()) {
     // parse character by character while ignoring comments and blankspaces

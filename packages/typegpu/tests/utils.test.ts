@@ -108,8 +108,8 @@ describe('extract args', () => {
     const { args, ret, range } = extractArgs(wgslFn);
 
     expect(args).toStrictEqual([
-      createArg('a', [`@builtin(vertex_index)`], 'u32'),
-      createArg('b', [`@location(0)`], 'i32'),
+      createArg('a', ['@builtin(vertex_index)'], 'u32'),
+      createArg('b', ['@location(0)'], 'i32'),
       createArg('c', [], 'i32'),
     ]);
     expect(ret).toStrictEqual(createReturn([], 'i32'));
@@ -127,7 +127,7 @@ describe('extract args', () => {
 
     expect(args).toStrictEqual([
       createArg('a', ['@location(0)'], 'i32'),
-      createArg('b', [`@location(1)`, `@interpolate(flat)`], 'i32'),
+      createArg('b', ['@location(1)', '@interpolate(flat)'], 'i32'),
       createArg('c', [], 'i32'),
     ]);
     expect(ret).toStrictEqual(createReturn([], 'i32'));
@@ -145,7 +145,7 @@ describe('extract args', () => {
 
     expect(args).toStrictEqual([
       createArg('position', ['@location(0)'], 'vec3f'),
-      createArg('b', [`@interpolate(flat,first)`], 'i32'),
+      createArg('b', ['@interpolate(flat,first)'], 'i32'),
       createArg('c', [], 'i32'),
     ]);
     expect(ret).toStrictEqual(createReturn([], 'i32'));
