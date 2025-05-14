@@ -1,4 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
+import { getName, setName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import { unwrapProxy } from '../valueProxyUtils.ts';
 import type { TgpuSlot } from './slotTypes.ts';
@@ -17,14 +18,13 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
   public readonly resourceType = 'slot';
-  public label?: string | undefined;
   /** Type-token, not available at runtime */
   declare public readonly [$repr]: Infer<T>;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 
   $name(label: string) {
-    this.label = label;
+    setName(this, label);
     return this;
   }
 
@@ -33,7 +33,7 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
   }
 
   toString(): string {
-    return `slot:${this.label ?? '<unnamed>'}`;
+    return `slot:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<T> {

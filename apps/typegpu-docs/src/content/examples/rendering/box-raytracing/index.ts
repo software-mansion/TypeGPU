@@ -1,6 +1,18 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { cross, mul, normalize, sub } from 'typegpu/std';
+import {
+  add,
+  discard,
+  div,
+  max,
+  min,
+  mul,
+  normalize,
+  pow,
+  sub,
+} from 'typegpu/std';
+import { linearToSrgb, srgbToLinear } from '@typegpu/color';
+import { mat4 } from 'wgpu-matrix';
 
 // init canvas and values
 
@@ -8,12 +20,10 @@ const X = 7;
 const Y = 7;
 const Z = 7;
 
-const MAX_BOX_SIZE = 15;
-const cubeSize = d.vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
-const boxCenter = mul(0.5, cubeSize);
-const upAxis = d.vec3f(0, 1, 0);
-let rotationSpeed = 2;
-let cameraDistance = 250;
+const cubeSize = d.vec3f(X, Y, Z);
+const cameraAnchor = mul(0.5, sub(cubeSize, d.vec3f(1)));
+let rotationSpeed = 1.2;
+let cameraDistance = 16;
 
 let frame = 0;
 
@@ -31,12 +41,24 @@ context.configure({
 
 // structs
 
-const BoxStruct = d.struct({
-  isActive: d.u32,
-  albedo: d.vec4f,
+const Uniforms = d.struct({
+  canvasDims: d.vec2f,
+  invViewMatrix: d.mat4x4f,
+  materialDensity: d.f32,
+  boxSize: d.f32,
 });
 
-const RayStruct = d.struct({
+const BoxStruct = d.struct({
+  isActive: d.u32,
+  albedo: d.vec3f,
+});
+
+const AxisAlignedBounds = d.struct({
+  min: d.vec3f,
+  max: d.vec3f,
+});
+
+const Ray = d.struct({
   origin: d.vec3f,
   direction: d.vec3f,
 });
@@ -46,14 +68,6 @@ const IntersectionStruct = d.struct({
   tMin: d.f32,
   tMax: d.f32,
 });
-
-const CameraAxesStruct = d.struct({
-  right: d.vec3f,
-  up: d.vec3f,
-  forward: d.vec3f,
-});
-
-const CanvasDimsStruct = d.struct({ width: d.u32, height: d.u32 });
 
 // buffers
 
@@ -68,52 +82,25 @@ const boxMatrixBuffer = root
           (_, j) =>
             Array.from({ length: Z }, (_, k) => ({
               isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-              albedo: d.vec4f(i / X, j / Y, k / Z, 1),
+              albedo: srgbToLinear(
+                d.vec3f(i / X, j / Y, k / Z * 0.8 + 0.1 + (X - i) / X * 0.6),
+              ),
             })),
         ),
     ),
   )
   .$name('box_array')
   .$usage('storage');
+const boxMatrixReadonly = boxMatrixBuffer.as('readonly');
 
-const cameraPositionBuffer = root
-  .createBuffer(d.vec3f)
-  .$name('camera_position')
-  .$usage('storage');
-
-const cameraAxesBuffer = root
-  .createBuffer(CameraAxesStruct)
-  .$name('camera_axes')
-  .$usage('storage');
-
-const canvasDimsUniform = root['~unstable']
-  .createUniform(CanvasDimsStruct)
-  .$name('canvas_dims');
-
-const boxSizeUniform = root['~unstable']
-  .createUniform(d.u32, MAX_BOX_SIZE)
-  .$name('box_size');
-
-// bind groups and layouts
-
-const renderLayout = tgpu.bindGroupLayout({
-  boxMatrix: { storage: boxMatrixBuffer.dataType },
-  cameraPosition: { storage: cameraPositionBuffer.dataType },
-  cameraAxes: { storage: cameraAxesBuffer.dataType },
-});
-
-const renderBindGroup = root.createBindGroup(renderLayout, {
-  boxMatrix: boxMatrixBuffer,
-  cameraPosition: cameraPositionBuffer,
-  cameraAxes: cameraAxesBuffer,
-});
+const uniforms = root['~unstable'].createUniform(Uniforms);
 
 // functions
 
 const getBoxIntersection = tgpu['~unstable'].fn(
-  { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
+  [AxisAlignedBounds, Ray],
   IntersectionStruct,
-) /* wgsl */`{
+) /* wgsl */`(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -122,19 +109,19 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   var tMaxZ: f32;
 
   if (ray.direction.x >= 0) {
-    tMin = (boundMin.x - ray.origin.x) / ray.direction.x;
-    tMax = (boundMax.x - ray.origin.x) / ray.direction.x;
+    tMin = (bounds.min.x - ray.origin.x) / ray.direction.x;
+    tMax = (bounds.max.x - ray.origin.x) / ray.direction.x;
   } else {
-    tMin = (boundMax.x - ray.origin.x) / ray.direction.x;
-    tMax = (boundMin.x - ray.origin.x) / ray.direction.x;
+    tMin = (bounds.max.x - ray.origin.x) / ray.direction.x;
+    tMax = (bounds.min.x - ray.origin.x) / ray.direction.x;
   }
 
   if (ray.direction.y >= 0) {
-    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y;
-    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y;
+    tMinY = (bounds.min.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (bounds.max.y - ray.origin.y) / ray.direction.y;
   } else {
-    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y;
-    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y;
+    tMinY = (bounds.max.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (bounds.min.y - ray.origin.y) / ray.direction.y;
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
@@ -150,11 +137,11 @@ const getBoxIntersection = tgpu['~unstable'].fn(
   }
 
   if (ray.direction.z >= 0) {
-    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z;
-    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+    tMinZ = (bounds.min.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (bounds.max.z - ray.origin.z) / ray.direction.z;
   } else {
-    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z;
-    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+    tMinZ = (bounds.max.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (bounds.min.z - ray.origin.z) / ray.direction.z;
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
@@ -171,110 +158,140 @@ const getBoxIntersection = tgpu['~unstable'].fn(
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`
-  .$uses({ IntersectionStruct })
+  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct })
   .$name('box_intersection');
 
-const vertexFunction = tgpu['~unstable'].vertexFn({
+const Varying = {
+  rayWorldOrigin: d.vec3f,
+};
+
+const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position },
-}) /* wgsl */`{
-  var pos = array<vec2f, 6>(
-    vec2<f32>( 1,  1),
-    vec2<f32>( 1, -1),
-    vec2<f32>(-1, -1),
-    vec2<f32>( 1,  1),
-    vec2<f32>(-1, -1),
-    vec2<f32>(-1,  1)
-  );
+  out: { pos: d.builtin.position, ...Varying },
+})((input) => {
+  const pos = [
+    d.vec2f(-1, -1),
+    d.vec2f(3, -1),
+    d.vec2f(-1, 3),
+  ];
 
-  return Out(vec4f(pos[in.vertexIndex], 0, 1));
-}`.$name('vertex_main');
+  const rayWorldOrigin =
+    mul(uniforms.value.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
 
-const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
-const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
+  return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
+});
 
 const fragmentFunction = tgpu['~unstable'].fragmentFn({
-  in: { position: d.builtin.position },
+  in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
-}) /* wgsl */`{
-  let minDim = f32(min(canvasDims.width, canvasDims.height));
+})((input) => {
+  const boxSize3 = d.vec3f(d.f32(uniforms.value.boxSize));
+  const halfBoxSize3 = mul(0.5, boxSize3);
+  const halfCanvasDims = mul(0.5, uniforms.value.canvasDims);
 
-  var ray: RayStruct;
-  ray.origin = cameraPosition;
-  ray.direction += cameraAxes.right * (in.position.x - f32(canvasDims.width)/2)/minDim;
-  ray.direction += cameraAxes.up * (in.position.y - f32(canvasDims.height)/2)/minDim;
-  ray.direction += cameraAxes.forward;
-  ray.direction = normalize(ray.direction);
+  const minDim = min(uniforms.value.canvasDims.x, uniforms.value.canvasDims.y);
+  const viewCoords = div(sub(input.position.xy, halfCanvasDims), minDim);
 
-  let bigBoxIntersection = getBoxIntersection(
-    -vec3f(f32(boxSize))/2,
-    vec3f(
-      cubeSize.x,
-      cubeSize.y,
-      cubeSize.z,
-    ) + vec3f(f32(boxSize))/2,
+  const ray = Ray({
+    origin: input.rayWorldOrigin,
+    direction: mul(
+      uniforms.value.invViewMatrix,
+      d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0),
+    ).xyz,
+  });
+
+  const bigBoxIntersection = getBoxIntersection(
+    AxisAlignedBounds({
+      min: mul(-1, halfBoxSize3),
+      max: add(cubeSize, halfBoxSize3),
+    }),
     ray,
   );
 
-  var color = vec4f(0);
+  if (!bigBoxIntersection.intersects) {
+    discard();
+    return d.vec4f(0, 0, 0, 0);
+  }
 
-  if bigBoxIntersection.intersects {
-    var tMin: f32;
-    var intersectionFound = false;
+  let density = d.f32(0);
+  let invColor = d.vec3f(0, 0, 0);
+  let tMin = d.f32(0);
+  let intersectionFound = false;
 
-    for (var i = 0; i < X; i = i+1) {
-      for (var j = 0; j < Y; j = j+1) {
-        for (var k = 0; k < Z; k = k+1) {
-          if boxMatrix[i][j][k].isActive == 0 {
-            continue;
-          }
+  for (let i = 0; i < X; i++) {
+    for (let j = 0; j < Y; j++) {
+      for (let k = 0; k < Z; k++) {
+        if (boxMatrixReadonly.value[i][j][k].isActive === 0) {
+          continue;
+        }
 
-          let intersection = getBoxIntersection(
-            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE - vec3f(f32(boxSize))/2,
-            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE + vec3f(f32(boxSize))/2,
-            ray,
+        const ijkScaled = d.vec3f(d.f32(i), d.f32(j), d.f32(k));
+
+        const intersection = getBoxIntersection(
+          AxisAlignedBounds({
+            min: sub(ijkScaled, halfBoxSize3),
+            max: add(ijkScaled, halfBoxSize3),
+          }),
+          ray,
+        );
+
+        if (intersection.intersects) {
+          const boxDensity = max(0, intersection.tMax - intersection.tMin) *
+            pow(uniforms.value.materialDensity, 2);
+          density += boxDensity;
+          invColor = add(
+            invColor,
+            mul(
+              boxDensity,
+              div(d.vec3f(1), boxMatrixReadonly.value[i][j][k].albedo),
+            ),
           );
-
-          if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
-            color = boxMatrix[i][j][k].albedo;
-            tMin = intersection.tMin;
-            intersectionFound = true;
-          }
+          tMin = intersection.tMin;
+          intersectionFound = true;
         }
       }
     }
   }
 
-  return color;
-}`
-  .$uses({
-    ...renderLayout.bound,
-    RayStruct,
-    getBoxIntersection,
-    X,
-    Y,
-    Z,
-    MAX_BOX_SIZE,
-    cubeSize,
-    boxSize: boxSizeAccessor,
-    canvasDims: canvasDimsAccessor,
-  })
-  .$name('fragment_main');
+  const linear = div(d.vec3f(1), invColor);
+  const srgb = linearToSrgb(linear);
+  const gamma = 2.2;
+  const corrected = pow(srgb, d.vec3f(1.0 / gamma));
+
+  if (intersectionFound) {
+    return mul(
+      min(density, 1),
+      d.vec4f(min(corrected, d.vec3f(1)), 1),
+    );
+  }
+
+  discard();
+  return d.vec4f();
+});
 
 // pipeline
 
 const pipeline = root['~unstable']
-  .with(
-    boxSizeAccessor,
-    tgpu['~unstable'].fn([], d.u32)`() -> u32 { return boxSize; }`.$uses({
-      boxSize: boxSizeUniform,
-    }),
-  )
-  .with(canvasDimsAccessor, canvasDimsUniform)
-  .withVertex(vertexFunction, {})
-  .withFragment(fragmentFunction, { format: presentationFormat })
-  .createPipeline()
-  .with(renderLayout, renderBindGroup);
+  .withVertex(mainVertex, {})
+  .withFragment(fragmentFunction, {
+    format: presentationFormat,
+    blend: {
+      color: {
+        srcFactor: 'one',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+      alpha: {
+        srcFactor: 'one',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+    },
+  })
+  .withPrimitive({
+    topology: 'triangle-strip',
+  })
+  .createPipeline();
 
 // UI
 
@@ -300,23 +317,20 @@ onFrame((deltaTime) => {
   const height = canvas.height;
 
   const cameraPosition = d.vec3f(
-    Math.cos(frame) * cameraDistance + boxCenter.x,
-    boxCenter.y,
-    Math.sin(frame) * cameraDistance + boxCenter.z,
+    Math.cos(frame) * cameraDistance + cameraAnchor.x,
+    cameraAnchor.y - 5,
+    Math.sin(frame) * cameraDistance + cameraAnchor.z,
   );
 
-  const cameraAxes = (() => {
-    const forwardAxis = normalize(sub(boxCenter, cameraPosition));
-    return {
-      forward: forwardAxis,
-      up: upAxis,
-      right: cross(upAxis, forwardAxis),
-    };
-  })();
-
-  cameraPositionBuffer.write(cameraPosition);
-  cameraAxesBuffer.write(cameraAxes);
-  canvasDimsUniform.write({ width, height });
+  uniforms.buffer.writePartial({
+    canvasDims: d.vec2f(width, height),
+    invViewMatrix: mat4.aim(
+      cameraPosition,
+      cameraAnchor,
+      d.vec3f(0, 1, 0),
+      d.mat4x4f(),
+    ),
+  });
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
@@ -328,7 +342,7 @@ onFrame((deltaTime) => {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .draw(6);
+    .draw(3);
 });
 
 // #region Example controls and cleanup
@@ -345,19 +359,32 @@ export const controls = {
 
   'camera distance': {
     initial: cameraDistance,
-    min: 100,
-    max: 1200,
+    min: 10,
+    max: 100,
     onSliderChange: (value: number) => {
       cameraDistance = value;
     },
   },
 
   'box size': {
-    initial: MAX_BOX_SIZE,
-    min: 1,
-    max: MAX_BOX_SIZE,
+    initial: 1,
+    min: 0.1,
+    max: 1,
     onSliderChange: (value: number) => {
-      boxSizeUniform.write(value);
+      uniforms.buffer.writePartial({
+        boxSize: value,
+      });
+    },
+  },
+
+  'material density': {
+    initial: 2,
+    min: 0.2,
+    max: 2,
+    onSliderChange: (value: number) => {
+      uniforms.buffer.writePartial({
+        materialDensity: value,
+      });
     },
   },
 };

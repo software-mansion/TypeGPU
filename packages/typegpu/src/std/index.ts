@@ -6,32 +6,32 @@ export {
   add,
   sub,
   mul,
+  div,
   // builtin functions
+  abs,
   acos,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
   cross,
+  distance,
   dot,
+  exp,
   floor,
   fract,
   length,
   max,
   min,
-  normalize,
-  distance,
-  sign,
-  sin,
-  exp,
   mix,
+  neg,
+  normalize,
   pow,
   reflect,
-  neg,
+  sign,
+  sin,
   sqrt,
-  div,
 } from './numeric.ts';
 
 // deno-fmt-ignore
@@ -58,14 +58,14 @@ export {
 
 // deno-fmt-ignore
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
   // synchronization
   workgroupBarrier,
@@ -83,4 +83,10 @@ export {
   unpack2x16float,
 } from './packing.ts';
 
-export { textureSample } from './texture.ts';
+export {
+  textureDimensions,
+  textureLoad,
+  textureSample,
+  textureSampleLevel,
+  textureStore,
+} from './texture.ts';

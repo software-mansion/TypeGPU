@@ -33,14 +33,12 @@ import {
   type TgpuWriteonlyTexture,
 } from './core/texture/texture.ts';
 import type {
-  SampleTypeToStringChannelType,
-  ViewDimensionToDimension,
-} from './core/texture/textureFormats.ts';
-import type {
   ChannelFormatToSchema,
   ChannelTypeToLegalFormats,
+  SampleTypeToStringChannelType,
   StorageTextureTexelFormat,
   TexelFormatToDataType,
+  ViewDimensionToDimension,
 } from './core/texture/textureFormats.ts';
 import type { TextureProps } from './core/texture/textureProps.ts';
 import {
@@ -56,7 +54,8 @@ import {
   NotStorageError,
   type StorageFlag,
 } from './extension.ts';
-import type { TgpuNamable } from './namable.ts';
+import type { TgpuNamable } from './name.ts';
+import { getName, setName } from './name.ts';
 import type { Infer } from './shared/repr.ts';
 import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
@@ -66,11 +65,11 @@ import type { Unwrapper } from './unwrapper.ts';
 // Public API
 // ----------
 
-export type LayoutMembership = {
+export interface LayoutMembership {
   layout: TgpuBindGroupLayout;
   key: string;
   idx: number;
-};
+}
 
 export type TgpuLayoutEntryBase = {
   /**
@@ -160,7 +159,6 @@ export interface TgpuBindGroupLayout<
   >,
 > extends TgpuNamable {
   readonly resourceType: 'bind-group-layout';
-  readonly label: string | undefined;
   readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
@@ -316,7 +314,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
   : T extends TgpuLayoutTexture ? TgpuSampledTexture<
-      Default<GetDimension<T['viewDimension']>, '2d'>,
+      Default<T['viewDimension'], '2d'>,
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
@@ -387,7 +385,6 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  private _label: string | undefined;
   private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
@@ -413,7 +410,7 @@ class TgpuBindGroupLayoutImpl<
         continue;
       }
 
-      const membership = { idx, key, layout: this };
+      const membership: LayoutMembership = { layout: this, key, idx };
 
       if ('uniform' in entry) {
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
@@ -496,19 +493,15 @@ class TgpuBindGroupLayoutImpl<
   }
 
   toString(): string {
-    return `bindGroupLayout:${this._label ?? '<unnamed>'}`;
-  }
-
-  get label(): string | undefined {
-    return this._label;
+    return `bindGroupLayout:${getName(this) ?? '<unnamed>'}`;
   }
 
   get index(): number | undefined {
     return this._index;
   }
 
-  $name(label?: string | undefined): this {
-    this._label = label;
+  $name(label: string): this {
+    setName(this, label);
     return this;
   }
 
@@ -519,7 +512,7 @@ class TgpuBindGroupLayoutImpl<
 
   unwrap(unwrapper: Unwrapper) {
     const unwrapped = unwrapper.device.createBindGroupLayout({
-      label: this.label ?? '<unnamed>',
+      label: getName(this) ?? '<unnamed>',
       entries: Object.values(this.entries)
         .map((entry, idx) => {
           if (entry === null) {
@@ -622,14 +615,14 @@ export class TgpuBindGroupImpl<
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
       if (layout.entries[key] !== null && !(key in entries)) {
-        throw new MissingBindingError(layout.label, key);
+        throw new MissingBindingError(getName(layout), key);
       }
     }
   }
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
     const unwrapped = unwrapper.device.createBindGroup({
-      label: this.layout.label ?? '<unnamed>',
+      label: getName(this.layout) ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
       entries: Object.entries(this.layout.entries)
         .map(([key, entry], idx) => {
@@ -642,7 +635,7 @@ export class TgpuBindGroupImpl<
           if (value === undefined) {
             throw new Error(
               `'${key}' is a resource required to populate bind group layout '${
-                this.layout.label ?? '<unnamed>'
+                getName(this.layout) ?? '<unnamed>'
               }'.`,
             );
           }

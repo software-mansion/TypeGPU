@@ -7,7 +7,12 @@ import {
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation, isData } from '../../data/dataTypes.ts';
 import { struct } from '../../data/struct.ts';
-import type { BaseData, Location, WgslStruct } from '../../data/wgslTypes.ts';
+import {
+  type BaseData,
+  isVoid,
+  type Location,
+  type WgslStruct,
+} from '../../data/wgslTypes.ts';
 import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
 
 export type WithLocations<T extends IORecord> = {
@@ -19,6 +24,8 @@ export type WithLocations<T extends IORecord> = {
 export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
   ? Decorate<T, Location<0>>
   : T extends IORecord ? WgslStruct<WithLocations<T>>
+  // biome-ignore lint/suspicious/noConfusingVoidType: <it actually is void>
+  : T extends { type: 'void' } ? void
   : never;
 
 export function withLocations<T extends IOData>(
@@ -48,7 +55,9 @@ export function withLocations<T extends IOData>(
 export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
   return (
     isData(returnType)
-      ? getCustomLocation(returnType) !== undefined
+      ? isVoid(returnType)
+        ? undefined
+        : getCustomLocation(returnType) !== undefined
         ? returnType
         : location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
