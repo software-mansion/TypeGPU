@@ -1,27 +1,5 @@
 // AAA sprawdź czy te funkcje z testów są poprawne
 // AAA więcej testów
-// AAA range z nawiasami i potencjalnym typem zwracanym
-// AAA dawaj tez typ zwracany
-// AAA benchmarki?
-// AAA [] -> ""
-
-const lineBreaks = new Set<string>([
-  '\u000A', // line feed
-  '\u000B', // vertical tab
-  '\u000C', // form feed
-  '\u000D', // carriage return
-  '\u0085', // next line
-  '\u2028', // line separator
-  '\u2029', // paragraph separator
-]);
-
-const blankSpaces = new Set<string>([
-  ...lineBreaks,
-  '\u0020', // space
-  '\u0009', // horizontal tab
-  '\u200E', // left-to-right mark
-  '\u200F', // right-to-left mark
-]);
 
 interface ArgInfo {
   identifier: string;
@@ -48,18 +26,18 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     // In each loop iteration, process all the attributes, the identifier and the type of a single argument.
     const attributes = [];
     while (code.isAt('@')) {
-      code.parseUntil(new Set(')'), ['(', ')']);
+      code.parseUntil(closingParenthesis, parentheses);
       code.advanceBy(1); // ')'
       attributes.push(code.lastParsed);
     }
 
-    code.parseUntil(new Set([':', ',', ')']));
+    code.parseUntil(identifierEndSymbols);
     const identifier = code.lastParsed;
 
     let maybeType;
     if (code.isAt(':')) {
       code.advanceBy(1); // ':'
-      code.parseUntil(new Set([',', ')']), ['<', '>']);
+      code.parseUntil(typeEndSymbols, angleBrackets);
       maybeType = code.lastParsed;
     }
 
@@ -92,8 +70,8 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
  * Strips comments, whitespaces, the name and the body of the function.
  * @example
  * const code = `
- *    fn add( a, /* comment *\/ ＠location(0) b : i32 ) -> i32   {
- *        return a + b;
+ *    fn add( a,  ＠location(0) b : i32 ) -> i32   {
+ *        return a + b; // returns the sum
  *  }`;
  *
  * const stripped = strip(code); // "(a,@location(0)b:i32)->i32"
@@ -125,7 +103,7 @@ function strip(
 
     // skip block comments
     if (code.isAt('/*')) {
-      code.parseUntil(new Set('*/'), ['/*', '*/']);
+      code.parseUntil(openingCommentBlock, commentBlocks);
       code.advanceBy(2); // the last '*/'
       continue;
     }
@@ -203,7 +181,7 @@ class ParsableString {
    */
   parseUntil(
     toFind: Set<string>,
-    brackets?: [string, string],
+    brackets?: readonly [string, string],
   ): number {
     this.#parseStartPos = this.#pos;
     let openedBrackets = 0;
@@ -224,3 +202,29 @@ class ParsableString {
     throw new Error('Reached the end of the string without finding a match!');
   }
 }
+
+// sets and tuples of characters defined here so they are not recreated on every call
+const lineBreaks = new Set<string>([
+  '\u000A', // line feed
+  '\u000B', // vertical tab
+  '\u000C', // form feed
+  '\u000D', // carriage return
+  '\u0085', // next line
+  '\u2028', // line separator
+  '\u2029', // paragraph separator
+]);
+const blankSpaces = new Set<string>([
+  ...lineBreaks,
+  '\u0020', // space
+  '\u0009', // horizontal tab
+  '\u200E', // left-to-right mark
+  '\u200F', // right-to-left mark
+]);
+const closingParenthesis = new Set<string>([')']);
+const identifierEndSymbols = new Set([':', ',', ')']);
+const typeEndSymbols = new Set([',', ')']);
+const openingCommentBlock = new Set(['*/']);
+
+const parentheses = ['(', ')'] as const;
+const angleBrackets = ['<', '>'] as const;
+const commentBlocks = ['/*', '*/'] as const;
