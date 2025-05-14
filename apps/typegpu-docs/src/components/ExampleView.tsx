@@ -142,7 +142,7 @@ export function ExampleView({ example }: Props) {
                           type='button'
                           onClick={() => setCurrentFilePath(fileName)}
                           className={cs(
-                            'px-4 rounded-t-lg rounded-b-none text-nowrap',
+                            'px-4 rounded-t-lg rounded-b-none text-nowrap text-sm',
                             currentFilePath === fileName
                               ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
                               : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
@@ -187,7 +187,7 @@ function GPUUnsupportedPanel() {
 
       <a
         href='/TypeGPU/blog/troubleshooting'
-        className='underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text'
+        className='text-transparent underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text'
       >
         Read more about the availability
       </a>

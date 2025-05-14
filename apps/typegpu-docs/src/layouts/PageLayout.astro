@@ -24,65 +24,26 @@ const { title, theme = 'light' } = Astro.props;
       .overflow-guard {
         border-radius: 0 0.5rem 0.5rem 0.5rem;
       }
-
+      @reference "../tailwind.css";
       @layer base {
         h1 {
-          margin: 0;
-          font-size: 1.4375rem;
-          line-height: 130%;
-        }
-        @screen md {
-          h1 { font-size: 2.5rem; }
-        }
-        @screen lg {
-          h1 { font-size: 3.25rem; }
+          @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
         }
 
         h2 {
-          margin: 0;
-          font-size: 1.375rem;
-          line-height: 130%;
-        }
-        @screen md {
-          h2 { font-size: 2.125rem; }
-        }
-        @screen lg {
-          h2 { font-size: 3rem; }
+          @apply m-0 lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
         }
 
         h3 {
-          margin: 0;
-          font-size: 1.25rem;
-          line-height: 140%;
-        }
-        @screen md {
-          h3 { font-size: 1.5rem; }
-        }
-        @screen lg {
-          h3 { font-size: 2.125rem; }
+          @apply m-0 lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
         }
 
         p {
-          margin: 0;
-          font-size: 1rem;
-          line-height: 150%;
-        }
-        @screen md {
-          p { font-size: 1.25rem; }
-        }
-        @screen lg {
-          p { font-size: 1.5rem; }
+          @apply m-0 lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
         }
 
         .text-micro {
-          font-size: 0.75rem;
-          line-height: 160%;
-        }
-        @screen md {
-          .text-micro { font-size: 0.875rem; }
-        }
-        @screen lg {
-          .text-micro { font-size: 1rem; }
+          @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
         }
       }
 
