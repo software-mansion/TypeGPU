@@ -13,7 +13,10 @@ function ExamplesGrid({ examples }: { examples: Example[] }) {
 }
 
 export function SearchableExampleList(
-  { excludeTags = [] }: { excludeTags?: string[] },
+  { excludeTags = [], scrollContainerRef }: {
+    excludeTags?: string[];
+    scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
+  },
 ) {
   const [query, setQuery] = useState('');
 
@@ -74,7 +77,12 @@ export function SearchableExampleList(
           type='text'
           placeholder='Search examples by name or tag...'
           value={query}
-          onChange={(e) => setQuery(e.target.value.trim())}
+          onChange={(e) => {
+            if (scrollContainerRef?.current) {
+              scrollContainerRef.current.scrollTop = 0;
+            }
+            setQuery(e.target.value.trim());
+          }}
           className='w-full box-border border border-purple-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
         />
       </div>

@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
@@ -56,7 +56,7 @@ function SideMenu() {
   const [experimentalShowing, setExperimentalShowing] = useState(
     localStorage.getItem(experimentalShowingLSKey) === 'true',
   );
-
+  const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
 
   return (
@@ -85,7 +85,7 @@ function SideMenu() {
         <hr className='my-0 box-border w-full border-t border-tameplum-100' />
       </div>
 
-      <div className='flex-1 overflow-y-auto min-h-0 hide-scrollbar pr-3'>
+      <div className='flex-1 overflow-y-auto min-h-0 pr-3' ref={scrollRef}>
         <section className='mb-6 pb-6 border-b border-tameplum-100 space-y-2'>
           <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
           <p className='m-0 text-sm'>
@@ -105,6 +105,7 @@ function SideMenu() {
             experimentalShowing ? [] : ['experimental'],
             typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
           ].flat()}
+          scrollContainerRef={scrollRef}
         />
       </div>
 
