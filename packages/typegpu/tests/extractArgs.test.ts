@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractArgs } from '../src/utils.ts';
+import { extractArgs } from '../src/extractArgs.ts';
 
 describe('extract args', () => {
   it('extracts when no arguments', () => {
