@@ -31,7 +31,7 @@ interface ArgInfo {
 
 interface FunctionArgsInfo {
   args: ArgInfo[];
-  // returnType: string;
+  returnType: string | undefined;
   range: {
     begin: number;
     end: number;
@@ -73,6 +73,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
       code.advanceBy(1); // ',' before the next argument
     }
   }
+  code.advanceBy(1); // ')'
 
   let maybeReturnType;
   if (code.isAt('->')) {
@@ -80,7 +81,11 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     maybeReturnType = code.str.slice(code.pos);
   }
 
-  return { args, range: { begin: range[0], end: range[1] } };
+  return {
+    args,
+    returnType: maybeReturnType,
+    range: { begin: range[0], end: range[1] },
+  };
 }
 
 /**

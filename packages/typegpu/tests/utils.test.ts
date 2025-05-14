@@ -22,10 +22,11 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 18, end: 28 });
     expect(args).toStrictEqual([]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 18, end: 28 });
   });
 
   it('extracts when one argument', () => {
@@ -35,10 +36,11 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 18, end: 34 });
     expect(args).toStrictEqual([createArg('a', [], 'i32')]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 18, end: 34 });
   });
 
   it('extracts when multiple arguments', () => {
@@ -48,14 +50,15 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 45 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [], 'i32'),
       createArg('c', [], 'i32'),
     ]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 13, end: 45 });
   });
 
   it('extracts when attributes', () => {
@@ -65,14 +68,15 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 81 });
     expect(args).toStrictEqual([
       createArg('a', [`@builtin(vertex_index)`], 'i32'),
       createArg('b', [`@location(0)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 13, end: 81 });
   });
 
   it('extracts when multiple attributes', () => {
@@ -82,14 +86,15 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 77 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [`@location(0)`, `@interpolate(flat)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 13, end: 77 });
   });
 
   it('extracts when commas in attributes', () => {
@@ -99,14 +104,15 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 72 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [`@interpolate(flat,center)`], 'i32'),
       createArg('c', [], 'i32'),
     ]);
+    expect(returnType).toBe('i32');
+    expect(range).toStrictEqual({ begin: 13, end: 72 });
   });
 
   it('extracts when commas in templates', () => {
@@ -116,13 +122,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 47 });
     expect(args).toStrictEqual([
       createArg('a', [], 'array<f32,4>'),
       createArg('b', [], 'f32'),
     ]);
+    expect(returnType).toBe('f32');
+    expect(range).toStrictEqual({ begin: 13, end: 47 });
   });
 
   it('extracts when inlined comments', () => {
@@ -132,13 +139,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 54 });
     expect(args).toStrictEqual([
       createArg('a', [], 'f32'),
       createArg('b', [], 'f32'),
     ]);
+    expect(returnType).toBe('f32');
+    expect(range).toStrictEqual({ begin: 13, end: 54 });
   });
 
   it('extracts when inlined nested comments', () => {
@@ -148,13 +156,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 85 });
     expect(args).toStrictEqual([
       createArg('a', [], 'f32'),
       createArg('b', [], 'f32'),
     ]);
+    expect(returnType).toBe('f32');
+    expect(range).toStrictEqual({ begin: 13, end: 85 });
   });
 
   it('extracts when missing argument types', () => {
@@ -164,13 +173,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 32 });
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], 'f32'),
     ]);
+    expect(returnType).toBe('f32');
+    expect(range).toStrictEqual({ begin: 13, end: 32 });
   });
 
   it('extracts when missing return type', () => {
@@ -180,13 +190,14 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 13, end: 20 });
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], undefined),
     ]);
+    expect(returnType).toBeUndefined();
+    expect(range).toStrictEqual({ begin: 13, end: 20 });
   });
 
   it('extracts when excessive whitespaces', () => {
@@ -200,15 +211,16 @@ describe('extract args', () => {
           }
       `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 17, end: 107 });
     expect(args).toStrictEqual([
       createArg('a', [], 'i32'),
       createArg('b', [], 'i32'),
       createArg('c', [], 'i32'),
       createArg('d', [], 'i32'),
     ]);
+    expect(returnType).toBe('f32');
+    expect(range).toStrictEqual({ begin: 17, end: 107 });
   });
 
   it('extracts when comment at the beginning', () => {
@@ -218,12 +230,13 @@ describe('extract args', () => {
       }
     `;
 
-    const { args, range } = extractArgs(wgslFn);
+    const { args, returnType, range } = extractArgs(wgslFn);
 
-    expect(range).toStrictEqual({ begin: 21, end: 28 });
     expect(args).toStrictEqual([
       createArg('a', [], undefined),
       createArg('b', [], undefined),
     ]);
+    expect(returnType).toBeUndefined();
+    expect(range).toStrictEqual({ begin: 21, end: 28 });
   });
 });
