@@ -65,9 +65,9 @@ export function SearchableExampleList(
   return (
     <div className='flex flex-col w-full max-w-full'>
       <div
-        className='sticky isolate top-0 pb-4 w-full flex-shrink-0 z-10'
+        className='sticky top-0 z-20 bg-white w-full pb-4 flex-shrink-0'
         style={{
-          background: 'linear-gradient(to bottom, white 50%, transparent 100%)',
+          background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
         }}
       >
         <input
@@ -78,7 +78,7 @@ export function SearchableExampleList(
           className='w-full box-border border border-purple-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
         />
       </div>
-      <div className='flex flex-col gap-10 flex-1 overflow-y-hidden min-h-0'>
+      <div className='flex flex-col gap-10 flex-1'>
         {query
           ? (
             filteredExamples.length > 0
@@ -96,10 +96,16 @@ export function SearchableExampleList(
           : (
             categoriesToShow.length > 0 && (
               categoriesToShow.map((category) => (
-                <div key={category.key} className='flex flex-col gap-5'>
-                  <div className='flex items-center justify-center w-full'>
+                <div key={category.key} className='flex flex-col'>
+                  <div
+                    className='sticky z-10 bg-white flex items-center justify-center w-full top-8'
+                    style={{
+                      background:
+                        'linear-gradient(to bottom, white 50%, transparent 100%)',
+                    }}
+                  >
                     <div className='h-px bg-gray-200 flex-grow' />
-                    <h2 className='text-2xl font-bold text-black px-6 py-2 text-center'>
+                    <h2 className='text-2xl font-bold px-6 py-2'>
                       {category.label}
                     </h2>
                     <div className='h-px bg-gray-200 flex-grow' />
