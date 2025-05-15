@@ -43,22 +43,18 @@ export function createFnCore(
 
   if (typeof implementation === 'string') {
     if (!shell.isEntry) {
-      if (Array.isArray(shell.argTypes)) {
-        // TODO: Remove this branch along with deprecated array arg types
-
-        addArgTypesToExternals(
-          implementation,
-          Array.isArray(shell.argTypes)
-            ? shell.argTypes
-            : Object.values(shell.argTypes),
-          (externals) => externalsToApply.push(externals),
-        );
-        addReturnTypeToExternals(
-          implementation,
-          shell.returnType,
-          (externals) => externalsToApply.push(externals),
-        );
-      }
+      addArgTypesToExternals(
+        implementation,
+        Array.isArray(shell.argTypes)
+          ? shell.argTypes
+          : Object.values(shell.argTypes),
+        (externals) => externalsToApply.push(externals),
+      );
+      addReturnTypeToExternals(
+        implementation,
+        shell.returnType,
+        (externals) => externalsToApply.push(externals),
+      );
     } else {
       if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
         externalsToApply.push({ In: shell.argTypes[0] });

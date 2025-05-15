@@ -7,7 +7,7 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn([], d.f32)(`() {
+      .fn([], d.f32)(`() -> f32 {
         return 3.0f;
       }`)
       .$name('get_x');
@@ -259,7 +259,7 @@ struct fragment_Output {
       .$name('Point');
 
     const func = tgpu['~unstable']
-      .fn([d.vec4f, Point], undefined)(/* wgsl */ `(a: vec4f, b: Point) {
+      .fn([d.vec4f, Point])(/* wgsl */ `(a: vec4f, b: Point) {
         var newPoint: Point;
         newPoint = b;
       }`)

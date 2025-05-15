@@ -67,7 +67,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(/* wgsl */ `() {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -88,7 +88,7 @@ describe('tgpu.slot', () => {
     // should be green
     expect(actual).toBe(
       parse(`
-        fn getColor() {
+        fn getColor() -> vec3f {
           return vec3f(0., 1., 0.);
         }
 
@@ -103,7 +103,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return colorSlot;
       })`)
       .$name('getColor')

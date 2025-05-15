@@ -281,7 +281,7 @@ describe('tgpu resolve', () => {
 
   it('should resolve object externals and replace their usages in template', () => {
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -307,7 +307,7 @@ describe('tgpu resolve', () => {
       parse(`
       @group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() {
+      fn get_color() -> vec3f {
         let color = vec3f();
         return color;
       }
@@ -321,14 +321,14 @@ describe('tgpu resolve', () => {
 
   it('should resolve only used object externals and ignore non-existing', () => {
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getIntensity = tgpu['~unstable']
-      .fn([], d.vec3f)(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return 1;
       }`)
       .$name('get_intensity');
