@@ -1,5 +1,5 @@
 {
   "title": "Boids",
   "category": "simulation",
-  "tags": ["compute", "instancing", "simulation"]
+  "tags": ["compute", "instancing"]
 }

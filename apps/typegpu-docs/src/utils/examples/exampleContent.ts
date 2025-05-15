@@ -101,8 +101,7 @@ export const examples = R.pipe(
         tsFiles: readonlyTsFiles[key] ?? [],
         tsImport: tsFilesImportFunctions[key],
         htmlFile: htmlFiles[key]?.[0] ?? '',
-        thumbnails: thumbnailFiles[key] ??
-          { small: undefined, large: undefined },
+        thumbnails: thumbnailFiles[key],
       }) satisfies Example,
   ),
 );

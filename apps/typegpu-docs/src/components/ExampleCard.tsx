@@ -24,7 +24,7 @@ export function ExampleCard({ example }: { example: Example }) {
             </picture>
           )
           : (
-            <span className='text-gray-400 fallback'>
+            <span className='text-gray-400 text-lg font-semibold'>
               No thumbnail
             </span>
           )}

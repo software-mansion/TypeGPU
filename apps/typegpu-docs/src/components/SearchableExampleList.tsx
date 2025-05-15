@@ -20,7 +20,7 @@ export function SearchableExampleList(
 ) {
   const [query, setQuery] = useState('');
 
-  const allExamples = useMemo<Example[]>(
+  const allExamples = useMemo(
     () =>
       Object.values(examples).filter((ex) =>
         !ex.metadata.tags?.some((tag) => excludeTags.includes(tag))
@@ -39,14 +39,14 @@ export function SearchableExampleList(
     [allExamples],
   );
 
-  const filteredExamples = useMemo<Example[]>(() => {
+  const filteredExamples = useMemo(() => {
     const trimmedQuery = query.trim();
     return trimmedQuery
       ? fuse.search(trimmedQuery).map((r) => r.item)
       : allExamples;
   }, [query, fuse, allExamples]);
 
-  const examplesByCategories = useMemo<Record<string, Example[]>>(
+  const examplesByCategories = useMemo(
     () =>
       filteredExamples.reduce((groups, example) => {
         const category = example.metadata.category;
@@ -104,28 +104,26 @@ export function SearchableExampleList(
               )
           )
           : (
-            categoriesToShow.length > 0 && (
-              categoriesToShow.map((category) => (
-                <div key={category.key} className='flex flex-col'>
-                  <div
-                    className='sticky z-10 bg-white flex items-center justify-center w-full top-8'
-                    style={{
-                      background:
-                        'linear-gradient(to bottom, white 70%, transparent 100%)',
-                    }}
-                  >
-                    <div className='h-px bg-gray-200 flex-grow' />
-                    <h2 className='text-2xl font-bold px-3 py-2'>
-                      {category.label}
-                    </h2>
-                    <div className='h-px bg-gray-200 flex-grow' />
-                  </div>
-                  <ExamplesGrid
-                    examples={examplesByCategories[category.key] || []}
-                  />
+            categoriesToShow.map((category) => (
+              <div key={category.key} className='flex flex-col'>
+                <div
+                  className='sticky z-10 bg-white flex items-center justify-center w-full top-8'
+                  style={{
+                    background:
+                      'linear-gradient(to bottom, white 70%, transparent 100%)',
+                  }}
+                >
+                  <div className='h-px bg-gray-200 flex-grow' />
+                  <h2 className='text-2xl font-bold px-3 py-2'>
+                    {category.label}
+                  </h2>
+                  <div className='h-px bg-gray-200 flex-grow' />
                 </div>
-              ))
-            )
+                <ExamplesGrid
+                  examples={examplesByCategories[category.key] || []}
+                />
+              </div>
+            ))
           )}
       </div>
     </div>

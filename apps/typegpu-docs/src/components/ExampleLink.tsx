@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
@@ -14,7 +14,7 @@ type Props = {
 export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
-  const [_, setCurrentExample] = useAtom(currentExampleAtom);
+  const setCurrentExample = useSetAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
