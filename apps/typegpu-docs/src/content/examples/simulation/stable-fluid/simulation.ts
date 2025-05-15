@@ -16,7 +16,7 @@ const getNeighbors = tgpu['~unstable'].fn(
   for (let i = 0; i < 4; i++) {
     adjacentOffsets[i] = std.clamp(
       std.add(coords, adjacentOffsets[i]),
-      d.vec2i(0),
+      d.vec2i(),
       std.sub(bounds, d.vec2i(1)),
     );
   }
@@ -25,8 +25,8 @@ const getNeighbors = tgpu['~unstable'].fn(
 
 export const brushLayout = tgpu.bindGroupLayout({
   brushParams: { uniform: p.BrushParams },
-  forceDst: { storageTexture: 'rg32float', access: 'writeonly' },
-  inkDst: { storageTexture: 'r32float', access: 'writeonly' },
+  forceDst: { storageTexture: 'rgba16float', access: 'writeonly' },
+  inkDst: { storageTexture: 'rgba16float', access: 'writeonly' },
 });
 
 export const brushFn = tgpu['~unstable'].computeFn({
@@ -67,7 +67,7 @@ export const brushFn = tgpu['~unstable'].computeFn({
 
 export const addForcesLayout = tgpu.bindGroupLayout({
   src: { texture: 'float' },
-  dst: { storageTexture: 'rg32float', access: 'writeonly' },
+  dst: { storageTexture: 'rgba16float', access: 'writeonly' },
   force: { texture: 'float' },
   simParams: { uniform: p.ShaderParams },
 });
@@ -86,7 +86,7 @@ export const addForcesFn = tgpu['~unstable'].computeFn({
 
 export const advectLayout = tgpu.bindGroupLayout({
   src: { texture: 'float' },
-  dst: { storageTexture: 'rg32float', access: 'writeonly' },
+  dst: { storageTexture: 'rgba16float', access: 'writeonly' },
   simParams: { uniform: p.ShaderParams },
   linSampler: { sampler: 'filtering' },
 });
@@ -131,7 +131,7 @@ export const advectFn = tgpu['~unstable'].computeFn({
 
 export const diffusionLayout = tgpu.bindGroupLayout({
   in: { texture: 'float' },
-  out: { storageTexture: 'rg32float', access: 'writeonly' },
+  out: { storageTexture: 'rgba16float', access: 'writeonly' },
   simParams: { uniform: p.ShaderParams },
 });
 
@@ -170,7 +170,7 @@ export const diffusionFn = tgpu['~unstable'].computeFn({
 
 export const divergenceLayout = tgpu.bindGroupLayout({
   vel: { texture: 'float' },
-  div: { storageTexture: 'r32float', access: 'writeonly' },
+  div: { storageTexture: 'rgba16float', access: 'writeonly' },
 });
 
 export const divergenceFn = tgpu['~unstable'].computeFn({
@@ -189,7 +189,7 @@ export const divergenceFn = tgpu['~unstable'].computeFn({
   const rightVel = std.textureLoad(divergenceLayout.$.vel, neighbors[2], 0);
   const downVel = std.textureLoad(divergenceLayout.$.vel, neighbors[3], 0);
 
-  const divergence = d.f32(0.5) *
+  const divergence = 0.5 *
     (rightVel.x - leftVel.x + (downVel.y - upVel.y));
   std.textureStore(
     divergenceLayout.$.div,
@@ -201,7 +201,7 @@ export const divergenceFn = tgpu['~unstable'].computeFn({
 export const pressureLayout = tgpu.bindGroupLayout({
   x: { texture: 'float' },
   b: { texture: 'float' },
-  out: { storageTexture: 'r32float', access: 'writeonly' },
+  out: { storageTexture: 'rgba16float', access: 'writeonly' },
 });
 
 export const pressureFn = tgpu['~unstable'].computeFn({
@@ -232,7 +232,7 @@ export const pressureFn = tgpu['~unstable'].computeFn({
 export const projectLayout = tgpu.bindGroupLayout({
   vel: { texture: 'float' },
   p: { texture: 'float' },
-  out: { storageTexture: 'rg32float', access: 'writeonly' },
+  out: { storageTexture: 'rgba16float', access: 'writeonly' },
 });
 
 export const projectFn = tgpu['~unstable'].computeFn({
@@ -261,7 +261,7 @@ export const projectFn = tgpu['~unstable'].computeFn({
 export const advectInkLayout = tgpu.bindGroupLayout({
   vel: { texture: 'float' },
   src: { texture: 'float' },
-  dst: { storageTexture: 'r32float', access: 'writeonly' },
+  dst: { storageTexture: 'rgba16float', access: 'writeonly' },
   simParams: { uniform: p.ShaderParams },
   linSampler: { sampler: 'filtering' },
 });
@@ -297,7 +297,7 @@ export const advectInkFn = tgpu['~unstable'].computeFn({
 
 export const addInkLayout = tgpu.bindGroupLayout({
   src: { texture: 'float' },
-  dst: { storageTexture: 'r32float', access: 'writeonly' },
+  dst: { storageTexture: 'rgba16float', access: 'writeonly' },
   add: { texture: 'float' },
 });
 
