@@ -39,10 +39,12 @@ export function SearchableExampleList(
     [allExamples],
   );
 
-  const filteredExamples = useMemo<Example[]>(
-    () => query ? fuse.search(query).map((result) => result.item) : allExamples,
-    [query, fuse, allExamples],
-  );
+  const filteredExamples = useMemo<Example[]>(() => {
+    const trimmedQuery = query.trim();
+    return trimmedQuery
+      ? fuse.search(trimmedQuery).map((r) => r.item)
+      : allExamples;
+  }, [query, fuse, allExamples]);
 
   const examplesByCategories = useMemo<Record<string, Example[]>>(
     () =>
@@ -81,13 +83,13 @@ export function SearchableExampleList(
             if (scrollContainerRef?.current) {
               scrollContainerRef.current.scrollTop = 0;
             }
-            setQuery(e.target.value.trim());
+            setQuery(e.target.value);
           }}
           className='w-full box-border border border-purple-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
         />
       </div>
       <div className='flex flex-col gap-10 flex-1'>
-        {query
+        {query.trim()
           ? (
             filteredExamples.length > 0
               ? (
