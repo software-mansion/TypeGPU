@@ -1,4 +1,3 @@
-export type FieldFormat = 'rg32float' | 'r32float';
 export type DisplayMode = 'ink' | 'velocity' | 'image';
 
 export type SimulationParams = {
