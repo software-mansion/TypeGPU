@@ -1,5 +1,5 @@
 {
   "title": "Confetti",
   "category": "simulation",
-  "tags": ["experimental"]
+  "tags": ["experimental", "compute", "instancing"]
 }
