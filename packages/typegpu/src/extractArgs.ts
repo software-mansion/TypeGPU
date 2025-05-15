@@ -100,7 +100,8 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
  * Strips comments, whitespaces, the name and the body of the function.
  * @example
  * const code = `
- *    fn add( a,  ＠location(0) b : i32 ) -> i32   {
+ *    fn add( a,  // first argument
+ *            ＠location(0) b : i32 ) -> i32   {
  *        return a + b; // returns the sum
  *  }`;
  *
@@ -239,7 +240,6 @@ class ParsableString {
   }
 }
 
-// sets and tuples of characters defined here so they are not recreated on every call
 const lineBreaks = new Set<string>([
   '\u000A', // line feed
   '\u000B', // vertical tab
