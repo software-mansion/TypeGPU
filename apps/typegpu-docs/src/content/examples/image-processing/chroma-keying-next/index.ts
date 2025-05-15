@@ -81,7 +81,8 @@ video.addEventListener('resize', () => {
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 });
 
