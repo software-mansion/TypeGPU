@@ -16,10 +16,7 @@ describe('TgpuDerived', () => {
     const b = tgpu['~unstable'].derived(() => double.value + 2);
 
     const main = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return a.value + b.value;
       })
       .$name('main');
@@ -40,10 +37,7 @@ describe('TgpuDerived', () => {
     const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
     const getDouble = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return double.value;
       })
       .$name('getDouble');
@@ -189,10 +183,7 @@ describe('TgpuDerived', () => {
 
     const derivedFn = utgpu.derived(() => {
       return tgpu['~unstable']
-        .fn(
-          [],
-          d.f32,
-        )(() => valueSlot.value)
+        .fn([], d.f32)(() => valueSlot.value)
         .with(valueSlot, valueSlot.value) // currently necessary to work :/
         .$name('innerFn');
     });

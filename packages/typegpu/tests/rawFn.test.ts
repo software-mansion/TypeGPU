@@ -259,10 +259,7 @@ struct fragment_Output {
       .$name('Point');
 
     const func = tgpu['~unstable']
-      .fn(
-        [d.vec4f, Point],
-        undefined,
-      )(/* wgsl */ `(a: vec4f, b: Point) {
+      .fn([d.vec4f, Point], undefined)(/* wgsl */ `(a: vec4f, b: Point) {
         var newPoint: Point;
         newPoint = b;
       }`)

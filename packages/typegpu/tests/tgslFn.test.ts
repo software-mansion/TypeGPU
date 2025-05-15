@@ -8,10 +8,7 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return 3;
       })
       .$name('get_x');
@@ -21,10 +18,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves fn to WGSL', () => {
     const getY = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return 3;
       })
       .$name('getY');
@@ -42,10 +36,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves externals', () => {
     const v = d.vec3f; // necessary workaround until we finish implementation of member access in the generator
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
+      .fn([], d.vec3f)(() => {
         const color = v();
         const color2 = v(1, 2, 3);
         return color;
@@ -54,10 +45,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('get_color');
 
     const getX = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const color = getColor();
         return 3;
       })
@@ -65,10 +53,7 @@ describe('TGSL tgpu.fn function', () => {
       .$uses({ getColor });
 
     const getY = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const c = getColor();
         return getX();
       })
@@ -105,10 +90,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     const createGradient = tgpu['~unstable']
-      .fn(
-        [],
-        Gradient,
-      )(() => {
+      .fn([], Gradient)(() => {
         return Gradient({ to: d.vec3f(1, 2, 3), from: d.vec3f(4, 5, 6) });
       })
       .$name('create_gradient');
@@ -151,10 +133,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('C');
 
     const pureConfusion = tgpu['~unstable']
-      .fn(
-        [],
-        A,
-      )(() => {
+      .fn([], A)(() => {
         return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
       })
       .$name('pure_confusion');
@@ -371,10 +350,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn(
-        [],
-        TestStruct,
-      )(() => {
+      .fn([], TestStruct)(() => {
         return {
           a: 1,
           b: 2,
@@ -410,10 +386,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn(
-        [],
-        TestStruct,
-      )(() => {
+      .fn([], TestStruct)(() => {
         return {
           a: 1,
           b: 2,

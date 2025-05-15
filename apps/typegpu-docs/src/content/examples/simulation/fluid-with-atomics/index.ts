@@ -79,24 +79,19 @@ const squareBuffer = root
   .$usage('vertex')
   .$name('square');
 
-const getIndex = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => {
+const getIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) => {
   const h = sizeUniform.value.y;
   const w = sizeUniform.value.x;
   return (y % h) * w + (x % w);
 });
 
-const getCell = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => currentStateStorage.value[getIndex(x, y)]);
+const getCell = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) =>
+  currentStateStorage.value[getIndex(x, y)]
+);
 
-const getCellNext = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => std.atomicLoad(nextStateStorage.value[getIndex(x, y)]));
+const getCellNext = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) =>
+  std.atomicLoad(nextStateStorage.value[getIndex(x, y)])
+);
 
 const updateCell = tgpu['~unstable'].fn([d.u32, d.u32, d.u32])(
   (x, y, value) => {
