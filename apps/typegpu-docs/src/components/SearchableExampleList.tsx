@@ -34,6 +34,7 @@ export function SearchableExampleList(
         keys: [
           { name: 'metadata.title', weight: 0.7 },
           { name: 'metadata.tags', weight: 0.3 },
+          { name: 'metadata.category', weight: 0.1 },
         ],
       }),
     [allExamples],
