@@ -5,21 +5,17 @@ import * as std from 'typegpu/std';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu['~unstable'].fn(
-  [d.vec2f, d.f32],
-  d.vec2f,
-)((v, angle) => {
+const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   const cos = std.cos(angle);
   const sin = std.sin(angle);
   return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
 });
 
-const getRotationFromVelocity = tgpu['~unstable'].fn(
-  [d.vec2f],
-  d.f32,
-)((velocity) => {
-  return -std.atan2(velocity.x, velocity.y);
-});
+const getRotationFromVelocity = tgpu['~unstable'].fn([d.vec2f], d.f32)(
+  (velocity) => {
+    return -std.atan2(velocity.x, velocity.y);
+  },
+);
 
 const TriangleData = d.struct({
   position: d.vec2f,

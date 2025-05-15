@@ -3,10 +3,7 @@ import { f32, vec3f } from 'typegpu/data';
 import { floor, max, min } from 'typegpu/std';
 
 export const hsvToRgb = tgpu['~unstable']
-  .fn(
-    [vec3f],
-    vec3f,
-  )((hsv) => {
+  .fn([vec3f], vec3f)((hsv) => {
     const h = hsv.x;
     const s = hsv.y;
     const v = hsv.z;
@@ -50,10 +47,7 @@ export const hsvToRgb = tgpu['~unstable']
   .$name('hsv to rgb');
 
 export const rgbToHsv = tgpu['~unstable']
-  .fn(
-    [vec3f],
-    vec3f,
-  )((rgb) => {
+  .fn([vec3f], vec3f)((rgb) => {
     const r = rgb.x;
     const g = rgb.y;
     const b = rgb.z;

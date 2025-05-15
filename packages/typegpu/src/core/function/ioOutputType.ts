@@ -56,7 +56,7 @@ export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
   return (
     isData(returnType)
       ? isVoid(returnType)
-        ? undefined
+        ? returnType
         : getCustomLocation(returnType) !== undefined
         ? returnType
         : location(0, returnType)

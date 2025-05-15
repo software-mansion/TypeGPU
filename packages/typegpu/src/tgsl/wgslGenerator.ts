@@ -355,15 +355,7 @@ export function generateExpression(
         ? ((argTypes(...resolvedSnippets) as wgsl.AnyWgslData[])
           .map((type, i) => [type, resolvedSnippets[i]])
           .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
-        : Object.entries(argTypes).map(([key, type]) => {
-          const sn = (argSnippets[0]?.value as Record<string, Snippet>)[
-            key
-          ];
-          if (!sn) {
-            throw new Error(`Missing argument ${key} in function call`);
-          }
-          return [type, sn] as [wgsl.AnyWgslData, Snippet];
-        });
+        : [];
 
       convertedResources = pairs.map(([type, sn]) => {
         const conv = convertToCommonType(ctx, [sn], [type])?.[0];

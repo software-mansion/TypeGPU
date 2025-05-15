@@ -15,6 +15,7 @@ export {
   isWgslArray,
   isWgslData,
   isWgslStruct,
+  Void,
 } from './wgslTypes.ts';
 export type {
   Align,

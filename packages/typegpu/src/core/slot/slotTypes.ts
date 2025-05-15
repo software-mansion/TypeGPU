@@ -1,4 +1,4 @@
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -33,8 +33,7 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
-export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
-  extends TgpuNamable {
+export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly resourceType: 'accessor';
   [$repr]: Infer<T>;
 
@@ -77,7 +76,7 @@ export function isProviding(
   return (value as { '~providing': Providing })?.['~providing'] !== undefined;
 }
 
-export function isAccessor<T extends AnyWgslData>(
+export function isAccessor<T extends AnyData>(
   value: unknown | TgpuAccessor<T>,
 ): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';

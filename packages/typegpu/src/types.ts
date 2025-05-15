@@ -84,7 +84,7 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   args: Snippet[];
-  returnType: AnyWgslData;
+  returnType: AnyData;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -104,7 +104,7 @@ export interface ItemStateStack {
   popSlotBindings(): void;
   pushFunctionScope(
     args: Snippet[],
-    returnType: AnyWgslData | undefined,
+    returnType: AnyData,
     externalMap: Record<string, unknown>,
   ): void;
   popFunctionScope(): void;
@@ -202,8 +202,7 @@ export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 export type DefaultConversionStrategy = 'keep' | 'coerce';
 
 export type FnArgsConversionHint =
-  | AnyWgslData[]
-  | Record<string, AnyWgslData>
+  | AnyData[]
   | ((...args: Snippet[]) => AnyWgslData[])
   | DefaultConversionStrategy
   | undefined;
