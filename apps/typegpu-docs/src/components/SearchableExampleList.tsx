@@ -114,11 +114,11 @@ export function SearchableExampleList(
                       'linear-gradient(to bottom, white 70%, transparent 100%)',
                   }}
                 >
-                  <div className='h-px bg-gray-200 flex-grow' />
+                  <hr className='my-0 box-border w-full border-t border-tameplum-100' />
                   <h2 className='text-2xl font-bold px-3 py-2'>
                     {category.label}
                   </h2>
-                  <div className='h-px bg-gray-200 flex-grow' />
+                  <hr className='my-0 box-border w-full border-t border-tameplum-100' />
                 </div>
                 <ExamplesGrid
                   examples={examplesByCategories[category.key] || []}
