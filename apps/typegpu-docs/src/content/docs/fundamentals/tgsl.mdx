@@ -18,7 +18,7 @@ or the Just-In-Time transpiler -- *tgpu-jit* (WIP).
 
 ## Usage
 
-You can pass TGSL to tgpu function shell implementation calls, just as you would with the WGSL code strings.
+Instead of using a WGSL code string, you can pass TGSL to the tgpu function shell as an argument instead.
 Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier...*) are accessible through the `typegpu/std` endpoint. 
 The package also includes functions for vector and matrix operators (*add, eq, lt...*).
 
