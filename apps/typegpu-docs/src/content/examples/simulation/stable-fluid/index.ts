@@ -13,17 +13,15 @@ import {
   renderLayout,
 } from './render.ts';
 import * as c from './simulation.ts';
-import type { BrushState, DisplayMode, FieldFormat } from './types.ts';
+import type { BrushState, DisplayMode } from './types.ts';
 
 // Initialize
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
   throw new Error('No GPU adapter found');
 }
-const device = await adapter.requestDevice({
-  requiredFeatures: ['float32-filterable'],
-});
-const root = tgpu.initFromDevice({ device });
+const root = await tgpu.init();
+const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -37,9 +35,9 @@ context.configure({
 });
 
 // Helpers
-function createField(format: FieldFormat, name: string) {
+function createField(name: string) {
   return root['~unstable']
-    .createTexture({ size: [p.SIM_N, p.SIM_N], format })
+    .createTexture({ size: [p.SIM_N, p.SIM_N], format: 'rgba16float' })
     .$usage('storage', 'sampled')
     .$name(name);
 }
@@ -120,22 +118,13 @@ device.queue.copyExternalImageToTexture(
 );
 
 // Create simulation textures
-const velTex = [
-  createField('rg32float', 'velocity0'),
-  createField('rg32float', 'velocity1'),
-];
-const inkTex = [
-  createField('r32float', 'density0'),
-  createField('r32float', 'density1'),
-];
-const pressureTex = [
-  createField('r32float', 'pressure0'),
-  createField('r32float', 'pressure1'),
-];
+const velTex = [createField('velocity0'), createField('velocity1')];
+const inkTex = [createField('density0'), createField('density1')];
+const pressureTex = [createField('pressure0'), createField('pressure1')];
 
-const newInkTex = createField('r32float', 'addedInk');
-const forceTex = createField('rg32float', 'force');
-const divergenceTex = createField('r32float', 'divergence');
+const newInkTex = createField('addedInk');
+const forceTex = createField('force');
+const divergenceTex = createField('divergence');
 
 const linSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
@@ -419,17 +408,43 @@ canvas.addEventListener('mousedown', (e) => {
     isDown: true,
   };
 });
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * devicePixelRatio;
+  const y = (touch.clientY - rect.top) * devicePixelRatio;
+  brushState = {
+    pos: toGrid(x, y),
+    delta: [0, 0],
+    isDown: true,
+  };
+}, { passive: false });
+
 window.addEventListener('mouseup', () => {
   brushState.isDown = false;
 });
+window.addEventListener('touchend', () => {
+  brushState.isDown = false;
+});
+
 canvas.addEventListener('mousemove', (e) => {
   const x = e.offsetX * devicePixelRatio;
   const y = e.offsetY * devicePixelRatio;
-
   const [newX, newY] = toGrid(x, y);
   brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
   brushState.pos = [newX, newY];
 });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * devicePixelRatio;
+  const y = (touch.clientY - rect.top) * devicePixelRatio;
+  const [newX, newY] = toGrid(x, y);
+  brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
+  brushState.pos = [newX, newY];
+}, { passive: false });
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
