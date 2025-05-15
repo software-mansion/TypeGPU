@@ -27,6 +27,8 @@ export interface BaseData {
   readonly [$repr]: unknown;
 }
 
+export type ExtractTypeLabel<T extends BaseData> = T['type'];
+
 // #region Instance Types
 
 /**
