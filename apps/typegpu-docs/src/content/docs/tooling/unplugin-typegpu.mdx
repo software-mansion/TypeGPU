@@ -23,41 +23,37 @@ The package includes the following functionalities:
   import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
-  const add = tgpu['~unstable'].fn(
-    { a: d.u32, b: d.u32 },
-    d.u32,
-  )(({ a, b }) => a + b);
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(
+    (a, b) => a + b,
+  );
   ```
 
   However, if the implementation function, or the shell, is referenced via a variable, the plugin will not recognize it as TGSL,
   thus to make it work, the function needs to be marked with a `"kernel"` directive.
 
   ```ts
-  const addFn = tgpu['~unstable'].fn({ a: d.u32, b: d.u32 }, d.u32);
+  const addFn = tgpu['~unstable'].fn([d.u32, d.u32], d.u32);
 
-  const add = addFn(({ a, b }) => {
+  const add = addFn((a, b) => {
     'kernel';
     return a + b;
   });
   ```
 
   ```ts
-  const addImpl = ({ a, b }) => {
+  const addImpl = (a, b) => {
     'kernel';
     return a + b;
   };
 
-  const add = tgpu['~unstable'].fn({ a: d.u32, b: d.u32 }, d.u32)(addImpl);
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(addImpl);
   ```
 
   After transpiling the function, the JS implementation is removed from the bundle in order to save space.
   To be able to invoke the function both on GPU and CPU, it needs to be marked with `"kernel & js"` directive;
 
   ```ts
-  const add = tgpu['~unstable'].fn(
-    { a: d.u32, b: d.u32 },
-    d.u32,
-  )(({ a, b }) => {
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a, b) => {
     'kernel & js';
     return a + b;
   });

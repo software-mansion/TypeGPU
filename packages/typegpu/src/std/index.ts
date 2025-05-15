@@ -83,4 +83,10 @@ export {
   unpack2x16float,
 } from './packing.ts';
 
-export { textureSample } from './texture.ts';
+export {
+  textureDimensions,
+  textureLoad,
+  textureSample,
+  textureSampleLevel,
+  textureStore,
+} from './texture.ts';
