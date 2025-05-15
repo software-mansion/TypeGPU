@@ -58,13 +58,13 @@ const propertiesBuffer = root
 function createLineVerticesBuffers() {
   const Schema = d.arrayOf(d.vec2f, properties.interpolationPoints);
   return initialFunctions.map(() =>
-    root.createBuffer(Schema).$usage('storage'),
+    root.createBuffer(Schema).$usage('storage')
   );
 }
 let lineVerticesBuffers = createLineVerticesBuffers();
 
 const drawColorBuffers = initialFunctions.map((data) =>
-  root.createBuffer(d.vec4f, data.color).$usage('uniform'),
+  root.createBuffer(d.vec4f, data.color).$usage('uniform')
 );
 
 // Compute shader
@@ -104,7 +104,8 @@ const computePipelines: Array<GPUComputePipeline> = initialFunctions.map(
   (functionData, _) => {
     const computeShaderCode = createComputeShaderCode(functionData.code);
     const computeShaderModule = device.createShaderModule({
-      label: `Compute function points shader module for f(x) = ${functionData.code}`,
+      label:
+        `Compute function points shader module for f(x) = ${functionData.code}`,
       code: computeShaderCode,
     });
 
@@ -455,11 +456,11 @@ canvas.onmousemove = (event) => {
   const currentPos = [event.offsetX, event.offsetY];
   const translation = [
     (-(currentPos[0] - lastPos[0]) / canvas.width) *
-      2.0 *
-      window.devicePixelRatio,
+    2.0 *
+    window.devicePixelRatio,
     ((currentPos[1] - lastPos[1]) / canvas.height) *
-      2.0 *
-      window.devicePixelRatio,
+    2.0 *
+    window.devicePixelRatio,
     0.0,
   ];
   mat4.translate(

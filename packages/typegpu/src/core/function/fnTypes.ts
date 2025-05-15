@@ -18,6 +18,7 @@ import type {
   Vec4h,
   Vec4i,
   Vec4u,
+  Void,
 } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 
@@ -39,8 +40,8 @@ export type InferArgs<T extends unknown[]> = {
 };
 
 export type InferReturn<T> = T extends undefined
-  ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
-    void
+  // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
+  ? void
   : Infer<T>;
 
 export type JsImplementation<
@@ -49,11 +50,9 @@ export type JsImplementation<
     | Record<string, unknown>,
   Return = unknown,
 > = (
-  ...args: Args extends unknown[]
-    ? InferArgs<Args>
-    : Args extends Record<string, never>
-      ? []
-      : [InferIO<Args>]
+  ...args: Args extends unknown[] ? InferArgs<Args>
+    : Args extends Record<string, never> ? []
+    : [InferIO<Args>]
 ) => InferReturn<Return>;
 
 export type Implementation<
@@ -93,10 +92,9 @@ export type IORecord<TElementType extends IOData = IOData> = Record<
  */
 export type IOLayout<TElementType extends IOData = IOData> =
   | TElementType
-  | IORecord<TElementType>;
+  | IORecord<TElementType>
+  | Void;
 
-export type InferIO<T> = T extends { type: string }
-  ? Infer<T>
-  : T extends Record<string, unknown>
-    ? { [K in keyof T]: Infer<T[K]> }
-    : T;
+export type InferIO<T> = T extends { type: string } ? Infer<T>
+  : T extends Record<string, unknown> ? { [K in keyof T]: Infer<T[K]> }
+  : T;

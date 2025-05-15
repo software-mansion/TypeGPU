@@ -81,8 +81,9 @@ export function resolve(options: TgpuResolveOptions): string {
   };
 
   const { code } = resolveImpl(resolutionObj, {
-    names:
-      names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
+    names: names === 'strict'
+      ? new StrictNameRegistry()
+      : new RandomNameRegistry(),
     jitTranspiler,
   });
 

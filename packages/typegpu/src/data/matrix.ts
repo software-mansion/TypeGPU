@@ -1,3 +1,4 @@
+import { setName } from '../name.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -5,20 +6,20 @@ import type { SelfResolvable } from '../types.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
-  Mat2x2f,
-  Mat3x3f,
-  Mat4x4f,
-  VecKind,
   m2x2f,
   m3x3f,
   m4x4f,
   mat2x2,
+  Mat2x2f,
   mat3x3,
+  Mat3x3f,
   mat4x4,
+  Mat4x4f,
   matBase,
   v2f,
   v3f,
   v4f,
+  VecKind,
 } from './wgslTypes.ts';
 
 // --------------
@@ -54,8 +55,8 @@ function createMatSchema<
     [$internal]: true,
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
-    label: options.type,
   } as unknown as AnyWgslData;
+  setName(MatSchema, options.type);
 
   const construct = createDualImpl(
     // CPU implementation
@@ -95,8 +96,7 @@ function createMatSchema<
 }
 
 abstract class mat2x2Impl<TColumn extends v2f>
-  implements mat2x2<TColumn>, SelfResolvable
-{
+  implements mat2x2<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
@@ -144,10 +144,19 @@ abstract class mat2x2Impl<TColumn extends v2f>
     this.columns[1].y = value;
   }
 
+  *[Symbol.iterator]() {
+    yield this[0];
+    yield this[1];
+    yield this[2];
+    yield this[3];
+  }
+
   '~resolve'(): string {
-    return `${this.kind}(${Array.from({ length: this.length })
-      .map((_, i) => this[i])
-      .join(', ')})`;
+    return `${this.kind}(${
+      Array.from({ length: this.length })
+        .map((_, i) => this[i])
+        .join(', ')
+    })`;
   }
 }
 
@@ -160,8 +169,7 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
 }
 
 abstract class mat3x3Impl<TColumn extends v3f>
-  implements mat3x3<TColumn>, SelfResolvable
-{
+  implements mat3x3<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
@@ -280,8 +288,16 @@ abstract class mat3x3Impl<TColumn extends v3f>
 
   set [11](_: number) {}
 
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 12; i++) {
+      yield this[i] as number;
+    }
+  }
+
   '~resolve'(): string {
-    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${this[5]}, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
+    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
+      this[5]
+    }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
   }
 }
 
@@ -293,8 +309,7 @@ class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
 }
 
 abstract class mat4x4Impl<TColumn extends v4f>
-  implements mat4x4<TColumn>, SelfResolvable
-{
+  implements mat4x4<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
@@ -461,10 +476,18 @@ abstract class mat4x4Impl<TColumn extends v4f>
     this.columns[3].w = value;
   }
 
+  *[Symbol.iterator]() {
+    for (let i = 0; i < 16; i++) {
+      yield this[i] as number;
+    }
+  }
+
   '~resolve'(): string {
-    return `${this.kind}(${Array.from({ length: this.length })
-      .map((_, i) => this[i])
-      .join(', ')})`;
+    return `${this.kind}(${
+      Array.from({ length: this.length })
+        .map((_, i) => this[i])
+        .join(', ')
+    })`;
   }
 }
 
@@ -481,7 +504,6 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 // ----------
 
 /**
- *
  * Schema representing mat2x2f - a matrix with 2 rows and 2 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *
@@ -510,7 +532,6 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
 }) as Mat2x2f;
 
 /**
- *
  * Schema representing mat3x3f - a matrix with 3 rows and 3 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *
@@ -541,7 +562,6 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
 }) as Mat3x3f;
 
 /**
- *
  * Schema representing mat4x4f - a matrix with 4 rows and 4 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
  *
@@ -549,14 +569,14 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
  * const zero4x4 = mat4x4f(); // filled with zeros
  *
  * @example
- * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+ * const mat = mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
  * mat.columns[0] // vec4f(0, 1, 2, 3)
  * mat.columns[1] // vec4f(4, 5, 6, 7)
  * mat.columns[2] // vec4f(8, 9, 10, 11)
  * mat.columns[3] // vec4f(12, 13, 14, 15)
  *
  * @example
- * const mat = mat3x3f(
+ * const mat = mat4x4f(
  *  vec4f(0, 1, 2, 3),     // column 0
  *  vec4f(4, 5, 6, 7),     // column 1
  *  vec4f(8, 9, 10, 11),   // column 2

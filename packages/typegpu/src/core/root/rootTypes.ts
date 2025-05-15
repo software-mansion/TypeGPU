@@ -55,29 +55,29 @@ export type ValidateFragmentIn<
   VertexOut extends IORecord,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> = FragmentIn extends Partial<VertexOut>
-  ? VertexOut extends FragmentIn
-    ? [
-        entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
-        targets: FragmentOutToTargets<FragmentOut>,
-      ]
-    : [
-        entryFn: 'n/a',
-        targets: 'n/a',
-        MissingFromVertexOutput: {
-          [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
-        },
-      ]
+> = FragmentIn extends Partial<VertexOut> ? VertexOut extends FragmentIn ? [
+      entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
+      targets: FragmentOutToTargets<FragmentOut>,
+    ]
   : [
-      entryFn: 'n/a',
-      targets: 'n/a',
-      MismatchedVertexOutput: {
-        [Key in keyof FragmentIn &
-          keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
-          ? never
-          : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
-      },
-    ];
+    entryFn: 'n/a',
+    targets: 'n/a',
+    MissingFromVertexOutput: {
+      [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
+    },
+  ]
+  : [
+    entryFn: 'n/a',
+    targets: 'n/a',
+    MismatchedVertexOutput: {
+      [
+        Key in
+          & keyof FragmentIn
+          & keyof VertexOut as FragmentIn[Key] extends VertexOut[Key] ? never
+            : Key
+      ]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
+    },
+  ];
 
 export interface WithVertex<VertexOut extends IORecord = IORecord> {
   withFragment<
@@ -168,39 +168,36 @@ export type CreateTextureResult<
   TViewFormat extends GPUTextureFormat,
   TDimension extends GPUTextureDimension,
 > = Prettify<
-  {
+  & {
     size: Mutable<TSize>;
     format: TFormat;
-  } & OmitProps<
+  }
+  & OmitProps<
     {
       dimension: GPUTextureDimension extends TDimension
-        ? // Omitted property means the default
-          undefined
-        : // '2d' is the default, omitting from type
-          TDimension extends '2d'
-          ? undefined
-          : TDimension;
+        // Omitted property means the default
+        ? undefined
+        // '2d' is the default, omitting from type
+        : TDimension extends '2d' ? undefined
+        : TDimension;
       mipLevelCount: number extends TMipLevelCount
-        ? // Omitted property means the default
-          undefined
-        : // '1' is the default, omitting from type
-          TMipLevelCount extends 1
-          ? undefined
-          : TMipLevelCount;
+        // Omitted property means the default
+        ? undefined
+        // '1' is the default, omitting from type
+        : TMipLevelCount extends 1 ? undefined
+        : TMipLevelCount;
       sampleCount: number extends TSampleCount
-        ? // Omitted property means the default
-          undefined
-        : // '1' is the default, omitting from type
-          TSampleCount extends 1
-          ? undefined
-          : TSampleCount;
+        // Omitted property means the default
+        ? undefined
+        // '1' is the default, omitting from type
+        : TSampleCount extends 1 ? undefined
+        : TSampleCount;
       viewFormats: GPUTextureFormat extends TViewFormat
-        ? // Omitted property means the default
-          undefined
-        : // 'never[]' is the default, omitting from type
-          TViewFormat[] extends never[]
-          ? undefined
-          : TViewFormat[];
+        // Omitted property means the default
+        ? undefined
+        // 'never[]' is the default, omitting from type
+        : TViewFormat[] extends never[] ? undefined
+        : TViewFormat[];
     },
     undefined
   >

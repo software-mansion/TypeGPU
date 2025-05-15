@@ -2,8 +2,8 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { offsetsForProps } from '../src/data/offsets.ts';
 import {
-  type WriteInstruction,
   getWriteInstructions,
+  type WriteInstruction,
 } from '../src/data/partialIO.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
@@ -43,7 +43,7 @@ function expectInstruction(
   }
 
   expect(instruction.data).toHaveLength(totalByteLength);
-  expect(instruction.data).toEqual(mergedExpected);
+  expect(instruction.data).toStrictEqual(mergedExpected);
 }
 
 describe('offsetsForProps', () => {

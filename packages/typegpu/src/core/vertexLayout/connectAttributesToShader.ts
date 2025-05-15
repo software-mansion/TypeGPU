@@ -63,9 +63,11 @@ export function connectAttributesToShader(
   >();
   let nextShaderLocation = 0;
 
-  for (const [key, member] of Object.entries(
-    shaderInputLayout as Record<string, IOData>,
-  )) {
+  for (
+    const [key, member] of Object.entries(
+      shaderInputLayout as Record<string, IOData>,
+    )
+  ) {
     if (isBuiltin(member)) {
       continue;
     }

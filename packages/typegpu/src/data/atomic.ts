@@ -1,6 +1,6 @@
 import type { $repr, Infer, MemIdentity } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { Atomic, I32, U32, atomicI32, atomicU32 } from './wgslTypes.ts';
+import type { Atomic, atomicI32, atomicU32, I32, U32 } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -29,7 +29,7 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly [$internal] = true;
   public readonly type = 'atomic';
   /** Type-token, not available at runtime */
-  public declare readonly [$repr]: Infer<TSchema>;
+  declare public readonly [$repr]: Infer<TSchema>;
   /** Type-token, not available at runtime */
   public readonly '~memIdent'!: MemIdentity<TSchema>;
   /** Type-token, not available at runtime */

@@ -1,7 +1,7 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { isNamable } from '../../namable.ts';
-import { type ResolutionCtx, isWgsl } from '../../types.ts';
+import { getName, isNamable } from '../../name.ts';
+import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -23,10 +23,7 @@ export function applyExternals(
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
-    if (
-      isNamable(value) &&
-      (!('label' in value) || value.label === undefined)
-    ) {
+    if (isNamable(value) && getName(value) === undefined) {
       value.$name(key);
     }
   }
@@ -68,7 +65,9 @@ export function addReturnTypeToExternals(
 
 function identifierRegex(name: string) {
   return new RegExp(
-    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
+    `(?<![\\w\\$_.])${
+      name.replaceAll('.', '\\.').replaceAll('$', '\\$')
+    }(?![\\w\\$_])`,
     'g',
   );
 }
@@ -96,27 +95,28 @@ export function replaceExternalsInWgsl(
     }
 
     if (external !== null && typeof external === 'object') {
-      const foundProperties =
-        [
-          ...wgsl.matchAll(
-            new RegExp(
-              `${externalName.replaceAll('.', '\\.').replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
-              'g',
-            ),
+      const foundProperties = [
+        ...wgsl.matchAll(
+          new RegExp(
+            `${
+              externalName.replaceAll('.', '\\.').replaceAll('$', '\\$')
+            }\\.(?<prop>.*?)(?![\\w\\$_])`,
+            'g',
           ),
-        ].map((found) => found[1]) ?? [];
+        ),
+      ].map((found) => found[1]) ?? [];
 
       return foundProperties.reduce(
         (innerAcc: string, prop) =>
           prop && prop in external
             ? replaceExternalsInWgsl(
-                ctx,
-                {
-                  [`${externalName}.${prop}`]:
-                    external[prop as keyof typeof external],
-                },
-                innerAcc,
-              )
+              ctx,
+              {
+                [`${externalName}.${prop}`]:
+                  external[prop as keyof typeof external],
+              },
+              innerAcc,
+            )
             : innerAcc,
         acc,
       );

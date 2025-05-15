@@ -26,8 +26,7 @@ export function ExampleLink(props: Props) {
     setMenuShownMobile(false);
   });
 
-  const active =
-    currentExample === exampleKey ||
+  const active = currentExample === exampleKey ||
     (exampleKey === PLAYGROUND_KEY &&
       currentExample?.startsWith(PLAYGROUND_KEY));
 
@@ -42,13 +41,13 @@ export function ExampleLink(props: Props) {
         active
           ? 'bg-clip-text bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark text-transparent'
           : isExperimental
-            ? 'text-gray-400'
-            : 'text-black',
+          ? 'text-gray-400'
+          : 'text-black',
       )}
     >
       {children}
 
-      {active ? <img src={SelectedDotSvg.src} alt="" /> : null}
+      {active ? <img src={SelectedDotSvg.src} alt='' /> : null}
     </a>
   );
 }

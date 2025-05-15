@@ -96,7 +96,7 @@ describe('createCompileInstructions', () => {
     writer(dataView, 0, { a: 1, b: d.vec3f(1, 2, 3) });
 
     expect(new Uint32Array(arr, 0, 1)[0]).toBe(1);
-    expect([...new Float32Array(arr, 16, 3)]).toEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([1, 2, 3]);
   });
 
   it('should compile a writer for a struct with an array', () => {
@@ -118,9 +118,9 @@ describe('createCompileInstructions', () => {
     });
 
     expect(new Uint32Array(arr, 0, 1)[0]).toBe(1);
-    expect([...new Float32Array(arr, 16, 3)]).toEqual([1, 2, 3]);
-    expect([...new Float32Array(arr, 32, 3)]).toEqual([4, 5, 6]);
-    expect([...new Uint32Array(arr, 48, 3)]).toEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([4, 5, 6]);
+    expect([...new Uint32Array(arr, 48, 3)]).toStrictEqual([1, 2, 3]);
   });
 
   it('should compile a writer for a struct with nested structs', () => {
@@ -144,8 +144,8 @@ describe('createCompileInstructions', () => {
     });
 
     expect(new Uint32Array(arr, 0, 1)[0]).toBe(1);
-    expect([...new Float32Array(arr, 16, 3)]).toEqual([1, 2, 3]);
-    expect([...new Uint32Array(arr, 32, 3)]).toEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Uint32Array(arr, 32, 3)]).toStrictEqual([1, 2, 3]);
   });
 
   it('should compile a writer for an array', () => {
@@ -165,7 +165,7 @@ describe('createCompileInstructions', () => {
     ]);
 
     for (let i = 0; i < 5; i++) {
-      expect([...new Float32Array(arr, i * 16, 3)]).toEqual([
+      expect([...new Float32Array(arr, i * 16, 3)]).toStrictEqual([
         i * 3,
         i * 3 + 1,
         i * 3 + 2,
@@ -186,7 +186,7 @@ describe('createCompileInstructions', () => {
       transform: d.mat4x4f(...Array.from({ length: 16 }).map((_, i) => i)),
     });
 
-    expect([...new Float32Array(arr)]).toEqual(
+    expect([...new Float32Array(arr)]).toStrictEqual(
       Array.from({ length: 16 }).map((_, i) => i),
     );
   });
@@ -205,9 +205,8 @@ describe('createCompileInstructions', () => {
     });
 
     expect(arr.byteLength).toBe(48);
-    expect([...new Float32Array(arr)]).toEqual([
-      0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0,
-    ]);
+    // deno-fmt-ignore
+    expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]);
   });
 
   it('should compile a writer for a mat2x2f', () => {
@@ -224,6 +223,6 @@ describe('createCompileInstructions', () => {
     });
 
     expect(arr.byteLength).toBe(16);
-    expect([...new Float32Array(arr)]).toEqual([0, 1, 2, 3]);
+    expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 3]);
   });
 });

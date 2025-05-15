@@ -5,8 +5,15 @@ import type {
   AnyMatInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  v2f,
+  v2h,
+  v2i,
   v3f,
   v3h,
+  v3i,
+  v4f,
+  v4h,
+  v4i,
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
@@ -33,6 +40,7 @@ export const add = createDualImpl(
     value: `(${lhs.value} + ${rhs.value})`,
     dataType: lhs.dataType,
   }),
+  'coerce',
 );
 
 export const sub = createDualImpl(
@@ -44,6 +52,7 @@ export const sub = createDualImpl(
     value: `(${lhs.value} - ${rhs.value})`,
     dataType: lhs.dataType,
   }),
+  'coerce',
 );
 
 type MulOverload = {
@@ -91,16 +100,16 @@ export const mul: MulOverload = createDualImpl(
   // GPU implementation
   (s, v) => {
     const returnType = isNumeric(s)
-      ? // Scalar * Vector/Matrix
-        (v.dataType as AnyWgslData)
+      // Scalar * Vector/Matrix
+      ? (v.dataType as AnyWgslData)
       : !s.dataType.type.startsWith('mat')
-        ? // Vector * Matrix
-          (s.dataType as AnyWgslData)
-        : !v.dataType.type.startsWith('mat')
-          ? // Matrix * Vector
-            (v.dataType as AnyWgslData)
-          : // Vector * Vector or Matrix * Matrix
-            (s.dataType as AnyWgslData);
+      // Vector * Matrix
+      ? (s.dataType as AnyWgslData)
+      : !v.dataType.type.startsWith('mat')
+      // Matrix * Vector
+      ? (v.dataType as AnyWgslData)
+      // Vector * Vector or Matrix * Matrix
+      : (s.dataType as AnyWgslData);
     return { value: `(${s.value} * ${v.value})`, dataType: returnType };
   },
 );
@@ -305,6 +314,7 @@ export const max = createDualImpl(
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
+  'coerce',
 );
 
 /**
@@ -320,7 +330,26 @@ export const min = createDualImpl(
     return VectorOps.min[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
-  (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
+  (a, b) => ({
+    value: `min(${a.value}, ${b.value})`,
+    dataType: a.dataType,
+  }),
+  'coerce',
+);
+
+export const sign = createDualImpl(
+  // CPU implementation
+  //         \/ specifically no unsigned variants
+  <T extends v2f | v2h | v2i | v3f | v3h | v3i | v4f | v4h | v4i | number>(
+    e: T,
+  ): T => {
+    if (typeof e === 'number') {
+      return Math.sign(e) as T;
+    }
+    return VectorOps.sign[e.kind](e) as T;
+  },
+  // GPU implementation
+  (e) => ({ value: `sign(${e.value})`, dataType: e.dataType }),
 );
 
 /**
@@ -455,4 +484,41 @@ export const neg = createDualImpl(
   },
   // GPU implementation
   (value) => ({ value: `-(${value.value})`, dataType: value.dataType }),
+);
+
+export const sqrt = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.sqrt(value) as T;
+    }
+    return VectorOps.sqrt[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `sqrt(${value.value})`, dataType: value.dataType }),
+);
+
+export const div = createDualImpl(
+  // CPU implementation
+  <T extends AnyNumericVecInstance | number>(lhs: T, rhs: T | number): T => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return (lhs / rhs) as T;
+    }
+    if (typeof rhs === 'number') {
+      return VectorOps.mulSxV[(lhs as AnyNumericVecInstance).kind](
+        1 / rhs,
+        lhs as AnyNumericVecInstance,
+      ) as T;
+    }
+    // Vector / Vector case
+    return VectorOps.div[(lhs as AnyNumericVecInstance).kind](
+      lhs as AnyNumericVecInstance,
+      rhs as AnyNumericVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} / ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
 );

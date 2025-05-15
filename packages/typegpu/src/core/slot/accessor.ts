@@ -1,14 +1,15 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../gpuMode.ts';
+import { getName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import {
+  isBufferUsage,
   type ResolutionCtx,
   type SelfResolvable,
-  isBufferUsage,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
-import { type TgpuFn, isTgpuFn } from '../function/tgpuFn.ts';
+import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
@@ -29,12 +30,13 @@ export function accessor<T extends AnyWgslData>(
 // --------------
 
 export class TgpuAccessorImpl<T extends AnyWgslData>
-  implements TgpuAccessor<T>, SelfResolvable
-{
+  implements TgpuAccessor<T>, SelfResolvable {
   public readonly resourceType = 'accessor';
-  public declare readonly [$repr]: Infer<T>;
-  public label?: string | undefined;
+  declare public readonly [$repr]: Infer<T>;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
+  readonly [$getNameForward]: TgpuSlot<
+    TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>
+  >;
 
   constructor(
     public readonly schema: T,
@@ -45,16 +47,16 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       | undefined = undefined,
   ) {
     this.slot = slot(defaultValue);
+    this[$getNameForward] = this.slot;
   }
 
   $name(label: string) {
-    this.label = label;
     this.slot.$name(label);
     return this;
   }
 
   toString(): string {
-    return `accessor:${this.label ?? '<unnamed>'}`;
+    return `accessor:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<T> {
@@ -68,7 +70,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.schema,
         },
