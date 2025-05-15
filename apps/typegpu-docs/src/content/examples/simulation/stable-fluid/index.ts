@@ -408,17 +408,43 @@ canvas.addEventListener('mousedown', (e) => {
     isDown: true,
   };
 });
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * devicePixelRatio;
+  const y = (touch.clientY - rect.top) * devicePixelRatio;
+  brushState = {
+    pos: toGrid(x, y),
+    delta: [0, 0],
+    isDown: true,
+  };
+}, { passive: false });
+
 window.addEventListener('mouseup', () => {
   brushState.isDown = false;
 });
+window.addEventListener('touchend', () => {
+  brushState.isDown = false;
+});
+
 canvas.addEventListener('mousemove', (e) => {
   const x = e.offsetX * devicePixelRatio;
   const y = e.offsetY * devicePixelRatio;
-
   const [newX, newY] = toGrid(x, y);
   brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
   brushState.pos = [newX, newY];
 });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * devicePixelRatio;
+  const y = (touch.clientY - rect.top) * devicePixelRatio;
+  const [newX, newY] = toGrid(x, y);
+  brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
+  brushState.pos = [newX, newY];
+}, { passive: false });
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
