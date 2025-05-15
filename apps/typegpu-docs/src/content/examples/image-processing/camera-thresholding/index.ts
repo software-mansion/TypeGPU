@@ -59,7 +59,11 @@ const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 canvas.parentElement?.appendChild(video);
 
-video.addEventListener('resize', () => {
+function resizeVideo() {
+  if (video.videoHeight === 0) {
+    return;
+  }
+
   const aspectRatio = video.videoWidth / video.videoHeight;
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
@@ -67,7 +71,11 @@ video.addEventListener('resize', () => {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-});
+}
+
+const videoSizeObserver = new ResizeObserver(resizeVideo);
+videoSizeObserver.observe(video);
+video.addEventListener('resize', resizeVideo);
 
 const root = await tgpu.init();
 const device = root.device;
@@ -192,6 +200,7 @@ export function onCleanup() {
   }
 
   root.destroy();
+  videoSizeObserver.disconnect();
 }
 
 // #endregion
