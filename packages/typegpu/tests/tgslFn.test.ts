@@ -233,6 +233,48 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toBe(expected);
   });
 
+  it('allows destructuring the input argument in vertexFn', () => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        in: {
+          vi: builtin.vertexIndex,
+          ii: builtin.instanceIndex,
+          color: d.vec4f,
+        },
+        out: {
+          pos: builtin.position,
+          uv: d.vec2f,
+        },
+      })(({ vi, ii, color }) => {
+        return {
+          pos: d.vec4f(d.f32(color.w), d.f32(ii), d.f32(vi), 1),
+          uv: d.vec2f(d.f32(color.w), vi),
+        };
+      })
+      .$name('vertex_fn');
+
+    const actual = parseResolved({ vertexFn });
+
+    const expected = parse(`
+      struct vertex_fn_Input {
+        @builtin(vertex_index) vi: u32,
+        @builtin(instance_index) ii: u32,
+        @location(0) color: vec4f,
+      }
+
+      struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn vertex_fn(in: vertex_fn_Input) -> vertex_fn_Output {
+        return vertex_fn_Output(vec4f(f32(in.color.w), f32(in.ii), f32(in.vi), 1), vec2f(f32(in.color.w), f32(in.vi)));
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
   it('resolves computeFn', () => {
     const computeFn = tgpu['~unstable']
       .computeFn({
@@ -256,6 +298,38 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24)
       fn compute_fn(input: compute_fn_Input) {
         var index = input.gid.x;
+        var iterationF = f32(0);
+        var sign = 0;
+        var change = vec4f(0, 0, 0, 0);
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('allows destructuring the input argument in computeFn', () => {
+    const computeFn = tgpu['~unstable']
+      .computeFn({
+        in: { gid: builtin.globalInvocationId },
+        workgroupSize: [24],
+      })(({ gid }) => {
+        const index = gid.x;
+        const iterationF = d.f32(0);
+        const sign = 0;
+        const change = d.vec4f(0, 0, 0, 0);
+      })
+      .$name('compute_fn');
+
+    const actual = parseResolved({ computeFn });
+
+    const expected = parse(`
+      struct compute_fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(24)
+      fn compute_fn(in: compute_fn_Input) {
+        var index = in.gid.x;
         var iterationF = f32(0);
         var sign = 0;
         var change = vec4f(0, 0, 0, 0);
@@ -328,6 +402,62 @@ describe('TGSL tgpu.fn function', () => {
         var pos = input.pos;
         var out = fragment_fn_Output(0, 1, vec4f(0, 0, 0, 0));
         if (((input.sampleMask > 0) && (pos.x > 0))) {
+          out.sampleMask = 1;
+        }
+
+        return out;
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('allows destructuring the input argument in fragmentFn', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: d.vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: {
+          sampleMask: builtin.sampleMask,
+          fragDepth: builtin.fragDepth,
+          out: d.location(0, d.vec4f),
+        },
+      })(({ pos, sampleMask }) => {
+        const out = {
+          out: d.vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: 0,
+        };
+        if (sampleMask > 0 && pos.x > 0) {
+          out.sampleMask = 1;
+        }
+
+        return out;
+      })
+      .$name('fragment_fn');
+
+    const actual = parseResolved({ fragmentFn });
+
+    const expected = parse(`
+      struct fragment_fn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      struct fragment_fn_Output {
+        @builtin(sample_mask) sampleMask: u32,
+        @builtin(frag_depth) fragDepth: f32,
+        @location(0) out: vec4f,
+      }
+
+      @fragment
+      fn fragment_fn(in: fragment_fn_Input) -> fragment_fn_Output {
+        var out = fragment_fn_Output(0, 1, vec4f(0, 0, 0, 0));
+        if (((in.sampleMask > 0) && (in.pos.x > 0))) {
           out.sampleMask = 1;
         }
 

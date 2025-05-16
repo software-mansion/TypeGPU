@@ -198,6 +198,14 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
+
+        if (
+          external && typeof external === 'object' && 'value' in external &&
+          'dataType' in external && !($internal in external)
+        ) {
+          return external as Snippet;
+        }
+
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
         }
