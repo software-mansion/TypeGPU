@@ -170,6 +170,12 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
+        const maybeEntryStructArg =
+          shell.isEntry && Array.isArray(shell.argTypes) &&
+            isWgslStruct(shell.argTypes[0])
+            ? shell.argTypes[0]
+            : undefined;
+
         const args: Snippet[] = Array.isArray(shell.argTypes)
           ? ast.argNames.type === 'identifiers'
             ? shell.argTypes.map((arg, i) => ({
@@ -178,11 +184,35 @@ export function createFnCore(
                 : undefined) ?? `arg_${i}`,
               dataType: arg as AnyWgslData,
             }))
-            : []
+            : [
+              {
+                value: 'in',
+                dataType: maybeEntryStructArg as AnyWgslData,
+              },
+            ]
           : Object.entries(shell.argTypes).map(([name, dataType]) => ({
             value: name,
             dataType: dataType as AnyWgslData,
           }));
+
+        if (
+          ast.argNames.type === 'destructured-object' && maybeEntryStructArg
+        ) {
+          applyExternals(
+            externalMap,
+            Object.fromEntries(
+              ast.argNames.props.map((
+                { prop, alias },
+              ) => [
+                alias,
+                {
+                  value: `in.${prop}`,
+                  dataType: maybeEntryStructArg.propTypes[prop],
+                },
+              ]),
+            ),
+          );
+        }
 
         const { head, body } = ctx.fnToWgsl({
           args,
