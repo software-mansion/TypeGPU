@@ -4,7 +4,6 @@
 
 import { constant } from './core/constant/tgpuConstant.ts';
 import { declare } from './core/declare/tgpuDeclare.ts';
-import { assignAst, removedJsImpl } from './core/function/astUtils.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
@@ -49,13 +48,6 @@ export const tgpu = {
   },
 };
 export default tgpu;
-
-// Hidden API, used only by tooling (e.g., rollup plugin).
-// AAA usuń to
-Object.assign(tgpu, {
-  __assignAst: assignAst,
-  __removedJsImpl: removedJsImpl,
-});
 
 export {
   MissingBindGroupsError,

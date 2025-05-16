@@ -136,8 +136,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          const tgpuAlias = ctx.tgpuAliases.values().next().value;
-
           for (
             const {
               def,

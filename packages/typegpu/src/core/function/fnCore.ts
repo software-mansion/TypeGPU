@@ -5,7 +5,7 @@ import {
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { getName, setName } from '../../name.ts';
+import { getName, getPrebuiltAstFor, setName } from '../../name.ts';
 import { resolveFunctionHeader } from '../../resolutionCtx.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
@@ -15,7 +15,6 @@ import {
   type ExternalMap,
   replaceExternalsInWgsl,
 } from '../resolve/externals.ts';
-import { getPrebuiltAstFor } from './astUtils.ts';
 import type { Implementation } from './fnTypes.ts';
 
 export interface TgpuFnShellBase<
