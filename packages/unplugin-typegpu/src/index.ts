@@ -154,15 +154,10 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             const { argNames, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
-            // AAA popraw to na ile się da
             const metadata = `{
               ast: ${embedJSON({ argNames, body, externalNames })},
-              name: ${name}
-              ${
-              externalNames.length > 0
-                ? ', externals: {' + externalNames.join(', ') + '}'
-                : ''
-            }
+              name: ${name},
+              externals: {${externalNames.join(', ')}},
             }`;
 
             // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
