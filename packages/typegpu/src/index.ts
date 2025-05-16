@@ -51,6 +51,7 @@ export const tgpu = {
 export default tgpu;
 
 // Hidden API, used only by tooling (e.g., rollup plugin).
+// AAA usuń to
 Object.assign(tgpu, {
   __assignAst: assignAst,
   __removedJsImpl: removedJsImpl,

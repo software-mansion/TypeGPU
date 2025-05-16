@@ -147,50 +147,49 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           for (
             const {
               def,
-              name,
+              name, // AAA to name to nazwa funkcji, ogarnij heurę na to
               removeJsImplementation,
             } of tgslFunctionDefs
           ) {
             const { argNames, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
-            if (
-              isFunctionStatement &&
-              name &&
-              code
-                  .slice(0, def.start)
-                  .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
-            ) {
-              throw new Error(
-                `File ${id}: function "${name}", containing ${
-                  removeJsImplementation ? 'kernel' : 'kernel & js'
-                } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
-              );
+            // AAA popraw to na ile się da
+            const metadata = `{
+              ast: ${embedJSON({ argNames, body, externalNames })},
+              name: ${name}
+              ${
+              externalNames.length > 0
+                ? ', externals: {' + externalNames.join(', ') + '}'
+                : ''
             }
+            }`;
 
-            // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
+            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
             magicString.appendLeft(
               def.start,
-              `${
-                isFunctionStatement && name ? `const ${name} = ` : ''
-              }${tgpuAlias}.__assignAst(`,
-            );
-            magicString.appendRight(
+              `${isFunctionStatement && name ? `const ${name} = ` : ''}
+              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                $.f = (`,
+            ).appendRight(
               def.end,
-              `, ${embedJSON({ argNames, body, externalNames })}`,
+              `) , ${metadata}) && $.f))({})`,
             );
 
-            if (externalNames.length > 0) {
-              magicString.appendRight(
-                def.end,
-                `, {${externalNames.join(', ')}})`,
-              );
-            } else {
-              magicString.appendRight(
-                def.end,
-                `)${isFunctionStatement && name ? ';' : ''}`,
-              );
-            }
+            // AAA przetestuj
+            // if (
+            //   isFunctionStatement &&
+            //   name &&
+            //   code
+            //       .slice(0, def.start)
+            //       .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
+            // ) {
+            //   throw new Error(
+            //     `File ${id}: function "${name}", containing ${
+            //       removeJsImplementation ? 'kernel' : 'kernel & js'
+            //     } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+            //   );
+            // }
 
             if (removeJsImplementation) {
               magicString.overwriteNode(

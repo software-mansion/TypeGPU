@@ -19,7 +19,9 @@ const functionToAstMap = new WeakMap<
 export function getPrebuiltAstFor(
   fn: (...args: unknown[]) => unknown,
 ): AstInfo | undefined {
-  return functionToAstMap.get(fn);
+  // AAA popraw to any
+  return (globalThis as any).__TYPEGPU_META__.get(fn);
+  // return functionToAstMap.get(fn);
 }
 
 export function assignAst<T extends (...args: unknown[]) => unknown>(
