@@ -138,12 +138,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
 
           const tgpuAlias = ctx.tgpuAliases.values().next().value;
 
-          if (tgpuAlias === undefined && tgslFunctionDefs.length > 0) {
-            throw new Error(
-              `No tgpu import found, cannot assign ast to function in file: ${id}`,
-            );
-          }
-
           for (
             const {
               def,
@@ -153,23 +147,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           ) {
             const { argNames, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
-
-            const metadata = `{
-              ast: ${embedJSON({ argNames, body, externalNames })},
-              name: ${name},
-              externals: {${externalNames.join(', ')}},
-            }`;
-
-            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
-            magicString.appendLeft(
-              def.start,
-              `${isFunctionStatement && name ? `const ${name} = ` : ''}
-              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                $.f = (`,
-            ).appendRight(
-              def.end,
-              `) , ${metadata}) && $.f))({})`,
-            );
 
             // AAA przetestuj
             // if (
@@ -186,10 +163,30 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             //   );
             // }
 
+            const metadata = `{
+              ast: ${embedJSON({ argNames, body, externalNames })},
+              externals: {${externalNames.join(', ')}},
+            }`;
+
+            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
+            magicString.appendLeft(
+              def.start,
+              `${isFunctionStatement && name ? `const ${name} = ` : ''}
+              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                $.f = (`,
+            ).appendRight(
+              def.end,
+              `) , ${metadata}) && $.f))({})`,
+            );
+
             if (removeJsImplementation) {
               magicString.overwriteNode(
                 def,
-                `${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`,
+                `() => {
+                  throw new Error(\`The function "${
+                  name ?? '<unnamed>'
+                }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                }`,
               );
             }
           }
