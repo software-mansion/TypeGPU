@@ -425,13 +425,13 @@ describe('TGSL tgpu.fn function', () => {
           fragDepth: builtin.fragDepth,
           out: d.location(0, d.vec4f),
         },
-      })(({ pos, sampleMask }) => {
+      })(({ pos: position, sampleMask }) => {
         const out = {
           out: d.vec4f(0, 0, 0, 0),
           fragDepth: 1,
           sampleMask: 0,
         };
-        if (sampleMask > 0 && pos.x > 0) {
+        if (sampleMask > 0 && position.x > 0) {
           out.sampleMask = 1;
         }
 
