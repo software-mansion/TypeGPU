@@ -1,7 +1,6 @@
 import { JitTranspiler } from 'tgpu-jit';
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
@@ -13,6 +12,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { getPrebuiltAstFor } from '../../src/name.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

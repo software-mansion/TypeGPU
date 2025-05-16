@@ -86,7 +86,14 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import hello from 'typegpu';
 
       hello['~unstable']
-              .fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
+              .fn([])(
+                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                      $.f = (() => {
+                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                      }) , {
+                    ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+                    externals: {},
+                  }) && $.f))({}));
       "
     `);
   });
@@ -130,7 +137,14 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import { tgpu } from 'typegpu';
 
       tgpu['~unstable']
-              .fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
+              .fn([])(
+                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                      $.f = (() => {
+                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                      }) , {
+                    ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+                    externals: {},
+                  }) && $.f))({}));
       "
     `);
   });
@@ -149,7 +163,14 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import * as t from 'typegpu';
 
       t.tgpu['~unstable']
-              .fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
+              .fn([])(
+                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                      $.f = (() => {
+                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                      }) , {
+                    ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+                    externals: {},
+                  }) && $.f))({}));
       "
     `);
   });
