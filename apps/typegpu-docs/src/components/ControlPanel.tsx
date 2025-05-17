@@ -321,6 +321,7 @@ export function ControlPanel() {
     >
       <div className='hidden md:flex flex-col gap-4'>
         <h2 className='text-xl font-medium'>Control panel</h2>
+
         <label
           htmlFor={showLeftMenuId}
           className='flex items-center justify-between gap-3 text-sm cursor-pointer'

@@ -17,9 +17,9 @@ import ModularityDark from './modularity-dark.svg';
 import ModularityLight from './modularity-light.svg';
 import { Image } from 'astro:assets';
 
-<div className='max-w-[30rem] mx-auto'>
-<Image className="!hidden dark:!block" src={ModularityDark} alt="Modularity" />
-<Image className="!block dark:!hidden" src={ModularityLight} alt="Modularity" />
+<div className='max-w-120 mx-auto'>
+<Image className="hidden! dark:block!" src={ModularityDark} alt="Modularity" />
+<Image className="block! dark:hidden!" src={ModularityLight} alt="Modularity" />
 </div>
 
 ## Leaving WebGL behind
