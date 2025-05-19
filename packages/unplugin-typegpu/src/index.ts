@@ -137,7 +137,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           for (
             const {
               def,
-              name, // AAA to name to nazwa funkcji, ogarnij heurę na to
+              name,
               removeJsImplementation,
             } of tgslFunctionDefs
           ) {

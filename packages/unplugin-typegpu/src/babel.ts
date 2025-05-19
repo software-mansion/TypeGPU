@@ -13,6 +13,7 @@ import {
   type Options,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
+import { ArgNames, Block } from '../../tinyest/src/nodes.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -39,6 +40,36 @@ function getKernelDirective(
   }
 }
 
+function generateFunctionNode(
+  tgpuAlias: string,
+  directive: string,
+  name: string | undefined,
+  node: babel.ArrowFunctionExpression | babel.FunctionExpression,
+  externalNames: string[],
+  argNames: ArgNames,
+  body: Block,
+) {
+  return types.callExpression(
+    template.expression(`${tgpuAlias}.__assignAst`)(),
+    [
+      directive !== 'kernel & js'
+        ? template.expression`${tgpuAlias}.__removedJsImpl(${
+          name ? `"${name}"` : ''
+        })`()
+        : node,
+      template.expression`${embedJSON({ argNames, body, externalNames })}`(),
+      types.objectExpression(
+        externalNames.map((name) =>
+          types.objectProperty(
+            types.identifier(name),
+            types.identifier(name),
+          )
+        ),
+      ),
+    ],
+  );
+}
+
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
   ctx: Context,
@@ -59,21 +90,14 @@ function functionToTranspiled(
     );
   }
 
-  return types.callExpression(
-    template.expression(`${tgpuAlias}.__assignAst`)(),
-    [
-      directive === 'kernel & js'
-        ? node
-        : template.expression`${tgpuAlias}.__removedJsImpl(${
-          name ? `"${name}"` : ''
-        })`(),
-      template.expression`${embedJSON({ argNames, body, externalNames })}`(),
-      types.objectExpression(
-        externalNames.map((name) =>
-          types.objectProperty(types.identifier(name), types.identifier(name))
-        ),
-      ),
-    ],
+  return generateFunctionNode(
+    tgpuAlias,
+    directive,
+    name,
+    node,
+    externalNames,
+    argNames,
+    body,
   );
 }
 
@@ -158,27 +182,19 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
           const directive = getKernelDirective(implementation);
 
+          const newNode = generateFunctionNode(
+            tgpuAlias,
+            directive ?? 'kernel',
+            undefined,
+            implementation,
+            externalNames,
+            argNames,
+            body,
+          );
+
           path.replaceWith(
             types.callExpression(node.callee, [
-              types.callExpression(
-                template.expression(`${tgpuAlias}.__assignAst`)(),
-                [
-                  directive !== 'kernel & js'
-                    ? template.expression`${tgpuAlias}.__removedJsImpl()`()
-                    : implementation,
-                  template.expression`${
-                    embedJSON({ argNames, body, externalNames })
-                  }`(),
-                  types.objectExpression(
-                    externalNames.map((name) =>
-                      types.objectProperty(
-                        types.identifier(name),
-                        types.identifier(name),
-                      )
-                    ),
-                  ),
-                ],
-              ),
+              newNode,
             ]),
           );
 
@@ -188,6 +204,21 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
   };
 }
+
+const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
+const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
+const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
+
+/**
+ * Regexes used to efficiently determine if a file is
+ * meant to be processed by our plugin. We assume every file
+ * that should be processed imports `typegpu` in some way.
+ */
+export const codeFilterRegexes = [
+  typegpuImportRegex,
+  typegpuDynamicImportRegex,
+  typegpuRequireRegex,
+];
 
 export default function () {
   return {
@@ -205,7 +236,11 @@ export default function () {
           return;
         }
 
-        if (!options?.forceTgpuAlias && code) {
+        if (
+          !options?.forceTgpuAlias &&
+          code &&
+          !codeFilterRegexes.some((reg) => reg.test(code))
+        ) {
           return;
         }
 
