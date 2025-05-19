@@ -6,7 +6,6 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
-  codeFilterRegexes,
   type Context,
   defaultOptions,
   embedJSON,
@@ -62,7 +61,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       transform: {
         filter: {
           id: options,
-          ...(options.forceTgpuAlias ? {} : { code: codeFilterRegexes }),
         },
         handler(code, id) {
           const ctx: Context = {

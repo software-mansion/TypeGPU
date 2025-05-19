@@ -4,7 +4,6 @@ import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  codeFilterRegexes,
   type Context,
   embedJSON,
   gatherTgpuAliases,
@@ -206,11 +205,7 @@ export default function () {
           return;
         }
 
-        if (
-          !options?.forceTgpuAlias &&
-          code &&
-          !codeFilterRegexes.some((reg) => reg.test(code))
-        ) {
+        if (!options?.forceTgpuAlias && code) {
           return;
         }
 
