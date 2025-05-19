@@ -19,13 +19,22 @@ or the Just-In-Time transpiler -- *tgpu-jit* (WIP).
 ## Usage
 
 Instead of using a WGSL code string, you can pass TGSL to the tgpu function shell as an argument instead.
-Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier...*) are accessible through the `typegpu/std` endpoint. 
+Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier, [etc.](https://github.com/software-mansion/TypeGPU/blob/release/packages/typegpu/src/std/index.ts)*) are accessible through the `typegpu/std` endpoint. 
 The package also includes functions for vector and matrix operators (*add, eq, lt...*).
 
 ```ts
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+
+const obstaclesReadonly = root
+  .createBuffer(d.arrayOf(d.struct({
+    center: d.vec2u,
+    size: d.vec2u,
+    enabled: d.u32,
+  }), 4))
+  .$usage('storage')
+  .as('readonly');
 
 const isInsideObstacle = tgpu['~unstable'].fn(
   [d.i32, d.i32],
@@ -92,7 +101,15 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 ```
 
+TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures.
+However, the plugin removes the JS implementation from the bundle by default to save space.
+So for the TGSL functions to be callable on the CPU, they should be marked with the *"kernel & js"* directive.
+
 ## What to keep in mind
+
+* **TGSL limitations** --
+For a function to be valid TGSL, it must consist only of supported JS syntax (again, see [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts)), possibly including references to bound buffers, constant variables defined outside of the function, other TGSL functions etc.
+This means that, for example, `console.log()` calls will not work on the GPU.
 
 * **Differences between JS on the CPU and GPU** --
 TGSL is developed to work on the GPU the same as on the CPU as much as possible, 
@@ -104,7 +121,7 @@ Also when passing them to functions, they are able to be modified there, unless 
 Therefore some WGSL knowledge is still required, even when opting out for TGSL.
 
 * **.value** --
-Objects that have different types on the CPU and on the GPU (like buffers, layouts, slots etc.) need to be accessed via the `value` property in TGSL functions.
+Objects that have different types on the CPU and on the GPU (like buffers, layouts, slots etc.) need to be accessed via the `value` property in TGSL functions (or the `$` property alias).
 This is different from how they appear in WGSL-implemented ones.
 
 ```ts twoslash
@@ -126,6 +143,11 @@ const fragmentWgsl = tgpu['~unstable'].fragmentFn({
   return backgroundColorUniform; 
 }`.$uses({ backgroundColorUniform });
 ```
+
+* **Operators** --
+JavaScript does not support operator overloading. 
+This means that, while you can still use operators for numbers, 
+you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices.
 
 * **When to use TGSL instead of WGSL** --
 Writing the code using TGSL has a few significant advantages. 
