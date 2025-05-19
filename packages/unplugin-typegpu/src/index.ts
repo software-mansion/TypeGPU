@@ -146,20 +146,19 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             const { argNames, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
-            // AAA przetestuj
-            // if (
-            //   isFunctionStatement &&
-            //   name &&
-            //   code
-            //       .slice(0, def.start)
-            //       .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
-            // ) {
-            //   throw new Error(
-            //     `File ${id}: function "${name}", containing ${
-            //       removeJsImplementation ? 'kernel' : 'kernel & js'
-            //     } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
-            //   );
-            // }
+            if (
+              isFunctionStatement &&
+              name &&
+              code
+                  .slice(0, def.start)
+                  .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
+            ) {
+              throw new Error(
+                `File ${id}: function "${name}", containing ${
+                  removeJsImplementation ? 'kernel' : 'kernel & js'
+                } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+              );
+            }
 
             const metadata = `{
               ast: ${embedJSON({ argNames, body, externalNames })},

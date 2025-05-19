@@ -165,6 +165,20 @@ describe('[BABEL] "kernel & js" directive', () => {
       }"
     `);
   });
+
+  it('throws when hoisting was meant to be used', () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const sum = add(1, 2);
+      const add = (a, b) => {
+        'kernel & js';
+        return a + b;
+      };
+    `;
+
+    expect(() => babelTransform(code)).toThrowErrorMatchingInlineSnapshot();
+  });
 });
 
 describe('[ROLLUP] "kernel & js" directive', () => {
@@ -389,5 +403,23 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             console.log(addCPU);
       "
     `);
+  });
+
+  it('throws when hoisting was meant to be used', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const sum = add(1, 2);
+      function add(a, b) {
+        'kernel & js';
+        return a + b;
+      };
+    `;
+
+    expect(rollupTransform(code))
+      .rejects
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: File  virtual:code: function "add", containing kernel & js directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.]`,
+      );
   });
 });

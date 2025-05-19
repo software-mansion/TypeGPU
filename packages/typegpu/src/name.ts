@@ -15,7 +15,7 @@ export interface FunctionMetaData extends MetaData {
 }
 
 interface GlobalWithMeta {
-  __TYPEGPU_META__: WeakMap<object, MetaData> & WeakMap<object, MetaData>;
+  __TYPEGPU_META__: WeakMap<object, MetaData>;
 }
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
