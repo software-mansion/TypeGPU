@@ -1,4 +1,4 @@
-import type { OmitBuiltins } from '../../builtin.ts';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import type { JitTranspiler } from '../../jitTranspiler.ts';
@@ -25,7 +25,6 @@ import type {
   TgpuFixedBufferUsage,
 } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
@@ -46,6 +45,7 @@ import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
+import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 
 // ----------
 // Public API
@@ -117,7 +117,9 @@ export interface WithBinding {
     value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding;
 
-  withCompute(entryFn: TgpuComputeFn): WithCompute;
+  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute;
 
   withVertex<
     VertexIn extends VertexInConstrained,
