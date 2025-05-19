@@ -6,7 +6,7 @@ import { ExampleCard } from './ExampleCard.tsx';
 
 function ExamplesGrid({ examples }: { examples: Example[] }) {
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6'>
+    <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6 mx-1'>
       {examples.map((ex) => <ExampleCard example={ex} key={ex.key} />)}
     </div>
   );
@@ -71,9 +71,9 @@ export function SearchableExampleList(
   return (
     <div className='flex flex-col w-full'>
       <div
-        className='sticky top-0 z-20 bg-white w-full flex-shrink-0 pb-4'
+        className='sticky top-0 z-20 bg-white w-full pb-4'
         style={{
-          background: 'linear-gradient(to bottom, white 70%, transparent 100%)',
+          background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
         }}
       >
         <input
@@ -115,7 +115,7 @@ export function SearchableExampleList(
                   }}
                 >
                   <hr className='box-border w-full border-t border-tameplum-100' />
-                  <h2 className='text-2xl font-bold px-3 py-2 text-center'>
+                  <h2 className='text-2xl font-bold px-3 py-1 text-center'>
                     {category.label}
                   </h2>
                   <hr className='box-border w-full border-t border-tameplum-100' />

@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
@@ -14,7 +14,7 @@ type Props = {
 export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
-  const setCurrentExample = useSetAtom(currentExampleAtom);
+  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
@@ -23,6 +23,8 @@ export function ExampleLink(props: Props) {
     setMenuShownMobile(false);
   });
 
+  const isCurrentExample = currentExample === exampleKey;
+
   return (
     <a
       // Even though we prevent the default behavior of this link
@@ -30,8 +32,10 @@ export function ExampleLink(props: Props) {
       href={`#example=${exampleKey}`}
       onClick={handleClick}
       className={cs(
-        'block no-underline border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow',
-        'bg-white',
+        'block no-underline border border-gray-200 rounded-lg overflow-hidden transition-shadow bg-white',
+        isCurrentExample
+          ? 'ring-3 ring-purple-500 shadow-lg'
+          : 'hover:shadow-lg',
       )}
     >
       {children}
