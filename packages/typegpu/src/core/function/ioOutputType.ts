@@ -18,7 +18,7 @@ import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
 export type WithLocations<T extends IORecord> = {
   [Key in keyof T]: IsBuiltin<T[Key]> extends true ? T[Key]
     : HasCustomLocation<T[Key]> extends true ? T[Key]
-    : Decorate<T[Key], Location<number>>;
+    : Decorate<T[Key], Location>;
 };
 
 export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData

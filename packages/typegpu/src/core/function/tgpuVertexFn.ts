@@ -3,7 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Location } from '../../data/wgslTypes.ts';
+import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
@@ -33,7 +33,7 @@ export type VertexInConstrained = IORecord<
 
 export type VertexOutConstrained = IORecord<
   | BaseIOData
-  | Decorated<BaseIOData, [Location<number>]>
+  | Decorated<BaseIOData, (Location | Interpolate)[]>
   | AnyVertexOutputBuiltin
 >;
 

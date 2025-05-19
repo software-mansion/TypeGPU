@@ -3,7 +3,13 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Location, Vec4f, Void } from '../../data/wgslTypes.ts';
+import type {
+  Decorated,
+  Interpolate,
+  Location,
+  Vec4f,
+  Void,
+} from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
@@ -27,20 +33,22 @@ import { stripTemplate } from './templateUtils.ts';
 // Public API
 // ----------
 
+export type FragmentInConstrained = IORecord<
+  | BaseIOData
+  | Decorated<BaseIOData, (Location | Interpolate)[]>
+  | AnyFragmentInputBuiltin
+>;
+
 export type FragmentOutConstrained =
   | Void
   | Vec4f
-  | Decorated<Vec4f, [Location<number>]>
+  | Decorated<Vec4f, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
   | IORecord<
-    Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
+    | Vec4f
+    | Decorated<Vec4f, (Location | Interpolate)[]>
+    | AnyFragmentOutputBuiltin
   >;
-
-export type FragmentInConstrained = IORecord<
-  | BaseIOData
-  | Decorated<BaseIOData, Location<number>[]>
-  | AnyFragmentInputBuiltin
->;
 
 /**
  * Describes a fragment entry function signature (its arguments, return type and targets)
