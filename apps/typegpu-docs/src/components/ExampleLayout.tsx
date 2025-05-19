@@ -4,6 +4,7 @@ import { useId, useRef, useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
+import CrossSvg from '../assets/cross.svg';
 import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import {
   menuShownAtom,
@@ -52,7 +53,7 @@ const experimentalShowingLSKey = 'experimental-showing';
 
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
-  const menuShownMobile = useAtomValue(menuShownMobileAtom);
+  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
   const [experimentalShowing, setExperimentalShowing] = useState(
     localStorage.getItem(experimentalShowingLSKey) === 'true',
   );
@@ -78,6 +79,19 @@ function SideMenu() {
               alt='TypeGPU Logo'
             />
           </a>
+        </div>
+        <div className='absolute top-5 right-5 md:hidden'>
+          {menuShownMobile && (
+            <Button
+              onClick={() => setMenuShownMobile(false)}
+            >
+              <img
+                src={CrossSvg.src}
+                alt='Close menu'
+                className='h-3 w-3'
+              />
+            </Button>
+          )}
         </div>
       </header>
 
