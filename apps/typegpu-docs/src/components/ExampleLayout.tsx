@@ -66,10 +66,10 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] pl-5 py-5 gap-5 overflow-y-auto',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem]',
       )}
     >
-      <header className='mr-5'>
+      <header className='p-5'>
         <div className='grid place-items-center'>
           <a href='/TypeGPU' className='block box-border py-4 cursor-pointer'>
             <img
@@ -81,14 +81,18 @@ function SideMenu() {
         </div>
       </header>
 
-      <div className='box-border w-full pr-5'>
+      <div className='box-border w-full px-5'>
         <hr className='my-0 box-border w-full border-t border-tameplum-100' />
       </div>
 
-      <div className='flex-1 overflow-y-auto min-h-0 pr-3' ref={scrollRef}>
-        <section className='mb-6 pb-6 border-b border-tameplum-100 space-y-2'>
-          <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
-          <p className='m-0 text-sm'>
+      {/* TODO: Figure out a way to   */}
+      <div
+        className='overflow-y-auto flex-1 min-h-0 my-5 px-5'
+        ref={scrollRef}
+      >
+        <section className='border-b border-tameplum-100 space-y-2 pb-5 mb-5'>
+          <h1 className='font-medium text-lg'>Welcome to examples page</h1>
+          <p className='text-sm'>
             Test out the power of our TypeScript library and get to know
             TypeGPU.
           </p>
@@ -109,13 +113,13 @@ function SideMenu() {
         />
       </div>
 
-      <div className='box-border w-full pr-5'>
+      <div className='box-border w-full px-5'>
         <hr className='my-0 box-border w-full border-t border-tameplum-100' />
       </div>
 
       <label
         htmlFor={experimentalExamplesToggleId}
-        className='flex items-center justify-between gap-3 text-sm cursor-pointer pr-5'
+        className='flex items-center justify-between gap-3 text-sm cursor-pointer p-5'
       >
         <span>Experimental examples</span>
         <Toggle
@@ -132,7 +136,7 @@ function SideMenu() {
         />
       </label>
 
-      <div className='flex justify-between text-tameplum-800 text-xs pr-5'>
+      <div className='flex justify-between text-tameplum-800 text-xs px-5'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className='flex gap-3 items-center'>
           <a

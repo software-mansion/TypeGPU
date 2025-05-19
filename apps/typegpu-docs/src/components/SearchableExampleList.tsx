@@ -69,11 +69,11 @@ export function SearchableExampleList(
   );
 
   return (
-    <div className='flex flex-col w-full max-w-full'>
+    <div className='flex flex-col w-full'>
       <div
-        className='sticky top-0 z-20 bg-white w-full pb-4 flex-shrink-0'
+        className='sticky top-0 z-20 bg-white w-full flex-shrink-0 pb-4'
         style={{
-          background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
+          background: 'linear-gradient(to bottom, white 70%, transparent 100%)',
         }}
       >
         <input
@@ -108,17 +108,17 @@ export function SearchableExampleList(
             categoriesToShow.map((category) => (
               <div key={category.key} className='flex flex-col'>
                 <div
-                  className='sticky z-10 bg-white flex items-center justify-center w-full top-8'
+                  className='sticky z-10 bg-white flex items-center justify-center w-full top-8 pb-5'
                   style={{
                     background:
-                      'linear-gradient(to bottom, white 70%, transparent 100%)',
+                      'linear-gradient(to bottom, white 50%, transparent 100%)',
                   }}
                 >
-                  <hr className='my-0 box-border w-full border-t border-tameplum-100' />
-                  <h2 className='text-2xl font-bold px-3 py-2'>
+                  <hr className='box-border w-full border-t border-tameplum-100' />
+                  <h2 className='text-2xl font-bold px-3 py-2 text-center'>
                     {category.label}
                   </h2>
-                  <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+                  <hr className='box-border w-full border-t border-tameplum-100' />
                 </div>
                 <ExamplesGrid
                   examples={examplesByCategories[category.key] || []}
