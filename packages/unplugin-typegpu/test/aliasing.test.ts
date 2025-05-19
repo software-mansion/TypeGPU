@@ -14,7 +14,12 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
-      const increment = hello['~unstable'].fn([])(hello.__assignAst(hello.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = hello['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const x = 2 + 2;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));"
     `);
   });
 
@@ -50,7 +55,12 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
-      const increment = t['~unstable'].fn([])(t.__assignAst(t.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = t['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const x = 2 + 2;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));"
     `);
   });
 
@@ -66,7 +76,12 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
-      const increment = t.tgpu['~unstable'].fn([])(t.tgpu.__assignAst(t.tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = t.tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const x = 2 + 2;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));"
     `);
   });
 });

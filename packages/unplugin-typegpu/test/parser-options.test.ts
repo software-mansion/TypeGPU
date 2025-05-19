@@ -16,7 +16,12 @@ describe('[BABEL] parser options', () => {
       babelTransform(codeWithImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const increment = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));"
+      const increment = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const x = 2 + 2;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));"
     `);
 
     const codeWithoutImport = `\

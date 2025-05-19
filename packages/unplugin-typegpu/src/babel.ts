@@ -40,9 +40,22 @@ function getKernelDirective(
   }
 }
 
+// AAA does syntax do usunięcia
+
+// const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+//   $.f = ...,
+//   {
+//     ast: {...},
+//     externals: {...},
+//   },
+// ) && $.f))({});
+
+function i(identifier: string): babel.Identifier {
+  return types.identifier(identifier);
+}
+
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  ctx: Context,
   directive: 'kernel' | 'kernel & js' | undefined,
   name?: string | undefined,
 ): babel.CallExpression | null {
@@ -51,34 +64,43 @@ function functionToTranspiled(
   }
 
   const { argNames, body, externalNames } = transpileFn(node);
-  const tgpuAlias = ctx.tgpuAliases.values().next().value;
-  if (tgpuAlias === undefined) {
-    throw new Error(
-      `No tgpu import found, cannot assign ast to function in file: ${
-        ctx.fileId ?? ''
-      }`,
-    );
-  }
 
-  return types.callExpression(
-    template.expression(`${tgpuAlias}.__assignAst`)(),
-    [
-      directive !== 'kernel & js'
-        ? template.expression`${tgpuAlias}.__removedJsImpl(${
-          name ? `"${name}"` : ''
-        })`()
-        : node,
-      template.expression`${embedJSON({ argNames, body, externalNames })}`(),
-      types.objectExpression(
-        externalNames.map((name) =>
-          types.objectProperty(
-            types.identifier(name),
-            types.identifier(name),
-          )
+  const metadata = `{
+    ast: ${embedJSON({ argNames, body, externalNames })},
+    externals: {${externalNames.join(', ')}},
+  }`;
+
+  const newNode = types.callExpression(
+    types.arrowFunctionExpression(
+      [i('$')],
+      types.logicalExpression(
+        '&&',
+        types.callExpression(
+          types.memberExpression(
+            types.assignmentExpression(
+              '??=',
+              types.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
+              types.newExpression(i('WeakMap'), []),
+            ),
+            i('set'),
+          ),
+          [
+            types.assignmentExpression(
+              '=',
+              types.memberExpression(i('$'), i('f')),
+              node,
+            ),
+            template.expression`${metadata}`(),
+          ],
         ),
+        types.memberExpression(i('$'), i('f')),
       ),
+    ),
+    [
+      types.objectExpression([]),
     ],
   );
+  return newNode;
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
@@ -90,7 +112,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
     ArrowFunctionExpression(path) {
       const transpiled = functionToTranspiled(
         path.node,
-        ctx,
         getKernelDirective(path.node),
         path.parentPath.node.type === 'VariableDeclarator'
           ? path.parentPath.node.id.type === 'Identifier'
@@ -107,7 +128,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionExpression(path) {
       const transpiled = functionToTranspiled(
         path.node,
-        ctx,
         getKernelDirective(path.node),
         path.node.id?.name
           ? path.node.id.name
@@ -132,7 +152,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
       );
       const transpiled = functionToTranspiled(
         expression,
-        ctx,
         getKernelDirective(path.node),
         node.id?.name,
       );
@@ -159,7 +178,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
-            ctx,
             getKernelDirective(implementation) ?? 'kernel',
           ) as babel.CallExpression;
 

@@ -18,11 +18,14 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = tgpu.__assignAst((a, b) => {
+      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -48,11 +51,14 @@ describe('[BABEL] "kernel & js" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(tgpu.__assignAst((a, b) => {
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));
       shell((a, b) => {
         return a + b;
       });"
@@ -71,11 +77,14 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      tgpu['~unstable'].fn([])(tgpu.__assignAst((a, b) => {
+      tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));"
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));"
     `);
   });
 
@@ -98,11 +107,14 @@ describe('[BABEL] "kernel & js" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(tgpu.__assignAst(function (a, b) {
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));
       shell(function (a, b) {
         return a + b;
       });"
@@ -128,11 +140,14 @@ describe('[BABEL] "kernel & js" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(tgpu.__assignAst(function addGPU(a, b) {
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -155,11 +170,14 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = tgpu.__assignAst(function addGPU(a, b) {
+      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({});
       function addCPU(a, b) {
         return a + b;
       }"

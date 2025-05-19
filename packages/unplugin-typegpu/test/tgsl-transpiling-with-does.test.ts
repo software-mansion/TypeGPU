@@ -34,10 +34,15 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {
-        counter: counter,
-        d: d
-      }));"
+      }).does(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const tmp = counter.value.x;
+        counter.value.x = counter.value.y;
+        counter.value.y += tmp;
+        counter.value.z += d.f32(input.num.x);
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+          externals: {counter, d},
+        }) && $.f)({}));"
     `);
   });
 
@@ -63,12 +68,23 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
-      const b = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));
+      }).does(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const x = true;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));
+      const b = tgpu['~unstable'].fn([]).does(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const y = 2 + 2;
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]}, {
-        cx: cx
-      }));
+      const c = tgpu['~unstable'].fn([]).does(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
+          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
+          externals: {cx},
+        }) && $.f)({}));
       const d = tgpu['~unstable'].fn([]).does('() {}');"
     `);
   });
