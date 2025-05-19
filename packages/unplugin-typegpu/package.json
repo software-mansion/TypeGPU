@@ -128,7 +128,7 @@
     "@types/babel__traverse": "^7.20.7",
     "@types/picomatch": "^4.0.0",
     "acorn": "^8.14.1",
-    "rollup": "~4.37.0",
+    "rollup": "~4.41.0",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }
