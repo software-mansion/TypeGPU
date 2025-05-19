@@ -24,7 +24,7 @@ import type {
   TgpuBufferUsage,
   TgpuFixedBufferUsage,
 } from '../buffer/bufferUsage.ts';
-import type { IOLayout, IORecord } from '../function/fnTypes.ts';
+import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
@@ -32,7 +32,11 @@ import type {
   FragmentOutConstrained,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type {
+  TgpuVertexFn,
+  VertexInConstrained,
+  VertexOutConstrained,
+} from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
@@ -115,7 +119,10 @@ export interface WithBinding {
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 
-  withVertex<VertexIn extends IOLayout, VertexOut extends IORecord>(
+  withVertex<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+  >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;

@@ -3,14 +3,7 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { AnyAttribute } from '../../data/attributes.ts';
-import type {
-  AnyWgslStruct,
-  Decorated,
-  Location,
-  Vec4f,
-  Void,
-} from '../../data/wgslTypes.ts';
+import type { Decorated, Location, Vec4f, Void } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
@@ -45,7 +38,7 @@ export type FragmentOutConstrained =
 
 export type FragmentInConstrained = IORecord<
   | BaseIOData
-  | Decorated<BaseIOData, AnyAttribute<never>[]>
+  | Decorated<BaseIOData, Location<number>[]>
   | AnyFragmentInputBuiltin
 >;
 
@@ -56,9 +49,9 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
-  readonly argTypes: [AnyWgslStruct] | [];
+  readonly argTypes: [IOLayoutToSchema<FragmentIn>] | [];
   readonly targets: FragmentOut;
-  readonly returnType: FragmentOut;
+  readonly returnType: IOLayoutToSchema<FragmentOut>;
   readonly isEntry: true;
 };
 
@@ -154,10 +147,10 @@ export function fragmentFn<
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in)]
+      ? [createStructFromIO(options.in) as IOLayoutToSchema<FragmentIn>]
       : [],
     targets: options.out,
-    returnType: createOutputType(options.out) as FragmentOut,
+    returnType: createOutputType(options.out),
     isEntry: true,
   };
 
@@ -185,9 +178,7 @@ function createFragmentFn(
   type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
   const core = createFnCore(shell, implementation);
-  const outputType = shell.returnType as IOLayoutToSchema<
-    typeof shell.returnType
-  >;
+  const outputType = shell.returnType;
   const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(
