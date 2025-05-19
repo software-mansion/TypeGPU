@@ -109,7 +109,7 @@ export function ExampleView({ example }: Props) {
                   scrollbarGutter: 'stable both-edges',
                 }}
                 className={cs(
-                  'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
+                  'relative flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
                   codeEditorShowing
                     ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                     : '',
@@ -142,7 +142,7 @@ export function ExampleView({ example }: Props) {
                           type='button'
                           onClick={() => setCurrentFilePath(fileName)}
                           className={cs(
-                            'px-4 rounded-t-lg rounded-b-none text-nowrap',
+                            'px-4 rounded-t-lg rounded-b-none text-nowrap text-sm',
                             currentFilePath === fileName
                               ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
                               : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
@@ -187,7 +187,7 @@ function GPUUnsupportedPanel() {
 
       <a
         href='/TypeGPU/blog/troubleshooting'
-        className='text-transparent underline bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text'
+        className='text-transparent underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text'
       >
         Read more about the availability
       </a>
@@ -215,7 +215,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       container.appendChild(frame);
 
       container.className =
-        'flex flex-1 justify-center items-center w-full md:h-full md:w-auto';
+        'flex flex-1 justify-center items-center w-full h-full md:w-auto';
       container.style.containerType = 'size';
 
       frame.className = 'relative';
@@ -226,8 +226,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       } else {
         const aspectRatio = canvas.dataset.aspectRatio ?? '1';
         frame.style.aspectRatio = aspectRatio;
-        frame.style.height =
-          `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+        frame.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
       }
 
       for (const prop of canvas.style) {
