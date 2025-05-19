@@ -40,15 +40,26 @@ function getKernelDirective(
   }
 }
 
-function generateFunctionNode(
-  tgpuAlias: string,
-  directive: string,
-  name: string | undefined,
+function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  externalNames: string[],
-  argNames: ArgNames,
-  body: Block,
-) {
+  ctx: Context,
+  directive: 'kernel' | 'kernel & js' | undefined,
+  name?: string | undefined,
+): babel.CallExpression | null {
+  if (!directive) {
+    return null;
+  }
+
+  const { argNames, body, externalNames } = transpileFn(node);
+  const tgpuAlias = ctx.tgpuAliases.values().next().value;
+  if (tgpuAlias === undefined) {
+    throw new Error(
+      `No tgpu import found, cannot assign ast to function in file: ${
+        ctx.fileId ?? ''
+      }`,
+    );
+  }
+
   return types.callExpression(
     template.expression(`${tgpuAlias}.__assignAst`)(),
     [
@@ -70,37 +81,6 @@ function generateFunctionNode(
   );
 }
 
-function functionToTranspiled(
-  node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  ctx: Context,
-  name?: string | undefined,
-): babel.CallExpression | null {
-  const directive = getKernelDirective(node);
-  if (!directive) {
-    return null;
-  }
-
-  const { argNames, body, externalNames } = transpileFn(node);
-  const tgpuAlias = ctx.tgpuAliases.values().next().value;
-  if (tgpuAlias === undefined) {
-    throw new Error(
-      `No tgpu import found, cannot assign ast to function in file: ${
-        ctx.fileId ?? ''
-      }`,
-    );
-  }
-
-  return generateFunctionNode(
-    tgpuAlias,
-    directive,
-    name,
-    node,
-    externalNames,
-    argNames,
-    body,
-  );
-}
-
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     ImportDeclaration(path) {
@@ -111,6 +91,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
       const transpiled = functionToTranspiled(
         path.node,
         ctx,
+        getKernelDirective(path.node),
         path.parentPath.node.type === 'VariableDeclarator'
           ? path.parentPath.node.id.type === 'Identifier'
             ? path.parentPath.node.id.name
@@ -127,6 +108,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
       const transpiled = functionToTranspiled(
         path.node,
         ctx,
+        getKernelDirective(path.node),
         path.node.id?.name
           ? path.node.id.name
           : path.parentPath.node.type === 'VariableDeclarator'
@@ -148,7 +130,12 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.params,
         node.body,
       );
-      const transpiled = functionToTranspiled(expression, ctx, node.id?.name);
+      const transpiled = functionToTranspiled(
+        expression,
+        ctx,
+        getKernelDirective(path.node),
+        node.id?.name,
+      );
       if (transpiled && node.id) {
         path.replaceWith(
           types.variableDeclaration('const', [
@@ -170,31 +157,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
           (implementation.type === 'FunctionExpression' ||
             implementation.type === 'ArrowFunctionExpression')
         ) {
-          const { argNames, body, externalNames } = transpileFn(implementation);
-          const tgpuAlias = ctx.tgpuAliases.values().next().value;
-          if (tgpuAlias === undefined) {
-            throw new Error(
-              `No tgpu import found, cannot assign ast to function in file: ${
-                ctx.fileId ?? ''
-              }`,
-            );
-          }
-
-          const directive = getKernelDirective(implementation);
-
-          const newNode = generateFunctionNode(
-            tgpuAlias,
-            directive ?? 'kernel',
-            undefined,
+          const transpiled = functionToTranspiled(
             implementation,
-            externalNames,
-            argNames,
-            body,
-          );
+            ctx,
+            getKernelDirective(implementation) ?? 'kernel',
+          ) as babel.CallExpression;
 
           path.replaceWith(
             types.callExpression(node.callee, [
-              newNode,
+              transpiled,
             ]),
           );
 
