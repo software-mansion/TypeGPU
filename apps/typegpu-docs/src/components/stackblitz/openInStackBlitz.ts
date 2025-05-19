@@ -1,5 +1,5 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import { parse } from '@std/yaml';
+import { parse } from 'yaml';
 import { type } from 'arktype';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with {
   type: 'json',
