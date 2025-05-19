@@ -1,11 +1,10 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
-import { createStructFromIO } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -18,7 +17,7 @@ import { stripTemplate } from './templateUtils.ts';
 type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
-  readonly argTypes: [AnyWgslStruct] | [];
+  readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
@@ -108,7 +107,7 @@ export function computeFn<
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in)]
+      ? [createIoSchema(options.in)]
       : [],
     returnType: undefined,
     workgroupSize: [

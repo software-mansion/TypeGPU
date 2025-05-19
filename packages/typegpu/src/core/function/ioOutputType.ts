@@ -52,12 +52,10 @@ export function withLocations<T extends IOData>(
   );
 }
 
-export function createOutputType<
+export function createIoSchema<
   T extends IOData,
   Layout extends IORecord<T> | IOLayout<T>,
->(
-  returnType: IOLayout<T>,
-) {
+>(returnType: Layout) {
   return (
     isData(returnType)
       ? isVoid(returnType)
@@ -67,8 +65,4 @@ export function createOutputType<
         : location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
   ) as IOLayoutToSchema<Layout>;
-}
-
-export function createStructFromIO<T extends IOData>(members: IORecord<T>) {
-  return struct(withLocations(members) as Record<string, T>);
 }

@@ -22,11 +22,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createOutputType,
-  createStructFromIO,
-  type IOLayoutToSchema,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -155,10 +151,10 @@ export function fragmentFn<
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in) as IOLayoutToSchema<FragmentIn>]
+      ? [createIoSchema(options.in)]
       : [],
     targets: options.out,
-    returnType: createOutputType(options.out),
+    returnType: createIoSchema(options.out),
     isEntry: true,
   };
 

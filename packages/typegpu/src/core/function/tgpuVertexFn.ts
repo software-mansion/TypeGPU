@@ -16,11 +16,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createOutputType,
-  createStructFromIO,
-  type IOLayoutToSchema,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -133,10 +129,10 @@ export function vertexFn<
     attributes: [options.in ?? ({} as VertexIn)],
     returnType:
       (Object.keys(options.out).length !== 0
-        ? createOutputType(options.out)
-        : undefined) as IOLayoutToSchema<VertexOut>,
+        ? createIoSchema(options.out)
+        : undefined),
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in) as IOLayoutToSchema<VertexIn>]
+      ? [createIoSchema(options.in)]
       : [],
     isEntry: true,
   };
