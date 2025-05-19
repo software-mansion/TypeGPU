@@ -40,7 +40,7 @@ export function ExampleLayout() {
         </Button>
       </div>
 
-      <div className='box-border flex h-[100dvh] p-4 gap-4 bg-tameplum-50'>
+      <div className='box-border flex h-dvh p-4 gap-4 bg-tameplum-50'>
         {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
@@ -66,7 +66,7 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem]',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-75',
       )}
     >
       <header className='p-5'>

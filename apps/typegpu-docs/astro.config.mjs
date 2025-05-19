@@ -3,7 +3,7 @@
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
-import tailwind from '@astrojs/tailwind';
+import tailwindVite from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
@@ -26,8 +26,9 @@ export default defineConfig({
   vite: {
     // Allowing query params, for invalidation
     plugins: [
+      tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
-      /** @type {any} */ (imagetools()),
+      /** @type {any} */ imagetools(),
     ],
   },
   integrations: [
@@ -61,9 +62,13 @@ export default defineConfig({
         ThemeSelect: './src/components/starlight/ThemeSelect.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',
       },
-      social: {
-        github: 'https://github.com/software-mansion/TypeGPU',
-      },
+      social: [
+        {
+          label: 'GitHub',
+          href: 'https://github.com/software-mansion/TypeGPU',
+          icon: 'github',
+        },
+      ],
       sidebar: stripFalsy([
         {
           label: 'Why TypeGPU?',
@@ -203,9 +208,6 @@ export default defineConfig({
           ]),
         },
       ]),
-    }),
-    tailwind({
-      applyBaseStyles: false,
     }),
     react(),
     sitemap(),
