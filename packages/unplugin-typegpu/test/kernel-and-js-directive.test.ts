@@ -193,11 +193,14 @@ describe('[BABEL] "kernel & js" directive', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "function add(a, b) {
+      "const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'kernel & js';
 
         return a + b;
-      }
+      }, {
+          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: {},
+        }) && $.f)({});
       ;"
     `);
   });

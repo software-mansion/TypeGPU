@@ -39,16 +39,6 @@ function getKernelDirective(
   }
 }
 
-// AAA does syntax do usunięcia
-
-// const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-//   $.f = ...,
-//   {
-//     ast: {...},
-//     externals: {...},
-//   },
-// ) && $.f))({});
-
 function i(identifier: string): babel.Identifier {
   return types.identifier(identifier);
 }
@@ -193,21 +183,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
   };
 }
 
-const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
-const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
-const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
-
-/**
- * Regexes used to efficiently determine if a file is
- * meant to be processed by our plugin. We assume every file
- * that should be processed imports `typegpu` in some way.
- */
-export const codeFilterRegexes = [
-  typegpuImportRegex,
-  typegpuDynamicImportRegex,
-  typegpuRequireRegex,
-];
-
 export default function () {
   return {
     visitor: {
@@ -221,14 +196,6 @@ export default function () {
 
         const filter = createFilterForId(options);
         if (id && filter && !filter?.(id)) {
-          return;
-        }
-
-        if (
-          !options?.forceTgpuAlias &&
-          code &&
-          !codeFilterRegexes.some((reg) => reg.test(code))
-        ) {
           return;
         }
 
