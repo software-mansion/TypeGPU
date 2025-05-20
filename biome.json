@@ -9,8 +9,7 @@
       "**/coverage/*",
       "**/*.d.ts",
       "packages/tgpu-wgsl-parser/src/grammar.ts",
-      "**/*.astro",
-      "**/tsup.config.bundled_*.mjs"
+      "**/*.astro"
     ]
   },
   "linter": {
