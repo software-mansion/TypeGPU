@@ -160,7 +160,7 @@ describe('array.length', () => {
       const layout = tgpu.bindGroupLayout({
         values: {
           storage: staticArray,
-          access: 'readonly',
+          access: 'mutable',
         },
       });
 
@@ -168,15 +168,12 @@ describe('array.length', () => {
         [],
         d.i32,
       )(() => {
-        if (!layout.bound.values) {
-          throw new Error('layout.bound.values is undefined');
-        }
-        return arrayLength(layout.bound.values.value);
+        return arrayLength(layout.$.values);
       });
 
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
-          @group(0) @binding(0) var<storage, read> values: array<f32, 5>;
+          @group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
   
           fn testFn() -> i32 {
             return 5;
@@ -190,7 +187,7 @@ describe('array.length', () => {
       const layout = tgpu.bindGroupLayout({
         values: {
           storage: dynamicArray,
-          access: 'readonly',
+          access: 'mutable',
         },
       });
 
@@ -198,15 +195,12 @@ describe('array.length', () => {
         [],
         d.u32,
       )(() => {
-        if (!layout.bound.values) {
-          throw new Error('layout.bound.values is undefined');
-        }
         return arrayLength(layout.bound.values.value);
       });
 
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
-          @group(0) @binding(0) var<storage, read> values: array<f32>;
+          @group(0) @binding(0) var<storage, read_write> values: array<f32>;
   
           fn testFn() -> u32 {
             return arrayLength(&values);
