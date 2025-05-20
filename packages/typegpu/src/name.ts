@@ -1,17 +1,14 @@
 import { ArgNames, Block } from 'tinyest';
 import { $getNameForward } from './shared/symbols.ts';
 
-interface MetaData {
-  name: string | undefined;
-}
-
-export interface FunctionMetaData extends MetaData {
-  ast: {
+export interface MetaData {
+  name?: string;
+  ast?: {
     argNames: ArgNames;
     body: Block;
     externalNames: string[];
   };
-  externals?: Record<string, unknown> | undefined;
+  externals?: Record<string, unknown>;
 }
 
 interface GlobalWithMeta {
@@ -52,10 +49,10 @@ export function isNamable(value: unknown): value is TgpuNamable {
   return !!(value as TgpuNamable)?.$name;
 }
 
-export function getPrebuiltAstFor(
-  fn: (...args: never[]) => unknown,
-): FunctionMetaData | undefined {
+export function getMetaData(
+  definition: object,
+): MetaData | undefined {
   return (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__.get(
-    fn,
-  ) as FunctionMetaData;
+    definition,
+  );
 }
