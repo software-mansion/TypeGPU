@@ -44,12 +44,12 @@ const presets = {
     fishCohesionStrength: 0.0004,
   },
   mosquitoes: {
-    fishSeparationDistance: 0.3,
-    fishSeparationStrength: 0.0006,
-    fishAlignmentDistance: 0.3,
-    fishAlignmentStrength: 0.005,
+    fishSeparationDistance: 0.6,
+    fishSeparationStrength: 0.0012,
+    fishAlignmentDistance: 0.6,
+    fishAlignmentStrength: 0.01,
     fishCohesionDistance: 0.5,
-    fishCohesionStrength: 0.0004,
+    fishCohesionStrength: 0.0012,
   },
   blobs: {
     fishSeparationDistance: 0.3,
@@ -61,7 +61,7 @@ const presets = {
   },
 } as const;
 
-let currentPreset: keyof typeof presets = 'default';
+let currentPreset: keyof typeof presets = 'mosquitoes';
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
