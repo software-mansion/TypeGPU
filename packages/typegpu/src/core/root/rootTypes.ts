@@ -117,7 +117,7 @@ export interface WithBinding {
     value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding;
 
-  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
