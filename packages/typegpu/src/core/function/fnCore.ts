@@ -45,9 +45,7 @@ export function createFnCore(
     if (!shell.isEntry) {
       addArgTypesToExternals(
         implementation,
-        Array.isArray(shell.argTypes)
-          ? shell.argTypes
-          : Object.values(shell.argTypes),
+        shell.argTypes,
         (externals) => externalsToApply.push(externals),
       );
       addReturnTypeToExternals(
@@ -56,7 +54,7 @@ export function createFnCore(
         (externals) => externalsToApply.push(externals),
       );
     } else {
-      if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
+      if (isWgslStruct(shell.argTypes[0])) {
         externalsToApply.push({ In: shell.argTypes[0] });
       }
 

@@ -347,15 +347,9 @@ export function generateExpression(
       convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
         resolvedSnippets;
     } else {
-      const pairs: [wgsl.AnyWgslData, Snippet][] = Array.isArray(argTypes)
-        ? (argTypes
-          .map((type, i) => [type, resolvedSnippets[i]])
-          .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
-        : typeof argTypes === 'function'
-        ? ((argTypes(...resolvedSnippets) as wgsl.AnyWgslData[])
-          .map((type, i) => [type, resolvedSnippets[i]])
-          .filter(([, sn]) => !!sn) as [wgsl.AnyWgslData, Snippet][])
-        : [];
+      const pairs =
+        (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
+          .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
 
       convertedResources = pairs.map(([type, sn]) => {
         const conv = convertToCommonType(ctx, [sn], [type])?.[0];
