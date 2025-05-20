@@ -57,6 +57,25 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 
 const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+canvas.parentElement?.appendChild(video);
+
+function resizeVideo() {
+  if (video.videoHeight === 0) {
+    return;
+  }
+
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+}
+
+const videoSizeObserver = new ResizeObserver(resizeVideo);
+videoSizeObserver.observe(video);
+video.addEventListener('resize', resizeVideo);
 
 const root = await tgpu.init();
 const device = root.device;
@@ -181,6 +200,7 @@ export function onCleanup() {
   }
 
   root.destroy();
+  videoSizeObserver.disconnect();
 }
 
 // #endregion

@@ -80,6 +80,16 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 
+video.addEventListener('resize', () => {
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+});
+
 const width = video.width;
 const height = video.height;
 
@@ -216,26 +226,15 @@ function run() {
   }
 }
 
-// #region UI
-
-const table = document.querySelector('.rgb') as HTMLDivElement;
-
-video.addEventListener('click', (event) => {
-  const { offsetX: x, offsetY: y } = event;
-
-  // Sampling the video frame
-  samplingContext.drawImage(video, 0, 0, width, height);
-  const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
-
-  table.innerText = `R: ${r} G: ${g} B: ${b}`;
-  colorBuffer.write(d.vec3f(r / 255, g / 255, b / 255));
-});
-
-// #endregion
-
 // #region Example controls & Cleanup
 
 export const controls = {
+  color: {
+    onColorChange: (value: readonly [number, number, number]) => {
+      colorBuffer.write(d.vec3f(...value));
+    },
+    initial: [0, 1, 0] as const,
+  },
   threshold: {
     initial: 0.1,
     min: 0,

@@ -1,6 +1,68 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  /* --- Colors --- */
+  /* Starlight colors */
+  --color-accent-200: #c3c4f1;
+  --color-accent-600: #6453d2;
+  --color-accent-900: #2e295f;
+  --color-accent-950: #211f41;
+
+  --color-gray-100: #f5f5fd;
+  --color-gray-200: #ececfb;
+  --color-gray-300: #bfc0d2;
+  --color-gray-400: #8788aa;
+  --color-gray-500: #545474;
+  --color-gray-700: #353452;
+  --color-gray-800: #24233f;
+  --color-gray-900: #171724;
+
+  /* Custom colors */
+  --color-tameplum-20: #f6f6ff;
+  --color-tameplum-50: #efeff9;
+  --color-tameplum-100: #e2e2f0;
+  --color-tameplum-600: #757387;
+  --color-tameplum-800: #515061;
+
+  --color-grayscale-100: #000000;
+  --color-grayscale-80: #333333;
+  --color-grayscale-60: #808080;
+  --color-grayscale-20: #ebebed;
+  --color-grayscale-0: #fff;
+
+  --color-special-stroke: #2a0a6629;
+
+  /* Gradients */
+  --color-gradient-purple: #c464ff;
+  --color-gradient-purple-dark: #a91eff;
+  --color-gradient-blue: #1d72f0;
+  --color-gradient-blue-dark: #0058dd;
+
+  /* --- Font Family --- */
+  --font-sans: 'Aeonik', ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Keyframes --- */
+  @keyframes scroll-bg-y {
+    0% {
+      background-position: center 0rem;
+    }
+    100% {
+      background-position: center 2rem;
+    }
+  }
+
+  /* --- Animations --- */
+  --animate-scroll-bg-y-slow: scroll-bg-y 3s linear infinite;
+
+  /* --- Screens --- */
+  --breakpoint-sm: 601px;
+  --breakpoint-md: 1025px;
+  --breakpoint-lg: 1441px;
+}
 
 button,
 input {
