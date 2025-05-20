@@ -515,23 +515,23 @@ function generateFunction(func, wgsl, options) {
     .slice(func.startLine - 1, func.endLine)
     .join('\n');
 
-  const inputs = `{${
+  const inputs = `[${
     func.arguments
       .flatMap((arg) =>
         arg.type &&
           arg.type.attributes?.find((attr) => attr.name === 'builtin') ===
             undefined
-          ? [`${arg.name}: ${generateType(arg.type, options)}`]
+          ? [`${generateType(arg.type, options)}`]
           : []
       )
       .join(', ')
-  }}`;
+  }]`;
 
   const output = func.returnType
     ? generateType(func.returnType, options)
     : null;
 
-  const body = implementation.match(/{.*}/s);
+  const body = implementation.match(/\(.*\).*{.*}/s);
 
   return body?.[0]
     ? `tgpu['~unstable'].fn(${inputs}${
