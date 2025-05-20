@@ -9,7 +9,10 @@ export const arrayLength = createDualImpl(
   (a: unknown[]) => a.length,
   // GPU implementation
   (a) => {
-    if (isPtr(a.dataType) && isWgslArray(a.dataType.inner) && a.dataType.inner.elementCount > 0) {
+    if (
+      isPtr(a.dataType) && isWgslArray(a.dataType.inner) &&
+      a.dataType.inner.elementCount > 0
+    ) {
       return {
         value: String(a.dataType.inner.elementCount),
         dataType: abstractInt,
