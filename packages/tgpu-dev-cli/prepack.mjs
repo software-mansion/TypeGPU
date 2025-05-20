@@ -198,12 +198,18 @@ async function main() {
 
     const $ = execa({ all: true });
 
-    const results = await Promise.allSettled([
-      withStatusUpdate('biome', $`pnpm -w check`),
-      withStatusUpdate('build', $`pnpm build`),
-      withStatusUpdate('spec', $`pnpm -w test:spec`),
-      withStatusUpdate('types', $`pnpm -w test:types`),
-    ]);
+    const results = [
+      // First build
+      ...await Promise.allSettled([
+        withStatusUpdate('build', $`pnpm build`),
+      ]),
+      // Then the rest
+      ...await Promise.allSettled([
+        withStatusUpdate('biome', $`pnpm -w check`),
+        withStatusUpdate('spec', $`pnpm -w test:spec`),
+        withStatusUpdate('types', $`pnpm -w test:types`),
+      ]),
+    ];
 
     update(
       `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${
