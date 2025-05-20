@@ -16,6 +16,7 @@ import {
   MouseRay,
   renderBindGroupLayout,
   renderInstanceLayout,
+  FishBehaviorParams,
 } from './schemas.ts';
 
 // setup
@@ -32,6 +33,35 @@ context.configure({
 });
 
 // models and textures
+
+const presets = {
+  default: {
+    fishSeparationDistance: 0.3,
+    fishSeparationStrength: 0.0006,
+    fishAlignmentDistance: 0.3,
+    fishAlignmentStrength: 0.005,
+    fishCohesionDistance: 0.5,
+    fishCohesionStrength: 0.0004,
+  },
+  mosquitoes: {
+    fishSeparationDistance: 0.3,
+    fishSeparationStrength: 0.0006,
+    fishAlignmentDistance: 0.3,
+    fishAlignmentStrength: 0.005,
+    fishCohesionDistance: 0.5,
+    fishCohesionStrength: 0.0004,
+  },
+  blobs: {
+    fishSeparationDistance: 0.3,
+    fishSeparationStrength: 0.0006,
+    fishAlignmentDistance: 0.3,
+    fishAlignmentStrength: 0.005,
+    fishCohesionDistance: 0.5,
+    fishCohesionStrength: 0.0004,
+  },
+} as const;
+
+let currentPreset: keyof typeof presets = 'default';
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
@@ -123,6 +153,11 @@ const currentTimeBuffer = root
   .$usage('uniform')
   .$name('current time buffer');
 
+const fishBehaviorBuffer = root
+  .createBuffer(FishBehaviorParams, presets.default)
+  .$usage('uniform')
+  .$name('fish behavior buffer');
+
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
     {
@@ -196,6 +231,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
+    fishBehavior: fishBehaviorBuffer,
   })
 );
 
@@ -215,6 +251,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   timePassedBuffer.write(timestamp - lastTimestamp);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
+  fishBehaviorBuffer.write(presets[currentPreset]);
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
@@ -277,6 +314,12 @@ requestAnimationFrame(frame);
 export const controls = {
   'Randomize positions': {
     onButtonClick: () => randomizeFishPositions(),
+  },
+  Preset: {
+    options: Object.keys(presets) as (keyof typeof presets)[],
+    onOptionSelect: (option: keyof typeof presets) => {
+      currentPreset = option;
+    },
   },
 };
 

@@ -60,6 +60,17 @@ export const MouseRay = d
   })
   .$name('mouse ray');
 
+export const FishBehaviorParams = d
+  .struct({
+    fishSeparationDistance: d.f32,
+    fishSeparationStrength: d.f32,
+    fishAlignmentDistance: d.f32,
+    fishAlignmentStrength: d.f32,
+    fishCohesionDistance: d.f32,
+    fishCohesionStrength: d.f32,
+  })
+  .$name('fish behavior params');
+
 // layouts
 
 export const modelVertexLayout = tgpu
@@ -89,5 +100,6 @@ export const computeBindGroupLayout = tgpu
     },
     mouseRay: { uniform: MouseRay },
     timePassed: { uniform: d.f32 },
+    fishBehavior: { uniform: FishBehaviorParams },
   })
   .$name('compute bind group layout');
