@@ -1,5 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName } from '../../name.ts';
+import { getName } from '../../shared/meta.ts';
 import { $repr, type Infer } from '../../shared/repr.ts';
 import { unwrapProxy } from '../valueProxyUtils.ts';
 import type {

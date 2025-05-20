@@ -1,5 +1,5 @@
-import { ArgNames, Block } from 'tinyest';
-import { $getNameForward } from './shared/symbols.ts';
+import type { ArgNames, Block } from 'tinyest';
+import { $getNameForward } from './symbols.ts';
 
 export interface MetaData {
   name?: string;

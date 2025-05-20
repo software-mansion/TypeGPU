@@ -12,7 +12,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
-import { getMetaData } from '../../src/name.ts';
+import { getMetaData } from '../../src/shared/meta.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
