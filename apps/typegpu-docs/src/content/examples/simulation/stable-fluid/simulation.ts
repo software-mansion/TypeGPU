@@ -4,9 +4,9 @@ import * as std from 'typegpu/std';
 import * as p from './params.ts';
 
 const getNeighbors = tgpu['~unstable'].fn(
-  { coords: d.vec2i, bounds: d.vec2i },
+  [d.vec2i, d.vec2i],
   d.arrayOf(d.vec2i, 4),
-)(({ coords, bounds }) => {
+)((coords, bounds) => {
   const adjacentOffsets = [
     d.vec2i(-1, 0),
     d.vec2i(0, -1),
@@ -145,7 +145,7 @@ export const diffusionFn = tgpu['~unstable'].computeFn({
   );
   const centerVal = std.textureLoad(diffusionLayout.$.in, pixelPos, 0);
 
-  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
+  const neighbors = getNeighbors(pixelPos, texSize);
 
   const leftVal = std.textureLoad(diffusionLayout.$.in, neighbors[0], 0);
   const upVal = std.textureLoad(diffusionLayout.$.in, neighbors[1], 0);
@@ -182,7 +182,7 @@ export const divergenceFn = tgpu['~unstable'].computeFn({
     std.textureDimensions(divergenceLayout.$.vel),
   );
 
-  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
+  const neighbors = getNeighbors(pixelPos, texSize);
 
   const leftVel = std.textureLoad(divergenceLayout.$.vel, neighbors[0], 0);
   const upVel = std.textureLoad(divergenceLayout.$.vel, neighbors[1], 0);
@@ -211,7 +211,7 @@ export const pressureFn = tgpu['~unstable'].computeFn({
   const pixelPos = d.vec2i(input.gid.xy);
   const texSize = d.vec2i(std.textureDimensions(pressureLayout.$.x));
 
-  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
+  const neighbors = getNeighbors(pixelPos, texSize);
 
   const leftPressure = std.textureLoad(pressureLayout.$.x, neighbors[0], 0);
   const upPressure = std.textureLoad(pressureLayout.$.x, neighbors[1], 0);
@@ -243,7 +243,7 @@ export const projectFn = tgpu['~unstable'].computeFn({
   const texSize = d.vec2i(std.textureDimensions(projectLayout.$.vel));
   const velocity = std.textureLoad(projectLayout.$.vel, pixelPos, 0);
 
-  const neighbors = getNeighbors({ coords: pixelPos, bounds: texSize });
+  const neighbors = getNeighbors(pixelPos, texSize);
 
   const leftPressure = std.textureLoad(projectLayout.$.p, neighbors[0], 0);
   const upPressure = std.textureLoad(projectLayout.$.p, neighbors[1], 0);
