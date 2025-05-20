@@ -8,7 +8,6 @@ import type {
   Interpolate,
   Location,
   Vec4f,
-  Void,
 } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
@@ -20,6 +19,7 @@ import type {
   BaseIOData,
   Implementation,
   InferIO,
+  IOLayout,
   IORecord,
 } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
@@ -35,16 +35,11 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
-export type FragmentOutConstrained =
-  | Void
+export type FragmentOutConstrained = IOLayout<
   | Vec4f
   | Decorated<Vec4f, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
-  | IORecord<
-    | Vec4f
-    | Decorated<Vec4f, (Location | Interpolate)[]>
-    | AnyFragmentOutputBuiltin
-  >;
+>;
 
 /**
  * Describes a fragment entry function signature (its arguments, return type and targets)
