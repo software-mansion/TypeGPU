@@ -1,5 +1,5 @@
 import type { ArgNames, Block } from 'tinyest';
-import { getMetaData, setMetaData } from '../../shared/meta';
+import { getMetaData, setMetaData } from '../../shared/meta.ts';
 
 export type Ast = {
   argNames: ArgNames;

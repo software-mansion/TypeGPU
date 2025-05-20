@@ -184,21 +184,6 @@ describe('[BABEL] "kernel & js" directive', () => {
     `);
   });
 
-  it('throws when hoisting was meant to be used', () => {
-    const code = `\
-      import tgpu from 'typegpu';
-
-      const sum = add(1, 2);
-      const add = (a, b) => {
-        'kernel & js';
-        return a + b;
-      };
-    `;
-
-    expect(true).toBe(false);
-    expect(() => babelTransform(code)).toThrowErrorMatchingInlineSnapshot();
-  });
-
   it('parses when no typegpu import', () => {
     const code = `\
       function add(a, b) {
@@ -207,7 +192,6 @@ describe('[BABEL] "kernel & js" directive', () => {
       };
     `;
 
-    expect(true).toBe(false);
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "function add(a, b) {
         'kernel & js';

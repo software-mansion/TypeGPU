@@ -13,7 +13,6 @@ import {
   type Options,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
-import { ArgNames, Block } from '../../tinyest/src/nodes.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
