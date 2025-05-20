@@ -80,8 +80,10 @@ export type TgpuVertexFnShell<
   };
 
 export interface TgpuVertexFn<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
+  VertexIn extends VertexInConstrained = any,
+  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
+  VertexOut extends VertexOutConstrained = any,
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
