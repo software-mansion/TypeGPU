@@ -23,23 +23,24 @@ export function ExampleLayout() {
 
   return (
     <>
-      <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
-        {menuShownMobile ? null : (
-          <Button onClick={() => setMenuShownMobile(true)}>
-            <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
-          </Button>
-        )}
+      <div className='md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm'>
+        {menuShownMobile
+          ? null
+          : (
+            <Button onClick={() => setMenuShownMobile(true)}>
+              <img src={HamburgerSvg.src} alt='menu' className='h-6 w-6' />
+            </Button>
+          )}
 
         <Button
           onClick={() =>
-            setCodeShownMobile((codeShownMobile) => !codeShownMobile)
-          }
+            setCodeShownMobile((codeShownMobile) => !codeShownMobile)}
         >
           {codeShownMobile ? 'Preview' : 'Code'}
         </Button>
       </div>
 
-      <div className="box-border flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
+      <div className='box-border flex h-dvh p-4 gap-4 bg-tameplum-50'>
         {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
@@ -65,38 +66,38 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5 overflow-auto',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-75 p-5 gap-5 overflow-auto',
       )}
     >
-      <header className="grid gap-5">
-        <div className="grid place-items-center">
-          <a href="/TypeGPU" className="block box-border py-4 cursor-pointer">
+      <header className='grid gap-5'>
+        <div className='grid place-items-center'>
+          <a href='/TypeGPU' className='block box-border py-4 cursor-pointer'>
             <img
-              className="w-40"
-              src="/TypeGPU/typegpu-logo-light.svg"
-              alt="TypeGPU Logo"
+              className='w-40'
+              src='/TypeGPU/typegpu-logo-light.svg'
+              alt='TypeGPU Logo'
             />
           </a>
         </div>
 
-        <hr className="my-0 box-border w-full border-t border-tameplum-100" />
+        <hr className='my-0 box-border w-full border-t border-tameplum-100' />
 
-        <div className="grid gap-6">
-          <h1 className="m-0 font-medium text-xl">Welcome to examples page</h1>
-          <p className="m-0 text-sm">
+        <div className='grid gap-6'>
+          <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
+          <p className='m-0 text-sm'>
             Test out the power of our TypeScript library and get to know
             TypeGPU.
           </p>
           <a
-            href="/TypeGPU/why-typegpu"
-            className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
+            href='/TypeGPU/why-typegpu'
+            className='underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
           >
             Learn more about TypeGPU here
           </a>
         </div>
       </header>
 
-      <hr className="my-0 box-border w-full border-t border-tameplum-100" />
+      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
 
       <ExampleList
         excludeTags={[
@@ -105,11 +106,11 @@ function SideMenu() {
         ].flat()}
       />
 
-      <hr className="my-0 box-border w-full border-t border-tameplum-100" />
+      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
 
       <label
         htmlFor={experimentalExamplesToggleId}
-        className="flex items-center justify-between gap-3 text-sm cursor-pointer"
+        className='flex items-center justify-between gap-3 text-sm cursor-pointer'
       >
         <span>Experimental examples</span>
         <Toggle
@@ -126,29 +127,29 @@ function SideMenu() {
         />
       </label>
 
-      <div className="flex justify-between text-tameplum-800 text-xs">
+      <div className='flex justify-between text-tameplum-800 text-xs'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
-        <div className="flex gap-3 items-center">
+        <div className='flex gap-3 items-center'>
           <a
-            href="https://discord.gg/8jpfgDqPcM"
-            target="_blank"
-            rel="noreferrer"
+            href='https://discord.gg/8jpfgDqPcM'
+            target='_blank'
+            rel='noreferrer'
           >
             <img
               src={DiscordIconSvg.src}
-              className="opacity-75"
-              alt="github logo"
+              className='opacity-75'
+              alt='github logo'
             />
           </a>
           <a
-            href="https://github.com/software-mansion/TypeGPU"
-            target="_blank"
-            rel="noreferrer"
+            href='https://github.com/software-mansion/TypeGPU'
+            target='_blank'
+            rel='noreferrer'
           >
             <img
               src={GithubIconSvg.src}
-              className="opacity-75"
-              alt="discord logo"
+              className='opacity-75'
+              alt='discord logo'
             />
           </a>
         </div>

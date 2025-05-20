@@ -2,8 +2,8 @@ import { getAttributesString } from '../../data/attributes.ts';
 import {
   type AnyData,
   type Disarray,
-  type Unstruct,
   isLooseData,
+  type Unstruct,
 } from '../../data/dataTypes.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
@@ -35,6 +35,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { getName } from '../../name.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { isAttribute } from '../vertexLayout/connectAttributesToShader.ts';
@@ -110,7 +111,9 @@ function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseData],
 ) {
-  return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
+  return `  ${getAttributesString(property)}${key}: ${
+    ctx.resolve(property as AnyWgslData)
+  },\n`;
 }
 
 /**
@@ -121,13 +124,15 @@ function resolveStructProperty(
  * @returns The resolved struct name.
  */
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
-  const id = ctx.names.makeUnique(struct.label);
+  const id = ctx.names.makeUnique(getName(struct));
 
   ctx.addDeclaration(`
 struct ${id} {
-${Object.entries(struct.propTypes)
-  .map((prop) => resolveStructProperty(ctx, prop))
-  .join('')}\
+${
+    Object.entries(struct.propTypes)
+      .map((prop) => resolveStructProperty(ctx, prop))
+      .join('')
+  }\
 }\n`);
 
   return id;
@@ -149,17 +154,22 @@ ${Object.entries(struct.propTypes)
  * ```
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
-  const id = ctx.names.makeUnique(unstruct.label);
+  const id = ctx.names.makeUnique(getName(unstruct));
 
   ctx.addDeclaration(`
 struct ${id} {
-${Object.entries(unstruct.propTypes)
-  .map((prop) =>
-    isAttribute(prop[1])
-      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
-      : resolveStructProperty(ctx, prop),
-  )
-  .join('')}
+${
+    Object.entries(unstruct.propTypes)
+      .map((prop) =>
+        isAttribute(prop[1])
+          ? resolveStructProperty(ctx, [
+            prop[0],
+            formatToWGSLType[prop[1].format],
+          ])
+          : resolveStructProperty(ctx, prop)
+      )
+      .join('')
+  }
 }\n`);
 
   return id;
@@ -248,7 +258,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
 
   if (data.type === 'ptr') {
     if (data.addressSpace === 'storage') {
-      return `ptr<storage, ${ctx.resolve(data.inner)}, ${data.access === 'read-write' ? 'read_write' : data.access}>`;
+      return `ptr<storage, ${ctx.resolve(data.inner)}, ${
+        data.access === 'read-write' ? 'read_write' : data.access
+      }>`;
     }
     return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
   }

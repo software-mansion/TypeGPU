@@ -3,10 +3,10 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  - package-ecosystem: 'npm'
     directories:
       - /
       - /packages/*
       - /apps/*
     schedule:
-      interval: "weekly"
+      interval: 'weekly'

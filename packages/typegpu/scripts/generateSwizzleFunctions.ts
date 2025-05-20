@@ -29,11 +29,14 @@ function printSwizzlingFor(components: string) {
   for (const count of [2, 3, 4] as const) {
     const vecClassName = `_Vec${count}`;
     for (const swizzle of vectorComponentCombinations(components, count)) {
-      const implementation = `  get ${swizzle}() { return new this.${vecClassName}(${[
-        ...swizzle,
-      ]
-        .map((s) => `this[${componentIndex[s]}]`)
-        .join(', ')}); }`;
+      const implementation =
+        `  get ${swizzle}() { return new this.${vecClassName}(${
+          [
+            ...swizzle,
+          ]
+            .map((s) => `this[${componentIndex[s]}]`)
+            .join(', ')
+        }); }`;
       console.log(implementation);
     }
   }

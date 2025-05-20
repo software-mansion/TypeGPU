@@ -30,7 +30,9 @@ export function parseResolved(
     return parse(resolved);
   } catch (e) {
     throw new Error(
-      `Failed to parse the following: \n${resolved}\n\nCause:${String(e).substring(0, 128)}`,
+      `Failed to parse the following: \n${resolved}\n\nCause:${
+        String(e).substring(0, 128)
+      }`,
     );
   }
 }

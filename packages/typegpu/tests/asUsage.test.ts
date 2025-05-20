@@ -9,9 +9,7 @@ import {
 import { it } from './utils/extendedIt.ts';
 
 describe('asUsage', () => {
-  it('allows creating bufferUsages only for buffers allowing them', ({
-    root,
-  }) => {
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
     asReadonly(root.createBuffer(u32, 2).$usage('storage'));
     asReadonly(root.createBuffer(u32, 2).$usage('storage', 'uniform'));
     asReadonly(root.createBuffer(u32, 2).$usage('storage', 'vertex'));
@@ -19,7 +17,7 @@ describe('asUsage', () => {
     expect(() => asReadonly(root.createBuffer(u32, 2))).toThrow();
     expect(() =>
       // @ts-expect-error
-      asReadonly(root.createBuffer(u32, 2).$usage('uniform')),
+      asReadonly(root.createBuffer(u32, 2).$usage('uniform'))
     ).toThrow();
 
     asUniform(root.createBuffer(u32, 2).$usage('uniform'));
@@ -29,7 +27,7 @@ describe('asUsage', () => {
     expect(() => asUniform(root.createBuffer(u32, 2))).toThrow();
     expect(() =>
       // @ts-expect-error
-      asUniform(root.createBuffer(u32, 2).$usage('storage')),
+      asUniform(root.createBuffer(u32, 2).$usage('storage'))
     ).toThrow();
 
     asMutable(root.createBuffer(u32, 2).$usage('storage'));
@@ -39,15 +37,13 @@ describe('asUsage', () => {
     expect(() => asMutable(root.createBuffer(u32, 2))).toThrow();
     expect(() =>
       // @ts-expect-error
-      asMutable(root.createBuffer(u32, 2).$usage('uniform')),
+      asMutable(root.createBuffer(u32, 2).$usage('uniform'))
     ).toThrow();
   });
 });
 
 describe('buffer.as(usage)', () => {
-  it('allows creating bufferUsages only for buffers allowing them', ({
-    root,
-  }) => {
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
     root.createBuffer(u32, 2).$usage('storage').as('readonly');
     root.createBuffer(u32, 2).$usage('storage', 'uniform').as('readonly');
     root.createBuffer(u32, 2).$usage('storage', 'vertex').as('readonly');
@@ -58,7 +54,7 @@ describe('buffer.as(usage)', () => {
         .createBuffer(u32, 2)
         .$usage('uniform')
         // @ts-expect-error
-        .as('readonly'),
+        .as('readonly')
     ).toThrow();
 
     root.createBuffer(u32, 2).$usage('uniform').as('uniform');
@@ -71,7 +67,7 @@ describe('buffer.as(usage)', () => {
         .createBuffer(u32, 2)
         .$usage('storage')
         // @ts-expect-error
-        .as('uniform'),
+        .as('uniform')
     ).toThrow();
 
     root.createBuffer(u32, 2).$usage('storage').as('mutable');
@@ -84,7 +80,7 @@ describe('buffer.as(usage)', () => {
         .createBuffer(u32, 2)
         .$usage('uniform')
         // @ts-expect-error
-        .as('mutable'),
+        .as('mutable')
     ).toThrow();
   });
 });

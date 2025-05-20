@@ -1,12 +1,20 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import { parse } from '@std/yaml';
+import { parse } from 'yaml';
 import { type } from 'arktype';
-import typegpuColorPackageJson from '../../../../../packages/typegpu-color/package.json';
-import typegpuNoisePackageJson from '../../../../../packages/typegpu-noise/package.json';
-import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
-import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
+import typegpuColorPackageJson from '@typegpu/color/package.json' with {
+  type: 'json',
+};
+import typegpuNoisePackageJson from '@typegpu/noise/package.json' with {
+  type: 'json',
+};
+import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
+import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
+  type: 'json',
+};
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
-import typegpuDocsPackageJson from '../../../package.json';
+import typegpuDocsPackageJson from '../../../package.json' with {
+  type: 'json',
+};
 import type { Example } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
@@ -88,8 +96,12 @@ ${example.htmlFile.content}
       "typegpu": "^${typegpuPackageJson.version}",
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
       "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
-      "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
-      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
+      "@loaders.gl/core": "${
+          typegpuDocsPackageJson.dependencies['@loaders.gl/core']
+        }",
+      "@loaders.gl/obj": "${
+          typegpuDocsPackageJson.dependencies['@loaders.gl/obj']
+        }",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}"
     }

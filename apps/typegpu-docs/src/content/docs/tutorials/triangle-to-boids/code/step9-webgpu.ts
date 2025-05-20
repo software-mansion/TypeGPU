@@ -32,7 +32,12 @@ const parametersBuffer = device.createBuffer({
   mappedAtCreation: true,
 });
 new Float32Array(parametersBuffer.getMappedRange()).set([
-  0.09, 0.005, 0.3, 0.005, 0.3, 0.001,
+  0.09,
+  0.005,
+  0.3,
+  0.005,
+  0.3,
+  0.001,
 ]);
 parametersBuffer.unmap();
 
@@ -50,10 +55,9 @@ const triangleAmount = 500;
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   device.createBuffer({
     size: triangleAmount * 8 * 2,
-    usage:
-      GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  }),
-);
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_DST,
+  }));
 
 const triangleVertexBuffer = device.createBuffer({
   size: triangleVertexData.byteLength,
@@ -263,7 +267,7 @@ const renderBindGroups = [0, 1].map((idx) =>
         },
       },
     ],
-  }),
+  })
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -289,7 +293,7 @@ const computeBindGroups = [0, 1].map((idx) =>
         },
       },
     ],
-  }),
+  })
 );
 
 randomizeTriangles();

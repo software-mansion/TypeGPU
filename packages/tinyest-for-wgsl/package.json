@@ -1,7 +1,7 @@
 {
   "name": "tinyest-for-wgsl",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "license": "MIT",
   "type": "module",
@@ -51,7 +51,7 @@
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "@babel/parser": "^7.26.10",
+    "@babel/parser": "^7.27.0",
     "@babel/types": "7.26.5",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "acorn": "^8.14.1",

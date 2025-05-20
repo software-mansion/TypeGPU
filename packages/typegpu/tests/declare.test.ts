@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
@@ -17,7 +16,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -39,7 +38,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -64,7 +63,7 @@ describe('tgpu.declare', () => {
       })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -95,7 +94,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -124,7 +123,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -152,7 +151,7 @@ describe('tgpu.declare', () => {
       })
       .$name('main');
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 

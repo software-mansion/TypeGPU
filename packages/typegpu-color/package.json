@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/color",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "A set of color helper functions for use in WebGPU/TypeGPU apps.",
   "exports": {
     ".": "./src/index.ts",
@@ -22,7 +22,6 @@
       }
     }
   },
-  "files": ["README.md", "package.json", "dist/**/*"],
   "sideEffects": false,
   "scripts": {
     "build": "unbuild",
@@ -32,7 +31,7 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.5.6"
+    "typegpu": "^0.5.7"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",

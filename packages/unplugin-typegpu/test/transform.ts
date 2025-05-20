@@ -10,7 +10,10 @@ const defaultOptions: Options = {
 };
 
 export const babelTransform = (code: string, options = defaultOptions) =>
-  Babel.transform(code, { plugins: [[babelPlugin, options]] }).code;
+  Babel.transform(code, {
+    plugins: [[babelPlugin, options]],
+    parserOpts: { plugins: ['typescript'] },
+  }).code;
 
 export const rollupTransform = (code: string, options = defaultOptions) =>
   rollup({

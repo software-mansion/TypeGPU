@@ -95,79 +95,81 @@ export function ExampleView({ example }: Props) {
     <>
       {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
 
-      <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
+      <div className='flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full'>
         <div
           className={cs(
             'flex-1 grid gap-4',
             codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
-          {isGPUSupported ? (
-            <div
-              style={{
-                scrollbarGutter: 'stable both-edges',
-              }}
-              className={cs(
-                'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
-                codeEditorShowing
-                  ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
-                  : '',
-              )}
-            >
-              <div ref={exampleHtmlRef} className="contents w-full h-full" />
-            </div>
-          ) : (
-            <GPUUnsupportedPanel />
-          )}
-
-          {codeEditorShowing || codeEditorMobileShowing ? (
-            <div
-              className={cs(
-                codeEditorShowing && !codeEditorMobileShowing
-                  ? 'hidden md:block'
-                  : '',
-                !codeEditorShowing && codeEditorMobileShowing
-                  ? 'md:hidden'
-                  : '',
-                'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
-              )}
-            >
-              <div className="absolute inset-0 flex flex-col justify-between">
-                <div className="h-12 pt-16 md:pt-0">
-                  <div className="flex overflow-x-auto border-gray-300 h-full">
-                    {editorTabsList.map((fileName) => (
-                      <button
-                        key={fileName}
-                        type="button"
-                        onClick={() => setCurrentFilePath(fileName)}
-                        className={cs(
-                          'px-4 rounded-t-lg rounded-b-none text-nowrap',
-                          currentFilePath === fileName
-                            ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                            : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
-                        )}
-                      >
-                        {fileName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <HtmlCodeEditor
-                  shown={currentFilePath === 'index.html'}
-                  file={htmlFile}
-                />
-
-                {tsFiles.map((file) => (
-                  <TsCodeEditor
-                    key={file.path}
-                    shown={file.path === currentFilePath}
-                    file={file}
-                  />
-                ))}
+          {isGPUSupported
+            ? (
+              <div
+                style={{
+                  scrollbarGutter: 'stable both-edges',
+                }}
+                className={cs(
+                  'relative flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
+                  codeEditorShowing
+                    ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
+                    : '',
+                )}
+              >
+                <div ref={exampleHtmlRef} className='contents w-full h-full' />
               </div>
-            </div>
-          ) : null}
+            )
+            : <GPUUnsupportedPanel />}
+
+          {codeEditorShowing || codeEditorMobileShowing
+            ? (
+              <div
+                className={cs(
+                  codeEditorShowing && !codeEditorMobileShowing
+                    ? 'hidden md:block'
+                    : '',
+                  !codeEditorShowing && codeEditorMobileShowing
+                    ? 'md:hidden'
+                    : '',
+                  'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
+                )}
+              >
+                <div className='absolute inset-0 flex flex-col justify-between'>
+                  <div className='h-12 pt-16 md:pt-0'>
+                    <div className='flex overflow-x-auto border-gray-300 h-full'>
+                      {editorTabsList.map((fileName) => (
+                        <button
+                          key={fileName}
+                          type='button'
+                          onClick={() => setCurrentFilePath(fileName)}
+                          className={cs(
+                            'px-4 rounded-t-lg rounded-b-none text-nowrap text-sm',
+                            currentFilePath === fileName
+                              ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                              : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                          )}
+                        >
+                          {fileName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <HtmlCodeEditor
+                    shown={currentFilePath === 'index.html'}
+                    file={htmlFile}
+                  />
+
+                  {tsFiles.map((file) => (
+                    <TsCodeEditor
+                      key={file.path}
+                      shown={file.path === currentFilePath}
+                      file={file}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+            : null}
         </div>
         <ControlPanel />
       </div>
@@ -177,15 +179,15 @@ export function ExampleView({ example }: Props) {
 
 function GPUUnsupportedPanel() {
   return (
-    <div className="grid gap-6 text-xl leading-tight text-center place-content-center">
-      <div className="text-3xl">
+    <div className='grid gap-6 text-xl leading-tight text-center place-content-center'>
+      <div className='text-3xl'>
         WebGPU is not enabled/supported in this browser 😔
       </div>
       <div>Maybe it's hidden under an experimental flag? 🤔</div>
 
       <a
-        href="/TypeGPU/blog/troubleshooting"
-        className="text-transparent underline bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text"
+        href='/TypeGPU/blog/troubleshooting'
+        className='text-transparent underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text'
       >
         Read more about the availability
       </a>
@@ -213,7 +215,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       container.appendChild(frame);
 
       container.className =
-        'flex flex-1 justify-center items-center w-full md:h-full md:w-auto';
+        'flex flex-1 justify-center items-center w-full h-full md:w-auto';
       container.style.containerType = 'size';
 
       frame.className = 'relative';
@@ -224,7 +226,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       } else {
         const aspectRatio = canvas.dataset.aspectRatio ?? '1';
         frame.style.aspectRatio = aspectRatio;
-        frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+        frame.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
       }
 
       for (const prop of canvas.style) {

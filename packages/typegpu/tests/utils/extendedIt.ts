@@ -58,11 +58,12 @@ const mockDevice = {
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
   createBuffer: vi.fn(
-    ({ size, usage, mappedAtCreation }: GPUBufferDescriptor) => {
+    ({ size, usage, mappedAtCreation, label }: GPUBufferDescriptor) => {
       const mockBuffer = {
         mapState: mappedAtCreation ? 'mapped' : 'unmapped',
         size,
         usage,
+        label: label ?? '<unnamed>',
         getMappedRange: vi.fn(() => new ArrayBuffer(size)),
         unmap: vi.fn(() => {
           mockBuffer.mapState = 'unmapped';

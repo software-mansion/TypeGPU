@@ -1,3 +1,5 @@
+import { getName } from './name.ts';
+
 export interface NotAllowed<TMsg> {
   reason: TMsg;
 }
@@ -25,9 +27,11 @@ export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
  * @category Errors
  */
 export class NotStorageError extends Error {
-  constructor(value: { readonly label?: string | undefined }) {
+  constructor(value: object) {
     super(
-      `Resource '${value.label ?? '<unnamed>'}' cannot be bound as 'storage'. Use .$usage('storage') to allow it.`,
+      `Resource '${
+        getName(value) ?? '<unnamed>'
+      }' cannot be bound as 'storage'. Use .$usage('storage') to allow it.`,
     );
 
     // Set the prototype explicitly.

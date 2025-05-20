@@ -50,11 +50,10 @@ describe('TgpuComputePipeline', () => {
       new MissingBindGroupsError([layout]),
     );
 
-    expect(() =>
-      pipeline.dispatchWorkgroups(1),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
-    );
+    expect(() => pipeline.dispatchWorkgroups(1))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      );
   });
 
   it('allows to omit input in entry function shell', () => {

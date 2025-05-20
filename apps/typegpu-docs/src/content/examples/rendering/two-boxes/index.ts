@@ -162,7 +162,7 @@ const [transformBuffer, secondTransformBuffer] = [
     .createBuffer(Transform, {
       model: getCubeTransform(translation, m.mat4.identity(d.mat4x4f())),
     })
-    .$usage('uniform'),
+    .$usage('uniform')
 );
 
 const planeBuffer = root

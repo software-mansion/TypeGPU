@@ -1,6 +1,7 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -34,9 +35,7 @@ export function constant<TDataType extends AnyWgslData>(
 // --------------
 
 class TgpuConstImpl<TDataType extends AnyWgslData>
-  implements TgpuConst<TDataType>, SelfResolvable
-{
-  private _label: string | undefined;
+  implements TgpuConst<TDataType>, SelfResolvable {
   public readonly [$internal]: {
     readonly dataType: TDataType;
   };
@@ -48,17 +47,13 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     this[$internal] = { dataType };
   }
 
-  get label() {
-    return this._label;
-  }
-
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this._label);
+    const id = ctx.names.makeUnique(getName(this));
     const resolvedValue = ctx.resolveValue(this._value, this.dataType);
 
     ctx.addDeclaration(`const ${id} = ${resolvedValue};`);
@@ -67,7 +62,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   }
 
   toString() {
-    return `const:${this.label ?? '<unnamed>'}`;
+    return `const:${getName(this) ?? '<unnamed>'}`;
   }
 
   get value(): Infer<TDataType> {
@@ -78,7 +73,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$internal]: {
           dataType: this.dataType,
         },

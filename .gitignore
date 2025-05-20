@@ -8,8 +8,8 @@ coverage
 
 # development
 .devcontainer
-.vscode
 .attest
+.zed
 
 # production
 dist
@@ -30,3 +30,4 @@ yarn-error.log*
 # misc
 .DS_Store
 .idea
+.husky

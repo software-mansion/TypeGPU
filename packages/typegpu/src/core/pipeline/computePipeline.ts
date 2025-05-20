@@ -1,6 +1,8 @@
 import { MissingBindGroupsError } from '../../errors.ts';
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import { resolve } from '../../resolutionCtx.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -9,13 +11,17 @@ import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
+interface ComputePipelineInternals {
+  readonly rawPipeline: GPUComputePipeline;
+}
+
 // ----------
 // Public API
 // ----------
 
 export interface TgpuComputePipeline extends TgpuNamable {
+  readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
-  readonly label: string | undefined;
 
   with(
     bindGroupLayout: TgpuBindGroupLayout,
@@ -27,10 +33,6 @@ export interface TgpuComputePipeline extends TgpuNamable {
     y?: number | undefined,
     z?: number | undefined,
   ): void;
-}
-
-export interface INTERNAL_TgpuComputePipeline {
-  readonly rawPipeline: GPUComputePipeline;
 }
 
 export function INTERNAL_createComputePipeline(
@@ -47,7 +49,8 @@ export function INTERNAL_createComputePipeline(
 export function isComputePipeline(
   value: unknown,
 ): value is TgpuComputePipeline {
-  return (value as TgpuComputePipeline)?.resourceType === 'compute-pipeline';
+  const maybe = value as TgpuComputePipeline | undefined;
+  return maybe?.resourceType === 'compute-pipeline' && !!maybe[$internal];
 }
 
 // --------------
@@ -64,18 +67,21 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | null;
 };
 
-class TgpuComputePipelineImpl
-  implements TgpuComputePipeline, INTERNAL_TgpuComputePipeline
-{
+class TgpuComputePipelineImpl implements TgpuComputePipeline {
+  public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
+  readonly [$getNameForward]: ComputePipelineCore;
 
   constructor(
     private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
-  ) {}
-
-  get label(): string | undefined {
-    return this._core.label;
+  ) {
+    this[$internal] = {
+      get rawPipeline() {
+        return _core.unwrap().pipeline;
+      },
+    };
+    this[$getNameForward] = _core;
   }
 
   get rawPipeline(): GPUComputePipeline {
@@ -100,10 +106,10 @@ class TgpuComputePipelineImpl
     z?: number | undefined,
   ): void {
     const memo = this._core.unwrap();
-    const { branch, label } = this._core;
+    const { branch } = this._core;
 
     const pass = branch.commandEncoder.beginComputePass({
-      label: label ?? '<unnamed>',
+      label: getName(this._core) ?? '<unnamed>',
     });
 
     pass.setPipeline(memo.pipeline);
@@ -132,14 +138,13 @@ class TgpuComputePipelineImpl
     pass.end();
   }
 
-  $name(label?: string | undefined): this {
-    this._core.label = label;
+  $name(label: string): this {
+    setName(this._core, label);
     return this;
   }
 }
 
 class ComputePipelineCore {
-  public label: string | undefined;
   private _memo: Memo | undefined;
 
   constructor(
@@ -162,7 +167,7 @@ class ComputePipelineCore {
             return '';
           },
 
-          toString: () => `computePipeline:${this.label ?? '<unnamed>'}`,
+          toString: () => `computePipeline:${getName(this) ?? '<unnamed>'}`,
         },
         {
           names: this.branch.nameRegistry,
@@ -172,22 +177,22 @@ class ComputePipelineCore {
 
       if (catchall !== null) {
         bindGroupLayouts[catchall[0]]?.$name(
-          `${this.label ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
 
       this._memo = {
         pipeline: device.createComputePipeline({
-          label: this.label ?? '<unnamed>',
+          label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
-            label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
+            label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: bindGroupLayouts.map((l) =>
-              this.branch.unwrap(l),
+              this.branch.unwrap(l)
             ),
           }),
           compute: {
             module: device.createShaderModule({
-              label: `${this.label ?? '<unnamed>'} - Shader`,
+              label: `${getName(this) ?? '<unnamed>'} - Shader`,
               code,
             }),
           },
