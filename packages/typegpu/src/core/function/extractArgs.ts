@@ -1,6 +1,6 @@
 interface FunctionArgsInfo {
   args: ArgInfo[];
-  ret: ReturnInfo;
+  ret: ReturnInfo | undefined;
   range: {
     begin: number;
     end: number;
@@ -13,10 +13,10 @@ interface ArgInfo {
   type: string | undefined;
 }
 
-type ReturnInfo = {
+interface ReturnInfo {
   attributes: string[];
   type: string;
-} | undefined;
+}
 
 /**
  * Extracts info about arguments of a given WGSL function string.
@@ -75,7 +75,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
   }
   code.advanceBy(1); // ')'
 
-  let maybeRet: ReturnInfo;
+  let maybeRet: ReturnInfo | undefined;
   if (code.isAt('->')) {
     code.advanceBy(2); // '->'
 
