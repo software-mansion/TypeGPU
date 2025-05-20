@@ -107,7 +107,7 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "@babel/standalone": "^7.27.0",
+    "@babel/standalone": "^7.27.2",
     "estree-walker": "^3.0.3",
     "magic-string-ast": "^0.9.1",
     "picomatch": "^4.0.2",
