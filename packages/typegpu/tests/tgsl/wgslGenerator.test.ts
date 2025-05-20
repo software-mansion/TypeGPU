@@ -161,10 +161,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.u32,
-      )(() => {
+      .fn([], d.u32)(() => {
         return testUsage.value.a + testUsage.value.b.x;
       })
       .$name('testFn');
@@ -229,10 +226,7 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('uniform');
 
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       return testUsage.value[3] as number;
     });
 
@@ -289,10 +283,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn(
-        [d.u32],
-        d.vec4f,
-      )((idx) => {
+      .fn([d.u32], d.vec4f)((idx) => {
         // biome-ignore lint/style/noNonNullAssertion: <no thanks>
         const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
         const vec = std.mix(d.vec4f(), testUsage.value.a, value);
@@ -437,10 +428,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for derived values and slots', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec4u,
-      )(() => {
+      .fn([], d.vec4u)(() => {
         return derivedV4u.value;
       })
       .$name('testFn');
@@ -482,10 +470,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for indexing into a derived value', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [d.u32],
-        d.f32,
-      )((idx) => {
+      .fn([d.u32], d.f32)((idx) => {
         return derivedV2f.value[idx] as number;
       })
       .$name('testFn');
@@ -519,10 +504,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions', () => {
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       const arr = [d.u32(1), 2, 3];
       return arr[1] as number;
     });
@@ -567,10 +549,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for complex array expressions', () => {
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       const arr = [
         d.vec2u(1, 2),
         d.vec2u(3, 4),
@@ -596,10 +575,7 @@ describe('wgslGenerator', () => {
       })
       .$name('TestStruct');
 
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.f32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.f32)(() => {
       const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
       return (arr[1] as { x: number; y: number }).y;
     });
@@ -647,10 +623,7 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for array expressions with derived elements', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const arr = [
           derivedV2f.value,
           std.mul(derivedV2f.value, d.vec2f(2, 2)),
@@ -753,10 +726,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
     const testSlot = tgpu['~unstable'].slot(testUsage);
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const value = testSlot.value.value;
         return value.x + value.y + value.z;
       })

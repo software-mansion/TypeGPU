@@ -12,10 +12,7 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -23,10 +20,7 @@ describe('tgpu.accessor', () => {
       .with(
         colorAccessor,
         tgpu['~unstable']
-          .fn(
-            [],
-            d.vec3f,
-          )(`() -> vec3f { return ${RED_RESOLVED}; }`)
+          .fn([], d.vec3f)(`() -> vec3f { return ${RED_RESOLVED}; }`)
           .$name('red'),
       );
 
@@ -47,10 +41,7 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -82,10 +73,7 @@ describe('tgpu.accessor', () => {
       .$name('multiplier');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color * multiplier;
       }`)
       .$name('getColor')
@@ -108,10 +96,7 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -132,10 +117,7 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -168,10 +150,7 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return color;
       })`)
       .$name('getColor')
@@ -200,10 +179,7 @@ describe('tgpu.accessor', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(
       d.vec3f,
       tgpu['~unstable']
-        .fn(
-          [],
-          d.vec3f,
-        )(() => RED)
+        .fn([], d.vec3f)(() => RED)
         .$name('getColor'),
     );
 
