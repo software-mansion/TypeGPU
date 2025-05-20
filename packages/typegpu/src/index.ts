@@ -51,7 +51,7 @@ export const tgpu = {
 export default tgpu;
 
 // Hidden API, used only by tooling.
-// TODO: remove this api (it is no longer used, but is kept for compatibility)
+// TODO: remove this api eventually (it is no longer used, but it is kept for compatibility with older unplugin versions)
 Object.assign(tgpu, {
   __assignAst: assignAst,
   __removedJsImpl: removedJsImpl,

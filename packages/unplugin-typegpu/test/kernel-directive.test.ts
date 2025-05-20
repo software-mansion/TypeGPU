@@ -18,10 +18,8 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel';
-
-        return a + b;
+      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
@@ -51,10 +49,8 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel';
-
-        return a + b;
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
@@ -84,10 +80,8 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
-        'kernel';
-
-        return a + b;
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
@@ -117,10 +111,8 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const shell = tgpu['~unstable'].fn([]);
-      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel';
-
-        return a + b;
+      shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
@@ -147,10 +139,8 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel';
-
-        return a + b;
+      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},

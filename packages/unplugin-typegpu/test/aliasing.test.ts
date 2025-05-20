@@ -15,7 +15,7 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
       const increment = hello['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        const x = 2 + 2;
+        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
@@ -56,7 +56,7 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
       const increment = t['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        const x = 2 + 2;
+        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
@@ -77,7 +77,7 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
       const increment = t.tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        const x = 2 + 2;
+        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},

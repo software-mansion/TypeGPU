@@ -59,6 +59,23 @@ function functionToTranspiled(
     externals: {${externalNames.join(', ')}},
   }`;
 
+  const jsImpl = directive === 'kernel & js'
+    ? node
+    : types.arrowFunctionExpression(
+      [],
+      types.blockStatement(
+        [types.throwStatement(
+          types.newExpression(i('Error'), [
+            types.stringLiteral(
+              `The function "${
+                name ?? '<unnamed>'
+              }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
+            ),
+          ]),
+        )],
+      ),
+    );
+
   const newNode = types.callExpression(
     types.arrowFunctionExpression(
       [i('$')],
@@ -77,7 +94,7 @@ function functionToTranspiled(
             types.assignmentExpression(
               '=',
               types.memberExpression(i('$'), i('f')),
-              node,
+              jsImpl,
             ),
             template.expression`${metadata}`(),
           ],
