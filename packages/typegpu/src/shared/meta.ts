@@ -23,16 +23,11 @@ export function getName(definition: unknown): string | undefined {
   if (isForwarded(definition)) {
     return getName(definition[$getNameForward]);
   }
-  return (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__?.get(
-    // biome-ignore lint/suspicious/noExplicitAny: it's fine, if it's not an object, the get will return undefined
-    definition as any,
-  )?.name;
+  return getMetaData(definition)?.name;
 }
 
 export function setName(definition: object, name: string): void {
-  (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__ ??= new WeakMap();
-  const map = (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__;
-  map.set(definition, { ...map.get(definition), name });
+  setMetaData(definition, { name });
 }
 
 /**
@@ -50,9 +45,16 @@ export function isNamable(value: unknown): value is TgpuNamable {
 }
 
 export function getMetaData(
-  definition: object,
+  definition: unknown,
 ): MetaData | undefined {
   return (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__.get(
-    definition,
+    // biome-ignore lint/suspicious/noExplicitAny: it's fine, if it's not an object, the get will return undefined
+    definition as any,
   );
+}
+
+export function setMetaData(definition: object, metaData: object) {
+  (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__ ??= new WeakMap();
+  const map = (globalThis as unknown as GlobalWithMeta).__TYPEGPU_META__;
+  map.set(definition, { ...map.get(definition), ...metaData });
 }
