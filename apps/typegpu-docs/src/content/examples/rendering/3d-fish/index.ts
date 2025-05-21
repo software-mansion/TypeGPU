@@ -85,7 +85,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
     .$name(`fish data buffer ${idx}`));
 
 function defaultPreset() {
-  speedMultiplier = 3
+  speedMultiplier = 3;
   if (currentPreset !== 'init') {
     currentPreset = 'init';
     spinner.style.display = 'block';
