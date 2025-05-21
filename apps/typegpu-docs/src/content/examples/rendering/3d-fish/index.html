@@ -1,16 +1,4 @@
 <style>
-  @property --p {
-    syntax: '<number>';
-    initial-value: 0;
-    inherits: true;
-  }
-
-  @property --q {
-    syntax: '<number>';
-    initial-value: 0;
-    inherits: true;
-  }
-
   .controls-header {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
@@ -40,64 +28,7 @@
     transition: opacity 0.5s;
   }
 
-  .spinner {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    z-index: 2;
-    display: grid;
-    place-self: center;
-    transform: translate(-50%, -50%) rotate(calc(var(--p) * 1turn));
-    background: conic-gradient(
-      transparent calc(var(--p) * 100%),
-      var(--color-gradient-purple) calc(var(--p) * 100%),
-      var(--color-gradient-blue) calc(var(--q) * 100%),
-      transparent calc(var(--q) * 100%)
-    );
-    --mask-spinner: radial-gradient(
-      closest-side,
-      transparent calc(100% - 0.5rem),
-      #000 calc(100% - 0.5rem + 1px)
-    );
-    -webkit-mask: var(--mask-spinner);
-    mask: var(--mask-spinner);
-    animation:
-      p_anim 2s infinite cubic-bezier(0.32, 0, 0.68, 0),
-      q_anim 2s infinite cubic-bezier(0.32, 1, 0.68, 1);
-  }
-
-  .spinner::before,
-  .spinner::after {
-    border-radius: 50%;
-    place-self: center;
-    transform: rotate(calc(var(--a, var(--p)) * 1turn)) translateY(-1rem);
-  }
-
-  .spinner::before {
-    background: var(--color-gradient-purple);
-  }
-
-  .spinner::after {
-    background: var(--color-gradient-blue);
-    --a: var(--q);
-  }
-
-  @keyframes p_anim {
-    to {
-      --p: 1;
-    }
-  }
-
-  @keyframes q_anim {
-    to {
-      --q: 1;
-    }
-  }
-
-  #spinner-background {
+  .spinner-background {
     position: absolute;
     top: 0;
     left: 0;
@@ -107,7 +38,8 @@
     z-index: 1;
   }
 </style>
-<div id="spinner-background"></div>
+
+<div id="spinner-background" class="spinner-background"></div>
 <div id="spinner" class="spinner"></div>
 <div id="help">
   <h3 class="controls-header">Controls (click to dismiss)</h3>
