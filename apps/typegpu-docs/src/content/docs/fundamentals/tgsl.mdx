@@ -7,7 +7,7 @@ description: Guide on using JavaScript for WebGPU function definitions.
 This feature is under heavy development and is yet to reach stability.
 :::
 
-**TGSL (TypeGPU Shading Language)** is a subset of JavaScript that can be used for defining functions run on the GPU via TypeGPU.
+**TGSL (TypeGPU Shading Language)** is a subset of JavaScript used to define functions that run on the GPU via TypeGPU.
 It works by transpiling JavaScript into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest), 
 which is then used to generate equivalent WGSL.
 
@@ -27,44 +27,34 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
+const MAX_OBSTACLES = 4;
 const obstaclesReadonly = root
   .createBuffer(d.arrayOf(d.struct({
-    center: d.vec2u,
-    size: d.vec2u,
+    center: d.vec2i,
+    size: d.vec2i,
     enabled: d.u32,
-  }), 4))
+  }), MAX_OBSTACLES))
   .$usage('storage')
   .as('readonly');
 
-const isInsideObstacle = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
-  d.bool,
-)((x, y) => {
-  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-    const obs = obstaclesReadonly.value[obsIdx];
-
-    if (obs.enabled === 0) {
-      continue;
+const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
+  (x, y) => {
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+      const obs = obstaclesReadonly.value[obsIdx];
+      if (obs.enabled === 0) {
+        continue;
+      }
+      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        return true;
+      }
     }
-
-    const minX = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-    const maxX = std.min(
-      d.i32(gridSize),
-      d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
-    );
-    const minY = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-    const maxY = std.min(
-      d.i32(gridSize),
-      d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
-    );
-
-    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-      return true;
-    }
-  }
-
-  return false;
-});
+    return false;
+  },
+);
 ```
 
 ```ts
