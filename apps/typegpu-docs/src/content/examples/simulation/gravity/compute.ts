@@ -11,22 +11,19 @@ import {
 const { none, bounce, merge } = collisionBehaviors;
 
 // tiebreaker function for merges and bounces
-const isSmaller = tgpu['~unstable']
-  .fn(
-    { currentId: d.u32, otherId: d.u32 },
-    d.bool,
-  )((args) => {
-    const current = collisionsLayout.$.inState[args.currentId];
-    const other = collisionsLayout.$.inState[args.otherId];
+const isSmaller = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (currentId, otherId) => {
+    const current = collisionsLayout.$.inState[currentId];
+    const other = collisionsLayout.$.inState[otherId];
     if (current.mass < other.mass) {
       return true;
     }
     if (current.mass === other.mass) {
-      return args.currentId < args.otherId;
+      return currentId < otherId;
     }
     return false;
-  })
-  .$name('isSmaller');
+  },
+).$name('isSmaller');
 
 export const computeCollisionsShader = tgpu['~unstable']
   .computeFn({
@@ -60,7 +57,7 @@ export const computeCollisionsShader = tgpu['~unstable']
         ) {
           // bounce occurs
           // push the smaller object outside
-          if (isSmaller({ currentId, otherId })) {
+          if (isSmaller(currentId, otherId)) {
             updatedCurrent.position = std.add(
               other.position,
               std.mul(
@@ -89,7 +86,7 @@ export const computeCollisionsShader = tgpu['~unstable']
           // merge occurs
           const isCurrentAbsorbed = current.collisionBehavior === bounce ||
             (current.collisionBehavior === merge &&
-              isSmaller({ currentId, otherId }));
+              isSmaller(currentId, otherId));
           if (isCurrentAbsorbed) {
             // absorbed by the other
             updatedCurrent.destroyed = 1;
