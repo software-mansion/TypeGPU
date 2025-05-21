@@ -239,7 +239,7 @@ const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
       }
 
       const diff = std.sub(nextObs.center.xy, obs.center.xy);
-      
+
       const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
       const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
       const minY = std.max(0, obs.center.y - d.i32(obs.size.y) / 2);
