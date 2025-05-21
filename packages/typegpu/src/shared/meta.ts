@@ -4,6 +4,7 @@ import { $getNameForward } from './symbols.ts';
 export interface MetaData {
   name?: string;
   ast?: {
+    v: number;
     argNames: ArgNames;
     body: Block;
     externalNames: string[];

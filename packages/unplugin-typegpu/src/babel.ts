@@ -3,6 +3,7 @@ import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { FORMAT_VERSION } from 'tinyest';
 import {
   type Context,
   embedJSON,
@@ -56,6 +57,7 @@ function functionToTranspiled(
   const { argNames, body, externalNames } = transpileFn(node);
 
   const metadata = `{
+    v: ${FORMAT_VERSION},
     ast: ${embedJSON({ argNames, body, externalNames })},
     externals: {${externalNames.join(', ')}},
   }`;

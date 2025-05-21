@@ -23,6 +23,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({});
@@ -56,6 +57,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
@@ -82,6 +84,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));"
@@ -112,6 +115,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
@@ -145,6 +149,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
@@ -175,6 +180,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({});
@@ -198,6 +204,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
         return a + b;
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({});
@@ -249,6 +256,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({});
@@ -291,6 +299,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
@@ -321,6 +330,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
@@ -354,6 +364,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
@@ -392,6 +403,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
@@ -430,6 +442,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({});
@@ -477,6 +490,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               'kernel & js';
               return a + b;
             }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({});

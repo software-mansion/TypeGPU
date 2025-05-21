@@ -19,6 +19,7 @@ describe('[BABEL] parser options', () => {
       const increment = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
+          v: 1,
           ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));"
@@ -65,6 +66,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
+                    v: 1,
                     ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));

@@ -3,6 +3,7 @@ import defu from 'defu';
 import { type Node, walk } from 'estree-walker';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { FORMAT_VERSION } from 'tinyest';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
@@ -160,6 +161,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             }
 
             const metadata = `{
+              v: ${FORMAT_VERSION},
               ast: ${embedJSON({ argNames, body, externalNames })},
               externals: {${externalNames.join(', ')}},
             }`;
