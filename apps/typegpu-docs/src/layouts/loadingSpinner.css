@@ -17,7 +17,7 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  z-index: 2;
+  z-index: 5;
   display: grid;
   place-self: center;
   transform: translate(-50%, -50%) rotate(calc(var(--p) * 1turn));

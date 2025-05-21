@@ -20,6 +20,7 @@ import {
 } from './schemas.ts';
 
 // setup
+let speedMultiplier = 1;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -84,6 +85,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
     .$name(`fish data buffer ${idx}`));
 
 function defaultPreset() {
+  speedMultiplier = 3
   if (currentPreset !== 'init') {
     currentPreset = 'init';
     spinner.style.display = 'block';
@@ -98,6 +100,7 @@ function defaultPreset() {
       spinnerBackground.style.display = 'none';
     }
   }, 1000);
+  speedMultiplier = 1;
 }
 
 const randomizeFishPositions = () => {
@@ -263,7 +266,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   odd = !odd;
 
   currentTimeBuffer.write(timestamp);
-  timePassedBuffer.write(timestamp - lastTimestamp);
+  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
   fishBehaviorBuffer.write(presets[currentPreset]);
