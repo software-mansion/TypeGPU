@@ -28,8 +28,8 @@ const GridData = d.arrayOf(d.vec4f, MAX_GRID_SIZE ** 2);
 
 type BoxObstacle = typeof BoxObstacle;
 const BoxObstacle = d.struct({
-  center: d.vec2u,
-  size: d.vec2u,
+  center: d.vec2i,
+  size: d.vec2i,
   enabled: d.u32,
 });
 
@@ -132,16 +132,10 @@ const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
         continue;
       }
 
-      const minX = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-      const maxX = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
-      );
-      const minY = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-      const maxY = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
-      );
+      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
       if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
         return true;
@@ -222,7 +216,7 @@ const mainInitWorld = tgpu['~unstable'].computeFn({
   let value = d.vec4f();
 
   if (!isValidFlowOut(x, y)) {
-    value = d.vec4f(0, 0, 0, 0);
+    value = d.vec4f();
   } else {
     // Ocean
     if (y < d.i32(gridSizeUniform.value) / 2) {
@@ -244,37 +238,25 @@ const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
         continue;
       }
 
-      const diff = std.sub(
-        d.vec2i(d.i32(nextObs.center.x), d.i32(nextObs.center.y)),
-        d.vec2i(d.i32(obs.center.x), d.i32(obs.center.y)),
-      );
+      const diff = std.sub(nextObs.center.xy, obs.center.xy);
 
-      const minX = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-      const maxX = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
-      );
-      const minY = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-      const maxY = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
-      );
+      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+      const minY = std.max(0, obs.center.y - d.i32(obs.size.y) / 2);
+      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
-      const nextMinX = std.max(
-        0,
-        d.i32(nextObs.center.x) - d.i32(obs.size.x) / 2,
-      );
+      const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));
       const nextMaxX = std.min(
-        d.i32(gridSize),
-        d.i32(nextObs.center.x) + d.i32(obs.size.x) / 2,
+        gridSize,
+        nextObs.center.x + d.i32(obs.size.x / 2),
       );
       const nextMinY = std.max(
         0,
-        d.i32(nextObs.center.y) - d.i32(obs.size.y) / 2,
+        nextObs.center.y - d.i32(obs.size.y / 2),
       );
       const nextMaxY = std.min(
-        d.i32(gridSize),
-        d.i32(nextObs.center.y) + d.i32(obs.size.y) / 2,
+        gridSize,
+        nextObs.center.y + d.i32(obs.size.y / 2),
       );
 
       // does it move right
@@ -378,10 +360,7 @@ const getMinimumInFlow = tgpu['~unstable'].fn([d.i32, d.i32], d.f32)((x, y) => {
     sourceParamsUniform.value.center.y * gridSizeF,
   );
 
-  if (
-    std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
-      sourceRadius
-  ) {
+  if (std.distance(d.vec2f(d.f32(x), d.f32(y)), sourcePos) < sourceRadius) {
     return sourceParamsUniform.value.intensity;
   }
 
@@ -435,8 +414,8 @@ const obstacles: {
 
 function obstaclesToConcrete(): d.Infer<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
-    center: d.vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
-    size: d.vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
+    center: d.vec2i(Math.round(x * gridSize), Math.round(y * gridSize)),
+    size: d.vec2i(Math.round(width * gridSize), Math.round(height * gridSize)),
     enabled: enabled ? 1 : 0,
   }));
 }
