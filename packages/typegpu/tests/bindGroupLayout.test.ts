@@ -21,7 +21,7 @@ import tgpu, {
   type TgpuSampledTexture,
   type TgpuWriteonlyTexture,
 } from '../src/index.ts';
-import { getName } from '../src/name.ts';
+import { getName } from '../src/shared/meta.ts';
 import {
   MissingBindingError,
   type TgpuBindGroup,

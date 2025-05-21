@@ -1,5 +1,5 @@
 import type { BaseData } from '../data/wgslTypes.ts';
-import { getName } from '../name.ts';
+import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import {

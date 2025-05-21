@@ -3,7 +3,7 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
-import { getName } from './name.ts';
+import { getName } from './shared/meta.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
