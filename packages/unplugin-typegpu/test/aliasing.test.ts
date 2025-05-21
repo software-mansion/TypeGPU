@@ -23,26 +23,6 @@ describe('[BABEL] tgpu alias gathering', () => {
     `);
   });
 
-  // TODO: make it work
-  // it('works when assigning tgpu to a constant', () => {
-  //   const code = `\
-  //     import tgpu from 'typegpu';
-  //     const x = tgpu;
-
-  //     const increment = x['~unstable']
-  //       .fn([])
-  //       (() => {
-  //         const x = 2+2;
-  //       });
-  //   `;
-
-  //   expect(babelTransform(code)).toMatchInlineSnapshot(`
-  //     "import tgpu from 'typegpu';
-  //     const x = tgpu;
-  //     const increment = x['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
-  //   `);
-  // });
-
   it('works with aliased tgpu import', () => {
     const code = `\
       import { tgpu as t } from 'typegpu';
@@ -112,30 +92,6 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "
     `);
   });
-
-  // TODO: make it work
-  // it('works when assigning tgpu to a constant', async () => {
-  //   const code = `\
-  //     import tgpu from 'typegpu';
-  //     const x = tgpu;
-
-  //     const increment = x['~unstable']
-  //       .fn([])(() => {
-  //         const x = 2+2;
-  //       });
-  //   `;
-
-  //   expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-  //     "import tgpu from 'typegpu';
-
-  //     const x = tgpu;
-
-  //           x['~unstable']
-  //             .fn([])
-  //             (tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
-  //     "
-  //   `);
-  // });
 
   it('works with aliased tgpu import', async () => {
     const code = `\

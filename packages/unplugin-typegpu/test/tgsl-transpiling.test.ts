@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
-  it('wraps argument passed to function shell with tgpu.__assignAst call', () => {
+  it('wraps argument passed to function shell with globalThis set call', () => {
     const code = `\
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
@@ -148,7 +148,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 });
 
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
-  it('wraps argument passed to function shell with tgpu.__assignAst call', async () => {
+  it('wraps argument passed to function shell with globalThis set call', async () => {
     const code = `\
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';

@@ -4,7 +4,7 @@ import { babelTransform, rollupTransform } from './transform.ts';
 // TODO: remove along with the deprecated 'does' method.
 
 describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
-  it('wraps argument passed to does with tgpu.__assignAst call', () => {
+  it('wraps argument passed to does with globalThis set call', () => {
     const code = `\
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
@@ -90,7 +90,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 });
 
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
-  it('wraps argument passed to does with tgpu.__assignAst call', async () => {
+  it('wraps argument passed to does with globalThis set call', async () => {
     const code = `\
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';

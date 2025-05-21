@@ -46,7 +46,7 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  directive: 'kernel' | 'kernel & js' | undefined,
+  directive: KernelDirective | undefined,
   name?: string | undefined,
 ): babel.CallExpression | null {
   if (!directive) {
