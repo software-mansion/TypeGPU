@@ -7,6 +7,7 @@ import {
   type Context,
   embedJSON,
   gatherTgpuAliases,
+  getErrorMessage,
   isShellImplementationCall,
   type KernelDirective,
   kernelDirectives,
@@ -39,6 +40,11 @@ function getKernelDirective(
   }
 }
 
+// AAA import jest zbędny
+// AAA  "import (tgpu from) 'typegpu'; ...?
+// AAA babel zwraca, rollup nie
+// AAA babael nie daje warna
+
 function i(identifier: string): babel.Identifier {
   return types.identifier(identifier);
 }
@@ -66,11 +72,7 @@ function functionToTranspiled(
       types.blockStatement(
         [types.throwStatement(
           types.newExpression(i('Error'), [
-            types.stringLiteral(
-              `The function "${
-                name ?? '<unnamed>'
-              }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
-            ),
+            types.stringLiteral(getErrorMessage(name)),
           ]),
         )],
       ),
@@ -102,9 +104,7 @@ function functionToTranspiled(
         types.memberExpression(i('$'), i('f')),
       ),
     ),
-    [
-      types.objectExpression([]),
-    ],
+    [types.objectExpression([])],
   );
   return newNode;
 }

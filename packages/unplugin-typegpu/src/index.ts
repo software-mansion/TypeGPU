@@ -10,6 +10,7 @@ import {
   defaultOptions,
   embedJSON,
   gatherTgpuAliases,
+  getErrorMessage,
   isShellImplementationCall,
   type KernelDirective,
   kernelDirectives,
@@ -178,9 +179,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               magicString.overwriteNode(
                 def,
                 `() => {
-                  throw new Error(\`The function "${
-                  name ?? '<unnamed>'
-                }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                  throw new Error(\`${getErrorMessage(name)}\`);
                 }`,
               );
             }
