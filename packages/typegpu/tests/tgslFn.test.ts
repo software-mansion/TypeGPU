@@ -704,4 +704,54 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(actualCall).toEqual(expectedCall);
   });
+
+  it('allows destructuring the input struct argument', () => {
+    const Input = d.struct({
+      value: d.i32,
+    }).$name('Input');
+
+    const fun = tgpu['~unstable']
+      .fn([Input])(({ value }) => {
+        const vector = d.vec2u(value);
+      });
+
+    const actual = parseResolved({ fun });
+
+    const expected = parse(`
+      struct Input {
+        value: i32,
+      }
+
+      fn fun(in: Input) {
+        var vector = vec2u(u32(in.value));
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('correctly coerces type of input arguments', () => {
+    const Input = d.struct({
+      value: d.i32,
+    }).$name('Input');
+
+    const fun = tgpu['~unstable']
+      .fn([Input])((input) => {
+        const vector = d.vec2u(input.value);
+      });
+
+    const actual = parseResolved({ fun });
+
+    const expected = parse(`
+      struct Input {
+        value: i32,
+      }
+
+      fn fun(input: Input) {
+        var vector = vec2u(u32(input.value));
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
 });

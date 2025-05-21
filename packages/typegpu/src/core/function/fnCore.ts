@@ -128,18 +128,6 @@ export function createFnCore(
           );
         }
 
-        if (
-          !Array.isArray(shell.argTypes) &&
-          ast.argNames.type === 'identifiers' &&
-          ast.argNames.names[0] !== undefined
-        ) {
-          applyExternals(externalMap, {
-            [ast.argNames.names[0]]: Object.fromEntries(
-              Object.keys(shell.argTypes).map((arg) => [arg, arg]),
-            ),
-          });
-        }
-
         // Verifying all required externals are present.
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
@@ -149,33 +137,26 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        const maybeEntryStructArg =
-          shell.isEntry && Array.isArray(shell.argTypes) &&
-            isWgslStruct(shell.argTypes[0])
-            ? shell.argTypes[0]
-            : undefined;
+        const maybeStructArg = isWgslStruct(shell.argTypes[0])
+          ? shell.argTypes[0]
+          : undefined;
 
-        const args: Snippet[] = Array.isArray(shell.argTypes)
-          ? ast.argNames.type === 'identifiers'
-            ? shell.argTypes.map((arg, i) => ({
-              value: (ast.argNames.type === 'identifiers'
-                ? ast.argNames.names[i]
-                : undefined) ?? `arg_${i}`,
-              dataType: arg as AnyWgslData,
-            }))
-            : [
-              {
-                value: 'in',
-                dataType: maybeEntryStructArg as AnyWgslData,
-              },
-            ]
-          : Object.entries(shell.argTypes).map(([name, dataType]) => ({
-            value: name,
-            dataType: dataType as AnyWgslData,
-          }));
+        const args: Snippet[] = ast.argNames.type === 'identifiers'
+          ? shell.argTypes.map((arg, i) => ({
+            value: (ast.argNames.type === 'identifiers'
+              ? ast.argNames.names[i]
+              : undefined) ?? `arg_${i}`,
+            dataType: arg as AnyWgslData,
+          }))
+          : [
+            {
+              value: 'in',
+              dataType: maybeStructArg as AnyWgslData,
+            },
+          ];
 
         if (
-          ast.argNames.type === 'destructured-object' && maybeEntryStructArg
+          ast.argNames.type === 'destructured-object' && maybeStructArg
         ) {
           applyExternals(
             externalMap,
@@ -186,7 +167,7 @@ export function createFnCore(
                 alias,
                 {
                   value: `in.${prop}`,
-                  dataType: maybeEntryStructArg.propTypes[prop],
+                  dataType: maybeStructArg.propTypes[prop],
                 },
               ]),
             ),
