@@ -1,0 +1,149 @@
+---
+title: TGSL
+description: Guide on using JavaScript for WebGPU function definitions.
+---
+
+:::caution[Experimental]
+This feature is under heavy development and is yet to reach stability.
+:::
+
+**TGSL (TypeGPU Shading Language)** is a subset of JavaScript used to define functions that run on the GPU via TypeGPU.
+It works by transpiling JavaScript into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest), 
+which is then used to generate equivalent WGSL.
+
+You can check the current state of supported JavaScript syntax in the [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts).
+
+For the TGSL functions to work, you need to use either the dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu), 
+or the Just-In-Time transpiler -- *tgpu-jit* (WIP).
+
+## Usage
+
+Instead of using a WGSL code string, you can pass TGSL to the tgpu function shell as an argument instead.
+Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier, [etc.](https://github.com/software-mansion/TypeGPU/blob/release/packages/typegpu/src/std/index.ts)*) are accessible through the `typegpu/std` endpoint. 
+The package also includes functions for vector and matrix operators (*add, eq, lt...*).
+
+```ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+const MAX_OBSTACLES = 4;
+const obstaclesReadonly = root
+  .createBuffer(d.arrayOf(d.struct({
+    center: d.vec2i,
+    size: d.vec2i,
+    enabled: d.u32,
+  }), MAX_OBSTACLES))
+  .$usage('storage')
+  .as('readonly');
+
+const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
+  (x, y) => {
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+      const obs = obstaclesReadonly.value[obsIdx];
+      if (obs.enabled === 0) {
+        continue;
+      }
+      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        return true;
+      }
+    }
+    return false;
+  },
+);
+```
+
+```ts
+import {
+  oklabGamutClip,
+  oklabGamutClipAlphaAccess,
+  oklabGamutClipSlot,
+  oklabToLinearRgb,
+  oklabToRgb,
+} from '@typegpu/color';
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { any, cos, floor, gt, lt, mul, select, sin } from 'typegpu/std';
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const hue = layout.$.uniforms.hue;
+  const pos = scaleView(input.uv);
+  const lab = d.vec3f(
+    pos.y,
+    mul(pos.x, d.vec2f(cos(hue), sin(hue))),
+  );
+  const rgb = oklabToLinearRgb(lab);
+  const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
+
+  const clipLab = oklabGamutClipSlot.value(lab);
+  const color = oklabToRgb(lab);
+
+  const patternScaled = patternSlot.value(input.uv, clipLab) * 0.1 + 0.9;
+
+  return d.vec4f(select(color, mul(patternScaled, color), outOfGamut), 1);
+});
+```
+
+TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures.
+However, the plugin removes the JS implementation from the bundle by default to save space.
+So for the TGSL functions to be callable on the CPU, they should be marked with the *"kernel & js"* directive.
+
+## What to keep in mind
+
+* **TGSL limitations** --
+For a function to be valid TGSL, it must consist only of supported JS syntax (again, see [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts)), possibly including references to bound buffers, constant variables defined outside of the function, other TGSL functions etc.
+This means that, for example, `console.log()` calls will not work on the GPU.
+
+* **Differences between JS on the CPU and GPU** --
+TGSL is developed to work on the GPU the same as on the CPU as much as possible, 
+however because of the fundamental differences between the JavaScript and WGSL languages, it is not guaranteed to always be the case.
+Currently the biggest known difference is that vectors (and matrices) are treated as reference types in JavaScript and value types in WGSL.
+That is two vectors in JavaScript are never equal to each other, even when they store the same values. 
+Also when passing them to functions, they are able to be modified there, unless the user specifically clones the passed argument
+(in WGSL vectors are copied by default). When using TGSL on the GPU, the behavior is that of WGSL, not JS, as one would expect.
+Therefore some WGSL knowledge is still required, even when opting out for TGSL.
+
+* **.value** --
+Objects that have different types on the CPU and on the GPU (like buffers, layouts, slots etc.) need to be accessed via the `value` property in TGSL functions (or the `$` property alias).
+This is different from how they appear in WGSL-implemented ones.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const backgroundColorUniform = root['~unstable'].createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
+
+const fragmentTgsl = tgpu['~unstable'].fragmentFn({
+  out: d.location(0, d.vec4f),
+})(() => backgroundColorUniform.value);
+//                              ^?
+
+const fragmentWgsl = tgpu['~unstable'].fragmentFn({
+  out: d.location(0, d.vec4f),
+})`{ 
+  return backgroundColorUniform; 
+}`.$uses({ backgroundColorUniform });
+```
+
+* **Operators** --
+JavaScript does not support operator overloading. 
+This means that, while you can still use operators for numbers, 
+you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices.
+
+* **When to use TGSL instead of WGSL** --
+Writing the code using TGSL has a few significant advantages. 
+It allows defining utils only once and using them both as a kernel and host functions,
+as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer UX.
+However, it sometimes might be better to choose WGSL for certain functions. 
+Since JavaScript doesn't support operator overloading, functions including complex matrix operations can be more readable in WGSL.
+Also writing WGSL become a necessity whenever TGSL does not support some feature or standard library function quite yet.
+Luckily, you don't have to choose on or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.
