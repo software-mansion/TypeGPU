@@ -40,11 +40,6 @@ function getKernelDirective(
   }
 }
 
-// AAA import jest zbędny
-// AAA  "import (tgpu from) 'typegpu'; ...?
-// AAA babel zwraca, rollup nie
-// AAA babael nie daje warna
-
 function i(identifier: string): babel.Identifier {
   return types.identifier(identifier);
 }
