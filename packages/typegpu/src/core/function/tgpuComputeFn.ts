@@ -1,4 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -18,7 +19,7 @@ type TgpuComputeFnShellHeader<
   ComputeIn extends IORecord<AnyComputeBuiltin>,
 > = {
   readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
-  readonly returnType: undefined;
+  readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
 };
@@ -31,7 +32,8 @@ type TgpuComputeFnShellHeader<
 export type TgpuComputeFnShell<
   ComputeIn extends IORecord<AnyComputeBuiltin>,
 > =
-  & TgpuComputeFnShellHeader<ComputeIn> /**
+  & TgpuComputeFnShellHeader<ComputeIn>
+  /**
    * Creates a type-safe implementation of this signature
    */
   & ((
@@ -107,7 +109,7 @@ export function computeFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
-    returnType: undefined,
+    returnType: Void,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,
       options.workgroupSize[1] ?? 1,
