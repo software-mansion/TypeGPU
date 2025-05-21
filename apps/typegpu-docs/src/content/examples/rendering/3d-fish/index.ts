@@ -9,6 +9,7 @@ import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   computeBindGroupLayout,
+  FishBehaviorParams,
   Line3,
   type ModelData,
   ModelDataArray,
@@ -16,7 +17,6 @@ import {
   MouseRay,
   renderBindGroupLayout,
   renderInstanceLayout,
-  FishBehaviorParams,
 } from './schemas.ts';
 
 // setup
@@ -59,7 +59,7 @@ const presets = {
     fishCohesionDistance: 0.3,
     fishCohesionStrength: 0.013,
   },
-  init: { 
+  init: {
     fishSeparationDistance: 0.073,
     fishSeparationStrength: 0.051,
     fishAlignmentDistance: 0.9,
@@ -72,17 +72,9 @@ const presets = {
 let currentPreset: keyof typeof presets = 'init';
 
 const spinner = document.getElementById('spinner') as HTMLDivElement;
-const spinnerBackground = document.getElementById('spinner-background') as HTMLDivElement;
-
-setTimeout(() => {
-  currentPreset = 'default';
-  if (spinner) {
-    spinner.style.display = 'none';
-  }
-  if (spinnerBackground) {
-    spinnerBackground.style.display = 'none';
-  }
-}, 5000);
+const spinnerBackground = document.getElementById(
+  'spinner-background',
+) as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
@@ -328,6 +320,17 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   requestAnimationFrame(frame);
 }
+
+setTimeout(() => {
+  currentPreset = 'default';
+  if (spinner) {
+    spinner.style.display = 'none';
+  }
+  if (spinnerBackground) {
+    spinnerBackground.style.display = 'none';
+  }
+}, 1000);
+
 requestAnimationFrame(frame);
 
 // #region Example controls and cleanup

@@ -1,12 +1,12 @@
 <style>
   @property --p {
-    syntax: "<number>";
+    syntax: '<number>';
     initial-value: 0;
     inherits: true;
   }
 
   @property --q {
-    syntax: "<number>";
+    syntax: '<number>';
     initial-value: 0;
     inherits: true;
   }
@@ -64,7 +64,8 @@
     );
     -webkit-mask: var(--mask-spinner);
     mask: var(--mask-spinner);
-    animation: p_anim 2s infinite cubic-bezier(0.32, 0, 0.68, 0),
+    animation:
+      p_anim 2s infinite cubic-bezier(0.32, 0, 0.68, 0),
       q_anim 2s infinite cubic-bezier(0.32, 1, 0.68, 1);
   }
 
