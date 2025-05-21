@@ -33,8 +33,8 @@
     z-index: 1;
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 0.625rem;
+    border-radius: 0.625rem;
     user-select: none;
     pointer-events: none;
     transition: opacity 0.5s;
@@ -44,8 +44,8 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 40px;
-    height: 40px;
+    width: 2.5rem;
+    height: 2.5rem;
     padding: 0;
     border-radius: 50%;
     z-index: 2;
@@ -60,8 +60,8 @@
     );
     --mask-spinner: radial-gradient(
       closest-side,
-      transparent calc(100% - 8px), #000
-        calc(100% - 8px + 1px)
+      transparent calc(100% - 0.5rem),
+      #000 calc(100% - 0.5rem + 1px)
     );
     -webkit-mask: var(--mask-spinner);
     mask: var(--mask-spinner);
@@ -73,12 +73,12 @@
   .spinner::after {
     content: "";
     grid-area: 1 / 1;
-    width: 8px;
-    height: 8px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
     place-self: center;
     transform: rotate(calc(var(--a, var(--p)) * 1turn))
-      translateY(calc(-20px + 4px));
+      translateY(calc(-1.25rem + 0.25rem));
   }
 
   .spinner::before {
