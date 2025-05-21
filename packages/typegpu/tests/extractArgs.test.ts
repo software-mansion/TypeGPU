@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { extractArgs } from '../src/core/function/extractArgs.ts';
 
+function createArg(
+  identifier: string,
+  attributes: string[],
+  type: string | undefined,
+) {
+  return { identifier, attributes, type };
+}
+function createReturn(
+  attributes: string[],
+  type: string,
+) {
+  return { attributes, type };
+}
+
 describe('extract args', () => {
   it('extracts when no arguments', () => {
     const wgslFn = /* wgsl */ `
@@ -318,18 +332,3 @@ describe('extract args', () => {
     expect(range).toStrictEqual({ begin: 21, end: 57 });
   });
 });
-
-// for better formatting and less boilerplate
-function createArg(
-  identifier: string,
-  attributes: string[],
-  type: string | undefined,
-) {
-  return { identifier, attributes, type };
-}
-function createReturn(
-  attributes: string[],
-  type: string,
-) {
-  return { attributes, type };
-}
