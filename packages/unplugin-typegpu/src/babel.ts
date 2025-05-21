@@ -73,7 +73,7 @@ function functionToTranspiled(
       ),
     );
 
-  const newNode = types.callExpression(
+  return types.callExpression(
     types.arrowFunctionExpression(
       [i('$')],
       types.logicalExpression(
@@ -101,7 +101,6 @@ function functionToTranspiled(
     ),
     [types.objectExpression([])],
   );
-  return newNode;
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {

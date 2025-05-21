@@ -1,22 +1,11 @@
 import type { ArgNames, Block } from 'tinyest';
-import { getMetaData, setMetaData } from '../../shared/meta.ts';
+import { setMetaData } from '../../shared/meta.ts';
 
 export type Ast = {
   argNames: ArgNames;
   body: Block;
   externalNames: string[];
 };
-
-export type AstInfo = {
-  ast: Ast;
-  externals?: Record<string, unknown> | undefined;
-};
-
-export function getPrebuiltAstFor(
-  fn: (...args: unknown[]) => unknown,
-): AstInfo | undefined {
-  return getMetaData(fn) as AstInfo;
-}
 
 export function assignAst<T extends (...args: unknown[]) => unknown>(
   fn: T,
