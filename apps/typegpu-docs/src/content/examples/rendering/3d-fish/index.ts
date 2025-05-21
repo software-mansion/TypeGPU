@@ -71,8 +71,17 @@ const presets = {
 
 let currentPreset: keyof typeof presets = 'init';
 
+const spinner = document.getElementById('spinner') as HTMLDivElement;
+const spinnerBackground = document.getElementById('spinner-background') as HTMLDivElement;
+
 setTimeout(() => {
   currentPreset = 'default';
+  if (spinner) {
+    spinner.style.display = 'none';
+  }
+  if (spinnerBackground) {
+    spinnerBackground.style.display = 'none';
+  }
 }, 5000);
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
