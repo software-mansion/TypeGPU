@@ -749,7 +749,6 @@ describe('wgslGenerator', () => {
       d.f32,
       astInfo.externals ?? {},
     );
-    console.log('astInfo.externals', astInfo.externals);
 
     // Check for: const value = testSlot.value.value;
     //                  ^ this should be a vec3f

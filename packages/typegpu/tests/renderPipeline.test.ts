@@ -11,7 +11,7 @@ describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {
     const emptyVert = tgpu['~unstable'].vertexFn({ out: {} })('');
     const emptyVertWithBuiltin = tgpu['~unstable'].vertexFn({
-      out: { pos: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position },
     })('');
 
     it('allows fragment functions to use a subset of the vertex output', ({ root }) => {

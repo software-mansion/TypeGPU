@@ -1,11 +1,11 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import { type AnyWgslStruct, Void } from '../../data/wgslTypes.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { Implementation, InferIO } from './fnTypes.ts';
-import { createStructFromIO } from './ioOutputType.ts';
+import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -16,9 +16,9 @@ import { stripTemplate } from './templateUtils.ts';
  * Describes a compute entry function signature (its arguments, return type and workgroup size)
  */
 type TgpuComputeFnShellHeader<
-  ComputeIn extends Record<string, AnyComputeBuiltin>,
+  ComputeIn extends IORecord<AnyComputeBuiltin>,
 > = {
-  readonly argTypes: [AnyWgslStruct] | [];
+  readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
   readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
@@ -30,7 +30,7 @@ type TgpuComputeFnShellHeader<
  * and passing the implementation (as WGSL string or JS function) as the argument.
  */
 export type TgpuComputeFnShell<
-  ComputeIn extends Record<string, AnyComputeBuiltin>,
+  ComputeIn extends IORecord<AnyComputeBuiltin>,
 > =
   & TgpuComputeFnShellHeader<ComputeIn>
   /**
@@ -66,12 +66,10 @@ export type TgpuComputeFnShell<
   };
 
 export interface TgpuComputeFn<
-  ComputeIn extends Record<string, AnyComputeBuiltin> = Record<
-    string,
-    AnyComputeBuiltin
-  >,
+  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
+  ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
-  readonly shell: TgpuComputeFnShell<ComputeIn>;
+  readonly shell: TgpuComputeFnShellHeader<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -86,7 +84,7 @@ export function computeFn(options: {
 }): TgpuComputeFnShell<{}>;
 
 export function computeFn<
-  ComputeIn extends Record<string, AnyComputeBuiltin>,
+  ComputeIn extends IORecord<AnyComputeBuiltin>,
 >(options: {
   in: ComputeIn;
   workgroupSize: number[];
@@ -102,14 +100,14 @@ export function computeFn<
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
 export function computeFn<
-  ComputeIn extends Record<string, AnyComputeBuiltin>,
+  ComputeIn extends IORecord<AnyComputeBuiltin>,
 >(options: {
   in?: ComputeIn;
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in)]
+      ? [createIoSchema(options.in)]
       : [],
     returnType: Void,
     workgroupSize: [
@@ -139,7 +137,7 @@ export function computeFn<
 // Implementation
 // --------------
 
-function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   shell: TgpuComputeFnShellHeader<ComputeIn>,
   workgroupSize: number[],
   implementation: Implementation,

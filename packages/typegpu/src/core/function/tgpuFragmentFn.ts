@@ -3,13 +3,11 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
-  AnyWgslStruct,
   Decorated,
+  Interpolate,
   Location,
   Vec4f,
-  Void,
 } from '../../data/wgslTypes.ts';
 import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
@@ -21,32 +19,26 @@ import type {
   BaseIOData,
   Implementation,
   InferIO,
+  IOLayout,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createOutputType,
-  createStructFromIO,
-  type IOLayoutToSchema,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
 // ----------
 
-export type FragmentOutConstrained =
-  | Void
-  | Vec4f
-  | Decorated<Vec4f, [Location<number>]>
-  | AnyFragmentOutputBuiltin
-  | IORecord<
-    Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
-  >;
-
 export type FragmentInConstrained = IORecord<
   | BaseIOData
-  | Decorated<BaseIOData, AnyAttribute<never>[]>
+  | Decorated<BaseIOData, (Location | Interpolate)[]>
   | AnyFragmentInputBuiltin
+>;
+
+export type FragmentOutConstrained = IOLayout<
+  | Vec4f
+  | Decorated<Vec4f, (Location | Interpolate)[]>
+  | AnyFragmentOutputBuiltin
 >;
 
 /**
@@ -56,9 +48,9 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
-  readonly argTypes: [AnyWgslStruct] | [];
+  readonly argTypes: [IOLayoutToSchema<FragmentIn>] | [];
   readonly targets: FragmentOut;
-  readonly returnType: FragmentOut;
+  readonly returnType: IOLayoutToSchema<FragmentOut>;
   readonly isEntry: true;
 };
 
@@ -154,10 +146,10 @@ export function fragmentFn<
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
     argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createStructFromIO(options.in)]
+      ? [createIoSchema(options.in)]
       : [],
     targets: options.out,
-    returnType: createOutputType(options.out) as FragmentOut,
+    returnType: createIoSchema(options.out),
     isEntry: true,
   };
 
@@ -185,9 +177,7 @@ function createFragmentFn(
   type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
   const core = createFnCore(shell, implementation);
-  const outputType = shell.returnType as IOLayoutToSchema<
-    typeof shell.returnType
-  >;
+  const outputType = shell.returnType;
   const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(
