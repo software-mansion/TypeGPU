@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
+import { type AnyWgslStruct, Void } from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -24,7 +24,7 @@ type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
   readonly argTypes: [AnyWgslStruct] | [];
-  readonly returnType: undefined;
+  readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
 };
@@ -37,7 +37,8 @@ type TgpuComputeFnShellHeader<
 export type TgpuComputeFnShell<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > =
-  & TgpuComputeFnShellHeader<ComputeIn> /**
+  & TgpuComputeFnShellHeader<ComputeIn>
+  /**
    * Creates a type-safe implementation of this signature
    */
   & ((
@@ -115,7 +116,7 @@ export function computeFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createStructFromIO(options.in)]
       : [],
-    returnType: undefined,
+    returnType: Void,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,
       options.workgroupSize[1] ?? 1,
