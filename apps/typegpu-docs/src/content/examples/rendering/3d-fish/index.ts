@@ -36,28 +36,36 @@ context.configure({
 
 const presets = {
   default: {
-    fishSeparationDistance: 0.3,
-    fishSeparationStrength: 0.0006,
+    fishSeparationDistance: 0.05,
+    fishSeparationStrength: 0.001,
     fishAlignmentDistance: 0.3,
-    fishAlignmentStrength: 0.005,
-    fishCohesionDistance: 0.5,
-    fishCohesionStrength: 0.0004,
+    fishAlignmentStrength: 0.01,
+    fishCohesionDistance: 0.3,
+    fishCohesionStrength: 0.001,
   },
   mosquitoes: {
-    fishSeparationDistance: 0.6,
-    fishSeparationStrength: 0.0012,
-    fishAlignmentDistance: 0.6,
-    fishAlignmentStrength: 0.01,
-    fishCohesionDistance: 0.5,
-    fishCohesionStrength: 0.0012,
+    fishSeparationDistance: 0.02,
+    fishSeparationStrength: 0.01,
+    fishAlignmentDistance: 0.0,
+    fishAlignmentStrength: 0.0,
+    fishCohesionDistance: 0.177,
+    fishCohesionStrength: 0.011,
   },
-  init: {
-    fishSeparationDistance: 0.3,
-    fishSeparationStrength: 0.0006,
-    fishAlignmentDistance: 0.3,
-    fishAlignmentStrength: 0.005,
-    fishCohesionDistance: 0.5,
-    fishCohesionStrength: 0.0004,
+  blobs: {
+    fishSeparationDistance: 0.033,
+    fishSeparationStrength: 0.051,
+    fishAlignmentDistance: 0.047,
+    fishAlignmentStrength: 0.1,
+    fishCohesionDistance: 0.3,
+    fishCohesionStrength: 0.013,
+  },
+  init: { 
+    fishSeparationDistance: 0.073,
+    fishSeparationStrength: 0.051,
+    fishAlignmentDistance: 0.9,
+    fishAlignmentStrength: 1.2,
+    fishCohesionDistance: 0.3,
+    fishCohesionStrength: 0.013,
   },
 } as const;
 
@@ -65,7 +73,7 @@ let currentPreset: keyof typeof presets = 'init';
 
 setTimeout(() => {
   currentPreset = 'default';
-}, 1000);
+}, 5000);
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
