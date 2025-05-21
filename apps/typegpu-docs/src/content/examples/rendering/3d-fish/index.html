@@ -46,7 +46,6 @@
     left: 50%;
     width: 2.5rem;
     height: 2.5rem;
-    padding: 0;
     border-radius: 50%;
     z-index: 2;
     display: grid;
@@ -71,14 +70,9 @@
 
   .spinner::before,
   .spinner::after {
-    content: "";
-    grid-area: 1 / 1;
-    width: 0.5rem;
-    height: 0.5rem;
     border-radius: 50%;
     place-self: center;
-    transform: rotate(calc(var(--a, var(--p)) * 1turn))
-      translateY(calc(-1.25rem + 0.25rem));
+    transform: rotate(calc(var(--a, var(--p)) * 1turn)) translateY(-1rem);
   }
 
   .spinner::before {
