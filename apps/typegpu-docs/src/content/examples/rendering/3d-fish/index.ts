@@ -83,6 +83,23 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
     .$usage('storage', 'vertex')
     .$name(`fish data buffer ${idx}`));
 
+function defaultPreset() {
+  if (currentPreset !== 'init') {
+    currentPreset = 'init';
+    spinner.style.display = 'block';
+    spinnerBackground.style.display = 'block';
+  }
+  setTimeout(() => {
+    currentPreset = 'default';
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+    if (spinnerBackground) {
+      spinnerBackground.style.display = 'none';
+    }
+  }, 1000);
+}
+
 const randomizeFishPositions = () => {
   const positions: d.Infer<typeof ModelData>[] = Array.from(
     { length: p.fishAmount },
@@ -106,6 +123,7 @@ const randomizeFishPositions = () => {
   );
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
+  defaultPreset();
 };
 randomizeFishPositions();
 
@@ -304,17 +322,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   requestAnimationFrame(frame);
 }
-
-setTimeout(() => {
-  currentPreset = 'default';
-  if (spinner) {
-    spinner.style.display = 'none';
-  }
-  if (spinnerBackground) {
-    spinnerBackground.style.display = 'none';
-  }
-}, 1000);
-
+defaultPreset();
 requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
