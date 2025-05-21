@@ -489,10 +489,15 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       function add(a, b) {
         return a + b;
       };
+
+      console.log(add);
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "
+      "function add(a, b) {
+              return a + b;
+            }
+            console.log(add);
       "
     `);
   });
