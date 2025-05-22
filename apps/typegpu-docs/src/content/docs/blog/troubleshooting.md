@@ -20,50 +20,65 @@ cover:
   image: ../../../assets/troubleshooting_thumbnail.png
 ---
 
-Since WebGPU is still considered experimental, despite being supported by
-many browsers, it is often hidden behind flags.
-This post will help you find out if your browser secretly supports WebGPU and, if it does, how you can enable it.
-In general, you can check if your browser supports WebGPU by visiting [the WebGPU API doccumentation](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
-and looking for your browser in the list. If it is listed under `full support` it should generally work out of the box (on the listed operating systems).
-There are some cases where it is more complicated and requires some manual configuration.
-This post will guide you through the process of enabling WebGPU on your devices.
+Since WebGPU is still considered experimental, despite being supported by many
+browsers, it is often hidden behind flags. This post will help you find out if
+your browser secretly supports WebGPU and, if it does, how you can enable it. In
+general, you can check if your browser supports WebGPU by visiting
+[the WebGPU API doccumentation](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
+and looking for your browser in the list. If it is listed under `full support`
+it should generally work out of the box (on the listed operating systems). There
+are some cases where it is more complicated and requires some manual
+configuration. This post will guide you through the process of enabling WebGPU
+on your devices.
 
 ## Safari on iOS
-Despite what the [docs](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
+
+Despite what the
+[docs](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
 tell us, there is a way to enable WebGPU in Safari on iOS.
 
 To enable WebGPU go to:
+
 ```
 Settings > Apps > Safari > Advanced > Feature Flags
 ```
+
 or for iOS versions lower than 18:
+
 ```
 Settings > Safari > Advanced > Feature Flags
 ```
+
 Then enable WebGPU and restart Safari.
 
-That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
-and you should be able to tinker with them on your phone.
+That's it! After enabling the WebGPU flag you can go to
+[our examples page](https://docs.swmansion.com/TypeGPU/examples/) and you should
+be able to tinker with them on your phone.
 
 ## Safari on macOS
 
 Go to:
+
 ```
 Settings > Advanced
 ```
-And check the `Show features for web developers` checkbox.
-After that, you can go to:
+
+And check the `Show features for web developers` checkbox. After that, you can
+go to:
+
 ```
 Settings > Feature Flags
 ```
-And search for the WebGPU checkbox.
-Enable it and you should be good to go!
+
+And search for the WebGPU checkbox. Enable it and you should be good to go!
 
 ## Deno
 
 If you are running Deno 1.39 or newer you can either:
+
 - Run your script with the `--unstable-webgpu` flag
 - Add the following line to your `deno.json` file:
+
 ```json
 "unstable": [
   "webgpu"
@@ -72,4 +87,8 @@ If you are running Deno 1.39 or newer you can either:
 
 ## Chrome for Android and desktop
 
-WebGPU for Google Chrome should work by default on Android and desktop devices, just make sure you run the newest available version of the app. If however it does not work, you might need to try enabling some experimental flags listed in the official [Chrome developer documentation](https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips).
+WebGPU for Google Chrome should work by default on Android and desktop devices,
+just make sure you run the newest available version of the app. If however it
+does not work, you might need to try enabling some experimental flags listed in
+the official
+[Chrome developer documentation](https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips).

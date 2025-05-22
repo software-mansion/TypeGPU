@@ -4,14 +4,14 @@ import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  type Context,
-  type KernelDirective,
-  type Options,
   codeFilterRegexes,
+  type Context,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
+  type KernelDirective,
   kernelDirectives,
+  type Options,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -54,7 +54,9 @@ function functionToTranspiled(
   const tgpuAlias = ctx.tgpuAliases.values().next().value;
   if (tgpuAlias === undefined) {
     throw new Error(
-      `No tgpu import found, cannot assign ast to function in file: ${ctx.fileId ?? ''}`,
+      `No tgpu import found, cannot assign ast to function in file: ${
+        ctx.fileId ?? ''
+      }`,
     );
   }
 
@@ -63,11 +65,13 @@ function functionToTranspiled(
     [
       directive === 'kernel & js'
         ? node
-        : template.expression`${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`(),
+        : template.expression`${tgpuAlias}.__removedJsImpl(${
+          name ? `"${name}"` : ''
+        })`(),
       template.expression`${embedJSON({ argNames, body, externalNames })}`(),
       types.objectExpression(
         externalNames.map((name) =>
-          types.objectProperty(types.identifier(name), types.identifier(name)),
+          types.objectProperty(types.identifier(name), types.identifier(name))
         ),
       ),
     ],
@@ -103,10 +107,10 @@ function functionVisitor(ctx: Context): TraverseOptions {
         path.node.id?.name
           ? path.node.id.name
           : path.parentPath.node.type === 'VariableDeclarator'
-            ? path.parentPath.node.id.type === 'Identifier'
-              ? path.parentPath.node.id.name
-              : undefined
-            : undefined,
+          ? path.parentPath.node.id.type === 'Identifier'
+            ? path.parentPath.node.id.name
+            : undefined
+          : undefined,
       );
       if (transpiled) {
         path.replaceWith(transpiled);
@@ -147,7 +151,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
           const tgpuAlias = ctx.tgpuAliases.values().next().value;
           if (tgpuAlias === undefined) {
             throw new Error(
-              `No tgpu import found, cannot assign ast to function in file: ${ctx.fileId ?? ''}`,
+              `No tgpu import found, cannot assign ast to function in file: ${
+                ctx.fileId ?? ''
+              }`,
             );
           }
 
@@ -161,13 +167,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
                   directive !== 'kernel & js'
                     ? template.expression`${tgpuAlias}.__removedJsImpl()`()
                     : implementation,
-                  template.expression`${embedJSON({ argNames, body, externalNames })}`(),
+                  template.expression`${
+                    embedJSON({ argNames, body, externalNames })
+                  }`(),
                   types.objectExpression(
                     externalNames.map((name) =>
                       types.objectProperty(
                         types.identifier(name),
                         types.identifier(name),
-                      ),
+                      )
                     ),
                   ),
                 ],

@@ -25,21 +25,18 @@ The following code defines a function that accepts one argument and returns one 
 
 ```ts
 const getGradientColor = tgpu['~unstable']
-  .fn(
-    { ratio: d.f32 },
-    d.vec4f,
-  )(`{
+  .fn([d.f32], d.vec4f)(/* wgsl */ `(ratio: f32) -> vec4f {
     let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
     return color;
-  }`)
-  .$name('getGradientColor');
+  }`);
 
 // or
 
-const getGradientColor = tgpu['~unstable'].fn({ ratio: d.f32 }, d.vec4f)`{
-  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-  return color;
-}`.$name('getGradientColor');
+const getGradientColor = tgpu['~unstable']
+  .fn([d.f32], d.vec4f) /* wgsl */`(ratio: f32) -> vec4f {
+    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+    return color;
+  };
 ```
 
 If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
@@ -50,18 +47,18 @@ Functions can use external resources passed inside a record via the `$uses` meth
 Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
 
 ```ts
-const getBlue = tgpu['~unstable'].fn({}, d.vec4f)`{ 
+const getBlue = tgpu['~unstable'].fn([], d.vec4f)`() -> vec4f {
   return vec4f(0.114, 0.447, 0.941, 1); 
 }`;
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
-const getGradientColor = tgpu['~unstable'].fn({ ratio: d.f32 }, d.vec4f)`{
-  let color = mix(purple, getBlue(), ratio);
-  return color;
-}`
-  .$uses({ purple, getBlue })
-  .$name('getGradientColor');
+const getGradientColor = tgpu['~unstable']
+  .fn([d.f32], d.vec4f)`(ratio: f32) -> vec4f {
+    let color = mix(purple, getBlue(), ratio);
+    return color;
+  }
+  `.$uses({ purple, getBlue });
 ```
 
 The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:

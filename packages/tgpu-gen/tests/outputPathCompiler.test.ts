@@ -17,7 +17,7 @@ const test = ({
       inputPattern ?? '**/*.wgsl',
       outputPattern,
     )(fileName),
-  ).toEqual(expected);
+  ).toStrictEqual(expected);
 
 describe('createOutputPathCompiler', () => {
   it('generates an output path that is the same as output pattern when no placeholders are used', () => {

@@ -214,8 +214,7 @@ const TriangleInfoStruct = d.struct({
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(d.arrayOf(TriangleInfoStruct, triangleAmount))
-    .$usage('storage', 'uniform'),
-);
+    .$usage('storage', 'uniform'));
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
@@ -274,7 +273,7 @@ const computeModule = root.device.createShaderModule({
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(d.location(0, d.vec2f), n),
+  d.arrayOf(d.location(0, d.vec2f), n)
 );
 
 const pipeline = root.device.createRenderPipeline({
@@ -311,7 +310,7 @@ const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
-  }),
+  })
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -319,7 +318,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
     params: paramsBuffer,
-  }),
+  })
 );
 
 const renderPassDescriptor: GPURenderPassDescriptor = {

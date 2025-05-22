@@ -1,18 +1,17 @@
-export type Default<T, TDefault> = unknown extends T
-  ? TDefault
-  : T extends undefined
-    ? TDefault
-    : T;
+export type Default<T, TDefault> = unknown extends T ? TDefault
+  : T extends undefined ? TDefault
+  : T;
 
 export type UnionToIntersection<U> =
   // biome-ignore lint/suspicious/noExplicitAny: <had to be done>
-  (U extends any ? (x: U) => void : never) extends (x: infer I) => void
-    ? I
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I
     : never;
 
-export type Prettify<T> = {
-  [K in keyof T]: T[K];
-} & {};
+export type Prettify<T> =
+  & {
+    [K in keyof T]: T[K];
+  }
+  & {};
 
 /**
  * Removes properties from record type that extend `Prop`

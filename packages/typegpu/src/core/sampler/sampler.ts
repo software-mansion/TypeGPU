@@ -1,4 +1,5 @@
-import type { TgpuNamable } from '../../namable.ts';
+import type { TgpuNamable } from '../../name.ts';
+import { getName, setName } from '../../name.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -110,8 +111,7 @@ export interface TgpuComparisonSampler {
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 
 export interface TgpuFixedComparisonSampler
-  extends TgpuComparisonSampler,
-    TgpuNamable {}
+  extends TgpuComparisonSampler, TgpuNamable {}
 
 export function sampler(props: SamplerProps): TgpuSampler {
   return new TgpuFixedSamplerImpl(props);
@@ -145,14 +145,11 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 
   constructor(private readonly _membership: LayoutMembership) {
     this[$internal] = {};
-  }
-
-  get label(): string | undefined {
-    return this._membership.key;
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -163,26 +160,22 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
 export class TgpuLaidOutComparisonSamplerImpl
-  implements TgpuComparisonSampler, SelfResolvable
-{
+  implements TgpuComparisonSampler, SelfResolvable {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   constructor(private readonly _membership: LayoutMembership) {
     this[$internal] = {};
-  }
-
-  get label(): string | undefined {
-    return this._membership.key;
+    setName(this, _membership.key);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -193,7 +186,7 @@ export class TgpuLaidOutComparisonSamplerImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
@@ -201,7 +194,6 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
-  private _label: string | undefined;
   private _filtering: boolean;
   private _sampler: GPUSampler | null = null;
 
@@ -211,7 +203,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
         if (!this._sampler) {
           this._sampler = branch.device.createSampler({
             ...this._props,
-            label: this._label ?? '<unnamed>',
+            label: getName(this) ?? '<unnamed>',
           });
         }
 
@@ -220,23 +212,18 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
     };
 
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
-    this._filtering =
-      _props.minFilter === 'linear' ||
+    this._filtering = _props.minFilter === 'linear' ||
       _props.magFilter === 'linear' ||
       _props.mipmapFilter === 'linear';
   }
 
-  get label() {
-    return this._label;
-  }
-
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this._label);
+    const id = ctx.names.makeUnique(getName(this));
 
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -253,17 +240,15 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }
 
 class TgpuFixedComparisonSamplerImpl
-  implements TgpuFixedComparisonSampler, SelfResolvable
-{
+  implements TgpuFixedComparisonSampler, SelfResolvable {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
-  private _label: string | undefined;
   private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: ComparisonSamplerProps) {
@@ -272,7 +257,7 @@ class TgpuFixedComparisonSamplerImpl
         if (!this._sampler) {
           this._sampler = branch.device.createSampler({
             ...this._props,
-            label: this._label ?? '<unnamed>',
+            label: getName(this) ?? '<unnamed>',
           });
         }
 
@@ -281,17 +266,13 @@ class TgpuFixedComparisonSamplerImpl
     };
   }
 
-  get label(): string | undefined {
-    return this._label;
-  }
-
   $name(label: string) {
-    this._label = label;
+    setName(this, label);
     return this;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(this.label);
+    const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
       this,
@@ -305,6 +286,6 @@ class TgpuFixedComparisonSamplerImpl
   }
 
   toString() {
-    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }

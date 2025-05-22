@@ -15,7 +15,7 @@ describe('mix', () => {
     const factor = vec2f(0, 1);
     // Expected: [1 * (1 - 0) + 3 * 0, 2 * (1 - 1) + 4 * 1] = [1, 4]
     const result = mix(v1, v2, factor);
-    expect(result).toEqual(vec2f(1, 4));
+    expect(result).toStrictEqual(vec2f(1, 4));
   });
 
   it('should blend vector values with scalar blending factor correctly', () => {
@@ -24,7 +24,7 @@ describe('mix', () => {
     // Expected: [1 * (1 - 0.5) + 4 * 0.5, 2 * (1 - 0.5) + 5 * 0.5, 3 * (1 - 0.5) + 6 * 0.5]
     //          = [2.5, 3.5, 4.5]
     const result = mix(v1, v2, 0.5);
-    expect(result).toEqual(vec3f(2.5, 3.5, 4.5));
+    expect(result).toStrictEqual(vec3f(2.5, 3.5, 4.5));
   });
 
   it('should blend higher dimension vectors correctly', () => {
@@ -32,7 +32,7 @@ describe('mix', () => {
     const v2 = vec4h(1, 1, 1, 1);
     // Expected: Each component = 0 * (1 - 0.25) + 1 * 0.25 = 0.25
     const result = mix(v1, v2, 0.25);
-    expect(result).toEqual(vec4h(0.25, 0.25, 0.25, 0.25));
+    expect(result).toStrictEqual(vec4h(0.25, 0.25, 0.25, 0.25));
   });
 
   it('should blend non-integer scalar values correctly', () => {

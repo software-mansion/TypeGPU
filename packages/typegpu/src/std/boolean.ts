@@ -8,7 +8,6 @@ import type {
   AnyVec2Instance,
   AnyVec3Instance,
   AnyVecInstance,
-  ScalarData,
   v2b,
   v3b,
   v4b,
@@ -280,7 +279,8 @@ export const isCloseTo = createDualImpl(
   (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
     if (snippetIsNumeric(lhs) && snippetIsNumeric(rhs)) {
       return {
-        value: `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
+        value:
+          `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
@@ -288,7 +288,8 @@ export const isCloseTo = createDualImpl(
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        value: `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
+        value:
+          `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
         dataType: bool,
       };
     }
@@ -300,15 +301,13 @@ export const isCloseTo = createDualImpl(
 );
 
 export type SelectOverload = {
-  <T extends ScalarData | AnyVecInstance>(f: T, t: T, cond: boolean): T;
+  <T extends number | boolean | AnyVecInstance>(f: T, t: T, cond: boolean): T;
   <T extends AnyVecInstance>(
     f: T,
     t: T,
-    cond: T extends AnyVec2Instance
-      ? v2b
-      : T extends AnyVec3Instance
-        ? v3b
-        : v4b,
+    cond: T extends AnyVec2Instance ? v2b
+      : T extends AnyVec3Instance ? v3b
+      : v4b,
   ): T;
 };
 
@@ -316,12 +315,14 @@ export type SelectOverload = {
  * Returns `t` if `cond` is `true`, and `f` otherwise.
  * Component-wise if `cond` is a vector.
  * @example
+ * select(1, 2, false) // returns 1
+ * select(1, 2, true) // returns 2
  * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
  * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
  */
 export const select: SelectOverload = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | ScalarData>(
+  <T extends number | boolean | AnyVecInstance>(
     f: T,
     t: T,
     cond: AnyBooleanVecInstance | boolean,

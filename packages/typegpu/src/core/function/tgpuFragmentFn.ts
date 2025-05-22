@@ -9,22 +9,24 @@ import type {
   Decorated,
   Location,
   Vec4f,
+  Void,
 } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { GenerationCtx } from '../../tgsl/wgslGenerator.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
+import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
-  IORecord,
   Implementation,
   InferIO,
+  IORecord,
 } from './fnTypes.ts';
 import {
-  type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
+  type IOLayoutToSchema,
 } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
@@ -33,12 +35,13 @@ import { stripTemplate } from './templateUtils.ts';
 // ----------
 
 export type FragmentOutConstrained =
+  | Void
   | Vec4f
   | Decorated<Vec4f, [Location<number>]>
   | AnyFragmentOutputBuiltin
   | IORecord<
-      Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
-    >;
+    Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
+  >;
 
 export type FragmentInConstrained = IORecord<
   | BaseIOData
@@ -67,38 +70,39 @@ type TgpuFragmentFnShellHeader<
 export type TgpuFragmentFnShell<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> = TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> /**
- * Creates a type-safe implementation of this signature
- */ &
-  ((
+> =
+  & TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> /**
+   * Creates a type-safe implementation of this signature
+   */
+  & ((
     implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
-  /**
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  & /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
-   */
-  ((
+   */ ((
     implementation: string,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
-  ((
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: ((
-      implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
-    ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
-      /**
+    does:
+      & ((
+        implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
+      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+      & /**
        * @param implementation
        *   Raw WGSL function implementation with header and body
        *   without `fn` keyword and function name
        *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */
-      ((
+       */ ((
         implementation: string,
       ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>);
   };
@@ -149,14 +153,11 @@ export function fragmentFn<
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
-    argTypes:
-      options.in && Object.keys(options.in).length !== 0
-        ? [createStructFromIO(options.in)]
-        : [],
+    argTypes: options.in && Object.keys(options.in).length !== 0
+      ? [createStructFromIO(options.in)]
+      : [],
     targets: options.out,
-    returnType: (Object.keys(options.out).length !== 0
-      ? createOutputType(options.out)
-      : undefined) as FragmentOut,
+    returnType: createOutputType(options.out) as FragmentOut,
     isEntry: true,
   };
 
@@ -181,7 +182,7 @@ function createFragmentFn(
   >,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & Labelled & SelfResolvable;
+  type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType as IOLayoutToSchema<
@@ -189,8 +190,10 @@ function createFragmentFn(
   >;
   const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
-    addReturnTypeToExternals(implementation, outputType, (externals) =>
-      core.applyExternals(externals),
+    addReturnTypeToExternals(
+      implementation,
+      outputType,
+      (externals) => core.applyExternals(externals),
     );
   }
 
@@ -198,17 +201,14 @@ function createFragmentFn(
     shell,
     outputType,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$getNameForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
@@ -239,7 +239,7 @@ function createFragmentFn(
     },
 
     toString() {
-      return `fragmentFn:${this.label ?? '<unnamed>'}`;
+      return `fragmentFn:${getName(core) ?? '<unnamed>'}`;
     },
   };
 

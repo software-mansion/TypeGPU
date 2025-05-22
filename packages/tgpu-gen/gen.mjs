@@ -129,9 +129,11 @@ export function generate(
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${[imports, structs, aliases, bindGroupLayouts, functions, exports_]
-  .filter((generated) => generated && generated.trim() !== '')
-  .join('\n')}
+${
+    [imports, structs, aliases, bindGroupLayouts, functions, exports_]
+      .filter((generated) => generated && generated.trim() !== '')
+      .join('\n')
+  }
 `;
 }
 
@@ -158,9 +160,11 @@ function generateStruct(struct, options) {
       ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
       : ''
   }d.struct({
-  ${struct.members
-    .map((member) => generateStructMember(member, options))
-    .join('\n  ')}
+  ${
+    struct.members
+      .map((member) => generateStructMember(member, options))
+      .join('\n  ')
+  }
 });`;
 }
 
@@ -187,15 +191,19 @@ function hasVarLengthMember(struct) {
 function generateAliases(aliases, options) {
   return aliases.length > 0
     ? `\n/* aliases */
-${aliases
-  .map(
-    (alias) =>
-      `${declareConst(alias.name, options)} = ${generateType(
-        alias.type,
-        options,
-      )};`,
-  )
-  .join('\n')}`
+${
+      aliases
+        .map(
+          (alias) =>
+            `${declareConst(alias.name, options)} = ${
+              generateType(
+                alias.type,
+                options,
+              )
+            };`,
+        )
+        .join('\n')
+    }`
     : '';
 }
 
@@ -221,29 +229,27 @@ function generateType(type_, options) {
   }
 
   /** @type {string} */
-  const tgpuType =
-    type_ instanceof StructInfo
-      ? type_.name
-      : type_ instanceof ArrayInfo
-        ? `d.arrayOf(${generateType(type_.format, options)}, ${
-            type_.count > 0 ? type_.count : LENGTH_VAR
-          })`
-        : type_ instanceof TemplateInfo &&
-            type_.name === 'atomic' &&
-            type_.format
-          ? `d.atomic(${generateType(type_.format, options)})`
-          : type_.size === 0
-            ? type_.name
-            : `d.${replaceWithAlias(type_)}`;
+  const tgpuType = type_ instanceof StructInfo
+    ? type_.name
+    : type_ instanceof ArrayInfo
+    ? `d.arrayOf(${generateType(type_.format, options)}, ${
+      type_.count > 0 ? type_.count : LENGTH_VAR
+    })`
+    : type_ instanceof TemplateInfo &&
+        type_.name === 'atomic' &&
+        type_.format
+    ? `d.atomic(${generateType(type_.format, options)})`
+    : type_.size === 0
+    ? type_.name
+    : `d.${replaceWithAlias(type_)}`;
 
-  const result =
-    type_.attributes?.reduce(
-      (acc, attribute) =>
-        ['align', 'size', 'location'].includes(attribute.name)
-          ? `d.${attribute.name}(${attribute.value}, ${acc})`
-          : acc,
-      tgpuType,
-    ) ?? tgpuType;
+  const result = type_.attributes?.reduce(
+    (acc, attribute) =>
+      ['align', 'size', 'location'].includes(attribute.name)
+        ? `d.${attribute.name}(${attribute.value}, ${acc})`
+        : acc,
+    tgpuType,
+  ) ?? tgpuType;
 
   if (result.startsWith('d.')) {
     setUseImport('data', options);
@@ -281,14 +287,17 @@ function replaceWithAlias(type) {
 function generateBindGroupLayouts(bindGroups, options) {
   return bindGroups.length > 0
     ? `\n/* bindGroupLayouts */
-${bindGroups
-  .flatMap(
-    (group, index) => `\
+${
+      bindGroups
+        .flatMap(
+          (group, index) =>
+            `\
 ${declareConst(`layout${index}`, options)} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group, options)}
 });`,
-  )
-  .join('\n\n')}`
+        )
+        .join('\n\n')
+    }`
     : '';
 }
 
@@ -323,7 +332,7 @@ function generateGroupLayout(group, options) {
     .map((variable, index) =>
       variable
         ? `${variable.name}: ${generateVariable(variable, options)},`
-        : `_${index}: null, // skipping binding ${index}`,
+        : `_${index}: null, // skipping binding ${index}`
     )
     .join('\n  ');
 }
@@ -343,10 +352,10 @@ function generateVariable(variable, options) {
 function generateUniformVariable(variable, options) {
   return `{
     uniform: ${
-      isVarLengthArray(variable.type)
-        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
-        : ''
-    }${generateType(variable.type, options)},
+    isVarLengthArray(variable.type)
+      ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+      : ''
+  }${generateType(variable.type, options)},
   }`;
 }
 
@@ -357,18 +366,18 @@ function generateUniformVariable(variable, options) {
 function generateStorageVariable(variable, options) {
   return `{
     storage: ${
-      isVarLengthArray(variable.type)
-        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
-        : ''
-    }${generateType(variable.type, options)},${
-      variable.access
-        ? `\n    access: '${
-            ACCESS_TYPES[
-              /** @type ('read' | 'write' | 'read_write') */ (variable.access)
-            ]
-          }',`
-        : ''
-    }
+    isVarLengthArray(variable.type)
+      ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+      : ''
+  }${generateType(variable.type, options)},${
+    variable.access
+      ? `\n    access: '${
+        ACCESS_TYPES[
+          /** @type ('read' | 'write' | 'read_write') */ (variable.access)
+        ]
+      }',`
+      : ''
+  }
   }`;
 }
 
@@ -380,18 +389,18 @@ function getViewDimension(variable) {
   const dimension = type_.includes('_1d')
     ? '1d'
     : type_.includes('_2d')
-      ? '2d'
-      : type_.includes('_3d')
-        ? '3d'
-        : type_.includes('_cube')
-          ? 'cube'
-          : null;
+    ? '2d'
+    : type_.includes('_3d')
+    ? '3d'
+    : type_.includes('_cube')
+    ? 'cube'
+    : null;
 
   return type_.includes('_array')
     ? `${dimension ?? '2d'}-array`
     : dimension !== '2d'
-      ? dimension
-      : null;
+    ? dimension
+    : null;
 }
 
 /**
@@ -400,15 +409,14 @@ function getViewDimension(variable) {
 function generateStorageTextureVariable(variable) {
   const viewDimension = getViewDimension(variable);
 
-  const access =
-    variable.type instanceof TemplateInfo
-      ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
-      : null;
+  const access = variable.type instanceof TemplateInfo
+    ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
+    : null;
 
   return `{
     storageTexture: '${variable.format?.name}',${
-      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+    access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
+  }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
   }`;
 }
 
@@ -423,10 +431,10 @@ const SAMPLER_TYPES = {
 function generateSamplerVariable(variable) {
   return `{
     sampler: '${
-      SAMPLER_TYPES[
-        /** @type ('sampler' | 'sampler_comparison') */ (variable.type.name)
-      ]
-    }',
+    SAMPLER_TYPES[
+      /** @type ('sampler' | 'sampler_comparison') */ (variable.type.name)
+    ]
+  }',
   }`;
 }
 
@@ -446,14 +454,14 @@ function generateTextureVariable(variable) {
 
   return `{
     texture: '${
-      type_.includes('_depth')
-        ? 'depth'
-        : format && format in SAMPLE_TYPES
-          ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
-          : 'uint'
-    }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
-      multisampled ? '\n    multisampled: true,' : ''
-    }
+    type_.includes('_depth')
+      ? 'depth'
+      : format && format in SAMPLE_TYPES
+      ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
+      : 'uint'
+  }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
+    multisampled ? '\n    multisampled: true,' : ''
+  }
   }`;
 }
 
@@ -475,16 +483,20 @@ function generateFunctions(functions, wgsl, options) {
   const nonEntryFunctions = functions.filter((func) => func.stage === null);
   return nonEntryFunctions.length > 0
     ? `\n/* functions */
-${nonEntryFunctions
-  .map(
-    (func) =>
-      `${declareConst(func.name, options)} = ${generateFunction(
-        func,
-        wgsl,
-        options,
-      )};`,
-  )
-  .join('\n\n')}`
+${
+      nonEntryFunctions
+        .map(
+          (func) =>
+            `${declareConst(func.name, options)} = ${
+              generateFunction(
+                func,
+                wgsl,
+                options,
+              )
+            };`,
+        )
+        .join('\n\n')
+    }`
     : '';
 }
 
@@ -503,25 +515,28 @@ function generateFunction(func, wgsl, options) {
     .slice(func.startLine - 1, func.endLine)
     .join('\n');
 
-  const inputs = `{${func.arguments
-    .flatMap((arg) =>
-      arg.type &&
-      arg.type.attributes?.find((attr) => attr.name === 'builtin') === undefined
-        ? [`${arg.name}: ${generateType(arg.type, options)}`]
-        : [],
-    )
-    .join(', ')}}`;
+  const inputs = `[${
+    func.arguments
+      .flatMap((arg) =>
+        arg.type &&
+          arg.type.attributes?.find((attr) => attr.name === 'builtin') ===
+            undefined
+          ? [`${generateType(arg.type, options)}`]
+          : []
+      )
+      .join(', ')
+  }]`;
 
   const output = func.returnType
     ? generateType(func.returnType, options)
     : null;
 
-  const body = implementation.match(/{.*}/s);
+  const body = implementation.match(/\(.*\).*{.*}/s);
 
   return body?.[0]
     ? `tgpu['~unstable'].fn(${inputs}${
-        output ? `, ${output}` : ''
-      })(/* wgsl */ \`${body[0]}\`)`
+      output ? `, ${output}` : ''
+    })(/* wgsl */ \`${body[0]}\`)`
     : '';
 }
 
@@ -567,9 +582,11 @@ function generateImports(options) {
  */
 function generateExports(options) {
   return options.moduleSyntax === 'commonjs'
-    ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(
+    ? `\nmodule.exports = {${
+      [...(options.declaredIdentifiers ?? [])].join(
         ', ',
-      )}};`
+      )
+    }};`
     : '';
 }
 

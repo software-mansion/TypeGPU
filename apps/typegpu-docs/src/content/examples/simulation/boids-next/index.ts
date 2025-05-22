@@ -5,24 +5,17 @@ import * as std from 'typegpu/std';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu['~unstable'].fn(
-  { v: d.vec2f, angle: d.f32 },
-  d.vec2f,
-)(/* wgsl */ `{
-  let pos = vec2(
-    (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle))
-  );
+const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
+  const cos = std.cos(angle);
+  const sin = std.sin(angle);
+  return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
+});
 
-  return pos;
-}`);
-
-const getRotationFromVelocity = tgpu['~unstable'].fn(
-  { velocity: d.vec2f },
-  d.f32,
-)(/* wgsl */ `{
-  return -atan2(velocity.x, velocity.y);
-}`);
+const getRotationFromVelocity = tgpu['~unstable'].fn([d.vec2f], d.f32)(
+  (velocity) => {
+    return -std.atan2(velocity.x, velocity.y);
+  },
+);
 
 const TriangleData = d.struct({
   position: d.vec2f,
@@ -40,36 +33,36 @@ const VertexOutput = {
   color: d.vec4f,
 };
 
-const mainVert = tgpu['~unstable']
-  .vertexFn({
-    in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
-    out: VertexOutput,
-  })(/* wgsl */ `{
-    let angle = getRotationFromVelocity(in.velocity);
-    let rotated = rotate(in.v, angle);
+const mainVert = tgpu['~unstable'].vertexFn({
+  in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+  out: VertexOutput,
+})((input) => {
+  const angle = getRotationFromVelocity(input.velocity);
+  const rotated = rotate(input.v, angle);
 
-    let pos = vec4(rotated + in.center, 0.0, 1.0);
+  const pos = d.vec4f(
+    rotated.x + input.center.x,
+    rotated.y + input.center.y,
+    0.0,
+    1.0,
+  );
 
-    let color = vec4(
-        sin(angle + colorPalette.r) * 0.45 + 0.45,
-        sin(angle + colorPalette.g) * 0.45 + 0.45,
-        sin(angle + colorPalette.b) * 0.45 + 0.45,
-        1.0);
+  const color = d.vec4f(
+    std.sin(angle + colorPalette.value.x) * 0.45 + 0.45,
+    std.sin(angle + colorPalette.value.y) * 0.45 + 0.45,
+    std.sin(angle + colorPalette.value.z) * 0.45 + 0.45,
+    1.0,
+  );
 
-    return Out(pos, color);
-  }`)
-  .$uses({
-    colorPalette,
-    getRotationFromVelocity,
-    rotate,
-  });
+  return { position: pos, color };
+});
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
-})(/* wgsl */ `{
-  return in.color;
-}`);
+})((input) => {
+  return input.color;
+});
 
 const Params = d
   .struct({
@@ -162,8 +155,7 @@ const triangleVertexBuffer = root
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(d.arrayOf(TriangleData, triangleAmount))
-    .$usage('storage', 'uniform', 'vertex'),
-);
+    .$usage('storage', 'uniform', 'vertex'));
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
@@ -287,17 +279,17 @@ const computePipeline = root['~unstable']
   .withCompute(mainCompute)
   .createPipeline();
 
-const renderBindGroups = [0, 1].map((idx) =>
+const renderBindGroups = [0, 1].map(() =>
   root.createBindGroup(renderBindGroupLayout, {
     colorPalette: colorPaletteBuffer,
-  }),
+  })
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
-  }),
+  })
 );
 
 let even = false;

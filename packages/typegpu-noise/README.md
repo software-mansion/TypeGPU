@@ -22,5 +22,4 @@ const mainFrag = tgpu
     const normal = randf.onUnitSphere(); // => v3f
     const dir = randf.inUnitCircle(); // => v2f
   });
-
 ```

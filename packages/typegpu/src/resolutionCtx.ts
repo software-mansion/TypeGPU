@@ -2,36 +2,31 @@ import type { ArgNames, Block } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
-  type SlotValuePair,
-  type TgpuDerived,
-  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
+  type SlotValuePair,
+  type TgpuDerived,
+  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData } from './data/dataTypes.ts';
-import {
-  type AnyWgslData,
-  type BaseData,
-  isWgslArray,
-  isWgslStruct,
-} from './data/wgslTypes.ts';
+import { type AnyData, isData } from './data/dataTypes.ts';
+import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode.ts';
+import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
 import type { JitTranspiler } from './jitTranspiler.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import {
+  bindGroupLayout,
   type TgpuBindGroup,
   TgpuBindGroupImpl,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
-  bindGroupLayout,
 } from './tgpuBindGroupLayout.ts';
-import { getTypeFromWgsl } from './tgsl/generationHelpers.ts';
+import { coerceToSnippet } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   FnToWgslOptions,
@@ -41,7 +36,7 @@ import type {
   Snippet,
   Wgsl,
 } from './types.ts';
-import { UnknownData, isSelfResolvable, isWgsl } from './types.ts';
+import { isSelfResolvable, isWgsl, type UnknownData } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -70,12 +65,12 @@ type FunctionScopeLayer = {
   type: 'functionScope';
   args: Snippet[];
   externalMap: Record<string, unknown>;
-  returnType: AnyWgslData | undefined;
+  returnType: AnyData;
 };
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyWgslData | UnknownData>;
+  declarations: Map<string, AnyData | UnknownData>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -124,7 +119,7 @@ class ItemStateStackImpl implements ItemStateStack {
 
   pushFunctionScope(
     args: Snippet[],
-    returnType: AnyWgslData | undefined,
+    returnType: AnyData,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
@@ -142,7 +137,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
-      declarations: new Map<string, AnyWgslData | UnknownData>(),
+      declarations: new Map<string, AnyData | UnknownData>(),
     });
   }
 
@@ -198,13 +193,8 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
-        if (external !== undefined) {
-          return {
-            value: external,
-            dataType: isWgsl(external)
-              ? getTypeFromWgsl(external)
-              : UnknownData,
-          };
+        if (external !== undefined && external !== null) {
+          return coerceToSnippet(external);
         }
 
         // Since functions cannot access resources from the calling scope, we
@@ -225,7 +215,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet {
+  defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -260,8 +250,8 @@ export class IndentController {
   get pre(): string {
     return (
       INDENT[this.identLevel] ??
-      (INDENT[N] as string).repeat(this.identLevel / N) +
-        INDENT[this.identLevel % N]
+        (INDENT[N] as string).repeat(this.identLevel / N) +
+          INDENT[this.identLevel % N]
     );
   }
 
@@ -350,7 +340,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet {
+  defineVariable(id: string, dataType: AnyData | UnknownData): Snippet {
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
@@ -402,7 +392,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
-      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this
+        ._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }
 
@@ -478,7 +469,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
           )
         ) {
           return instance.result as T;
@@ -531,7 +522,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
           )
         ) {
           return instance.result;
@@ -573,8 +564,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(item: unknown): string {
     if (isProviding(item)) {
-      return this.withSlots(item['~providing'].pairs, () =>
-        this.resolve(item['~providing'].inner),
+      return this.withSlots(
+        item['~providing'].pairs,
+        () => this.resolve(item['~providing'].inner),
       );
     }
 
@@ -604,7 +596,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (schema && isWgslArray(schema)) {
-      return `array(${(value as unknown[]).map((element) => this.resolveValue(element, schema.elementType))})`;
+      return `array(${
+        (value as unknown[]).map((element) =>
+          this.resolveValue(element, schema.elementType)
+        )
+      })`;
     }
 
     if (Array.isArray(value)) {
@@ -612,11 +608,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (schema && isWgslStruct(schema)) {
-      return `${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, type_]) => this.resolveValue((value as Infer<typeof schema>)[key], type_))})`;
+      return `${this.resolve(schema)}(${
+        Object.entries(schema.propTypes).map(([key, type_]) =>
+          this.resolveValue((value as Infer<typeof schema>)[key], type_)
+        )
+      })`;
     }
 
     throw new Error(
-      `Value ${value} (as json: ${JSON.stringify(value)}) of schema ${schema} is not resolvable to WGSL`,
+      `Value ${value} (as json: ${
+        JSON.stringify(value)
+      }) of schema ${schema} is not resolvable to WGSL`,
     );
   }
 }
@@ -690,13 +692,15 @@ export function resolve(
 export function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
-  returnType: AnyWgslData,
+  returnType: AnyData,
 ) {
   const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyWgslData)}`)
+    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData)}`)
     .join(', ');
 
-  return returnType !== undefined
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${ctx.resolve(returnType)}`
+  return returnType.type !== 'void'
+    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+      ctx.resolve(returnType)
+    }`
     : `(${argList})`;
 }

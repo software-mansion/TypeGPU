@@ -12,11 +12,11 @@ export function ExampleNotFound() {
   });
 
   return (
-    <div className="flex-1 flex flex-col justify-center items-center">
-      <h1 className="text-4xl font-bold">404 Example Not Found</h1>
+    <div className='flex-1 flex flex-col justify-center items-center'>
+      <h1 className='text-4xl font-bold'>404 Example Not Found</h1>
       <button
-        type="button"
-        className="mt-4 text-lg text-slate-600 underline"
+        type='button'
+        className='mt-4 text-lg text-slate-600 underline'
         onClick={handleGoHome}
       >
         Go back home

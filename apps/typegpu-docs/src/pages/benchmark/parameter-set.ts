@@ -1,19 +1,19 @@
-import { type Getter, atom } from 'jotai';
+import { atom, type Getter } from 'jotai';
 import { splitAtom } from 'jotai/utils';
 import { atomWithUrl } from './atom-with-url.ts';
 
 export type PackageLocator =
   | {
-      type: 'npm';
-      version?: string;
-    }
+    type: 'npm';
+    version?: string;
+  }
   | {
-      type: 'pr';
-      commit?: string;
-    }
+    type: 'pr';
+    commit?: string;
+  }
   | {
-      type: 'local';
-    };
+    type: 'local';
+  };
 
 export interface BenchParameterSet {
   key: number;
@@ -54,7 +54,13 @@ export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
       values
         .map(
           (value) =>
-            `${value.typegpu.type === 'npm' ? `npm-${value.typegpu.version ?? ''}` : value.typegpu.type === 'pr' ? `pr-${value.typegpu.commit ?? ''}` : 'local'}`,
+            `${
+              value.typegpu.type === 'npm'
+                ? `npm-${value.typegpu.version ?? ''}`
+                : value.typegpu.type === 'pr'
+                ? `pr-${value.typegpu.commit ?? ''}`
+                : 'local'
+            }`,
         )
         .join('_'),
 
@@ -62,21 +68,21 @@ export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
       encoded.split('_').map((value, i) =>
         value.startsWith('npm-')
           ? {
-              key: i + 1,
-              typegpu: {
-                type: 'npm',
-                version: value.slice('npm-'.length) ?? '',
-              },
-            }
+            key: i + 1,
+            typegpu: {
+              type: 'npm',
+              version: value.slice('npm-'.length) ?? '',
+            },
+          }
           : value.startsWith('pr-')
-            ? {
-                key: i + 1,
-                typegpu: {
-                  type: 'pr',
-                  commit: value.slice('pr-'.length) ?? '',
-                },
-              }
-            : { key: i + 1, typegpu: { type: 'local' } },
+          ? {
+            key: i + 1,
+            typegpu: {
+              type: 'pr',
+              commit: value.slice('pr-'.length) ?? '',
+            },
+          }
+          : { key: i + 1, typegpu: { type: 'local' } }
       ),
   },
 );

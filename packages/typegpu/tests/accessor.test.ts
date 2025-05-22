@@ -2,8 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
@@ -13,10 +12,7 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -24,14 +20,11 @@ describe('tgpu.accessor', () => {
       .with(
         colorAccessor,
         tgpu['~unstable']
-          .fn(
-            [],
-            d.vec3f,
-          )(`() -> vec3f { return ${RED_RESOLVED}; }`)
+          .fn([], d.vec3f)(`() -> vec3f { return ${RED_RESOLVED}; }`)
           .$name('red'),
       );
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn red() -> vec3f {
           return ${RED_RESOLVED};
@@ -48,10 +41,7 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -65,7 +55,7 @@ describe('tgpu.accessor', () => {
           .as('uniform'),
       );
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> red: vec3f;
 
@@ -83,10 +73,7 @@ describe('tgpu.accessor', () => {
       .$name('multiplier');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color * multiplier;
       }`)
       .$name('getColor')
@@ -94,7 +81,7 @@ describe('tgpu.accessor', () => {
       .with(colorAccessor, RED)
       .with(multiplierAccessor, 2);
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return ${RED_RESOLVED} * 2;
@@ -109,16 +96,13 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(parseResolved({ getColor })).toEqual(
+    expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED_RESOLVED};
@@ -133,10 +117,7 @@ describe('tgpu.accessor', () => {
       .$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return color;
       }`)
       .$name('getColor')
@@ -152,7 +133,7 @@ describe('tgpu.accessor', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    expect(parseResolved({ main })).toEqual(
+    expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return vec3f(0, 1, 0);
@@ -169,18 +150,14 @@ describe('tgpu.accessor', () => {
     const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return color;
       })`)
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(() =>
-      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
+      .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed: 
         - <root>
         - fn:getColor
@@ -202,10 +179,7 @@ describe('tgpu.accessor', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(
       d.vec3f,
       tgpu['~unstable']
-        .fn(
-          [],
-          d.vec3f,
-        )(() => RED)
+        .fn([], d.vec3f)(() => RED)
         .$name('getColor'),
     );
 
@@ -226,7 +200,7 @@ describe('tgpu.accessor', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> colorUniform: vec3f;
 

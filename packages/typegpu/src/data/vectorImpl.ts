@@ -2,7 +2,7 @@ import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { VecKind } from './wgslTypes.ts';
 
-// biome-ignore format: swizzles should not expand
+// deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   public readonly [$internal] = true;
   abstract get kind(): VecKind;

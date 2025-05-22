@@ -24,25 +24,27 @@ const { title, theme = 'light' } = Astro.props;
       .overflow-guard {
         border-radius: 0 0.5rem 0.5rem 0.5rem;
       }
+      @reference "../tailwind.css";
+      @layer base {
+        h1 {
+          @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
+        }
 
-      h1 {
-        @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
-      }
+        h2 {
+          @apply m-0 lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
+        }
 
-      h2 {
-        @apply m-0 lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
-      }
+        h3 {
+          @apply m-0 lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
+        }
 
-      h3 {
-        @apply m-0 lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
-      }
+        p {
+          @apply m-0 lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
+        }
 
-      p {
-        @apply m-0 lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
-      }
-
-      .text-micro {
-        @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
+        .text-micro {
+          @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
+        }
       }
 
       body {
@@ -56,6 +58,14 @@ const { title, theme = 'light' } = Astro.props;
 
       [data-theme='light'] body {
         background-color: white;
+      }
+
+      input[type="color"]::-webkit-color-swatch {
+        border: none;
+      }
+      
+      input[type="color"]::-moz-color-swatch  {
+        border: none;
       }
     </style>
   </head>

@@ -93,12 +93,14 @@ const ASSIGNMENT_OP_MAP = {
   },
 } as const;
 
-const Transpilers: Partial<{
-  [Type in JsNode['type']]: (
-    ctx: Context,
-    node: Extract<JsNode, { type: Type }>,
-  ) => tinyest.AnyNode;
-}> = {
+const Transpilers: Partial<
+  {
+    [Type in JsNode['type']]: (
+      ctx: Context,
+      node: Extract<JsNode, { type: Type }>,
+    ) => tinyest.AnyNode;
+  }
+> = {
   Program(ctx, node) {
     const body = node.body[0];
 
@@ -226,7 +228,7 @@ const Transpilers: Partial<{
     const callee = transpile(ctx, node.callee) as tinyest.Expression;
 
     const args = node.arguments.map((arg) =>
-      transpile(ctx, arg),
+      transpile(ctx, arg)
     ) as tinyest.Expression[];
 
     return [NODE.call, callee, args];
@@ -277,7 +279,7 @@ const Transpilers: Partial<{
       return [NODE.const, id, init];
     }
 
-    return init ? [NODE.let, id, init] : [NODE.let, id];
+    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
   },
 
   IfStatement(ctx, node) {
@@ -314,10 +316,9 @@ const Transpilers: Partial<{
       }
 
       ctx.ignoreExternalDepth++;
-      const key =
-        prop.key.type === 'Identifier'
-          ? (transpile(ctx, prop.key) as string)
-          : String(prop.key.value);
+      const key = prop.key.type === 'Identifier'
+        ? (transpile(ctx, prop.key) as string)
+        : String(prop.key.value);
       ctx.ignoreExternalDepth--;
       const value = transpile(ctx, prop.value) as tinyest.Expression;
 
@@ -354,6 +355,14 @@ const Transpilers: Partial<{
 
   BreakStatement() {
     return [NODE.break];
+  },
+
+  TSAsExpression(ctx, node) {
+    return transpile(ctx, node.expression);
+  },
+
+  TSSatisfiesExpression(ctx, node) {
+    return transpile(ctx, node.expression);
   },
 };
 
@@ -429,7 +438,9 @@ export function extractFunctionParts(rootNode: JsNode): {
 
   if (!functionNode) {
     throw new Error(
-      `tgpu.fn expected a single function to be passed as implementation ${JSON.stringify(unwrappedNode)}`,
+      `tgpu.fn expected a single function to be passed as implementation ${
+        JSON.stringify(unwrappedNode)
+      }`,
     );
   }
 
@@ -451,10 +462,10 @@ export function extractFunctionParts(rootNode: JsNode): {
         type: 'destructured-object',
         props: functionNode.params[0].properties.flatMap((prop) =>
           (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-          prop.key.type === 'Identifier' &&
-          prop.value.type === 'Identifier'
+            prop.key.type === 'Identifier' &&
+            prop.value.type === 'Identifier'
             ? [{ prop: prop.key.name, alias: prop.value.name }]
-            : [],
+            : []
         ),
       },
       body: functionNode.body,
@@ -465,7 +476,7 @@ export function extractFunctionParts(rootNode: JsNode): {
     params: {
       type: 'identifiers',
       names: functionNode.params.flatMap((x) =>
-        x.type === 'Identifier' ? [x.name] : [],
+        x.type === 'Identifier' ? [x.name] : []
       ),
     },
     body: functionNode.body,
@@ -480,10 +491,9 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     ignoreExternalDepth: 0,
     stack: [
       {
-        declaredNames:
-          argNames.type === 'identifiers'
-            ? argNames.names
-            : argNames.props.map((prop) => prop.alias),
+        declaredNames: argNames.type === 'identifiers'
+          ? argNames.names
+          : argNames.props.map((prop) => prop.alias),
       },
     ],
   };

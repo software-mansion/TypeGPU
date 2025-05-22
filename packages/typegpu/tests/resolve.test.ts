@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { $internal } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
+import { setName } from '../src/name.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -18,7 +20,7 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(
         'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
       ),
@@ -27,7 +29,9 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      label: 'intensity',
+      [$internal]: {
+        dataType: d.f32,
+      },
 
       get value() {
         return this;
@@ -40,6 +44,7 @@ describe('tgpu resolve', () => {
         return 'intensity_1';
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
+    setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1))
@@ -54,7 +59,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(
         `@group(0) @binding(0) var<uniform> intensity_1: f32;
         @fragment fn fragment1() -> @location(0) vec4f {
@@ -75,10 +80,7 @@ describe('tgpu resolve', () => {
     });
 
     const getPlayerHealth = tgpu['~unstable']
-      .fn(
-        [PlayerData],
-        d.f32,
-      )((pInfo) => {
+      .fn([PlayerData], d.f32)((pInfo) => {
         return pInfo.health;
       })
       .$name('getPlayerHealthTest');
@@ -100,7 +102,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct PlayerData {
           position: vec3f,
@@ -129,10 +131,7 @@ describe('tgpu resolve', () => {
     });
 
     const random = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(/* wgsl */ `() -> f32 {
+      .fn([], d.f32)(/* wgsl */ `() -> f32 {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
         r.range = vec2<f32>(0.0, 1.0);
@@ -154,7 +153,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Random {
           seed: vec2f,
@@ -191,7 +190,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct VertexInfo {
           color: vec4f,
@@ -217,7 +216,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct VertexInfo {
           color: vec4f,
@@ -254,7 +253,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct extra {
           a: f32,
@@ -282,10 +281,7 @@ describe('tgpu resolve', () => {
 
   it('should resolve object externals and replace their usages in template', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -307,11 +303,11 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() {
+      fn get_color() -> vec3f {
         let color = vec3f();
         return color;
       }
@@ -325,20 +321,14 @@ describe('tgpu resolve', () => {
 
   it('should resolve only used object externals and ignore non-existing', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getIntensity = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return 1;
       }`)
       .$name('get_intensity');
@@ -382,7 +372,7 @@ describe('tgpu resolve', () => {
           names: 'strict',
         }),
       ),
-    ).toEqual(parse('fn main() { let x = 2 + 3; }'));
+    ).toBe(parse('fn main() { let x = 2 + 3; }'));
   });
 
   it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
@@ -403,7 +393,7 @@ describe('tgpu resolve', () => {
           names: 'strict',
         }),
       ),
-    ).toEqual(
+    ).toBe(
       parse(`
         fn main () {
           let x = 3;

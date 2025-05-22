@@ -1,0 +1,154 @@
+---
+title: Build Plugin
+description: A guide on how to use the optional build plugin for TypeGPU
+---
+
+[unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) is an optional (but highly recommended) tool for projects using TypeGPU. It hooks into your bundler of choice, and unlocks new features, optimizations and quality-of-life improvements.
+
+The package includes the following functionalities:
+
+- **TGSL functions**
+
+  TypeGPU allows running a subset of JavaScript (which we call TGSL) on the GPU. It is achieved by transpiling JS functions into WGSL.
+  This can be done via a Just-In-Time compiler or at build time, using the plugin.
+  Transpiling at build time reduces the performance overhead at runtime
+  and it is also the only possible approach on React Native, as the function code string is not available during runtime there.
+
+  _unplugin-typegpu_ scans the project files looking for the tgpu function shell implementations.
+  It transpiles the JS code into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest).
+
+  When an implementation function is passed directly to the shell creation, the plugin should have no problem identifying and processing it.
+
+  ```ts
+  import tgpu from 'typegpu';
+  import * as d from 'typegpu/data';
+
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(
+    (a, b) => a + b,
+  );
+  ```
+
+  However, if the implementation function, or the shell, is referenced via a variable, the plugin will not recognize it as TGSL,
+  thus to make it work, the function needs to be marked with a `"kernel"` directive.
+
+  ```ts
+  const addFn = tgpu['~unstable'].fn([d.u32, d.u32], d.u32);
+
+  const add = addFn((a, b) => {
+    'kernel';
+    return a + b;
+  });
+  ```
+
+  ```ts
+  const addImpl = (a, b) => {
+    'kernel';
+    return a + b;
+  };
+
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(addImpl);
+  ```
+
+  After transpiling the function, the JS implementation is removed from the bundle in order to save space.
+  To be able to invoke the function both on GPU and CPU, it needs to be marked with `"kernel & js"` directive;
+
+  ```ts
+  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a, b) => {
+    'kernel & js';
+    return a + b;
+  });
+
+  add(2, 2);
+  ```
+
+  Besides transpiling JS into AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method anymore.
+  This is not possible when using a JIT transpiler.
+
+- **[WIP] Automatic naming of tgpu objects**
+
+  Naming gpu objects via the `$name` method is very helpful for debugging. Soon it will not be necessary to do that explicitly.
+  Instead, the plugin will be able to name the objects based on the variable names that they are assigned to.
+
+:::caution
+In order for the plugin to work, the file that is to be transformed needs to import _typegpu_.
+Note that unused imports may be automatically removed by bundlers, so make sure this does not happen.
+:::
+
+## Installation
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none 
+    npm install --save-dev unplugin-typegpu 
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none 
+    pnpm add -D unplugin-typegpu 
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none 
+    yarn add -D unplugin-typegpu 
+    ```
+  </TabItem>
+</Tabs>
+
+After installing the package, the exported plugin needs to be included in the list of plugins in the bundler config.
+
+## Supported bundlers
+
+The plugin was built using [unplugin](https://unplugin.unjs.io/), which allows it to be used with a variety of bundlers.
+Currently the package exports plugins for the following ones: _esbuild_, _farm_, _rolldown_, _rollup_, _rspack_, _vite_, _webpack_.
+Apart from the tools supported by _unplugin_, a _babel_ plugin was also created.
+
+:::caution
+The _babel_ and _vite_/_rollup_ plugins are the ones that are actively being maintained and tested by the TypeGPU team,
+the stability of the other ones may be limited.
+:::
+
+- Vite
+
+```js title="vite.config.js"
+import { defineConfig } from 'vite';
+import typegpuPlugin from 'unplugin-typegpu/vite';
+
+export default defineConfig({
+  plugins: [typegpuPlugin()],
+});
+```
+
+- Babel (React Native)
+
+```js title="babel.config.js"
+module.exports = (api) => {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['unplugin-typegpu/babel'],
+  };
+};
+```
+
+## Plugin options
+
+```ts
+interface Options {
+  include?: FilterPattern;
+  exclude?: FilterPattern;
+  enforce?: 'post' | 'pre' | undefined;
+  forceTgpuAlias?: string;
+}
+```
+
+The plugin accepts the standard `unplugin` options, that make it possible to customize which files are to be processed ([include/exclude](https://rolldown.rs/guide/plugin-development#plugin-hook-filters) patterns),
+or [enforce](https://vite.dev/guide/api-plugin.html#plugin-ordering) the order in which the plugin is run in regards to other plugins.
+
+The custom _forceTgpuAlias_ option allows specifying the name of _tgpu_ object imported from `typegpu`.
+It is only useful in a handful of custom scenarios, when the name cannot be retrieved by the plugin automatically from the import statement.
+
+## Further reading
+
+For more information about bundler plugins, please refer to the [unplugin](https://unplugin.unjs.io/guide/) and [babel](https://babeljs.io/docs/plugins) documentations.

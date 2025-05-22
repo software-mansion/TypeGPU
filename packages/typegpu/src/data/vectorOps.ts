@@ -197,11 +197,9 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(
       e1: T,
       e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+      : wgsl.v4b
   >,
 
   lt: {
@@ -232,11 +230,9 @@ export const VectorOps = {
     <T extends wgsl.AnyNumericVecInstance>(
       e1: T,
       e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+      : wgsl.v4b
   >,
 
   or: {
@@ -501,7 +497,6 @@ export const VectorOps = {
       return mat2x2f(
         a_[0].x * b_[0].x + a_[1].x * b_[0].y,
         a_[0].y * b_[0].x + a_[1].y * b_[0].y,
-
         a_[0].x * b_[1].x + a_[1].x * b_[1].y,
         a_[0].y * b_[1].x + a_[1].y * b_[1].y,
       );
@@ -515,11 +510,9 @@ export const VectorOps = {
         a_[0].x * b_[0].x + a_[1].x * b_[0].y + a_[2].x * b_[0].z,
         a_[0].y * b_[0].x + a_[1].y * b_[0].y + a_[2].y * b_[0].z,
         a_[0].z * b_[0].x + a_[1].z * b_[0].y + a_[2].z * b_[0].z,
-
         a_[0].x * b_[1].x + a_[1].x * b_[1].y + a_[2].x * b_[1].z,
         a_[0].y * b_[1].x + a_[1].y * b_[1].y + a_[2].y * b_[1].z,
         a_[0].z * b_[1].x + a_[1].z * b_[1].y + a_[2].z * b_[1].z,
-
         a_[0].x * b_[2].x + a_[1].x * b_[2].y + a_[2].x * b_[2].z,
         a_[0].y * b_[2].x + a_[1].y * b_[2].y + a_[2].y * b_[2].z,
         a_[0].z * b_[2].x + a_[1].z * b_[2].y + a_[2].z * b_[2].z,
@@ -547,7 +540,6 @@ export const VectorOps = {
           a_[1].w * b_[0].y +
           a_[2].w * b_[0].z +
           a_[3].w * b_[0].w,
-
         a_[0].x * b_[1].x +
           a_[1].x * b_[1].y +
           a_[2].x * b_[1].z +
@@ -564,7 +556,6 @@ export const VectorOps = {
           a_[1].w * b_[1].y +
           a_[2].w * b_[1].z +
           a_[3].w * b_[1].w,
-
         a_[0].x * b_[2].x +
           a_[1].x * b_[2].y +
           a_[2].x * b_[2].z +
@@ -581,7 +572,6 @@ export const VectorOps = {
           a_[1].w * b_[2].y +
           a_[2].w * b_[2].z +
           a_[3].w * b_[2].w,
-
         a_[0].x * b_[3].x +
           a_[1].x * b_[3].y +
           a_[2].x * b_[3].z +
@@ -838,6 +828,46 @@ export const VectorOps = {
     <T extends wgsl.AnyFloatVecInstance | number>(a: T, b: T) => T
   >,
 
+  sign: {
+    vec2f: unary2f(Math.sign),
+    vec2h: unary2h(Math.sign),
+    vec2i: unary2i(Math.sign),
+
+    vec3f: unary3f(Math.sign),
+    vec3h: unary3h(Math.sign),
+    vec3i: unary3i(Math.sign),
+
+    vec4f: unary4f(Math.sign),
+    vec4h: unary4h(Math.sign),
+    vec4i: unary4i(Math.sign),
+  } as Record<VecKind, <T extends vBase>(e: T) => T>,
+
+  sqrt: {
+    vec2f: unary2f(Math.sqrt),
+    vec2h: unary2h(Math.sqrt),
+
+    vec3f: unary3f(Math.sqrt),
+    vec3h: unary3h(Math.sqrt),
+
+    vec4f: unary4f(Math.sqrt),
+    vec4h: unary4h(Math.sqrt),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  div: {
+    vec2f: binaryComponentWise2f((a, b) => a / b),
+    vec2h: binaryComponentWise2h((a, b) => a / b),
+    vec2i: binaryComponentWise2i((a, b) => a / b),
+    vec2u: binaryComponentWise2u((a, b) => a / b),
+    vec3f: binaryComponentWise3f((a, b) => a / b),
+    vec3h: binaryComponentWise3h((a, b) => a / b),
+    vec3i: binaryComponentWise3i((a, b) => a / b),
+    vec3u: binaryComponentWise3u((a, b) => a / b),
+    vec4f: binaryComponentWise4f((a, b) => a / b),
+    vec4h: binaryComponentWise4h((a, b) => a / b),
+    vec4i: binaryComponentWise4i((a, b) => a / b),
+    vec4u: binaryComponentWise4u((a, b) => a / b),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
   mix: {
     vec2f: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {
       if (typeof e3 === 'number') {
@@ -1051,11 +1081,9 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(
       f: T,
       t: T,
-      c: T extends wgsl.AnyVec2Instance
-        ? wgsl.v2b
-        : T extends wgsl.AnyVec3Instance
-          ? wgsl.v3b
-          : wgsl.v4b,
+      c: T extends wgsl.AnyVec2Instance ? wgsl.v2b
+        : T extends wgsl.AnyVec3Instance ? wgsl.v3b
+        : wgsl.v4b,
     ) => T
   >,
 };

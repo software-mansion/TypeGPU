@@ -2,8 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
-import { parseResolved } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -13,10 +12,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -24,7 +20,7 @@ describe('tgpu.slot', () => {
 
     const actual = parseResolved({ getColor });
 
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED};
@@ -37,10 +33,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -57,7 +50,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithGreen });
 
     const actual = parseResolved({ main });
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${GREEN};
@@ -74,10 +67,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -96,9 +86,9 @@ describe('tgpu.slot', () => {
     const actual = parseResolved({ main });
 
     // should be green
-    expect(actual).toEqual(
+    expect(actual).toBe(
       parse(`
-        fn getColor() {
+        fn getColor() -> vec3f {
           return vec3f(0., 1., 0.);
         }
 
@@ -113,18 +103,14 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return colorSlot;
       })`)
       .$name('getColor')
       .$uses({ colorSlot });
 
-    expect(() =>
-      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
+      .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed: 
         - <root>
         - fn:getColor
@@ -136,10 +122,7 @@ describe('tgpu.slot', () => {
     const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$name('getColor')
@@ -185,7 +168,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('reuses common nested functions', () => {
@@ -195,20 +178,14 @@ describe('tgpu.slot', () => {
       .$name('color');
 
     const getSize = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(/* wgsl */ `() -> f32 {
+      .fn([], d.f32)(/* wgsl */ `() -> f32 {
         return sizeSlot;
       }`)
       .$uses({ sizeSlot })
       .$name('getSize');
 
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(/* wgsl */ `() -> vec3f {
+      .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
         return colorSlot;
       }`)
       .$uses({ colorSlot })
@@ -320,7 +297,7 @@ describe('tgpu.slot', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('unwraps layers of slots', () => {
@@ -362,12 +339,10 @@ describe('tgpu.slot', () => {
       fn main() { fn4(); }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({
-    root,
-  }) => {
+  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
     const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
     const Boid = d
       .struct({
@@ -384,10 +359,7 @@ describe('tgpu.slot', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(
       d.vec3f,
       tgpu['~unstable']
-        .fn(
-          [],
-          d.vec3f,
-        )(() => d.vec3f(1, 2, 3))
+        .fn([], d.vec3f)(() => d.vec3f(1, 2, 3))
         .$name('getColor'),
     );
     const colorAccessorSlot = tgpu['~unstable'].slot(colorAccessorFn);
@@ -409,7 +381,7 @@ describe('tgpu.slot', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toEqual(
+    expect(parse(resolved)).toBe(
       parse(`
         struct Boid {
           pos: vec3f,

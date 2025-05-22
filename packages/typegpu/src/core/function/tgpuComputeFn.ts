@@ -1,8 +1,9 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { AnyWgslStruct } from '../../data/wgslTypes.ts';
-import { type TgpuNamable, isNamable } from '../../namable.ts';
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore } from './fnCore.ts';
+import { type AnyWgslStruct, Void } from '../../data/wgslTypes.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO } from './fnTypes.ts';
 import { createStructFromIO } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
@@ -18,7 +19,7 @@ type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
   readonly argTypes: [AnyWgslStruct] | [];
-  readonly returnType: undefined;
+  readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
   readonly isEntry: true;
 };
@@ -30,36 +31,38 @@ type TgpuComputeFnShellHeader<
  */
 export type TgpuComputeFnShell<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
-> = TgpuComputeFnShellHeader<ComputeIn> /**
- * Creates a type-safe implementation of this signature
- */ &
-  ((
-    implementation: (input: InferIO<ComputeIn>) => undefined,
-  ) => TgpuComputeFn<ComputeIn>) &
+> =
+  & TgpuComputeFnShellHeader<ComputeIn>
   /**
+   * Creates a type-safe implementation of this signature
+   */
+  & ((
+    implementation: (input: InferIO<ComputeIn>) => undefined,
+  ) => TgpuComputeFn<ComputeIn>)
+  & /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
-   */
-  ((implementation: string) => TgpuComputeFn<ComputeIn>) &
-  ((
+   */ ((implementation: string) => TgpuComputeFn<ComputeIn>)
+  & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuComputeFn<ComputeIn>) & {
+  ) => TgpuComputeFn<ComputeIn>)
+  & {
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: ((
-      implementation: (input: InferIO<ComputeIn>) => undefined,
-    ) => TgpuComputeFn<ComputeIn>) &
-      /**
+    does:
+      & ((
+        implementation: (input: InferIO<ComputeIn>) => undefined,
+      ) => TgpuComputeFn<ComputeIn>)
+      & /**
        * @param implementation
        *   Raw WGSL function implementation with header and body
        *   without `fn` keyword and function name
        *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */
-      ((implementation: string) => TgpuComputeFn<ComputeIn>);
+       */ ((implementation: string) => TgpuComputeFn<ComputeIn>);
   };
 
 export interface TgpuComputeFn<
@@ -105,11 +108,10 @@ export function computeFn<
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
-    argTypes:
-      options.in && Object.keys(options.in).length !== 0
-        ? [createStructFromIO(options.in)]
-        : [],
-    returnType: undefined,
+    argTypes: options.in && Object.keys(options.in).length !== 0
+      ? [createStructFromIO(options.in)]
+      : [],
+    returnType: Void,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,
       options.workgroupSize[1] ?? 1,
@@ -142,7 +144,9 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   workgroupSize: number[],
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
-  type This = TgpuComputeFn<ComputeIn> & Labelled & SelfResolvable;
+  type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(shell, implementation);
   const inputType = shell.argTypes[0];
@@ -150,17 +154,14 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
   return {
     shell,
 
-    get label() {
-      return core.label;
-    },
-
     $uses(newExternals) {
       core.applyExternals(newExternals);
       return this;
     },
 
+    [$getNameForward]: core,
     $name(newLabel: string): This {
-      core.label = newLabel;
+      setName(core, newLabel);
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
@@ -175,7 +176,7 @@ function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     },
 
     toString() {
-      return `computeFn:${this.label ?? '<unnamed>'}`;
+      return `computeFn:${getName(core) ?? '<unnamed>'}`;
     },
   } as This;
 }

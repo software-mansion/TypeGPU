@@ -2,9 +2,9 @@ import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import {
+  invariant,
   MissingBindGroupsError,
   MissingVertexBuffersError,
-  invariant,
 } from '../../errors.ts';
 import type { JitTranspiler } from '../../jitTranspiler.ts';
 import { WeakMemo } from '../../memo.ts';
@@ -17,21 +17,21 @@ import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
-  LayoutEntryToInput,
+  ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import {
-  TgpuBindGroupImpl,
   isBindGroup,
   isBindGroupLayout,
+  TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
 import {
   INTERNAL_createBuffer,
+  isBuffer,
   type TgpuBuffer,
   type VertexFlag,
-  isBuffer,
 } from '../buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
@@ -50,42 +50,42 @@ import type {
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
-  type TgpuComputePipeline,
   isComputePipeline,
+  type TgpuComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
+  isRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
-  isRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import {
-  type TgpuComparisonSampler,
-  type TgpuSampler,
   isComparisonSampler,
   isSampler,
+  type TgpuComparisonSampler,
+  type TgpuSampler,
 } from '../sampler/sampler.ts';
 import {
+  isAccessor,
   type TgpuAccessor,
   type TgpuSlot,
-  isAccessor,
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
   type TgpuSampledTexture,
   type TgpuTexture,
   type TgpuWriteonlyTexture,
-  isSampledTextureView,
-  isStorageTextureView,
-  isTexture,
 } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
-  type TgpuVertexLayout,
   isVertexLayout,
+  type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import type {
   CreateTextureOptions,
@@ -209,10 +209,8 @@ interface Disposable {
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl
-  extends WithBindingImpl
-  implements TgpuRoot, ExperimentalTgpuRoot
-{
+class TgpuRootImpl extends WithBindingImpl
+  implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 
   private _disposables: Disposable[] = [];
@@ -221,7 +219,7 @@ class TgpuRootImpl
     (key: TgpuBindGroupLayout) => key.unwrap(this),
   );
   private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
-    key.unwrap(this),
+    key.unwrap(this)
   );
 
   private _commandEncoder: GPUCommandEncoder | null = null;
@@ -278,8 +276,9 @@ class TgpuRootImpl
   ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
     return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
       .$usage('storage')
-      .as('readonly') as TgpuBufferReadonly<TData> &
-      TgpuFixedBufferUsage<TData>;
+      .as('readonly') as
+        & TgpuBufferReadonly<TData>
+        & TgpuFixedBufferUsage<TData>;
   }
 
   createBindGroup<
@@ -289,9 +288,7 @@ class TgpuRootImpl
     >,
   >(
     layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
-    },
+    entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
     return new TgpuBindGroupImpl(layout, entries);
   }
@@ -484,8 +481,8 @@ class TgpuRootImpl
           pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
           missingBindGroups.delete(layout);
         } else {
-          const bindGroup =
-            priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout);
+          const bindGroup = priors.bindGroupLayoutMap?.get(layout) ??
+            bindGroups.get(layout);
           if (bindGroup !== undefined) {
             missingBindGroups.delete(layout);
             if (isBindGroup(bindGroup)) {
@@ -502,10 +499,10 @@ class TgpuRootImpl
         const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
         const opts = priorBuffer
           ? {
-              buffer: priorBuffer,
-              offset: undefined,
-              size: undefined,
-            }
+            buffer: priorBuffer,
+            offset: undefined,
+            size: undefined,
+          }
           : vertexBuffers.get(vertexLayout);
 
         if (!opts || !opts.buffer) {

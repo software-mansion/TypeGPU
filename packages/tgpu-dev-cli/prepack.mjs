@@ -79,9 +79,11 @@ async function transformPackageJSON() {
   });
 
   // Erroring out on any wildcard dependencies
-  for (const [moduleKey, versionSpec] of [
-    ...entries(distPackageJson.dependencies ?? {}),
-  ]) {
+  for (
+    const [moduleKey, versionSpec] of [
+      ...entries(distPackageJson.dependencies ?? {}),
+    ]
+  ) {
     if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
         `Cannot depend on a module with a wildcard version. (${moduleKey}: ${versionSpec})`,
@@ -156,11 +158,21 @@ async function main() {
     };
 
     const taskString = (/** @type {TaskName} */ name) =>
-      `${{ in_progress: color.Magenta, success: color.Green, fail: color.Red }[status[name]]}${ICON[status[name]]}${color.Reset} ${name}`;
+      `${
+        {
+          in_progress: color.Magenta,
+          success: color.Green,
+          fail: color.Red,
+        }[status[name]]
+      }${ICON[status[name]]}${color.Reset} ${name}`;
 
     const updateMsg = () =>
       update(
-        `${color.BgBrightMagenta}${color.Black}${Frog} working on tasks...${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+        `${color.BgBrightMagenta}${color.Black}${Frog} working on tasks...${color.Reset}  ${
+          taskString('biome')
+        }, ${taskString('build')}, ${taskString('spec')}, ${
+          taskString('types')
+        }`,
       );
 
     /**
@@ -169,33 +181,40 @@ async function main() {
      * @param {T} promise
      * @returns {T}
      */
-    const withStatusUpdate = (name, promise) =>
-      /** @type {T} */ (
-        promise
-          .then((result) => {
-            status[name] = 'success';
-            updateMsg();
-            return result;
-          })
-          .catch((err) => {
-            status[name] = 'fail';
-            updateMsg();
-            err.taskName = name;
-            throw err;
-          })
-      );
+    const withStatusUpdate = (name, promise) => /** @type {T} */ (
+      promise
+        .then((result) => {
+          status[name] = 'success';
+          updateMsg();
+          return result;
+        })
+        .catch((err) => {
+          status[name] = 'fail';
+          updateMsg();
+          err.taskName = name;
+          throw err;
+        })
+    );
 
     const $ = execa({ all: true });
 
-    const results = await Promise.allSettled([
-      withStatusUpdate('biome', $`biome check .`),
-      withStatusUpdate('build', $`pnpm build`),
-      withStatusUpdate('spec', $`pnpm -w test:spec`),
-      withStatusUpdate('types', $`pnpm -w test:types`),
-    ]);
+    const results = [
+      // First build
+      ...await Promise.allSettled([
+        withStatusUpdate('build', $`pnpm build`),
+      ]),
+      // Then the rest
+      ...await Promise.allSettled([
+        withStatusUpdate('biome', $`pnpm -w check`),
+        withStatusUpdate('spec', $`pnpm -w test:spec`),
+        withStatusUpdate('types', $`pnpm -w test:types`),
+      ]),
+    ];
 
     update(
-      `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+      `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${
+        taskString('biome')
+      }, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
     );
 
     return results;

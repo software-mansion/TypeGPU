@@ -79,24 +79,19 @@ const squareBuffer = root
   .$usage('vertex')
   .$name('square');
 
-const getIndex = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => {
+const getIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) => {
   const h = sizeUniform.value.y;
   const w = sizeUniform.value.x;
   return (y % h) * w + (x % w);
 });
 
-const getCell = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => currentStateStorage.value[getIndex(x, y)]);
+const getCell = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) =>
+  currentStateStorage.value[getIndex(x, y)]
+);
 
-const getCellNext = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => std.atomicLoad(nextStateStorage.value[getIndex(x, y)]));
+const getCellNext = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) =>
+  std.atomicLoad(nextStateStorage.value[getIndex(x, y)])
+);
 
 const updateCell = tgpu['~unstable'].fn([d.u32, d.u32, d.u32])(
   (x, y, value) => {
@@ -133,83 +128,76 @@ const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   updateCell(x, y, (flags << 24) | waterLevel);
 });
 
-const getStableStateBelow = tgpu['~unstable'].fn(
-  { upper: d.u32, lower: d.u32 },
-  d.u32,
-)(({ upper, lower }) => {
-  const totalMass = upper + lower;
-  if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
-    return totalMass;
-  }
-  if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.value * 2 && upper > lower) {
-    return totalMass / 2 + MAX_PRESSURE.value;
-  }
-  return MAX_WATER_LEVEL_UNPRESSURIZED.value;
-});
+const getStableStateBelow = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(
+  (upper, lower) => {
+    const totalMass = upper + lower;
+    if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
+      return totalMass;
+    }
+    if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.value * 2 && upper > lower) {
+      return totalMass / 2 + MAX_PRESSURE.value;
+    }
+    return MAX_WATER_LEVEL_UNPRESSURIZED.value;
+  },
+);
 
-const isWall = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => getCell(x, y) >> 24 === 1);
+const isWall = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (x, y) => getCell(x, y) >> 24 === 1,
+);
 
-const isWaterSource = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => getCell(x, y) >> 24 === 2);
+const isWaterSource = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (x, y) => getCell(x, y) >> 24 === 2,
+);
 
-const isWaterDrain = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => getCell(x, y) >> 24 === 3);
+const isWaterDrain = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (x, y) => getCell(x, y) >> 24 === 3,
+);
 
-const isClearCell = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => getCell(x, y) >> 24 === 4);
+const isClearCell = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (x, y) => getCell(x, y) >> 24 === 4,
+);
 
-const getWaterLevel = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => getCell(x, y) & MAX_WATER_LEVEL.value);
+const getWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(
+  (x, y) => getCell(x, y) & MAX_WATER_LEVEL.value,
+);
 
-const checkForFlagsAndBounds = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => {
-  if (isClearCell(x, y)) {
-    updateCell(x, y, 0);
-    return true;
-  }
+const checkForFlagsAndBounds = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
+  (x, y) => {
+    if (isClearCell(x, y)) {
+      updateCell(x, y, 0);
+      return true;
+    }
 
-  if (isWall(x, y)) {
-    persistFlags(x, y);
-    return true;
-  }
+    if (isWall(x, y)) {
+      persistFlags(x, y);
+      return true;
+    }
 
-  if (isWaterSource(x, y)) {
-    persistFlags(x, y);
-    addToCell(x, y, 20);
+    if (isWaterSource(x, y)) {
+      persistFlags(x, y);
+      addToCell(x, y, 20);
+      return false;
+    }
+
+    if (isWaterDrain(x, y)) {
+      persistFlags(x, y);
+      updateCell(x, y, 3 << 24);
+      return true;
+    }
+
+    if (
+      y === 0 ||
+      y === sizeUniform.value.y - 1 ||
+      x === 0 ||
+      x === sizeUniform.value.x - 1
+    ) {
+      subtractFromCell(x, y, getWaterLevel(x, y));
+      return true;
+    }
+
     return false;
-  }
-
-  if (isWaterDrain(x, y)) {
-    persistFlags(x, y);
-    updateCell(x, y, 3 << 24);
-    return true;
-  }
-
-  if (
-    y === 0 ||
-    y === sizeUniform.value.y - 1 ||
-    x === 0 ||
-    x === sizeUniform.value.x - 1
-  ) {
-    subtractFromCell(x, y, getWaterLevel(x, y));
-    return true;
-  }
-
-  return false;
-});
+  },
+);
 
 const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   if (checkForFlagsAndBounds(x, y)) {
@@ -224,10 +212,10 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
 
   if (!isWall(x, y - 1)) {
     const waterLevelBelow = getWaterLevel(x, y - 1);
-    const stable = getStableStateBelow({
-      upper: remainingWater,
-      lower: waterLevelBelow,
-    });
+    const stable = getStableStateBelow(
+      remainingWater,
+      waterLevelBelow,
+    );
     if (waterLevelBelow < stable) {
       const change = stable - waterLevelBelow;
       const flow = std.min(change, viscosityUniform.value);
@@ -273,10 +261,10 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   }
 
   if (!isWall(x, y + 1)) {
-    const stable = getStableStateBelow({
-      upper: getWaterLevel(x, y + 1),
-      lower: remainingWater,
-    });
+    const stable = getStableStateBelow(
+      getWaterLevel(x, y + 1),
+      remainingWater,
+    );
     if (stable < remainingWater) {
       const flow = std.min(remainingWater - stable, viscosityUniform.value);
       subtractFromCell(x, y, flow);
@@ -296,14 +284,13 @@ const vertex = tgpu['~unstable'].vertexFn({
 })((input) => {
   const w = sizeUniform.value.x;
   const h = sizeUniform.value.y;
-  const x =
-    (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
-      2 *
-      d.f32(w)) /
+  const x = (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
+    2 *
+    d.f32(w)) /
     d.f32(std.max(w, h));
   const y =
     ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
-      d.f32(h) -
+        d.f32(h) -
       0.5) *
       2 *
       d.f32(h)) /
@@ -512,8 +499,7 @@ canvas.onmousemove = (event) => {
 
   const cellSize = canvas.width / options.size;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y =
-    options.size -
+  const y = options.size -
     Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
     1;
 
@@ -549,8 +535,7 @@ canvas.ontouchmove = (event) => {
   const x = Math.floor(
     ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
   );
-  const y =
-    options.size -
+  const y = options.size -
     Math.floor(
       ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
     ) -
@@ -578,8 +563,7 @@ const createSampleScene = () => {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
         drawCanvasData.push({
-          idx:
-            (middlePoint + j + options.size / 4) * options.size +
+          idx: (middlePoint + j + options.size / 4) * options.size +
             middlePoint +
             i,
           value: 2 << 24,

@@ -3,37 +3,34 @@ import {
   type AnyWgslData,
   isWgslData,
   isWgslStruct,
+  Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { resolveFunctionHeader } from '../../resolutionCtx.ts';
+import { getName, setName } from '../../name.ts';
 import type { ResolutionCtx, Snippet } from '../../types.ts';
 import {
-  type ExternalMap,
   addArgTypesToExternals,
   addReturnTypeToExternals,
   applyExternals,
+  type ExternalMap,
   replaceExternalsInWgsl,
 } from '../resolve/externals.ts';
 import { getPrebuiltAstFor } from './astUtils.ts';
 import type { Implementation } from './fnTypes.ts';
 
-export interface TgpuFnShellBase<
-  Args extends unknown[] | Record<string, unknown>,
-  Return,
-> {
+export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
   readonly isEntry: boolean;
 }
 
 export interface FnCore {
-  label: string | undefined;
   applyExternals(newExternals: ExternalMap): void;
   resolve(ctx: ResolutionCtx, fnAttribute?: string): string;
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[] | Record<string, unknown>, unknown>,
+  shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation,
 ): FnCore {
   /**
@@ -46,24 +43,18 @@ export function createFnCore(
 
   if (typeof implementation === 'string') {
     if (!shell.isEntry) {
-      if (Array.isArray(shell.argTypes)) {
-        // TODO: Remove this branch along with deprecated array arg types
-
-        addArgTypesToExternals(
-          implementation,
-          Array.isArray(shell.argTypes)
-            ? shell.argTypes
-            : Object.values(shell.argTypes),
-          (externals) => externalsToApply.push(externals),
-        );
-        addReturnTypeToExternals(
-          implementation,
-          shell.returnType,
-          (externals) => externalsToApply.push(externals),
-        );
-      }
+      addArgTypesToExternals(
+        implementation,
+        shell.argTypes,
+        (externals) => externalsToApply.push(externals),
+      );
+      addReturnTypeToExternals(
+        implementation,
+        shell.returnType,
+        (externals) => externalsToApply.push(externals),
+      );
     } else {
-      if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
+      if (isWgslStruct(shell.argTypes[0])) {
         externalsToApply.push({ In: shell.argTypes[0] });
       }
 
@@ -73,9 +64,7 @@ export function createFnCore(
     }
   }
 
-  return {
-    label: undefined as string | undefined,
-
+  const core = {
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
@@ -87,37 +76,24 @@ export function createFnCore(
         applyExternals(externalMap, externals);
       }
 
-      const id = ctx.names.makeUnique(this.label);
+      const id = ctx.names.makeUnique(getName(this));
 
       if (typeof implementation === 'string') {
         let header = '';
 
-        if (!shell.isEntry) {
-          header = Array.isArray(shell.argTypes)
-            ? ''
-            : resolveFunctionHeader(
-                ctx,
-                Object.entries(shell.argTypes).map(([value, dataType]) => ({
-                  value,
-                  dataType: dataType as AnyWgslData,
-                })),
-                shell.returnType as AnyWgslData,
-              );
-        } else {
-          const input =
-            Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])
-              ? '(in: In)'
-              : '()';
+        if (shell.isEntry) {
+          const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
 
           const attributes = isWgslData(shell.returnType)
             ? getAttributesString(shell.returnType)
             : '';
-          const output =
-            shell.returnType !== undefined
-              ? isWgslStruct(shell.returnType)
-                ? '-> Out'
-                : `-> ${attributes !== '' ? attributes : '@location(0)'} ${ctx.resolve(shell.returnType)}`
-              : '';
+          const output = shell.returnType !== Void
+            ? isWgslStruct(shell.returnType)
+              ? '-> Out'
+              : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
+                ctx.resolve(shell.returnType)
+              }`
+            : '';
           header = `${input} ${output} `;
         }
 
@@ -170,23 +146,22 @@ export function createFnCore(
         );
 
         if (missingExternals.length > 0) {
-          throw new MissingLinksError(this.label, missingExternals);
+          throw new MissingLinksError(getName(this), missingExternals);
         }
 
         const args: Snippet[] = Array.isArray(shell.argTypes)
           ? ast.argNames.type === 'identifiers'
             ? shell.argTypes.map((arg, i) => ({
-                value:
-                  (ast.argNames.type === 'identifiers'
-                    ? ast.argNames.names[i]
-                    : undefined) ?? `arg_${i}`,
-                dataType: arg as AnyWgslData,
-              }))
+              value: (ast.argNames.type === 'identifiers'
+                ? ast.argNames.names[i]
+                : undefined) ?? `arg_${i}`,
+              dataType: arg as AnyWgslData,
+            }))
             : []
           : Object.entries(shell.argTypes).map(([name, dataType]) => ({
-              value: name,
-              dataType: dataType as AnyWgslData,
-            }));
+            value: name,
+            dataType: dataType as AnyWgslData,
+          }));
 
         const { head, body } = ctx.fnToWgsl({
           args,
@@ -203,4 +178,13 @@ export function createFnCore(
       return id;
     },
   };
+
+  // The implementation could have been given a name by a bundler plugin,
+  // so we try to transfer it to the core.
+  const maybeName = getName(implementation);
+  if (maybeName !== undefined) {
+    setName(core, maybeName);
+  }
+
+  return core;
 }

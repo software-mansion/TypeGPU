@@ -14,7 +14,7 @@ describe('tagged syntax', () => {
 
       const expected = parse('fn const() -> i32 { return 3; }');
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -28,11 +28,11 @@ describe('tagged syntax', () => {
         'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
       );
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
 
     it('parses template literal with arguments of different types, object args', () => {
-      const addFn = tgpu['~unstable'].fn({}, d.f32)`{
+      const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`.$name('add');
 
@@ -42,7 +42,7 @@ describe('tagged syntax', () => {
         'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
       );
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
   });
 
@@ -61,7 +61,7 @@ describe('tagged syntax', () => {
         @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { return in.pos; }
         `);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -83,7 +83,7 @@ describe('tagged syntax', () => {
           return in.pos;
         }`);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
   });
 
@@ -104,7 +104,7 @@ describe('tagged syntax', () => {
           return vec4f(); 
         }`);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -127,7 +127,7 @@ describe('tagged syntax', () => {
           return vec4f(); 
         }`);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
   });
 
@@ -147,7 +147,7 @@ describe('tagged syntax', () => {
         @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { }
         `);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -167,7 +167,7 @@ describe('tagged syntax', () => {
         @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) { var a = f32(10) + f32(20) + f32(30.1); }
         `);
 
-      expect(actual).toEqual(expected);
+      expect(actual).toBe(expected);
     });
   });
 });

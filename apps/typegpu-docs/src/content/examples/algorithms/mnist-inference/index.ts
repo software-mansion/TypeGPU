@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBuffer, type StorageFlag } from 'typegpu';
+import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const SIZE = 28;
@@ -122,21 +122,23 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     root.createBindGroup(ioLayout, {
       input: i === 0 ? input : buffers[i - 1].state,
       output: buffers[i].state,
-    }),
+    })
   );
 
   const weightsBindGroups = buffers.map((layer) =>
     root.createBindGroup(weightsBiasesLayout, {
       weights: layer.weights,
       biases: layer.biases,
-    }),
+    })
   );
 
   async function inference(data: number[]): Promise<number[]> {
     // verify the length of the data matches the input layer
     if (data.length !== layers[0][0].shape[0]) {
       throw new Error(
-        `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
+        `Data length ${data.length} does not match input shape ${
+          layers[0][0].shape[0]
+        }`,
       );
     }
     input.write(data);
@@ -227,7 +229,7 @@ function downloadLayers(): Promise<[LayerData, LayerData][]> {
       Promise.all([
         downloadLayer(`layer${layer}.weight.npy`),
         downloadLayer(`layer${layer}.bias.npy`),
-      ]),
+      ])
     ),
   );
 }
@@ -280,7 +282,8 @@ function run() {
     for (let j = 0; j < SIZE; j++) {
       const value = canvasData[i * SIZE + j];
       if (value > 0) {
-        context.fillStyle = `rgb(${255 - value}, ${255 - value}, ${255 - value})`;
+        const inverted = 255 - value;
+        context.fillStyle = `rgb(${inverted}, ${inverted}, ${inverted})`;
         context.fillRect(j * scale, i * scale, scale, scale);
       }
     }

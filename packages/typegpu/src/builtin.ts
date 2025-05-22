@@ -119,10 +119,8 @@ export type AnyFragmentInputBuiltin =
   | BuiltinSubgroupSize;
 export type AnyFragmentOutputBuiltin = BuiltinFragDepth | BuiltinSampleMask;
 
-export type OmitBuiltins<S> = S extends AnyBuiltin
-  ? never
-  : S extends BaseData
-    ? S
-    : {
-        [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
-      };
+export type OmitBuiltins<S> = S extends AnyBuiltin ? never
+  : S extends BaseData ? S
+  : {
+    [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
+  };

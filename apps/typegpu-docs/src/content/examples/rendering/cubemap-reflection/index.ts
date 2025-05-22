@@ -133,7 +133,7 @@ let textureBindGroup = root.createBindGroup(textureLayout, {
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(CubeVertex, n),
+  d.arrayOf(CubeVertex, n)
 );
 
 // Shader Functions
@@ -230,7 +230,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
 const cubeVertexFn = tgpu['~unstable'].vertexFn({
   in: {
-    position: d.vec4f,
+    position: d.vec3f,
     uv: d.vec2f,
   },
   out: {
@@ -238,16 +238,13 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewRotationMatrix = d.mat4x4f(
-    camera.value.view.columns[0],
-    camera.value.view.columns[1],
-    camera.value.view.columns[2],
-    d.vec4f(0, 0, 0, 1),
-  );
+  const viewPos =
+    std.mul(camera.value.view, d.vec4f(input.position.xyz, 0)).xyz;
+
   return {
     pos: std.mul(
       camera.value.projection,
-      std.mul(viewRotationMatrix, input.position),
+      d.vec4f(viewPos, 1),
     ),
     texCoord: input.position.xyz,
   };
@@ -496,11 +493,8 @@ export const controls = {
       materialProps.ambient.x,
       materialProps.ambient.y,
       materialProps.ambient.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ ambient: materialProps.ambient });
     },
@@ -510,11 +504,8 @@ export const controls = {
       materialProps.diffuse.x,
       materialProps.diffuse.y,
       materialProps.diffuse.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ diffuse: materialProps.diffuse });
     },
@@ -524,11 +515,8 @@ export const controls = {
       materialProps.specular.x,
       materialProps.specular.y,
       materialProps.specular.z,
-    ],
-    min: [0, 0, 0],
-    max: [1, 1, 1],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange: (value: number[]) => {
+    ] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
       materialProps.specular = d.vec3f(value[0], value[1], value[2]);
       materialBuffer.writePartial({ specular: materialProps.specular });
     },

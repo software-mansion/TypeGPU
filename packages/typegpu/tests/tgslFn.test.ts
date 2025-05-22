@@ -2,28 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { getName } from '../src/name.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return 3;
       })
       .$name('get_x');
 
-    expect(getX.label).toEqual('get_x');
+    expect(getName(getX)).toBe('get_x');
   });
 
   it('resolves fn to WGSL', () => {
     const getY = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         return 3;
       })
       .$name('getY');
@@ -35,16 +30,13 @@ describe('TGSL tgpu.fn function', () => {
         return 3;
       }`);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves externals', () => {
     const v = d.vec3f; // necessary workaround until we finish implementation of member access in the generator
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
+      .fn([], d.vec3f)(() => {
         const color = v();
         const color2 = v(1, 2, 3);
         return color;
@@ -53,10 +45,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('get_color');
 
     const getX = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const color = getColor();
         return 3;
       })
@@ -64,10 +53,7 @@ describe('TGSL tgpu.fn function', () => {
       .$uses({ getColor });
 
     const getY = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const c = getColor();
         return getX();
       })
@@ -94,7 +80,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves structs', () => {
@@ -104,10 +90,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     const createGradient = tgpu['~unstable']
-      .fn(
-        [],
-        Gradient,
-      )(() => {
+      .fn([], Gradient)(() => {
         return Gradient({ to: d.vec3f(1, 2, 3), from: d.vec3f(4, 5, 6) });
       })
       .$name('create_gradient');
@@ -125,7 +108,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves deeply nested structs', () => {
@@ -150,10 +133,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('C');
 
     const pureConfusion = tgpu['~unstable']
-      .fn(
-        [],
-        A,
-      )(() => {
+      .fn([], A)(() => {
         return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
       })
       .$name('pure_confusion');
@@ -180,7 +160,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves vertexFn', () => {
@@ -196,8 +176,8 @@ describe('TGSL tgpu.fn function', () => {
           uv: d.vec2f,
         },
       })((input) => {
-        const vi = input.vi;
-        const ii = input.ii;
+        const vi = d.f32(input.vi);
+        const ii = d.f32(input.ii);
         const color = input.color;
 
         return {
@@ -215,21 +195,21 @@ describe('TGSL tgpu.fn function', () => {
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
       }
-        
+
       struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output{
-        var vi = input.vi;
-        var ii = input.ii;
+        var vi = f32(input.vi);
+        var ii = f32(input.ii);
         var color = input.color;
         return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves computeFn', () => {
@@ -261,7 +241,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('rejects invalid arguments for computeFn', () => {
@@ -334,7 +314,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves fragmentFn with a single output', () => {
@@ -357,7 +337,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('allows for an object based on return type struct to be returned', () => {
@@ -370,10 +350,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn(
-        [],
-        TestStruct,
-      )(() => {
+      .fn([], TestStruct)(() => {
         return {
           a: 1,
           b: 2,
@@ -396,7 +373,7 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('correctly handles object based on return type struct with a function call inside another function', () => {
@@ -409,10 +386,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn(
-        [],
-        TestStruct,
-      )(() => {
+      .fn([], TestStruct)(() => {
         return {
           a: 1,
           b: 2,
@@ -453,27 +427,14 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    expect(actual).toEqual(expected);
+    expect(actual).toBe(expected);
   });
 
   it('resolves its header based on the shell, not AST, allowing passing function accepting a subset of arguments', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a) => a);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(`fn foo(a: u32, arg_1: u32) -> u32 {
-        return a;
-      }`),
-    );
-  });
-
-  it('resolves its header based on the shell, not AST, allowing passing function accepting a subset of arguments (object args)', () => {
-    const foo = tgpu['~unstable'].fn(
-      { a: d.u32, b: d.u32 },
-      d.u32,
-    )(({ a }) => a);
-
-    expect(parseResolved({ foo })).toEqual(
-      parse(`fn foo(a: u32, b: u32) -> u32 {
         return a;
       }`),
     );
@@ -482,18 +443,8 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function with no arguments', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(() => 2);
 
-    expect(parseResolved({ foo })).toEqual(
+    expect(parseResolved({ foo })).toBe(
       parse(`fn foo(arg_0: u32, arg_1: u32) -> u32 {
-        return 2;
-      }`),
-    );
-  });
-
-  it('resolves its header based on the shell, not AST, allowing passing function with no arguments (object args)', () => {
-    const foo = tgpu['~unstable'].fn({ a: d.u32, b: d.u32 }, d.u32)(() => 2);
-
-    expect(parseResolved({ foo })).toEqual(
-      parse(`fn foo(a: u32, b: u32) -> u32 {
         return 2;
       }`),
     );
@@ -501,20 +452,20 @@ describe('TGSL tgpu.fn function', () => {
 
   describe('(when using plugin) can be invoked on CPU only when marked with "kernel & js" directive', () => {
     it('cannot be invoked for a constant with "kernel" directive', () => {
-      const addKernel = ({ x, y }: { x: number; y: number }) => {
+      const addKernel = (x: number, y: number) => {
         'kernel';
         return x + y;
       };
 
-      const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(addKernel);
+      const add = tgpu['~unstable'].fn([d.u32, d.u32])(addKernel);
 
-      expect(() => addKernel({ x: 2, y: 3 })).toThrow(
+      expect(() => addKernel(2, 3)).toThrow(
         'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
-      expect(() => add({ x: 2, y: 3 })).toThrow(
+      expect(() => add(2, 3)).toThrow(
         'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
-      expect(parseResolved({ add })).toEqual(
+      expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -522,16 +473,16 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     it('can be invoked for a constant with "kernel & js" directive', () => {
-      const addKernelJs = ({ x, y }: { x: number; y: number }) => {
+      const addKernelJs = (x: number, y: number) => {
         'kernel & js';
         return x + y;
       };
 
-      const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(addKernelJs);
+      const add = tgpu['~unstable'].fn([d.u32, d.u32])(addKernelJs);
 
-      expect(addKernelJs({ x: 2, y: 3 })).toEqual(5);
-      expect(add({ x: 2, y: 3 })).toEqual(5);
-      expect(parseResolved({ add })).toEqual(
+      expect(addKernelJs(2, 3)).toBe(5);
+      expect(add(2, 3)).toBe(5);
+      expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -539,15 +490,13 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     it('cannot be invoked for inline function with "kernel" directive', () => {
-      const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(
-        ({ x, y }: { x: number; y: number }) => {
-          'kernel';
-          return x + y;
-        },
-      );
+      const add = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
+        'kernel';
+        return x + y;
+      });
 
-      expect(() => add({ x: 2, y: 3 })).toThrow();
-      expect(parseResolved({ add })).toEqual(
+      expect(() => add(2, 3)).toThrow();
+      expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -555,12 +504,12 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     it('cannot be invoked for inline function with no directive', () => {
-      const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(
-        ({ x, y }: { x: number; y: number }) => x + y,
+      const add = tgpu['~unstable'].fn([d.u32, d.u32])(
+        (x, y) => x + y,
       );
 
-      expect(() => add({ x: 2, y: 3 })).toThrow();
-      expect(parseResolved({ add })).toEqual(
+      expect(() => add(2, 3)).toThrow();
+      expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -568,15 +517,13 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     it('can be invoked for inline function with "kernel & js" directive', () => {
-      const add = tgpu['~unstable'].fn({ x: d.u32, y: d.u32 })(
-        ({ x, y }: { x: number; y: number }) => {
-          'kernel & js';
-          return x + y;
-        },
-      );
+      const add = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
+        'kernel & js';
+        return x + y;
+      });
 
-      expect(add({ x: 2, y: 3 })).toEqual(5);
-      expect(parseResolved({ add })).toEqual(
+      expect(add(2, 3)).toBe(5);
+      expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
@@ -584,27 +531,47 @@ describe('TGSL tgpu.fn function', () => {
     });
   });
 
-  // TODO: Add this back when we can properly infer ast types (and implement appropriate behavior for pointers)
-  // it('resolves a function with a pointer parameter', () => {
-  //   const addOnes = tgpu['~unstable']
-  //     .fn([ptrStorage(vec3f, 'read-write')])
-  //     ((ptr) => {
-  //       ptr.x += 1;
-  //       ptr.y += 1;
-  //       ptr.z += 1;
-  //     });
+  it('resolves a function with a pointer parameter', () => {
+    const addOnes = tgpu['~unstable'].fn([d.ptrStorage(d.vec3f, 'read-write')])(
+      (ptr) => {
+        ptr.x += 1;
+        ptr.y += 1;
+        ptr.z += 1;
+      },
+    );
 
-  //   const actual = parseResolved({ addOnes });
-  //   console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
+    const actual = parseResolved({ addOnes });
 
-  //   const expected = parse(`
-  //     fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-  //       (*ptr).x += 1;
-  //       (*ptr).y += 1;
-  //       (*ptr).z += 1;
-  //     }
-  //   `);
+    const expected = parse(`
+      fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+        (*ptr).x += 1;
+        (*ptr).y += 1;
+        (*ptr).z += 1;
+      }
+    `);
 
-  //   expect(actual).toEqual(expected);
-  // });
+    expect(actual).toEqual(expected);
+
+    const callAddOnes = tgpu['~unstable'].fn([])(() => {
+      const someVec = d.vec3f(1, 2, 3);
+      addOnes(someVec);
+    });
+
+    const actualCall = parseResolved({ callAddOnes });
+
+    const expectedCall = parse(`
+      fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+        (*ptr).x += 1;
+        (*ptr).y += 1;
+        (*ptr).z += 1;
+      }
+
+      fn callAddOnes() {
+        var someVec = vec3f(1, 2, 3);
+        addOnes(&someVec);
+      }
+    `);
+
+    expect(actualCall).toEqual(expectedCall);
+  });
 });

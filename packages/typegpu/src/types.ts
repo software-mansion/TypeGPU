@@ -16,12 +16,12 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
-  type SlotValuePair,
-  type TgpuAccessor,
-  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
+  type SlotValuePair,
+  type TgpuAccessor,
+  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type {
@@ -84,7 +84,7 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   args: Snippet[];
-  returnType: AnyWgslData;
+  returnType: AnyData;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -104,7 +104,7 @@ export interface ItemStateStack {
   popSlotBindings(): void;
   pushFunctionScope(
     args: Snippet[],
-    returnType: AnyWgslData | undefined,
+    returnType: AnyData,
     externalMap: Record<string, unknown>,
   ): void;
   popFunctionScope(): void;
@@ -180,10 +180,6 @@ export interface SelfResolvable {
   toString(): string;
 }
 
-export interface Labelled {
-  readonly label?: string | undefined;
-}
-
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
   return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }
@@ -203,6 +199,13 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
+export type DefaultConversionStrategy = 'keep' | 'coerce';
+
+export type FnArgsConversionHint =
+  | AnyData[]
+  | ((...args: Snippet[]) => AnyWgslData[])
+  | DefaultConversionStrategy
+  | undefined;
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (
