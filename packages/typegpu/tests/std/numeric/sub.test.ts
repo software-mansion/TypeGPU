@@ -1,12 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
-  m3x3f,
   mat2x2f,
   mat3x3f,
   mat4x4f,
-  v2f,
-  v3f,
-  v4f,
   vec2f,
   vec2i,
   vec2u,
@@ -17,6 +13,8 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
+import type { m3x3f, v2f, v3f, v4f } from '../../../src/data/index.ts';
+
 import { sub } from '../../../src/std/index.ts';
 
 describe('sub', () => {

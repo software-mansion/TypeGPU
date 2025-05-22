@@ -3,7 +3,6 @@ import {
   mat2x2f,
   mat3x3f,
   mat4x4f,
-  v3f,
   vec2f,
   vec2h,
   vec2i,
@@ -18,12 +17,12 @@ import {
   vec4u,
 } from '../../../src/data/index.ts';
 import { mul } from '../../../src/std/index.ts';
-import {
+import type {
   m2x2f,
   m3x3f,
   m4x4f,
-  mat2x2,
   v2f,
+  v3f,
   v4f,
 } from '../../../src/data/wgslTypes.ts';
 

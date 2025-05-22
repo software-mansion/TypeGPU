@@ -22,10 +22,6 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-// AAA add, sub dla mat
-// AAA testy unit i example dla fluent add, sub dla mat
-// AAA add, sub, div dla vec
-// AAA testy unit i example dla fluent add, sub, div dla vec
 type Vec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
@@ -202,6 +198,34 @@ export const mul = createDualImpl(
     return { value: `(${lhs.value} * ${rhs.value})`, dataType: returnType };
   },
 );
+
+// AAA cały div do przerobienia
+// AAA dzielenie przez zero?
+export const div = createDualImpl(
+  // CPU implementation
+  <T extends Vec | number>(lhs: T, rhs: T | number): T => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return (lhs / rhs) as T;
+    }
+    if (typeof rhs === 'number') {
+      return VectorOps.mulSxV[(lhs as Vec).kind](
+        1 / rhs,
+        lhs as Vec,
+      ) as T;
+    }
+    // Vector / Vector case
+    return VectorOps.div[(lhs as Vec).kind](
+      lhs as Vec,
+      rhs as Vec,
+    ) as T;
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} / ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
+);
+
 export const abs = createDualImpl(
   // CPU implementation
   <T extends Vec | number>(value: T): T => {
@@ -583,31 +607,4 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => ({ value: `sqrt(${value.value})`, dataType: value.dataType }),
-);
-
-// AAA cały div do przerobienia
-// AAA dzielenie przez zero?
-export const div = createDualImpl(
-  // CPU implementation
-  <T extends Vec | number>(lhs: T, rhs: T | number): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof rhs === 'number') {
-      return VectorOps.mulSxV[(lhs as Vec).kind](
-        1 / rhs,
-        lhs as Vec,
-      ) as T;
-    }
-    // Vector / Vector case
-    return VectorOps.div[(lhs as Vec).kind](
-      lhs as Vec,
-      rhs as Vec,
-    ) as T;
-  },
-  // GPU implementation
-  (lhs, rhs) => ({
-    value: `(${lhs.value} / ${rhs.value})`,
-    dataType: lhs.dataType,
-  }),
 );
