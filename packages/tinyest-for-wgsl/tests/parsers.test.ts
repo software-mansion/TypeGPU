@@ -152,7 +152,7 @@ describe('transpileFn', () => {
   );
 
   it(
-    'mixed type parameters',
+    'handles mixed type parameters',
     dualTest((p) => {
       const { params, externalNames } = transpileFn(
         p(`(y, { pos, a: b }, {c, d}) => {
