@@ -1,5 +1,4 @@
 import { $internal } from '../shared/symbols.ts';
-import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { VecKind } from './wgslTypes.ts';
 
@@ -30,12 +29,6 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
 
   toString() {
     return this['~resolve']();
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: this avoids repeating this 16 times in the impls 
-  mul(this: any, other: any) {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }

@@ -1,7 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import * as std from '../std/index.ts';
 import type { SelfResolvable } from '../types.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
@@ -158,18 +157,6 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   makeColumn(e0: number, e1: number): v2f {
     return vec2f(e0, e1);
   }
-
-  // TODO: add
-
-  // TODO: sub
-
-  mul(this: m2x2f, other: number): m2x2f;
-  mul(this: m2x2f, other: v2f): v2f;
-  mul(this: m2x2f, other: m2x2f): m2x2f;
-  mul(this: m2x2f, other: number | v2f | m2x2f): v2f | m2x2f {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
-  }
 }
 
 abstract class mat3x3Impl<TColumn extends v3f>
@@ -302,18 +289,6 @@ class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
   public readonly kind = 'mat3x3f';
   makeColumn(x: number, y: number, z: number): v3f {
     return vec3f(x, y, z);
-  }
-
-  // TODO: add
-
-  // TODO: sub
-
-  mul(this: m3x3f, other: number): m3x3f;
-  mul(this: m3x3f, other: v3f): v3f;
-  mul(this: m3x3f, other: m3x3f): m3x3f;
-  mul(this: m3x3f, other: number | v3f | m3x3f): v3f | m3x3f {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
   }
 }
 
@@ -498,18 +473,6 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 
   makeColumn(x: number, y: number, z: number, w: number): v4f {
     return vec4f(x, y, z, w);
-  }
-
-  // TODO: add
-
-  // TODO: sub
-
-  mul(this: m4x4f, other: number): m4x4f;
-  mul(this: m4x4f, other: v4f): v4f;
-  mul(this: m4x4f, other: m4x4f): m4x4f;
-  mul(this: m4x4f, other: number | v4f | m4x4f): v4f | m4x4f {
-    // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-    return std.mul(this, other as any);
   }
 }
 
