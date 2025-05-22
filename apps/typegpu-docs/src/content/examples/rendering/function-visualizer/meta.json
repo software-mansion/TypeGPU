@@ -1,4 +1,5 @@
 {
   "title": "Function Visualizer",
-  "category": "rendering"
+  "category": "rendering",
+  "tags": ["compute"]
 }
