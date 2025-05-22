@@ -18,7 +18,14 @@ import {
   vec4u,
 } from '../../../src/data/index.ts';
 import { mul } from '../../../src/std/index.ts';
-import { m2x2f, m4x4f, mat2x2, v2f, v4f } from '../../../src/data/wgslTypes.ts';
+import {
+  m2x2f,
+  m3x3f,
+  m4x4f,
+  mat2x2,
+  v2f,
+  v4f,
+} from '../../../src/data/wgslTypes.ts';
 
 describe('mul', () => {
   it('computes product of a number and a number', () => {
@@ -315,5 +322,24 @@ describe('mul overload', () => {
     expectTypeOf(mul(mat4x4f(), 5)).toEqualTypeOf<m4x4f>();
     expectTypeOf(mul(mat2x2f(), vec2f())).toEqualTypeOf<v2f>();
     expectTypeOf(mul(mat4x4f(), mat4x4f())).toEqualTypeOf<m4x4f>();
+  });
+
+  it('accepts union', () => {
+    // expect no errors
+    mul(1 as number | v2f | m3x3f, vec3f() as v3f | m2x2f);
+    mul(vec3f() as v3f | v4f, 1 as number | v3f | m3x3f | v4f | m4x4f);
+  });
+
+  it('rejects when incompatible types', () => {
+    // @ts-expect-error
+    (() => mul(vec2f(), vec2u()));
+    // @ts-expect-error
+    (() => mul(vec2f(), vec3f()));
+    // @ts-expect-error
+    (() => mul(mat3x3f(), mat4x4f()));
+    // @ts-expect-error
+    (() => mul(vec2f(), mat3x3f()));
+    // @ts-expect-error
+    (() => mul(mat3x3f(), vec2f()));
   });
 });

@@ -667,6 +667,11 @@ export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
   : v4f;
 
+export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+  : T extends v3f ? m3x3f
+  : T extends v4f ? m4x4f
+  : never;
+
 // #endregion
 
 // #region WGSL Schema Types

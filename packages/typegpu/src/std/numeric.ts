@@ -7,6 +7,7 @@ import type {
   AnyNumericVecInstance,
   AnyVecInstance,
   AnyWgslData,
+  mBaseForVec,
   v2f,
   v2h,
   v2i,
@@ -70,9 +71,17 @@ function isMat(
 }
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
-function cpuAdd<T extends Vec | Mat>(lhs: number, rhs: T): T; // mixed addition
-function cpuAdd<T extends Vec | Mat>(lhs: T, rhs: number): T; // mixed addition
+function cpuAdd<T extends Vec>(lhs: number, rhs: T): T; // mixed addition
+function cpuAdd<T extends Vec>(lhs: T, rhs: number): T; // mixed addition
 function cpuAdd<T extends Vec | Mat>(lhs: T, rhs: T): T; // component-wise addition
+function cpuAdd<
+  // union overload for internal usage
+  Lhs extends number | Vec | Mat,
+  Rhs extends (Lhs extends number ? number | Vec
+    : Lhs extends Vec ? number | Lhs
+    : Lhs extends Mat ? Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
 function cpuAdd(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs + rhs; // default addition
@@ -102,12 +111,20 @@ export const add = createDualImpl(
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
-function cpuSub<T extends Vec | Mat>(lhs: number, rhs: T): T; // mixed subtraction
-function cpuSub<T extends Vec | Mat>(lhs: T, rhs: number): T; // mixed subtraction
+function cpuSub<T extends Vec>(lhs: number, rhs: T): T; // mixed subtraction
+function cpuSub<T extends Vec>(lhs: T, rhs: number): T; // mixed subtraction
 function cpuSub<T extends Vec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
+function cpuSub<
+  // union overload for internal usage
+  Lhs extends number | Vec | Mat,
+  Rhs extends (Lhs extends number ? number | Vec
+    : Lhs extends Vec ? number | Lhs
+    : Lhs extends Mat ? Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
 function cpuSub(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
-  // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-  return cpuAdd(lhs, mul(-1 as any, rhs));
+  // while illegal on the wgsl side, we can do this in js
+  return cpuAdd(lhs, mul(-1, rhs));
 }
 export const sub = createDualImpl(
   // CPU implementation
@@ -127,11 +144,16 @@ function cpuMul<V extends Vec>(lhs: V, rhs: V): V; // component-wise multiplicat
 function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: V, rhs: M): V; // row-vector-matrix
 function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: M, rhs: V): V; // matrix-column-vector
 function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
-// function cpuMul<
-//   TFirst extends number | Vec | Mat,
-//   TSecond extends TFirst extends Mat ? TFirst | number | vBaseForMat<TFirst>
-//     : number | Vec | Mat,
-// >(...args: [TFirst, TSecond]): void;
+function cpuMul<
+  // union overload for internal usage
+  Lhs extends number | Vec | Mat,
+  Rhs extends (
+    Lhs extends number ? number | Vec | Mat
+      : Lhs extends Vec ? number | Lhs | mBaseForVec<Lhs>
+      : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
+      : never
+  ),
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
@@ -563,6 +585,8 @@ export const sqrt = createDualImpl(
   (value) => ({ value: `sqrt(${value.value})`, dataType: value.dataType }),
 );
 
+// AAA cały div do przerobienia
+// AAA dzielenie przez zero?
 export const div = createDualImpl(
   // CPU implementation
   <T extends Vec | number>(lhs: T, rhs: T | number): T => {

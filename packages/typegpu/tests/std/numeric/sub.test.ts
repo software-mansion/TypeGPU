@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  m3x3f,
   mat2x2f,
   mat3x3f,
   mat4x4f,
+  v2f,
+  v3f,
+  v4f,
   vec2f,
   vec2i,
   vec2u,
@@ -111,5 +115,38 @@ describe('sub', () => {
         mat4x4f(-1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16),
       ),
     ).toEqual(mat4x4f(2, 0, 6, 0, 10, 0, 14, 0, 18, 0, 22, 0, 26, 0, 30, 0));
+  });
+});
+
+describe('sub overload', () => {
+  it('has correct return type', () => {
+    expectTypeOf(sub(5, 1)).toEqualTypeOf<number>();
+    expectTypeOf(sub(5, vec3f())).toEqualTypeOf<v3f>();
+    expectTypeOf(sub(vec2f(), 1)).toEqualTypeOf<v2f>();
+    expectTypeOf(sub(vec4f(), vec4f())).toEqualTypeOf<v4f>();
+    expectTypeOf(sub(mat3x3f(), mat3x3f())).toEqualTypeOf<m3x3f>();
+  });
+
+  it('accepts union', () => {
+    // expect no errors
+    sub(1, vec3f() as number | v3f);
+    sub(vec2f(), vec2f() as number | v2f);
+  });
+
+  it('rejects when incompatible types', () => {
+    // @ts-expect-error
+    (() => sub(vec2f(), vec2u()));
+    // @ts-expect-error
+    (() => sub(vec2f(), vec3f()));
+    // @ts-expect-error
+    (() => sub(mat3x3f(), mat4x4f()));
+    // @ts-expect-error
+    (() => sub(vec2f(), mat3x3f()));
+    // @ts-expect-error
+    (() => sub(mat3x3f(), vec2f()));
+    // @ts-expect-error
+    (() => sub(1, mat2x2f()));
+    // @ts-expect-error
+    (() => sub(mat3x3f(), 1));
   });
 });
