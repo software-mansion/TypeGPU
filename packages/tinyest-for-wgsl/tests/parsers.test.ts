@@ -1,7 +1,6 @@
 import babel from '@babel/parser';
 import type { Node } from '@babel/types';
 import * as acorn from 'acorn';
-import type { ArgNames } from 'tinyest';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
 
@@ -28,12 +27,9 @@ describe('transpileFn', () => {
   it(
     'parses an empty arrow function',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(p('() => {}'));
+      const { params, body, externalNames } = transpileFn(p('() => {}'));
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
       expect(externalNames).toStrictEqual([]);
     }),
@@ -42,14 +38,11 @@ describe('transpileFn', () => {
   it(
     'parses an empty named function',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(
+      const { params, body, externalNames } = transpileFn(
         p('function example() {}'),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
       expect(externalNames).toStrictEqual([]);
     }),
@@ -58,14 +51,14 @@ describe('transpileFn', () => {
   it(
     'gathers external names',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(
+      const { params, body, externalNames } = transpileFn(
         p('(a, b) => a + b - c'),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: ['a', 'b'],
-      });
+      expect(params).toStrictEqual([
+        { type: 'i', name: 'a' },
+        { type: 'i', name: 'b' },
+      ]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
@@ -76,17 +69,14 @@ describe('transpileFn', () => {
   it(
     'respects local declarations when gathering external names',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(
+      const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
         c = a + 2;
       }`),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
       );
@@ -98,7 +88,7 @@ describe('transpileFn', () => {
   it(
     'respects outer scope when gathering external names',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(
+      const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
         {
@@ -107,10 +97,7 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
       );
@@ -122,14 +109,11 @@ describe('transpileFn', () => {
   it(
     'treats the object as a possible external value when accessing a member',
     dualTest((p) => {
-      const { argNames, body, externalNames } = transpileFn(
+      const { params, body, externalNames } = transpileFn(
         p('() => external.outside.prop'),
       );
 
-      expect(argNames).toStrictEqual({
-        type: 'identifiers',
-        names: [],
-      });
+      expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[7,[7,"external","outside"],"prop"]]]]"`,
       );
@@ -141,15 +125,15 @@ describe('transpileFn', () => {
   it(
     'handles destructured args',
     dualTest((p) => {
-      const { argNames, externalNames } = transpileFn(
+      const { params, externalNames } = transpileFn(
         p(`({ pos, a: b }) => {
           const x = pos.x;
         }`),
       );
 
-      expect(argNames).toStrictEqual(
-        {
-          type: 'destructured-object',
+      expect(params).toStrictEqual(
+        [{
+          type: 'd',
           props: [
             {
               alias: 'pos',
@@ -160,7 +144,7 @@ describe('transpileFn', () => {
               prop: 'a',
             },
           ],
-        } satisfies ArgNames,
+        }],
       );
 
       expect(externalNames).toStrictEqual([]);

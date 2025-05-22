@@ -246,8 +246,8 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertex_fn(in: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(f32(in.color.w), f32(in.ii), f32(in.vi), 1), vec2f(f32(in.color.w), f32(in.vi)));
+      @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
+        return vertex_fn_Output(vec4f(f32(_arg_0.color.w), f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(f32(_arg_0.color.w), f32(_arg_0.vi)));
       }
     `);
 
@@ -307,8 +307,8 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24)
-      fn compute_fn(in: compute_fn_Input) {
-        var index = in.gid.x;
+      fn compute_fn(_arg_0: compute_fn_Input) {
+        var index = _arg_0.gid.x;
         var iterationF = f32(0);
         var sign = 0;
         var change = vec4f(0, 0, 0, 0);
@@ -434,9 +434,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @fragment
-      fn fragment_fn(in: fragment_fn_Input) -> fragment_fn_Output {
+      fn fragment_fn(_arg_0: fragment_fn_Input) -> fragment_fn_Output {
         var out = fragment_fn_Output(0, 1, vec4f(0, 0, 0, 0));
-        if (((in.sampleMask > 0) && (in.pos.x > 0))) {
+        if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
           out.sampleMask = 1;
         }
 
@@ -564,7 +564,7 @@ describe('TGSL tgpu.fn function', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a) => a);
 
     expect(parseResolved({ foo })).toBe(
-      parse(`fn foo(a: u32, arg_1: u32) -> u32 {
+      parse(`fn foo(a: u32, _arg_1: u32) -> u32 {
         return a;
       }`),
     );
@@ -574,7 +574,7 @@ describe('TGSL tgpu.fn function', () => {
     const foo = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(() => 2);
 
     expect(parseResolved({ foo })).toBe(
-      parse(`fn foo(arg_0: u32, arg_1: u32) -> u32 {
+      parse(`fn foo(_arg_0: u32, _arg_1: u32) -> u32 {
         return 2;
       }`),
     );
@@ -722,8 +722,8 @@ describe('TGSL tgpu.fn function', () => {
         value: i32,
       }
 
-      fn fun(in: Input) {
-        var vector = vec2u(u32(in.value));
+      fn fun(_arg_0: Input) {
+        var vector = vec2u(u32(_arg_0.value));
       }
     `);
 
@@ -772,8 +772,33 @@ describe('TGSL tgpu.fn function', () => {
         value: i32,
       }
 
-      fn fun(in: Input) {
-        var vector = vec2u(u32(in.value));
+      fn fun(_arg_0: Input) {
+        var vector = vec2u(u32(_arg_0.value));
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('allows destructuring any struct argument', () => {
+    const Input = d.struct({
+      value: d.i32,
+    }).$name('Input');
+
+    const fun = tgpu['~unstable']
+      .fn([Input, d.i32, Input])(({ value: v }, x, { value }) => {
+        const vector = d.vec3u(v, x, value);
+      });
+
+    const actual = parseResolved({ fun });
+
+    const expected = parse(`
+      struct Input {
+        value: i32,
+      }
+
+      fn fun(_arg_0: Input, x: i32, _arg_2: Input) {
+        var vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
       }
     `);
 

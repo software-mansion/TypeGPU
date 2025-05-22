@@ -253,13 +253,18 @@ export type Expression =
 
 export type AnyNode = Statement | Expression;
 
-export type ArgNames =
+export const FuncParameterType = {
+  identifier: 'i',
+  destructuredObject: 'd',
+} as const;
+
+export type FuncParameter =
   | {
-    type: 'identifiers';
-    names: string[];
+    type: typeof FuncParameterType.identifier;
+    name: string;
   }
   | {
-    type: 'destructured-object';
+    type: typeof FuncParameterType.destructuredObject;
     props: {
       prop: string;
       alias: string;

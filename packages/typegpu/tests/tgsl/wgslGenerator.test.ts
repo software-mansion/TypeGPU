@@ -307,12 +307,14 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
-    if (astInfo.ast.argNames.type !== 'identifiers') {
+    if (
+      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
+    ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast.argNames.names.map((name) => ({
-      value: name,
+    const args = astInfo.ast.params.map((arg) => ({
+      value: (arg as { type: 'i'; name: string }).name,
       dataType: d.u32,
     }));
 

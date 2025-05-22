@@ -26,7 +26,7 @@ import type { Infer } from '../../shared/repr.ts';
  * Information extracted from transpiling a JS function.
  */
 export type TranspilationResult = {
-  argNames: tinyest.ArgNames;
+  params: tinyest.FuncParameter[];
   body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the

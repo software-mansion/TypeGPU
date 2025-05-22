@@ -1,13 +1,15 @@
+import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
 import {
   type AnyWgslData,
+  type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
   Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getName, setName } from '../../name.ts';
-import type { ResolutionCtx, Snippet } from '../../types.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
@@ -129,44 +131,32 @@ export function createFnCore(
         }
 
         // create argument Snippets
-        const maybeStructArg = isWgslStruct(shell.argTypes[0])
-          ? shell.argTypes[0]
-          : undefined;
+        const args = shell.argTypes.map((arg, i) => ({
+          value: ast.params[i]?.type === FuncParameterType.identifier
+            ? ast.params[i].name
+            : `_arg_${i}`,
+          dataType: arg as AnyWgslData,
+        }));
 
-        const args: Snippet[] = ast.argNames.type === 'identifiers'
-          ? shell.argTypes.map((arg, i) => ({
-            value: (ast.argNames.type === 'identifiers'
-              ? ast.argNames.names[i]
-              : undefined) ?? `arg_${i}`,
-            dataType: arg as AnyWgslData,
-          }))
-          : [
-            {
-              value: 'in',
-              dataType: maybeStructArg as AnyWgslData,
-            },
-          ];
-
-        const argAliases =
-          ast.argNames.type === 'destructured-object' && maybeStructArg
-            ? Object.fromEntries(
-              ast.argNames.props.map((
-                { prop, alias },
-              ) => [
+        const argAliases = Object.fromEntries(
+          ast.params.flatMap((param, i) =>
+            param.type === FuncParameterType.destructuredObject
+              ? param.props.map(({ prop, alias }) => [
                 alias,
                 {
-                  value: `in.${prop}`,
-                  dataType: maybeStructArg.propTypes[prop] as AnyWgslData,
+                  value: `_arg_${i}.${prop}`,
+                  dataType: (shell.argTypes[i] as AnyWgslStruct)
+                    .propTypes[prop] as AnyWgslData,
                 },
-              ]),
-            )
-            : {};
+              ])
+              : []
+          ),
+        );
 
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
           args,
           argAliases,
-          // {},
           returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,

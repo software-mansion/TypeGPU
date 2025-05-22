@@ -22,7 +22,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -52,7 +52,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
       shell((a, b) => {
         return a + b;
       });"
@@ -75,7 +75,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));"
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));"
     `);
   });
 
@@ -102,7 +102,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
       shell(function (a, b) {
         return a + b;
       });"
@@ -132,7 +132,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -159,7 +159,7 @@ describe('[BABEL] "kernel & js" directive', () => {
         'kernel & js';
 
         return a + b;
-      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
+      }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}, {});
       function addCPU(a, b) {
         return a + b;
       }"
@@ -192,7 +192,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const addGPU = tgpu.__assignAst((a, b) => {
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]});
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]});
 
             console.log(addGPU);
 
@@ -229,7 +229,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell(tgpu.__assignAst((a, b) => {
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
 
             shell((a, b) => {
               return a + b;
@@ -254,7 +254,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       tgpu['~unstable'].fn([])(tgpu.__assignAst((a, b) => {
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
       "
     `);
   });
@@ -282,7 +282,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell(tgpu.__assignAst(function(a, b){
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
 
             shell(function(a, b) {
               return a + b;
@@ -315,7 +315,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell(tgpu.__assignAst(function addGPU(a, b){
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]}));
 
             shell(function addCPU(a, b) {
               return a + b;
@@ -348,7 +348,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const addGPU = tgpu.__assignAst(function addGPU(a, b) {
               'kernel & js';
               return a + b;
-            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]});
+            }, {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]});
 
             console.log(addGPU);
 
