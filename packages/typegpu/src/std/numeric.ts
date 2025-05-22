@@ -1,3 +1,4 @@
+import { mat4x4f } from '../data/matrix.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
@@ -5,6 +6,7 @@ import type {
   AnyMatInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  m4x4f,
   v2f,
   v2h,
   v2i,
@@ -521,4 +523,24 @@ export const div = createDualImpl(
     value: `(${lhs.value} / ${rhs.value})`,
     dataType: lhs.dataType,
   }),
+);
+
+/**
+ * Translates a matrix by a given vector.
+ * @param {m4x4f} matrix - The matrix to be translated.
+ * @param {v3f} vector - The vector by which to translate the matrix.
+ * @returns {m4x4f} - The translated matrix.
+ */
+export const translate4x4 = createDualImpl(
+  // CPU implementation
+  (matrix: m4x4f, vector: v3f) => {
+    return mul(matrix, mat4x4f.translation(vector));
+  },
+  // GPU implementation
+  (matrix, vector) => {
+    return {
+      value: `${matrix.value} * ${mat4x4f.translation(vector.value as v3f)}`,
+      dataType: matrix.dataType,
+    };
+  },
 );
