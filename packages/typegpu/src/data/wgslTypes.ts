@@ -574,6 +574,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   w: boolean;
 }
 
+export type AnyFloat32VecInstance = v2f | v3f | v4f;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
