@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   mat2x2f,
   mat3x3f,
   mat4x4f,
+  v3f,
   vec2f,
   vec2h,
   vec2i,
@@ -17,6 +18,7 @@ import {
   vec4u,
 } from '../../../src/data/index.ts';
 import { mul } from '../../../src/std/index.ts';
+import { m2x2f, m4x4f, mat2x2, v2f, v4f } from '../../../src/data/wgslTypes.ts';
 
 describe('mul', () => {
   it('computes product of a number and a number', () => {
@@ -299,5 +301,19 @@ describe('mul', () => {
     const m = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
     const expected = vec4f(190, 486, 782, 1078);
     expect(mul(v, m)).toStrictEqual(expected);
+  });
+});
+
+describe('mul overload', () => {
+  it('has correct return type', () => {
+    expectTypeOf(mul(5, 1)).toEqualTypeOf<number>();
+    expectTypeOf(mul(5, vec3f())).toEqualTypeOf<v3f>();
+    expectTypeOf(mul(5, mat2x2f())).toEqualTypeOf<m2x2f>();
+    expectTypeOf(mul(vec2f(), 1)).toEqualTypeOf<v2f>();
+    expectTypeOf(mul(vec4f(), vec4f())).toEqualTypeOf<v4f>();
+    expectTypeOf(mul(vec3f(), mat3x3f())).toEqualTypeOf<v3f>();
+    expectTypeOf(mul(mat4x4f(), 5)).toEqualTypeOf<m4x4f>();
+    expectTypeOf(mul(mat2x2f(), vec2f())).toEqualTypeOf<v2f>();
+    expectTypeOf(mul(mat4x4f(), mat4x4f())).toEqualTypeOf<m4x4f>();
   });
 });
