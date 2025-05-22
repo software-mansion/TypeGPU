@@ -125,38 +125,32 @@ export function createFnCore(
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
         );
-
         if (missingExternals.length > 0) {
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        // create argument Snippets
-        const args = shell.argTypes.map((arg, i) => ({
-          value: ast.params[i]?.type === FuncParameterType.identifier
-            ? ast.params[i].name
-            : `_arg_${i}`,
-          dataType: arg as AnyWgslData,
-        }));
-
-        const argAliases = Object.fromEntries(
-          ast.params.flatMap((param, i) =>
-            param.type === FuncParameterType.destructuredObject
-              ? param.props.map(({ name, alias }) => [
-                alias,
-                {
-                  value: `_arg_${i}.${name}`,
-                  dataType: (shell.argTypes[i] as AnyWgslStruct)
-                    .propTypes[name] as AnyWgslData,
-                },
-              ])
-              : []
-          ),
-        );
-
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
-          args,
-          argAliases,
+          args: shell.argTypes.map((arg, i) => ({
+            value: ast.params[i]?.type === FuncParameterType.identifier
+              ? ast.params[i].name
+              : `_arg_${i}`,
+            dataType: arg as AnyWgslData,
+          })),
+          argAliases: Object.fromEntries(
+            ast.params.flatMap((param, i) =>
+              param.type === FuncParameterType.destructuredObject
+                ? param.props.map(({ name, alias }) => [
+                  alias,
+                  {
+                    value: `_arg_${i}.${name}`,
+                    dataType: (shell.argTypes[i] as AnyWgslStruct)
+                      .propTypes[name] as AnyWgslData,
+                  },
+                ])
+                : []
+            ),
+          ),
           returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,
