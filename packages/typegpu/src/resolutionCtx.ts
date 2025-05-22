@@ -64,6 +64,7 @@ type SlotBindingLayer = {
 type FunctionScopeLayer = {
   type: 'functionScope';
   args: Snippet[];
+  argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
   returnType: AnyData;
 };
@@ -119,12 +120,14 @@ class ItemStateStackImpl implements ItemStateStack {
 
   pushFunctionScope(
     args: Snippet[],
+    argAliases: Record<string, Snippet>,
     returnType: AnyData,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
       type: 'functionScope',
       args,
+      argAliases,
       returnType,
       externalMap,
     });
@@ -192,14 +195,12 @@ class ItemStateStackImpl implements ItemStateStack {
           return arg;
         }
 
-        const external = layer.externalMap[id];
-
-        if (
-          external && typeof external === 'object' && 'value' in external &&
-          'dataType' in external && !($internal in external)
-        ) {
-          return external as Snippet;
+        const argAlias = layer.argAliases[id];
+        if (argAlias !== undefined) {
+          return argAlias;
         }
+
+        const external = layer.externalMap[id];
 
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
@@ -377,6 +378,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
     this._itemStateStack.pushFunctionScope(
       options.args,
+      options.argAliases,
       options.returnType,
       options.externalMap,
     );

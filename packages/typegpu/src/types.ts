@@ -84,6 +84,7 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   args: Snippet[];
+  argAliases: Record<string, Snippet>;
   returnType: AnyData;
   body: Block;
   externalMap: Record<string, unknown>;
@@ -104,6 +105,7 @@ export interface ItemStateStack {
   popSlotBindings(): void;
   pushFunctionScope(
     args: Snippet[],
+    argAliases: Record<string, Snippet>,
     returnType: AnyData,
     externalMap: Record<string, unknown>,
   ): void;

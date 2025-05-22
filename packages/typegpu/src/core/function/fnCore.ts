@@ -119,16 +119,7 @@ export function createFnCore(
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 
-        if (ast.argNames.type === 'destructured-object') {
-          applyExternals(
-            externalMap,
-            Object.fromEntries(
-              ast.argNames.props.map(({ prop, alias }) => [alias, prop]),
-            ),
-          );
-        }
-
-        // Verifying all required externals are present.
+        // verify all required externals are present
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
         );
@@ -137,6 +128,7 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
+        // create argument Snippets
         const maybeStructArg = isWgslStruct(shell.argTypes[0])
           ? shell.argTypes[0]
           : undefined;
@@ -155,27 +147,26 @@ export function createFnCore(
             },
           ];
 
-        if (
+        const argAliases =
           ast.argNames.type === 'destructured-object' && maybeStructArg
-        ) {
-          applyExternals(
-            externalMap,
-            Object.fromEntries(
+            ? Object.fromEntries(
               ast.argNames.props.map((
                 { prop, alias },
               ) => [
                 alias,
                 {
                   value: `in.${prop}`,
-                  dataType: maybeStructArg.propTypes[prop],
+                  dataType: maybeStructArg.propTypes[prop] as AnyWgslData,
                 },
               ]),
-            ),
-          );
-        }
+            )
+            : {};
 
+        // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
           args,
+          argAliases,
+          // {},
           returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,

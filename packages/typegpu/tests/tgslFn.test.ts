@@ -590,10 +590,10 @@ describe('TGSL tgpu.fn function', () => {
       const add = tgpu['~unstable'].fn([d.u32, d.u32])(addKernel);
 
       expect(() => addKernel(2, 3)).toThrow(
-        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+        'The function "addKernel" is invocable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
       expect(() => add(2, 3)).toThrow(
-        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+        'The function "addKernel" is invocable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
       expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
@@ -749,6 +749,31 @@ describe('TGSL tgpu.fn function', () => {
 
       fn fun(input: Input) {
         var vector = vec2u(u32(input.value));
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('correctly coerces type of destructured aliased input arguments', () => {
+    const Input = d.struct({
+      value: d.i32,
+    }).$name('Input');
+
+    const fun = tgpu['~unstable']
+      .fn([Input])(({ value: v }) => {
+        const vector = d.vec2u(v);
+      });
+
+    const actual = parseResolved({ fun });
+
+    const expected = parse(`
+      struct Input {
+        value: i32,
+      }
+
+      fn fun(in: Input) {
+        var vector = vec2u(u32(in.value));
       }
     `);
 

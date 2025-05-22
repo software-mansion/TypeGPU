@@ -178,6 +178,7 @@ describe('wgslGenerator', () => {
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -244,6 +245,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -316,6 +318,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
+      {},
       d.vec4f,
       astInfo.externals ?? {},
     );
@@ -454,6 +457,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.vec4u,
       astInfo.externals ?? {},
     );
@@ -489,6 +493,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [{ value: 'idx', dataType: d.u32 }],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -531,6 +536,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -607,6 +613,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -697,6 +704,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -746,6 +754,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
