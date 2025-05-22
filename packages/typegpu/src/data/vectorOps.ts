@@ -162,6 +162,15 @@ const binaryComponentWise4x4f =
     );
   };
 
+export const NumberOps = {
+  divInteger: (lhs: number, rhs: number) => {
+    if (rhs === 0) {
+      return lhs;
+    }
+    return Math.trunc(lhs / rhs);
+  },
+};
+
 export const VectorOps = {
   eq: {
     vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x === e2.x, e1.y === e2.y),
@@ -665,6 +674,46 @@ export const VectorOps = {
     ) => wgsl.vBaseForMat<T>
   >,
 
+  div: {
+    vec2f: binaryComponentWise2f((a, b) => a / b),
+    vec2h: binaryComponentWise2h((a, b) => a / b),
+    vec2i: binaryComponentWise2i(NumberOps.divInteger),
+    vec2u: binaryComponentWise2u(NumberOps.divInteger),
+
+    vec3f: binaryComponentWise3f((a, b) => a / b),
+    vec3h: binaryComponentWise3h((a, b) => a / b),
+    vec3i: binaryComponentWise3i(NumberOps.divInteger),
+    vec3u: binaryComponentWise3u(NumberOps.divInteger),
+
+    vec4f: binaryComponentWise4f((a, b) => a / b),
+    vec4h: binaryComponentWise4h((a, b) => a / b),
+    vec4i: binaryComponentWise4i(NumberOps.divInteger),
+    vec4u: binaryComponentWise4u(NumberOps.divInteger),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
+  divMixed: {
+    vec2f: (a: wgsl.v2f, b: number) => unary2f((e) => e / b)(a),
+    vec2h: (a: wgsl.v2h, b: number) => unary2h((e) => e / b)(a),
+    vec2i: (a: wgsl.v2i, b: number) =>
+      unary2i((e) => NumberOps.divInteger(e, b))(a),
+    vec2u: (a: wgsl.v2u, b: number) =>
+      unary2u((e) => NumberOps.divInteger(e, b))(a),
+
+    vec3f: (a: wgsl.v3f, b: number) => unary3f((e) => e / b)(a),
+    vec3h: (a: wgsl.v3h, b: number) => unary3h((e) => e / b)(a),
+    vec3i: (a: wgsl.v3i, b: number) =>
+      unary3i((e) => NumberOps.divInteger(e, b))(a),
+    vec3u: (a: wgsl.v3u, b: number) =>
+      unary3u((e) => NumberOps.divInteger(e, b))(a),
+
+    vec4f: (a: wgsl.v4f, b: number) => unary4f((e) => e / b)(a),
+    vec4h: (a: wgsl.v4h, b: number) => unary4h((e) => e / b)(a),
+    vec4i: (a: wgsl.v4i, b: number) =>
+      unary4i((e) => NumberOps.divInteger(e, b))(a),
+    vec4u: (a: wgsl.v4u, b: number) =>
+      unary4u((e) => NumberOps.divInteger(e, b))(a),
+  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: number) => T>,
+
   dot: {
     vec2f: dotVec2,
     vec2h: dotVec2,
@@ -852,21 +901,6 @@ export const VectorOps = {
     vec4f: unary4f(Math.sqrt),
     vec4h: unary4h(Math.sqrt),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
-
-  div: {
-    vec2f: binaryComponentWise2f((a, b) => a / b),
-    vec2h: binaryComponentWise2h((a, b) => a / b),
-    vec2i: binaryComponentWise2i((a, b) => a / b),
-    vec2u: binaryComponentWise2u((a, b) => a / b),
-    vec3f: binaryComponentWise3f((a, b) => a / b),
-    vec3h: binaryComponentWise3h((a, b) => a / b),
-    vec3i: binaryComponentWise3i((a, b) => a / b),
-    vec3u: binaryComponentWise3u((a, b) => a / b),
-    vec4f: binaryComponentWise4f((a, b) => a / b),
-    vec4h: binaryComponentWise4h((a, b) => a / b),
-    vec4i: binaryComponentWise4i((a, b) => a / b),
-    vec4u: binaryComponentWise4u((a, b) => a / b),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   mix: {
     vec2f: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {

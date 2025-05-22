@@ -199,31 +199,43 @@ export const mul = createDualImpl(
   },
 );
 
-// AAA cały div do przerobienia
-// AAA dzielenie przez zero?
+function cpuDiv(lhs: number, rhs: number): number; // default division
+function cpuDiv<MV extends Vec>(lhs: number, rhs: MV): MV; // scale
+function cpuDiv<MV extends Vec>(lhs: MV, rhs: number): MV; // scale
+function cpuDiv<V extends Vec>(lhs: V, rhs: V): V; // component-wise division
+function cpuDiv(lhs: number | Vec, rhs: number | Vec) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return (lhs / rhs);
+  }
+  if (typeof lhs === 'number' && isVec(rhs)) {
+    return VectorOps.divMixed[rhs.kind](rhs, lhs);
+  }
+  if (isVec(lhs) && typeof rhs === 'number') {
+    return VectorOps.divMixed[lhs.kind](lhs, rhs);
+  }
+  if (isVec(lhs) && isVec(rhs)) {
+    return VectorOps.div[lhs.kind](lhs, rhs);
+  }
+
+  throw new Error('Div called with invalid arguments.');
+}
+
 export const div = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(lhs: T, rhs: T | number): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof rhs === 'number') {
-      return VectorOps.mulSxV[(lhs as Vec).kind](
-        1 / rhs,
-        lhs as Vec,
-      ) as T;
-    }
-    // Vector / Vector case
-    return VectorOps.div[(lhs as Vec).kind](
-      lhs as Vec,
-      rhs as Vec,
-    ) as T;
-  },
+  cpuDiv,
   // GPU implementation
-  (lhs, rhs) => ({
-    value: `(${lhs.value} / ${rhs.value})`,
-    dataType: lhs.dataType,
-  }),
+  (lhs, rhs) => {
+    if (snippetIsNumeric(lhs) && snippetIsNumeric(rhs)) {
+      return {
+        value: `(f32(${lhs.value}) / ${rhs.value})`,
+        dataType: f32,
+      };
+    }
+    return {
+      value: `(${lhs.value} / ${rhs.value})`,
+      dataType: lhs.dataType,
+    };
+  },
 );
 
 export const abs = createDualImpl(
