@@ -27,17 +27,17 @@ export const computeShader = tgpu['~unstable']
 
       const other = layout.$.currentFishData[i];
       const dist = std.length(std.sub(fishData.position, other.position));
-      if (dist < p.fishSeparationDistance) {
+      if (dist < layout.$.fishBehavior.fishSeparationDistance) {
         separation = std.add(
           separation,
           std.sub(fishData.position, other.position),
         );
       }
-      if (dist < p.fishAlignmentDistance) {
+      if (dist < layout.$.fishBehavior.fishAlignmentDistance) {
         alignment = std.add(alignment, other.direction);
         alignmentCount = alignmentCount + 1;
       }
-      if (dist < p.fishCohesionDistance) {
+      if (dist < layout.$.fishBehavior.fishCohesionDistance) {
         cohesion = std.add(cohesion, other.position);
         cohesionCount = cohesionCount + 1;
       }
@@ -83,15 +83,15 @@ export const computeShader = tgpu['~unstable']
 
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(p.fishSeparationStrength, separation),
+      std.mul(layout.$.fishBehavior.fishSeparationStrength, separation),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(p.fishAlignmentStrength, alignment),
+      std.mul(layout.$.fishBehavior.fishAlignmentStrength, alignment),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(p.fishCohesionStrength, cohesion),
+      std.mul(layout.$.fishBehavior.fishCohesionStrength, cohesion),
     );
     fishData.direction = std.add(
       fishData.direction,

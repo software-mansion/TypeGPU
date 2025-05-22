@@ -9,6 +9,7 @@ import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   computeBindGroupLayout,
+  FishBehaviorParams,
   Line3,
   type ModelData,
   ModelDataArray,
@@ -19,6 +20,7 @@ import {
 } from './schemas.ts';
 
 // setup
+let speedMultiplier = 1;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -32,6 +34,32 @@ context.configure({
 });
 
 // models and textures
+
+const presets = {
+  default: {
+    fishSeparationDistance: 0.3,
+    fishSeparationStrength: 0.0006,
+    fishAlignmentDistance: 0.3,
+    fishAlignmentStrength: 0.005,
+    fishCohesionDistance: 0.5,
+    fishCohesionStrength: 0.0004,
+  },
+  init: {
+    fishSeparationDistance: 0.2,
+    fishSeparationStrength: 0.1,
+    fishAlignmentDistance: 0.5,
+    fishAlignmentStrength: 1,
+    fishCohesionDistance: 0.3,
+    fishCohesionStrength: 0.013,
+  },
+} as const;
+
+let currentPreset: keyof typeof presets = 'init';
+
+const spinner = document.getElementById('spinner') as HTMLDivElement;
+const spinnerBackground = document.getElementById(
+  'spinner-background',
+) as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
@@ -56,6 +84,25 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
     .$usage('storage', 'vertex')
     .$name(`fish data buffer ${idx}`));
 
+function defaultPreset() {
+  speedMultiplier = 3;
+  if (currentPreset !== 'init') {
+    currentPreset = 'init';
+    spinner.style.display = 'block';
+    spinnerBackground.style.display = 'block';
+  }
+  setTimeout(() => {
+    currentPreset = 'default';
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+    if (spinnerBackground) {
+      spinnerBackground.style.display = 'none';
+    }
+  }, 1000);
+  speedMultiplier = 1;
+}
+
 const randomizeFishPositions = () => {
   const positions: d.Infer<typeof ModelData>[] = Array.from(
     { length: p.fishAmount },
@@ -79,6 +126,7 @@ const randomizeFishPositions = () => {
   );
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
+  defaultPreset();
 };
 randomizeFishPositions();
 
@@ -122,6 +170,11 @@ const currentTimeBuffer = root
   .createBuffer(d.f32)
   .$usage('uniform')
   .$name('current time buffer');
+
+const fishBehaviorBuffer = root
+  .createBuffer(FishBehaviorParams, presets.default)
+  .$usage('uniform')
+  .$name('fish behavior buffer');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -196,6 +249,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
+    fishBehavior: fishBehaviorBuffer,
   })
 );
 
@@ -212,9 +266,10 @@ function frame(timestamp: DOMHighResTimeStamp) {
   odd = !odd;
 
   currentTimeBuffer.write(timestamp);
-  timePassedBuffer.write(timestamp - lastTimestamp);
+  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
+  fishBehaviorBuffer.write(presets[currentPreset]);
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
@@ -270,6 +325,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   requestAnimationFrame(frame);
 }
+defaultPreset();
 requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
@@ -277,6 +333,12 @@ requestAnimationFrame(frame);
 export const controls = {
   'Randomize positions': {
     onButtonClick: () => randomizeFishPositions(),
+  },
+  Preset: {
+    options: Object.keys(presets) as (keyof typeof presets)[],
+    onOptionSelect: (option: keyof typeof presets) => {
+      currentPreset = option;
+    },
   },
 };
 
