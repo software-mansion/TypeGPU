@@ -36,7 +36,7 @@ export function removedJsImpl(name?: string) {
     throw new Error(
       `The function "${
         name ?? '<unnamed>'
-      }" is invocable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
+      }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`,
     );
   };
 }
