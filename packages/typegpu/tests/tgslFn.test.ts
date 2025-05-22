@@ -590,10 +590,10 @@ describe('TGSL tgpu.fn function', () => {
       const add = tgpu['~unstable'].fn([d.u32, d.u32])(addKernel);
 
       expect(() => addKernel(2, 3)).toThrow(
-        'The function "addKernel" is invocable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
       expect(() => add(2, 3)).toThrow(
-        'The function "addKernel" is invocable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
+        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
       );
       expect(parseResolved({ add })).toBe(
         parse(`fn add(x: u32, y: u32){
