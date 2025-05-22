@@ -14,7 +14,7 @@ export function VectorSlider({ min, max, step, value, onChange }: Props) {
   };
 
   const renderSlider = (index: number) => (
-    <div key={index} className='flex items-center flex-1'>
+    <div key={index} className='flex flex-1 items-center'>
       <RadixSlider.Root
         value={[value[index]]}
         min={min[index]}
@@ -22,12 +22,12 @@ export function VectorSlider({ min, max, step, value, onChange }: Props) {
         step={step[index]}
         onValueChange={(values) =>
           handleComponentChange(index, values[0])}
-        className='bg-grayscale-20 h-10 rounded relative flex overflow-hidden flex-1 touch-none'
+        className='relative flex h-10 flex-1 touch-none overflow-hidden rounded bg-grayscale-20'
       >
-        <RadixSlider.Track className='flex-1 h-full'>
+        <RadixSlider.Track className='h-full flex-1'>
           <RadixSlider.Range className='absolute h-full bg-gradient-to-br from-gradient-purple to-gradient-blue' />
         </RadixSlider.Track>
-        <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-center'>
+        <div className='-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 text-center text-xs'>
           {value[index].toFixed(2)}
         </div>
       </RadixSlider.Root>
