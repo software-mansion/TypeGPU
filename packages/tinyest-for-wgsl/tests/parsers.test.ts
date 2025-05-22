@@ -137,15 +137,61 @@ describe('transpileFn', () => {
           props: [
             {
               alias: 'pos',
-              prop: 'pos',
+              name: 'pos',
             },
             {
               alias: 'b',
-              prop: 'a',
+              name: 'a',
             },
           ],
         }],
       );
+
+      expect(externalNames).toStrictEqual([]);
+    }),
+  );
+
+  it(
+    'mixed type parameters',
+    dualTest((p) => {
+      const { params, externalNames } = transpileFn(
+        p(`(y, { pos, a: b }, {c, d}) => {
+          const x = pos.x;
+        }`),
+      );
+
+      expect(params).toStrictEqual([
+        {
+          type: 'i',
+          name: 'y',
+        },
+        {
+          type: 'd',
+          props: [
+            {
+              alias: 'pos',
+              name: 'pos',
+            },
+            {
+              alias: 'b',
+              name: 'a',
+            },
+          ],
+        },
+        {
+          type: 'd',
+          props: [
+            {
+              alias: 'c',
+              name: 'c',
+            },
+            {
+              alias: 'd',
+              name: 'd',
+            },
+          ],
+        },
+      ]);
 
       expect(externalNames).toStrictEqual([]);
     }),

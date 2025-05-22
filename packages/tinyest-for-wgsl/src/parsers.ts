@@ -464,7 +464,7 @@ export function extractFunctionParts(rootNode: JsNode): {
             (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
               prop.key.type === 'Identifier' &&
               prop.value.type === 'Identifier'
-              ? [{ prop: prop.key.name, alias: prop.value.name }]
+              ? [{ name: prop.key.name, alias: prop.value.name }]
               : []
           ),
         }

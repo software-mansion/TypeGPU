@@ -266,7 +266,7 @@ export type FuncParameter =
   | {
     type: typeof FuncParameterType.destructuredObject;
     props: {
-      prop: string;
+      name: string;
       alias: string;
     }[];
   };

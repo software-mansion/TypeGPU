@@ -141,12 +141,12 @@ export function createFnCore(
         const argAliases = Object.fromEntries(
           ast.params.flatMap((param, i) =>
             param.type === FuncParameterType.destructuredObject
-              ? param.props.map(({ prop, alias }) => [
+              ? param.props.map(({ name, alias }) => [
                 alias,
                 {
-                  value: `_arg_${i}.${prop}`,
+                  value: `_arg_${i}.${name}`,
                   dataType: (shell.argTypes[i] as AnyWgslStruct)
-                    .propTypes[prop] as AnyWgslData,
+                    .propTypes[name] as AnyWgslData,
                 },
               ])
               : []
