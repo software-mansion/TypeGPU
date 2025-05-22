@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { translate4x4 } from '../../../src/std';
-import { mat4x4f, vec3f } from '../../../src/data';
-
+import { translate4x4 } from '../../../src/std/index.ts';
+import { mat4x4f, vec3f } from '../../../src/data/index.ts';
 
 describe('translate', () => {
   it('translates a matrix by a vec3f vector', () => {
