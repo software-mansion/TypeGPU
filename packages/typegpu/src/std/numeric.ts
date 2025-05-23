@@ -20,12 +20,13 @@ import type {
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Snippet } from '../types.ts';
 
 type Vec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
-export function snippetIsNumeric(element: Snippet) {
+export function isSnippetNumeric(element: Snippet) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
@@ -43,7 +44,8 @@ function isVec(
   if (typeof element === 'number') {
     return false;
   }
-  return 'kind' in element && element.kind.startsWith('vec');
+  return $internal in element && 'kind' in element &&
+    element.kind.startsWith('vec');
 }
 
 function isFloat32Vec(
@@ -52,9 +54,8 @@ function isFloat32Vec(
   if (typeof element === 'number') {
     return false;
   }
-  return (
-    'kind' in element && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind)
-  );
+  return ($internal in element &&
+    'kind' in element && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind));
 }
 
 function isMat(
@@ -63,7 +64,8 @@ function isMat(
   if (typeof element === 'number') {
     return false;
   }
-  return 'kind' in element && element.kind.startsWith('mat');
+  return $internal in element && 'kind' in element &&
+    element.kind.startsWith('mat');
 }
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
@@ -101,7 +103,7 @@ export const add = createDualImpl(
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} + ${rhs.value})`,
-    dataType: snippetIsNumeric(lhs) ? rhs.dataType : lhs.dataType,
+    dataType: isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
   }),
   'coerce',
 );
@@ -181,10 +183,10 @@ export const mul = createDualImpl(
   cpuMul,
   // GPU implementation
   (lhs, rhs) => {
-    const returnType = snippetIsNumeric(lhs)
+    const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? (rhs.dataType as AnyWgslData)
-      : snippetIsNumeric(rhs)
+      : isSnippetNumeric(rhs)
       // Vector/Matrix * Scalar
       ? (lhs.dataType as AnyWgslData)
       : lhs.dataType.type.startsWith('vec')
@@ -232,7 +234,7 @@ export const div = createDualImpl(
   cpuDiv,
   // GPU implementation
   (lhs, rhs) => {
-    if (snippetIsNumeric(lhs) && snippetIsNumeric(rhs)) {
+    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return {
         value: `(f32(${lhs.value}) / ${rhs.value})`,
         dataType: f32,

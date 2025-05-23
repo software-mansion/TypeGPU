@@ -14,7 +14,7 @@ import type {
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
-import { snippetIsNumeric, sub } from './numeric.ts';
+import { isSnippetNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {
@@ -277,14 +277,14 @@ export const isCloseTo = createDualImpl(
   },
   // GPU implementation
   (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
-    if (snippetIsNumeric(lhs) && snippetIsNumeric(rhs)) {
+    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return {
         value:
           `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
-    if (!snippetIsNumeric(lhs) && !snippetIsNumeric(rhs)) {
+    if (!isSnippetNumeric(lhs) && !isSnippetNumeric(rhs)) {
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
