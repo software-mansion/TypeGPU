@@ -79,6 +79,8 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
+  // TODO: Use the value of gridSizeAccess directly after
+  // we fix type inference of accessors.
   const gridSize = d.f32(gridSizeAccess.value);
   const n = samplePerlin(mul(gridSize, input.uv));
   return d.vec4f(d.vec3f(n * 0.5 + 0.5), 1);
