@@ -4,7 +4,6 @@ import {
   type AnyFloatVecInstance,
   type AnyMatInstance,
   type AnyNumericVecInstance,
-  type AnyWgslData,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
@@ -54,15 +53,15 @@ function cpuAdd(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs + rhs; // default addition
   }
-  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
     return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
   }
-  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
     return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
   }
   if (
-    (isVecInstance(lhs) || isMatInstance(lhs)) &&
-    (isVecInstance(rhs) || isMatInstance(rhs))
+    (isVecInstance(lhs) && isVecInstance(rhs)) ||
+    (isMatInstance(lhs) && isMatInstance(rhs))
   ) {
     return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
   }
@@ -97,13 +96,14 @@ function cpuSub(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   // while illegal on the wgsl side, we can do this in js
   return cpuAdd(lhs, mul(-1, rhs));
 }
+
 export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} - ${rhs.value})`,
-    dataType: lhs.dataType,
+    dataType: isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
   }),
   'coerce',
 );
@@ -158,23 +158,23 @@ export const mul = createDualImpl(
   (lhs, rhs) => {
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
-      ? (rhs.dataType as AnyWgslData)
+      ? rhs.dataType
       : isSnippetNumeric(rhs)
       // Vector/Matrix * Scalar
-      ? (lhs.dataType as AnyWgslData)
+      ? lhs.dataType
       : lhs.dataType.type.startsWith('vec')
       // Vector * Vector/Matrix
-      ? (lhs.dataType as AnyWgslData)
+      ? lhs.dataType
       : rhs.dataType.type.startsWith('vec')
       // Matrix * Vector
-      ? (rhs.dataType as AnyWgslData)
+      ? rhs.dataType
       // Matrix * Matrix
-      : (lhs.dataType as AnyWgslData);
+      : lhs.dataType;
     return { value: `(${lhs.value} * ${rhs.value})`, dataType: returnType };
   },
 );
 
-function cpuDiv(lhs: number, rhs: number): number; // default division
+function cpuDiv(lhs: number, rhs: number): number; // default js division
 function cpuDiv<MV extends Vec>(lhs: number, rhs: MV): MV; // scale
 function cpuDiv<MV extends Vec>(lhs: MV, rhs: number): MV; // scale
 function cpuDiv<V extends Vec>(lhs: V, rhs: V): V; // component-wise division
