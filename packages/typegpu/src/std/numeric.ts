@@ -1,26 +1,26 @@
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  AnyFloat32VecInstance,
-  AnyFloatVecInstance,
-  AnyMatInstance,
-  AnyNumericVecInstance,
-  AnyVecInstance,
-  AnyWgslData,
-  mBaseForVec,
-  v2f,
-  v2h,
-  v2i,
-  v3f,
-  v3h,
-  v3i,
-  v4f,
-  v4h,
-  v4i,
-  vBaseForMat,
+import {
+  type AnyFloatVecInstance,
+  type AnyMatInstance,
+  type AnyNumericVecInstance,
+  type AnyWgslData,
+  isFloat32VecInstance,
+  isMatInstance,
+  isVecInstance,
+  type mBaseForVec,
+  type v2f,
+  type v2h,
+  type v2i,
+  type v3f,
+  type v3h,
+  type v3i,
+  type v4f,
+  type v4h,
+  type v4i,
+  type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import { $internal } from '../shared/symbols.ts';
 import type { Snippet } from '../types.ts';
 
 type Vec = AnyNumericVecInstance;
@@ -38,36 +38,6 @@ export function isSnippetNumeric(element: Snippet) {
   );
 }
 
-function isVec(
-  element: number | AnyVecInstance | Mat,
-): element is AnyVecInstance {
-  if (typeof element === 'number') {
-    return false;
-  }
-  return $internal in element && 'kind' in element &&
-    element.kind.startsWith('vec');
-}
-
-function isFloat32Vec(
-  element: number | AnyVecInstance | Mat,
-): element is AnyFloat32VecInstance {
-  if (typeof element === 'number') {
-    return false;
-  }
-  return ($internal in element &&
-    'kind' in element && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind));
-}
-
-function isMat(
-  element: number | AnyVecInstance | Mat,
-): element is Mat {
-  if (typeof element === 'number') {
-    return false;
-  }
-  return $internal in element && 'kind' in element &&
-    element.kind.startsWith('mat');
-}
-
 function cpuAdd(lhs: number, rhs: number): number; // default addition
 function cpuAdd<T extends Vec>(lhs: number, rhs: T): T; // mixed addition
 function cpuAdd<T extends Vec>(lhs: T, rhs: number): T; // mixed addition
@@ -79,18 +49,21 @@ function cpuAdd<
     : Lhs extends Vec ? number | Lhs
     : Lhs extends Mat ? Lhs
     : never),
->(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuAdd(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs + rhs; // default addition
   }
-  if (typeof lhs === 'number' && (isVec(rhs) || isMat(rhs))) {
+  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
     return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
   }
-  if ((isVec(lhs) || isMat(lhs)) && typeof rhs === 'number') {
+  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
     return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
   }
-  if ((isVec(lhs) || isMat(lhs)) && (isVec(rhs) || isMat(rhs))) {
+  if (
+    (isVecInstance(lhs) || isMatInstance(lhs)) &&
+    (isVecInstance(rhs) || isMatInstance(rhs))
+  ) {
     return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
   }
 
@@ -119,7 +92,7 @@ function cpuSub<
     : Lhs extends Vec ? number | Lhs
     : Lhs extends Mat ? Lhs
     : never),
->(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuSub(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   // while illegal on the wgsl side, we can do this in js
   return cpuAdd(lhs, mul(-1, rhs));
@@ -156,22 +129,22 @@ function cpuMul(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }
-  if (typeof lhs === 'number' && (isVec(rhs) || isMat(rhs))) {
+  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
     return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
   }
-  if ((isVec(lhs) || isMat(lhs)) && typeof rhs === 'number') {
+  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
     return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
   }
-  if (isVec(lhs) && isVec(rhs)) {
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
     return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
   }
-  if (isFloat32Vec(lhs) && isMat(rhs)) {
+  if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
-  if (isMat(lhs) && isFloat32Vec(rhs)) {
+  if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
-  if (isMat(lhs) && isMat(rhs)) {
+  if (isMatInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
@@ -211,18 +184,18 @@ function cpuDiv<
   Rhs extends (Lhs extends number ? number | Vec
     : Lhs extends Vec ? number | Lhs
     : never),
->(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuDiv(lhs: number | Vec, rhs: number | Vec) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return (lhs / rhs);
   }
-  if (typeof lhs === 'number' && isVec(rhs)) {
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
     return VectorOps.divMixed[rhs.kind](rhs, lhs);
   }
-  if (isVec(lhs) && typeof rhs === 'number') {
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
     return VectorOps.divMixed[lhs.kind](lhs, rhs);
   }
-  if (isVec(lhs) && isVec(rhs)) {
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
     return VectorOps.div[lhs.kind](lhs, rhs);
   }
 

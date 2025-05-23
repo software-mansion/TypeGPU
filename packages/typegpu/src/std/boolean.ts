@@ -1,16 +1,17 @@
 import { bool, f32 } from '../data/numeric.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  AnyBooleanVecInstance,
-  AnyFloatVecInstance,
-  AnyNumericVecInstance,
-  AnyVec2Instance,
-  AnyVec3Instance,
-  AnyVecInstance,
-  v2b,
-  v3b,
-  v4b,
+import {
+  type AnyBooleanVecInstance,
+  type AnyFloatVecInstance,
+  type AnyNumericVecInstance,
+  type AnyVec2Instance,
+  type AnyVec3Instance,
+  type AnyVecInstance,
+  isVecInstance,
+  type v2b,
+  type v3b,
+  type v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
@@ -266,10 +267,9 @@ export const isCloseTo = createDualImpl(
     if (typeof lhs === 'number' && typeof rhs === 'number') {
       return Math.abs(lhs - rhs) < precision;
     }
-    if (typeof lhs !== 'number' && typeof rhs !== 'number') {
+    if (isVecInstance(lhs) && isVecInstance(rhs)) {
       return VectorOps.isCloseToZero[lhs.kind](
-        // biome-ignore lint/suspicious/noExplicitAny: this overload needs any
-        sub(lhs as any, rhs as any),
+        sub(lhs, rhs),
         precision,
       );
     }
