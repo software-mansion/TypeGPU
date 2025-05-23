@@ -612,6 +612,7 @@ export interface matBase<TColumn> extends NumberArrayView {
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -630,6 +631,7 @@ export interface m2x2f extends mat2x2<v2f> {
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -648,6 +650,12 @@ export interface m3x3f extends mat3x3<v3f> {
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
   readonly kind: string;
+  /* override */ readonly columns: readonly [
+    TColumn,
+    TColumn,
+    TColumn,
+    TColumn,
+  ];
   [n: number]: number;
 }
 
@@ -986,6 +994,7 @@ export interface Mat2x2f {
   readonly type: 'mat2x2f';
   readonly [$repr]: m2x2f;
 
+  // AAA update
   (...elements: number[]): m2x2f;
   (...columns: v2f[]): m2x2f;
   (): m2x2f;
