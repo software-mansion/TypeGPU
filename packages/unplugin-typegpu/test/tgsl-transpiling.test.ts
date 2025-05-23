@@ -31,7 +31,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {
         counter: counter,
         d: d
       }));"
@@ -60,10 +60,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
-      const b = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
+      const b = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}, {}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]}, {
+      const c = tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]}, {
         cx: cx
       }));
       const d = tgpu['~unstable'].fn([])('() {}');"
@@ -106,13 +106,13 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const fun = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
       const funcWithAs = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));
       const funcWithSatisfies = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));"
+      })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]}, {}));"
     `);
   });
 });
@@ -147,7 +147,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const counter = counterBuffer.as('mutable');
               
               tgpu
-                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {counter, d}));
+                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]}, {counter, d}));
       "
     `);
   });
@@ -173,12 +173,12 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]}));
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] })(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]}));
 
-              tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
+              tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]}));
 
               const cx = 2;
-              tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]}, {cx}));
+              tgpu['~unstable'].fn([])(tgpu.__assignAst(tgpu.__removedJsImpl(), {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]}, {cx}));
 
               tgpu['~unstable'].fn([])('() {}');
       "

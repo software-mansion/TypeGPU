@@ -151,7 +151,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               removeJsImplementation,
             } of tgslFunctionDefs
           ) {
-            const { argNames, body, externalNames } = transpileFn(def);
+            const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
             if (
@@ -177,7 +177,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             );
             magicString.appendRight(
               def.end,
-              `, ${embedJSON({ argNames, body, externalNames })}`,
+              `, ${embedJSON({ params, body, externalNames })}`,
             );
 
             if (externalNames.length > 0) {

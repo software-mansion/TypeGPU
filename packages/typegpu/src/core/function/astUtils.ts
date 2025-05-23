@@ -1,7 +1,7 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 
 export type Ast = {
-  argNames: ArgNames;
+  params: FuncParameter[];
   body: Block;
   externalNames: string[];
 };
