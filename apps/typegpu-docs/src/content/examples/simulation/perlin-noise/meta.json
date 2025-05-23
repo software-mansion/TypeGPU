@@ -1,4 +1,5 @@
 {
   "title": "Perlin noise",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }

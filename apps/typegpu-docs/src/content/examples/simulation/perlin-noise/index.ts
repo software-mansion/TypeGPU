@@ -1,316 +1,129 @@
-"use strict";
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
+import { add, cos, dot, floor, mix, mul, pow, sin, sub } from 'typegpu/std';
 
-let gameWidth = 1024;
-let gameHeight = 1024;
-let gridWidth = 32;
-let gridHeight = 32;
+const PI = Math.PI;
 
-const computeShaderString = `override blockSize = 16;
-  
-fn getCell(x: u32, y: u32) -> f32 {
-  let h = size.y;
-  let w = size.x;
-  return memory[(y % h) * w + (x % w)];
-}
+const computeJunctionGradient = tgpu['~unstable'].fn([d.vec2i], d.vec2f)(
+  (pos) => {
+    randf.seed2(d.vec2f(pos));
+    const theta = randf.sample() * 2 * PI;
+    return d.vec2f(cos(theta), sin(theta));
+  },
+)
 
-fn getGradientsGridIndexes(position: vec3u, xShift: u32, yShift: u32) -> vec2u {
-  return vec2u((position.x / gradientsCellSize.x) + xShift, (position.y / gradientsCellSize.y) + yShift);
-}
+const getJunctionGradientSlot = tgpu['~unstable'].slot(computeJunctionGradient);
 
-fn smootherstep(x: f32) -> f32 {
-  return  6 * pow(x, 5) - 15 * pow(x, 4) + 10 * pow(x, 3);
-}
-fn interpolate(x: f32, a: f32, b: f32) -> f32 {
-  return a + smootherstep(x) * (b - a);
-}
+const smootherStep = tgpu['~unstable'].fn([d.f32], d.f32)((x) => {
+  return 6 * pow(x, 5) - 15 * pow(x, 4) + 10 * pow(x, 3);
+});
 
-fn dotProdGrid(position: vec3u, gradientsGridPosition: vec2u) -> f32 {
-  let positionInAGridCell: vec2f = vec2f(
-    f32(position.x) / f32(gradientsCellSize.x) - f32(gradientsGridPosition.x),
-    f32(position.y) / f32(gradientsCellSize.y) - f32(gradientsGridPosition.y),
+const smootherMix = tgpu['~unstable'].fn([d.f32, d.f32, d.f32], d.f32)(
+  (a, b, x) => {
+    return mix(a, b, smootherStep(x));
+  },
+);
+
+const dotProdGrid = tgpu['~unstable'].fn([d.vec2f, d.vec2i], d.f32)(
+  (samplePos, junctionPos) => {
+    const relative = sub(samplePos, d.vec2f(junctionPos.x, junctionPos.y));
+    const gridVector = getJunctionGradientSlot.value(junctionPos);
+    return dot(relative, gridVector);
+  },
+);
+
+const samplePerlin = tgpu['~unstable'].fn([d.vec2f], d.f32)((pos) => {
+  const topLeftJunction = d.vec2i(floor(pos));
+
+  const topLeft = dotProdGrid(pos, topLeftJunction);
+  const topRight = dotProdGrid(pos, add(topLeftJunction, d.vec2i(1, 0)));
+  const bottomLeft = dotProdGrid(pos, add(topLeftJunction, d.vec2i(0, 1)));
+  const bottomRight = dotProdGrid(pos, add(topLeftJunction, d.vec2i(1, 1)));
+
+  const positionInAGridCell = sub(pos, floor(pos));
+  const topValueToInterpolate = smootherMix(
+    topLeft,
+    topRight,
+    positionInAGridCell.x,
   );
-  let gridVector: vec2f = gradients[gradientsGridPosition.x + gradientsGridPosition.y * (gradientsGridSize.x + 1)];
-  return (
-    positionInAGridCell.x * gridVector.x +
-    positionInAGridCell.y * gridVector.y
+  const bottomValueToInterpolate = smootherMix(
+    bottomLeft,
+    bottomRight,
+    positionInAGridCell.x,
   );
-}
-
-fn calculateValuePerPosition(position: vec3u, index: u32) -> f32 {
-  let gradientsGridPosition: vec2u = getGradientsGridIndexes(position, 0, 0);
-  let positionInAGridCell: vec2f = vec2f(
-    f32(position.x) / f32(gradientsCellSize.x) - f32(gradientsGridPosition.x), 
-    f32(position.y) / f32(gradientsCellSize.y) - f32(gradientsGridPosition.y)
+  const interpolatedValue = smootherMix(
+    topValueToInterpolate,
+    bottomValueToInterpolate,
+    positionInAGridCell.y,
   );
-  let topLeft: f32 = dotProdGrid(position, gradientsGridPosition);
-  let topRight: f32 = dotProdGrid(position, getGradientsGridIndexes(position, 1, 0));
-  let bottomLeft: f32 = dotProdGrid(position, getGradientsGridIndexes(position, 0, 1));
-  let bottomRight: f32 = dotProdGrid(position, getGradientsGridIndexes(position, 1, 1));
-  let topValueToInterpolate: f32 = interpolate(positionInAGridCell.x, topLeft, topRight);
-  let bottomValueToInterpolate: f32 = interpolate(positionInAGridCell.x, bottomLeft, bottomRight);
-  let interpolatedValue: f32 = interpolate(positionInAGridCell.y, topValueToInterpolate, bottomValueToInterpolate);
   return interpolatedValue;
-}
+});
 
-@compute @workgroup_size(blockSize, blockSize)
-fn main(@builtin(global_invocation_id) grid: vec3u) {
-  let index: u32 = grid.x + grid.y * size.x;
-  let val: f32 = calculateValuePerPosition(grid, index);
-  memory[index] = val;
-}
-`;
+const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const uv = [d.vec2f(0), d.vec2f(2, 0), d.vec2f(0, 2)];
 
-const renderShaderString = `struct Out {
-    @builtin(position) pos: vec4f,
-    @location(0) cell: f32,
-    @location(1) uv: vec2f,
-}
-  
-@vertex
-fn vert(@builtin(instance_index) i: u32, @location(0) cell: f32, @location(1) pos: vec2u) -> Out {
-    let w = size.x;
-    let h = size.y;
-    let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-    let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-  
-    return Out(vec4f(x, y, 0., 1.), cell, vec2f(x,y));
-}
-  
-@fragment
-fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {  
-    return vec4f((cell + 1.)/2., 0, 1. - (cell + 1.)/2., 1);
-}`;
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
+    uv: uv[input.vertexIndex],
+  };
+});
+
+const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const gridSize = d.f32(gridSizeAccess.value);
+  const n = samplePerlin(mul(gridSize, input.uv));
+  return d.vec4f(d.vec3f(n * 0.5 + 0.5), 1);
+});
 
 const root = await tgpu.init();
+const device = root.device;
 
-const startupTGPU = async () => {
-  const device = root.device;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+context.configure({
+  device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
 
-  const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-  const context = canvas.getContext("webgpu") as GPUCanvasContext;
+const gridSizeUniform = root['~unstable'].createUniform(d.f32, 32);
 
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-  context.configure({
-    device,
-    format: presentationFormat,
-    alphaMode: "premultiplied",
-  });
+const renderPipeline = root['~unstable']
+  .with(gridSizeAccess, gridSizeUniform)
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline();
 
-  let workgroupSize = 16;
-
-  const bindGroupLayoutCompute = tgpu.bindGroupLayout({
-    memory: {
-      storage: (arrayLength: number) => d.arrayOf(d.f32, arrayLength),
-      access: "mutable",
-    },
-    gradients: {
-      storage: (arrayLength: number) => d.arrayOf(d.vec2f, arrayLength),
-      access: "readonly",
-    },
-    size: {
-      storage: d.vec2u,
-      access: "readonly",
-    },
-    gradientsGridSize: {
-      storage: d.vec2u,
-      access: "readonly",
-    },
-    gradientsCellSize: {
-      storage: d.vec2u,
-      access: "readonly",
-    },
-  });
-  const bindGroupLayoutRender = tgpu.bindGroupLayout({
-    size: {
-      uniform: d.vec2u,
-    },
-  });
-
-  const computeShader = device.createShaderModule({
-    code: tgpu.resolve({
-      template: computeShaderString,
-      externals: {
-        ...bindGroupLayoutCompute.bound,
-      },
-    }),
-  });
-
-  const renderShader = device.createShaderModule({
-    code: tgpu.resolve({
-      template: renderShaderString,
-      externals: {
-        ...bindGroupLayoutRender.bound,
-      },
-    }),
-  });
-
-  const computePipeline = device.createComputePipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [root.unwrap(bindGroupLayoutCompute)],
-    }),
-    compute: {
-      module: computeShader,
-      constants: {
-        blockSize: workgroupSize,
-      },
-    },
-  });
-
-  const squareVertexLayout = tgpu.vertexLayout(
-    (n: number) => d.arrayOf(d.location(1, d.vec2u), n),
-    "vertex"
-  );
-
-  const memoryVertexLayout = tgpu.vertexLayout(
-    (n: number) => d.arrayOf(d.location(0, d.f32), n),
-    "instance"
-  );
-
-  const memoryLength = gameWidth * gameHeight;
-  const memory = Array.from({ length: memoryLength }).fill(0) as Array<number>;
-  const gradientsGridSizes = [gridWidth + 1, gridHeight + 1];
-
-  const gradientsLength = gradientsGridSizes[0] * gradientsGridSizes[1];
-  const gradients = Array.from({ length: gradientsLength })
-    .fill(0)
-    .map(() => {
-      const theta = Math.random() * 2 * Math.PI;
-      return d.vec2f(Math.cos(theta), Math.sin(theta));
-    });
-
-  const memoryBuffer = root
-    .createBuffer(d.arrayOf(d.f32, memoryLength), memory)
-    .$usage("storage", "vertex");
-
-  const gradientsBuffer = root
-    .createBuffer(d.arrayOf(d.vec2f, gradientsLength), gradients)
-    .$usage("uniform", "storage");
-
-  const sizeBuffer = root
-    .createBuffer(d.vec2u, d.vec2u(gameWidth, gameHeight))
-    .$usage("uniform", "storage");
-
-  const squareBuffer = root
-    .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
-    .$usage("vertex");
-
-  const gradientsGridSizeBuffer = root
-    .createBuffer(
-      d.vec2u,
-      d.vec2u(gradientsGridSizes[0] - 1, gradientsGridSizes[1] - 1)
-    )
-    .$usage("uniform", "storage");
-
-  const gradientsCellSizeBuffer = root
-    .createBuffer(
-      d.vec2u,
-      d.vec2u(
-        Math.round(gameWidth / (gradientsGridSizes[0] - 1)),
-        Math.round(gameHeight / (gradientsGridSizes[1] - 1))
-      )
-    )
-    .$usage("uniform", "storage");
-
-  const bindGroup = root.createBindGroup(bindGroupLayoutCompute, {
-    size: sizeBuffer,
-    memory: memoryBuffer,
-    gradients: gradientsBuffer,
-    gradientsGridSize: gradientsGridSizeBuffer,
-    gradientsCellSize: gradientsCellSizeBuffer,
-  });
-
-  const uniformBindGroup = root.createBindGroup(bindGroupLayoutRender, {
-    size: sizeBuffer,
-  });
-
+const draw = async () => {
   const view = context.getCurrentTexture().createView();
-  const renderPass: GPURenderPassDescriptor = {
-    colorAttachments: [
-      {
-        view,
-        loadOp: "clear",
-        storeOp: "store",
-      },
-    ],
-  };
 
-  const commandEncoder = device.createCommandEncoder();
-  const passEncoderCompute = commandEncoder.beginComputePass();
-
-  passEncoderCompute.setPipeline(computePipeline);
-  passEncoderCompute.setBindGroup(0, root.unwrap(bindGroup));
-
-  passEncoderCompute.dispatchWorkgroups(
-    gameWidth / workgroupSize,
-    gameHeight / workgroupSize
-  );
-  passEncoderCompute.end();
-
-  const renderPipeline = device.createRenderPipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [root.unwrap(bindGroupLayoutRender)],
-    }),
-    primitive: {
-      topology: "triangle-strip",
-    },
-    vertex: {
-      module: renderShader,
-      buffers: [
-        root.unwrap(memoryVertexLayout),
-        root.unwrap(squareVertexLayout),
-      ],
-    },
-    fragment: {
-      module: renderShader,
-      targets: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-  });
-
-  const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
-  passEncoderRender.setPipeline(renderPipeline);
-
-  passEncoderRender.setVertexBuffer(0, root.unwrap(memoryBuffer));
-  passEncoderRender.setVertexBuffer(1, root.unwrap(squareBuffer));
-  passEncoderRender.setBindGroup(0, root.unwrap(uniformBindGroup));
-
-  passEncoderRender.draw(4, memoryLength);
-  passEncoderRender.end();
-  device.queue.submit([commandEncoder.finish()]);
+  renderPipeline.withColorAttachment({
+    view,
+    loadOp: 'clear',
+    storeOp: 'store',
+  }).draw(3);
 };
 
-startupTGPU();
-
-
+draw();
 
 export const controls = {
-  size: {
-    initial: '64',
-    options: [16, 32, 64, 128, 256, 512, 1024, 2048, 4096].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      gameWidth = Number.parseInt(value);
-      gameHeight = Number.parseInt(value);
-      startupTGPU();
-    },
-  },
-
   'grid size': {
     initial: '16',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
     onSelectChange: (value: string) => {
-      gridHeight = Number.parseInt(value);
-      gridWidth = Number.parseInt(value);
-      startupTGPU();
+      gridSizeUniform.write(Number.parseInt(value));
+      draw();
     },
-  },
-
-  Reset: {
-    onButtonClick: startupTGPU,
   },
 };
 
@@ -318,4 +131,3 @@ export function onCleanup() {
   root.destroy();
   root.device.destroy();
 }
-
