@@ -11,7 +11,7 @@ const computeJunctionGradient = tgpu['~unstable'].fn([d.vec2i], d.vec2f)(
     const theta = randf.sample() * 2 * PI;
     return d.vec2f(cos(theta), sin(theta));
   },
-)
+);
 
 const getJunctionGradientSlot = tgpu['~unstable'].slot(computeJunctionGradient);
 
@@ -20,14 +20,14 @@ const smootherStep = tgpu['~unstable'].fn([d.f32], d.f32)((x) => {
 });
 
 const smootherMix = tgpu['~unstable'].fn([d.f32, d.f32, d.f32], d.f32)(
-  (a, b, x) => {
-    return mix(a, b, smootherStep(x));
+  (a, b, t) => {
+    return mix(a, b, smootherStep(t));
   },
 );
 
 const dotProdGrid = tgpu['~unstable'].fn([d.vec2f, d.vec2i], d.f32)(
   (samplePos, junctionPos) => {
-    const relative = sub(samplePos, d.vec2f(junctionPos.x, junctionPos.y));
+    const relative = sub(samplePos, d.vec2f(junctionPos));
     const gridVector = getJunctionGradientSlot.value(junctionPos);
     return dot(relative, gridVector);
   },
@@ -41,23 +41,10 @@ const samplePerlin = tgpu['~unstable'].fn([d.vec2f], d.f32)((pos) => {
   const bottomLeft = dotProdGrid(pos, add(topLeftJunction, d.vec2i(0, 1)));
   const bottomRight = dotProdGrid(pos, add(topLeftJunction, d.vec2i(1, 1)));
 
-  const positionInAGridCell = sub(pos, floor(pos));
-  const topValueToInterpolate = smootherMix(
-    topLeft,
-    topRight,
-    positionInAGridCell.x,
-  );
-  const bottomValueToInterpolate = smootherMix(
-    bottomLeft,
-    bottomRight,
-    positionInAGridCell.x,
-  );
-  const interpolatedValue = smootherMix(
-    topValueToInterpolate,
-    bottomValueToInterpolate,
-    positionInAGridCell.y,
-  );
-  return interpolatedValue;
+  const partial = sub(pos, floor(pos));
+  const top = smootherMix(topLeft, topRight, partial.x);
+  const bottom = smootherMix(bottomLeft, bottomRight, partial.x);
+  return smootherMix(top, bottom, partial.y);
 });
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -65,11 +52,10 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0), d.vec2f(2, 0), d.vec2f(0, 2)];
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: uv[input.vertexIndex],
+    uv: pos[input.vertexIndex],
   };
 });
 
