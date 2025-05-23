@@ -232,7 +232,7 @@ describe('mat3x3f', () => {
   });
 
   it('should work with for...of', () => {
-    const mat = d.mat3x3f(...Array(9).keys());
+    const mat = d.mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8);
     let i = 0;
     for (const x of mat) {
       expect(x).toBe(mat[i]);
@@ -373,7 +373,7 @@ describe('mat4x4f', () => {
   });
 
   it('should work with for...of', () => {
-    const mat = d.mat4x4f(...Array(16).keys());
+    const mat = d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     let i = 0;
     for (const x of mat) {
       expect(x).toBe(mat[i]);
