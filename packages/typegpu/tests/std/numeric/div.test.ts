@@ -1,15 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { div, isCloseTo } from '../../../src/std/index.ts';
+import type { v2f, v3f, v3u, v4f } from '../../../src/data/index.ts';
 import {
-  m3x3f,
-  m4x4f,
-  mat2x2f,
-  mat4x4f,
   u32,
-  v2f,
-  v3f,
-  v3u,
-  v4f,
   vec2f,
   vec2h,
   vec2i,
@@ -23,6 +15,7 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
+import { div, isCloseTo } from '../../../src/std/index.ts';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {

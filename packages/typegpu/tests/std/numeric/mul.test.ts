@@ -16,7 +16,6 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
-import { mul } from '../../../src/std/index.ts';
 import type {
   m2x2f,
   m3x3f,
@@ -25,6 +24,7 @@ import type {
   v3f,
   v4f,
 } from '../../../src/data/wgslTypes.ts';
+import { mul } from '../../../src/std/index.ts';
 
 describe('mul', () => {
   it('computes product of a number and a number', () => {
