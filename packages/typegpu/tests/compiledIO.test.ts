@@ -183,7 +183,8 @@ describe('createCompileInstructions', () => {
     const dataView = new DataView(arr);
 
     writer(dataView, 0, {
-      transform: d.mat4x4f(...Array.from({ length: 16 }).map((_, i) => i)),
+      // deno-fmt-ignore
+      transform: d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
     });
 
     expect([...new Float32Array(arr)]).toStrictEqual(
@@ -201,7 +202,7 @@ describe('createCompileInstructions', () => {
     const dataView = new DataView(arr);
 
     writer(dataView, 0, {
-      transform: d.mat3x3f(...Array.from({ length: 9 }).map((_, i) => i)),
+      transform: d.mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8),
     });
 
     expect(arr.byteLength).toBe(48);
@@ -219,7 +220,7 @@ describe('createCompileInstructions', () => {
     const dataView = new DataView(arr);
 
     writer(dataView, 0, {
-      transform: d.mat2x2f(...Array.from({ length: 4 }).map((_, i) => i)),
+      transform: d.mat2x2f(0, 1, 2, 3),
     });
 
     expect(arr.byteLength).toBe(16);
