@@ -195,9 +195,8 @@ class ItemStateStackImpl implements ItemStateStack {
           return arg;
         }
 
-        const argAlias = layer.argAliases[id];
-        if (argAlias !== undefined) {
-          return argAlias;
+        if (layer.argAliases[id]) {
+          return layer.argAliases[id];
         }
 
         const external = layer.externalMap[id];

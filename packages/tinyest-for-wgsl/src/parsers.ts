@@ -453,26 +453,43 @@ export function extractFunctionParts(rootNode: JsNode): {
     throw new Error('tgpu.fn cannot be a generator');
   }
 
-  return {
-    params: functionNode.params.filter((param) =>
+  const unsupportedTypes = new Set(
+    functionNode.params.flatMap((param) =>
       param.type === 'ObjectPattern' || param.type === 'Identifier'
-    ).map((param) =>
-      param.type === 'ObjectPattern'
-        ? {
-          type: FuncParameterType.destructuredObject,
-          props: param.properties.flatMap((prop) =>
-            (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-              prop.key.type === 'Identifier' &&
-              prop.value.type === 'Identifier'
-              ? [{ name: prop.key.name, alias: prop.value.name }]
-              : []
-          ),
-        }
-        : {
-          type: FuncParameterType.identifier,
-          name: param.name,
-        }
+        ? []
+        : [param.type]
     ),
+  );
+  if (unsupportedTypes.size > 0) {
+    throw new Error(
+      `Unsupported function parameter type(s): ${[...unsupportedTypes]}`,
+    );
+  }
+
+  return {
+    params: (functionNode
+      .params as (
+        | babel.Identifier
+        | acorn.Identifier
+        | babel.ObjectPattern
+        | acorn.ObjectPattern
+      )[]).map((param) =>
+        param.type === 'ObjectPattern'
+          ? {
+            type: FuncParameterType.destructuredObject,
+            props: param.properties.flatMap((prop) =>
+              (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
+                prop.key.type === 'Identifier' &&
+                prop.value.type === 'Identifier'
+                ? [{ name: prop.key.name, alias: prop.value.name }]
+                : []
+            ),
+          }
+          : {
+            type: FuncParameterType.identifier,
+            name: param.name,
+          }
+      ),
     body: functionNode.body,
   };
 }
