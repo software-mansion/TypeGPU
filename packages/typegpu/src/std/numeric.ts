@@ -203,6 +203,13 @@ function cpuDiv(lhs: number, rhs: number): number; // default division
 function cpuDiv<MV extends Vec>(lhs: number, rhs: MV): MV; // scale
 function cpuDiv<MV extends Vec>(lhs: MV, rhs: number): MV; // scale
 function cpuDiv<V extends Vec>(lhs: V, rhs: V): V; // component-wise division
+function cpuDiv<
+  // union overload for internal usage
+  Lhs extends number | Vec,
+  Rhs extends (Lhs extends number ? number | Vec
+    : Lhs extends Vec ? number | Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): number | Lhs | Rhs;
 function cpuDiv(lhs: number | Vec, rhs: number | Vec) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return (lhs / rhs);
