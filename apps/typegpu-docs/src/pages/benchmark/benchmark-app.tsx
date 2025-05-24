@@ -79,10 +79,10 @@ export default function BenchmarkApp() {
 
   return (
     <div className='px-4'>
-      <div className='gap-4 mx-auto p-4 my-10 flex flex-col items-center justify-between w-96 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700'>
+      <div className='mx-auto my-10 flex w-96 flex-col items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800'>
         <div>
-          <p className='w-full text-lg mb-2'>Versions to compare:</p>
-          <ul className='w-full flex flex-col items-start gap-1 my-1 list-none p-0 m-0'>
+          <p className='mb-2 w-full text-lg'>Versions to compare:</p>
+          <ul className='m-0 my-1 flex w-full list-none flex-col items-start gap-1 p-0'>
             {parameterSetAtoms.map((paramsAtom, index) => (
               <li
                 // biome-ignore lint/suspicious/noArrayIndexKey: <it's fine React>
@@ -96,7 +96,7 @@ export default function BenchmarkApp() {
           <div className='w-full'>
             <button
               type='button'
-              className='cursor-pointer select-none p-2 flex justify-center items-center w-10 h-10 bg-transparent text-white transition-colors hover:bg-gray-700 rounded-md text-sm text-center me-2'
+              className='me-2 flex h-10 w-10 cursor-pointer select-none items-center justify-center rounded-md bg-transparent p-2 text-center text-sm text-white transition-colors hover:bg-gray-700'
               onClick={createParameterSet}
             >
               <CirclePlus />
@@ -104,7 +104,7 @@ export default function BenchmarkApp() {
           </div>
         </div>
         <div className='w-full'>
-          <p className='text-lg mb-2'>Benchmark suites to run:</p>
+          <p className='mb-2 text-lg'>Benchmark suites to run:</p>
           <div className='w-full'>
             {Object.entries(unfilteredSuites).map(([suiteName, suite]) => (
               <SuiteCheckbox
@@ -117,7 +117,7 @@ export default function BenchmarkApp() {
         </div>
         <button
           type='button'
-          className='text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center'
+          className='rounded-lg bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 px-5 py-2.5 text-center font-medium text-sm text-white shadow-lg shadow-purple-500/50 hover:bg-gradient-to-br focus:outline-none focus:ring-4 focus:ring-purple-300 dark:shadow-lg dark:shadow-purple-800/80 dark:focus:ring-purple-800'
           onClick={runBenchmarks}
         >
           Run Benchmarks

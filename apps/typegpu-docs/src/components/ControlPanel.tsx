@@ -41,7 +41,7 @@ function ToggleRow({
 
       <label
         htmlFor={toggleId}
-        className='grid items-center justify-end h-10 cursor-pointer'
+        className='grid h-10 cursor-pointer items-center justify-end'
       >
         <Toggle
           id={toggleId}
@@ -218,7 +218,7 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
-    <div className='grid h-10 col-span-2'>
+    <div className='col-span-2 grid h-10'>
       <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
@@ -316,15 +316,15 @@ export function ControlPanel() {
     <div
       className={cs(
         isGPUSupported ? '' : 'hidden md:flex',
-        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full overflow-auto',
+        'box-border flex max-h-[50%] flex-col gap-4 overflow-auto rounded-xl bg-grayscale-0 p-6 md:max-h-full',
       )}
     >
-      <div className='hidden md:flex flex-col gap-4'>
-        <h2 className='text-xl font-medium'>Control panel</h2>
+      <div className='hidden flex-col gap-4 md:flex'>
+        <h2 className='font-medium text-xl'>Control panel</h2>
 
         <label
           htmlFor={showLeftMenuId}
-          className='flex items-center justify-between gap-3 text-sm cursor-pointer'
+          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
         >
           <span>Show left menu</span>
           <Toggle
@@ -335,7 +335,7 @@ export function ControlPanel() {
         </label>
         <label
           htmlFor={showCodeEditorId}
-          className='flex items-center justify-between gap-3 text-sm cursor-pointer'
+          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
         >
           <span>Show code editor</span>
           <Toggle
@@ -353,14 +353,14 @@ export function ControlPanel() {
           )
           : null}
 
-        <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
       </div>
 
       {isGPUSupported
         ? (
           <>
-            <h2 className='m-0 text-xl font-medium'>Example controls</h2>
-            <div className='grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2'>
+            <h2 className='m-0 font-medium text-xl'>Example controls</h2>
+            <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
               {exampleControlParams.map((param) => paramToControlRow(param))}
             </div>
           </>

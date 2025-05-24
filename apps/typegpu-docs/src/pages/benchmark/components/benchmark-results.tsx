@@ -12,9 +12,9 @@ export function ResultsTable(props: { results: InstanceResults }) {
   const columns = Object.keys(allResults?.[0] ?? {});
 
   return (
-    <table className='w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 mb-4'>
+    <table className='mb-4 w-full text-left text-gray-500 text-sm rtl:text-right dark:text-gray-400'>
       <caption>{name}</caption>
-      <thead className='text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400'>
+      <thead className='bg-gray-50 text-gray-700 text-xs uppercase dark:bg-gray-700 dark:text-gray-400'>
         <tr>
           {columns.map((columnKey) => (
             <th scope='col' key={columnKey} className='px-6 py-3'>
@@ -27,7 +27,7 @@ export function ResultsTable(props: { results: InstanceResults }) {
         {allResults.map((task) => (
           <tr
             key={task?.['Task name']}
-            className='bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200'
+            className='border-gray-200 border-b bg-white dark:border-gray-700 dark:bg-gray-800'
           >
             {columns.map((columnKey) => (
               <td key={columnKey} className='px-6 py-4'>
@@ -51,11 +51,11 @@ export function BenchmarkResults() {
 
 export function BenchmarkFallback() {
   return (
-    <div className='flex items-center justify-center font-sans benchmark-fallback h-32'>
-      <div className='flex items-center gap-2 motion-preset-focus'>
+    <div className='benchmark-fallback flex h-32 items-center justify-center font-sans'>
+      <div className='motion-preset-focus flex items-center gap-2'>
         <svg
           aria-hidden='true'
-          className='w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600'
+          className='h-8 w-8 animate-spin fill-blue-600 text-gray-200 dark:text-gray-600'
           viewBox='0 0 100 101'
           fill='none'
           xmlns='http://www.w3.org/2000/svg'

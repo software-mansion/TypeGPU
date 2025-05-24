@@ -30,7 +30,7 @@ function NpmParameters(props: {
       <p className='text-sm'>typegpu@</p>
       <input
         type='text'
-        className='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+        className='block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500'
         value={version}
         onChange={(e) => setVersion(e.target.value)}
         placeholder='0.0.0'
@@ -63,7 +63,7 @@ function PrParameters(props: {
       <p className='text-sm'>typegpu@</p>
       <input
         type='text'
-        className='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+        className='block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500'
         value={version}
         onChange={(e) => setCommit(e.target.value)}
         placeholder='b364de3'
@@ -91,16 +91,16 @@ export function ParameterSetRow(props: {
   );
 
   return (
-    <div className='w-full flex gap-4 justify-between items-center relative'>
+    <div className='relative flex w-full items-center justify-between gap-4'>
       <button
         type='button'
-        className='p-0 bg-transparent text-white transition-colors hover:bg-gray-700 rounded-md'
+        className='rounded-md bg-transparent p-0 text-white transition-colors hover:bg-gray-700'
         onClick={() => deleteParameterSet(parameterSet.key)}
       >
         <DeleteIcon />
       </button>
       <select
-        className='w-22 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+        className='block w-22 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500'
         value={typeValue}
         data-value={typeValue}
         onChange={(event) => setType(event.target.value as 'local' | 'npm')}
@@ -109,7 +109,7 @@ export function ParameterSetRow(props: {
         <option value='npm'>⬇️ npm</option>
         <option value='pr'>🌳 pr</option>
       </select>
-      <div className='flex-1 flex justify-start items-center'>
+      <div className='flex flex-1 items-center justify-start'>
         {typeValue === 'local' && <p className='text-sm'>typegpu</p>}
         {typeValue === 'npm' && (
           <NpmParameters parameterSetAtom={props.parameterSetAtom} />

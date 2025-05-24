@@ -78,7 +78,7 @@ function ExamplePage() {
   })();
 
   return (
-    <main className='flex-1 max-w-full'>
+    <main className='max-w-full flex-1'>
       <Suspense fallback={'Loading...'}>{content}</Suspense>
     </main>
   );
