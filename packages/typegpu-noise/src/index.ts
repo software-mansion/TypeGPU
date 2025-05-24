@@ -11,11 +11,11 @@ import {
 } from './random.ts';
 
 export const randf: {
-  sample: typeof randFloat01;
   seed: typeof randSeed;
   seed2: typeof randSeed2;
   seed3: typeof randSeed3;
   seed4: typeof randSeed4;
+  sample: typeof randFloat01;
   inUnitCircle: typeof randInUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
@@ -42,3 +42,5 @@ export {
   randomGeneratorShell,
   randomGeneratorSlot,
 } from './generator.ts';
+
+export * as perlin2d from './perlin-2d.ts';
