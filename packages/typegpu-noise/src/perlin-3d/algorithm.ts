@@ -1,8 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, floor, mix, mul, sub } from 'typegpu/std';
-import { randOnUnitSphere, randSeed3 } from './random.ts';
-import { smootherStep } from './utils.ts';
+import { randOnUnitSphere, randSeed3 } from '../random.ts';
+import { smootherStep } from '../utils.ts';
 
 export const computeJunctionGradient = tgpu['~unstable'].fn([d.vec3i], d.vec3f)(
   (pos) => {

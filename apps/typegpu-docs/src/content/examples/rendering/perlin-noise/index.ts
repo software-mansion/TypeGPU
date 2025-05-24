@@ -58,6 +58,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const perlinCache = perlin3d.createCache({
+  root,
+  size: [32, 32, 10],
+});
+
 const gridSizeUniform = root['~unstable'].createUniform(d.f32, 32);
 const timeUniform = root['~unstable'].createUniform(d.f32, 0);
 const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
@@ -66,6 +71,7 @@ const renderPipeline = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)
   .with(timeAccess, timeUniform)
   .with(sharpnessAccess, sharpnessUniform)
+  .with(perlin3d.getJunctionGradientSlot, perlinCache.getJunctionGradient)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
@@ -75,7 +81,7 @@ function draw() {
     return;
   }
 
-  timeUniform.write(Date.now() * 0.001 % 10);
+  timeUniform.write(performance.now() * 0.0002 % 10);
 
   renderPipeline
     .withColorAttachment({
