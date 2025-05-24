@@ -1,7 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { perlin2d } from '@typegpu/noise';
-import { mul } from 'typegpu/std';
+import { perlin3d } from '@typegpu/noise';
+import { abs, mix, mul, pow, sign } from 'typegpu/std';
+
+// Used for clean-up of this example
+const abortController = new AbortController();
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -16,6 +19,8 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
 });
 
 const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
+const timeAccess = tgpu['~unstable'].accessor(d.f32);
+const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -24,8 +29,21 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   // TODO: Use the value of gridSizeAccess directly after
   // we fix type inference of accessors.
   const gridSize = d.f32(gridSizeAccess.value);
-  const n = perlin2d.sample(mul(gridSize, input.uv));
-  return d.vec4f(d.vec3f(n * 0.5 + 0.5), 1);
+  const time = d.f32(timeAccess.value);
+  const sharpness = d.f32(sharpnessAccess.value);
+
+  const n = perlin3d.sample(d.vec3f(mul(gridSize, input.uv), time));
+
+  // Sharpening
+  const sharp = sign(n) * pow(abs(n), 1 - sharpness);
+
+  // Remapping to 0-1 range
+  const n01 = sharp * 0.5 + 0.5;
+
+  // Gradient map
+  const dark = d.vec3f(0, 0.2, 1);
+  const light = d.vec3f(1, 0.3, 0.5);
+  return d.vec4f(mix(dark, light, n01), 1);
 });
 
 const root = await tgpu.init();
@@ -41,37 +59,54 @@ context.configure({
 });
 
 const gridSizeUniform = root['~unstable'].createUniform(d.f32, 32);
+const timeUniform = root['~unstable'].createUniform(d.f32, 0);
+const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
 
 const renderPipeline = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)
+  .with(timeAccess, timeUniform)
+  .with(sharpnessAccess, sharpnessUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-const draw = async () => {
-  const view = context.getCurrentTexture().createView();
+function draw() {
+  if (abortController.signal.aborted) {
+    return;
+  }
 
-  renderPipeline.withColorAttachment({
-    view,
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
-};
+  timeUniform.write(Date.now() * 0.001 % 10);
+
+  renderPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
+
+  requestAnimationFrame(draw);
+}
 
 draw();
 
 export const controls = {
   'grid size': {
-    initial: '4',
+    initial: '2',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      gridSizeUniform.write(Number.parseInt(value));
-      draw();
-    },
+    onSelectChange: (value: string) =>
+      gridSizeUniform.write(Number.parseInt(value)),
+  },
+  'sharpness': {
+    initial: 0.5,
+    min: 0,
+    max: 0.99,
+    step: 0.01,
+    onSliderChange: (value: number) => sharpnessUniform.write(value),
   },
 };
 
 export function onCleanup() {
+  abortController.abort();
   root.destroy();
-  root.device.destroy();
 }

@@ -1,12 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { add, dot, floor, mix, sub } from 'typegpu/std';
+import { add, dot, floor, mix, mul, sub } from 'typegpu/std';
 import { randOnUnitCircle, randSeed2 } from './random.ts';
 import { smootherStep } from './utils.ts';
 
 export const computeJunctionGradient = tgpu['~unstable'].fn([d.vec2i], d.vec2f)(
   (pos) => {
-    randSeed2(d.vec2f(pos));
+    randSeed2(mul(0.001, d.vec2f(pos)));
     return randOnUnitCircle();
   },
 );
