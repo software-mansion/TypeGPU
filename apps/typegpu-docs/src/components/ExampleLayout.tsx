@@ -23,7 +23,7 @@ export function ExampleLayout() {
 
   return (
     <>
-      <div className='md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm'>
+      <div className='absolute top-4 left-4 z-50 flex gap-4 text-sm md:hidden'>
         {menuShownMobile
           ? null
           : (
@@ -40,7 +40,7 @@ export function ExampleLayout() {
         </Button>
       </div>
 
-      <div className='box-border flex h-dvh p-4 gap-4 bg-tameplum-50'>
+      <div className='box-border flex h-dvh gap-4 bg-tameplum-50 p-4'>
         {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
@@ -66,12 +66,12 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-75 p-5 gap-5 overflow-auto',
+        'box-border flex flex-col gap-5 overflow-auto bg-white p-5 md:w-75 md:rounded-2xl',
       )}
     >
       <header className='grid gap-5'>
         <div className='grid place-items-center'>
-          <a href='/TypeGPU' className='block box-border py-4 cursor-pointer'>
+          <a href='/TypeGPU' className='box-border block cursor-pointer py-4'>
             <img
               className='w-40'
               src='/TypeGPU/typegpu-logo-light.svg'
@@ -80,7 +80,7 @@ function SideMenu() {
           </a>
         </div>
 
-        <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
 
         <div className='grid gap-6'>
           <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
@@ -90,14 +90,14 @@ function SideMenu() {
           </p>
           <a
             href='/TypeGPU/why-typegpu'
-            className='underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
+            className='bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-sm text-transparent underline'
           >
             Learn more about TypeGPU here
           </a>
         </div>
       </header>
 
-      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+      <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
 
       <ExampleList
         excludeTags={[
@@ -106,11 +106,11 @@ function SideMenu() {
         ].flat()}
       />
 
-      <hr className='my-0 box-border w-full border-t border-tameplum-100' />
+      <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
 
       <label
         htmlFor={experimentalExamplesToggleId}
-        className='flex items-center justify-between gap-3 text-sm cursor-pointer'
+        className='flex cursor-pointer items-center justify-between gap-3 text-sm'
       >
         <span>Experimental examples</span>
         <Toggle
@@ -129,7 +129,7 @@ function SideMenu() {
 
       <div className='flex justify-between text-tameplum-800 text-xs'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
-        <div className='flex gap-3 items-center'>
+        <div className='flex items-center gap-3'>
           <a
             href='https://discord.gg/8jpfgDqPcM'
             target='_blank'

@@ -11,7 +11,7 @@ export function Select({
 }) {
   return (
     <RadixSelect.Root value={value} onValueChange={onChange}>
-      <RadixSelect.Trigger className='flex justify-between items-center w-full h-10 border border-tameplum-100 hover:border-tameplum-600 rounded px-3 text-sm bg-tameplum-50'>
+      <RadixSelect.Trigger className='flex h-10 w-full items-center justify-between rounded border border-tameplum-100 bg-tameplum-50 px-3 text-sm hover:border-tameplum-600'>
         <RadixSelect.Value>{value}</RadixSelect.Value>
         <RadixSelect.Icon />
       </RadixSelect.Trigger>
@@ -19,7 +19,7 @@ export function Select({
       <RadixSelect.Portal>
         <RadixSelect.Content
           position='popper'
-          className='relative -top-4 min-w-30'
+          className='-top-4 relative min-w-30'
         >
           <RadixSelect.Viewport className='rounded bg-tameplum-50'>
             {options.map((option) => (

@@ -5,7 +5,7 @@ import { ExampleLink } from './ExampleLink.tsx';
 function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
   return (
     <>
-      <nav className='box-border flex flex-col flex-1 gap-6 py-4 overflow-y-auto min-w-64'>
+      <nav className='box-border flex min-w-64 flex-1 flex-col gap-6 overflow-y-auto py-4'>
         {
           /* <ExampleLink key={PLAYGROUND_KEY} exampleKey={PLAYGROUND_KEY}>
           Playground
