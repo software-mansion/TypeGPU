@@ -13,9 +13,6 @@ function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
 }
 
 export function getName(definition: unknown): string | undefined {
-  if (typeof definition === 'string') {
-    return definition;
-  }
   if (isForwarded(definition)) {
     return getName(definition[$getNameForward]);
   }

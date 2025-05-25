@@ -317,7 +317,7 @@ export function generateExpression(
       if (sn.dataType === UnknownData) {
         throw new Error(
           `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
-            getName(idValue)
+            typeof idValue === 'string' ? idValue : getName(idValue)
           }()'`,
         );
       }
