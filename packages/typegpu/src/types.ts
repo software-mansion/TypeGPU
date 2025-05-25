@@ -16,6 +16,7 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
+  isAccessor,
   isDerived,
   isProviding,
   isSlot,
@@ -192,6 +193,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
+    isAccessor(value) ||
     isDerived(value) ||
     isProviding(value)
   );

@@ -44,4 +44,4 @@ export {
 } from './generator.ts';
 
 export * as perlin2d from './perlin-2d.ts';
-export * as perlin3d from './perlin-3d.ts';
+export * as perlin3d from './perlin-3d/index.ts';

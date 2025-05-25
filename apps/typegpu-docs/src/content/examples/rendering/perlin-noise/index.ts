@@ -46,8 +46,13 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(mix(dark, light, n01), 1);
 });
 
+const PerlinCache = perlin3d.dynamicCache();
+const dynamicLayout = tgpu.bindGroupLayout(PerlinCache.layout);
+
 const root = await tgpu.init();
 const device = root.device;
+
+const perlinCache = PerlinCache.instance(root, d.vec3u(16, 16, 10));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -58,11 +63,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const perlinCache = perlin3d.createCache({
-  root,
-  size: [32, 32, 10],
-});
-
 const gridSizeUniform = root['~unstable'].createUniform(d.f32, 32);
 const timeUniform = root['~unstable'].createUniform(d.f32, 0);
 const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
@@ -71,7 +71,8 @@ const renderPipeline = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)
   .with(timeAccess, timeUniform)
   .with(sharpnessAccess, sharpnessUniform)
-  .with(perlin3d.getJunctionGradientSlot, perlinCache.getJunctionGradient)
+  .with(perlin3d.getJunctionGradientSlot, PerlinCache.getJunctionGradient)
+  .with(PerlinCache.valuesSlot, dynamicLayout.value)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
@@ -83,7 +84,13 @@ function draw() {
 
   timeUniform.write(performance.now() * 0.0002 % 10);
 
+  const dynamicGroup = root.createBindGroup(
+    dynamicLayout,
+    perlinCache.bindings,
+  );
+
   renderPipeline
+    .with(dynamicLayout, dynamicGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
@@ -114,5 +121,6 @@ export const controls = {
 
 export function onCleanup() {
   abortController.abort();
+  perlinCache.destroy();
   root.destroy();
 }
