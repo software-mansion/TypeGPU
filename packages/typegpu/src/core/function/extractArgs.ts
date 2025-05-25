@@ -40,7 +40,7 @@ interface ReturnInfo {
 export function extractArgs(rawCode: string): FunctionArgsInfo {
   const { strippedCode, argRange: range } = strip(rawCode);
   const code = new ParsableString(strippedCode);
-  code.advanceBy(1); // '('
+  code.consume('(');
 
   const args: ArgInfo[] = [];
   while (!code.isAt(')')) {
@@ -49,7 +49,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     const attributes = [];
     while (code.isAt('@')) {
       code.parseUntil(closingParenthesis, parentheses);
-      code.advanceBy(1); // ')'
+      code.consume(')');
       attributes.push(code.lastParsed);
     }
 
@@ -58,7 +58,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
 
     let maybeType: string | undefined;
     if (code.isAt(':')) {
-      code.advanceBy(1); // ':'
+      code.consume(':');
       code.parseUntil(typeEndSymbols, angleBrackets);
       maybeType = code.lastParsed;
     }
@@ -70,19 +70,19 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
     });
 
     if (code.isAt(',')) {
-      code.advanceBy(1); // ',' before the next argument
+      code.consume(',');
     }
   }
-  code.advanceBy(1); // ')'
+  code.consume(')');
 
   let maybeRet: ReturnInfo | undefined;
   if (code.isAt('->')) {
-    code.advanceBy(2); // '->'
+    code.consume('->');
 
     const attributes = [];
     while (code.isAt('@')) {
       code.parseUntil(closingParenthesis, parentheses);
-      code.advanceBy(1); // ')'
+      code.consume(')');
       attributes.push(code.lastParsed);
     }
 
@@ -125,7 +125,7 @@ function strip(
 
     // skip line comments
     if (code.isAt('//')) {
-      code.advanceBy(2); // '//'
+      code.consume('//');
       code.parseUntil(lineBreaks);
       code.advanceBy(1); // the line break
       continue;
@@ -134,7 +134,7 @@ function strip(
     // skip block comments
     if (code.isAt('/*')) {
       code.parseUntil(openingCommentBlock, commentBlocks);
-      code.advanceBy(2); // the last '*/'
+      code.consume('*/');
       continue;
     }
 
@@ -181,10 +181,6 @@ class ParsableString {
 
   isFinished() {
     return this.#pos >= this.str.length;
-  }
-
-  advanceBy(steps: number) {
-    this.#pos += steps;
   }
 
   isAt(substr: string | Set<string>): boolean {
@@ -237,6 +233,21 @@ class ParsableString {
       this.#pos += 1;
     }
     throw new Error('Reached the end of the string without finding a match!');
+  }
+
+  advanceBy(steps: number) {
+    this.#pos += steps;
+  }
+
+  consume(str: string): void {
+    if (!this.isAt(str)) {
+      throw new Error(
+        `Expected '${str}' at position ${this.#pos}, but found '${
+          this.str.slice(this.#pos, this.#pos + str.length)
+        }'`,
+      );
+    }
+    this.advanceBy(str.length);
   }
 }
 
