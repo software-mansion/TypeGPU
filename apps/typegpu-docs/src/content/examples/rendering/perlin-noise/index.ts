@@ -3,8 +3,11 @@ import * as d from 'typegpu/data';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign } from 'typegpu/std';
 
-// Used for clean-up of this example
+/** Used for clean-up of this example */
 const abortController = new AbortController();
+
+/** The depth of the perlin noise (in time), after which the pattern loops around */
+const DEPTH = 10;
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -14,7 +17,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: pos[input.vertexIndex],
+    uv: mul(0.5, pos[input.vertexIndex]),
   };
 });
 
@@ -52,7 +55,7 @@ const dynamicLayout = tgpu.bindGroupLayout(PerlinCache.layout);
 const root = await tgpu.init();
 const device = root.device;
 
-const perlinCache = PerlinCache.instance(root, d.vec3u(16, 16, 10));
+const perlinCache = PerlinCache.instance(root, d.vec3u(2, 2, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -63,7 +66,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const gridSizeUniform = root['~unstable'].createUniform(d.f32, 32);
+const gridSizeUniform = root['~unstable'].createUniform(d.f32);
 const timeUniform = root['~unstable'].createUniform(d.f32, 0);
 const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
 
@@ -82,7 +85,7 @@ function draw() {
     return;
   }
 
-  timeUniform.write(performance.now() * 0.0002 % 10);
+  timeUniform.write(performance.now() * 0.0002 % DEPTH);
 
   const dynamicGroup = root.createBindGroup(
     dynamicLayout,
@@ -107,8 +110,11 @@ export const controls = {
   'grid size': {
     initial: '2',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
-    onSelectChange: (value: string) =>
-      gridSizeUniform.write(Number.parseInt(value)),
+    onSelectChange: (value: string) => {
+      const iSize = Number.parseInt(value);
+      perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
+      gridSizeUniform.write(iSize);
+    },
   },
   'sharpness': {
     initial: 0.5,
