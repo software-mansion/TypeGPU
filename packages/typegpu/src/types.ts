@@ -29,7 +29,7 @@ import type {
   TgpuAnyTextureView,
   TgpuTexture,
 } from './core/texture/texture.ts';
-import type { TgpuVar } from './core/variable/tgpuVariable.ts';
+import { isVariable, type TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData } from './data/dataTypes.ts';
 import {
   type AnyMatInstance,
@@ -193,6 +193,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
+    isVariable(value) ||
     isAccessor(value) ||
     isDerived(value) ||
     isProviding(value)

@@ -186,6 +186,14 @@ export function getTypeForPropAccess(
   if (hasInternalDataType(target)) {
     target = target[$internal].dataType as AnyData;
   }
+
+  // Accessing the property on the actual object
+  // biome-ignore lint/suspicious/noExplicitAny: let's see...
+  const propValue = (target as any)[propName];
+  if (hasInternalDataType(propValue)) {
+    return propValue[$internal].dataType as AnyData;
+  }
+
   while (isDecorated(target)) {
     target = target.inner as AnyData;
   }

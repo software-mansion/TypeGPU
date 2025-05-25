@@ -29,16 +29,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  // TODO: Use the value of gridSizeAccess directly after
-  // we fix type inference of accessors.
-  const gridSize = d.f32(gridSizeAccess.value);
-  const time = d.f32(timeAccess.value);
-  const sharpness = d.f32(sharpnessAccess.value);
+  const size = gridSizeAccess.value;
 
-  const n = perlin3d.sample(d.vec3f(mul(gridSize, input.uv), time));
+  const n = perlin3d.sample(d.vec3f(mul(size, input.uv), timeAccess.value));
 
   // Sharpening
-  const sharp = sign(n) * pow(abs(n), 1 - sharpness);
+  const sharp = sign(n) * pow(abs(n), 1 - sharpnessAccess.value);
 
   // Remapping to 0-1 range
   const n01 = sharp * 0.5 + 0.5;

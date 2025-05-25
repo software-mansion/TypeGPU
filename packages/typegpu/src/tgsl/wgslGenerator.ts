@@ -23,6 +23,7 @@ import {
   numericLiteralToSnippet,
   resolveRes,
 } from './generationHelpers.ts';
+import { getName } from '../name.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -311,6 +312,16 @@ export function generateExpression(
     const argValues = resolvedSnippets.map((res) => res.value);
 
     ctx.callStack.pop();
+
+    resolvedSnippets.forEach((sn, idx) => {
+      if (sn.dataType === UnknownData) {
+        throw new Error(
+          `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
+            getName(idValue)
+          }()'`,
+        );
+      }
+    });
 
     if (typeof idValue === 'string') {
       return {
