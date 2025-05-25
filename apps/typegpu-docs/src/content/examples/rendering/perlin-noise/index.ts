@@ -45,13 +45,18 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(mix(dark, light, n01), 1);
 });
 
-const PerlinCache = perlin3d.dynamicCache();
-const dynamicLayout = tgpu.bindGroupLayout(PerlinCache.layout);
+// Configuring a dynamic (meaning it's size can change) cache
+// for perlin noise gradients.
+const PerlinCacheConfig = perlin3d.dynamicCache();
+
+/** Contains all resources that the perlin cache needs access to */
+const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
 
 const root = await tgpu.init();
 const device = root.device;
 
-const perlinCache = PerlinCache.instance(root, d.vec3u(2, 2, DEPTH));
+// Instantiating the cache with an initial size.
+const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(2, 2, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -70,8 +75,8 @@ const renderPipeline = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)
   .with(timeAccess, timeUniform)
   .with(sharpnessAccess, sharpnessUniform)
-  .with(perlin3d.getJunctionGradientSlot, PerlinCache.getJunctionGradient)
-  .with(PerlinCache.valuesSlot, dynamicLayout.value)
+  .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
+  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
