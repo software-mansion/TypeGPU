@@ -40,7 +40,7 @@ import {
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $internal, $wgslDataType } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -220,12 +220,8 @@ export function isBufferUsage<
 
 export function hasInternalDataType(
   value: unknown,
-): value is { [$internal]: { dataType: BaseData } } {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
-  );
+): value is { [$wgslDataType]: BaseData } {
+  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
 }
 
 export function isMarkedInternal(

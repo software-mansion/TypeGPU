@@ -15,12 +15,10 @@ import { struct } from '../../src/data/struct.ts';
 import {
   vec2f,
   vec2i,
-  vec2u,
   vec3f,
   vec3i,
   vec4f,
   vec4h,
-  vec4i,
 } from '../../src/data/vector.ts';
 import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import {
@@ -32,7 +30,6 @@ import {
   getBestConversion,
   getTypeForIndexAccess,
   getTypeForPropAccess,
-  getTypeFromWgsl,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
 import { type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
@@ -118,7 +115,9 @@ describe('generationHelpers', () => {
     it('should return struct property types', () => {
       expect(getTypeForPropAccess(myStruct, 'foo')).toBe(f32);
       expect(getTypeForPropAccess(myStruct, 'bar')).toBe(vec3f);
-      expect(getTypeForPropAccess(myStruct, 'notfound')).toBe(UnknownData);
+      expect(getTypeForPropAccess(myStruct, 'notfound')).toBe(
+        UnknownData,
+      );
     });
 
     it('should return swizzle types on vectors', () => {
@@ -128,8 +127,8 @@ describe('generationHelpers', () => {
     });
 
     it('should return UnknownData when applied to primitives or invalid', () => {
-      expect(getTypeForPropAccess(1, 'x')).toBe(UnknownData);
-      expect(getTypeForPropAccess(true, 'x')).toBe(UnknownData);
+      expect(getTypeForPropAccess(u32, 'x')).toBe(UnknownData);
+      expect(getTypeForPropAccess(bool, 'x')).toBe(UnknownData);
     });
   });
 
@@ -152,38 +151,6 @@ describe('generationHelpers', () => {
 
     it('returns UnknownData otherwise', () => {
       expect(getTypeForIndexAccess(f32)).toBe(UnknownData);
-    });
-  });
-
-  describe('getTypeFromWgsl', () => {
-    it('returns type for JS primitives', () => {
-      expect(getTypeFromWgsl(1)).toBe(abstractInt);
-      expect(getTypeFromWgsl(1.5)).toBe(abstractFloat);
-      expect(getTypeFromWgsl(0)).toBe(abstractInt);
-      expect(getTypeFromWgsl(0.0)).toBe(abstractInt); // sadly x.0 always reduces to x
-      expect(getTypeFromWgsl(true)).toBe(bool);
-      expect(getTypeFromWgsl(false)).toBe(bool);
-    });
-
-    it('returns UnknownData for non-coercible JS types', () => {
-      expect(getTypeFromWgsl('foo')).toBe(UnknownData);
-    });
-
-    it('returns correct type for WgslData instances', () => {
-      expect(getTypeFromWgsl(f32)).toBe(f32);
-      expect(getTypeFromWgsl(i32)).toBe(i32);
-      expect(getTypeFromWgsl(u32)).toBe(u32);
-      expect(getTypeFromWgsl(f16)).toBe(f16);
-      expect(getTypeFromWgsl(bool)).toBe(bool);
-      expect(getTypeFromWgsl(vec3f)).toBe(vec3f);
-      expect(getTypeFromWgsl(vec4i)).toBe(vec4i);
-      expect(getTypeFromWgsl(mat3x3f)).toBe(mat3x3f);
-      const arr = arrayOf(vec2u, 10);
-      expect(getTypeFromWgsl(arr)).toBe(arr);
-      const myStruct = struct({ a: f32 });
-      expect(getTypeFromWgsl(myStruct)).toBe(myStruct);
-      const ptr = ptrPrivate(f32);
-      expect(getTypeFromWgsl(ptr)).toBe(ptr);
     });
   });
 

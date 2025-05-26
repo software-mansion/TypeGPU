@@ -12,19 +12,15 @@ import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
-  type FnArgsConversionHint,
-  isMarkedInternal,
-  isWgsl,
-} from '../types.ts';
-import {
+  coerceToSnippet,
   concretize,
   convertStructValues,
   convertToCommonType,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
-  getTypeFromWgsl,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import { getName } from '../name.ts';
@@ -180,62 +176,48 @@ export function generateExpression(
 
   if (expression[0] === NODE.memberAccess) {
     // Member Access
-    const [_, targetId, property] = expression;
-    const target = generateExpression(ctx, targetId);
+    const [_, targetNode, property] = expression;
+    const target = generateExpression(ctx, targetNode);
+
+    if (target.dataType.type === 'unknown') {
+      // No idea what the type is, so we act on the snippet's value and try to guess
+
+      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+      const propValue = (target.value as any)[property];
+
+      // We try to extract any type information based on the prop's value
+      return coerceToSnippet(propValue);
+    }
+
+    // #region Known data types
 
     if (wgsl.isPtr(target.dataType)) {
       return snip(
-        `(*${target.value}).${property}`,
-        isData(target.dataType.inner)
-          ? getTypeForPropAccess(target.dataType.inner, property)
-          : UnknownData,
+        `(*${ctx.resolve(target.value)}).${property}`,
+        getTypeForPropAccess(target.dataType.inner as AnyData, property),
       );
     }
 
-    if (typeof target.value === 'string') {
-      return snip(
-        `${target.value}.${property}`,
-        isData(target.dataType)
-          ? getTypeForPropAccess(target.dataType, property)
-          : UnknownData,
-      );
-    }
-
-    if (wgsl.isWgslArray(target.dataType)) {
-      if (property === 'length') {
-        if (target.dataType.elementCount === 0) {
-          // Dynamically-sized array
-          return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
-        }
-
-        return snip(String(target.dataType.elementCount), abstractInt);
-      }
-    }
-
-    // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-    const propValue = (target.value as any)[property];
-
-    if (target.dataType.type !== 'unknown') {
-      if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return snip(target.value, target.dataType);
+    if (wgsl.isWgslArray(target.dataType) && property === 'length') {
+      if (target.dataType.elementCount === 0) {
+        // Dynamically-sized array
+        return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
       }
 
-      return snip(propValue, getTypeForPropAccess(target.dataType, property));
+      return snip(String(target.dataType.elementCount), abstractInt);
     }
 
-    if (isWgsl(target.value)) {
-      return snip(propValue, getTypeForPropAccess(target.value, property));
+    if (wgsl.isMat(target.dataType) && property === 'columns') {
+      return snip(target.value, target.dataType);
     }
 
-    if (typeof target.value === 'object') {
-      const dataType = isWgsl(propValue)
-        ? getTypeFromWgsl(propValue)
-        : UnknownData;
+    // #endregion Known data types
 
-      return snip(propValue, dataType);
-    }
-
-    throw new Error(`Cannot access member ${property} of ${target.value}`);
+    throw new Error(
+      `Cannot access member ${property} of ${
+        ctx.resolve(target.value)
+      }. (type: ${getName(target.dataType)})`,
+    );
   }
 
   if (expression[0] === NODE.indexAccess) {

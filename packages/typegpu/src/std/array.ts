@@ -1,3 +1,4 @@
+import { snip } from '../data/dataTypes.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
 import type { AnyWgslData } from '../data/wgslTypes.ts';
@@ -13,12 +14,9 @@ export const arrayLength = createDualImpl(
       isPtr(a.dataType) && isWgslArray(a.dataType.inner) &&
       a.dataType.inner.elementCount > 0
     ) {
-      return {
-        value: String(a.dataType.inner.elementCount),
-        dataType: abstractInt,
-      };
+      return snip(String(a.dataType.inner.elementCount), abstractInt);
     }
-    return { value: `arrayLength(${a.value})`, dataType: u32 };
+    return snip(`arrayLength(${a.value})`, u32);
   },
   (a) => [ptrFn(a.dataType as AnyWgslData)],
 );

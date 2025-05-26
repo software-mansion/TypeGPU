@@ -1,4 +1,4 @@
-import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
+import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
@@ -219,10 +219,11 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
       return implementation(...args);
     },
-    (...args) => ({
-      value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-      dataType: shell.returnType ?? UnknownData,
-    }),
+    (...args) =>
+      snip(
+        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        shell.returnType ?? UnknownData,
+      ),
     shell.argTypes,
   );
 
@@ -287,10 +288,10 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
   const call = createDualImpl(
     (...args: InferArgs<Args>): unknown => innerFn(...args),
     (...args) => {
-      return {
-        value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        dataType: innerFn.shell.returnType ?? UnknownData,
-      };
+      return snip(
+        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        innerFn.shell.returnType ?? UnknownData,
+      );
     },
     innerFn.shell.argTypes,
   );

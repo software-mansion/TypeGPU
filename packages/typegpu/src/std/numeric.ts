@@ -1,10 +1,16 @@
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
+  AbstractFloat,
+  AbstractInt,
   AnyFloatVecInstance,
   AnyMatInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  F16,
+  F32,
+  I32,
+  U32,
   v2f,
   v2h,
   v2i,
@@ -17,17 +23,26 @@ import type {
   vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import { snip, type Snippet } from '../data/dataTypes.ts';
+import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
+import { $internal } from '../shared/symbols.ts';
 
-export function isNumeric(element: Snippet) {
-  const type = element.dataType.type;
+export function isNumeric(snippet: Snippet) {
+  return isNumericSchema(snippet.dataType);
+}
+
+export function isNumericSchema(
+  schema: unknown,
+): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
+  const type = (schema as AnyData)?.type;
+
   return (
-    type === 'abstractInt' ||
-    type === 'abstractFloat' ||
-    type === 'f32' ||
-    type === 'f16' ||
-    type === 'i32' ||
-    type === 'u32'
+    !!(schema as AnyData)?.[$internal] &&
+    (type === 'abstractInt' ||
+      type === 'abstractFloat' ||
+      type === 'f32' ||
+      type === 'f16' ||
+      type === 'i32' ||
+      type === 'u32')
   );
 }
 
