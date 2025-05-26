@@ -96,7 +96,7 @@ function enqueuePresetChanges() {
     spinner.style.display = 'none';
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
-  }, 1000);
+  }, 300);
 
 }
 
@@ -330,13 +330,7 @@ requestAnimationFrame(frame);
 export const controls = {
   'Randomize positions': {
     onButtonClick: () => randomizeFishPositions(),
-  },
-  Preset: {
-    options: Object.keys(presets) as (keyof typeof presets)[],
-    onOptionSelect: (option: keyof typeof presets) => {
-      currentPreset = option;
-    },
-  },
+  }
 };
 
 // Variables for mouse interaction.
