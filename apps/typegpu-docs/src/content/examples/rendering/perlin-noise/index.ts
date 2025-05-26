@@ -29,9 +29,9 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const size = gridSizeAccess.value;
+  const uv = mul(gridSizeAccess.value, input.uv);
 
-  const n = perlin3d.sample(d.vec3f(mul(size, input.uv), timeAccess.value));
+  const n = perlin3d.sample(d.vec3f(uv, timeAccess.value));
 
   // Sharpening
   const sharp = sign(n) * pow(abs(n), 1 - sharpnessAccess.value);
@@ -56,7 +56,7 @@ const root = await tgpu.init();
 const device = root.device;
 
 // Instantiating the cache with an initial size.
-const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(2, 2, DEPTH));
+const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -109,7 +109,7 @@ draw();
 
 export const controls = {
   'grid size': {
-    initial: '2',
+    initial: '4',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       const iSize = Number.parseInt(value);
