@@ -372,6 +372,135 @@ struct fragment_Output {
     `),
     );
   });
+
+  it('resolves missing base types', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f, d.u32, d.mat2x2f, d.bool, d.vec2b], d.vec4u)(
+        /* wgsl */ `(a, b: u32, c, d, e) {
+        return vec4u();
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u {
+        return vec4u();
+      }
+    `),
+    );
+  });
+
+  it('resolves void functions', () => {
+    const getColor = tgpu['~unstable']
+      .fn([])(
+        `() {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      fn get_color() {
+        return;
+      }
+    `),
+    );
+  });
+
+  it('resolves array types', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(d.u32, 4)])(
+        /* wgsl */ `(a) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(`
+      fn get_color(a: array<u32, 4>) {
+        return;
+      }
+    `);
+  });
+
+  it('throws when parameter type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f])(
+        /* wgsl */ `(a: vec4f) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between JS and WGSL, argument "a", types: vec3f, vec4f.]
+      `);
+  });
+
+  it('throws when return type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec4f)(
+        /* wgsl */ `() -> vec2f {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('throws when wrong argument count', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f, d.vec4f])(
+        /* wgsl */ `(a, b, c) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments!]
+      `);
+  });
+
+  it('throws when implicitly typed struct is used', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.struct({ a: d.i32 })])(
+        /* wgsl */ `(a) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Argument "a" is of struct type and needs to be explicitly typed (any type alias will be correctly bound and resolved).]
+      `);
+  });
+
+  it('throws when implicitly typed struct is used in nested type', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(d.struct({ a: d.i32 }), 4)])(
+        /* wgsl */ `(a) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot();
+  });
 });
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
