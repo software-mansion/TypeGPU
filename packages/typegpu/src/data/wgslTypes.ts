@@ -1358,25 +1358,11 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
 }
 
-export function isVecInstance(
-  element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyVecInstance {
-  return typeof element !== 'number' && $internal in element &&
-    'kind' in element && element.kind.startsWith('vec');
-}
-
 export function isFloat32VecInstance(
   element: number | AnyVecInstance | AnyMatInstance,
 ): element is AnyFloat32VecInstance {
   return isVecInstance(element) &&
     ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
-}
-
-export function isMatInstance(
-  element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyMatInstance {
-  return typeof element !== 'number' && $internal in element &&
-    'kind' in element && element.kind.startsWith('mat');
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {
