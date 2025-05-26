@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { $wgslDataType } from '../src/shared/symbols.ts';
@@ -29,19 +28,21 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      [$wgslDataType]: d.f32,
-
-      get value() {
-        return this;
-      },
+      value: {
+        [$wgslDataType]: d.f32,
+        '~resolve': (ctx: ResolutionCtx) => {
+          return intensity['~resolve'](ctx);
+        },
+      } as unknown as number,
 
       '~resolve'(ctx: ResolutionCtx) {
+        const name = ctx.names.makeUnique('intensity');
         ctx.addDeclaration(
-          '@group(0) @binding(0) var<uniform> intensity_1: f32;',
+          `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return 'intensity_1';
+        return name;
       },
-    } as unknown as TgpuBufferReadonly<d.F32>;
+    };
     setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
@@ -59,12 +60,12 @@ describe('tgpu resolve', () => {
 
     expect(parse(resolved)).toBe(
       parse(
-        `@group(0) @binding(0) var<uniform> intensity_1: f32;
+        `@group(0) @binding(0) var<uniform> intensity: f32;
         @fragment fn fragment1() -> @location(0) vec4f {
-          return vec4f(0, intensity_1, 0, 1);
+          return vec4f(0, intensity, 0, 1);
         }
         @fragment fn fragment2() -> @location(0) vec4f {
-          return vec4f(intensity_1, 0, 0, 1);
+          return vec4f(intensity, 0, 0, 1);
         }`,
       ),
     );

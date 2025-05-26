@@ -50,7 +50,6 @@ import {
   isWgslArray,
   isWgslStruct,
   type U32,
-  Void,
 } from '../data/wgslTypes.ts';
 import { invariant } from '../errors.ts';
 import { getResolutionCtx } from '../gpuMode.ts';
@@ -615,14 +614,11 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (
     typeof value === 'string' || typeof value === 'function' ||
-    typeof value === 'object' || typeof value === 'symbol'
+    typeof value === 'object' || typeof value === 'symbol' ||
+    typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
     return snip(value, UnknownData);
-  }
-
-  if (typeof value === 'undefined' || value === null) {
-    return snip(value, Void);
   }
 
   if (typeof value === 'number' || typeof value === 'bigint') {

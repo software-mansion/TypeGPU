@@ -32,7 +32,7 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
+import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -575,14 +575,11 @@ describe('generationHelpers', () => {
       expect(coerceToSnippet(false)).toEqual({ value: false, dataType: bool });
     });
 
-    it('coerces WgslData types directly', () => {
-      expect(coerceToSnippet(f32)).toEqual({ value: f32, dataType: f32 });
-      expect(coerceToSnippet(vec3i)).toEqual({
-        value: vec3i,
-        dataType: vec3i,
-      });
+    it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
+      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
+      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
       const arr = arrayOf(f32, 2);
-      expect(coerceToSnippet(arr)).toEqual({ value: arr, dataType: arr });
+      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
     it('coerces arrays of compatible numbers', () => {
@@ -620,21 +617,12 @@ describe('generationHelpers', () => {
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet('foo')).toEqual({
-        value: 'foo',
-        dataType: UnknownData,
-      });
-      expect(coerceToSnippet({})).toEqual({ value: {}, dataType: UnknownData });
-      expect(coerceToSnippet(null)).toEqual({
-        value: null,
-        dataType: UnknownData,
-      });
-      expect(coerceToSnippet(undefined)).toEqual({
-        value: undefined,
-        dataType: UnknownData,
-      });
+      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
+      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
+      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
+      expect(coerceToSnippet(undefined)).toEqual(snip(undefined, UnknownData));
       const fn = () => {};
-      expect(coerceToSnippet(fn)).toEqual({ value: fn, dataType: UnknownData });
+      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
     });
   });
 });
