@@ -97,7 +97,6 @@ function enqueuePresetChanges() {
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
   }, 300);
-
 }
 
 const randomizeFishPositions = () => {
@@ -330,7 +329,7 @@ requestAnimationFrame(frame);
 export const controls = {
   'Randomize positions': {
     onButtonClick: () => randomizeFishPositions(),
-  }
+  },
 };
 
 // Variables for mouse interaction.
