@@ -4,7 +4,11 @@ export {
   sample,
 } from './algorithm.ts';
 export {
-  dynamicCache,
+  dynamicCacheConfig,
+  type DynamicPerlin3DCacheConfig,
   type DynamicPerlin3DCache,
-  type DynamicPerlin3DCacheInstance,
 } from './dynamic-cache.ts';
+export {
+  staticCache,
+  type StaticPerlin3DCache,
+} from './static-cache.ts';

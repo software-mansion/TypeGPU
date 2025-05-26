@@ -47,7 +47,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 // Configuring a dynamic (meaning it's size can change) cache
 // for perlin noise gradients.
-const PerlinCacheConfig = perlin3d.dynamicCache();
+const PerlinCacheConfig = perlin3d.dynamicCacheConfig();
 
 /** Contains all resources that the perlin cache needs access to */
 const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
