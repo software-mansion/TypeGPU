@@ -22,7 +22,7 @@ import {
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-type Vec = AnyNumericVecInstance;
+type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
 export function isSnippetNumeric(element: Snippet) {
@@ -38,18 +38,18 @@ export function isSnippetNumeric(element: Snippet) {
 }
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
-function cpuAdd<T extends Vec>(lhs: number, rhs: T): T; // mixed addition
-function cpuAdd<T extends Vec>(lhs: T, rhs: number): T; // mixed addition
-function cpuAdd<T extends Vec | Mat>(lhs: T, rhs: T): T; // component-wise addition
+function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
+function cpuAdd<T extends NumVec>(lhs: T, rhs: number): T; // mixed addition
+function cpuAdd<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise addition
 function cpuAdd<
-  // union overload for internal usage
-  Lhs extends number | Vec | Mat,
-  Rhs extends (Lhs extends number ? number | Vec
-    : Lhs extends Vec ? number | Lhs
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
     : Lhs extends Mat ? Lhs
     : never),
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuAdd(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
+function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs + rhs; // default addition
   }
@@ -81,18 +81,18 @@ export const add = createDualImpl(
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
-function cpuSub<T extends Vec>(lhs: number, rhs: T): T; // mixed subtraction
-function cpuSub<T extends Vec>(lhs: T, rhs: number): T; // mixed subtraction
-function cpuSub<T extends Vec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
+function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
+function cpuSub<T extends NumVec>(lhs: T, rhs: number): T; // mixed subtraction
+function cpuSub<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
 function cpuSub<
-  // union overload for internal usage
-  Lhs extends number | Vec | Mat,
-  Rhs extends (Lhs extends number ? number | Vec
-    : Lhs extends Vec ? number | Lhs
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
     : Lhs extends Mat ? Lhs
     : never),
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuSub(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
+function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
   return cpuAdd(lhs, mul(-1, rhs));
 }
@@ -109,23 +109,23 @@ export const sub = createDualImpl(
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
-function cpuMul<MV extends Vec | Mat>(lhs: number, rhs: MV): MV; // scale
-function cpuMul<MV extends Vec | Mat>(lhs: MV, rhs: number): MV; // scale
-function cpuMul<V extends Vec>(lhs: V, rhs: V): V; // component-wise multiplication
+function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
+function cpuMul<MV extends NumVec | Mat>(lhs: MV, rhs: number): MV; // scale
+function cpuMul<V extends NumVec>(lhs: V, rhs: V): V; // component-wise multiplication
 function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: V, rhs: M): V; // row-vector-matrix
 function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: M, rhs: V): V; // matrix-column-vector
 function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
 function cpuMul<
-  // union overload for internal usage
-  Lhs extends number | Vec | Mat,
+  // union overload
+  Lhs extends number | NumVec | Mat,
   Rhs extends (
-    Lhs extends number ? number | Vec | Mat
-      : Lhs extends Vec ? number | Lhs | mBaseForVec<Lhs>
+    Lhs extends number ? number | NumVec | Mat
+      : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
       : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
       : never
   ),
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuMul(lhs: number | Vec | Mat, rhs: number | Vec | Mat) {
+function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }
@@ -175,17 +175,17 @@ export const mul = createDualImpl(
 );
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
-function cpuDiv<MV extends Vec>(lhs: number, rhs: MV): MV; // scale
-function cpuDiv<MV extends Vec>(lhs: MV, rhs: number): MV; // scale
-function cpuDiv<V extends Vec>(lhs: V, rhs: V): V; // component-wise division
+function cpuDiv<MV extends NumVec>(lhs: number, rhs: MV): MV; // scale
+function cpuDiv<MV extends NumVec>(lhs: MV, rhs: number): MV; // scale
+function cpuDiv<V extends NumVec>(lhs: V, rhs: V): V; // component-wise division
 function cpuDiv<
-  // union overload for internal usage
-  Lhs extends number | Vec,
-  Rhs extends (Lhs extends number ? number | Vec
-    : Lhs extends Vec ? number | Lhs
+  // union overload
+  Lhs extends number | NumVec,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
     : never),
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuDiv(lhs: number | Vec, rhs: number | Vec) {
+function cpuDiv(lhs: number | NumVec, rhs: number | NumVec) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return (lhs / rhs);
   }
@@ -222,7 +222,7 @@ export const div = createDualImpl(
 
 export const abs = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(value: T): T => {
+  <T extends NumVec | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.abs(value) as T;
     }
@@ -297,14 +297,14 @@ export const ceil = createDualImpl(
  */
 export const clamp = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(value: T, low: T, high: T): T => {
+  <T extends NumVec | number>(value: T, low: T, high: T): T => {
     if (typeof value === 'number') {
       return Math.min(Math.max(low as number, value), high as number) as T;
     }
     return VectorOps.clamp[value.kind](
       value,
-      low as Vec,
-      high as Vec,
+      low as NumVec,
+      high as NumVec,
     ) as T;
   },
   // GPU implementation
@@ -349,7 +349,8 @@ export const cross = createDualImpl(
  */
 export const dot = createDualImpl(
   // CPU implementation
-  <T extends Vec>(lhs: T, rhs: T): number => VectorOps.dot[lhs.kind](lhs, rhs),
+  <T extends NumVec>(lhs: T, rhs: T): number =>
+    VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
 );
@@ -411,11 +412,11 @@ export const length = createDualImpl(
  */
 export const max = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(a: T, b: T): T => {
+  <T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.max(a, b as number) as T;
     }
-    return VectorOps.max[a.kind](a, b as Vec) as T;
+    return VectorOps.max[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -428,11 +429,11 @@ export const max = createDualImpl(
  */
 export const min = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(a: T, b: T): T => {
+  <T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.min(a, b as number) as T;
     }
-    return VectorOps.min[a.kind](a, b as Vec) as T;
+    return VectorOps.min[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
   (a, b) => ({
@@ -581,7 +582,7 @@ export const distance = createDualImpl(
 
 export const neg = createDualImpl(
   // CPU implementation
-  <T extends Vec | number>(value: T): T => {
+  <T extends NumVec | number>(value: T): T => {
     if (typeof value === 'number') {
       return -value as T;
     }
