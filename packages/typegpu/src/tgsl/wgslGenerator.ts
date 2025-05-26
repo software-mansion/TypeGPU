@@ -209,6 +209,14 @@ export function generateExpression(
       return snip(target.value, target.dataType);
     }
 
+    if (
+      wgsl.isVec(target.dataType) && typeof wgsl.isVecInstance(target.value)
+    ) {
+      // We're operating on a vector that's known at resolution time
+      // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
+      return coerceToSnippet((target.value as any)[property]);
+    }
+
     return snip(
       `${ctx.resolve(target.value)}.${property}`,
       getTypeForPropAccess(target.dataType, property),
@@ -548,6 +556,10 @@ ${alternate}`;
       throw new Error(
         `Cannot create variable '${rawId}' with loose data type.`,
       );
+    }
+
+    if (eq.dataType === undefined) {
+      throw new Error(`Bruh ${eq}`);
     }
 
     registerBlockVariable(
