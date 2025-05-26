@@ -95,10 +95,10 @@ export function ExampleView({ example }: Props) {
     <>
       {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
 
-      <div className='flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full'>
+      <div className='flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]'>
         <div
           className={cs(
-            'flex-1 grid gap-4',
+            'grid flex-1 gap-4',
             codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
@@ -109,13 +109,13 @@ export function ExampleView({ example }: Props) {
                   scrollbarGutter: 'stable both-edges',
                 }}
                 className={cs(
-                  'relative flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
+                  'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly md:flex-row md:gap-4',
                   codeEditorShowing
                     ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                     : '',
                 )}
               >
-                <div ref={exampleHtmlRef} className='contents w-full h-full' />
+                <div ref={exampleHtmlRef} className='contents h-full w-full' />
               </div>
             )
             : <GPUUnsupportedPanel />}
@@ -130,22 +130,22 @@ export function ExampleView({ example }: Props) {
                   !codeEditorShowing && codeEditorMobileShowing
                     ? 'md:hidden'
                     : '',
-                  'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
+                  'absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full',
                 )}
               >
                 <div className='absolute inset-0 flex flex-col justify-between'>
                   <div className='h-12 pt-16 md:pt-0'>
-                    <div className='flex overflow-x-auto border-gray-300 h-full'>
+                    <div className='flex h-full overflow-x-auto border-gray-300'>
                       {editorTabsList.map((fileName) => (
                         <button
                           key={fileName}
                           type='button'
                           onClick={() => setCurrentFilePath(fileName)}
                           className={cs(
-                            'px-4 rounded-t-lg rounded-b-none text-nowrap text-sm',
+                            'text-nowrap rounded-t-lg rounded-b-none px-4 text-sm',
                             currentFilePath === fileName
                               ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                              : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                              : 'border-2 border-tameplum-100 bg-white hover:bg-tameplum-20',
                           )}
                         >
                           {fileName}
@@ -179,7 +179,7 @@ export function ExampleView({ example }: Props) {
 
 function GPUUnsupportedPanel() {
   return (
-    <div className='grid gap-6 text-xl leading-tight text-center place-content-center'>
+    <div className='grid place-content-center gap-6 text-center text-xl leading-tight'>
       <div className='text-3xl'>
         WebGPU is not enabled/supported in this browser 😔
       </div>
@@ -187,7 +187,7 @@ function GPUUnsupportedPanel() {
 
       <a
         href='/TypeGPU/blog/troubleshooting'
-        className='text-transparent underline bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text'
+        className='bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent underline'
       >
         Read more about the availability
       </a>
