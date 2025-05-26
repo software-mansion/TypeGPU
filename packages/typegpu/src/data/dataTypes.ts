@@ -193,7 +193,13 @@ class SnippetImpl implements Snippet {
 }
 
 export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
-  return new SnippetImpl(value, dataType);
+  return new SnippetImpl(
+    value,
+    // We don't care about attributes in snippet land, so we discard that information.
+    dataType.type === 'decorated' || dataType.type === 'loose-decorated'
+      ? dataType.inner as AnyData
+      : dataType,
+  );
 }
 
 export function isSnippet(value: unknown): value is Snippet {

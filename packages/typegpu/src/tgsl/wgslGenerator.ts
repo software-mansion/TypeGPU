@@ -223,8 +223,6 @@ export function generateExpression(
     const targetStr = ctx.resolve(target.value);
     const propertyStr = ctx.resolve(property.value);
 
-    console.log(target, targetStr);
-
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess
 
@@ -249,10 +247,6 @@ export function generateExpression(
       );
     }
 
-    console.log(
-      `Index access of ${targetStr}[${propertyStr}] (target type: ${target.dataType})`,
-    );
-
     return snip(
       `${targetStr}[${propertyStr}]`,
       isData(target.dataType)
@@ -274,9 +268,8 @@ export function generateExpression(
     // Function Call
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
-    const idValue = id.value;
 
-    ctx.callStack.push(idValue);
+    ctx.callStack.push(id.value);
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
     const resolvedSnippets = argSnippets.map((res) =>
@@ -290,33 +283,37 @@ export function generateExpression(
       if (sn.dataType === UnknownData) {
         throw new Error(
           `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
-            typeof idValue === 'string'
-              ? idValue
-              : getName(idValue) ?? '<unnamed>'
+            typeof id.value === 'string'
+              ? id.value
+              : getName(id.value) ?? '<unnamed>'
           }()'`,
         );
       }
     });
 
-    if (typeof idValue === 'string') {
-      return snip(`${idValue}(${argValues.join(', ')})`, id.dataType);
+    if (typeof id.value === 'string') {
+      return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
     }
 
-    if (wgsl.isWgslStruct(idValue)) {
-      const resolvedId = ctx.resolve(idValue);
+    if (wgsl.isWgslStruct(id.value)) {
+      const resolvedId = ctx.resolve(id.value);
 
-      return snip(`${resolvedId}(${argValues.join(', ')})`, id.dataType);
+      return snip(
+        `${resolvedId}(${argValues.join(', ')})`,
+        // Unintuitive, but the type of the return value is the struct itself
+        id.value,
+      );
     }
 
-    if (!isMarkedInternal(idValue)) {
+    if (!isMarkedInternal(id.value)) {
       throw new Error(
         `Function ${
-          String(idValue)
+          String(id.value)
         } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
-    const argTypes = idValue[$internal]?.argTypes as
+    const argTypes = id.value[$internal]?.argTypes as
       | FnArgsConversionHint
       | undefined;
     let convertedResources: Snippet[];
@@ -345,7 +342,7 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
+    const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
       ...convertedResources,
     ) as Snippet;
 
