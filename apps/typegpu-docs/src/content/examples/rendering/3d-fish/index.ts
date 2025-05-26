@@ -84,23 +84,20 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
     .$usage('storage', 'vertex')
     .$name(`fish data buffer ${idx}`));
 
-function defaultPreset() {
+function enqueuePresetChanges() {
   speedMultiplier = 3;
-  if (currentPreset !== 'init') {
-    currentPreset = 'init';
-    spinner.style.display = 'block';
-    spinnerBackground.style.display = 'block';
-  }
+
+  currentPreset = 'init';
+  spinner.style.display = 'block';
+  spinnerBackground.style.display = 'block';
+
   setTimeout(() => {
     currentPreset = 'default';
-    if (spinner) {
-      spinner.style.display = 'none';
-    }
-    if (spinnerBackground) {
-      spinnerBackground.style.display = 'none';
-    }
+    spinner.style.display = 'none';
+    spinnerBackground.style.display = 'none';
+    speedMultiplier = 1;
   }, 1000);
-  speedMultiplier = 1;
+
 }
 
 const randomizeFishPositions = () => {
@@ -126,7 +123,7 @@ const randomizeFishPositions = () => {
   );
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
-  defaultPreset();
+  enqueuePresetChanges();
 };
 randomizeFishPositions();
 
@@ -325,7 +322,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   requestAnimationFrame(frame);
 }
-defaultPreset();
+enqueuePresetChanges();
 requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
