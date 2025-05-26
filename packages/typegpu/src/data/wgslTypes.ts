@@ -1275,7 +1275,7 @@ export type AnyWgslData =
 
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
-  return !!v?.[$internal] && v.kind.startsWith('vec');
+  return !!v?.[$internal] && v.kind?.startsWith('vec');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
@@ -1319,7 +1319,7 @@ export function isVec(
 
 export function isMatInstance(value: unknown): value is AnyMatInstance {
   const v = value as AnyMatInstance | undefined;
-  return !!v?.[$internal] && v.kind.startsWith('mat');
+  return !!v?.[$internal] && v.kind?.startsWith('mat');
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {

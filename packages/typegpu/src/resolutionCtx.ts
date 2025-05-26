@@ -221,6 +221,10 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
+    if (type.type === 'unknown') {
+      throw Error(`Tried to define variable '${id}' of unknown type`);
+    }
+
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 

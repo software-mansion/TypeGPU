@@ -172,8 +172,13 @@ export type AnyConcreteData = Exclude<
 
 export const UnknownData = {
   type: 'unknown' as const,
+  toString() {
+    return 'unknown';
+  },
 };
-export type UnknownData = typeof UnknownData;
+export interface UnknownData {
+  readonly type: 'unknown';
+}
 
 export interface Snippet {
   readonly value: unknown;

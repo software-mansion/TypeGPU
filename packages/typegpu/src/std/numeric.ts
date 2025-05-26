@@ -25,6 +25,7 @@ import type {
 import { createDualImpl } from '../shared/generators.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { setName } from '../name.ts';
 
 export function isNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
@@ -122,6 +123,7 @@ export const mul: MulOverload = createDualImpl(
     return snip(`(${s.value} * ${v.value})`, returnType);
   },
 );
+setName(mul, 'mul');
 
 export const abs = createDualImpl(
   // CPU implementation
@@ -408,10 +410,10 @@ export const pow: PowOverload = createDualImpl(
     throw new Error('Invalid arguments to pow()');
   },
   // GPU implementation
-  (base, exponent) => {
-    return snip(`pow(${base.value}, ${exponent.value})`, base.dataType);
-  },
+  (base, exponent) =>
+    snip(`pow(${base.value}, ${exponent.value})`, base.dataType),
 );
+setName(pow, 'pow');
 
 type MixOverload = {
   (e1: number, e2: number, e3: number): number;
@@ -438,9 +440,8 @@ export const mix: MixOverload = createDualImpl(
     return VectorOps.mix[e1.kind](e1, e2, e3) as T;
   },
   // GPU implementation
-  (e1, e2, e3) => {
-    return snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType);
-  },
+  (e1, e2, e3) =>
+    snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
 );
 
 export const reflect = createDualImpl(

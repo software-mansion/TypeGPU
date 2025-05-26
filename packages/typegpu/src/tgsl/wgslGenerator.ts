@@ -189,8 +189,6 @@ export function generateExpression(
       return coerceToSnippet(propValue);
     }
 
-    // #region Known data types
-
     if (wgsl.isPtr(target.dataType)) {
       return snip(
         `(*${ctx.resolve(target.value)}).${property}`,
@@ -211,36 +209,54 @@ export function generateExpression(
       return snip(target.value, target.dataType);
     }
 
-    // #endregion Known data types
-
-    throw new Error(
-      `Cannot access member ${property} of ${
-        ctx.resolve(target.value)
-      }. (type: ${getName(target.dataType)})`,
+    return snip(
+      `${ctx.resolve(target.value)}.${property}`,
+      getTypeForPropAccess(target.dataType, property),
     );
   }
 
   if (expression[0] === NODE.indexAccess) {
     // Index Access
-    const [_, target, property] = expression;
-    const targetExpr = generateExpression(ctx, target);
-    const propertyExpr = generateExpression(ctx, property);
-    const targetStr = ctx.resolve(targetExpr.value);
-    const propertyStr = ctx.resolve(propertyExpr.value);
+    const [_, targetNode, propertyNode] = expression;
+    const target = generateExpression(ctx, targetNode);
+    const property = generateExpression(ctx, propertyNode);
+    const targetStr = ctx.resolve(target.value);
+    const propertyStr = ctx.resolve(property.value);
 
-    if (wgsl.isPtr(targetExpr.dataType)) {
-      return snip(
-        `(*${targetStr})[${propertyStr}]`,
-        isData(targetExpr.dataType.inner)
-          ? getTypeForIndexAccess(targetExpr.dataType.inner)
-          : UnknownData,
+    console.log(target, targetStr);
+
+    if (target.dataType.type === 'unknown') {
+      // No idea what the type is, so we act on the snippet's value and try to guess
+
+      if (
+        Array.isArray(propertyNode) && propertyNode[0] === NODE.numericLiteral
+      ) {
+        return coerceToSnippet(
+          // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+          (target.value as any)[propertyNode[1] as number],
+        );
+      }
+
+      throw new Error(
+        `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
       );
     }
 
+    if (wgsl.isPtr(target.dataType)) {
+      return snip(
+        `(*${targetStr})[${propertyStr}]`,
+        getTypeForIndexAccess(target.dataType.inner as AnyData),
+      );
+    }
+
+    console.log(
+      `Index access of ${targetStr}[${propertyStr}] (target type: ${target.dataType})`,
+    );
+
     return snip(
       `${targetStr}[${propertyStr}]`,
-      isData(targetExpr.dataType)
-        ? getTypeForIndexAccess(targetExpr.dataType)
+      isData(target.dataType)
+        ? getTypeForIndexAccess(target.dataType)
         : UnknownData,
     );
   }
@@ -274,7 +290,9 @@ export function generateExpression(
       if (sn.dataType === UnknownData) {
         throw new Error(
           `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
-            typeof idValue === 'string' ? idValue : getName(idValue)
+            typeof idValue === 'string'
+              ? idValue
+              : getName(idValue) ?? '<unnamed>'
           }()'`,
         );
       }

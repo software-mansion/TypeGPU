@@ -129,18 +129,6 @@ export function createFnCore(
           );
         }
 
-        if (
-          !Array.isArray(shell.argTypes) &&
-          ast.argNames.type === 'identifiers' &&
-          ast.argNames.names[0] !== undefined
-        ) {
-          applyExternals(externalMap, {
-            [ast.argNames.names[0]]: Object.fromEntries(
-              Object.keys(shell.argTypes).map((arg) => [arg, arg]),
-            ),
-          });
-        }
-
         // Verifying all required externals are present.
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
@@ -150,20 +138,16 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        const args: Snippet[] = Array.isArray(shell.argTypes)
-          ? ast.argNames.type === 'identifiers'
-            ? shell.argTypes.map((arg, i) =>
-              snip(
-                (ast.argNames.type === 'identifiers'
-                  ? ast.argNames.names[i]
-                  : undefined) ?? `arg_${i}`,
-                arg as AnyData,
-              )
+        const args: Snippet[] = ast.argNames.type === 'identifiers'
+          ? shell.argTypes.map((arg, i) =>
+            snip(
+              (ast.argNames.type === 'identifiers'
+                ? ast.argNames.names[i]
+                : undefined) ?? `arg_${i}`,
+              arg as AnyData,
             )
-            : []
-          : Object.entries(shell.argTypes).map(([name, dataType]) =>
-            snip(name, dataType as AnyData)
-          );
+          )
+          : [];
 
         const { head, body } = ctx.fnToWgsl({
           args,
