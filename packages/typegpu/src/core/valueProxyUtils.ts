@@ -39,12 +39,10 @@ export const valueProxyHandler: ProxyHandler<
         toString: () =>
           `.value(...).${String(prop)}:${getName(target) ?? '<unnamed>'}`,
 
-        get [$wgslDataType]() {
-          return getTypeForPropAccess(
-            target[$wgslDataType] as AnyData,
-            String(prop),
-          ) as BaseData;
-        },
+        [$wgslDataType]: getTypeForPropAccess(
+          target[$wgslDataType] as AnyData,
+          String(prop),
+        ) as BaseData,
       },
       valueProxyHandler,
     );

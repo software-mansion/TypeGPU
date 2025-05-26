@@ -28,12 +28,14 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      value: {
-        [$wgslDataType]: d.f32,
-        '~resolve': (ctx: ResolutionCtx) => {
-          return intensity['~resolve'](ctx);
-        },
-      } as unknown as number,
+      get value(): number {
+        return {
+          [$wgslDataType]: d.f32,
+          '~resolve'(ctx: ResolutionCtx) {
+            return ctx.resolve(intensity);
+          },
+        } as unknown as number;
+      },
 
       '~resolve'(ctx: ResolutionCtx) {
         const name = ctx.names.makeUnique('intensity');

@@ -226,15 +226,9 @@ export const div = createDualImpl(
   // GPU implementation
   (lhs, rhs) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return {
-        value: `(f32(${lhs.value}) / ${rhs.value})`,
-        dataType: f32,
-      };
+      return snip(`(f32(${lhs.value}) / ${rhs.value})`, f32);
     }
-    return {
-      value: `(${lhs.value} / ${rhs.value})`,
-      dataType: lhs.dataType,
-    };
+    return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
   },
 );
 setName(mul, 'mul');

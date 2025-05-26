@@ -266,11 +266,10 @@ export const isCloseTo = createDualImpl(
   // GPU implementation
   (lhs, rhs, precision = snip(0.01, f32)) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return {
-        value:
-          `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
-        dataType: bool,
-      };
+      return snip(
+        `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
+        bool,
+      );
     }
     if (!isSnippetNumeric(lhs) && !isSnippetNumeric(rhs)) {
       return snip(

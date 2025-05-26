@@ -170,15 +170,16 @@ export type AnyConcreteData = Exclude<
   wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
 >;
 
+export interface UnknownData {
+  readonly type: 'unknown';
+}
+
 export const UnknownData = {
   type: 'unknown' as const,
   toString() {
     return 'unknown';
   },
-};
-export interface UnknownData {
-  readonly type: 'unknown';
-}
+} as UnknownData;
 
 export interface Snippet {
   readonly value: unknown;

@@ -67,40 +67,31 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(String(1))).toEqual({
-        value: '1',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(1))).toEqual(
+        snip('1', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet(String(1.1))).toEqual({
-        value: '1.1',
-        dataType: abstractFloat,
-      });
+      expect(numericLiteralToSnippet(String(1.1))).toEqual(
+        snip('1.1', abstractFloat),
+      );
 
-      expect(numericLiteralToSnippet(String(1e10))).toEqual({
-        value: '10000000000',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(1e10))).toEqual(
+        snip('10000000000', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet(String(0.5))).toEqual({
-        value: '0.5',
-        dataType: abstractFloat,
-      });
+      expect(numericLiteralToSnippet(String(0.5))).toEqual(
+        snip('0.5', abstractFloat),
+      );
 
-      expect(numericLiteralToSnippet(String(-45))).toEqual({
-        value: '-45',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(-45))).toEqual(
+        snip('-45', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet('0x1A')).toEqual({
-        value: '0x1A',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet('0x1A')).toEqual(
+        snip('0x1A', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet('0b101')).toEqual({
-        value: '5',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet('0b101')).toEqual(snip('5', abstractInt));
 
       expect(numericLiteralToSnippet('asdf')).toBeUndefined();
     });
@@ -367,16 +358,13 @@ describe('generationHelpers', () => {
   });
 
   describe('convertToCommonType', () => {
-    const snippetF32: Snippet = { value: '2.22', dataType: f32 };
-    const snippetI32: Snippet = { value: '-12', dataType: i32 };
-    const snippetU32: Snippet = { value: '33', dataType: u32 };
-    const snippetAbsFloat: Snippet = { value: '1.1', dataType: abstractFloat };
-    const snippetAbsInt: Snippet = { value: '1', dataType: abstractInt };
-    const snippetPtrF32: Snippet = {
-      value: 'ptr_f32',
-      dataType: ptrPrivate(f32),
-    };
-    const snippetUnknown: Snippet = { value: '?', dataType: UnknownData };
+    const snippetF32 = snip('2.22', f32);
+    const snippetI32 = snip('-12', i32);
+    const snippetU32 = snip('33', u32);
+    const snippetAbsFloat = snip('1.1', abstractFloat);
+    const snippetAbsInt = snip('1', abstractInt);
+    const snippetPtrF32 = snip('ptr_f32', ptrPrivate(f32));
+    const snippetUnknown = snip('?', UnknownData);
     let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
@@ -439,7 +427,7 @@ describe('generationHelpers', () => {
     });
 
     it('returns undefined for incompatible types', () => {
-      const snippetVec2f: Snippet = { value: 'v2', dataType: vec2f };
+      const snippetVec2f = snip('v2', vec2f);
       const result = convertToCommonType(mockCtx, [snippetF32, snippetVec2f]);
       expect(result).toBeUndefined();
     });
@@ -500,10 +488,10 @@ describe('generationHelpers', () => {
 
     it('maps values matching types exactly', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1.0', dataType: f32 },
-        b: { value: '2', dataType: i32 },
-        c: { value: 'vec2f(1.0, 1.0)', dataType: vec2f },
-        d: { value: 'true', dataType: bool },
+        a: snip('1.0', f32),
+        b: snip('2', i32),
+        c: snip('vec2f(1.0, 1.0)', vec2f),
+        d: snip('true', bool),
       };
       const res = convertStructValues(mockCtx, structType, snippets);
       expect(res.length).toBe(4);
@@ -516,15 +504,15 @@ describe('generationHelpers', () => {
 
     it('maps values requiring implicit casts and warns', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1', dataType: i32 }, // i32 -> f32 (cast)
-        b: { value: '2', dataType: u32 }, // u32 -> i32 (cast)
-        c: { value: '2.22', dataType: f32 },
-        d: { value: 'true', dataType: bool },
+        a: snip('1', i32), // i32 -> f32 (cast)
+        b: snip('2', u32), // u32 -> i32 (cast)
+        c: snip('2.22', f32),
+        d: snip('true', bool),
       };
       const res = convertStructValues(mockCtx, structType, snippets);
       expect(res.length).toBe(4);
-      expect(res[0]).toEqual({ value: 'f32(1)', dataType: f32 }); // Cast applied
-      expect(res[1]).toEqual({ value: 'i32(2)', dataType: i32 }); // Cast applied
+      expect(res[0]).toEqual(snip('f32(1)', f32)); // Cast applied
+      expect(res[1]).toEqual(snip('i32(2)', i32)); // Cast applied
       expect(res[2]).toEqual(snippets.c);
       expect(res[3]).toEqual(snippets.d);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(2); // One warn per cast
@@ -532,10 +520,10 @@ describe('generationHelpers', () => {
 
     it('throws on missing property', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1.0', dataType: f32 },
+        a: snip('1.0', f32),
         // b is missing
-        c: { value: 'vec2f(1.0, 1.0)', dataType: vec2f },
-        d: { value: 'true', dataType: bool },
+        c: snip('vec2f(1.0, 1.0)', vec2f),
+        d: snip('true', bool),
       };
       expect(() => convertStructValues(mockCtx, structType, snippets)).toThrow(
         /Missing property b/,
@@ -555,24 +543,15 @@ describe('generationHelpers', () => {
     });
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual({ value: 1, dataType: abstractInt });
-      expect(coerceToSnippet(2.5)).toEqual({
-        value: 2.5,
-        dataType: abstractFloat,
-      });
-      expect(coerceToSnippet(-10)).toEqual({
-        value: -10,
-        dataType: abstractInt,
-      });
-      expect(coerceToSnippet(0.0)).toEqual({
-        value: 0,
-        dataType: abstractInt,
-      });
+      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
+      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
+      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt));
+      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt));
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual({ value: true, dataType: bool });
-      expect(coerceToSnippet(false)).toEqual({ value: false, dataType: bool });
+      expect(coerceToSnippet(true)).toEqual(snip(true, bool));
+      expect(coerceToSnippet(false)).toEqual(snip(false, bool));
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {

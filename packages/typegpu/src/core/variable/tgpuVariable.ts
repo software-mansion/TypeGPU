@@ -108,7 +108,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `${getName(this) ?? '<unnamed>'}.value`,
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this._dataType,
       },
       valueProxyHandler,

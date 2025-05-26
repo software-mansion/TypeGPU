@@ -287,12 +287,11 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
 
   const call = createDualImpl(
     (...args: InferArgs<Args>): unknown => innerFn(...args),
-    (...args) => {
-      return snip(
+    (...args) =>
+      snip(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         innerFn.shell.returnType ?? UnknownData,
-      );
-    },
+      ),
     innerFn.shell.argTypes,
   );
 
