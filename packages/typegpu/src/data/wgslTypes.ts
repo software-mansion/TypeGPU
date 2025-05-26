@@ -1275,28 +1275,30 @@ export type AnyWgslData =
 
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
-  return !!v?.[$internal] && v.kind?.startsWith('vec');
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('vec');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData).type.startsWith('vec2')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith?.('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData).type.startsWith('vec3')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData).type.startsWith('vec4')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec4');
 }
 
 export function isVec(
@@ -1319,7 +1321,9 @@ export function isVec(
 
 export function isMatInstance(value: unknown): value is AnyMatInstance {
   const v = value as AnyMatInstance | undefined;
-  return !!v?.[$internal] && v.kind?.startsWith('mat');
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('mat');
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {

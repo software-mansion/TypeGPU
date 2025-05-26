@@ -42,7 +42,6 @@ import {
   type F16,
   type F32,
   type I32,
-  isDecorated,
   isMat,
   isMatInstance,
   isVec,
@@ -143,29 +142,24 @@ export function getTypeForPropAccess(
   targetType: AnyData,
   propName: string,
 ): AnyData | UnknownData {
-  let dataType = targetType;
-  if (isDecorated(dataType)) {
-    dataType = dataType.inner as AnyData;
+  if (isWgslStruct(targetType) || isUnstruct(targetType)) {
+    return targetType.propTypes[propName] as AnyData ?? UnknownData;
   }
 
-  if (isWgslStruct(dataType) || isUnstruct(dataType)) {
-    return dataType.propTypes[propName] as AnyData ?? UnknownData;
-  }
-
-  if (dataType === bool || isNumericSchema(dataType)) {
+  if (targetType === bool || isNumericSchema(targetType)) {
     // No props to be accessed here
     return UnknownData;
   }
 
   const propLength = propName.length;
   if (
-    isVec(dataType) &&
+    isVec(targetType) &&
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = dataType.type.includes('bool')
+    const swizzleTypeChar = targetType.type.includes('bool')
       ? 'b'
-      : (dataType.type[4] as SwizzleableType);
+      : (targetType.type[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {

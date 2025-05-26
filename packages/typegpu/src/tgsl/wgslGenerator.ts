@@ -210,7 +210,7 @@ export function generateExpression(
     }
 
     if (
-      wgsl.isVec(target.dataType) && typeof wgsl.isVecInstance(target.value)
+      wgsl.isVec(target.dataType) && wgsl.isVecInstance(target.value)
     ) {
       // We're operating on a vector that's known at resolution time
       // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
@@ -556,10 +556,6 @@ ${alternate}`;
       throw new Error(
         `Cannot create variable '${rawId}' with loose data type.`,
       );
-    }
-
-    if (eq.dataType === undefined) {
-      throw new Error(`Bruh ${eq}`);
     }
 
     registerBlockVariable(
