@@ -331,4 +331,14 @@ describe('extract args', () => {
     expect(ret).toBeUndefined();
     expect(range).toStrictEqual({ begin: 21, end: 57 });
   });
+
+  it('extracts when no arguments, no name, no return type', () => {
+    const wgslFn = /* wgsl */ `() { return 42; }`;
+
+    const { args, ret, range } = extractArgs(wgslFn);
+
+    expect(args).toStrictEqual([]);
+    expect(ret).toStrictEqual(undefined);
+    expect(range).toStrictEqual({ begin: 0, end: 3 });
+  });
 });
