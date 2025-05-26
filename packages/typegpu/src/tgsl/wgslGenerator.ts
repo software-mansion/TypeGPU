@@ -21,7 +21,6 @@ import {
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToSnippet,
-  resolveRes,
 } from './generationHelpers.ts';
 import { getName } from '../name.ts';
 
@@ -147,8 +146,8 @@ export function generateExpression(
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
-    const lhsStr = resolveRes(ctx, convLhs);
-    const rhsStr = resolveRes(ctx, convRhs);
+    const lhsStr = ctx.resolve(convLhs);
+    const rhsStr = ctx.resolve(convRhs);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
     return {
@@ -163,7 +162,7 @@ export function generateExpression(
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr);
 
     return {
       value: `${argStr}${op}`,
@@ -175,7 +174,7 @@ export function generateExpression(
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr);
 
     const type = operatorToType(argExpr.dataType, op);
     return {
@@ -267,8 +266,8 @@ export function generateExpression(
     const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
     const propertyExpr = generateExpression(ctx, property);
-    const targetStr = resolveRes(ctx, targetExpr);
-    const propertyStr = resolveRes(ctx, propertyExpr);
+    const targetStr = ctx.resolve(targetExpr);
+    const propertyStr = ctx.resolve(propertyExpr);
 
     if (wgsl.isPtr(targetExpr.dataType)) {
       return {
@@ -306,7 +305,7 @@ export function generateExpression(
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
     const resolvedSnippets = argSnippets.map((res) => ({
-      value: resolveRes(ctx, res),
+      value: ctx.resolve(res),
       dataType: res.dataType,
     }));
     const argValues = resolvedSnippets.map((res) => res.value);
@@ -381,7 +380,7 @@ export function generateExpression(
     ) as Snippet;
 
     return {
-      value: resolveRes(ctx, fnRes),
+      value: ctx.resolve(fnRes),
       dataType: fnRes.dataType,
     };
   }
@@ -408,7 +407,7 @@ export function generateExpression(
       const convertedValues = convertStructValues(ctx, callee, entries);
 
       return {
-        value: convertedValues.map((v) => resolveRes(ctx, v)).join(', '),
+        value: convertedValues.map((v) => ctx.resolve(v)).join(', '),
         dataType: callee,
       };
     }
@@ -472,7 +471,7 @@ export function generateExpression(
     const typeId = ctx.resolve(type);
 
     const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = convertedValues.map((value) => resolveRes(ctx, value));
+    const arrayValues = convertedValues.map((value) => ctx.resolve(value));
 
     return {
       value: `${arrayType}( ${arrayValues.join(', ')} )`,
@@ -506,17 +505,17 @@ export function generateStatement(
   statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
-    return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
+    return `${ctx.pre}${ctx.resolve(generateIdentifier(ctx, statement))};`;
   }
 
   if (typeof statement === 'boolean') {
-    return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
+    return `${ctx.pre}${ctx.resolve(generateBoolean(ctx, statement))};`;
   }
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
     const returnValue = returnNode !== undefined
-      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      ? ctx.resolve(generateExpression(ctx, returnNode))
       : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
@@ -545,7 +544,7 @@ export function generateStatement(
     if (converted?.[0]) {
       [condSnippet] = converted;
     }
-    const condition = resolveRes(ctx, condSnippet);
+    const condition = ctx.resolve(condSnippet);
 
     ctx.indent(); // {
     const consequent = generateStatement(ctx, blockifySingleStatement(cons));
@@ -593,7 +592,7 @@ ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
+    const id = ctx.resolve(generateIdentifier(ctx, rawId));
 
     // If the value is a plain JS object it has to be an output struct
     if (
@@ -617,11 +616,11 @@ ${alternate}`;
       const convertedValues = convertStructValues(ctx, structType, entries);
       const resolvedStruct = ctx.resolve(structType);
       return `${ctx.pre}var ${id} = ${resolvedStruct}(${
-        convertedValues.map((v) => resolveRes(ctx, v)).join(', ')
+        convertedValues.map((v) => ctx.resolve(v)).join(', ')
       });`;
     }
 
-    return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
+    return `${ctx.pre}var ${id} = ${ctx.resolve(eq)};`;
   }
 
   if (statement[0] === NODE.block) {
@@ -644,7 +643,7 @@ ${alternate}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = condSnippet ? resolveRes(ctx, condSnippet) : '';
+    const conditionStr = condSnippet ? ctx.resolve(condSnippet) : '';
 
     const updateStatement = update ? generateStatement(ctx, update) : undefined;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
@@ -668,7 +667,7 @@ ${bodyStr}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = resolveRes(ctx, condSnippet);
+    const conditionStr = ctx.resolve(condSnippet);
 
     ctx.indent();
     const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
@@ -687,7 +686,7 @@ ${bodyStr}`;
     return `${ctx.pre}break;`;
   }
 
-  return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
+  return `${ctx.pre}${ctx.resolve(generateExpression(ctx, statement))};`;
 }
 
 export function generateFunction(

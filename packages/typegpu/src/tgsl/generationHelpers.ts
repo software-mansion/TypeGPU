@@ -578,14 +578,6 @@ export type GenerationCtx = ResolutionCtx & {
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
-  if (isWgsl(res.value)) {
-    return ctx.resolve(res.value);
-  }
-
-  return String(res.value);
-}
-
 function applyActionToSnippet(
   ctx: GenerationCtx,
   value: Snippet,
@@ -599,7 +591,7 @@ function applyActionToSnippet(
     };
   }
 
-  const resolvedValue = resolveRes(ctx, value);
+  const resolvedValue = ctx.resolve(value);
 
   switch (action.action) {
     case 'ref':
