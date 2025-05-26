@@ -10,11 +10,13 @@ export {
   // builtin functions
   abs,
   acos,
+  acosh,
   asin,
   atan2,
   ceil,
   clamp,
   cos,
+  cosh,
   cross,
   distance,
   dot,

@@ -62,12 +62,12 @@ export const MouseRay = d
 
 export const FishBehaviorParams = d
   .struct({
-    fishSeparationDistance: d.f32,
-    fishSeparationStrength: d.f32,
-    fishAlignmentDistance: d.f32,
-    fishAlignmentStrength: d.f32,
-    fishCohesionDistance: d.f32,
-    fishCohesionStrength: d.f32,
+    SeparationDist: d.f32,
+    SeparationStr: d.f32,
+    AlignmentDist: d.f32,
+    AlignmentStr: d.f32,
+    CohesionDist: d.f32,
+    CohesionStr: d.f32,
   })
   .$name('fish behavior params');
 

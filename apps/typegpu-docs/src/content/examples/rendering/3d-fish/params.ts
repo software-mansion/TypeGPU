@@ -6,12 +6,6 @@ export const workGroupSize = 256;
 export const fishAmount = 1024 * 8;
 export const fishModelScale = 0.07;
 
-export const fishSeparationDistance = 0.3;
-export const fishSeparationStrength = 0.0006;
-export const fishAlignmentDistance = 0.3;
-export const fishAlignmentStrength = 0.005;
-export const fishCohesionDistance = 0.5;
-export const fishCohesionStrength = 0.0004;
 export const fishWallRepulsionDistance = 0.1;
 export const fishWallRepulsionStrength = 0.0001;
 export const fishMouseRayRepulsionDistance = 0.9;

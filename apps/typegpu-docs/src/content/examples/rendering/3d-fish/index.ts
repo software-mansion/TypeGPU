@@ -37,20 +37,20 @@ context.configure({
 
 const presets = {
   default: {
-    fishSeparationDistance: 0.3,
-    fishSeparationStrength: 0.0006,
-    fishAlignmentDistance: 0.3,
-    fishAlignmentStrength: 0.005,
-    fishCohesionDistance: 0.5,
-    fishCohesionStrength: 0.0004,
+    SeparationDist: 0.3,
+    SeparationStr: 0.0006,
+    AlignmentDist: 0.3,
+    AlignmentStr: 0.005,
+    CohesionDist: 0.5,
+    CohesionStr: 0.0004,
   },
   init: {
-    fishSeparationDistance: 0.2,
-    fishSeparationStrength: 0.1,
-    fishAlignmentDistance: 0.5,
-    fishAlignmentStrength: 1,
-    fishCohesionDistance: 0.3,
-    fishCohesionStrength: 0.013,
+    SeparationDist: 0.2,
+    SeparationStr: 0.1,
+    AlignmentDist: 0.5,
+    AlignmentStr: 1,
+    CohesionDist: 0.3,
+    CohesionStr: 0.013,
   },
 } as const;
 
