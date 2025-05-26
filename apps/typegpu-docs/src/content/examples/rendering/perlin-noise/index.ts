@@ -88,13 +88,10 @@ function draw() {
 
   timeUniform.write(performance.now() * 0.0002 % DEPTH);
 
-  const dynamicGroup = root.createBindGroup(
-    dynamicLayout,
-    perlinCache.bindings,
-  );
+  const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
 
   renderPipeline
-    .with(dynamicLayout, dynamicGroup)
+    .with(dynamicLayout, group)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
