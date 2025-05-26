@@ -2,14 +2,14 @@ import type { ArgNames, Block } from 'tinyest';
 import { $getNameForward } from './symbols.ts';
 
 export interface MetaData {
-  name?: string;
+  name?: string | undefined;
   ast?: {
     v: number;
     argNames: ArgNames;
     body: Block;
     externalNames: string[];
-  };
-  externals?: Record<string, unknown>;
+  } | undefined;
+  externals?: Record<string, unknown> | undefined;
 }
 
 interface GlobalWithMeta {
