@@ -75,11 +75,11 @@ export const FishBehaviorParams = d
 
 export const modelVertexLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(d.struct(ModelVertexInput), n))
-  .$name('model vertex layout');
+  .$name('model vertex');
 
 export const renderInstanceLayout = tgpu
   .vertexLayout(ModelDataArray, 'instance')
-  .$name('render instance layout');
+  .$name('render instance');
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -89,7 +89,7 @@ export const renderBindGroupLayout = tgpu
     sampler: { sampler: 'filtering' },
     currentTime: { uniform: d.f32 },
   })
-  .$name('render bind group layout');
+  .$name('render bind group');
 
 export const computeBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -102,4 +102,4 @@ export const computeBindGroupLayout = tgpu
     timePassed: { uniform: d.f32 },
     fishBehavior: { uniform: FishBehaviorParams },
   })
-  .$name('compute bind group layout');
+  .$name('compute bind group');

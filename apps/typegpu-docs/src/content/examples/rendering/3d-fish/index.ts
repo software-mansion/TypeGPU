@@ -82,7 +82,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'vertex')
-    .$name(`fish data buffer ${idx}`));
+    .$name(`fish data ${idx}`));
 
 function enqueuePresetChanges() {
   speedMultiplier = 3;
@@ -148,7 +148,7 @@ const camera = {
 const cameraBuffer = root
   .createBuffer(Camera, camera)
   .$usage('uniform')
-  .$name('camera buffer');
+  .$name('camera');
 
 const mouseRayBuffer = root
   .createBuffer(MouseRay, {
@@ -156,22 +156,22 @@ const mouseRayBuffer = root
     line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
   })
   .$usage('uniform')
-  .$name('mouse buffer');
+  .$name('mouse');
 
 const timePassedBuffer = root
   .createBuffer(d.f32)
   .$usage('uniform')
-  .$name('time passed buffer');
+  .$name('time passed');
 
 const currentTimeBuffer = root
   .createBuffer(d.f32)
   .$usage('uniform')
-  .$name('current time buffer');
+  .$name('current time');
 
 const fishBehaviorBuffer = root
   .createBuffer(FishBehaviorParams, presets.default)
   .$usage('uniform')
-  .$name('fish behavior buffer');
+  .$name('fish behavior');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -186,7 +186,7 @@ const oceanFloorDataBuffer = root
     },
   ])
   .$usage('storage', 'vertex')
-  .$name('ocean floor buffer');
+  .$name('ocean floor');
 
 // pipelines
 
@@ -200,7 +200,7 @@ const renderPipeline = root['~unstable']
   })
   .withPrimitive({ topology: 'triangle-list' })
   .createPipeline()
-  .$name('render pipeline');
+  .$name('render');
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -211,7 +211,7 @@ let depthTexture = root.device.createTexture({
 const computePipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
-  .$name('compute pipeline');
+  .$name('compute');
 
 // bind groups
 
