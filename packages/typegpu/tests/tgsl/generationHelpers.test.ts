@@ -35,7 +35,7 @@ import {
   getTypeFromWgsl,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { type Snippet, UnknownData } from '../../src/types.ts';
+import { type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 
 const mockCtx = {
   indent: () => '',

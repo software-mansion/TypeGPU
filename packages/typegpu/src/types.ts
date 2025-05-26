@@ -16,6 +16,7 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
+  isAccessor,
   isDerived,
   isProviding,
   isSlot,
@@ -28,8 +29,8 @@ import type {
   TgpuAnyTextureView,
   TgpuTexture,
 } from './core/texture/texture.ts';
-import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData } from './data/dataTypes.ts';
+import { isVariable, type TgpuVar } from './core/variable/tgpuVariable.ts';
+import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -69,16 +70,6 @@ export type ResolvableObject =
   | TgpuFn<any, any>;
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
-
-export const UnknownData = {
-  type: 'unknown' as const,
-};
-export type UnknownData = typeof UnknownData;
-
-export type Snippet = {
-  value: unknown;
-  dataType: AnyData | UnknownData;
-};
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
@@ -192,6 +183,8 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
+    isVariable(value) ||
+    isAccessor(value) ||
     isDerived(value) ||
     isProviding(value)
   );

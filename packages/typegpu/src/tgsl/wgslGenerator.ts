@@ -1,6 +1,13 @@
 import * as tinyest from 'tinyest';
 import { arrayOf } from '../data/array.ts';
-import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
+import {
+  type AnyData,
+  isData,
+  isLooseData,
+  snip,
+  type Snippet,
+  UnknownData,
+} from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
@@ -9,8 +16,6 @@ import {
   type FnArgsConversionHint,
   isMarkedInternal,
   isWgsl,
-  type Snippet,
-  UnknownData,
 } from '../types.ts';
 import {
   concretize,
@@ -21,8 +26,8 @@ import {
   getTypeForPropAccess,
   getTypeFromWgsl,
   numericLiteralToSnippet,
-  resolveRes,
 } from './generationHelpers.ts';
+import { getName } from '../name.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -84,10 +89,6 @@ function assertExhaustive(value: never): never {
   );
 }
 
-export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
-  return { value: value ? 'true' : 'false', dataType: d.bool };
-}
-
 export function generateBlock(
   ctx: GenerationCtx,
   [_, statements]: tinyest.Block,
@@ -128,7 +129,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return generateBoolean(ctx, expression);
+    return snip(expression ? 'true' : 'false', d.bool);
   }
 
   if (
@@ -146,41 +147,35 @@ export function generateExpression(
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
-    const lhsStr = resolveRes(ctx, convLhs);
-    const rhsStr = resolveRes(ctx, convRhs);
+    const lhsStr = ctx.resolve(convLhs.value);
+    const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
-    return {
-      value: parenthesizedOps.includes(op)
+    return snip(
+      parenthesizedOps.includes(op)
         ? `(${lhsStr} ${op} ${rhsStr})`
         : `${lhsStr} ${op} ${rhsStr}`,
-      dataType: type,
-    };
+      type,
+    );
   }
 
   if (expression[0] === NODE.postUpdate) {
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr.value);
 
-    return {
-      value: `${argStr}${op}`,
-      dataType: argExpr.dataType,
-    };
+    return snip(`${argStr}${op}`, argExpr.dataType);
   }
 
   if (expression[0] === NODE.unaryExpr) {
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr.value);
 
     const type = operatorToType(argExpr.dataType, op);
-    return {
-      value: `${op}${argStr}`,
-      dataType: type,
-    };
+    return snip(`${op}${argStr}`, type);
   }
 
   if (expression[0] === NODE.memberAccess) {
@@ -189,37 +184,31 @@ export function generateExpression(
     const target = generateExpression(ctx, targetId);
 
     if (wgsl.isPtr(target.dataType)) {
-      return {
-        value: `(*${target.value}).${property}`,
-        dataType: isData(target.dataType.inner)
+      return snip(
+        `(*${target.value}).${property}`,
+        isData(target.dataType.inner)
           ? getTypeForPropAccess(target.dataType.inner, property)
           : UnknownData,
-      };
+      );
     }
 
     if (typeof target.value === 'string') {
-      return {
-        value: `${target.value}.${property}`,
-        dataType: isData(target.dataType)
+      return snip(
+        `${target.value}.${property}`,
+        isData(target.dataType)
           ? getTypeForPropAccess(target.dataType, property)
           : UnknownData,
-      };
+      );
     }
 
     if (wgsl.isWgslArray(target.dataType)) {
       if (property === 'length') {
         if (target.dataType.elementCount === 0) {
           // Dynamically-sized array
-          return {
-            value: `arrayLength(&${ctx.resolve(target.value)})`,
-            dataType: d.u32,
-          };
+          return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
         }
 
-        return {
-          value: String(target.dataType.elementCount),
-          dataType: abstractInt,
-        };
+        return snip(String(target.dataType.elementCount), abstractInt);
       }
     }
 
@@ -228,23 +217,14 @@ export function generateExpression(
 
     if (target.dataType.type !== 'unknown') {
       if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return {
-          value: target.value,
-          dataType: target.dataType,
-        };
+        return snip(target.value, target.dataType);
       }
 
-      return {
-        value: propValue,
-        dataType: getTypeForPropAccess(target.dataType, property),
-      };
+      return snip(propValue, getTypeForPropAccess(target.dataType, property));
     }
 
     if (isWgsl(target.value)) {
-      return {
-        value: propValue,
-        dataType: getTypeForPropAccess(target.value, property),
-      };
+      return snip(propValue, getTypeForPropAccess(target.value, property));
     }
 
     if (typeof target.value === 'object') {
@@ -252,10 +232,7 @@ export function generateExpression(
         ? getTypeFromWgsl(propValue)
         : UnknownData;
 
-      return {
-        value: propValue,
-        dataType,
-      };
+      return snip(propValue, dataType);
     }
 
     throw new Error(`Cannot access member ${property} of ${target.value}`);
@@ -266,24 +243,24 @@ export function generateExpression(
     const [_, target, property] = expression;
     const targetExpr = generateExpression(ctx, target);
     const propertyExpr = generateExpression(ctx, property);
-    const targetStr = resolveRes(ctx, targetExpr);
-    const propertyStr = resolveRes(ctx, propertyExpr);
+    const targetStr = ctx.resolve(targetExpr.value);
+    const propertyStr = ctx.resolve(propertyExpr.value);
 
     if (wgsl.isPtr(targetExpr.dataType)) {
-      return {
-        value: `(*${targetStr})[${propertyStr}]`,
-        dataType: isData(targetExpr.dataType.inner)
+      return snip(
+        `(*${targetStr})[${propertyStr}]`,
+        isData(targetExpr.dataType.inner)
           ? getTypeForIndexAccess(targetExpr.dataType.inner)
           : UnknownData,
-      };
+      );
     }
 
-    return {
-      value: `${targetStr}[${propertyStr}]`,
-      dataType: isData(targetExpr.dataType)
+    return snip(
+      `${targetStr}[${propertyStr}]`,
+      isData(targetExpr.dataType)
         ? getTypeForIndexAccess(targetExpr.dataType)
         : UnknownData,
-    };
+    );
   }
 
   if (expression[0] === NODE.numericLiteral) {
@@ -304,28 +281,31 @@ export function generateExpression(
     ctx.callStack.push(idValue);
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedSnippets = argSnippets.map((res) => ({
-      value: resolveRes(ctx, res),
-      dataType: res.dataType,
-    }));
+    const resolvedSnippets = argSnippets.map((res) =>
+      snip(ctx.resolve(res.value), res.dataType)
+    );
     const argValues = resolvedSnippets.map((res) => res.value);
 
     ctx.callStack.pop();
 
+    resolvedSnippets.forEach((sn, idx) => {
+      if (sn.dataType === UnknownData) {
+        throw new Error(
+          `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
+            typeof idValue === 'string' ? idValue : getName(idValue)
+          }()'`,
+        );
+      }
+    });
+
     if (typeof idValue === 'string') {
-      return {
-        value: `${idValue}(${argValues.join(', ')})`,
-        dataType: id.dataType,
-      };
+      return snip(`${idValue}(${argValues.join(', ')})`, id.dataType);
     }
 
     if (wgsl.isWgslStruct(idValue)) {
       const resolvedId = ctx.resolve(idValue);
 
-      return {
-        value: `${resolvedId}(${argValues.join(', ')})`,
-        dataType: id.dataType,
-      };
+      return snip(`${resolvedId}(${argValues.join(', ')})`, id.dataType);
     }
 
     if (!isMarkedInternal(idValue)) {
@@ -369,10 +349,7 @@ export function generateExpression(
       ...convertedResources,
     ) as Snippet;
 
-    return {
-      value: resolveRes(ctx, fnRes),
-      dataType: fnRes.dataType,
-    };
+    return snip(ctx.resolve(fnRes.value), fnRes.dataType);
   }
 
   if (expression[0] === NODE.objectExpr) {
@@ -396,10 +373,10 @@ export function generateExpression(
 
       const convertedValues = convertStructValues(ctx, callee, entries);
 
-      return {
-        value: convertedValues.map((v) => resolveRes(ctx, v)).join(', '),
-        dataType: callee,
-      };
+      return snip(
+        convertedValues.map((v) => ctx.resolve(v.value)).join(', '),
+        callee,
+      );
     }
 
     if (isMarkedInternal(callee)) {
@@ -422,10 +399,7 @@ export function generateExpression(
           snippets[key] = converted?.[0] ?? expr;
         }
 
-        return {
-          value: snippets,
-          dataType: UnknownData,
-        };
+        return snip(snippets, UnknownData);
       }
     }
 
@@ -461,15 +435,15 @@ export function generateExpression(
     const typeId = ctx.resolve(type);
 
     const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = convertedValues.map((value) => resolveRes(ctx, value));
+    const arrayValues = convertedValues.map((sn) => ctx.resolve(sn.value));
 
-    return {
-      value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: arrayOf(
+    return snip(
+      `${arrayType}( ${arrayValues.join(', ')} )`,
+      arrayOf(
         type as wgsl.AnyWgslData,
         values.length,
       ) as wgsl.AnyWgslData,
-    };
+    );
   }
 
   if (expression[0] === NODE.stringLiteral) {
@@ -495,17 +469,19 @@ export function generateStatement(
   statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
-    return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
+    return `${ctx.pre}${
+      ctx.resolve(generateIdentifier(ctx, statement).value)
+    };`;
   }
 
   if (typeof statement === 'boolean') {
-    return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
+    return `${ctx.pre}${statement ? 'true' : 'false'};`;
   }
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
     const returnValue = returnNode !== undefined
-      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      ? ctx.resolve(generateExpression(ctx, returnNode).value)
       : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
@@ -534,7 +510,7 @@ export function generateStatement(
     if (converted?.[0]) {
       [condSnippet] = converted;
     }
-    const condition = resolveRes(ctx, condSnippet);
+    const condition = ctx.resolve(condSnippet.value);
 
     ctx.indent(); // {
     const consequent = generateStatement(ctx, blockifySingleStatement(cons));
@@ -582,7 +558,7 @@ ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
+    const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
 
     // If the value is a plain JS object it has to be an output struct
     if (
@@ -606,11 +582,11 @@ ${alternate}`;
       const convertedValues = convertStructValues(ctx, structType, entries);
       const resolvedStruct = ctx.resolve(structType);
       return `${ctx.pre}var ${id} = ${resolvedStruct}(${
-        convertedValues.map((v) => resolveRes(ctx, v)).join(', ')
+        convertedValues.map((sn) => ctx.resolve(sn.value)).join(', ')
       });`;
     }
 
-    return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
+    return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
   }
 
   if (statement[0] === NODE.block) {
@@ -633,7 +609,7 @@ ${alternate}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = condSnippet ? resolveRes(ctx, condSnippet) : '';
+    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
     const updateStatement = update ? generateStatement(ctx, update) : undefined;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
@@ -657,7 +633,7 @@ ${bodyStr}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = resolveRes(ctx, condSnippet);
+    const conditionStr = ctx.resolve(condSnippet.value);
 
     ctx.indent();
     const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
@@ -676,7 +652,7 @@ ${bodyStr}`;
     return `${ctx.pre}break;`;
   }
 
-  return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
+  return `${ctx.pre}${ctx.resolve(generateExpression(ctx, statement).value)};`;
 }
 
 export function generateFunction(

@@ -1,4 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
+import { type AnyData, snip, type Snippet } from '../../data/dataTypes.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -7,7 +8,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getName, setName } from '../../name.ts';
-import type { ResolutionCtx, Snippet } from '../../types.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
@@ -151,17 +152,18 @@ export function createFnCore(
 
         const args: Snippet[] = Array.isArray(shell.argTypes)
           ? ast.argNames.type === 'identifiers'
-            ? shell.argTypes.map((arg, i) => ({
-              value: (ast.argNames.type === 'identifiers'
-                ? ast.argNames.names[i]
-                : undefined) ?? `arg_${i}`,
-              dataType: arg as AnyWgslData,
-            }))
+            ? shell.argTypes.map((arg, i) =>
+              snip(
+                (ast.argNames.type === 'identifiers'
+                  ? ast.argNames.names[i]
+                  : undefined) ?? `arg_${i}`,
+                arg as AnyData,
+              )
+            )
             : []
-          : Object.entries(shell.argTypes).map(([name, dataType]) => ({
-            value: name,
-            dataType: dataType as AnyWgslData,
-          }));
+          : Object.entries(shell.argTypes).map(([name, dataType]) =>
+            snip(name, dataType as AnyData)
+          );
 
         const { head, body } = ctx.fnToWgsl({
           args,

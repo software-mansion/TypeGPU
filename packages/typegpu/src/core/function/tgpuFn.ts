@@ -1,4 +1,4 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
@@ -6,12 +6,11 @@ import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
-import {
-  type FnArgsConversionHint,
-  type ResolutionCtx,
-  type SelfResolvable,
-  UnknownData,
-  type Wgsl,
+import type {
+  FnArgsConversionHint,
+  ResolutionCtx,
+  SelfResolvable,
+  Wgsl,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {

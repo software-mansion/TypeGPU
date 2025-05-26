@@ -1,6 +1,11 @@
 import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
 import { arrayOf } from '../data/array.ts';
-import type { AnyData } from '../data/dataTypes.ts';
+import {
+  type AnyData,
+  snip,
+  type Snippet,
+  UnknownData,
+} from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -52,8 +57,6 @@ import {
   isSelfResolvable,
   isWgsl,
   type ResolutionCtx,
-  type Snippet,
-  UnknownData,
   type Wgsl,
 } from '../types.ts';
 
@@ -186,6 +189,14 @@ export function getTypeForPropAccess(
   if (hasInternalDataType(target)) {
     target = target[$internal].dataType as AnyData;
   }
+
+  // Accessing the property on the actual object
+  // biome-ignore lint/suspicious/noExplicitAny: let's see...
+  const propValue = (target as any)[propName];
+  if (hasInternalDataType(propValue)) {
+    return propValue[$internal].dataType as AnyData;
+  }
+
   while (isDecorated(target)) {
     target = target.inner as AnyData;
   }
@@ -270,30 +281,27 @@ export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
 export function numericLiteralToSnippet(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
-    return { value, dataType: abstractInt };
+    return snip(value, abstractInt);
   }
 
   // Binary literals
   if (/^0b[01]+$/i.test(value)) {
-    return {
-      value: `${Number.parseInt(value.slice(2), 2)}`,
-      dataType: abstractInt,
-    };
+    return snip(`${Number.parseInt(value.slice(2), 2)}`, abstractInt);
   }
 
   // Floating point literals
   if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
-    return { value, dataType: abstractFloat };
+    return snip(value, abstractFloat);
   }
 
   // Floating point literals with scientific notation
   if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
-    return { value, dataType: abstractFloat };
+    return snip(value, abstractFloat);
   }
 
   // Integer literals
   if (/^-?\d+$/i.test(value)) {
-    return { value, dataType: abstractInt };
+    return snip(value, abstractInt);
   }
 
   return undefined;
@@ -570,14 +578,6 @@ export type GenerationCtx = ResolutionCtx & {
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
-  if (isWgsl(res.value)) {
-    return ctx.resolve(res.value);
-  }
-
-  return String(res.value);
-}
-
 function applyActionToSnippet(
   ctx: GenerationCtx,
   value: Snippet,
@@ -585,24 +585,18 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return {
-      value: value.value,
-      dataType: targetType,
-    };
+    return snip(value.value, targetType);
   }
 
-  const resolvedValue = resolveRes(ctx, value);
+  const resolvedValue = ctx.resolve(value.value);
 
   switch (action.action) {
     case 'ref':
-      return { value: `&${resolvedValue}`, dataType: targetType };
+      return snip(`&${resolvedValue}`, targetType);
     case 'deref':
-      return { value: `*${resolvedValue}`, dataType: targetType };
+      return snip(`*${resolvedValue}`, targetType);
     case 'cast': {
-      return {
-        value: `${ctx.resolve(targetType)}(${resolvedValue})`,
-        dataType: targetType,
-      };
+      return snip(`${ctx.resolve(targetType)}(${resolvedValue})`, targetType);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
@@ -667,10 +661,7 @@ export function convertStructValues(
 
 export function coerceToSnippet(value: unknown): Snippet {
   if (isWgsl(value)) {
-    return {
-      value: value,
-      dataType: getTypeFromWgsl(value),
-    };
+    return snip(value, getTypeFromWgsl(value));
   }
 
   if (Array.isArray(value)) {
@@ -686,16 +677,13 @@ export function coerceToSnippet(value: unknown): Snippet {
     )?.targetType as AnyWgslData | undefined;
 
     if (!converted || !commonType) {
-      return {
-        value: value,
-        dataType: UnknownData,
-      };
+      return snip(value, UnknownData);
     }
 
-    return {
-      value: converted.map((v) => v.value).join(', '),
-      dataType: arrayOf(concretize(commonType), value.length),
-    };
+    return snip(
+      converted.map((v) => v.value).join(', '),
+      arrayOf(concretize(commonType), value.length),
+    );
   }
 
   if (typeof value !== 'object') {
@@ -706,8 +694,5 @@ export function coerceToSnippet(value: unknown): Snippet {
     }
   }
 
-  return {
-    value: value,
-    dataType: UnknownData,
-  };
+  return snip(value, UnknownData);
 }
