@@ -11,13 +11,13 @@ export function importTypeGPU(locator: PackageLocator): Promise<TypeGPUModule> {
 
   if (locator.type === 'npm') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/typegpu@${locator.version}/`
+      /* @vite-ignore */ `https://esm.sh/typegpu@${locator.version}/?bundle=false`
     );
   }
 
   if (locator.type === 'pr') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/pr/software-mansion/TypeGPU/typegpu@${locator.commit}/`
+      /* @vite-ignore */ `https://esm.sh/pr/software-mansion/TypeGPU/typegpu@${locator.commit}/?bundle=false`
     );
   }
 
@@ -33,13 +33,13 @@ export function importTypeGPUData(
 
   if (locator.type === 'npm') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/typegpu@${locator.version}/data`
+      /* @vite-ignore */ `https://esm.sh/typegpu@${locator.version}/data/?bundle=false`
     );
   }
 
   if (locator.type === 'pr') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.commit}/data`
+      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.commit}/data/?bundle=false`
     );
   }
 
