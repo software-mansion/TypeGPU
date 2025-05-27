@@ -2,7 +2,7 @@ import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../gpuMode.ts';
 import { getName } from '../../name.ts';
 import type { $repr, Infer } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $wgslDataType } from '../../shared/symbols.ts';
 import {
   isBufferUsage,
   type ResolutionCtx,
@@ -71,9 +71,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.schema,
-        },
+        [$wgslDataType]: this.schema,
       },
       valueProxyHandler,
     ) as Infer<T>;

@@ -4,6 +4,7 @@ import type {
   TgpuStorageTexture,
 } from '../core/texture/texture.ts';
 import type { ChannelData, TexelData } from '../core/texture/texture.ts';
+import { snip } from '../data/dataTypes.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
@@ -128,10 +129,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
       args.push(maybeOffset);
     }
 
-    return {
-      value: `textureSample(${args.map((v) => v.value).join(', ')})`,
-      dataType: vec4f,
-    };
+    return snip(`textureSample(${args.map((v) => v.value).join(', ')})`, vec4f);
   },
 );
 
@@ -186,10 +184,10 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
       args.push(offsetOrArrayIndex);
     }
 
-    return {
-      value: `textureSampleLevel(${args.map((v) => v.value).join(', ')})`,
-      dataType: vec4f,
-    };
+    return snip(
+      `textureSampleLevel(${args.map((v) => v.value).join(', ')})`,
+      vec4f,
+    );
   },
 );
 
@@ -275,12 +273,12 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
       | TgpuStorageTexture
       | TgpuSampledTexture;
 
-    return {
-      value: `textureLoad(${args.map((v) => v.value).join(', ')})`,
-      dataType: 'texelDataType' in textureInfo
+    return snip(
+      `textureLoad(${args.map((v) => v.value).join(', ')})`,
+      'texelDataType' in textureInfo
         ? textureInfo.texelDataType
         : channelDataToInstance[textureInfo.channelDataType.type],
-    };
+    );
   },
 );
 
@@ -319,14 +317,15 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     throw new Error('Texture storing is not supported outside of GPU mode.');
   },
   // GPU implementation
-  (texture, coords, arrayIndexOrValue, maybeValue) => ({
-    value: `textureStore(${
-      [texture, coords, arrayIndexOrValue, maybeValue].filter(
-        (arg) => arg !== undefined,
-      ).map((v) => v.value).join(', ')
-    })`,
-    dataType: Void,
-  }),
+  (texture, coords, arrayIndexOrValue, maybeValue) =>
+    snip(
+      `textureStore(${
+        [texture, coords, arrayIndexOrValue, maybeValue].filter(
+          (arg) => arg !== undefined,
+        ).map((v) => v.value).join(', ')
+      })`,
+      Void,
+    ),
 );
 
 type TextureDimensionsOverload = {
@@ -375,11 +374,11 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
     const dim =
       (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
         .dimension;
-    return {
-      value: `textureDimensions(${texture.value}${
+    return snip(
+      `textureDimensions(${texture.value}${
         level !== undefined ? `, ${level.value}` : ''
       })`,
-      dataType: dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
-    };
+      dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
+    );
   },
 );

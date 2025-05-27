@@ -13,6 +13,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { snip } from '../../src/data/dataTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -309,10 +310,7 @@ describe('wgslGenerator', () => {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast.argNames.names.map((name) => ({
-      value: name,
-      dataType: d.u32,
-    }));
+    const args = astInfo.ast.argNames.names.map((name) => snip(name, d.u32));
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
@@ -488,7 +486,7 @@ describe('wgslGenerator', () => {
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
-      [{ value: 'idx', dataType: d.u32 }],
+      [snip('idx', d.u32)],
       d.f32,
       astInfo.externals ?? {},
     );

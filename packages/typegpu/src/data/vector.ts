@@ -1,6 +1,7 @@
 import { setName } from '../name.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
+import { snip } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -320,10 +321,11 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `'${type}' constructor called with invalid number of arguments.`,
       );
     },
-    (...args) => ({
-      value: `${type}(${args.map((v) => v.value).join(', ')})`,
-      dataType: vecTypeToConstructor[type],
-    }),
+    (...args) =>
+      snip(
+        `${type}(${args.map((v) => v.value).join(', ')})`,
+        vecTypeToConstructor[type],
+      ),
     (...args) =>
       args.map((arg) => {
         let argType = arg.dataType;

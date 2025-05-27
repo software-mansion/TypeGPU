@@ -15,12 +15,10 @@ import { struct } from '../../src/data/struct.ts';
 import {
   vec2f,
   vec2i,
-  vec2u,
   vec3f,
   vec3i,
   vec4f,
   vec4h,
-  vec4i,
 } from '../../src/data/vector.ts';
 import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import {
@@ -32,10 +30,9 @@ import {
   getBestConversion,
   getTypeForIndexAccess,
   getTypeForPropAccess,
-  getTypeFromWgsl,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { type Snippet, UnknownData } from '../../src/types.ts';
+import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -70,40 +67,31 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(String(1))).toEqual({
-        value: '1',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(1))).toEqual(
+        snip('1', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet(String(1.1))).toEqual({
-        value: '1.1',
-        dataType: abstractFloat,
-      });
+      expect(numericLiteralToSnippet(String(1.1))).toEqual(
+        snip('1.1', abstractFloat),
+      );
 
-      expect(numericLiteralToSnippet(String(1e10))).toEqual({
-        value: '10000000000',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(1e10))).toEqual(
+        snip('10000000000', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet(String(0.5))).toEqual({
-        value: '0.5',
-        dataType: abstractFloat,
-      });
+      expect(numericLiteralToSnippet(String(0.5))).toEqual(
+        snip('0.5', abstractFloat),
+      );
 
-      expect(numericLiteralToSnippet(String(-45))).toEqual({
-        value: '-45',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet(String(-45))).toEqual(
+        snip('-45', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet('0x1A')).toEqual({
-        value: '0x1A',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet('0x1A')).toEqual(
+        snip('0x1A', abstractInt),
+      );
 
-      expect(numericLiteralToSnippet('0b101')).toEqual({
-        value: '5',
-        dataType: abstractInt,
-      });
+      expect(numericLiteralToSnippet('0b101')).toEqual(snip('5', abstractInt));
 
       expect(numericLiteralToSnippet('asdf')).toBeUndefined();
     });
@@ -118,7 +106,9 @@ describe('generationHelpers', () => {
     it('should return struct property types', () => {
       expect(getTypeForPropAccess(myStruct, 'foo')).toBe(f32);
       expect(getTypeForPropAccess(myStruct, 'bar')).toBe(vec3f);
-      expect(getTypeForPropAccess(myStruct, 'notfound')).toBe(UnknownData);
+      expect(getTypeForPropAccess(myStruct, 'notfound')).toBe(
+        UnknownData,
+      );
     });
 
     it('should return swizzle types on vectors', () => {
@@ -128,8 +118,8 @@ describe('generationHelpers', () => {
     });
 
     it('should return UnknownData when applied to primitives or invalid', () => {
-      expect(getTypeForPropAccess(1, 'x')).toBe(UnknownData);
-      expect(getTypeForPropAccess(true, 'x')).toBe(UnknownData);
+      expect(getTypeForPropAccess(u32, 'x')).toBe(UnknownData);
+      expect(getTypeForPropAccess(bool, 'x')).toBe(UnknownData);
     });
   });
 
@@ -152,38 +142,6 @@ describe('generationHelpers', () => {
 
     it('returns UnknownData otherwise', () => {
       expect(getTypeForIndexAccess(f32)).toBe(UnknownData);
-    });
-  });
-
-  describe('getTypeFromWgsl', () => {
-    it('returns type for JS primitives', () => {
-      expect(getTypeFromWgsl(1)).toBe(abstractInt);
-      expect(getTypeFromWgsl(1.5)).toBe(abstractFloat);
-      expect(getTypeFromWgsl(0)).toBe(abstractInt);
-      expect(getTypeFromWgsl(0.0)).toBe(abstractInt); // sadly x.0 always reduces to x
-      expect(getTypeFromWgsl(true)).toBe(bool);
-      expect(getTypeFromWgsl(false)).toBe(bool);
-    });
-
-    it('returns UnknownData for non-coercible JS types', () => {
-      expect(getTypeFromWgsl('foo')).toBe(UnknownData);
-    });
-
-    it('returns correct type for WgslData instances', () => {
-      expect(getTypeFromWgsl(f32)).toBe(f32);
-      expect(getTypeFromWgsl(i32)).toBe(i32);
-      expect(getTypeFromWgsl(u32)).toBe(u32);
-      expect(getTypeFromWgsl(f16)).toBe(f16);
-      expect(getTypeFromWgsl(bool)).toBe(bool);
-      expect(getTypeFromWgsl(vec3f)).toBe(vec3f);
-      expect(getTypeFromWgsl(vec4i)).toBe(vec4i);
-      expect(getTypeFromWgsl(mat3x3f)).toBe(mat3x3f);
-      const arr = arrayOf(vec2u, 10);
-      expect(getTypeFromWgsl(arr)).toBe(arr);
-      const myStruct = struct({ a: f32 });
-      expect(getTypeFromWgsl(myStruct)).toBe(myStruct);
-      const ptr = ptrPrivate(f32);
-      expect(getTypeFromWgsl(ptr)).toBe(ptr);
     });
   });
 
@@ -400,16 +358,13 @@ describe('generationHelpers', () => {
   });
 
   describe('convertToCommonType', () => {
-    const snippetF32: Snippet = { value: '2.22', dataType: f32 };
-    const snippetI32: Snippet = { value: '-12', dataType: i32 };
-    const snippetU32: Snippet = { value: '33', dataType: u32 };
-    const snippetAbsFloat: Snippet = { value: '1.1', dataType: abstractFloat };
-    const snippetAbsInt: Snippet = { value: '1', dataType: abstractInt };
-    const snippetPtrF32: Snippet = {
-      value: 'ptr_f32',
-      dataType: ptrPrivate(f32),
-    };
-    const snippetUnknown: Snippet = { value: '?', dataType: UnknownData };
+    const snippetF32 = snip('2.22', f32);
+    const snippetI32 = snip('-12', i32);
+    const snippetU32 = snip('33', u32);
+    const snippetAbsFloat = snip('1.1', abstractFloat);
+    const snippetAbsInt = snip('1', abstractInt);
+    const snippetPtrF32 = snip('ptr_f32', ptrPrivate(f32));
+    const snippetUnknown = snip('?', UnknownData);
     let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
@@ -472,7 +427,7 @@ describe('generationHelpers', () => {
     });
 
     it('returns undefined for incompatible types', () => {
-      const snippetVec2f: Snippet = { value: 'v2', dataType: vec2f };
+      const snippetVec2f = snip('v2', vec2f);
       const result = convertToCommonType(mockCtx, [snippetF32, snippetVec2f]);
       expect(result).toBeUndefined();
     });
@@ -533,10 +488,10 @@ describe('generationHelpers', () => {
 
     it('maps values matching types exactly', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1.0', dataType: f32 },
-        b: { value: '2', dataType: i32 },
-        c: { value: 'vec2f(1.0, 1.0)', dataType: vec2f },
-        d: { value: 'true', dataType: bool },
+        a: snip('1.0', f32),
+        b: snip('2', i32),
+        c: snip('vec2f(1.0, 1.0)', vec2f),
+        d: snip('true', bool),
       };
       const res = convertStructValues(mockCtx, structType, snippets);
       expect(res.length).toBe(4);
@@ -549,15 +504,15 @@ describe('generationHelpers', () => {
 
     it('maps values requiring implicit casts and warns', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1', dataType: i32 }, // i32 -> f32 (cast)
-        b: { value: '2', dataType: u32 }, // u32 -> i32 (cast)
-        c: { value: '2.22', dataType: f32 },
-        d: { value: 'true', dataType: bool },
+        a: snip('1', i32), // i32 -> f32 (cast)
+        b: snip('2', u32), // u32 -> i32 (cast)
+        c: snip('2.22', f32),
+        d: snip('true', bool),
       };
       const res = convertStructValues(mockCtx, structType, snippets);
       expect(res.length).toBe(4);
-      expect(res[0]).toEqual({ value: 'f32(1)', dataType: f32 }); // Cast applied
-      expect(res[1]).toEqual({ value: 'i32(2)', dataType: i32 }); // Cast applied
+      expect(res[0]).toEqual(snip('f32(1)', f32)); // Cast applied
+      expect(res[1]).toEqual(snip('i32(2)', i32)); // Cast applied
       expect(res[2]).toEqual(snippets.c);
       expect(res[3]).toEqual(snippets.d);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(2); // One warn per cast
@@ -565,10 +520,10 @@ describe('generationHelpers', () => {
 
     it('throws on missing property', () => {
       const snippets: Record<string, Snippet> = {
-        a: { value: '1.0', dataType: f32 },
+        a: snip('1.0', f32),
         // b is missing
-        c: { value: 'vec2f(1.0, 1.0)', dataType: vec2f },
-        d: { value: 'true', dataType: bool },
+        c: snip('vec2f(1.0, 1.0)', vec2f),
+        d: snip('true', bool),
       };
       expect(() => convertStructValues(mockCtx, structType, snippets)).toThrow(
         /Missing property b/,
@@ -588,34 +543,22 @@ describe('generationHelpers', () => {
     });
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual({ value: 1, dataType: abstractInt });
-      expect(coerceToSnippet(2.5)).toEqual({
-        value: 2.5,
-        dataType: abstractFloat,
-      });
-      expect(coerceToSnippet(-10)).toEqual({
-        value: -10,
-        dataType: abstractInt,
-      });
-      expect(coerceToSnippet(0.0)).toEqual({
-        value: 0,
-        dataType: abstractInt,
-      });
+      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
+      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
+      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt));
+      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt));
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual({ value: true, dataType: bool });
-      expect(coerceToSnippet(false)).toEqual({ value: false, dataType: bool });
+      expect(coerceToSnippet(true)).toEqual(snip(true, bool));
+      expect(coerceToSnippet(false)).toEqual(snip(false, bool));
     });
 
-    it('coerces WgslData types directly', () => {
-      expect(coerceToSnippet(f32)).toEqual({ value: f32, dataType: f32 });
-      expect(coerceToSnippet(vec3i)).toEqual({
-        value: vec3i,
-        dataType: vec3i,
-      });
+    it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
+      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
+      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
       const arr = arrayOf(f32, 2);
-      expect(coerceToSnippet(arr)).toEqual({ value: arr, dataType: arr });
+      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
     it('coerces arrays of compatible numbers', () => {
@@ -653,21 +596,12 @@ describe('generationHelpers', () => {
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet('foo')).toEqual({
-        value: 'foo',
-        dataType: UnknownData,
-      });
-      expect(coerceToSnippet({})).toEqual({ value: {}, dataType: UnknownData });
-      expect(coerceToSnippet(null)).toEqual({
-        value: null,
-        dataType: UnknownData,
-      });
-      expect(coerceToSnippet(undefined)).toEqual({
-        value: undefined,
-        dataType: UnknownData,
-      });
+      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
+      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
+      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
+      expect(coerceToSnippet(undefined)).toEqual(snip(undefined, UnknownData));
       const fn = () => {};
-      expect(coerceToSnippet(fn)).toEqual({ value: fn, dataType: UnknownData });
+      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
     });
   });
 });

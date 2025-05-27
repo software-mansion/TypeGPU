@@ -574,6 +574,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   w: boolean;
 }
 
+export type AnyFloat32VecInstance = v2f | v3f | v4f;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -664,6 +666,11 @@ export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
   : v4f;
+
+export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+  : T extends v3f ? m3x3f
+  : T extends v4f ? m4x4f
+  : never;
 
 // #endregion
 
@@ -1273,25 +1280,32 @@ export type AnyWgslData =
 
 // #endregion
 
+export function isVecInstance(value: unknown): value is AnyVecInstance {
+  const v = value as AnyVecInstance | undefined;
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('vec');
+}
+
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec2')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith?.('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec3')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec4')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec4');
 }
 
 export function isVec(
@@ -1310,6 +1324,13 @@ export function isVec(
   | Vec4i
   | Vec4u {
   return isVec2(value) || isVec3(value) || isVec4(value);
+}
+
+export function isMatInstance(value: unknown): value is AnyMatInstance {
+  const v = value as AnyMatInstance | undefined;
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('mat');
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
@@ -1335,6 +1356,13 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
+export function isFloat32VecInstance(
+  element: number | AnyVecInstance | AnyMatInstance,
+): element is AnyFloat32VecInstance {
+  return isVecInstance(element) &&
+    ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {

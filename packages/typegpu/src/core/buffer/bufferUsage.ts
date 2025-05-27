@@ -5,7 +5,11 @@ import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import {
+  $getNameForward,
+  $internal,
+  $wgslDataType,
+} from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -132,9 +136,7 @@ class TgpuFixedBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.buffer.dataType,
-        },
+        [$wgslDataType]: this.buffer.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
@@ -185,9 +187,7 @@ export class TgpuLaidOutBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.dataType,
-        },
+        [$wgslDataType]: this.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;

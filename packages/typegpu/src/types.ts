@@ -30,7 +30,7 @@ import type {
   TgpuTexture,
 } from './core/texture/texture.ts';
 import { isVariable, type TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData } from './data/dataTypes.ts';
+import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -40,7 +40,7 @@ import {
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $internal, $wgslDataType } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -70,16 +70,6 @@ export type ResolvableObject =
   | TgpuFn<any, any>;
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
-
-export const UnknownData = {
-  type: 'unknown' as const,
-};
-export type UnknownData = typeof UnknownData;
-
-export type Snippet = {
-  value: unknown;
-  dataType: AnyData | UnknownData;
-};
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
@@ -230,12 +220,8 @@ export function isBufferUsage<
 
 export function hasInternalDataType(
   value: unknown,
-): value is { [$internal]: { dataType: BaseData } } {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
-  );
+): value is { [$wgslDataType]: BaseData } {
+  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
 }
 
 export function isMarkedInternal(

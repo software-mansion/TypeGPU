@@ -1,4 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
+import { type AnyData, snip, type Snippet } from '../../data/dataTypes.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -7,7 +8,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getName, setName } from '../../name.ts';
-import type { ResolutionCtx, Snippet } from '../../types.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
@@ -128,18 +129,6 @@ export function createFnCore(
           );
         }
 
-        if (
-          !Array.isArray(shell.argTypes) &&
-          ast.argNames.type === 'identifiers' &&
-          ast.argNames.names[0] !== undefined
-        ) {
-          applyExternals(externalMap, {
-            [ast.argNames.names[0]]: Object.fromEntries(
-              Object.keys(shell.argTypes).map((arg) => [arg, arg]),
-            ),
-          });
-        }
-
         // Verifying all required externals are present.
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
@@ -149,19 +138,16 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        const args: Snippet[] = Array.isArray(shell.argTypes)
-          ? ast.argNames.type === 'identifiers'
-            ? shell.argTypes.map((arg, i) => ({
-              value: (ast.argNames.type === 'identifiers'
+        const args: Snippet[] = ast.argNames.type === 'identifiers'
+          ? shell.argTypes.map((arg, i) =>
+            snip(
+              (ast.argNames.type === 'identifiers'
                 ? ast.argNames.names[i]
                 : undefined) ?? `arg_${i}`,
-              dataType: arg as AnyWgslData,
-            }))
-            : []
-          : Object.entries(shell.argTypes).map(([name, dataType]) => ({
-            value: name,
-            dataType: dataType as AnyWgslData,
-          }));
+              arg as AnyData,
+            )
+          )
+          : [];
 
         const { head, body } = ctx.fnToWgsl({
           args,
