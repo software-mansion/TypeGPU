@@ -22,7 +22,7 @@ describe('[BABEL] "kernel" directive', () => {
         throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({});
       const addCPU = (a, b) => {
@@ -54,7 +54,7 @@ describe('[BABEL] "kernel" directive', () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       shell((a, b) => {
@@ -86,7 +86,7 @@ describe('[BABEL] "kernel" directive', () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       shell(function (a, b) {
@@ -118,7 +118,7 @@ describe('[BABEL] "kernel" directive', () => {
         throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       shell(function addCPU(a, b) {
@@ -147,7 +147,7 @@ describe('[BABEL] "kernel" directive', () => {
         throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({});
       function addCPU(a, b) {
@@ -185,7 +185,7 @@ describe('[ROLLUP] "kernel" directive', () => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({});
 
@@ -227,7 +227,7 @@ describe('[ROLLUP] "kernel" directive', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
 
@@ -264,7 +264,7 @@ describe('[ROLLUP] "kernel" directive', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
 
@@ -302,7 +302,7 @@ describe('[ROLLUP] "kernel" directive', () => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
 
@@ -340,7 +340,7 @@ describe('[ROLLUP] "kernel" directive', () => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["a","b"]},"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({});
 

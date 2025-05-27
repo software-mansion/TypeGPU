@@ -38,7 +38,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
           externals: {counter, d},
         }) && $.f)({}));"
     `);
@@ -70,14 +70,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       const b = tgpu['~unstable'].fn([]).does(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       const cx = 2;
@@ -85,7 +85,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
-          ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
+          ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
           externals: {cx},
         }) && $.f)({}));
       const d = tgpu['~unstable'].fn([]).does('() {}');"
@@ -131,7 +131,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
                     externals: {counter, d},
                   }) && $.f))({}));
       "
@@ -165,7 +165,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":["input"]},"body":[0,[[13,"x",true]]],"externalNames":[]},
+                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
 
@@ -175,7 +175,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+                    ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f))({}));
 
@@ -186,7 +186,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
-                    ast: {"argNames":{"type":"identifiers","names":[]},"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
+                    ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
                     externals: {cx},
                   }) && $.f))({}));
 
