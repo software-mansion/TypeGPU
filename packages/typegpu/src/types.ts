@@ -16,7 +16,6 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
-  isAccessor,
   isDerived,
   isProviding,
   isSlot,
@@ -29,7 +28,7 @@ import type {
   TgpuAnyTextureView,
   TgpuTexture,
 } from './core/texture/texture.ts';
-import { isVariable, type TgpuVar } from './core/variable/tgpuVariable.ts';
+import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
 import {
   type AnyMatInstance,
@@ -188,8 +187,6 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
-    isVariable(value) ||
-    isAccessor(value) ||
     isDerived(value) ||
     isProviding(value)
   );
