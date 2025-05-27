@@ -537,10 +537,12 @@ export const translate4x4 = createDualImpl(
     return mul(matrix, mat4x4f.translation(vector));
   },
   // GPU implementation
-  (matrix, vector) => {
-    return {
-      value: `${matrix.value} * ${mat4x4f.translation(vector.value as v3f)}`,
-      dataType: matrix.dataType,
-    };
-  },
+  (matrix, vector) => ({
+    value: `${matrix.value} * ${
+      (mat4x4f.translation(
+        vector as unknown as v3f,
+      ) as unknown as Snippet).value
+    }`,
+    dataType: matrix.dataType,
+  }),
 );
