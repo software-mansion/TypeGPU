@@ -37,20 +37,20 @@ context.configure({
 
 const presets = {
   default: {
-    SeparationDist: 0.3,
-    SeparationStr: 0.0006,
-    AlignmentDist: 0.3,
-    AlignmentStr: 0.005,
-    CohesionDist: 0.5,
-    CohesionStr: 0.0004,
+    separationDist: 0.3,
+    separationStr: 0.0006,
+    alignmentDist: 0.3,
+    alignmentStr: 0.005,
+    cohesionDist: 0.5,
+    cohesionStr: 0.0004,
   },
   init: {
-    SeparationDist: 0.2,
-    SeparationStr: 0.1,
-    AlignmentDist: 0.5,
-    AlignmentStr: 1,
-    CohesionDist: 0.3,
-    CohesionStr: 0.013,
+    separationDist: 0.2,
+    separationStr: 0.1,
+    alignmentDist: 0.5,
+    alignmentStr: 1,
+    cohesionDist: 0.3,
+    cohesionStr: 0.013,
   },
 } as const;
 
