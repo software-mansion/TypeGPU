@@ -18,7 +18,7 @@ import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
 export type WithLocations<T extends IORecord> = {
   [Key in keyof T]: IsBuiltin<T[Key]> extends true ? T[Key]
     : HasCustomLocation<T[Key]> extends true ? T[Key]
-    : Decorate<T[Key], Location<number>>;
+    : Decorate<T[Key], Location>;
 };
 
 export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
@@ -52,7 +52,10 @@ export function withLocations<T extends IOData>(
   );
 }
 
-export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
+export function createIoSchema<
+  T extends IOData,
+  Layout extends IORecord<T> | IOLayout<T>,
+>(returnType: Layout) {
   return (
     isData(returnType)
       ? isVoid(returnType)
@@ -61,9 +64,5 @@ export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
         ? returnType
         : location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
-  ) as IOLayoutToSchema<IOLayout<T>>;
-}
-
-export function createStructFromIO<T extends IOData>(members: IORecord<T>) {
-  return struct(withLocations(members) as Record<string, T>);
+  ) as IOLayoutToSchema<Layout>;
 }
