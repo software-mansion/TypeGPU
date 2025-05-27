@@ -486,11 +486,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   //     .$name('get_color');
 
   //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot(`
-  //       [Error: Resolution of the following tree failed:
-  //       - <root>
-  //       - fn:get_color: Type mismatch between JS and WGSL, argument "a", types: vec3f, vec4f.]
-  //     `);
+  //     .toThrowErrorMatchingInlineSnapshot();
   // });
 
   // TODO: handle nested structs, which blocks type checking
@@ -504,12 +500,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   //     .$name('get_color');
 
   //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot(`
-  //       [Error: Resolution of the following tree failed:
-  //       - <root>
-  //       - fn:get_color
-  //       - struct:<unnamed>: Unnamed item found when using a strict name registry]
-  //     `);
+  //     .toThrowErrorMatchingInlineSnapshot();
   // });
 
   it('throws when wrong argument count', () => {
@@ -548,20 +539,6 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }
       `));
   });
-
-  // TODO: handle nested structs
-  // it('throws when implicitly typed struct is used in nested type', () => {
-  //   const getColor = tgpu['~unstable']
-  //     .fn([d.arrayOf(d.struct({ a: d.i32 }), 4)])(
-  //       /* wgsl */ `(a) {
-  //       return;
-  //     }`,
-  //     )
-  //     .$name('get_color');
-
-  //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot();
-  // });
 });
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
