@@ -87,14 +87,12 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
 function enqueuePresetChanges() {
   speedMultiplier = 3;
 
-  spinner.style.display = 'block';
   spinnerBackground.style.display = 'block';
 
   fishBehaviorBuffer.write(presets.init);
 
   setTimeout(() => {
     fishBehaviorBuffer.write(presets.default);
-    spinner.style.display = 'none';
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
   }, 300);
