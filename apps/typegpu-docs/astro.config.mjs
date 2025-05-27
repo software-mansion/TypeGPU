@@ -31,7 +31,9 @@ export default defineConfig({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: stripFalsy([
-        starlightBlog(),
+        starlightBlog({
+          navigation: 'none',
+        }),
         DEV &&
         starlightTypeDoc({
           entryPoints: [
