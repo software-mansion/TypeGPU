@@ -394,7 +394,9 @@ struct fragment_Output {
     `),
     );
   });
+});
 
+describe('tgpu.fn with raw wgsl and missing types', () => {
   it('resolves missing base types', () => {
     const getColor = tgpu['~unstable']
       .fn([d.vec3f, d.u32, d.mat2x2f, d.bool, d.vec2b], d.vec4u)(
@@ -434,7 +436,6 @@ struct fragment_Output {
   it('resolves array types', () => {
     const getColor = tgpu['~unstable']
       .fn([d.arrayOf(d.u32, 4)], d.u32)(
-        // .fn([d.arrayOf(d.u32, 4)], d.u32)(
         /* wgsl */ `(a) {
         return a[0];
       }`,
