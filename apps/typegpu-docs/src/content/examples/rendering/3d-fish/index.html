@@ -29,18 +29,17 @@
   }
 
   .spinner-background {
+    inset: 0;
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--color-gray-100);
+    display: grid;
+    place-items: center;
+    background-color: var(--color-tameplum-50, white);
     z-index: 4;
   }
 </style>
 
-<div id="spinner-background" class="spinner-background">
-  <div id="spinner" class="spinner"></div>
+<div class="spinner-background">
+  <div class="spinner">Loading...</div>
 </div>
 <div id="help">
   <h3 class="controls-header">Controls (click to dismiss)</h3>
