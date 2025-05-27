@@ -19,6 +19,16 @@
       "correctness": {
         "noUnusedImports": "error",
         "useImportExtensions": "error"
+      },
+      "nursery": {
+        "useSortedClasses": {
+          "level": "error",
+          "fix": "safe",
+          "options": {
+            "attributes": ["className"],
+            "functions": ["cs"]
+          }
+        }
       }
     }
   },

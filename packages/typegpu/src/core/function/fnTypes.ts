@@ -1,4 +1,5 @@
 import type * as tinyest from 'tinyest';
+import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
   Decorated,
@@ -26,7 +27,7 @@ import type { Infer } from '../../shared/repr.ts';
  * Information extracted from transpiling a JS function.
  */
 export type TranspilationResult = {
-  argNames: tinyest.ArgNames;
+  params: tinyest.FuncParameter[];
   body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the
@@ -80,7 +81,10 @@ export type BaseIOData =
   | Vec3u
   | Vec4u;
 
-export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]>;
+export type IOData =
+  | BaseIOData
+  | Decorated<BaseIOData, AnyAttribute[]>
+  | BuiltinClipDistances;
 
 export type IORecord<TElementType extends IOData = IOData> = Record<
   string,

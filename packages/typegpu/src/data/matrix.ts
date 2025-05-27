@@ -75,7 +75,15 @@ function createMatSchema<
         }
       }
 
-      // Fill the rest with zeros
+      if (
+        elements.length !== 0 &&
+        elements.length !== options.columns * options.rows
+      ) {
+        throw new Error(
+          `'${options.type}' constructor called with invalid number of arguments.`,
+        );
+      }
+
       for (let i = elements.length; i < options.columns * options.rows; ++i) {
         elements.push(0);
       }
