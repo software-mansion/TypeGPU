@@ -125,7 +125,6 @@ const randomizeFishPositions = () => {
   fishDataBuffers[1].write(positions);
   enqueuePresetChanges();
 };
-randomizeFishPositions();
 
 const camera = {
   position: p.cameraInitialPosition,
@@ -187,6 +186,8 @@ const oceanFloorDataBuffer = root
   ])
   .$usage('storage', 'vertex')
   .$name('ocean floor');
+
+randomizeFishPositions();
 
 // pipelines
 
