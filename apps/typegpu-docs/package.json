@@ -60,7 +60,7 @@
     "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
     "autoprefixer": "^10.4.16",
-    "tailwindcss": "^4.1.6",
+    "tailwindcss": "^4.1.7",
     "tailwindcss-motion": "^1.0.1",
     "yaml": "^2.7.0"
   }
