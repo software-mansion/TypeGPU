@@ -16,6 +16,7 @@ import {
   replaceExternalsInWgsl,
 } from '../resolve/externals.ts';
 import { getPrebuiltAstFor } from './astUtils.ts';
+import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
 export interface TgpuFnShellBase<Args extends unknown[], Return> {
@@ -76,10 +77,15 @@ export function createFnCore(
         applyExternals(externalMap, externals);
       }
 
+      // AAA załozenia:
+      // - bez atrybutów w fn
+      // - bez nested structów
+
       const id = ctx.names.makeUnique(getName(this));
 
       if (typeof implementation === 'string') {
         let header = '';
+        let body = '';
 
         if (shell.isEntry) {
           const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
@@ -95,12 +101,51 @@ export function createFnCore(
               }`
             : '';
           header = `${input} ${output} `;
+          body = implementation;
+        } else {
+          const providedArgs = extractArgs(implementation);
+
+          if (providedArgs.args.length !== shell.argTypes.length) {
+            throw new Error(
+              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments!`,
+            );
+          }
+
+          // AAA rozwaz poprawienie typu shell base
+          // AAA ctx do tego, i tam check na structa
+          // providedArgs.args.forEach((wgslInfo, i) =>
+          //   checkType(
+          //     wgslInfo.type,
+          //     ctx.resolve((shell.argTypes[i] as any).type),
+          //     `Parameter ${wgslInfo.identifier}`,
+          //   )
+          // );
+
+          // checkType(
+          //   providedArgs.ret?.type,
+          //   ctx.resolve(shell.returnType),
+          //   `Return value`,
+          // );
+
+          const input = providedArgs.args.map((argInfo, i) =>
+            `${argInfo.identifier}: ${
+              argInfo.type ?? ctx.resolve(shell.argTypes[i])
+            }`
+          ).join(', ');
+
+          const output = shell.returnType === Void
+            ? ''
+            : `-> ${providedArgs.ret?.type ?? ctx.resolve(shell.returnType)}`;
+
+          header = `(${input}) ${output}`;
+
+          body = implementation.slice(providedArgs.range.end);
         }
 
         const replacedImpl = replaceExternalsInWgsl(
           ctx,
           externalMap,
-          `${header}${implementation.trim()}`,
+          `${header}${body.trim()}`,
         );
 
         ctx.addDeclaration(`${fnAttribute}fn ${id}${replacedImpl}`);
@@ -187,4 +232,24 @@ export function createFnCore(
   }
 
   return core;
+}
+
+function checkType(
+  wgslType: string | undefined,
+  jsType: string,
+  logName: string,
+) {
+  if (jsType === 'struct') {
+    if (!wgslType) {
+      throw new Error(
+        `${logName} is of struct type and needs to be explicitly typed (any type alias will be correctly bound and resolved).`,
+      );
+    }
+  } else {
+    if (wgslType && wgslType !== jsType) {
+      throw new Error(
+        `Type mismatch between JS and WGSL, ${logName}, types: ${jsType}, ${wgslType}.`,
+      );
+    }
+  }
 }
