@@ -1,8 +1,8 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import { setMetaData } from '../../shared/meta.ts';
 
 export type Ast = {
-  argNames: ArgNames;
+  params: FuncParameter[];
   body: Block;
   externalNames: string[];
 };

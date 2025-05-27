@@ -7,12 +7,12 @@ import { Void } from '../../src/data/wgslTypes.ts';
 import * as gpu from '../../src/gpuMode.ts';
 import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
-import { getMetaData } from '../../src/shared/meta.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -178,6 +178,7 @@ describe('wgslGenerator', () => {
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -244,6 +245,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -305,17 +307,20 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
-    if (astInfo.ast?.argNames.type !== 'identifiers') {
+    if (
+      astInfo.ast?.argNames.filter((arg) => arg.type !== 'i').length > 0
+    ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast?.argNames.names.map((name) => ({
-      value: name,
+    const args = astInfo.ast?.params.map((arg) => ({
+      value: (arg as { type: 'i'; name: string }).name,
       dataType: d.u32,
     }));
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
+      {},
       d.vec4f,
       astInfo.externals ?? {},
     );
@@ -454,6 +459,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.vec4u,
       astInfo.externals ?? {},
     );
@@ -489,6 +495,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [{ value: 'idx', dataType: d.u32 }],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -531,6 +538,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -607,6 +615,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -697,6 +706,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -746,6 +756,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );

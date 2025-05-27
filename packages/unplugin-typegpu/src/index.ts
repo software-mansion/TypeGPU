@@ -2,8 +2,8 @@ import type * as acorn from 'acorn';
 import defu from 'defu';
 import { type Node, walk } from 'estree-walker';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
-import { transpileFn } from 'tinyest-for-wgsl';
 import { FORMAT_VERSION } from 'tinyest';
+import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
@@ -143,7 +143,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               removeJsImplementation,
             } of tgslFunctionDefs
           ) {
-            const { argNames, body, externalNames } = transpileFn(def);
+            const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
             if (

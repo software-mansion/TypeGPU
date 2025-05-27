@@ -2,8 +2,8 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
-import { transpileFn } from 'tinyest-for-wgsl';
 import { FORMAT_VERSION } from 'tinyest';
+import { transpileFn } from 'tinyest-for-wgsl';
 import {
   type Context,
   embedJSON,
