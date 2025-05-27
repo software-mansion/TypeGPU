@@ -299,21 +299,21 @@ describe('wgslGenerator', () => {
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
-    if (!astInfo) {
+    if (!astInfo?.ast) {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
     if (
-      astInfo.ast!.params.filter((arg) => arg.type !== 'i').length > 0
+      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
     ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast!.params.map((arg) => ({
+    const args = astInfo.ast.params.map((arg) => ({
       value: (arg as { type: 'i'; name: string }).name,
       dataType: d.u32,
     }));
