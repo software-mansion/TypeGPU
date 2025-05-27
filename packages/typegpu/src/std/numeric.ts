@@ -1,25 +1,31 @@
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  AnyFloatVecInstance,
-  AnyMatInstance,
-  AnyNumericVecInstance,
-  AnyWgslData,
-  v2f,
-  v2h,
-  v2i,
-  v3f,
-  v3h,
-  v3i,
-  v4f,
-  v4h,
-  v4i,
-  vBaseForMat,
+import {
+  type AnyFloatVecInstance,
+  type AnyMatInstance,
+  type AnyNumericVecInstance,
+  isFloat32VecInstance,
+  isMatInstance,
+  isVecInstance,
+  type mBaseForVec,
+  type v2f,
+  type v2h,
+  type v2i,
+  type v3f,
+  type v3h,
+  type v3i,
+  type v4f,
+  type v4h,
+  type v4i,
+  type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import type { Snippet } from '../types.ts';
 
-export function isNumeric(element: Snippet) {
+type NumVec = AnyNumericVecInstance;
+type Mat = AnyMatInstance;
+
+export function isSnippetNumeric(element: Snippet) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
@@ -31,92 +37,192 @@ export function isNumeric(element: Snippet) {
   );
 }
 
+function cpuAdd(lhs: number, rhs: number): number; // default addition
+function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
+function cpuAdd<T extends NumVec>(lhs: T, rhs: number): T; // mixed addition
+function cpuAdd<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise addition
+function cpuAdd<
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
+    : Lhs extends Mat ? Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs + rhs; // default addition
+  }
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
+  }
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
+    return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
+  }
+  if (
+    (isVecInstance(lhs) && isVecInstance(rhs)) ||
+    (isMatInstance(lhs) && isMatInstance(rhs))
+  ) {
+    return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
+  }
+
+  throw new Error('Add/Sub called with invalid arguments.');
+}
+
 export const add = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
-    VectorOps.add[lhs.kind](lhs, rhs),
+  cpuAdd,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} + ${rhs.value})`,
-    dataType: lhs.dataType,
+    dataType: isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
   }),
   'coerce',
 );
+
+function cpuSub(lhs: number, rhs: number): number; // default subtraction
+function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
+function cpuSub<T extends NumVec>(lhs: T, rhs: number): T; // mixed subtraction
+function cpuSub<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
+function cpuSub<
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
+    : Lhs extends Mat ? Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  // while illegal on the wgsl side, we can do this in js
+  return cpuAdd(lhs, mul(-1, rhs));
+}
 
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
-    VectorOps.sub[lhs.kind](lhs, rhs),
+  cpuSub,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} - ${rhs.value})`,
-    dataType: lhs.dataType,
+    dataType: isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
   }),
   'coerce',
 );
 
-type MulOverload = {
-  <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: T, v: TVec): TVec;
-  <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: TVec, v: T): TVec;
-  <T extends AnyNumericVecInstance | AnyMatInstance>(s: number | T, v: T): T;
-};
+function cpuMul(lhs: number, rhs: number): number; // default multiplication
+function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
+function cpuMul<MV extends NumVec | Mat>(lhs: MV, rhs: number): MV; // scale
+function cpuMul<V extends NumVec>(lhs: V, rhs: V): V; // component-wise multiplication
+function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: V, rhs: M): V; // row-vector-matrix
+function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: M, rhs: V): V; // matrix-column-vector
+function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
+function cpuMul<
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends (
+    Lhs extends number ? number | NumVec | Mat
+      : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
+      : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
+      : never
+  ),
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs * rhs; // default multiplication
+  }
+  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
+    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
+  }
+  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
+    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
+  }
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
+  }
+  if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
+    return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
+  }
+  if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
+    return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
+  }
+  if (isMatInstance(lhs) && isMatInstance(rhs)) {
+    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
+  }
 
-export const mul: MulOverload = createDualImpl(
+  throw new Error('Mul called with invalid arguments.');
+}
+
+export const mul = createDualImpl(
   // CPU implementation
-  (
-    s: number | AnyNumericVecInstance | AnyMatInstance,
-    v: AnyNumericVecInstance | AnyMatInstance,
-  ): AnyNumericVecInstance | AnyMatInstance => {
-    if (typeof s === 'number') {
-      // Scalar * Vector/Matrix case
-      return VectorOps.mulSxV[v.kind](s, v);
-    }
-    if (
-      typeof s === 'object' &&
-      typeof v === 'object' &&
-      'kind' in s &&
-      'kind' in v
-    ) {
-      const sIsVector = !s.kind.startsWith('mat');
-      const vIsVector = !v.kind.startsWith('mat');
-      if (!sIsVector && vIsVector) {
-        // Matrix * Vector case
-        return VectorOps.mulMxV[(s as AnyMatInstance).kind](
-          s as AnyMatInstance,
-          v as vBaseForMat<AnyMatInstance>,
-        );
-      }
-      if (sIsVector && !vIsVector) {
-        // Vector * Matrix case
-        return VectorOps.mulVxM[(v as AnyMatInstance).kind](
-          s as vBaseForMat<AnyMatInstance>,
-          v as AnyMatInstance,
-        );
-      }
-    }
-    // Vector * Vector or Matrix * Matrix case
-    return VectorOps.mulVxV[v.kind](s, v);
-  },
+  cpuMul,
   // GPU implementation
-  (s, v) => {
-    const returnType = isNumeric(s)
-      // Scalar * Vector/Matrix
-      ? (v.dataType as AnyWgslData)
-      : !s.dataType.type.startsWith('mat')
-      // Vector * Matrix
-      ? (s.dataType as AnyWgslData)
-      : !v.dataType.type.startsWith('mat')
+  (lhs, rhs) => {
+    const returnType = isSnippetNumeric(lhs)
+      // Scalar * Scalar/Vector/Matrix
+      ? rhs.dataType
+      : isSnippetNumeric(rhs)
+      // Vector/Matrix * Scalar
+      ? lhs.dataType
+      : lhs.dataType.type.startsWith('vec')
+      // Vector * Vector/Matrix
+      ? lhs.dataType
+      : rhs.dataType.type.startsWith('vec')
       // Matrix * Vector
-      ? (v.dataType as AnyWgslData)
-      // Vector * Vector or Matrix * Matrix
-      : (s.dataType as AnyWgslData);
-    return { value: `(${s.value} * ${v.value})`, dataType: returnType };
+      ? rhs.dataType
+      // Matrix * Matrix
+      : lhs.dataType;
+    return { value: `(${lhs.value} * ${rhs.value})`, dataType: returnType };
+  },
+);
+
+function cpuDiv(lhs: number, rhs: number): number; // default js division
+function cpuDiv<MV extends NumVec>(lhs: number, rhs: MV): MV; // scale
+function cpuDiv<MV extends NumVec>(lhs: MV, rhs: number): MV; // scale
+function cpuDiv<V extends NumVec>(lhs: V, rhs: V): V; // component-wise division
+function cpuDiv<
+  // union overload
+  Lhs extends number | NumVec,
+  Rhs extends (Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
+    : never),
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuDiv(lhs: number | NumVec, rhs: number | NumVec) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return (lhs / rhs);
+  }
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    return VectorOps.divMixed[rhs.kind](rhs, lhs);
+  }
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
+    return VectorOps.divMixed[lhs.kind](lhs, rhs);
+  }
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    return VectorOps.div[lhs.kind](lhs, rhs);
+  }
+
+  throw new Error('Div called with invalid arguments.');
+}
+
+export const div = createDualImpl(
+  // CPU implementation
+  cpuDiv,
+  // GPU implementation
+  (lhs, rhs) => {
+    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
+      return {
+        value: `(f32(${lhs.value}) / ${rhs.value})`,
+        dataType: f32,
+      };
+    }
+    return {
+      value: `(${lhs.value} / ${rhs.value})`,
+      dataType: lhs.dataType,
+    };
   },
 );
 
 export const abs = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(value: T): T => {
+  <T extends NumVec | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.abs(value) as T;
     }
@@ -191,14 +297,14 @@ export const ceil = createDualImpl(
  */
 export const clamp = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(value: T, low: T, high: T): T => {
+  <T extends NumVec | number>(value: T, low: T, high: T): T => {
     if (typeof value === 'number') {
       return Math.min(Math.max(low as number, value), high as number) as T;
     }
     return VectorOps.clamp[value.kind](
       value,
-      low as AnyNumericVecInstance,
-      high as AnyNumericVecInstance,
+      low as NumVec,
+      high as NumVec,
     ) as T;
   },
   // GPU implementation
@@ -243,7 +349,7 @@ export const cross = createDualImpl(
  */
 export const dot = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): number =>
+  <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
@@ -306,11 +412,11 @@ export const length = createDualImpl(
  */
 export const max = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
+  <T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.max(a, b as number) as T;
     }
-    return VectorOps.max[a.kind](a, b as AnyNumericVecInstance) as T;
+    return VectorOps.max[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -323,11 +429,11 @@ export const max = createDualImpl(
  */
 export const min = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
+  <T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.min(a, b as number) as T;
     }
-    return VectorOps.min[a.kind](a, b as AnyNumericVecInstance) as T;
+    return VectorOps.min[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
   (a, b) => ({
@@ -476,7 +582,7 @@ export const distance = createDualImpl(
 
 export const neg = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance | number>(value: T): T => {
+  <T extends NumVec | number>(value: T): T => {
     if (typeof value === 'number') {
       return -value as T;
     }
@@ -496,29 +602,4 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => ({ value: `sqrt(${value.value})`, dataType: value.dataType }),
-);
-
-export const div = createDualImpl(
-  // CPU implementation
-  <T extends AnyNumericVecInstance | number>(lhs: T, rhs: T | number): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof rhs === 'number') {
-      return VectorOps.mulSxV[(lhs as AnyNumericVecInstance).kind](
-        1 / rhs,
-        lhs as AnyNumericVecInstance,
-      ) as T;
-    }
-    // Vector / Vector case
-    return VectorOps.div[(lhs as AnyNumericVecInstance).kind](
-      lhs as AnyNumericVecInstance,
-      rhs as AnyNumericVecInstance,
-    ) as T;
-  },
-  // GPU implementation
-  (lhs, rhs) => ({
-    value: `(${lhs.value} / ${rhs.value})`,
-    dataType: lhs.dataType,
-  }),
 );
