@@ -433,7 +433,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     );
   });
 
-  it('resolves array types', () => {
+  it('resolves compound types', () => {
     const getColor = tgpu['~unstable']
       .fn([d.arrayOf(d.u32, 4)], d.u32)(
         /* wgsl */ `(a) {
@@ -451,6 +451,31 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     );
   });
 
+  it('resolves compound types with structs provided in externals', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)], d.u32)(
+        /* wgsl */ `(a) {
+        var b: MyPoint = a[0];
+        return b.a;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      struct P { a: u32, }
+      fn get_color(a: array<P, 4>) -> u32 {
+        var b: P = a[0];
+        return b.a;
+      }
+    `),
+    );
+  });
+
+  // TODO: handle nested structs, which blocks type checking
   // it('throws when parameter type mismatch', () => {
   //   const getColor = tgpu['~unstable']
   //     .fn([d.vec3f])(
@@ -468,6 +493,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   //     `);
   // });
 
+  // TODO: handle nested structs, which blocks type checking
   // it('throws when return type mismatch', () => {
   //   const getColor = tgpu['~unstable']
   //     .fn([], d.vec4f)(
@@ -486,40 +512,42 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   //     `);
   // });
 
-  // it('throws when wrong argument count', () => {
-  //   const getColor = tgpu['~unstable']
-  //     .fn([d.vec3f, d.vec4f])(
-  //       /* wgsl */ `(a, b, c) {
-  //       return;
-  //     }`,
-  //     )
-  //     .$name('get_color');
+  it('throws when wrong argument count', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f, d.vec4f])(
+        /* wgsl */ `(a, b, c) {
+        return;
+      }`,
+      )
+      .$name('get_color');
 
-  //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot(`
-  //       [Error: Resolution of the following tree failed:
-  //       - <root>
-  //       - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments!]
-  //     `);
-  // });
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments!]
+      `);
+  });
 
-  // it('throws when implicitly typed struct is used', () => {
-  //   const Point = d.struct({ a: d.i32 }).$name('struct');
-  //   const getColor = tgpu['~unstable']
-  //     .fn([Point])(
-  //       /* wgsl */ `(a) {
-  //       return;
-  //     }`,
-  //     )
-  //     .$name('get_color');
+  it('resolves implicitly typed struct without externals', () => {
+    const Point = d.struct({ a: d.i32 }).$name('myStruct');
+    const getColor = tgpu['~unstable']
+      .fn([Point])(
+        /* wgsl */ `(a) {
+        return;
+      }`,
+      )
+      .$name('get_color');
 
-  //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot(`
-  //       [Error: Resolution of the following tree failed:
-  //       - <root>
-  //       - fn:get_color: Argument "a" is of struct type and needs to be explicitly typed (any type alias will be correctly bound and resolved).]
-  //     `);
-  // });
+    console.log(parseResolved({ getColor }));
+
+    expect(parseResolved({ getColor })).toBe(parse(`
+      struct myStruct { a: i32, }
+      fn get_color(a: myStruct) {
+        return;
+      }
+      `));
+  });
 
   // TODO: handle nested structs
   // it('throws when implicitly typed struct is used in nested type', () => {

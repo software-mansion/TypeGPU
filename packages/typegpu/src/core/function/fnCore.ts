@@ -77,10 +77,6 @@ export function createFnCore(
         applyExternals(externalMap, externals);
       }
 
-      // AAA załozenia:
-      // - bez atrybutów w fn
-      // - bez nested structów
-
       const id = ctx.names.makeUnique(getName(this));
 
       if (typeof implementation === 'string') {
@@ -110,22 +106,6 @@ export function createFnCore(
               `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments!`,
             );
           }
-
-          // AAA rozwaz poprawienie typu shell base
-          // AAA ctx do tego, i tam check na structa
-          // providedArgs.args.forEach((wgslInfo, i) =>
-          //   checkType(
-          //     wgslInfo.type,
-          //     ctx.resolve((shell.argTypes[i] as any).type),
-          //     `Parameter ${wgslInfo.identifier}`,
-          //   )
-          // );
-
-          // checkType(
-          //   providedArgs.ret?.type,
-          //   ctx.resolve(shell.returnType),
-          //   `Return value`,
-          // );
 
           const input = providedArgs.args.map((argInfo, i) =>
             `${argInfo.identifier}: ${
@@ -232,24 +212,4 @@ export function createFnCore(
   }
 
   return core;
-}
-
-function checkType(
-  wgslType: string | undefined,
-  jsType: string,
-  logName: string,
-) {
-  if (jsType === 'struct') {
-    if (!wgslType) {
-      throw new Error(
-        `${logName} is of struct type and needs to be explicitly typed (any type alias will be correctly bound and resolved).`,
-      );
-    }
-  } else {
-    if (wgslType && wgslType !== jsType) {
-      throw new Error(
-        `Type mismatch between JS and WGSL, ${logName}, types: ${jsType}, ${wgslType}.`,
-      );
-    }
-  }
 }
