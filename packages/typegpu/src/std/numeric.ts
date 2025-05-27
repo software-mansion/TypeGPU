@@ -557,9 +557,7 @@ export const reflect = createDualImpl(
   <T extends AnyFloatVecInstance>(e1: T, e2: T): T =>
     sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
-  (e1, e2) => {
-    return snip(`reflect(${e1.value}, ${e2.value})`, e1.dataType);
-  },
+  (e1, e2) => snip(`reflect(${e1.value}, ${e2.value})`, e1.dataType),
 );
 
 export const distance = createDualImpl(

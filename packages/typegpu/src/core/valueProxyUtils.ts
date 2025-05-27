@@ -1,14 +1,13 @@
 import type { AnyData } from '../data/dataTypes.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
+import {
+  extractGpuValueGetter,
+  type GpuValueGetter,
+} from '../extractGpuValueGetter.ts';
 import { getName } from '../name.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
-import {
-  isBufferUsage,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../types.ts';
-import { isAccessor, isDerived, isSlot } from './slot/slotTypes.ts';
+import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 
 export const valueProxyHandler: ProxyHandler<
   & SelfResolvable
@@ -49,16 +48,16 @@ export const valueProxyHandler: ProxyHandler<
   },
 };
 
-export function unwrapProxy<T>(value: unknown): T {
+export function getGpuValueRecursively<T>(
+  ctx: ResolutionCtx,
+  value: unknown,
+): T {
   let unwrapped = value;
+  let valueGetter: GpuValueGetter | undefined;
 
-  while (
-    isSlot(unwrapped) ||
-    isDerived(unwrapped) ||
-    isAccessor(unwrapped) ||
-    isBufferUsage(unwrapped)
-  ) {
-    unwrapped = unwrapped.value;
+  // biome-ignore lint/suspicious/noAssignInExpressions: it's exactly what we want biome
+  while (valueGetter = extractGpuValueGetter(unwrapped)) {
+    unwrapped = valueGetter(ctx);
   }
 
   return unwrapped as T;

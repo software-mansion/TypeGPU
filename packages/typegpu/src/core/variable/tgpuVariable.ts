@@ -3,7 +3,7 @@ import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../name.ts';
 import { getName, setName } from '../../name.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal, $wgslDataType } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
@@ -100,11 +100,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     return `var:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TDataType> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access tgpu.var's value directly in JS.`);
-    }
-
+  [$gpuValueOf](): Infer<TDataType> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
@@ -113,5 +109,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       },
       valueProxyHandler,
     ) as Infer<TDataType>;
+  }
+
+  get value(): Infer<TDataType> {
+    if (!inGPUMode()) {
+      throw new Error('`tgpu.var` values are only accessible on the GPU');
+    }
+
+    return this[$gpuValueOf]();
   }
 }

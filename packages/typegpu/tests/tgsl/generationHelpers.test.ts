@@ -98,17 +98,15 @@ describe('generationHelpers', () => {
   });
 
   describe('getTypeForPropAccess', () => {
-    const myStruct = struct({
+    const MyStruct = struct({
       foo: f32,
       bar: vec3f,
     });
 
     it('should return struct property types', () => {
-      expect(getTypeForPropAccess(myStruct, 'foo')).toBe(f32);
-      expect(getTypeForPropAccess(myStruct, 'bar')).toBe(vec3f);
-      expect(getTypeForPropAccess(myStruct, 'notfound')).toBe(
-        UnknownData,
-      );
+      expect(getTypeForPropAccess(MyStruct, 'foo')).toBe(f32);
+      expect(getTypeForPropAccess(MyStruct, 'bar')).toBe(vec3f);
+      expect(getTypeForPropAccess(MyStruct, 'notfound')).toBe(UnknownData);
     });
 
     it('should return swizzle types on vectors', () => {

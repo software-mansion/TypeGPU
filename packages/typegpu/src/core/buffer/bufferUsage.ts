@@ -7,6 +7,7 @@ import { getName, setName } from '../../name.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
+  $gpuValueOf,
   $internal,
   $wgslDataType,
 } from '../../shared/symbols.ts';
@@ -127,11 +128,7 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
-    }
-
+  [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
@@ -140,6 +137,14 @@ class TgpuFixedBufferImpl<
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
+  }
+
+  get value(): InferGPU<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+
+    return this[$gpuValueOf]();
   }
 }
 export class TgpuLaidOutBufferImpl<
@@ -178,11 +183,7 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
-    }
-
+  [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
@@ -191,6 +192,14 @@ export class TgpuLaidOutBufferImpl<
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
+  }
+
+  get value(): InferGPU<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+
+    return this[$gpuValueOf]();
   }
 }
 
