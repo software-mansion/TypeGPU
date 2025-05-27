@@ -120,7 +120,7 @@
     "typegpu": "workspace:^0.5.7"
   },
   "devDependencies": {
-    "@babel/template": "^7.25.9",
+    "@babel/template": "^7.27.2",
     "@babel/types": "^7.26.5",
     "@rollup/plugin-virtual": "^3.0.2",
     "@typegpu/tgpu-dev-cli": "workspace:*",

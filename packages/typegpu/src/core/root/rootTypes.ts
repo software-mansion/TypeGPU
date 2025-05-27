@@ -1,4 +1,4 @@
-import type { OmitBuiltins } from '../../builtin.ts';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import type { JitTranspiler } from '../../jitTranspiler.ts';
@@ -24,15 +24,18 @@ import type {
   TgpuBufferUsage,
   TgpuFixedBufferUsage,
 } from '../buffer/bufferUsage.ts';
-import type { IOLayout, IORecord } from '../function/fnTypes.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type {
+  TgpuVertexFn,
+  VertexInConstrained,
+  VertexOutConstrained,
+} from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
@@ -42,6 +45,7 @@ import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
+import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 
 // ----------
 // Public API
@@ -113,9 +117,14 @@ export interface WithBinding {
     value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding;
 
-  withCompute(entryFn: TgpuComputeFn): WithCompute;
+  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute;
 
-  withVertex<VertexIn extends IOLayout, VertexOut extends IORecord>(
+  withVertex<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+  >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;
