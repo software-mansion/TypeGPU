@@ -54,11 +54,11 @@ function functionToTranspiled(
     return null;
   }
 
-  const { argNames, body, externalNames } = transpileFn(node);
+  const { params, body, externalNames } = transpileFn(node);
 
   const metadata = `{
     v: ${FORMAT_VERSION},
-    ast: ${embedJSON({ argNames, body, externalNames })},
+    ast: ${embedJSON({ params, body, externalNames })},
     externals: {${externalNames.join(', ')}},
   }`;
 

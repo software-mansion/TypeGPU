@@ -308,12 +308,12 @@ describe('wgslGenerator', () => {
     );
 
     if (
-      astInfo.ast?.argNames.filter((arg) => arg.type !== 'i').length > 0
+      astInfo.ast!.params.filter((arg) => arg.type !== 'i').length > 0
     ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast?.params.map((arg) => ({
+    const args = astInfo.ast!.params.map((arg) => ({
       value: (arg as { type: 'i'; name: string }).name,
       dataType: d.u32,
     }));

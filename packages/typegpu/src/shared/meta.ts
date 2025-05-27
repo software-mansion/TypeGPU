@@ -1,11 +1,11 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import { $getNameForward } from './symbols.ts';
 
 export interface MetaData {
   name?: string | undefined;
   ast?: {
     v: number;
-    argNames: ArgNames;
+    params: FuncParameter[];
     body: Block;
     externalNames: string[];
   } | undefined;
