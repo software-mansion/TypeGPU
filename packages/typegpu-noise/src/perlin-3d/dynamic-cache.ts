@@ -61,22 +61,22 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  * Used to instantiate caches for perlin noise generation, which reduce the amount of redundant calculations
  * if sampling is done more than once. Their domain can be changed at runtime, which makes this cache
  * *dynamic* (as opposed to `perlin3d.staticCache`, which is simpler at the cost of rigidity).
- * 
+ *
  * @param options A set of general options for instances of this cache configuration.
- * 
+ *
  * ### Basic usage
  * @example
  * ```ts
  * const PerlinCacheConfig = perlin3d.dynamicCacheConfig();
  * // Contains all resources that the perlin cache needs access to
  * const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
- * 
+ *
  * // ...
- * 
+ *
  * const root = await tgpu.init();
  * // Instantiating the cache with an initial size.
  * const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(10, 10, 1));
- * 
+ *
  * const pipeline = root
  *   // Plugging the cache into the pipeline
  *   .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
@@ -84,11 +84,11 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();
- * 
+ *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
  *   const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
- *   
+ *
  *   pipeline
  *     .with(dynamicLayout, group)
  *     // ...
@@ -103,7 +103,7 @@ export function dynamicCacheConfig(
      * resource this cache operates on
      * @default 'perlin3dCache__'
      */
-    prefix?: undefined,
+    prefix?: undefined;
   },
 ): DynamicPerlin3DCacheConfig<typeof DefaultPerlin3DLayoutPrefix>;
 
@@ -114,7 +114,7 @@ export function dynamicCacheConfig<Prefix extends string>(
      * resource this cache operates on
      * @default 'perlin3dCache__'
      */
-    prefix: Prefix
+    prefix: Prefix;
   },
 ): DynamicPerlin3DCacheConfig<Prefix>;
 
