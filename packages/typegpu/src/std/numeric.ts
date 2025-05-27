@@ -155,29 +155,6 @@ export const acos = createDualImpl(
   (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
 );
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#acosh-builtin
- */
-export const acosh = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.acosh(value) as T;
-    }
-    // @ts-expect-error Property 'acosh' does not exist on type 'VectorOpsDefs'.
-    return VectorOps.acosh[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
-  },
-  // GPU implementation
-  (value) => ({ value: `acosh(${value.value})`, dataType: value.dataType }),
-);
-
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#asin-builtin
- */
 export const asin = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
@@ -247,23 +224,6 @@ export const cos = createDualImpl(
   },
   // GPU implementation
   (value) => ({ value: `cos(${value.value})`, dataType: value.dataType }),
-);
-
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#cosh-builtin
- */
-export const cosh = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.cosh(value) as T;
-    }
-    // @ts-expect-error Property 'cosh' does not exist on type 'VectorOpsDefs'.
-    return VectorOps.cosh[value.kind](value) as T;
-  },
-  // GPU implementation
-  (value) => ({ value: `cosh(${value.value})`, dataType: value.dataType }),
 );
 
 /**
