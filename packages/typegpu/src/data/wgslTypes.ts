@@ -614,6 +614,7 @@ export interface matBase<TColumn> extends NumberArrayView {
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -632,6 +633,7 @@ export interface m2x2f extends mat2x2<v2f> {
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -650,6 +652,12 @@ export interface m3x3f extends mat3x3<v3f> {
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
   readonly kind: string;
+  /* override */ readonly columns: readonly [
+    TColumn,
+    TColumn,
+    TColumn,
+    TColumn,
+  ];
   [n: number]: number;
 }
 
@@ -993,8 +1001,8 @@ export interface Mat2x2f {
   readonly type: 'mat2x2f';
   readonly [$repr]: m2x2f;
 
-  (...elements: number[]): m2x2f;
-  (...columns: v2f[]): m2x2f;
+  (...elements: [number, number, number, number]): m2x2f;
+  (...columns: [v2f, v2f]): m2x2f;
   (): m2x2f;
 }
 
@@ -1006,8 +1014,9 @@ export interface Mat3x3f {
   readonly type: 'mat3x3f';
   readonly [$repr]: m3x3f;
 
-  (...elements: number[]): m3x3f;
-  (...columns: v3f[]): m3x3f;
+  // deno-fmt-ignore
+  (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
+  (...columns: [v3f, v3f, v3f]): m3x3f;
   (): m3x3f;
 }
 
@@ -1019,8 +1028,9 @@ export interface Mat4x4f {
   readonly type: 'mat4x4f';
   readonly [$repr]: m4x4f;
 
-  (...elements: number[]): m4x4f;
-  (...columns: v4f[]): m4x4f;
+  // deno-fmt-ignore
+  (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
+  (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
   (): m4x4f;
 }
 
