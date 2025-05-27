@@ -19,7 +19,7 @@ export const projectPointOnLine = tgpu['~unstable'].fn(
 export const PosAndNormal = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
-});
+}).$name('PosAndNormal');
 
 export const applySinWave = tgpu['~unstable'].fn(
   [d.u32, PosAndNormal, d.f32],

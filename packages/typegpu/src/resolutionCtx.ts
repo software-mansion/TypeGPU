@@ -10,7 +10,13 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { type AnyData, isData } from './data/dataTypes.ts';
+import {
+  type AnyData,
+  isData,
+  snip,
+  type Snippet,
+  type UnknownData,
+} from './data/dataTypes.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
 import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
@@ -33,10 +39,9 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  Snippet,
   Wgsl,
 } from './types.ts';
-import { isSelfResolvable, isWgsl, type UnknownData } from './types.ts';
+import { isSelfResolvable, isWgsl } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -213,7 +218,7 @@ class ItemStateStackImpl implements ItemStateStack {
       if (layer?.type === 'blockScope') {
         const declarationType = layer.declarations.get(id);
         if (declarationType !== undefined) {
-          return { value: id, dataType: declarationType };
+          return snip(id, declarationType);
         }
       } else {
         // Skip
@@ -224,13 +229,17 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
+    if (type.type === 'unknown') {
+      throw Error(`Tried to define variable '${id}' of unknown type`);
+    }
+
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
       if (layer?.type === 'blockScope') {
         layer.declarations.set(id, type);
 
-        return { value: id, dataType: type };
+        return snip(id, type);
       }
     }
 
