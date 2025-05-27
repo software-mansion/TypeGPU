@@ -9,6 +9,7 @@ import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   computeBindGroupLayout,
+  FishBehaviorParams,
   Line3,
   type ModelData,
   ModelDataArray,
@@ -19,6 +20,7 @@ import {
 } from './schemas.ts';
 
 // setup
+let speedMultiplier = 1;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -32,6 +34,32 @@ context.configure({
 });
 
 // models and textures
+
+const presets = {
+  default: {
+    separationDist: 0.3,
+    separationStr: 0.0006,
+    alignmentDist: 0.3,
+    alignmentStr: 0.005,
+    cohesionDist: 0.5,
+    cohesionStr: 0.0004,
+  },
+  init: {
+    separationDist: 0.2,
+    separationStr: 0.1,
+    alignmentDist: 0.5,
+    alignmentStr: 1,
+    cohesionDist: 0.3,
+    cohesionStr: 0.013,
+  },
+} as const;
+
+const currentPreset: keyof typeof presets = 'init';
+
+const spinner = document.getElementById('spinner') as HTMLDivElement;
+const spinnerBackground = document.getElementById(
+  'spinner-background',
+) as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
@@ -54,7 +82,21 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'vertex')
-    .$name(`fish data buffer ${idx}`));
+    .$name(`fish data ${idx}`));
+
+function enqueuePresetChanges() {
+  speedMultiplier = 3;
+
+  spinnerBackground.style.display = 'block';
+
+  fishBehaviorBuffer.write(presets.init);
+
+  setTimeout(() => {
+    fishBehaviorBuffer.write(presets.default);
+    spinnerBackground.style.display = 'none';
+    speedMultiplier = 1;
+  }, 300);
+}
 
 const randomizeFishPositions = () => {
   const positions: d.Infer<typeof ModelData>[] = Array.from(
@@ -79,8 +121,8 @@ const randomizeFishPositions = () => {
   );
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
+  enqueuePresetChanges();
 };
-randomizeFishPositions();
 
 const camera = {
   position: p.cameraInitialPosition,
@@ -103,7 +145,7 @@ const camera = {
 const cameraBuffer = root
   .createBuffer(Camera, camera)
   .$usage('uniform')
-  .$name('camera buffer');
+  .$name('camera');
 
 const mouseRayBuffer = root
   .createBuffer(MouseRay, {
@@ -111,17 +153,22 @@ const mouseRayBuffer = root
     line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
   })
   .$usage('uniform')
-  .$name('mouse buffer');
+  .$name('mouse');
 
 const timePassedBuffer = root
   .createBuffer(d.f32)
   .$usage('uniform')
-  .$name('time passed buffer');
+  .$name('time passed');
 
 const currentTimeBuffer = root
   .createBuffer(d.f32)
   .$usage('uniform')
-  .$name('current time buffer');
+  .$name('current time');
+
+const fishBehaviorBuffer = root
+  .createBuffer(FishBehaviorParams, presets.default)
+  .$usage('uniform')
+  .$name('fish behavior');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -136,7 +183,9 @@ const oceanFloorDataBuffer = root
     },
   ])
   .$usage('storage', 'vertex')
-  .$name('ocean floor buffer');
+  .$name('ocean floor');
+
+randomizeFishPositions();
 
 // pipelines
 
@@ -150,7 +199,7 @@ const renderPipeline = root['~unstable']
   })
   .withPrimitive({ topology: 'triangle-list' })
   .createPipeline()
-  .$name('render pipeline');
+  .$name('render');
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -161,7 +210,7 @@ let depthTexture = root.device.createTexture({
 const computePipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
-  .$name('compute pipeline');
+  .$name('compute');
 
 // bind groups
 
@@ -196,6 +245,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
+    fishBehavior: fishBehaviorBuffer,
   })
 );
 
@@ -212,7 +262,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   odd = !odd;
 
   currentTimeBuffer.write(timestamp);
-  timePassedBuffer.write(timestamp - lastTimestamp);
+  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
@@ -270,6 +320,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   requestAnimationFrame(frame);
 }
+enqueuePresetChanges();
 requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
