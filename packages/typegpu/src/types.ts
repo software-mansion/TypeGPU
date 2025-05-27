@@ -39,7 +39,7 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import type { Infer } from './shared/repr.ts';
+import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
@@ -144,7 +144,10 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: unknown): string;
-  resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
+  resolveValue<T extends BaseData>(
+    value: Infer<T> | InferGPU<T>,
+    schema: T,
+  ): string;
 
   transpileFn(fn: string): {
     argNames: ArgNames;
