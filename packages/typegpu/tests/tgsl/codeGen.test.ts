@@ -25,11 +25,12 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(
-          'fn main() -> f32 { var size = vec3f(1, 2, 3); return ((size.x * size.y) * size.z); }',
-        ),
-      );
+      expect(parseResolved({ main })).toBe(parse(`
+        fn main() -> f32 {
+          var size = vec3f(1, 2, 3);
+          return ((size.x * size.y) * size.z);
+        }
+      `));
     });
   });
 });
