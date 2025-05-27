@@ -5,7 +5,6 @@ import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
-  AnyMatInstance,
   AnyWgslData,
   m2x2f,
   m3x3f,
@@ -164,9 +163,7 @@ abstract class mat2x2Impl<TColumn extends v2f>
 }
 export const identity4x4 = createDualImpl(
   // CPU implementation
-  () => {
-    return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-  },
+  () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
   // GPU implementation
   () => ({
     value: `mat4x4<f32>(
@@ -181,9 +178,7 @@ export const identity4x4 = createDualImpl(
 
 export const identity3x3 = createDualImpl(
   // CPU implementation
-  () => {
-    return mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
-  },
+  () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
   // GPU implementation
   () => ({
     value: `mat4x4<f32>(
@@ -197,9 +192,7 @@ export const identity3x3 = createDualImpl(
 
 export const identity2x2 = createDualImpl(
   // CPU implementation
-  () => {
-    return mat2x2f(1, 0, 0, 1);
-  },
+  () => mat2x2f(1, 0, 0, 1),
   // GPU implementation
   () => ({
     value: `mat4x4<f32>(
@@ -209,7 +202,7 @@ export const identity2x2 = createDualImpl(
     dataType: mat2x2f,
   }),
 );
-const IdentityFunctions: Record<number, () => AnyMatInstance> = {
+const IdentityFunctions = {
   2: identity2x2,
   3: identity3x3,
   4: identity4x4,

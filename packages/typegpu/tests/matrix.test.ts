@@ -384,15 +384,15 @@ describe('mat4x4f', () => {
   });
 });
 
-describe('Tests identity matrx', () => {
+describe('identity matrix', () => {
   it('returns identity matrix of size 4x4', () => {
-    expect(d.mat4x4f.identity()).toEqual(
+    expect(d.mat4x4f.identity()).toStrictEqual(
       d.mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
     );
   });
 
   it('returns identity matrix of size 4x4', () => {
-    expect(d.mat4x4f.identity()).toEqual(
+    expect(d.mat4x4f.identity()).toStrictEqual(
       d.mat4x4f(
         d.vec4f(1, 0, 0, 0),
         d.vec4f(0, 1, 0, 0),
@@ -403,18 +403,20 @@ describe('Tests identity matrx', () => {
   });
 
   it('returns identity matrix of size 3x3', () => {
-    expect(d.mat3x3f.identity()).toEqual(d.mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1));
+    expect(d.mat3x3f.identity()).toStrictEqual(
+      d.mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
+    );
   });
   it('returns identity matrix of size 3x3', () => {
-    expect(d.mat3x3f.identity()).toEqual(
+    expect(d.mat3x3f.identity()).toStrictEqual(
       d.mat3x3f(d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)),
     );
   });
   it('returns identity matrix of size 2x2', () => {
-    expect(d.mat2x2f.identity()).toEqual(d.mat2x2f(1, 0, 0, 1));
+    expect(d.mat2x2f.identity()).toStrictEqual(d.mat2x2f(1, 0, 0, 1));
   });
   it('returns identity matrix of size 2x2', () => {
-    expect(d.mat2x2f.identity()).toEqual(
+    expect(d.mat2x2f.identity()).toStrictEqual(
       d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1)),
     );
   });
