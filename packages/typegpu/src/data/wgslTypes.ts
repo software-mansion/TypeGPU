@@ -13,7 +13,7 @@ import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
-type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
+type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface NumberArrayView {
   readonly length: number;
@@ -574,6 +574,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   w: boolean;
 }
 
+export type AnyFloat32VecInstance = v2f | v3f | v4f;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -672,6 +674,11 @@ export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
   : v4f;
+
+export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+  : T extends v3f ? m3x3f
+  : T extends v4f ? m4x4f
+  : never;
 
 // #endregion
 
@@ -1132,7 +1139,7 @@ export interface Size<T extends number> {
   readonly value: T;
 }
 
-export interface Location<T extends number> {
+export interface Location<T extends number = number> {
   readonly [$internal]: true;
   readonly type: '@location';
   readonly value: T;
@@ -1146,7 +1153,7 @@ export type InterpolationType =
   | PerspectiveOrLinearInterpolationType
   | FlatInterpolationType;
 
-export interface Interpolate<T extends InterpolationType> {
+export interface Interpolate<T extends InterpolationType = InterpolationType> {
   readonly [$internal]: true;
   readonly type: '@interpolate';
   readonly value: T;
@@ -1169,7 +1176,7 @@ export interface Decorated<
   readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
-  readonly '~memIdent': TAttribs extends Location<number>[]
+  readonly '~memIdent': TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
 }
@@ -1345,6 +1352,27 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
+export function isVecInstance(
+  element: number | AnyVecInstance | AnyMatInstance,
+): element is AnyVecInstance {
+  return typeof element !== 'number' && $internal in element &&
+    'kind' in element && element.kind.startsWith('vec');
+}
+
+export function isFloat32VecInstance(
+  element: number | AnyVecInstance | AnyMatInstance,
+): element is AnyFloat32VecInstance {
+  return isVecInstance(element) &&
+    ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
+}
+
+export function isMatInstance(
+  element: number | AnyVecInstance | AnyMatInstance,
+): element is AnyMatInstance {
+  return typeof element !== 'number' && $internal in element &&
+    'kind' in element && element.kind.startsWith('mat');
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {

@@ -108,7 +108,7 @@ export type IsBuiltin<T> = ExtractAttributes<T>[number] extends [] ? false
 
 export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
   ? false
-  : ExtractAttributes<T>[number] extends Location<number> ? true
+  : ExtractAttributes<T>[number] extends Location ? true
   : false;
 
 export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
@@ -359,7 +359,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'decorated';
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
-  public readonly '~memIdent'!: TAttribs extends Location<number>[]
+  public readonly '~memIdent'!: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
 }
