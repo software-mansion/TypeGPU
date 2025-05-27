@@ -79,10 +79,10 @@ importers:
         version: 0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))
       '@astrojs/starlight-tailwind':
         specifier: ^4.0.1
-        version: 4.0.1(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(tailwindcss@4.1.6)
+        version: 4.0.1(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(tailwindcss@4.1.7)
       '@astrojs/tailwind':
         specifier: ^6.0.2
-        version: 6.0.2(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))(tailwindcss@4.1.6)
+        version: 6.0.2(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))(tailwindcss@4.1.7)
       '@loaders.gl/core':
         specifier: ^4.3.3
         version: 4.3.3
@@ -214,11 +214,11 @@ importers:
         specifier: ^10.4.16
         version: 10.4.20(postcss@8.5.3)
       tailwindcss:
-        specifier: ^4.1.6
-        version: 4.1.6
+        specifier: ^4.1.7
+        version: 4.1.7
       tailwindcss-motion:
         specifier: ^1.0.1
-        version: 1.1.0(tailwindcss@4.1.6)
+        version: 1.1.0(tailwindcss@4.1.7)
       yaml:
         specifier: ^2.7.0
         version: 2.7.0
@@ -4889,6 +4889,9 @@ packages:
   tailwindcss@4.1.6:
     resolution: {integrity: sha512-j0cGLTreM6u4OWzBeLBpycK0WIh8w7kSwcUsQZoGLHZ7xDTdM69lN64AgoIEEwFi0tnhs4wSykUa5YWxAzgFYg==}
 
+  tailwindcss@4.1.7:
+    resolution: {integrity: sha512-kr1o/ErIdNhTz8uzAYL7TpaUuzKIE6QPQ4qmSdxnoX/lo+5wmUHQA6h3L5yIqEImSRnAAURDirLu/BgiXGPAhg==}
+
   tapable@2.2.1:
     resolution: {integrity: sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==}
     engines: {node: '>=6'}
@@ -5782,10 +5785,10 @@ snapshots:
       stream-replace-string: 2.0.0
       zod: 3.24.3
 
-  '@astrojs/starlight-tailwind@4.0.1(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(tailwindcss@4.1.6)':
+  '@astrojs/starlight-tailwind@4.0.1(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(tailwindcss@4.1.7)':
     dependencies:
       '@astrojs/starlight': 0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))
-      tailwindcss: 4.1.6
+      tailwindcss: 4.1.7
 
   '@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))':
     dependencies:
@@ -5820,13 +5823,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@astrojs/tailwind@6.0.2(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))(tailwindcss@4.1.6)':
+  '@astrojs/tailwind@6.0.2(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))(tailwindcss@4.1.7)':
     dependencies:
       astro: 5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)
       autoprefixer: 10.4.21(postcss@8.5.3)
       postcss: 8.5.3
       postcss-load-config: 4.0.2(postcss@8.5.3)
-      tailwindcss: 4.1.6
+      tailwindcss: 4.1.7
     transitivePeerDependencies:
       - ts-node
 
@@ -10425,11 +10428,13 @@ snapshots:
       csso: 5.0.5
       picocolors: 1.1.1
 
-  tailwindcss-motion@1.1.0(tailwindcss@4.1.6):
+  tailwindcss-motion@1.1.0(tailwindcss@4.1.7):
     dependencies:
-      tailwindcss: 4.1.6
+      tailwindcss: 4.1.7
 
   tailwindcss@4.1.6: {}
+
+  tailwindcss@4.1.7: {}
 
   tapable@2.2.1: {}
 
