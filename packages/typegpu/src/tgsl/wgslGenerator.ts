@@ -337,6 +337,13 @@ export function generateExpression(
           .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
 
       convertedResources = pairs.map(([type, sn]) => {
+        if (sn.dataType.type === 'unknown') {
+          console.warn(
+            `Internal error: unknown type when generating expression: ${expression}`,
+          );
+          return sn;
+        }
+
         const conv = convertToCommonType(ctx, [sn], [type])?.[0];
         if (!conv) {
           throw new Error(

@@ -179,6 +179,7 @@ describe('wgslGenerator', () => {
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -245,6 +246,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -306,14 +308,19 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
-    if (astInfo.ast.argNames.type !== 'identifiers') {
+    if (
+      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
+    ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast.argNames.names.map((name) => snip(name, d.u32));
+    const args = astInfo.ast.params.map((arg) =>
+      snip((arg as { type: 'i'; name: string }).name, d.u32)
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
+      {},
       d.vec4f,
       astInfo.externals ?? {},
     );
@@ -452,6 +459,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.vec4u,
       astInfo.externals ?? {},
     );
@@ -487,6 +495,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [snip('idx', d.u32)],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -529,6 +538,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -605,6 +615,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -695,6 +706,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -744,6 +756,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );

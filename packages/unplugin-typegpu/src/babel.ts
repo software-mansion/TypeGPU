@@ -50,7 +50,7 @@ function functionToTranspiled(
     return null;
   }
 
-  const { argNames, body, externalNames } = transpileFn(node);
+  const { params, body, externalNames } = transpileFn(node);
   const tgpuAlias = ctx.tgpuAliases.values().next().value;
   if (tgpuAlias === undefined) {
     throw new Error(
@@ -68,7 +68,7 @@ function functionToTranspiled(
         : template.expression`${tgpuAlias}.__removedJsImpl(${
           name ? `"${name}"` : ''
         })`(),
-      template.expression`${embedJSON({ argNames, body, externalNames })}`(),
+      template.expression`${embedJSON({ params, body, externalNames })}`(),
       types.objectExpression(
         externalNames.map((name) =>
           types.objectProperty(types.identifier(name), types.identifier(name))
@@ -147,7 +147,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
           (implementation.type === 'FunctionExpression' ||
             implementation.type === 'ArrowFunctionExpression')
         ) {
-          const { argNames, body, externalNames } = transpileFn(implementation);
+          const { params, body, externalNames } = transpileFn(implementation);
           const tgpuAlias = ctx.tgpuAliases.values().next().value;
           if (tgpuAlias === undefined) {
             throw new Error(
@@ -168,7 +168,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
                     ? template.expression`${tgpuAlias}.__removedJsImpl()`()
                     : implementation,
                   template.expression`${
-                    embedJSON({ argNames, body, externalNames })
+                    embedJSON({ params, body, externalNames })
                   }`(),
                   types.objectExpression(
                     externalNames.map((name) =>

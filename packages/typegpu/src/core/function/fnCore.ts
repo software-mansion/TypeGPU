@@ -1,7 +1,9 @@
+import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AnyData, snip, type Snippet } from '../../data/dataTypes.ts';
+import { snip } from '../../data/dataTypes.ts';
 import {
   type AnyWgslData,
+  type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
   Void,
@@ -120,37 +122,38 @@ export function createFnCore(
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 
-        if (ast.argNames.type === 'destructured-object') {
-          applyExternals(
-            externalMap,
-            Object.fromEntries(
-              ast.argNames.props.map(({ prop, alias }) => [alias, prop]),
-            ),
-          );
-        }
-
-        // Verifying all required externals are present.
+        // verify all required externals are present
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
         );
-
         if (missingExternals.length > 0) {
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        const args: Snippet[] = ast.argNames.type === 'identifiers'
-          ? shell.argTypes.map((arg, i) =>
-            snip(
-              (ast.argNames.type === 'identifiers'
-                ? ast.argNames.names[i]
-                : undefined) ?? `arg_${i}`,
-              arg as AnyData,
-            )
-          )
-          : [];
-
+        // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
-          args,
+          args: shell.argTypes.map((arg, i) =>
+            snip(
+              ast.params[i]?.type === FuncParameterType.identifier
+                ? ast.params[i].name
+                : `_arg_${i}`,
+              arg as AnyWgslData,
+            )
+          ),
+          argAliases: Object.fromEntries(
+            ast.params.flatMap((param, i) =>
+              param.type === FuncParameterType.destructuredObject
+                ? param.props.map(({ name, alias }) => [
+                  alias,
+                  snip(
+                    `_arg_${i}.${name}`,
+                    (shell.argTypes[i] as AnyWgslStruct)
+                      .propTypes[name] as AnyWgslData,
+                  ),
+                ])
+                : []
+            ),
+          ),
           returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,
