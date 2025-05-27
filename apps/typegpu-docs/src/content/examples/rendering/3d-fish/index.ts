@@ -54,7 +54,7 @@ const presets = {
   },
 } as const;
 
-let currentPreset: keyof typeof presets = 'init';
+const currentPreset: keyof typeof presets = 'init';
 
 const spinner = document.getElementById('spinner') as HTMLDivElement;
 const spinnerBackground = document.getElementById(
@@ -87,12 +87,13 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
 function enqueuePresetChanges() {
   speedMultiplier = 3;
 
-  currentPreset = 'init';
   spinner.style.display = 'block';
   spinnerBackground.style.display = 'block';
 
+  fishBehaviorBuffer.write(presets.init);
+
   setTimeout(() => {
-    currentPreset = 'default';
+    fishBehaviorBuffer.write(presets.default);
     spinner.style.display = 'none';
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
@@ -265,7 +266,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
   timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
-  fishBehaviorBuffer.write(presets[currentPreset]);
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
