@@ -347,8 +347,15 @@ export function ControlPanel() {
 
         {currentExample && currentExample in examples
           ? (
-            <Button onClick={() => openInStackBlitz(examples[currentExample])}>
-              Edit on StackBlitz
+            <Button
+              onClick={() => openInStackBlitz(examples[currentExample])}
+            >
+              <span className='font-bold'>Edit on</span>
+              <img
+                src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
+                alt='stackblitz logo'
+                className='w-22'
+              />
             </Button>
           )
           : null}
