@@ -10,7 +10,7 @@ import type {
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import { $repr } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -25,6 +25,12 @@ export interface BaseData {
   readonly [$internal]: true;
   readonly type: string;
   readonly [$repr]: unknown;
+}
+
+export function hasInternalDataType(
+  value: unknown,
+): value is { [$wgslDataType]: BaseData } {
+  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
 }
 
 export type ExtractTypeLabel<T extends BaseData> = T['type'];

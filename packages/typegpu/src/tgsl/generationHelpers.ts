@@ -41,6 +41,7 @@ import {
   type AnyWgslStruct,
   type F16,
   type F32,
+  hasInternalDataType,
   type I32,
   isMat,
   isMatInstance,
@@ -55,7 +56,7 @@ import { getResolutionCtx } from '../gpuMode.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
-import { hasInternalDataType, type ResolutionCtx } from '../types.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
