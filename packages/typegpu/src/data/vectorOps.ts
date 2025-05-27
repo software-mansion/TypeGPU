@@ -500,8 +500,8 @@ export const VectorOps = {
     vec4u: binaryComponentWise4u((a, b) => a * b),
 
     mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
-      const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
-      const b_ = b.columns as [wgsl.v2f, wgsl.v2f];
+      const a_ = a.columns;
+      const b_ = b.columns;
 
       return mat2x2f(
         a_[0].x * b_[0].x + a_[1].x * b_[0].y,
@@ -512,8 +512,8 @@ export const VectorOps = {
     },
 
     mat3x3f: (a: wgsl.m3x3f, b: wgsl.m3x3f) => {
-      const a_ = a.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
-      const b_ = b.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      const a_ = a.columns;
+      const b_ = b.columns;
 
       return mat3x3f(
         a_[0].x * b_[0].x + a_[1].x * b_[0].y + a_[2].x * b_[0].z,
@@ -529,8 +529,8 @@ export const VectorOps = {
     },
 
     mat4x4f: (a: wgsl.m4x4f, b: wgsl.m4x4f) => {
-      const a_ = a.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
-      const b_ = b.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      const a_ = a.columns;
+      const b_ = b.columns;
 
       return mat4x4f(
         a_[0].x * b_[0].x +
@@ -606,7 +606,7 @@ export const VectorOps = {
 
   mulMxV: {
     mat2x2f: (m: wgsl.m2x2f, v: wgsl.v2f) => {
-      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
+      const m_ = m.columns;
       return vec2f(
         m_[0].x * v.x + m_[1].x * v.y,
         m_[0].y * v.x + m_[1].y * v.y,
@@ -614,7 +614,7 @@ export const VectorOps = {
     },
 
     mat3x3f: (m: wgsl.m3x3f, v: wgsl.v3f) => {
-      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      const m_ = m.columns;
       return vec3f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z,
         m_[0].y * v.x + m_[1].y * v.y + m_[2].y * v.z,
@@ -623,7 +623,7 @@ export const VectorOps = {
     },
 
     mat4x4f: (m: wgsl.m4x4f, v: wgsl.v4f) => {
-      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      const m_ = m.columns;
       return vec4f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z + m_[3].x * v.w,
         m_[0].y * v.x + m_[1].y * v.y + m_[2].y * v.z + m_[3].y * v.w,
@@ -641,7 +641,7 @@ export const VectorOps = {
 
   mulVxM: {
     mat2x2f: (v: wgsl.v2f, m: wgsl.m2x2f) => {
-      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
+      const m_ = m.columns;
       return vec2f(
         v.x * m_[0].x + v.y * m_[0].y,
         v.x * m_[1].x + v.y * m_[1].y,
@@ -649,7 +649,7 @@ export const VectorOps = {
     },
 
     mat3x3f: (v: wgsl.v3f, m: wgsl.m3x3f) => {
-      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      const m_ = m.columns;
       return vec3f(
         v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z,
         v.x * m_[1].x + v.y * m_[1].y + v.z * m_[1].z,
@@ -658,7 +658,7 @@ export const VectorOps = {
     },
 
     mat4x4f: (v: wgsl.v4f, m: wgsl.m4x4f) => {
-      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      const m_ = m.columns;
       return vec4f(
         v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z + v.w * m_[0].w,
         v.x * m_[1].x + v.y * m_[1].y + v.z * m_[1].z + v.w * m_[1].w,
