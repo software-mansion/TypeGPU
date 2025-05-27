@@ -1,6 +1,7 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
+import { FuncParameterType } from 'tinyest';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -378,7 +379,7 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
 }
 
 export type TranspilationResult = {
-  argNames: tinyest.ArgNames;
+  params: tinyest.FuncParameter[];
   body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the
@@ -388,7 +389,7 @@ export type TranspilationResult = {
 };
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.ArgNames;
+  params: tinyest.FuncParameter[];
   body:
     | acorn.BlockStatement
     | acorn.Expression
@@ -452,48 +453,60 @@ export function extractFunctionParts(rootNode: JsNode): {
     throw new Error('tgpu.fn cannot be a generator');
   }
 
-  // destructured object argument
-  if (
-    functionNode.params[0] &&
-    functionNode.params[0].type === 'ObjectPattern'
-  ) {
-    return {
-      params: {
-        type: 'destructured-object',
-        props: functionNode.params[0].properties.flatMap((prop) =>
-          (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-            prop.key.type === 'Identifier' &&
-            prop.value.type === 'Identifier'
-            ? [{ prop: prop.key.name, alias: prop.value.name }]
-            : []
-        ),
-      },
-      body: functionNode.body,
-    };
+  const unsupportedTypes = new Set(
+    functionNode.params.flatMap((param) =>
+      param.type === 'ObjectPattern' || param.type === 'Identifier'
+        ? []
+        : [param.type]
+    ),
+  );
+  if (unsupportedTypes.size > 0) {
+    throw new Error(
+      `Unsupported function parameter type(s): ${[...unsupportedTypes]}`,
+    );
   }
 
   return {
-    params: {
-      type: 'identifiers',
-      names: functionNode.params.flatMap((x) =>
-        x.type === 'Identifier' ? [x.name] : []
+    params: (functionNode
+      .params as (
+        | babel.Identifier
+        | acorn.Identifier
+        | babel.ObjectPattern
+        | acorn.ObjectPattern
+      )[]).map((param) =>
+        param.type === 'ObjectPattern'
+          ? {
+            type: FuncParameterType.destructuredObject,
+            props: param.properties.flatMap((prop) =>
+              (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
+                prop.key.type === 'Identifier' &&
+                prop.value.type === 'Identifier'
+                ? [{ name: prop.key.name, alias: prop.value.name }]
+                : []
+            ),
+          }
+          : {
+            type: FuncParameterType.identifier,
+            name: param.name,
+          }
       ),
-    },
     body: functionNode.body,
   };
 }
 
 export function transpileFn(rootNode: JsNode): TranspilationResult {
-  const { params: argNames, body } = extractFunctionParts(rootNode);
+  const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
     stack: [
       {
-        declaredNames: argNames.type === 'identifiers'
-          ? argNames.names
-          : argNames.props.map((prop) => prop.alias),
+        declaredNames: params.flatMap((param) =>
+          param.type === FuncParameterType.identifier
+            ? param.name
+            : param.props.map((prop) => prop.alias)
+        ),
       },
     ],
   };
@@ -503,14 +516,14 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 
   if (body.type === 'BlockStatement') {
     return {
-      argNames,
+      params,
       body: tinyestBody as tinyest.Block,
       externalNames,
     };
   }
 
   return {
-    argNames,
+    params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
     externalNames,
   };

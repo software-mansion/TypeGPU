@@ -1,4 +1,4 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -74,6 +74,7 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   args: Snippet[];
+  argAliases: Record<string, Snippet>;
   returnType: AnyData;
   body: Block;
   externalMap: Record<string, unknown>;
@@ -94,6 +95,7 @@ export interface ItemStateStack {
   popSlotBindings(): void;
   pushFunctionScope(
     args: Snippet[],
+    argAliases: Record<string, Snippet>,
     returnType: AnyData,
     externalMap: Record<string, unknown>,
   ): void;
@@ -149,7 +151,7 @@ export interface ResolutionCtx {
   ): string;
 
   transpileFn(fn: string): {
-    argNames: ArgNames;
+    params: FuncParameter[];
     body: Block;
     externalNames: string[];
   };

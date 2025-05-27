@@ -1,4 +1,4 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
@@ -69,6 +69,7 @@ type SlotBindingLayer = {
 type FunctionScopeLayer = {
   type: 'functionScope';
   args: Snippet[];
+  argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
   returnType: AnyData;
 };
@@ -124,12 +125,14 @@ class ItemStateStackImpl implements ItemStateStack {
 
   pushFunctionScope(
     args: Snippet[],
+    argAliases: Record<string, Snippet>,
     returnType: AnyData,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
       type: 'functionScope',
       args,
+      argAliases,
       returnType,
       externalMap,
     });
@@ -197,7 +200,12 @@ class ItemStateStackImpl implements ItemStateStack {
           return arg;
         }
 
+        if (layer.argAliases[id]) {
+          return layer.argAliases[id];
+        }
+
         const external = layer.externalMap[id];
+
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
         }
@@ -362,7 +370,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   transpileFn(fn: string): {
-    argNames: ArgNames;
+    params: FuncParameter[];
     body: Block;
     externalNames: string[];
   } {
@@ -378,6 +386,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
     this._itemStateStack.pushFunctionScope(
       options.args,
+      options.argAliases,
       options.returnType,
       options.externalMap,
     );
