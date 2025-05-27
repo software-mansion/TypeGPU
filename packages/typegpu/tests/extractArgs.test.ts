@@ -333,7 +333,7 @@ describe('extract args', () => {
   });
 
   it('extracts when no arguments, no name, no return type', () => {
-    const wgslFn = /* wgsl */ `() { return 42; }`;
+    const wgslFn = /* wgsl */ '() { return 42; }';
 
     const { args, ret, range } = extractArgs(wgslFn);
 
