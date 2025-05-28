@@ -6,6 +6,22 @@ import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
+describe('constructors', () => {
+  it('casts floats to signed integers', () => {
+    expect(d.vec2i(1.1, -1.1)).toStrictEqual(d.vec2i(1, -1));
+    expect(d.vec3i(1.7, 2.6, 0.0)).toStrictEqual(d.vec3i(1, 2, 0));
+    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(
+      d.vec4i(1, -1, -10, -1),
+    );
+  });
+
+  it('casts floats to unsigned integers', () => {
+    expect(d.vec2u(1.1, -1)).toStrictEqual(d.vec2u(1, 4294967295));
+    expect(d.vec3u(1.7, 2.6, 0.0)).toStrictEqual(d.vec3u(1, 2, 0));
+    expect(d.vec4u(1.1, 1.1, 10.2, 1.0)).toStrictEqual(d.vec4u(1, 1, 10, 1));
+  });
+});
+
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
     expect(sizeOf(d.vec2f)).toBe(8);
