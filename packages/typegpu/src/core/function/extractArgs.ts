@@ -145,11 +145,11 @@ function strip(
       };
     }
 
-    if (code.isAt('(') && !argsStart) {
+    if (code.isAt('(') && argsStart === undefined) {
       argsStart = code.pos;
     }
 
-    if (argsStart) {
+    if (argsStart !== undefined) {
       strippedCode += code.str[code.pos];
     }
     code.advanceBy(1); // parsed character

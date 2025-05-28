@@ -19,6 +19,7 @@ import {
   replaceExternalsInWgsl,
 } from '../resolve/externals.ts';
 import { getPrebuiltAstFor } from './astUtils.ts';
+import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
 export interface TgpuFnShellBase<Args extends unknown[], Return> {
@@ -83,6 +84,7 @@ export function createFnCore(
 
       if (typeof implementation === 'string') {
         let header = '';
+        let body = '';
 
         if (shell.isEntry) {
           const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
@@ -98,12 +100,35 @@ export function createFnCore(
               }`
             : '';
           header = `${input} ${output} `;
+          body = implementation;
+        } else {
+          const providedArgs = extractArgs(implementation);
+
+          if (providedArgs.args.length !== shell.argTypes.length) {
+            throw new Error(
+              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments!`,
+            );
+          }
+
+          const input = providedArgs.args.map((argInfo, i) =>
+            `${argInfo.identifier}: ${
+              argInfo.type ?? ctx.resolve(shell.argTypes[i])
+            }`
+          ).join(', ');
+
+          const output = shell.returnType === Void
+            ? ''
+            : `-> ${providedArgs.ret?.type ?? ctx.resolve(shell.returnType)}`;
+
+          header = `(${input}) ${output}`;
+
+          body = implementation.slice(providedArgs.range.end);
         }
 
         const replacedImpl = replaceExternalsInWgsl(
           ctx,
           externalMap,
-          `${header}${implementation.trim()}`,
+          `${header}${body.trim()}`,
         );
 
         ctx.addDeclaration(`${fnAttribute}fn ${id}${replacedImpl}`);
