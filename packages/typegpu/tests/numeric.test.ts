@@ -59,6 +59,23 @@ it('has correct default values', () => {
   expect(d.bool()).toBe(false);
 });
 
+describe('argument coercion', () => {
+  it('correctly coerces to integers', () => {
+    expect(d.i32(1)).toBe(1);
+    expect(d.i32(4.1)).toBe(4);
+    expect(d.i32(-4.1)).toBe(-4);
+    expect(d.u32(1)).toBe(1);
+    expect(d.u32(4.1)).toBe(4);
+    expect(d.u32(-1)).toBe(4294967295);
+  });
+
+  it('correctly coerces to booleans', () => {
+    expect(d.bool(1)).toBe(true);
+    expect(d.bool(0)).toBe(false);
+    expect(d.bool(-4.1)).toBe(true);
+  });
+});
+
 describe('TGSL', () => {
   it('works for default constructors', () => {
     const main = tgpu['~unstable']
