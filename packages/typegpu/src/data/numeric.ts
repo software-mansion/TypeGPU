@@ -35,7 +35,7 @@ const boolCast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return snip(`bool(${v?.value ?? ''})`, bool );
+    return snip(`bool(${v?.value ?? ''})`, bool);
   },
 );
 
@@ -121,7 +121,7 @@ const i32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return snip(`i32(${v?.value ?? ''})`, i32 );
+    return snip(`i32(${v?.value ?? ''})`, i32);
   },
 );
 
@@ -158,7 +158,7 @@ const f32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return snip(`f32(${v?.value ?? ''})`, f32 );
+    return snip(`f32(${v?.value ?? ''})`, f32);
   },
 );
 
@@ -192,7 +192,7 @@ const f16Cast = createDualImpl(
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => {
-    return snip( `f16(${v?.value ?? ''})`, f16 );
+    return snip(`f16(${v?.value ?? ''})`, f16);
   },
 );
 
