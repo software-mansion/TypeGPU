@@ -8,6 +8,7 @@ import {
   Void,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = createDualImpl(
@@ -16,6 +17,7 @@ export const workgroupBarrier = createDualImpl(
   // GPU implementation
   () => snip('workgroupBarrier()', Void),
 );
+setName(workgroupBarrier, 'workgroupBarrier');
 
 export const storageBarrier = createDualImpl(
   // CPU implementation
@@ -23,6 +25,7 @@ export const storageBarrier = createDualImpl(
   // GPU implementation
   () => snip('storageBarrier()', Void),
 );
+setName(storageBarrier, 'storageBarrier');
 
 export const textureBarrier = createDualImpl(
   // CPU implementation
@@ -30,6 +33,7 @@ export const textureBarrier = createDualImpl(
   // GPU implementation
   () => snip('textureBarrier()', Void),
 );
+setName(textureBarrier, 'textureBarrier');
 
 export const atomicLoad = createDualImpl(
   // CPU implementation
@@ -46,6 +50,7 @@ export const atomicLoad = createDualImpl(
     );
   },
 );
+setName(atomicLoad, 'atomicLoad');
 
 export const atomicStore = createDualImpl(
   // CPU implementation
@@ -62,6 +67,7 @@ export const atomicStore = createDualImpl(
     return snip(`atomicStore(&${a.value}, ${value.value})`, Void);
   },
 );
+setName(atomicStore, 'atomicStore');
 
 const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
   if (a.dataType.type === 'atomic' && a.dataType.inner.type === 'i32') {
@@ -69,6 +75,7 @@ const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
   }
   return [a.dataType as AnyWgslData, u32];
 };
+setName(atomicTypeFn, 'atomicTypeFn');
 
 export const atomicAdd = createDualImpl(
   // CPU implementation
@@ -86,6 +93,7 @@ export const atomicAdd = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicAdd, 'atomicAdd');
 
 export const atomicSub = createDualImpl(
   // CPU implementation
@@ -103,6 +111,7 @@ export const atomicSub = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicSub, 'atomicSub');
 
 export const atomicMax = createDualImpl(
   // CPU implementation
@@ -120,6 +129,7 @@ export const atomicMax = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicMax, 'atomicMax');
 
 export const atomicMin = createDualImpl(
   // CPU implementation
@@ -137,6 +147,7 @@ export const atomicMin = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicMin, 'atomicMin');
 
 export const atomicAnd = createDualImpl(
   // CPU implementation
@@ -154,6 +165,7 @@ export const atomicAnd = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicAnd, 'atomicAnd');
 
 export const atomicOr = createDualImpl(
   // CPU implementation
@@ -171,6 +183,7 @@ export const atomicOr = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicOr, 'atomicOr');
 
 export const atomicXor = createDualImpl(
   // CPU implementation
@@ -188,3 +201,4 @@ export const atomicXor = createDualImpl(
   },
   atomicTypeFn,
 );
+setName(atomicXor, 'atomicXor');

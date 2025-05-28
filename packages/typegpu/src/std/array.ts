@@ -4,6 +4,7 @@ import { ptrFn } from '../data/ptr.ts';
 import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 
 export const arrayLength = createDualImpl(
   // CPU implementation
@@ -20,3 +21,4 @@ export const arrayLength = createDualImpl(
   },
   (a) => [ptrFn(a.dataType as AnyWgslData)],
 );
+setName(arrayLength, 'arrayLength');
