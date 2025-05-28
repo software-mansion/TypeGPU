@@ -8,6 +8,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   public readonly [$internal] = true;
   abstract get kind(): VecKind;
   abstract elementSchema(v?: S): S;
+  abstract getDefaultValue(): S;
 
   abstract get _Vec2(): new (
     x: S,
@@ -377,7 +378,6 @@ type Tuple4<S> = [S, S, S, S];
 
 abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
@@ -407,7 +407,6 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   declare readonly length = 3;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
@@ -447,7 +446,6 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   declare readonly length = 4;
-  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
