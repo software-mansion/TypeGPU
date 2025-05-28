@@ -1120,4 +1120,15 @@ export const VectorOps = {
         : wgsl.v4b,
     ) => T
   >,
+
+  tanh: {
+    vec2f: unary2f(Math.tanh),
+    vec2h: unary2h(Math.tanh),
+
+    vec3f: unary3f(Math.tanh),
+    vec3h: unary3h(Math.tanh),
+
+    vec4f: unary4f(Math.tanh),
+    vec4h: unary4h(Math.tanh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
 };
