@@ -99,7 +99,6 @@ function SideMenu() {
         <hr className='my-0 box-border w-full border-t border-tameplum-100' />
       </div>
 
-      {/* TODO: Figure out a way to   */}
       <div
         className='overflow-y-auto flex-1 min-h-0 my-5 px-5'
         ref={scrollRef}
@@ -150,7 +149,7 @@ function SideMenu() {
         />
       </label>
 
-      <div className='flex justify-between text-tameplum-800 text-xs px-5'>
+      <div className='flex justify-between text-tameplum-800 text-xs px-5 pb-5'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className='flex gap-3 items-center'>
           <a
