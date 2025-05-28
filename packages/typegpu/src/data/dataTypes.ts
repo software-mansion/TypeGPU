@@ -15,7 +15,7 @@ import type { FnArgsConversionHint } from '../types.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
-export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
+export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & TImpl
   & {
     [$internal]: {
@@ -169,3 +169,40 @@ export type AnyConcreteData = Exclude<
   AnyData,
   wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
 >;
+
+export interface UnknownData {
+  readonly type: 'unknown';
+}
+
+export const UnknownData = {
+  type: 'unknown' as const,
+  toString() {
+    return 'unknown';
+  },
+} as UnknownData;
+
+export interface Snippet {
+  readonly value: unknown;
+  readonly dataType: AnyData | UnknownData;
+}
+
+class SnippetImpl implements Snippet {
+  constructor(
+    readonly value: unknown,
+    readonly dataType: AnyData | UnknownData,
+  ) {}
+}
+
+export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
+  return new SnippetImpl(
+    value,
+    // We don't care about attributes in snippet land, so we discard that information.
+    dataType.type === 'decorated' || dataType.type === 'loose-decorated'
+      ? dataType.inner as AnyData
+      : dataType,
+  );
+}
+
+export function isSnippet(value: unknown): value is Snippet {
+  return value instanceof SnippetImpl;
+}

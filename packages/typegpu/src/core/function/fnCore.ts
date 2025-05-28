@@ -1,5 +1,6 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
+import { snip } from '../../data/dataTypes.ts';
 import {
   type AnyWgslData,
   type AnyWgslStruct,
@@ -130,22 +131,24 @@ export function createFnCore(
 
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
-          args: shell.argTypes.map((arg, i) => ({
-            value: ast.params[i]?.type === FuncParameterType.identifier
-              ? ast.params[i].name
-              : `_arg_${i}`,
-            dataType: arg as AnyWgslData,
-          })),
+          args: shell.argTypes.map((arg, i) =>
+            snip(
+              ast.params[i]?.type === FuncParameterType.identifier
+                ? ast.params[i].name
+                : `_arg_${i}`,
+              arg as AnyWgslData,
+            )
+          ),
           argAliases: Object.fromEntries(
             ast.params.flatMap((param, i) =>
               param.type === FuncParameterType.destructuredObject
                 ? param.props.map(({ name, alias }) => [
                   alias,
-                  {
-                    value: `_arg_${i}.${name}`,
-                    dataType: (shell.argTypes[i] as AnyWgslStruct)
+                  snip(
+                    `_arg_${i}.${name}`,
+                    (shell.argTypes[i] as AnyWgslStruct)
                       .propTypes[name] as AnyWgslData,
-                  },
+                  ),
                 ])
                 : []
             ),

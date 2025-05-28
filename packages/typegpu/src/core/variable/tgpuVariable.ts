@@ -1,9 +1,9 @@
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
@@ -15,10 +15,13 @@ export type VariableScope = 'private' | 'workgroup';
 
 export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
-  TDataType extends AnyWgslData = AnyWgslData,
+  TDataType extends AnyData = AnyData,
 > extends TgpuNamable {
   value: Infer<TDataType>;
-  readonly scope: TScope;
+
+  readonly [$internal]: {
+    readonly scope: TScope;
+  };
 }
 
 /**
@@ -27,7 +30,7 @@ export interface TgpuVar<
  * @param dataType The schema of the held data's type
  * @param initialValue If not provided, the variable will be initialized to the dataType's "zero-value".
  */
-export function privateVar<TDataType extends AnyWgslData>(
+export function privateVar<TDataType extends AnyData>(
   dataType: TDataType,
   initialValue?: Infer<TDataType>,
 ): TgpuVar<'private', TDataType> {
@@ -40,23 +43,35 @@ export function privateVar<TDataType extends AnyWgslData>(
  *
  * @param dataType The schema of the held data's type
  */
-export function workgroupVar<TDataType extends AnyWgslData>(
+export function workgroupVar<TDataType extends AnyData>(
   dataType: TDataType,
 ): TgpuVar<'workgroup', TDataType> {
   return new TgpuVarImpl('workgroup', dataType);
+}
+
+export function isVariable<T extends TgpuVar>(
+  value: T | unknown,
+): value is T {
+  return value instanceof TgpuVarImpl;
 }
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
+class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
+  declare readonly [$internal]: {
+    readonly scope: TScope;
+  };
+
   constructor(
     readonly scope: TScope,
     private readonly _dataType: TDataType,
     private readonly _initialValue?: Infer<TDataType> | undefined,
-  ) {}
+  ) {
+    this[$internal] = { scope };
+  }
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
@@ -85,20 +100,22 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return `var:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TDataType> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access tgpu.var's value directly in JS.`);
-    }
-
+  [$gpuValueOf](): Infer<TDataType> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this._dataType,
-        },
+        [$wgslDataType]: this._dataType,
       },
       valueProxyHandler,
     ) as Infer<TDataType>;
+  }
+
+  get value(): Infer<TDataType> {
+    if (!inGPUMode()) {
+      throw new Error('`tgpu.var` values are only accessible on the GPU');
+    }
+
+    return this[$gpuValueOf]();
   }
 }

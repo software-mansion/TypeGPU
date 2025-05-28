@@ -11,16 +11,12 @@
 }
 
 .spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
   z-index: 5;
   display: grid;
-  place-self: center;
-  transform: translate(-50%, -50%) rotate(calc(var(--p) * 1turn));
+  transform: rotate(calc(var(--p) * 1turn));
   background: conic-gradient(
     transparent calc(var(--p) * 100%),
     var(--color-gradient-purple) calc(var(--p) * 100%),
@@ -37,6 +33,7 @@
   animation:
     p_anim 2s infinite cubic-bezier(0.32, 0, 0.68, 0),
     q_anim 2s infinite cubic-bezier(0.32, 1, 0.68, 1);
+  color: transparent;
 }
 
 .spinner::before,
