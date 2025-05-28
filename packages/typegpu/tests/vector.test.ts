@@ -834,13 +834,13 @@ describe('v3i', () => {
 describe('v4f', () => {
   describe('(v3f, number) constructor', () => {
     it('works in JS', () => {
-      const red = d.vec3f(0.9, 0.2, 0.1);
+      const red = d.vec3f(0.125, 0.25, 0.375);
       const redWithAlpha = d.vec4f(red, 1);
-      expect(redWithAlpha).toStrictEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+      expect(redWithAlpha).toStrictEqual(d.vec4f(0.125, 0.25, 0.375, 1));
     });
 
     it('works in TGSL', () => {
-      const red = d.vec3f(0.9, 0.2, 0.1);
+      const red = d.vec3f(0.125, 0.25, 0.375);
 
       const main = tgpu['~unstable']
         .fn([])(() => {
@@ -857,7 +857,7 @@ describe('v4f', () => {
           fn main() {
             var green = vec3f(0, 1, 0);
 
-            var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
+            var one = vec4f(vec3f(0.125, 0.25, 0.375), 1);
             var two = vec4f(green, 1);
             var three = vec4f(vec3f(0, 0, 1), 1);
           }
@@ -868,32 +868,32 @@ describe('v4f', () => {
 
   describe('(number, v3f) constructor', () => {
     it('works in JS', () => {
-      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const foo = d.vec3f(0.25, 0.5, 0.75);
       const bar = d.vec4f(0.1, foo);
-      expect(bar).toStrictEqual(d.vec4f(0.1, 0.2, 0.3, 0.4));
+      expect(bar).toStrictEqual(d.vec4f(0.1, 0.25, 0.5, 0.75));
     });
 
     it('works in TGSL', () => {
-      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const foo = d.vec3f(0.25, 0.5, 0.75);
 
       const main = tgpu['~unstable']
         .fn([])(() => {
-          const fooLocal = d.vec3f(0.2, 0.3, 0.4);
+          const fooLocal = d.vec3f(0.25, 0.5, 0.75);
 
           const one = d.vec4f(0.1, foo); // external
           const two = d.vec4f(0.1, fooLocal); // local variable
-          const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
+          const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
         })
         .$name('main');
 
       expect(parseResolved({ main })).toBe(
         parse(`
         fn main() {
-          var fooLocal = vec3f(0.2, 0.3, 0.4);
+          var fooLocal = vec3f(0.25, 0.5, 0.75);
 
-          var one = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var one = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
           var two = vec4f(0.1, fooLocal);
-          var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var three = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
         }
       `),
       );
