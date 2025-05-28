@@ -56,7 +56,7 @@ function createMatSchema<
     [$internal]: true,
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
-    identity: IdentityFunctions[options.columns],
+    identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4x4 : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
@@ -174,7 +174,7 @@ export const identity4x4 = createDualImpl(
   () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4<f32>(
+    value: `mat4x4(
       1.0, 0.0, 0.0, 0.0,
       0.0, 1.0, 0.0, 0.0,
       0.0, 0.0, 1.0, 0.0,
@@ -189,7 +189,7 @@ export const identity3x3 = createDualImpl(
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4<f32>(
+    value: `mat4x4(
       1.0, 0.0, 0.0,
       0.0, 1.0, 0.0,
       0.0, 0.0, 1.0,
@@ -203,14 +203,14 @@ export const identity2x2 = createDualImpl(
   () => mat2x2f(1, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4<f32>(
+    value: `mat4x4(
       1.0, 0.0,
       0.0, 1.0
     )`,
     dataType: mat2x2f,
   }),
 );
-const IdentityFunctions = {
+const identityFunctions = {
   2: identity2x2,
   3: identity3x3,
   4: identity4x4,
@@ -218,34 +218,30 @@ const IdentityFunctions = {
 
 export const translation4x4 = createDualImpl(
   // CPU implementation
-  (vector: v3f) => {
-    return mat4x4f(
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      vector.x,
-      vector.y,
-      vector.z,
-      1,
-    );
-  },
+  (vector: v3f) => mat4x4f(
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    vector.x,
+    vector.y,
+    vector.z,
+    1,
+  ),
   // GPU implementation
-  (vector) => {
-    return {
-      value:
-        `mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
-      dataType: mat4x4f,
-    };
-  },
+  (vector) => ({
+    value:
+      `mat4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+    dataType: mat4x4f,
+  }),
 );
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   public readonly kind = 'mat2x2f';

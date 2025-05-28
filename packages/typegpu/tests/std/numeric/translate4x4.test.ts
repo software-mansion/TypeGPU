@@ -27,12 +27,12 @@ describe('translate', () => {
     const M = mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1);
     const T = vec3f(2, 2, 4);
 
-    const wgsl = tgpu['~unstable']
+    const translateFn = tgpu['~unstable']
       .fn([])(() => {
         const resultExpression = translate4x4(M, T);
       }).$name('translate4x4');
 
-    expect(parseResolved({ wgsl })).toBe(
+    expect(parseResolved({ translateFn })).toBe(
       parse(
         `fn translate4x4 () { 
           var resultExpression = ( mat4x4f ( 1 , 0 , 0 , 1 , 0 , 1 , 0 , 0 , 1 , 0 , 1 , 0 , 0 , 1 , 0 , 1 ) * mat4x4 < f32 > ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , vec3f ( 2 , 2 , 4 ) . x , vec3f ( 2 , 2 , 4 ) . y , vec3f ( 2 , 2 , 4 ) . z , 1 ) ); 
@@ -45,12 +45,12 @@ describe('translate', () => {
     const M = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     const T = vec3f(-2.5, -3.75, -10);
 
-    const wgsl = tgpu['~unstable']
+    const translateFn = tgpu['~unstable']
       .fn([])(() => {
         const resultExpression = translate4x4(M, T);
       }).$name('translateNegative');
 
-    expect(parseResolved({ wgsl })).toBe(
+    expect(parseResolved({ translateFn })).toBe(
       parse(
         `fn translateNegative () { 
           var resultExpression = ( mat4x4f ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 ) * mat4x4 < f32 > ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , vec3f ( -2.5 , -3.75 , -10 ) . x , vec3f ( -2.5 , -3.75 , -10 ) . y , vec3f ( -2.5 , -3.75 , -10 ) . z , 1 ) ); 
@@ -63,12 +63,12 @@ describe('translate', () => {
     const M = mat4x4f(2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 5, 5, 5, 1);
     const T = vec3f(0, 0, 0);
 
-    const wgsl = tgpu['~unstable']
+    const translateFn = tgpu['~unstable']
       .fn([])(() => {
         const resultExpression = translate4x4(M, T);
       }).$name('translateZero');
 
-    expect(parseResolved({ wgsl })).toBe(
+    expect(parseResolved({ translateFn })).toBe(
       parse(
         `fn translateZero () { 
           var resultExpression = ( mat4x4f ( 2 , 0 , 0 , 0 , 0 , 2 , 0 , 0 , 0 , 0 , 2 , 0 , 5 , 5 , 5 , 1 ) * mat4x4 < f32 > ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , vec3f ( 0 , 0 , 0 ) . x , vec3f ( 0 , 0 , 0 ) . y , vec3f ( 0 , 0 , 0 ) . z , 1 ) ); 
@@ -81,12 +81,12 @@ describe('translate', () => {
     const M = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 10, 10, 1);
     const T = vec3f(999.99, 8888.88, 77777.77);
 
-    const wgsl = tgpu['~unstable']
+    const translateFn = tgpu['~unstable']
       .fn([])(() => {
         const resultExpression = translate4x4(M, T);
       }).$name('translateLarge');
 
-    expect(parseResolved({ wgsl })).toBe(
+    expect(parseResolved({ translateFn })).toBe(
       parse(
         `fn translateLarge () { 
           var resultExpression = ( mat4x4f ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , 10 , 10 , 10 , 1 ) * mat4x4 < f32 > ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , vec3f ( 999.99 , 8888.88 , 77777.77 ) . x , vec3f ( 999.99 , 8888.88 , 77777.77 ) . y , vec3f ( 999.99 , 8888.88 , 77777.77 ) . z , 1 ) ); 
@@ -100,12 +100,12 @@ describe('translate', () => {
     const M2 = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 5, 5, 1);
     const T = vec3f(1, 2, 3);
 
-    const wgsl = tgpu['~unstable']
+    const translateFn = tgpu['~unstable']
       .fn([])(() => {
         const resultExpression = mul(M1, translate4x4(M2, T));
       }).$name('nestedTranslate');
 
-    expect(parseResolved({ wgsl })).toBe(
+    expect(parseResolved({ translateFn })).toBe(
       parse(
         `fn nestedTranslate () { 
           var resultExpression =( mat4x4f ( 2 , 0 , 0 , 0 , 0 , 2 , 0 , 0 , 0 , 0 , 2 , 0 , 0 , 0 , 0 , 1 ) * ( mat4x4f ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , 5 , 5 , 5 , 1 ) * mat4x4 < f32 > ( 1 , 0 , 0 , 0 , 0 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , vec3f ( 1 , 2 , 3 ) . x , vec3f ( 1 , 2 , 3 ) . y , vec3f ( 1 , 2 , 3 ) . z , 1 ) ) ); 
