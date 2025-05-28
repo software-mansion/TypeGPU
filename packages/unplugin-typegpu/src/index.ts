@@ -53,6 +53,21 @@ function removeKernelDirective(node: FunctionNode) {
   return cloned;
 }
 
+function assignMetadata(
+  magicString: MagicStringAST,
+  node: acorn.AnyNode,
+  metadata: string,
+) {
+  magicString.appendLeft(
+    node.start,
+    `(($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                $.f = (`,
+  ).appendRight(
+    node.end,
+    `) , ${metadata}) && $.f))({})`,
+  );
+}
+
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
   (rawOptions) => {
     const options = defu(rawOptions, defaultOptions);
@@ -166,16 +181,11 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               externals: {${externalNames.join(', ')}},
             }`;
 
-            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
-            magicString.appendLeft(
-              def.start,
-              `${isFunctionStatement && name ? `const ${name} = ` : ''}
-              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                $.f = (`,
-            ).appendRight(
-              def.end,
-              `) , ${metadata}) && $.f))({})`,
-            );
+            if (isFunctionStatement && name) {
+              magicString.appendLeft(def.start, `const ${name} = `);
+            }
+
+            assignMetadata(magicString, def, metadata);
 
             if (removeJsImplementation) {
               magicString.overwriteNode(

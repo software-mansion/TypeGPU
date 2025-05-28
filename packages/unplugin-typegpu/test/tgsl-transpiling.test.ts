@@ -184,8 +184,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const counter = counterBuffer.as('mutable');
               
               tgpu
-                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -218,8 +217,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -228,8 +226,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                     externals: {},
                   }) && $.f))({}));
 
-              tgpu['~unstable'].fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              tgpu['~unstable'].fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -239,8 +236,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }) && $.f))({}));
 
               const cx = 2;
-              tgpu['~unstable'].fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              tgpu['~unstable'].fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {

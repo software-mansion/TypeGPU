@@ -61,8 +61,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       "import tgpu from 'typegpu';
 
       const increment = tgpu['~unstable']
-              .fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {

@@ -84,8 +84,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import hello from 'typegpu';
 
       hello['~unstable']
-              .fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -112,8 +111,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import { tgpu } from 'typegpu';
 
       tgpu['~unstable']
-              .fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -139,8 +137,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import * as t from 'typegpu';
 
       t.tgpu['~unstable']
-              .fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+              .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {

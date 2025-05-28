@@ -250,8 +250,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = 
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
               'kernel & js';
               return a + b;
@@ -293,8 +292,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
               'kernel & js';
               return a + b;
@@ -324,8 +322,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].fn([])(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      tgpu['~unstable'].fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
               'kernel & js';
               return a + b;
@@ -358,8 +355,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function(a, b){
               'kernel & js';
               return a + b;
@@ -397,8 +393,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function addGPU(a, b){
               'kernel & js';
               return a + b;
@@ -436,8 +431,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = 
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function addGPU(a, b) {
               'kernel & js';
               return a + b;

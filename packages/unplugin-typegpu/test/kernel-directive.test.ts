@@ -179,8 +179,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = 
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -221,8 +220,7 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -258,8 +256,7 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -296,8 +293,7 @@ describe('[ROLLUP] "kernel" directive', () => {
 
       const shell = tgpu['~unstable'].fn([]);
 
-            shell(
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
@@ -334,8 +330,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = 
-                    (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
