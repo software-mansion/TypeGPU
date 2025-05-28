@@ -174,7 +174,7 @@ export const identity4x4 = createDualImpl(
   () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4(
+    value: `mat4x4f(
       1.0, 0.0, 0.0, 0.0,
       0.0, 1.0, 0.0, 0.0,
       0.0, 0.0, 1.0, 0.0,
@@ -189,7 +189,7 @@ export const identity3x3 = createDualImpl(
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4(
+    value: `mat4x4f(
       1.0, 0.0, 0.0,
       0.0, 1.0, 0.0,
       0.0, 0.0, 1.0,
@@ -203,7 +203,7 @@ export const identity2x2 = createDualImpl(
   () => mat2x2f(1, 0, 0, 1),
   // GPU implementation
   () => ({
-    value: `mat4x4(
+    value: `mat4x4f(
       1.0, 0.0,
       0.0, 1.0
     )`,
