@@ -25,17 +25,21 @@ const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const timeAccess = tgpu['~unstable'].accessor(d.f32);
 const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
-const exponentialSharpen = tgpu['~unstable'].fn([d.f32], d.f32)((n) => {
-  const sharp = sign(n) * pow(abs(n), 1 - sharpnessAccess.value);
-  return sharp * 0.5 + 0.5;
-});
+const exponentialSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
+  (n, sharpness) => {
+    const sharp = sign(n) * pow(abs(n), 1 - sharpness);
+    return sharp * 0.5 + 0.5;
+  },
+);
 
-const tanhSharpen = tgpu['~unstable'].fn([d.f32], d.f32)((n) => {
-  const sharp = tanh(n * (1 + sharpnessAccess.value * 10));
-  return sharp * 0.5 + 0.5;
-});
+const tanhSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
+  (n, sharpness) => {
+    const sharp = tanh(n * (1 + sharpness * 10));
+    return sharp * 0.5 + 0.5;
+  },
+);
 
-const sharpenFnSlot = tgpu['~unstable'].slot<TgpuFn<[d.F32], d.F32>>(
+const sharpenFnSlot = tgpu['~unstable'].slot<TgpuFn<[d.F32, d.F32], d.F32>>(
   exponentialSharpen,
 );
 
@@ -48,7 +52,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const n = perlin3d.sample(d.vec3f(uv, timeAccess.value));
 
   // Apply sharpening function and get normalized result
-  const n01 = sharpenFnSlot.value(n);
+  const n01 = sharpenFnSlot.value(n, sharpnessAccess.value);
 
   // Gradient map
   const dark = d.vec3f(0, 0.2, 1);
