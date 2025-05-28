@@ -1,6 +1,7 @@
 import bin from 'typed-binary';
 import { createDualImpl } from '../shared/generators.ts';
 import { $internal } from '../shared/symbols.ts';
+import { snip } from './dataTypes.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -34,7 +35,7 @@ const boolCast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `bool(${v?.value ?? ''})`, dataType: bool };
+    return snip(`bool(${v?.value ?? ''})`, bool );
   },
 );
 
@@ -76,7 +77,7 @@ const u32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `u32(${v?.value ?? ''})`, dataType: u32 };
+    return snip(`u32(${v?.value ?? ''})`, u32);
   },
 );
 
@@ -120,7 +121,7 @@ const i32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `i32(${v?.value ?? ''})`, dataType: i32 };
+    return snip(`i32(${v?.value ?? ''})`, i32 );
   },
 );
 
@@ -157,7 +158,7 @@ const f32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `f32(${v?.value ?? ''})`, dataType: f32 };
+    return snip(`f32(${v?.value ?? ''})`, f32 );
   },
 );
 
@@ -191,7 +192,7 @@ const f16Cast = createDualImpl(
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => {
-    return { value: `f16(${v?.value ?? ''})`, dataType: f16 };
+    return snip( `f16(${v?.value ?? ''})`, f16 );
   },
 );
 

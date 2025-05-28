@@ -1,17 +1,16 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
-import {
-  type FnArgsConversionHint,
-  type ResolutionCtx,
-  type SelfResolvable,
-  UnknownData,
-  type Wgsl,
+import type {
+  FnArgsConversionHint,
+  ResolutionCtx,
+  SelfResolvable,
+  Wgsl,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
@@ -220,10 +219,11 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
       return implementation(...args);
     },
-    (...args) => ({
-      value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-      dataType: shell.returnType ?? UnknownData,
-    }),
+    (...args) =>
+      snip(
+        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        shell.returnType ?? UnknownData,
+      ),
     shell.argTypes,
   );
 
@@ -287,12 +287,11 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
 
   const call = createDualImpl(
     (...args: InferArgs<Args>): unknown => innerFn(...args),
-    (...args) => {
-      return {
-        value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        dataType: innerFn.shell.returnType ?? UnknownData,
-      };
-    },
+    (...args) =>
+      snip(
+        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        innerFn.shell.returnType ?? UnknownData,
+      ),
     innerFn.shell.argTypes,
   );
 

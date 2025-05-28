@@ -1,4 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
+import { setMetaData } from '../../shared/meta.ts';
 
 export type Ast = {
   params: FuncParameter[];
@@ -6,28 +7,12 @@ export type Ast = {
   externalNames: string[];
 };
 
-export type AstInfo = {
-  ast: Ast;
-  externals?: Record<string, unknown> | undefined;
-};
-
-const functionToAstMap = new WeakMap<
-  (...args: unknown[]) => unknown,
-  AstInfo
->();
-
-export function getPrebuiltAstFor(
-  fn: (...args: unknown[]) => unknown,
-): AstInfo | undefined {
-  return functionToAstMap.get(fn);
-}
-
 export function assignAst<T extends (...args: unknown[]) => unknown>(
   fn: T,
   ast: Ast,
   externals?: Record<string, unknown> | undefined,
 ): T {
-  functionToAstMap.set(fn, { ast, externals });
+  setMetaData(fn, { ast, externals });
   return fn;
 }
 

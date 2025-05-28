@@ -1,9 +1,9 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
-import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
+import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
@@ -13,7 +13,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
-  readonly value: Infer<TDataType>;
+  readonly value: InferGPU<TDataType>;
 
   readonly [$internal]: {
     readonly dataType: TDataType;
@@ -25,7 +25,7 @@ export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
  */
 export function constant<TDataType extends AnyWgslData>(
   dataType: TDataType,
-  value: Infer<TDataType>,
+  value: InferGPU<TDataType>,
 ): TgpuConst<TDataType> {
   return new TgpuConstImpl(dataType, value);
 }
@@ -42,7 +42,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
   constructor(
     public readonly dataType: TDataType,
-    private readonly _value: Infer<TDataType>,
+    private readonly _value: InferGPU<TDataType>,
   ) {
     this[$internal] = { dataType };
   }
@@ -65,20 +65,22 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return `const:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TDataType> {
-    if (!inGPUMode()) {
-      return this._value;
-    }
-
+  [$gpuValueOf](): InferGPU<TDataType> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.dataType,
-        },
+        [$wgslDataType]: this.dataType,
       },
       valueProxyHandler,
-    ) as Infer<TDataType>;
+    ) as InferGPU<TDataType>;
+  }
+
+  get value(): InferGPU<TDataType> {
+    if (!inGPUMode()) {
+      return this._value;
+    }
+
+    return this[$gpuValueOf]();
   }
 }
