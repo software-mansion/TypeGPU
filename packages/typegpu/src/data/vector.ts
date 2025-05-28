@@ -1,5 +1,5 @@
-import { setName } from '../shared/meta.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 import { $repr } from '../shared/repr.ts';
 import { snip } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
@@ -294,7 +294,7 @@ type VecSchemaBase<TValue> = {
 };
 
 function makeVecSchema<TValue, S extends number | boolean>(
-  VecImpl: new (...args: (S | undefined)[]) => VecBase<S>,
+  VecImpl: new (...args: S[]) => VecBase<S>,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 

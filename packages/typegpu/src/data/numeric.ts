@@ -131,7 +131,7 @@ const i32Cast = createDualImpl(
  * Can also be called to cast a value to an i32 in accordance with WGSL casting rules.
  *
  * @example
- * const value = i32(0); // 0
+ * const value = i32(); // 0
  * @example
  * const value = i32(3.14); // 3
  * @example
