@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import type { TgpuNamable } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
 import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';

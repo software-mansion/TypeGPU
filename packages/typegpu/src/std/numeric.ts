@@ -1,3 +1,4 @@
+import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -26,9 +27,8 @@ import {
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
+import { setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import { setName } from '../name.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;

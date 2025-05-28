@@ -4,7 +4,7 @@ import tgpu from '../src/index.ts';
 import { $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
-import { setName } from '../src/name.ts';
+import { setName } from '../src/shared/meta.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {

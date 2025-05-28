@@ -8,8 +8,8 @@ import type {
   Vec4u,
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import {
   $getNameForward,
   $internal,

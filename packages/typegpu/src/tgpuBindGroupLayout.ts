@@ -54,8 +54,8 @@ import {
   NotStorageError,
   type StorageFlag,
 } from './extension.ts';
-import type { TgpuNamable } from './name.ts';
-import { getName, setName } from './name.ts';
+import type { TgpuNamable } from './shared/meta.ts';
+import { getName, setName } from './shared/meta.ts';
 import type { Infer } from './shared/repr.ts';
 import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';

@@ -11,6 +11,7 @@ import {
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
@@ -23,7 +24,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import { getName } from '../name.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

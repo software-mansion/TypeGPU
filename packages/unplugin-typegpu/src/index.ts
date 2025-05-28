@@ -2,15 +2,16 @@ import type * as acorn from 'acorn';
 import defu from 'defu';
 import { type Node, walk } from 'estree-walker';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
+import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
-  codeFilterRegexes,
   type Context,
   defaultOptions,
   embedJSON,
   gatherTgpuAliases,
+  getErrorMessage,
   isShellImplementationCall,
   type KernelDirective,
   kernelDirectives,
@@ -62,7 +63,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       transform: {
         filter: {
           id: options,
-          ...(options.forceTgpuAlias ? {} : { code: codeFilterRegexes }),
         },
         handler(code, id) {
           const ctx: Context = {
@@ -136,14 +136,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          const tgpuAlias = ctx.tgpuAliases.values().next().value;
-
-          if (tgpuAlias === undefined && tgslFunctionDefs.length > 0) {
-            throw new Error(
-              `No tgpu import found, cannot assign ast to function in file: ${id}`,
-            );
-          }
-
           for (
             const {
               def,
@@ -168,34 +160,29 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               );
             }
 
-            // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
+            const metadata = `{
+              v: ${FORMAT_VERSION},
+              ast: ${embedJSON({ params, body, externalNames })},
+              externals: {${externalNames.join(', ')}},
+            }`;
+
+            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
             magicString.appendLeft(
               def.start,
-              `${
-                isFunctionStatement && name ? `const ${name} = ` : ''
-              }${tgpuAlias}.__assignAst(`,
-            );
-            magicString.appendRight(
+              `${isFunctionStatement && name ? `const ${name} = ` : ''}
+              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                $.f = (`,
+            ).appendRight(
               def.end,
-              `, ${embedJSON({ params, body, externalNames })}`,
+              `) , ${metadata}) && $.f))({})`,
             );
-
-            if (externalNames.length > 0) {
-              magicString.appendRight(
-                def.end,
-                `, {${externalNames.join(', ')}})`,
-              );
-            } else {
-              magicString.appendRight(
-                def.end,
-                `)${isFunctionStatement && name ? ';' : ''}`,
-              );
-            }
 
             if (removeJsImplementation) {
               magicString.overwriteNode(
                 def,
-                `${tgpuAlias}.__removedJsImpl(${name ? `"${name}"` : ''})`,
+                `() => {
+                  throw new Error(\`${getErrorMessage(name)}\`);
+                }`,
               );
             }
           }

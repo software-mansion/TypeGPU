@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { $internal, $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
