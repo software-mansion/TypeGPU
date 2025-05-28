@@ -8,7 +8,6 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   public readonly [$internal] = true;
   abstract get kind(): VecKind;
   abstract getElementSchema(): (v?: S) => S;
-  abstract getDefaultValue(): S;
 
 
   abstract get _Vec2(): new (
@@ -495,9 +494,6 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 }
 
 export class Vec2fImpl extends Vec2<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f32;
   }
@@ -517,9 +513,6 @@ export class Vec2fImpl extends Vec2<number> {
 }
 
 export class Vec2hImpl extends Vec2<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f16;
   }
@@ -539,9 +532,6 @@ export class Vec2hImpl extends Vec2<number> {
 }
 
 export class Vec2iImpl extends Vec2<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return i32;
   }
@@ -561,9 +551,6 @@ export class Vec2iImpl extends Vec2<number> {
 }
 
 export class Vec2uImpl extends Vec2<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return u32;
   }
@@ -583,9 +570,6 @@ export class Vec2uImpl extends Vec2<number> {
 }
 
 export class Vec2bImpl extends Vec2<boolean> {
-  getDefaultValue() {
-    return false;
-  }
   getElementSchema() {
     return bool;
   }
@@ -605,9 +589,6 @@ export class Vec2bImpl extends Vec2<boolean> {
 }
 
 export class Vec3fImpl extends Vec3<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f32;
   }
@@ -627,9 +608,6 @@ export class Vec3fImpl extends Vec3<number> {
 }
 
 export class Vec3hImpl extends Vec3<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f16;
   }
@@ -649,9 +627,6 @@ export class Vec3hImpl extends Vec3<number> {
 }
 
 export class Vec3iImpl extends Vec3<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return i32;
   }
@@ -671,9 +646,6 @@ export class Vec3iImpl extends Vec3<number> {
 }
 
 export class Vec3uImpl extends Vec3<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return u32;
   }
@@ -693,9 +665,6 @@ export class Vec3uImpl extends Vec3<number> {
 }
 
 export class Vec3bImpl extends Vec3<boolean> {
-  getDefaultValue() {
-    return false;
-  }
   getElementSchema() {
     return bool;
   }
@@ -715,9 +684,6 @@ export class Vec3bImpl extends Vec3<boolean> {
 }
 
 export class Vec4fImpl extends Vec4<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f32;
   }
@@ -737,9 +703,6 @@ export class Vec4fImpl extends Vec4<number> {
 }
 
 export class Vec4hImpl extends Vec4<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return f16;
   }
@@ -759,9 +722,6 @@ export class Vec4hImpl extends Vec4<number> {
 }
 
 export class Vec4iImpl extends Vec4<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return i32;
   }
@@ -781,9 +741,6 @@ export class Vec4iImpl extends Vec4<number> {
 }
 
 export class Vec4uImpl extends Vec4<number> {
-  getDefaultValue() {
-    return 0;
-  }
   getElementSchema() {
     return u32;
   }
@@ -803,9 +760,6 @@ export class Vec4uImpl extends Vec4<number> {
 }
 
 export class Vec4bImpl extends Vec4<boolean> {
-  getDefaultValue() {
-    return false;
-  }
   getElementSchema() {
     return bool;
   }
