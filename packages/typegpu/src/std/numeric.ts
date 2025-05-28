@@ -613,11 +613,11 @@ export const translate4x4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `${matrix.value} * ${
+    value: `(${matrix.value} * ${
       (mat4x4f.translation(
         vector as unknown as v3f,
       ) as unknown as Snippet).value
-    }`,
+    })`,
     dataType: matrix.dataType,
   }),
 );
