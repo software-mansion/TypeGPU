@@ -75,7 +75,6 @@ const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
   }
   return [a.dataType as AnyWgslData, u32];
 };
-setName(atomicTypeFn, 'atomicTypeFn');
 
 export const atomicAdd = createDualImpl(
   // CPU implementation
