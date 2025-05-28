@@ -693,7 +693,7 @@ export interface Bool {
   readonly type: 'bool';
   readonly [$repr]: boolean;
 
-  // (v?: number | boolean): boolean;
+  (v?: number | boolean): boolean;
 }
 
 /**

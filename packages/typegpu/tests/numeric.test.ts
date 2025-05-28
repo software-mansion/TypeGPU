@@ -56,7 +56,7 @@ it('has correct default values', () => {
   expect(d.f16()).toBe(0);
   expect(d.i32()).toBe(0);
   expect(d.u32()).toBe(0);
-  // expect(d.bool()).toBe(false);
+  expect(d.bool()).toBe(false);
 });
 
 describe('TGSL', () => {
@@ -67,7 +67,7 @@ describe('TGSL', () => {
         const h = d.f16();
         const i = d.i32();
         const u = d.u32();
-        // const b = d.b32();
+        const b = d.bool();
       })
       .$name('main');
 
@@ -78,6 +78,7 @@ describe('TGSL', () => {
         var h = f16();
         var i = i32();
         var u = u32();
+        var b = bool();
       }
       `),
     );

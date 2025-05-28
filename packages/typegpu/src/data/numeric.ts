@@ -21,13 +21,40 @@ export const abstractFloat = {
   type: 'abstractFloat',
 } as AbstractFloat;
 
+const boolCast = createDualImpl(
+  // CPU implementation
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return false;
+    }
+    if (typeof v === 'boolean') {
+      return v;
+    }
+    return !!v;
+  },
+  // GPU implementation
+  (v) => {
+    return { value: `bool(${v?.value ?? ''})`, dataType: bool };
+  },
+);
+
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
+ *
+ * Can also be called to cast a value to an bool in accordance with WGSL casting rules.
+ *
+ * @example
+ * const value = bool(); // false
+ * @example
+ * const value = bool(0); // false
+ * @example
+ * const value = bool(-0); // false
+ * @example
+ * const value = bool(21.37); // true
  */
-export const bool: Bool = {
-  [$internal]: true,
+export const bool: Bool = Object.assign(boolCast, {
   type: 'bool',
-} as Bool;
+}) as unknown as Bool;
 
 const u32Cast = createDualImpl(
   // CPU implementation
@@ -58,6 +85,8 @@ const u32Cast = createDualImpl(
  *
  * Can also be called to cast a value to an u32 in accordance with WGSL casting rules.
  *
+ * @example
+ * const value = u32(); // 0
  * @example
  * const value = u32(3.14); // 3
  * @example
@@ -101,6 +130,8 @@ const i32Cast = createDualImpl(
  * Can also be called to cast a value to an i32 in accordance with WGSL casting rules.
  *
  * @example
+ * const value = i32(0); // 0
+ * @example
  * const value = i32(3.14); // 3
  * @example
  * const value = i32(-3.9); // -3
@@ -136,6 +167,8 @@ const f32Cast = createDualImpl(
  * Can also be called to cast a value to an f32.
  *
  * @example
+ * const value = f32(); // 0
+ * @example
  * const value = f32(true); // 1
  */
 export const f32: F32 = Object.assign(f32Cast, {
@@ -167,6 +200,8 @@ const f16Cast = createDualImpl(
  *
  * Can also be called to cast a value to an f16.
  *
+ * @example
+ * const value = f16(); // 0
  * @example
  * const value = f16(true); // 1
  * @example
