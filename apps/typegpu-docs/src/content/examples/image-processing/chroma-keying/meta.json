@@ -1,5 +1,5 @@
 {
   "title": "Chroma Keying",
   "category": "image-processing",
-  "tags": ["camera"]
+  "tags": ["camera", "filtering", "MediaStreamTrack API"]
 }
