@@ -240,7 +240,7 @@ export const translation4x4 = createDualImpl(
   // GPU implementation
   (vector) => ({
     value:
-      `mat4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+      `mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
     dataType: mat4x4f,
   }),
 );
