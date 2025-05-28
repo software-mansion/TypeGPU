@@ -64,7 +64,10 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   let normColor = clamp((color - dmin) / (dmax - dmin), vec3f(0.0), vec3f(1.0));
   let result = textureSampleLevel(lutTexture, lutSampler, normColor, 0.0).rgb;
 
-  return vec4f(result, 1.0);
+  // Convert linear RGB to sRGB
+  let srgbColor = pow(result, vec3f(1.0 / 2.2));
+
+  return vec4f(srgbColor, 1.0);
 }
 `;
 
@@ -338,6 +341,12 @@ async function fetchLUT(file: string) {
 const LUTFiles = {
   "Classic Chrome": '/TypeGPU/assets/cube-luts/classic-chrome.cube',
   "HollywoodBlue Day": '/TypeGPU/assets/cube-luts/HollywoodBlue_Day.cube',
+  "Dramatic_BlockBuster_33": '/TypeGPU/assets/cube-luts/Dramatic_BlockBuster_33.cube',
+  "pro neg hi_srgb.cube": "/TypeGPU/assets/cube-luts/pro neg hi_srgb.cube",
+  "tinyglade-Cold_Ice.cube": "/TypeGPU/assets/cube-luts/tinyglade-Cold_Ice.cube",
+  "tinyglade-Bluecine_75.cube": "/TypeGPU/assets/cube-luts/tinyglade-Bluecine_75.cube",
+  "tinyglade-Sam_Kolder.cube": "/TypeGPU/assets/cube-luts/tinyglade-Sam_Kolder.cube",
+  "resolve-LMT ACES v0.1.1.cube": "/TypeGPU/assets/cube-luts/resolve-LMT ACES v0.1.1.cube",
 };
 
 const selections = {
