@@ -1,8 +1,12 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName } from '../../name.ts';
-import type { $repr, Infer } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { inGPUMode } from '../../gpuMode.ts';
+import { getName } from '../../shared/meta.ts';
+import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
+import {
+  $getNameForward,
+  $gpuValueOf,
+  $wgslDataType,
+} from '../../shared/symbols.ts';
 import {
   isBufferUsage,
   type ResolutionCtx,
@@ -32,11 +36,11 @@ export function accessor<T extends AnyWgslData>(
 export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable {
   public readonly resourceType = 'accessor';
+  public readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
+
   declare public readonly [$repr]: Infer<T>;
-  public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
-  readonly [$getNameForward]: TgpuSlot<
-    TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>
-  >;
+  declare public readonly '~gpuRepr': InferGPU<T>;
+  declare readonly [$getNameForward]: unknown;
 
   constructor(
     public readonly schema: T,
@@ -59,24 +63,23 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return `accessor:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<T> {
-    const ctx = getResolutionCtx();
-    if (!ctx) {
-      throw new Error(
-        `Cannot access tgpu.accessor's value outside of resolution.`,
-      );
-    }
-
+  [$gpuValueOf](): InferGPU<T> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.schema,
-        },
+        [$wgslDataType]: this.schema,
       },
       valueProxyHandler,
-    ) as Infer<T>;
+    ) as InferGPU<T>;
+  }
+
+  get value(): InferGPU<T> {
+    if (!inGPUMode()) {
+      throw new Error('`tgpu.accessor` values are only accessible on the GPU');
+    }
+
+    return this[$gpuValueOf]();
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

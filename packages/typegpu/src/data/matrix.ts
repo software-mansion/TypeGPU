@@ -1,8 +1,9 @@
-import { setName } from '../name.ts';
+import { setName } from '../shared/meta.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
+import { snip } from './dataTypes.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
@@ -91,12 +92,11 @@ function createMatSchema<
       return options.makeFromElements(...elements);
     },
     // GPU implementation
-    (...args) => {
-      return {
-        value: `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
-        dataType: MatSchema,
-      };
-    },
+    (...args) =>
+      snip(
+        `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
+        MatSchema,
+      ),
   );
 
   return Object.assign(construct, MatSchema) as unknown as {

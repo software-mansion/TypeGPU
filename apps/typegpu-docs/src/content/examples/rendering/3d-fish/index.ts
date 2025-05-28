@@ -54,11 +54,8 @@ const presets = {
   },
 } as const;
 
-const currentPreset: keyof typeof presets = 'init';
-
-const spinner = document.getElementById('spinner') as HTMLDivElement;
-const spinnerBackground = document.getElementById(
-  'spinner-background',
+const spinnerBackground = document.querySelector(
+  '.spinner-background',
 ) as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
@@ -86,9 +83,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
 
 function enqueuePresetChanges() {
   speedMultiplier = 3;
-
-  spinnerBackground.style.display = 'block';
-
+  spinnerBackground.style.display = 'grid';
   fishBehaviorBuffer.write(presets.init);
 
   setTimeout(() => {

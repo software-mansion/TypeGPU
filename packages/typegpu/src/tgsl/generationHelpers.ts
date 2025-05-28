@@ -1,6 +1,13 @@
-import { isDerived, isSlot } from '../core/slot/slotTypes.ts';
 import { arrayOf } from '../data/array.ts';
-import type { AnyData } from '../data/dataTypes.ts';
+import {
+  type AnyData,
+  isDisarray,
+  isSnippet,
+  isUnstruct,
+  snip,
+  type Snippet,
+  UnknownData,
+} from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -34,47 +41,22 @@ import {
   type AnyWgslStruct,
   type F16,
   type F32,
+  hasInternalDataType,
   type I32,
-  isDecorated,
   isMat,
+  isMatInstance,
   isVec,
+  isVecInstance,
   isWgslArray,
-  isWgslData,
+  isWgslStruct,
   type U32,
-  type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant } from '../errors.ts';
 import { getResolutionCtx } from '../gpuMode.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import {
-  hasInternalDataType,
-  isSelfResolvable,
-  isWgsl,
-  type ResolutionCtx,
-  type Snippet,
-  UnknownData,
-  type Wgsl,
-} from '../types.ts';
-
-const swizzleableTypes = [
-  'vec2f',
-  'vec2h',
-  'vec2i',
-  'vec2u',
-  'vec2<bool>',
-  'vec3f',
-  'vec3h',
-  'vec3i',
-  'vec3u',
-  'vec3<bool>',
-  'vec4f',
-  'vec4h',
-  'vec4i',
-  'vec4u',
-  'vec4<bool>',
-  'struct',
-] as const;
+import { isNumericSchema } from '../std/numeric.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -158,59 +140,27 @@ const indexableTypeToResult = {
 } as const;
 
 export function getTypeForPropAccess(
-  targetType: Wgsl,
+  targetType: AnyData,
   propName: string,
 ): AnyData | UnknownData {
-  if (
-    typeof targetType === 'string' ||
-    typeof targetType === 'number' ||
-    typeof targetType === 'boolean'
-  ) {
+  if (isWgslStruct(targetType) || isUnstruct(targetType)) {
+    return targetType.propTypes[propName] as AnyData ?? UnknownData;
+  }
+
+  if (targetType === bool || isNumericSchema(targetType)) {
+    // No props to be accessed here
     return UnknownData;
-  }
-
-  if (isDerived(targetType) || isSlot(targetType)) {
-    const ctx = getResolutionCtx();
-    if (!ctx) {
-      throw new Error(
-        'Resolution context not found when unwrapping slot or derived',
-      );
-    }
-    const unwrapped = ctx.unwrap(targetType);
-
-    return getTypeFromWgsl(unwrapped);
-  }
-
-  let target = targetType as AnyData;
-
-  if (hasInternalDataType(target)) {
-    target = target[$internal].dataType as AnyData;
-  }
-  while (isDecorated(target)) {
-    target = target.inner as AnyData;
-  }
-
-  const targetTypeStr = 'kind' in target
-    ? (target.kind as string)
-    : target.type;
-
-  if (targetTypeStr === 'struct') {
-    return (
-      ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
-    );
   }
 
   const propLength = propName.length;
   if (
-    swizzleableTypes.includes(
-      targetTypeStr as (typeof swizzleableTypes)[number],
-    ) &&
+    isVec(targetType) &&
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr.includes('bool')
+    const swizzleTypeChar = targetType.type.includes('bool')
       ? 'b'
-      : (targetTypeStr[4] as SwizzleableType);
+      : (targetType.type[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
@@ -218,82 +168,51 @@ export function getTypeForPropAccess(
     }
   }
 
-  return isWgslData(target) ? target : UnknownData;
+  return UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
-  if (isWgslData(resource)) {
-    // array
-    if (isWgslArray(resource)) {
-      return resource.elementType as AnyData;
-    }
+export function getTypeForIndexAccess(
+  dataType: AnyData,
+): AnyData | UnknownData {
+  // array
+  if (isWgslArray(dataType) || isDisarray(dataType)) {
+    return dataType.elementType as AnyData;
+  }
 
-    // vector or matrix
-    if (resource.type in indexableTypeToResult) {
-      return indexableTypeToResult[
-        resource.type as keyof typeof indexableTypeToResult
-      ];
-    }
+  // vector or matrix
+  if (dataType.type in indexableTypeToResult) {
+    return indexableTypeToResult[
+      dataType.type as keyof typeof indexableTypeToResult
+    ];
   }
 
   return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
-  if (hasInternalDataType(resource)) {
-    return resource[$internal].dataType as AnyData;
-  }
-
-  if (typeof resource === 'string') {
-    return UnknownData;
-  }
-  if (typeof resource === 'number') {
-    return numericLiteralToSnippet(String(resource))?.dataType ?? UnknownData;
-  }
-  if (typeof resource === 'boolean') {
-    return bool;
-  }
-
-  if ('kind' in resource) {
-    const kind = resource.kind;
-    if (kind in kindToSchema) {
-      return kindToSchema[kind];
-    }
-  }
-
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-  return isWgslData(resource) || isSelfResolvable(resource)
-    ? (resource as unknown as AnyData)
-    : UnknownData;
-}
-
 export function numericLiteralToSnippet(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
-    return { value, dataType: abstractInt };
+    return snip(value, abstractInt);
   }
 
   // Binary literals
   if (/^0b[01]+$/i.test(value)) {
-    return {
-      value: `${Number.parseInt(value.slice(2), 2)}`,
-      dataType: abstractInt,
-    };
+    return snip(`${Number.parseInt(value.slice(2), 2)}`, abstractInt);
   }
 
   // Floating point literals
   if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
-    return { value, dataType: abstractFloat };
+    return snip(value, abstractFloat);
   }
 
   // Floating point literals with scientific notation
   if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
-    return { value, dataType: abstractFloat };
+    return snip(value, abstractFloat);
   }
 
   // Integer literals
   if (/^-?\d+$/i.test(value)) {
-    return { value, dataType: abstractInt };
+    return snip(value, abstractInt);
   }
 
   return undefined;
@@ -570,14 +489,6 @@ export type GenerationCtx = ResolutionCtx & {
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
-  if (isWgsl(res.value)) {
-    return ctx.resolve(res.value);
-  }
-
-  return String(res.value);
-}
-
 function applyActionToSnippet(
   ctx: GenerationCtx,
   value: Snippet,
@@ -585,24 +496,18 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return {
-      value: value.value,
-      dataType: targetType,
-    };
+    return snip(value.value, targetType);
   }
 
-  const resolvedValue = resolveRes(ctx, value);
+  const resolvedValue = ctx.resolve(value.value);
 
   switch (action.action) {
     case 'ref':
-      return { value: `&${resolvedValue}`, dataType: targetType };
+      return snip(`&${resolvedValue}`, targetType);
     case 'deref':
-      return { value: `*${resolvedValue}`, dataType: targetType };
+      return snip(`*${resolvedValue}`, targetType);
     case 'cast': {
-      return {
-        value: `${ctx.resolve(targetType)}(${resolvedValue})`,
-        dataType: targetType,
-      };
+      return snip(`${ctx.resolve(targetType)}(${resolvedValue})`, targetType);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
@@ -666,11 +571,18 @@ export function convertStructValues(
 }
 
 export function coerceToSnippet(value: unknown): Snippet {
-  if (isWgsl(value)) {
-    return {
-      value: value,
-      dataType: getTypeFromWgsl(value),
-    };
+  if (isSnippet(value)) {
+    // Already a snippet
+    return value;
+  }
+
+  if (hasInternalDataType(value)) {
+    // The value knows better about what type it is
+    return snip(value, value[$wgslDataType] as AnyData);
+  }
+
+  if (isVecInstance(value) || isMatInstance(value)) {
+    return snip(value, kindToSchema[value.kind]);
   }
 
   if (Array.isArray(value)) {
@@ -686,28 +598,34 @@ export function coerceToSnippet(value: unknown): Snippet {
     )?.targetType as AnyWgslData | undefined;
 
     if (!converted || !commonType) {
-      return {
-        value: value,
-        dataType: UnknownData,
-      };
+      return snip(value, UnknownData);
     }
 
-    return {
-      value: converted.map((v) => v.value).join(', '),
-      dataType: arrayOf(concretize(commonType), value.length),
-    };
+    return snip(
+      converted.map((v) => v.value).join(', '),
+      arrayOf(concretize(commonType), value.length),
+    );
   }
 
-  if (typeof value !== 'object') {
-    const maybeNumeric = numericLiteralToSnippet(String(value));
-
-    if (maybeNumeric) {
-      return maybeNumeric;
-    }
+  if (
+    typeof value === 'string' || typeof value === 'function' ||
+    typeof value === 'object' || typeof value === 'symbol' ||
+    typeof value === 'undefined' || value === null
+  ) {
+    // Nothing representable in WGSL as-is, so unknown
+    return snip(value, UnknownData);
   }
 
-  return {
-    value: value,
-    dataType: UnknownData,
-  };
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    return snip(
+      value,
+      numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
+    );
+  }
+
+  if (typeof value === 'boolean') {
+    return snip(value, bool);
+  }
+
+  return snip(value, UnknownData);
 }
