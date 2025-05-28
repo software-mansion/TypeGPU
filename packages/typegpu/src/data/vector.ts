@@ -293,7 +293,7 @@ type VecSchemaBase<TValue> = {
 };
 
 function makeVecSchema<TValue, S extends number | boolean>(
-  VecImpl: new (...args: S[]) => VecBase<S>,
+  VecImpl: new (...args: (S | undefined)[]) => VecBase<S>,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
