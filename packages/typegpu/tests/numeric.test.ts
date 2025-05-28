@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
+import { tgpu } from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -55,4 +57,29 @@ it('has correct default values', () => {
   expect(d.i32()).toBe(0);
   expect(d.u32()).toBe(0);
   // expect(d.bool()).toBe(false);
+});
+
+describe('TGSL', () => {
+  it('works for default constructors', () => {
+    const main = tgpu['~unstable']
+      .fn([])(() => {
+        const f = d.f32();
+        const h = d.f16();
+        const i = d.i32();
+        const u = d.u32();
+        // const b = d.b32();
+      })
+      .$name('main');
+
+    expect(parseResolved({ main })).toBe(
+      parse(`
+      fn main() {
+        var f = f32();
+        var h = f16();
+        var i = i32();
+        var u = u32();
+      }
+      `),
+    );
+  });
 });

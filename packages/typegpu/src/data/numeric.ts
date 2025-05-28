@@ -31,7 +31,7 @@ export const bool: Bool = {
 
 const u32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean | undefined) => {
+  (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -49,7 +49,7 @@ const u32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `u32(${v.value})`, dataType: u32 };
+    return { value: `u32(${v?.value ?? ''})`, dataType: u32 };
   },
 );
 
@@ -71,7 +71,7 @@ export const u32: U32 = Object.assign(u32Cast, {
 
 const i32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean | undefined) => {
+  (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -91,7 +91,7 @@ const i32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `i32(${v.value})`, dataType: i32 };
+    return { value: `i32(${v?.value ?? ''})`, dataType: i32 };
   },
 );
 
@@ -113,7 +113,7 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean | undefined) => {
+  (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -126,7 +126,7 @@ const f32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `f32(${v.value})`, dataType: f32 };
+    return { value: `f32(${v?.value ?? ''})`, dataType: f32 };
   },
 );
 
@@ -144,7 +144,7 @@ export const f32: F32 = Object.assign(f32Cast, {
 
 const f16Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean | undefined) => {
+  (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -158,7 +158,7 @@ const f16Cast = createDualImpl(
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => {
-    return { value: `f16(${v.value})`, dataType: f16 };
+    return { value: `f16(${v?.value ?? ''})`, dataType: f16 };
   },
 );
 
