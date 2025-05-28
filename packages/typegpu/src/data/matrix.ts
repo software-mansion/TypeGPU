@@ -218,24 +218,25 @@ const identityFunctions = {
 
 export const translation4x4 = createDualImpl(
   // CPU implementation
-  (vector: v3f) => mat4x4f(
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    vector.x,
-    vector.y,
-    vector.z,
-    1,
-  ),
+  (vector: v3f) =>
+    mat4x4f(
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      vector.x,
+      vector.y,
+      vector.z,
+      1,
+    ),
   // GPU implementation
   (vector) => ({
     value:
