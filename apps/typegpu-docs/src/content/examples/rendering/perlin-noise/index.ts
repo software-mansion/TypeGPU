@@ -1,7 +1,7 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 import { perlin3d } from '@typegpu/noise';
-import { abs, mix, mul, pow, select, sign, tanh } from 'typegpu/std';
+import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 
 /** Used for clean-up of this example */
 const abortController = new AbortController();
@@ -31,14 +31,7 @@ const exponentialSharpen = tgpu['~unstable'].fn([d.f32], d.f32)((n) => {
 });
 
 const tanhSharpen = tgpu['~unstable'].fn([d.f32], d.f32)((n) => {
-  const sharpness = sharpnessAccess.value;
-
-  const tanhResult = tanh(n * (1 + sharpness * 50));
-  const stepResult = select(d.f32(-1.0), 1.0, n >= 0);
-
-  const mixFactor = pow(sharpness, 3);
-  const sharp = mix(tanhResult, stepResult, mixFactor);
-
+  const sharp = tanh(n * (1 + sharpnessAccess.value * 10));
   return sharp * 0.5 + 0.5;
 });
 
