@@ -32,9 +32,9 @@ export function ExampleLink(props: Props) {
       href={`#example=${exampleKey}`}
       onClick={handleClick}
       className={cs(
-        'block no-underline border border-gray-200 rounded-lg overflow-hidden transition-shadow bg-white',
+        'block overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow',
         isCurrentExample
-          ? 'ring-3 ring-purple-500 shadow-lg'
+          ? 'shadow-lg ring-3 ring-purple-500'
           : 'hover:shadow-lg',
       )}
     >

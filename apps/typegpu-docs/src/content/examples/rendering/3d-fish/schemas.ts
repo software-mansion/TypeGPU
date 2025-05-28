@@ -60,15 +60,26 @@ export const MouseRay = d
   })
   .$name('mouse ray');
 
+export const FishBehaviorParams = d
+  .struct({
+    separationDist: d.f32,
+    separationStr: d.f32,
+    alignmentDist: d.f32,
+    alignmentStr: d.f32,
+    cohesionDist: d.f32,
+    cohesionStr: d.f32,
+  })
+  .$name('fish behavior params');
+
 // layouts
 
 export const modelVertexLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(d.struct(ModelVertexInput), n))
-  .$name('model vertex layout');
+  .$name('model vertex');
 
 export const renderInstanceLayout = tgpu
   .vertexLayout(ModelDataArray, 'instance')
-  .$name('render instance layout');
+  .$name('render instance');
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -78,7 +89,7 @@ export const renderBindGroupLayout = tgpu
     sampler: { sampler: 'filtering' },
     currentTime: { uniform: d.f32 },
   })
-  .$name('render bind group layout');
+  .$name('render bind group');
 
 export const computeBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -89,5 +100,6 @@ export const computeBindGroupLayout = tgpu
     },
     mouseRay: { uniform: MouseRay },
     timePassed: { uniform: d.f32 },
+    fishBehavior: { uniform: FishBehaviorParams },
   })
-  .$name('compute bind group layout');
+  .$name('compute bind group');

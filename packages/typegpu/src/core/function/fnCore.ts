@@ -1,13 +1,16 @@
+import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
+import { snip } from '../../data/dataTypes.ts';
 import {
   type AnyWgslData,
+  type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
+  Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getName, setName } from '../../name.ts';
-import { resolveFunctionHeader } from '../../resolutionCtx.ts';
-import type { ResolutionCtx, Snippet } from '../../types.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
@@ -18,12 +21,9 @@ import {
 import { getPrebuiltAstFor } from './astUtils.ts';
 import type { Implementation } from './fnTypes.ts';
 
-export interface TgpuFnShellBase<
-  Args extends unknown[] | Record<string, unknown>,
-  Return,
-> {
+export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
   readonly isEntry: boolean;
 }
 
@@ -33,7 +33,7 @@ export interface FnCore {
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[] | Record<string, unknown>, unknown>,
+  shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation,
 ): FnCore {
   /**
@@ -46,24 +46,18 @@ export function createFnCore(
 
   if (typeof implementation === 'string') {
     if (!shell.isEntry) {
-      if (Array.isArray(shell.argTypes)) {
-        // TODO: Remove this branch along with deprecated array arg types
-
-        addArgTypesToExternals(
-          implementation,
-          Array.isArray(shell.argTypes)
-            ? shell.argTypes
-            : Object.values(shell.argTypes),
-          (externals) => externalsToApply.push(externals),
-        );
-        addReturnTypeToExternals(
-          implementation,
-          shell.returnType,
-          (externals) => externalsToApply.push(externals),
-        );
-      }
+      addArgTypesToExternals(
+        implementation,
+        shell.argTypes,
+        (externals) => externalsToApply.push(externals),
+      );
+      addReturnTypeToExternals(
+        implementation,
+        shell.returnType,
+        (externals) => externalsToApply.push(externals),
+      );
     } else {
-      if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
+      if (isWgslStruct(shell.argTypes[0])) {
         externalsToApply.push({ In: shell.argTypes[0] });
       }
 
@@ -90,25 +84,13 @@ export function createFnCore(
       if (typeof implementation === 'string') {
         let header = '';
 
-        if (!shell.isEntry) {
-          header = Array.isArray(shell.argTypes) ? '' : resolveFunctionHeader(
-            ctx,
-            Object.entries(shell.argTypes).map(([value, dataType]) => ({
-              value,
-              dataType: dataType as AnyWgslData,
-            })),
-            shell.returnType as AnyWgslData,
-          );
-        } else {
-          const input =
-            Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])
-              ? '(in: In)'
-              : '()';
+        if (shell.isEntry) {
+          const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
 
           const attributes = isWgslData(shell.returnType)
             ? getAttributesString(shell.returnType)
             : '';
-          const output = shell.returnType !== undefined
+          const output = shell.returnType !== Void
             ? isWgslStruct(shell.returnType)
               ? '-> Out'
               : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
@@ -140,52 +122,38 @@ export function createFnCore(
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 
-        if (ast.argNames.type === 'destructured-object') {
-          applyExternals(
-            externalMap,
-            Object.fromEntries(
-              ast.argNames.props.map(({ prop, alias }) => [alias, prop]),
-            ),
-          );
-        }
-
-        if (
-          !Array.isArray(shell.argTypes) &&
-          ast.argNames.type === 'identifiers' &&
-          ast.argNames.names[0] !== undefined
-        ) {
-          applyExternals(externalMap, {
-            [ast.argNames.names[0]]: Object.fromEntries(
-              Object.keys(shell.argTypes).map((arg) => [arg, arg]),
-            ),
-          });
-        }
-
-        // Verifying all required externals are present.
+        // verify all required externals are present
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
         );
-
         if (missingExternals.length > 0) {
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
-        const args: Snippet[] = Array.isArray(shell.argTypes)
-          ? ast.argNames.type === 'identifiers'
-            ? shell.argTypes.map((arg, i) => ({
-              value: (ast.argNames.type === 'identifiers'
-                ? ast.argNames.names[i]
-                : undefined) ?? `arg_${i}`,
-              dataType: arg as AnyWgslData,
-            }))
-            : []
-          : Object.entries(shell.argTypes).map(([name, dataType]) => ({
-            value: name,
-            dataType: dataType as AnyWgslData,
-          }));
-
+        // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
-          args,
+          args: shell.argTypes.map((arg, i) =>
+            snip(
+              ast.params[i]?.type === FuncParameterType.identifier
+                ? ast.params[i].name
+                : `_arg_${i}`,
+              arg as AnyWgslData,
+            )
+          ),
+          argAliases: Object.fromEntries(
+            ast.params.flatMap((param, i) =>
+              param.type === FuncParameterType.destructuredObject
+                ? param.props.map(({ name, alias }) => [
+                  alias,
+                  snip(
+                    `_arg_${i}.${name}`,
+                    (shell.argTypes[i] as AnyWgslStruct)
+                      .propTypes[name] as AnyWgslData,
+                  ),
+                ])
+                : []
+            ),
+          ),
           returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,

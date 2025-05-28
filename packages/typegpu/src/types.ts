@@ -1,4 +1,4 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -29,7 +29,7 @@ import type {
   TgpuTexture,
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData } from './data/dataTypes.ts';
+import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -38,7 +38,7 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import type { Infer } from './shared/repr.ts';
+import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
@@ -70,21 +70,12 @@ export type ResolvableObject =
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
-export const UnknownData = {
-  type: 'unknown' as const,
-};
-export type UnknownData = typeof UnknownData;
-
-export type Snippet = {
-  value: unknown;
-  dataType: AnyData | UnknownData;
-};
-
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   args: Snippet[];
-  returnType: AnyWgslData;
+  argAliases: Record<string, Snippet>;
+  returnType: AnyData;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -104,7 +95,8 @@ export interface ItemStateStack {
   popSlotBindings(): void;
   pushFunctionScope(
     args: Snippet[],
-    returnType: AnyWgslData | undefined,
+    argAliases: Record<string, Snippet>,
+    returnType: AnyData,
     externalMap: Record<string, unknown>,
   ): void;
   popFunctionScope(): void;
@@ -153,10 +145,13 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: unknown): string;
-  resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
+  resolveValue<T extends BaseData>(
+    value: Infer<T> | InferGPU<T>,
+    schema: T,
+  ): string;
 
   transpileFn(fn: string): {
-    argNames: ArgNames;
+    params: FuncParameter[];
     body: Block;
     externalNames: string[];
   };
@@ -202,8 +197,7 @@ export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 export type DefaultConversionStrategy = 'keep' | 'coerce';
 
 export type FnArgsConversionHint =
-  | AnyWgslData[]
-  | Record<string, AnyWgslData>
+  | AnyData[]
   | ((...args: Snippet[]) => AnyWgslData[])
   | DefaultConversionStrategy
   | undefined;
@@ -224,16 +218,6 @@ export function isBufferUsage<
     | TgpuBufferMutable<BaseData>,
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
-}
-
-export function hasInternalDataType(
-  value: unknown,
-): value is { [$internal]: { dataType: BaseData } } {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
-  );
 }
 
 export function isMarkedInternal(

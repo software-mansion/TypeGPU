@@ -142,10 +142,7 @@ describe('tgpu.declare', () => {
     );
 
     const main = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         declaration;
         return 2;
       })

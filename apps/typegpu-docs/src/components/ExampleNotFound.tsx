@@ -12,8 +12,8 @@ export function ExampleNotFound() {
   });
 
   return (
-    <div className='flex-1 flex flex-col justify-center items-center'>
-      <h1 className='text-4xl font-bold'>404 Example Not Found</h1>
+    <div className='flex flex-1 flex-col items-center justify-center'>
+      <h1 className='font-bold text-4xl'>404 Example Not Found</h1>
       <button
         type='button'
         className='mt-4 text-lg text-slate-600 underline'

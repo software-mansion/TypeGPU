@@ -6,7 +6,7 @@ import { ExampleCard } from './ExampleCard.tsx';
 
 function ExamplesGrid({ examples }: { examples: Example[] }) {
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6 mx-1'>
+    <div className='mx-1 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1'>
       {examples.map((ex) => <ExampleCard example={ex} key={ex.key} />)}
     </div>
   );
@@ -69,9 +69,9 @@ export function SearchableExampleList(
   );
 
   return (
-    <div className='flex flex-col w-full'>
+    <div className='flex w-full flex-col'>
       <div
-        className='sticky top-0 z-20 bg-white w-full pb-4'
+        className='sticky top-0 z-20 w-full bg-white pb-4'
         style={{
           background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
         }}
@@ -86,10 +86,10 @@ export function SearchableExampleList(
             }
             setQuery(e.target.value);
           }}
-          className='w-full box-border border border-purple-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
+          className='box-border w-full rounded-full border border-purple-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset'
         />
       </div>
-      <div className='flex flex-col gap-10 flex-1'>
+      <div className='flex flex-1 flex-col gap-10'>
         {query.trim()
           ? (
             filteredExamples.length > 0
@@ -108,17 +108,17 @@ export function SearchableExampleList(
             categoriesToShow.map((category) => (
               <div key={category.key} className='flex flex-col'>
                 <div
-                  className='sticky z-10 bg-white flex items-center justify-center w-full top-8 pb-5'
+                  className='sticky top-8 z-10 flex w-full items-center justify-center bg-white pb-5'
                   style={{
                     background:
                       'linear-gradient(to bottom, white 50%, transparent 100%)',
                   }}
                 >
-                  <hr className='box-border w-full border-t border-tameplum-100' />
-                  <h2 className='text-2xl font-bold px-3 py-1 text-center'>
+                  <hr className='box-border w-full border-tameplum-100 border-t' />
+                  <h2 className='px-3 py-1 text-center font-bold text-2xl'>
                     {category.label}
                   </h2>
-                  <hr className='box-border w-full border-t border-tameplum-100' />
+                  <hr className='box-border w-full border-tameplum-100 border-t' />
                 </div>
                 <ExamplesGrid
                   examples={examplesByCategories[category.key] || []}

@@ -4,7 +4,7 @@ import { ExampleLink } from './ExampleLink.tsx';
 export function ExampleCard({ example }: { example: Example }) {
   return (
     <ExampleLink exampleKey={example.key} key={example.key}>
-      <div className='h-36 bg-gray-100 flex items-center justify-center overflow-hidden'>
+      <div className='flex h-36 items-center justify-center overflow-hidden bg-gray-100'>
         {example.thumbnails
           ? (
             <picture>
@@ -19,18 +19,18 @@ export function ExampleCard({ example }: { example: Example }) {
               <img
                 src={example.thumbnails.large}
                 alt={example.metadata.title}
-                className='object-cover w-full h-full'
+                className='h-full w-full object-cover'
               />
             </picture>
           )
           : (
-            <span className='text-gray-400 text-lg font-semibold'>
+            <span className='font-semibold text-gray-400 text-lg'>
               No thumbnail
             </span>
           )}
       </div>
       <div className='p-3'>
-        <h3 className='text-lg font-semibold mb-2 text-black'>
+        <h3 className='mb-2 font-semibold text-black text-lg'>
           {example.metadata.title}
         </h3>
         {example.metadata.tags && example.metadata.tags.length > 0 && (
@@ -38,7 +38,7 @@ export function ExampleCard({ example }: { example: Example }) {
             {example.metadata.tags.map((tag: string) => (
               <span
                 key={tag}
-                className='text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full'
+                className='rounded-full bg-indigo-100 px-2 py-1 text-indigo-800 text-xs'
               >
                 {tag}
               </span>
