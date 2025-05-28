@@ -1,6 +1,7 @@
 import { snip } from '../data/dataTypes.ts';
 import { Void } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 
 export const discard = createDualImpl(
   // CPU
@@ -10,3 +11,4 @@ export const discard = createDualImpl(
   // GPU
   () => snip('discard;', Void),
 );
+setName(discard, 'discard');

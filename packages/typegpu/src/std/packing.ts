@@ -4,6 +4,7 @@ import { vec2f, vec4f } from '../data/vector.ts';
 import type { v2f, v4f } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { snip } from '../data/dataTypes.ts';
+import { setName } from '../shared/meta.ts';
 
 /**
  * @privateRemarks
@@ -21,6 +22,7 @@ export const unpack2x16float = createDualImpl(
   // GPU implementation
   (e) => snip(`unpack2x16float(${e.value})`, vec2f),
 );
+setName(unpack2x16float, 'unpack2x16float');
 
 /**
  * @privateRemarks
@@ -39,6 +41,7 @@ export const pack2x16float = createDualImpl(
   // GPU implementation
   (e) => snip(`pack2x16float(${e.value})`, u32),
 );
+setName(pack2x16float, 'pack2x16float');
 
 /**
  * @privateRemarks
@@ -61,6 +64,7 @@ export const unpack4x8unorm = createDualImpl(
   // GPU implementation
   (e) => snip(`unpack4x8unorm(${e.value})`, vec4f),
 );
+setName(unpack4x8unorm, 'unpack4x8unorm');
 
 /**
  * @privateRemarks
@@ -81,3 +85,4 @@ export const pack4x8unorm = createDualImpl(
   // GPU implementation
   (e) => snip(`pack4x8unorm(${e.value})`, u32),
 );
+setName(pack4x8unorm, 'pack4x8unorm');

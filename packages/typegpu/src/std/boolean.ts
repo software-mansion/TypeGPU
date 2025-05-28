@@ -15,6 +15,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 import { isSnippetNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
@@ -42,6 +43,7 @@ export const allEq = createDualImpl(
   // GPU implementation
   (lhs, rhs) => snip(`all(${lhs.value} == ${rhs.value})`, bool),
 );
+setName(allEq, 'allEq');
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -63,6 +65,7 @@ export const eq = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(eq, 'eq');
 
 /**
  * Checks **component-wise** whether `lhs != rhs`.
@@ -82,6 +85,7 @@ export const ne = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(ne, 'ne');
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -102,6 +106,7 @@ export const lt = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(lt, 'lt');
 
 /**
  * Checks **component-wise** whether `lhs <= rhs`.
@@ -122,6 +127,7 @@ export const le = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(le, 'le');
 
 /**
  * Checks **component-wise** whether `lhs > rhs`.
@@ -142,6 +148,7 @@ export const gt = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(gt, 'gt');
 
 /**
  * Checks **component-wise** whether `lhs >= rhs`.
@@ -161,6 +168,7 @@ export const ge = createDualImpl(
       correspondingBooleanVectorSchema(lhs),
     ),
 );
+setName(ge, 'ge');
 
 // logical ops
 
@@ -177,6 +185,7 @@ export const not = createDualImpl(
   // GPU implementation
   (value) => snip(`!(${value.value})`, value.dataType),
 );
+setName(not, 'not');
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -191,6 +200,7 @@ export const or = createDualImpl(
   // GPU implementation
   (lhs, rhs) => snip(`(${lhs.value} | ${rhs.value})`, lhs.dataType),
 );
+setName(or, 'or');
 
 /**
  * Returns **component-wise** logical `and` result.
@@ -205,6 +215,7 @@ export const and = createDualImpl(
   // GPU implementation
   (lhs, rhs) => snip(`(${lhs.value} & ${rhs.value})`, lhs.dataType),
 );
+setName(and, 'and');
 
 // logical aggregation
 
@@ -220,6 +231,7 @@ export const all = createDualImpl(
   // GPU implementation
   (value) => snip(`all(${value.value})`, bool),
 );
+setName(all, 'all');
 
 /**
  * Returns `true` if any component of `value` is true.
@@ -233,6 +245,7 @@ export const any = createDualImpl(
   // GPU implementation
   (value) => snip(`any(${value.value})`, bool),
 );
+setName(any, 'any');
 
 // other
 
@@ -282,6 +295,7 @@ export const isCloseTo = createDualImpl(
     return snip('false', bool);
   },
 );
+setName(isCloseTo, 'isCloseTo');
 
 export type SelectOverload = {
   <T extends number | boolean | AnyVecInstance>(f: T, t: T, cond: boolean): T;
@@ -323,3 +337,4 @@ export const select: SelectOverload = createDualImpl(
   (f, t, cond) =>
     snip(`select(${f.value}, ${t.value}, ${cond.value})`, f.dataType),
 );
+setName(select, 'select');
