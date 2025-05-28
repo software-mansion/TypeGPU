@@ -98,6 +98,7 @@ export const add = createDualImpl(
     ),
   'coerce',
 );
+setName(add, 'add');
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
 function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
@@ -127,6 +128,7 @@ export const sub = createDualImpl(
     ),
   'coerce',
 );
+setName(sub, 'sub');
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
 function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
@@ -193,6 +195,7 @@ export const mul = createDualImpl(
     return snip(`(${lhs.value} * ${rhs.value})`, returnType);
   },
 );
+setName(mul, 'mul');
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
 function cpuDiv<MV extends NumVec>(lhs: number, rhs: MV): MV; // scale
@@ -233,7 +236,7 @@ export const div = createDualImpl(
     return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
   },
 );
-setName(mul, 'mul');
+setName(div, 'div');
 
 export const abs = createDualImpl(
   // CPU implementation
@@ -246,6 +249,7 @@ export const abs = createDualImpl(
   // GPU implementation
   (value) => snip(`abs(${value.value})`, value.dataType),
 );
+setName(abs, 'abs');
 
 export const atan2 = createDualImpl(
   // CPU implementation
@@ -261,6 +265,7 @@ export const atan2 = createDualImpl(
   // GPU implementation
   (y, x) => snip(`atan2(${y.value}, ${x.value})`, y.dataType),
 );
+setName(atan2, 'atan2');
 
 export const acos = createDualImpl(
   // CPU implementation
@@ -275,6 +280,7 @@ export const acos = createDualImpl(
   // GPU implementation
   (value) => snip(`acos(${value.value})`, value.dataType),
 );
+setName(acos, 'acos');
 
 export const asin = createDualImpl(
   // CPU implementation
@@ -289,6 +295,7 @@ export const asin = createDualImpl(
   // GPU implementation
   (value) => snip(`asin(${value.value})`, value.dataType),
 );
+setName(asin, 'asin');
 
 /**
  * @privateRemarks
@@ -305,6 +312,7 @@ export const ceil = createDualImpl(
   // GPU implementation
   (value) => snip(`ceil(${value.value})`, value.dataType),
 );
+setName(ceil, 'ceil');
 
 /**
  * @privateRemarks
@@ -326,6 +334,7 @@ export const clamp = createDualImpl(
   (value, low, high) =>
     snip(`clamp(${value.value}, ${low.value}, ${high.value})`, value.dataType),
 );
+setName(clamp, 'clamp');
 
 /**
  * @privateRemarks
@@ -342,6 +351,7 @@ export const cos = createDualImpl(
   // GPU implementation
   (value) => snip(`cos(${value.value})`, value.dataType),
 );
+setName(cos, 'cos');
 
 /**
  * @privateRemarks
@@ -353,6 +363,7 @@ export const cross = createDualImpl(
   // GPU implementation
   (a, b) => snip(`cross(${a.value}, ${b.value})`, a.dataType),
 );
+setName(cross, 'cross');
 
 /**
  * @privateRemarks
@@ -365,6 +376,7 @@ export const dot = createDualImpl(
   // GPU implementation
   (lhs, rhs) => snip(`dot(${lhs.value}, ${rhs.value})`, f32),
 );
+setName(dot, 'dot');
 
 export const normalize = createDualImpl(
   // CPU implementation
@@ -372,6 +384,7 @@ export const normalize = createDualImpl(
   // GPU implementation
   (v) => snip(`normalize(${v.value})`, v.dataType),
 );
+setName(normalize, 'normalize');
 
 /**
  * @privateRemarks
@@ -388,6 +401,7 @@ export const floor = createDualImpl(
   // GPU implementation
   (value) => snip(`floor(${value.value})`, value.dataType),
 );
+setName(floor, 'floor');
 
 export const fract = createDualImpl(
   // CPU implementation
@@ -400,6 +414,7 @@ export const fract = createDualImpl(
   // GPU implementation
   (a) => snip(`fract(${a.value})`, a.dataType),
 );
+setName(fract, 'fract');
 
 /**
  * @privateRemarks
@@ -416,6 +431,7 @@ export const length = createDualImpl(
   // GPU implementation
   (value) => snip(`length(${value.value})`, f32),
 );
+setName(length, 'length');
 
 /**
  * @privateRemarks
@@ -433,6 +449,7 @@ export const max = createDualImpl(
   (a, b) => snip(`max(${a.value}, ${b.value})`, a.dataType),
   'coerce',
 );
+setName(max, 'max');
 
 /**
  * @privateRemarks
@@ -450,6 +467,7 @@ export const min = createDualImpl(
   (a, b) => snip(`min(${a.value}, ${b.value})`, a.dataType),
   'coerce',
 );
+setName(min, 'min');
 
 export const sign = createDualImpl(
   // CPU implementation
@@ -465,6 +483,7 @@ export const sign = createDualImpl(
   // GPU implementation
   (e) => snip(`sign(${e.value})`, e.dataType),
 );
+setName(sign, 'sign');
 
 /**
  * @privateRemarks
@@ -481,6 +500,7 @@ export const sin = createDualImpl(
   // GPU implementation
   (value) => snip(`sin(${value.value})`, value.dataType),
 );
+setName(sin, 'sin');
 
 /**
  * @privateRemarks
@@ -497,6 +517,7 @@ export const exp = createDualImpl(
   // GPU implementation
   (value) => snip(`exp(${value.value})`, value.dataType),
 );
+setName(exp, 'exp');
 
 type PowOverload = {
   (base: number, exponent: number): number;
@@ -553,6 +574,7 @@ export const mix: MixOverload = createDualImpl(
   (e1, e2, e3) =>
     snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
 );
+setName(mix, 'mix');
 
 export const reflect = createDualImpl(
   // CPU implementation
@@ -561,6 +583,7 @@ export const reflect = createDualImpl(
   // GPU implementation
   (e1, e2) => snip(`reflect(${e1.value}, ${e2.value})`, e1.dataType),
 );
+setName(reflect, 'reflect');
 
 export const distance = createDualImpl(
   // CPU implementation
@@ -575,6 +598,7 @@ export const distance = createDualImpl(
   // GPU implementation
   (a, b) => snip(`distance(${a.value}, ${b.value})`, f32),
 );
+setName(distance, 'distance');
 
 export const neg = createDualImpl(
   // CPU implementation
@@ -587,6 +611,7 @@ export const neg = createDualImpl(
   // GPU implementation
   (value) => snip(`-(${value.value})`, value.dataType),
 );
+setName(neg, 'neg');
 
 export const sqrt = createDualImpl(
   // CPU implementation
@@ -599,6 +624,7 @@ export const sqrt = createDualImpl(
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
 );
+setName(sqrt, 'sqrt');
 
 /**
  * Translates a matrix by a given vector.
@@ -621,3 +647,4 @@ export const translate4x4 = createDualImpl(
     dataType: matrix.dataType,
   }),
 );
+setName(translate4x4, 'translate4x4');
