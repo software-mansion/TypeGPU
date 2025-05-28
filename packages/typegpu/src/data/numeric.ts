@@ -31,7 +31,10 @@ export const bool: Bool = {
 
 const u32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v: number | boolean | undefined) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -68,7 +71,10 @@ export const u32: U32 = Object.assign(u32Cast, {
 
 const i32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v: number | boolean | undefined) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -107,7 +113,10 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v: number | boolean | undefined) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -135,7 +144,10 @@ export const f32: F32 = Object.assign(f32Cast, {
 
 const f16Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v: number | boolean | undefined) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }

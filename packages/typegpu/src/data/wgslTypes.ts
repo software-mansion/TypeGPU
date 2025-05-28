@@ -692,6 +692,8 @@ export interface Bool {
   readonly [$internal]: true;
   readonly type: 'bool';
   readonly [$repr]: boolean;
+
+  // (v?: number | boolean): boolean;
 }
 
 /**
@@ -702,7 +704,7 @@ export interface F32 {
   readonly type: 'f32';
   readonly [$repr]: number;
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -713,7 +715,7 @@ export interface F16 {
   readonly type: 'f16';
   readonly [$repr]: number;
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -725,7 +727,7 @@ export interface I32 {
   readonly [$repr]: number;
   readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -737,7 +739,7 @@ export interface U32 {
   readonly [$repr]: number;
   readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**

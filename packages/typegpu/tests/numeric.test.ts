@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 
 describe('f32', () => {
@@ -47,4 +47,12 @@ describe('f16', () => {
     // @ts-expect-error
     acceptsF16Schema(d.u32);
   });
+});
+
+it('has correct default values', () => {
+  expect(d.f32()).toBe(0);
+  expect(d.f16()).toBe(0);
+  expect(d.i32()).toBe(0);
+  expect(d.u32()).toBe(0);
+  // expect(d.bool()).toBe(false);
 });
