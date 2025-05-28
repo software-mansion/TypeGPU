@@ -36,6 +36,7 @@ export function SearchableExampleList(
           { name: 'metadata.tags', weight: 0.3 },
           { name: 'metadata.category', weight: 0.1 },
         ],
+        threshold: 0.4,
       }),
     [allExamples],
   );
