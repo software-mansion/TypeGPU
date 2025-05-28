@@ -131,6 +131,9 @@ importers:
       expressive-code-twoslash:
         specifier: ^0.5.3
         version: 0.5.3(@expressive-code/core@0.41.2)(expressive-code@0.41.2)(typescript@5.8.3)
+      fuse.js:
+        specifier: ^7.1.0
+        version: 7.1.0
       jotai:
         specifier: ^2.8.4
         version: 2.12.1(@types/react@19.0.10)(react@19.0.0)
@@ -219,6 +222,9 @@ importers:
       tailwindcss-motion:
         specifier: ^1.0.1
         version: 1.1.0(tailwindcss@4.1.7)
+      vite-imagetools:
+        specifier: ^7.1.0
+        version: 7.1.0(rollup@4.34.8)
       yaml:
         specifier: ^2.7.0
         version: 2.7.0
@@ -3271,6 +3277,10 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
+  fuse.js@7.1.0:
+    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
+    engines: {node: '>=10'}
+
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
@@ -3416,6 +3426,10 @@ packages:
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
+
+  imagetools-core@7.1.0:
+    resolution: {integrity: sha512-8Aa4NecBBGmTkaAUjcuRYgTPKHCsBEWYmCnvKCL6/bxedehtVVFyZPdXe8DD0Nevd6UWBq85ifUaJ8498lgqNQ==}
+    engines: {node: '>=18.0.0'}
 
   import-meta-resolve@4.1.0:
     resolution: {integrity: sha512-I6fiaX09Xivtk+THaMfAwnA3MVA5Big1WHF1Dfx9hFuvNIWpXnorlkzhcQf6ehrqQiiZECRt1poOAkPmer3ruw==}
@@ -5256,6 +5270,10 @@ packages:
 
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
+
+  vite-imagetools@7.1.0:
+    resolution: {integrity: sha512-Mqh1uUY2DEMuBOogFz5Rd7cAs70VP6wsdQh2IShrJ+qGk5f7yQa4pN8w0YMLlGIKYW1JfM8oXrznUwVkhG+qxg==}
+    engines: {node: '>=18.0.0'}
 
   vite-node@3.1.2:
     resolution: {integrity: sha512-/8iMryv46J3aK13iUXsei5G/A3CUlW4665THCPS+K8xAaqrVWiGB4RfXMQXCLjpK9P2eK//BczrVkn5JLAk6DA==}
@@ -8394,6 +8412,8 @@ snapshots:
 
   function-bind@1.1.2: {}
 
+  fuse.js@7.1.0: {}
+
   gensync@1.0.0-beta.2: {}
 
   get-caller-file@2.0.5: {}
@@ -8665,6 +8685,8 @@ snapshots:
   ieee754@1.2.1: {}
 
   ignore@5.3.2: {}
+
+  imagetools-core@7.1.0: {}
 
   import-meta-resolve@4.1.0: {}
 
@@ -10778,6 +10800,14 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
       vfile-message: 4.0.2
+
+  vite-imagetools@7.1.0(rollup@4.34.8):
+    dependencies:
+      '@rollup/pluginutils': 5.1.4(rollup@4.34.8)
+      imagetools-core: 7.1.0
+      sharp: 0.34.2
+    transitivePeerDependencies:
+      - rollup
 
   vite-node@3.1.2(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.19.3)(yaml@2.7.0):
     dependencies:

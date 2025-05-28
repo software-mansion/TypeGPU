@@ -1,5 +1,5 @@
 {
   "title": "Camera Thresholding",
   "category": "image-processing",
-  "tags": ["camera"]
+  "tags": ["camera", "filtering", "external texture"]
 }
