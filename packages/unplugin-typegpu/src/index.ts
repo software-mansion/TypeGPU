@@ -68,6 +68,23 @@ function assignMetadata(
   );
 }
 
+function tryAssignName(
+  magicString: MagicStringAST,
+  node: acorn.Node,
+  name: string,
+) {
+  magicString
+    .appendLeft(node.start, '$autoName(')
+    .appendRight(node.end, `, ${name})`);
+}
+
+function includeAutoNameFunction(magicString: MagicStringAST) {
+  magicString.append(`
+function $autoName(exp, label) {
+  return exp?.$name ? exp.$name(label) : exp;
+}`);
+}
+
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
   (rawOptions) => {
     const options = defu(rawOptions, defaultOptions);
@@ -102,6 +119,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
+
+              if (
+                node.type === 'VariableDeclarator' &&
+                node.id.type === 'Identifier' &&
+                node.init
+              ) {
+                tryAssignName(magicString, node.init, node.id.name);
+              }
 
               if (node.type === 'ImportDeclaration') {
                 gatherTgpuAliases(node, ctx);
@@ -197,6 +222,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             }
           }
 
+          includeAutoNameFunction(magicString);
           return generateTransform(magicString, id);
         },
       },

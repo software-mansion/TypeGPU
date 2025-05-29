@@ -83,7 +83,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
 
-      hello['~unstable']
+      const increment = $autoName(hello['~unstable']
               .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
@@ -91,7 +91,11 @@ describe('[ROLLUP] tgpu alias gathering', () => {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})), increment);
+          
+      function $autoName(exp, label) {
+        return exp?.$name ? exp.$name(label) : exp;
+      }
       "
     `);
   });
@@ -110,7 +114,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
 
-      tgpu['~unstable']
+      const increment = $autoName(tgpu['~unstable']
               .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
@@ -118,7 +122,11 @@ describe('[ROLLUP] tgpu alias gathering', () => {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})), increment);
+          
+      function $autoName(exp, label) {
+        return exp?.$name ? exp.$name(label) : exp;
+      }
       "
     `);
   });
@@ -136,7 +144,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
 
-      t.tgpu['~unstable']
+      const increment = $autoName(t.tgpu['~unstable']
               .fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
@@ -144,7 +152,11 @@ describe('[ROLLUP] tgpu alias gathering', () => {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})), increment);
+          
+      function $autoName(exp, label) {
+        return exp?.$name ? exp.$name(label) : exp;
+      }
       "
     `);
   });
