@@ -10,7 +10,7 @@
     "check": "biome lint . && deno fmt --check",
     "fix": "biome lint --write . && deno fmt",
     "coverage": "vitest --coverage",
-    "test": "pnpm run test:types && pnpm run test:spec-and-attest",
+    "test": "pnpm run test:types && pnpm run check && pnpm run test:spec-and-attest",
     "test:types": "pnpm run -r --parallel test:types",
     "test:spec": "ATTEST_skipTypes=1 vitest run",
     "test:spec-and-attest": "vitest run",
