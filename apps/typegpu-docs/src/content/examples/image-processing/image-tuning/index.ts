@@ -279,20 +279,54 @@ async function fetchLUT(file: string): Promise<LUTData> {
   return { title, type, size, domain, data };
 }
 
+async function updateLUT(file: string) {
+    const parsed = await fetchLUT(file);
+
+    if (!parsed.data)
+        throw new Error(`${file} is corrupted`);
+
+    lutParamsBuffer.write({
+      size: d.f32(parsed.size),
+      min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
+      max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
+      enabled: 1,
+    });
+
+    if (currentLUTTexture !== defaultLUTTexture)
+      currentLUTTexture.destroy();
+
+    currentLUTTexture = root['~unstable']
+      .createTexture({
+        size: [parsed.size, parsed.size, parsed.size],
+        format: 'rgba16float',
+        dimension: '3d',
+      })
+      .$usage('sampled');
+
+    device.queue.writeTexture(
+      { texture: root.unwrap(currentLUTTexture) },
+      parsed.data,
+      {
+        bytesPerRow: parsed.size * 4 * 2,
+        rowsPerImage: parsed.size,
+      },
+      [parsed.size, parsed.size, parsed.size]
+    );
+}
+
 // #endregion
 
 // #region Example controls and cleanup
 
 const LUTFiles = {
   None: '',
-  Chrome: '/TypeGPU/assets/image-tuning/classic-chrome.cube',
-  Hollywood: '/TypeGPU/assets/image-tuning/HollywoodBlue_Day.cube',
-  Dramatic: '/TypeGPU/assets/image-tuning/Dramatic_BlockBuster_33.cube',
-  'Pro Neg': '/TypeGPU/assets/image-tuning/pro neg hi_srgb.cube',
-  'Cold Ice': '/TypeGPU/assets/image-tuning/tinyglade-Cold_Ice.cube',
-  Bluecine: '/TypeGPU/assets/image-tuning/tinyglade-Bluecine_75.cube',
-  'Sam Kolder': '/TypeGPU/assets/image-tuning/tinyglade-Sam_Kolder.cube',
-  'LMT ACES': '/TypeGPU/assets/image-tuning/resolve-LMT ACES v0.1.1.cube',
+  Chrome: '/TypeGPU/assets/image-tuning/classic_chrome.cube',
+  Hollywood: '/TypeGPU/assets/image-tuning/hollywoodblue_day.cube',
+  Dramatic: '/TypeGPU/assets/image-tuning/dramatic_blockbuster_33.cube',
+  'Pro Neg': '/TypeGPU/assets/image-tuning/pro_neg_hi_srgb.cube',
+  'Cold Ice': '/TypeGPU/assets/image-tuning/tinyglade_cold_ice.cube',
+  Bluecine: '/TypeGPU/assets/image-tuning/tinyglade_bluecine_75.cube',
+  'Sam Kolder': '/TypeGPU/assets/image-tuning/tinyglade_sam_kolder.cube',
 };
 
 export const controls = {
@@ -303,38 +337,7 @@ export const controls = {
         currentLUTTexture = defaultLUTTexture;
         lutParamsBuffer.writePartial({ enabled: 0 });
       } else {
-        const parsed = await fetchLUT(LUTFiles[selected]);
-
-        if (!parsed.data)
-            throw new Error(`${LUTFiles[selected]} is corrupted`);
-
-        lutParamsBuffer.write({
-          size: d.f32(parsed.size),
-          min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
-          max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
-          enabled: 1,
-        });
-
-        if (currentLUTTexture != defaultLUTTexture)
-          currentLUTTexture.destroy();
-
-        currentLUTTexture = root['~unstable']
-          .createTexture({
-            size: [parsed.size, parsed.size, parsed.size],
-            format: 'rgba16float',
-            dimension: '3d',
-          })
-          .$usage('sampled');
-
-        device.queue.writeTexture(
-          { texture: root.unwrap(currentLUTTexture) },
-          parsed.data,
-          {
-            bytesPerRow: parsed.size * 4 * 2,
-            rowsPerImage: parsed.size,
-          },
-          [parsed.size, parsed.size, parsed.size]
-        );
+        await updateLUT(LUTFiles[selected]);
       }
       render();
     },
