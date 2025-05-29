@@ -88,7 +88,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   let highlightLuminanceAdjust = contrastLuminance * highlightFactor;
   let highlightLuminance = mix(contrastLuminance, clamp(highlightLuminanceAdjust, 0.0, 1.0), highlightWeight);
 
-  let shadowWeight = 1.0 - smoothstep(0.0, 0.3, luminance);
+  let shadowWeight = 1.0 - luminance;
   let shadowAdjust = pow(highlightColor, vec3f(1.0 / adjustments.shadows));
   let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
   let shadowLuminanceAdjust = pow(highlightLuminance, 1.0 / adjustments.shadows);
