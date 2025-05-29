@@ -3,11 +3,11 @@
  * Used as a pre-publishing step.
  */
 
-import * as fs from 'node:fs/promises';
-import process from 'node:process';
 import arg from 'arg';
 import { consola } from 'consola';
 import { execa } from 'execa';
+import * as fs from 'node:fs/promises';
+import process from 'node:process';
 import { entries, mapValues } from 'remeda';
 import color from './colors.mjs';
 import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
@@ -147,14 +147,15 @@ async function main() {
 
   /** @type {PromiseSettledResult<*>[]} */
   const results = await progress('', async (update) => {
-    /** @typedef {'biome' | 'build' | 'spec' | 'types'} TaskName */
+    /** @typedef {'style' | 'build' | 'unit' | 'types' | 'circular-deps' } TaskName */
 
     /** @type {Record<TaskName, TaskStatus>} */
     const status = {
-      biome: 'in_progress',
       build: 'in_progress',
-      spec: 'in_progress',
+      style: 'in_progress',
+      unit: 'in_progress',
       types: 'in_progress',
+      'circular-deps': 'in_progress',
     };
 
     const taskString = (/** @type {TaskName} */ name) =>
@@ -168,11 +169,11 @@ async function main() {
 
     const updateMsg = () =>
       update(
-        `${color.BgBrightMagenta}${color.Black}${Frog} working on tasks...${color.Reset}  ${
-          taskString('biome')
-        }, ${taskString('build')}, ${taskString('spec')}, ${
+        `${color.BgBrightMagenta}${color.Black}${Frog}📋 working on tasks...${color.Reset}  ${
+          taskString('build')
+        }, ${taskString('style')}, ${taskString('unit')}, ${
           taskString('types')
-        }`,
+        }, ${taskString('circular-deps')}`,
       );
 
     /**
@@ -205,16 +206,21 @@ async function main() {
       ]),
       // Then the rest
       ...await Promise.allSettled([
-        withStatusUpdate('biome', $`pnpm -w check`),
-        withStatusUpdate('spec', $`pnpm -w test:spec`),
+        withStatusUpdate('style', $`pnpm -w test:style`),
+        withStatusUpdate('unit', $`pnpm -w test:unit`),
         withStatusUpdate('types', $`pnpm -w test:types`),
+        withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`),
       ]),
     ];
 
     update(
-      `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${
-        taskString('biome')
-      }, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+      `${color.BgBrightMagenta}${color.Black}${Frog}${
+        Object.values(status).includes('fail') ? '👎' : '👍'
+      } finished!${color.Reset}  ${taskString('build')}, ${
+        taskString('style')
+      }, ${taskString('unit')}, ${taskString('types')}, ${
+        taskString('circular-deps')
+      }`,
     );
 
     return results;
