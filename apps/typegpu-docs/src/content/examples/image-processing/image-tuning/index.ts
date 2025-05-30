@@ -103,14 +103,18 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 `;
 
 function render() {
-
   if (!defaultLUTTexture) {
     // Not yet initialized
     return;
   }
 
   const uniformLayout = tgpu.bindGroupLayout({
-    currentLUTTexture: { texture: 'float', dimension: '3d', viewDimension: '3d', sampleType: 'float' },
+    currentLUTTexture: {
+      texture: 'float',
+      dimension: '3d',
+      viewDimension: '3d',
+      sampleType: 'float',
+    },
     lutSampler: { sampler: 'filtering' },
     lut: { uniform: LUTParams },
     adjustments: { uniform: Adjustments },
@@ -135,7 +139,9 @@ function render() {
   });
 
   const uniformBindGroup = root.createBindGroup(uniformLayout, {
-    currentLUTTexture: root.unwrap(currentLUTTexture).createView({ dimension: '3d' }),
+    currentLUTTexture: root.unwrap(currentLUTTexture).createView({
+      dimension: '3d',
+    }),
     lutSampler,
     lut: lutParamsBuffer,
     adjustments: adjustmentsBuffer,
@@ -195,7 +201,7 @@ function render() {
 }
 
 async function init() {
-  const response = await fetch('/TypeGPU/Lenna.png');
+  const response = await fetch('/TypeGPU/assets/image-tuning/tiger.png');
   const imageBitmap = await createImageBitmap(await response.blob());
   const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
 
@@ -219,7 +225,7 @@ async function init() {
       dimension: '3d',
     })
     .$usage('sampled');
-  
+
   currentLUTTexture = defaultLUTTexture;
 
   lutParamsBuffer.writePartial({ enabled: 0 });
@@ -280,38 +286,40 @@ async function fetchLUT(file: string): Promise<LUTData> {
 }
 
 async function updateLUT(file: string) {
-    const parsed = await fetchLUT(file);
+  const parsed = await fetchLUT(file);
 
-    if (!parsed.data)
-        throw new Error(`${file} is corrupted`);
+  if (!parsed.data) {
+    throw new Error(`${file} is corrupted`);
+  }
 
-    lutParamsBuffer.write({
-      size: d.f32(parsed.size),
-      min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
-      max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
-      enabled: 1,
-    });
+  lutParamsBuffer.write({
+    size: d.f32(parsed.size),
+    min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
+    max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
+    enabled: 1,
+  });
 
-    if (currentLUTTexture !== defaultLUTTexture)
-      currentLUTTexture.destroy();
+  if (currentLUTTexture !== defaultLUTTexture) {
+    currentLUTTexture.destroy();
+  }
 
-    currentLUTTexture = root['~unstable']
-      .createTexture({
-        size: [parsed.size, parsed.size, parsed.size],
-        format: 'rgba16float',
-        dimension: '3d',
-      })
-      .$usage('sampled');
+  currentLUTTexture = root['~unstable']
+    .createTexture({
+      size: [parsed.size, parsed.size, parsed.size],
+      format: 'rgba16float',
+      dimension: '3d',
+    })
+    .$usage('sampled');
 
-    device.queue.writeTexture(
-      { texture: root.unwrap(currentLUTTexture) },
-      parsed.data,
-      {
-        bytesPerRow: parsed.size * 4 * 2,
-        rowsPerImage: parsed.size,
-      },
-      [parsed.size, parsed.size, parsed.size]
-    );
+  device.queue.writeTexture(
+    { texture: root.unwrap(currentLUTTexture) },
+    parsed.data,
+    {
+      bytesPerRow: parsed.size * 4 * 2,
+      rowsPerImage: parsed.size,
+    },
+    [parsed.size, parsed.size, parsed.size],
+  );
 }
 
 // #endregion
@@ -320,13 +328,13 @@ async function updateLUT(file: string) {
 
 const LUTFiles = {
   None: '',
-  Chrome: '/TypeGPU/assets/image-tuning/classic_chrome.cube',
-  Hollywood: '/TypeGPU/assets/image-tuning/hollywoodblue_day.cube',
-  Dramatic: '/TypeGPU/assets/image-tuning/dramatic_blockbuster_33.cube',
-  'Pro Neg': '/TypeGPU/assets/image-tuning/pro_neg_hi_srgb.cube',
-  'Cold Ice': '/TypeGPU/assets/image-tuning/tinyglade_cold_ice.cube',
-  Bluecine: '/TypeGPU/assets/image-tuning/tinyglade_bluecine_75.cube',
-  'Sam Kolder': '/TypeGPU/assets/image-tuning/tinyglade_sam_kolder.cube',
+  Chrome: '/TypeGPU/assets/image-tuning/chrome.cube',
+  Hollywood: '/TypeGPU/assets/image-tuning/hollywood.cube',
+  Dramatic: '/TypeGPU/assets/image-tuning/dramatic.cube',
+  'Pro Neg': '/TypeGPU/assets/image-tuning/pro_neg.cube',
+  'Cold Ice': '/TypeGPU/assets/image-tuning/cold_ice.cube',
+  Bluecine: '/TypeGPU/assets/image-tuning/bluecine.cube',
+  'Sam Kolder': '/TypeGPU/assets/image-tuning/sam_kolder.cube',
 };
 
 export const controls = {
@@ -356,7 +364,7 @@ export const controls = {
     initial: 1.0,
     min: 0.0,
     max: 2.0,
-    step: 0.01,
+    step: 0.1,
     onSliderChange(value: number) {
       adjustmentsBuffer.writePartial({ contrast: value });
       render();
@@ -366,7 +374,7 @@ export const controls = {
     initial: 1.0,
     min: 0.0,
     max: 2.0,
-    step: 0.01,
+    step: 0.1,
     onSliderChange(value: number) {
       adjustmentsBuffer.writePartial({ highlights: value });
       render();
@@ -376,7 +384,7 @@ export const controls = {
     initial: 1.0,
     min: 0.1,
     max: 1.9,
-    step: 0.01,
+    step: 0.1,
     onSliderChange(value: number) {
       adjustmentsBuffer.writePartial({ shadows: value });
       render();
@@ -386,7 +394,7 @@ export const controls = {
     initial: 1.0,
     min: 0.0,
     max: 2.0,
-    step: 0.01,
+    step: 0.1,
     onSliderChange(value: number) {
       adjustmentsBuffer.writePartial({ saturation: value });
       render();
