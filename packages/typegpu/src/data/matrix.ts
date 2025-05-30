@@ -58,6 +58,7 @@ function createMatSchema<
     type: options.type,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4x4 : undefined,
+    scaling: options.columns === 4 ? scaling4x4 : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -578,6 +579,28 @@ export const translation4x4 = createDualImpl(
         0, 1, 0, 0,
         0, 0, 1, 0, 
         ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1
+      )`,
+    dataType: mat4x4f,
+  }),
+);
+
+export const scaling4x4 = createDualImpl(
+  // CPU implementation
+  (vector: v3f) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      vector.x, 0, 0, 0,
+      0, vector.y, 0, 0,
+      0, 0, vector.z, 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (vector) => ({
+    value: `mat4x4f(
+        ${vector.value}.x, 0, 0, 0,
+        0, ${vector.value}.y, 0, 0,
+        0, 0, ${vector.value}.z, 0, 
+        0, 0, 0, 1
       )`,
     dataType: mat4x4f,
   }),
