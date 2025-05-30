@@ -10,6 +10,7 @@ import type {
   I32,
   U32,
 } from './wgslTypes.ts';
+import { snip } from './dataTypes.ts';
 
 export const abstractInt = {
   [$internal]: true,
@@ -45,9 +46,7 @@ const u32Cast = createDualImpl(
     return Math.max(0, Math.min(0xffffffff, Math.floor(v)));
   },
   // GPU implementation
-  (v) => {
-    return { value: `u32(${v.value})`, dataType: u32 };
-  },
+  (v) => snip(`u32(${v.value})`, u32),
 );
 
 /**
@@ -85,7 +84,7 @@ const i32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => {
-    return { value: `i32(${v.value})`, dataType: i32 };
+    return snip(`i32(${v.value})`, i32);
   },
 );
 
@@ -116,9 +115,7 @@ const f32Cast = createDualImpl(
     return arr[0];
   },
   // GPU implementation
-  (v) => {
-    return { value: `f32(${v.value})`, dataType: f32 };
-  },
+  (v) => snip(`f32(${v.value})`, f32),
 );
 
 /**
@@ -145,9 +142,7 @@ const f16Cast = createDualImpl(
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => {
-    return { value: `f16(${v.value})`, dataType: f16 };
-  },
+  (v) => snip(`f16(${v.value})`, f16),
 );
 
 /**

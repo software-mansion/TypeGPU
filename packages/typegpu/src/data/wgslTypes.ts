@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../name.ts';
+import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,
   InferGPU,
@@ -10,10 +10,10 @@ import type {
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import { $repr } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
-type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
+type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface NumberArrayView {
   readonly length: number;
@@ -25,6 +25,12 @@ export interface BaseData {
   readonly [$internal]: true;
   readonly type: string;
   readonly [$repr]: unknown;
+}
+
+export function hasInternalDataType(
+  value: unknown,
+): value is { [$wgslDataType]: BaseData } {
+  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
 }
 
 export type ExtractTypeLabel<T extends BaseData> = T['type'];
@@ -574,6 +580,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   w: boolean;
 }
 
+export type AnyFloat32VecInstance = v2f | v3f | v4f;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -612,6 +620,7 @@ export interface matBase<TColumn> extends NumberArrayView {
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -630,6 +639,7 @@ export interface m2x2f extends mat2x2<v2f> {
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
   readonly kind: string;
+  /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
 }
 
@@ -648,6 +658,12 @@ export interface m3x3f extends mat3x3<v3f> {
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
   readonly kind: string;
+  /* override */ readonly columns: readonly [
+    TColumn,
+    TColumn,
+    TColumn,
+    TColumn,
+  ];
   [n: number]: number;
 }
 
@@ -664,6 +680,11 @@ export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
   : v4f;
+
+export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+  : T extends v3f ? m3x3f
+  : T extends v4f ? m4x4f
+  : never;
 
 // #endregion
 
@@ -986,9 +1007,10 @@ export interface Mat2x2f {
   readonly type: 'mat2x2f';
   readonly [$repr]: m2x2f;
 
-  (...elements: number[]): m2x2f;
-  (...columns: v2f[]): m2x2f;
+  (...elements: [number, number, number, number]): m2x2f;
+  (...columns: [v2f, v2f]): m2x2f;
   (): m2x2f;
+  identity(): m2x2f;
 }
 
 /**
@@ -999,9 +1021,11 @@ export interface Mat3x3f {
   readonly type: 'mat3x3f';
   readonly [$repr]: m3x3f;
 
-  (...elements: number[]): m3x3f;
-  (...columns: v3f[]): m3x3f;
+  // deno-fmt-ignore
+  (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
+  (...columns: [v3f, v3f, v3f]): m3x3f;
   (): m3x3f;
+  identity(): m3x3f;
 }
 
 /**
@@ -1012,9 +1036,12 @@ export interface Mat4x4f {
   readonly type: 'mat4x4f';
   readonly [$repr]: m4x4f;
 
-  (...elements: number[]): m4x4f;
-  (...columns: v4f[]): m4x4f;
+  // deno-fmt-ignore
+  (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
+  (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
   (): m4x4f;
+  identity(): m4x4f;
+  translation(vec: v3f): m4x4f;
 }
 
 /**
@@ -1122,7 +1149,7 @@ export interface Size<T extends number> {
   readonly value: T;
 }
 
-export interface Location<T extends number> {
+export interface Location<T extends number = number> {
   readonly [$internal]: true;
   readonly type: '@location';
   readonly value: T;
@@ -1136,7 +1163,7 @@ export type InterpolationType =
   | PerspectiveOrLinearInterpolationType
   | FlatInterpolationType;
 
-export interface Interpolate<T extends InterpolationType> {
+export interface Interpolate<T extends InterpolationType = InterpolationType> {
   readonly [$internal]: true;
   readonly type: '@interpolate';
   readonly value: T;
@@ -1159,7 +1186,7 @@ export interface Decorated<
   readonly [$repr]: Infer<TInner>;
   readonly '~gpuRepr': InferGPU<TInner>;
   readonly '~reprPartial': InferPartial<TInner>;
-  readonly '~memIdent': TAttribs extends Location<number>[]
+  readonly '~memIdent': TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
 }
@@ -1273,25 +1300,32 @@ export type AnyWgslData =
 
 // #endregion
 
+export function isVecInstance(value: unknown): value is AnyVecInstance {
+  const v = value as AnyVecInstance | undefined;
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('vec');
+}
+
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec2')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith?.('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec3')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
-  return (
-    (value as AnyWgslData)?.[$internal] &&
-    (value as AnyWgslData)?.type.startsWith('vec4')
-  );
+  const v = value as AnyWgslData | undefined;
+  return !!v?.[$internal] &&
+    typeof v.type?.startsWith === 'function' &&
+    v.type.startsWith('vec4');
 }
 
 export function isVec(
@@ -1310,6 +1344,13 @@ export function isVec(
   | Vec4i
   | Vec4u {
   return isVec2(value) || isVec3(value) || isVec4(value);
+}
+
+export function isMatInstance(value: unknown): value is AnyMatInstance {
+  const v = value as AnyMatInstance | undefined;
+  return !!v?.[$internal] &&
+    typeof v.kind?.startsWith === 'function' &&
+    v.kind.startsWith('mat');
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
@@ -1335,6 +1376,13 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
+export function isFloat32VecInstance(
+  element: number | AnyVecInstance | AnyMatInstance,
+): element is AnyFloat32VecInstance {
+  return isVecInstance(element) &&
+    ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {

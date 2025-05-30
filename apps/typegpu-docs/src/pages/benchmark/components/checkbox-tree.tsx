@@ -40,7 +40,7 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
       <div className='flex items-center'>
         <button
           type='button'
-          className='bg-transparent text-base text-white cursor-pointer'
+          className='cursor-pointer bg-transparent text-base text-white'
           onClick={() => setOpened(!opened)}
         >
           <span className={cs(opened ? 'scale-y-[-1]' : '', 'inline-block')}>
@@ -61,7 +61,7 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
         />
         <button
           type='button'
-          className='bg-transparent text-base text-white cursor-pointer'
+          className='cursor-pointer bg-transparent text-base text-white'
           onClick={() => setOpened(!opened)}
         >
           {suiteName}
@@ -96,7 +96,7 @@ function TestCheckbox(props: { suiteName: string; testName: string }) {
       </div>
       <button
         type='button'
-        className='bg-transparent text-white cursor-pointer text-sm'
+        className='cursor-pointer bg-transparent text-sm text-white'
         onClick={changeState}
       >
         {testName}
@@ -118,19 +118,19 @@ function StylizedCheckbox(props: {
 
   return (
     <div className='inline-flex items-center'>
-      <label className='flex items-center cursor-pointer relative'>
+      <label className='relative flex cursor-pointer items-center'>
         <input
           ref={checkboxRef}
           type='checkbox'
           checked={props.state === 'checked'}
-          className='peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow hover:shadow-md border border-slate-300 checked:bg-gradient-purple-dark checked:border-gradient-purple indeterminate:bg-gradient-purple-dark indeterminate:border-gradient-purple'
+          className='peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 shadow transition-all checked:border-gradient-purple checked:bg-gradient-purple-dark indeterminate:border-gradient-purple indeterminate:bg-gradient-purple-dark hover:shadow-md'
           onChange={props.onChange}
         />
-        <span className='absolute inset-0 text-white opacity-0 peer-checked:opacity-100 flex items-center justify-center'>
+        <span className='absolute inset-0 flex items-center justify-center text-white opacity-0 peer-checked:opacity-100'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             aria-hidden='true'
-            className='w-4 h-4'
+            className='h-4 w-4'
             viewBox='0 2 100 102'
           >
             <path
@@ -141,11 +141,11 @@ function StylizedCheckbox(props: {
             />
           </svg>
         </span>
-        <span className='absolute inset-0 text-white opacity-0 peer-indeterminate:opacity-100 flex items-center justify-center'>
+        <span className='absolute inset-0 flex items-center justify-center text-white opacity-0 peer-indeterminate:opacity-100'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             aria-hidden='true'
-            className='w-4 h-4'
+            className='h-4 w-4'
             viewBox='0 2 100 102'
           >
             <line

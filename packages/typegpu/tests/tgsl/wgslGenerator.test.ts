@@ -1,18 +1,19 @@
 import { JitTranspiler } from 'tgpu-jit';
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { getPrebuiltAstFor } from '../../src/core/function/astUtils.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import * as gpu from '../../src/gpuMode.ts';
 import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { snip } from '../../src/data/dataTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -166,18 +167,19 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
     if (!astInfo) {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -189,7 +191,7 @@ describe('wgslGenerator', () => {
       // deno-fmt-ignore: it's better that way
       (
         (
-          astInfo.ast.body[1][0] as tinyest.Return
+          astInfo.ast?.body[1][0] as tinyest.Return
         )[1] as tinyest.BinaryExpression
       )[1],
     );
@@ -203,7 +205,7 @@ describe('wgslGenerator', () => {
       // deno-fmt-ignore: it's better that way
       (
         (
-          astInfo.ast.body[1][0] as tinyest.Return
+          astInfo.ast?.body[1][0] as tinyest.Return
         )[1] as tinyest.BinaryExpression
       )[3],
     );
@@ -213,7 +215,7 @@ describe('wgslGenerator', () => {
     //            ^ this should be a u32
     const sum = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
     expect(sum.dataType).toStrictEqual(d.u32);
   });
@@ -230,7 +232,7 @@ describe('wgslGenerator', () => {
       return testUsage.value[3] as number;
     });
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -238,12 +240,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -252,7 +255,7 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a u32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.u32);
@@ -293,11 +296,11 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
-    if (!astInfo) {
+    if (!astInfo?.ast) {
       throw new Error('Expected prebuilt AST to be present');
     }
 
@@ -305,17 +308,19 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
-    if (astInfo.ast.argNames.type !== 'identifiers') {
+    if (
+      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
+    ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast.argNames.names.map((name) => ({
-      value: name,
-      dataType: d.u32,
-    }));
+    const args = astInfo.ast.params.map((arg) =>
+      snip((arg as { type: 'i'; name: string }).name, d.u32)
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
+      {},
       d.vec4f,
       astInfo.externals ?? {},
     );
@@ -324,7 +329,7 @@ describe('wgslGenerator', () => {
     //                           ^ this part should be a i32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Const)[2],
+      (astInfo.ast?.body[1][0] as tinyest.Const)[2],
     );
 
     expect(res.dataType).toStrictEqual(d.i32);
@@ -335,7 +340,7 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
     const res2 = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][1] as tinyest.Const)[2],
+      (astInfo.ast?.body[1][1] as tinyest.Const)[2],
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -348,11 +353,11 @@ describe('wgslGenerator', () => {
     wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
     const res3 = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
+      (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
     );
     const res4 = wgslGenerator.generateExpression(
       ctx,
-      astInfo.ast.body[1][2] as tinyest.Expression,
+      astInfo.ast?.body[1][2] as tinyest.Expression,
     );
     ctx[$internal].itemStateStack.popBlockScope();
 
@@ -440,7 +445,7 @@ describe('wgslGenerator', () => {
       }`),
     );
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -448,12 +453,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[10,[7,"derivedV4u","value"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.vec4u,
       astInfo.externals ?? {},
     );
@@ -462,7 +468,7 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.vec4u);
@@ -475,7 +481,7 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -483,12 +489,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[10,[8,[7,"derivedV2f","value"],"idx"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
-      [{ value: 'idx', dataType: d.u32 }],
+      [snip('idx', d.u32)],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -497,7 +504,7 @@ describe('wgslGenerator', () => {
     //                      ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.f32);
@@ -517,7 +524,7 @@ describe('wgslGenerator', () => {
       }`),
     );
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -525,12 +532,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[6,[7,"d","u32"],[[5,"1"]]],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -541,7 +549,7 @@ describe('wgslGenerator', () => {
       ctx,
       // deno-fmt-ignore: it's better that way
       (
-        astInfo.ast.body[1][0] as tinyest.Const
+        astInfo.ast?.body[1][0] as tinyest.Const
       )[2] as unknown as tinyest.Expression,
     );
 
@@ -593,7 +601,7 @@ describe('wgslGenerator', () => {
       }`),
     );
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -601,12 +609,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -615,7 +624,7 @@ describe('wgslGenerator', () => {
     //                        ^ this should be an array<TestStruct, 2>
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.arrayOf(testStruct, 2));
@@ -640,7 +649,7 @@ describe('wgslGenerator', () => {
       }`),
     );
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -648,7 +657,7 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[7,"derivedV2f","value"],[6,[7,"std","mul"],[[7,"derivedV2f","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
@@ -683,7 +692,7 @@ describe('wgslGenerator', () => {
       }`),
     );
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       fnTwo[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -691,12 +700,13 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[10,[7,[7,[6,"fnOne",[]],"y"],"x"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -705,7 +715,7 @@ describe('wgslGenerator', () => {
     //                   ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
-      (astInfo.ast.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
     );
 
     expect(res.dataType).toStrictEqual(d.f32);
@@ -732,7 +742,7 @@ describe('wgslGenerator', () => {
       })
       .$name('testFn');
 
-    const astInfo = getPrebuiltAstFor(
+    const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
     );
 
@@ -740,23 +750,23 @@ describe('wgslGenerator', () => {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
-    console.log('astInfo.externals', astInfo.externals);
 
     // Check for: const value = testSlot.value.value;
     //                  ^ this should be a vec3f
     const res = wgslGenerator.generateExpression(
       ctx,
       (
-        astInfo.ast.body[1][0] as tinyest.Const
+        astInfo.ast?.body[1][0] as tinyest.Const
       )[2] as unknown as tinyest.Expression,
     );
 

@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { getName } from '../src/name.ts';
+import { getName } from '../src/shared/meta.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 

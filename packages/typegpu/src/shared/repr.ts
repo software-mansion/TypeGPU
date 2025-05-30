@@ -33,7 +33,7 @@ export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
  * @example
  * type A = InferGPU<F32> // => number
  * type B = InferGPU<WgslArray<F32>> // => number[]
- * type C = Infer<Atomic<U32>> // => atomicU32
+ * type C = InferGPU<Atomic<U32>> // => atomicU32
  */
 export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr } ? TRepr
   : Infer<T>;

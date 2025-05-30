@@ -1,3 +1,7 @@
+<div class="spinner-background">
+  <div class="spinner">Loading...</div>
+</div>
+
 <canvas></canvas>
 <video autoplay playsinline></video>
 
@@ -8,9 +12,22 @@
     right: 10px;
     width: 25%;
     border-radius: 16px;
-    background-image: linear-gradient(to right, #a91eff, #1d72f0);
+    background-image: linear-gradient(
+      to right,
+      var(--color-gradient-purple, #c464ff),
+      var(--color-gradient-blue, #1d72f0)
+    );
     background-origin: border-box;
     padding: 0.5rem;
     object-fit: cover;
+  }
+
+  .spinner-background {
+    inset: 0;
+    position: absolute;
+    display: grid;
+    place-items: center;
+    background-color: var(--color-tameplum-50, white);
+    z-index: 4;
   }
 </style>

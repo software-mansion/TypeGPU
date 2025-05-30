@@ -1,27 +1,28 @@
 import * as tinyest from 'tinyest';
 import { arrayOf } from '../data/array.ts';
-import { type AnyData, isData, isLooseData } from '../data/dataTypes.ts';
+import {
+  type AnyData,
+  isData,
+  isLooseData,
+  snip,
+  type Snippet,
+  UnknownData,
+} from '../data/dataTypes.ts';
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
-  type FnArgsConversionHint,
-  isMarkedInternal,
-  isWgsl,
-  type Snippet,
-  UnknownData,
-} from '../types.ts';
-import {
+  coerceToSnippet,
   concretize,
   convertStructValues,
   convertToCommonType,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
-  getTypeFromWgsl,
   numericLiteralToSnippet,
-  resolveRes,
 } from './generationHelpers.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -84,10 +85,6 @@ function assertExhaustive(value: never): never {
   );
 }
 
-export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
-  return { value: value ? 'true' : 'false', dataType: d.bool };
-}
-
 export function generateBlock(
   ctx: GenerationCtx,
   [_, statements]: tinyest.Block,
@@ -128,7 +125,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return generateBoolean(ctx, expression);
+    return snip(expression ? 'true' : 'false', d.bool);
   }
 
   if (
@@ -146,144 +143,124 @@ export function generateExpression(
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
-    const lhsStr = resolveRes(ctx, convLhs);
-    const rhsStr = resolveRes(ctx, convRhs);
+    const lhsStr = ctx.resolve(convLhs.value);
+    const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
-    return {
-      value: parenthesizedOps.includes(op)
+    return snip(
+      parenthesizedOps.includes(op)
         ? `(${lhsStr} ${op} ${rhsStr})`
         : `${lhsStr} ${op} ${rhsStr}`,
-      dataType: type,
-    };
+      type,
+    );
   }
 
   if (expression[0] === NODE.postUpdate) {
     // Post-Update Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr.value);
 
-    return {
-      value: `${argStr}${op}`,
-      dataType: argExpr.dataType,
-    };
+    return snip(`${argStr}${op}`, argExpr.dataType);
   }
 
   if (expression[0] === NODE.unaryExpr) {
     // Unary Expression
     const [_, op, arg] = expression;
     const argExpr = generateExpression(ctx, arg);
-    const argStr = resolveRes(ctx, argExpr);
+    const argStr = ctx.resolve(argExpr.value);
 
     const type = operatorToType(argExpr.dataType, op);
-    return {
-      value: `${op}${argStr}`,
-      dataType: type,
-    };
+    return snip(`${op}${argStr}`, type);
   }
 
   if (expression[0] === NODE.memberAccess) {
     // Member Access
-    const [_, targetId, property] = expression;
-    const target = generateExpression(ctx, targetId);
+    const [_, targetNode, property] = expression;
+    const target = generateExpression(ctx, targetNode);
+
+    if (target.dataType.type === 'unknown') {
+      // No idea what the type is, so we act on the snippet's value and try to guess
+
+      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+      const propValue = (target.value as any)[property];
+
+      // We try to extract any type information based on the prop's value
+      return coerceToSnippet(propValue);
+    }
 
     if (wgsl.isPtr(target.dataType)) {
-      return {
-        value: `(*${target.value}).${property}`,
-        dataType: isData(target.dataType.inner)
-          ? getTypeForPropAccess(target.dataType.inner, property)
-          : UnknownData,
-      };
+      return snip(
+        `(*${ctx.resolve(target.value)}).${property}`,
+        getTypeForPropAccess(target.dataType.inner as AnyData, property),
+      );
     }
 
-    if (typeof target.value === 'string') {
-      return {
-        value: `${target.value}.${property}`,
-        dataType: isData(target.dataType)
-          ? getTypeForPropAccess(target.dataType, property)
-          : UnknownData,
-      };
-    }
-
-    if (wgsl.isWgslArray(target.dataType)) {
-      if (property === 'length') {
-        if (target.dataType.elementCount === 0) {
-          // Dynamically-sized array
-          return {
-            value: `arrayLength(&${ctx.resolve(target.value)})`,
-            dataType: d.u32,
-          };
-        }
-
-        return {
-          value: String(target.dataType.elementCount),
-          dataType: abstractInt,
-        };
-      }
-    }
-
-    // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-    const propValue = (target.value as any)[property];
-
-    if (target.dataType.type !== 'unknown') {
-      if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return {
-          value: target.value,
-          dataType: target.dataType,
-        };
+    if (wgsl.isWgslArray(target.dataType) && property === 'length') {
+      if (target.dataType.elementCount === 0) {
+        // Dynamically-sized array
+        return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
       }
 
-      return {
-        value: propValue,
-        dataType: getTypeForPropAccess(target.dataType, property),
-      };
+      return snip(String(target.dataType.elementCount), abstractInt);
     }
 
-    if (isWgsl(target.value)) {
-      return {
-        value: propValue,
-        dataType: getTypeForPropAccess(target.value, property),
-      };
+    if (wgsl.isMat(target.dataType) && property === 'columns') {
+      return snip(target.value, target.dataType);
     }
 
-    if (typeof target.value === 'object') {
-      const dataType = isWgsl(propValue)
-        ? getTypeFromWgsl(propValue)
-        : UnknownData;
-
-      return {
-        value: propValue,
-        dataType,
-      };
+    if (
+      wgsl.isVec(target.dataType) && wgsl.isVecInstance(target.value)
+    ) {
+      // We're operating on a vector that's known at resolution time
+      // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
+      return coerceToSnippet((target.value as any)[property]);
     }
 
-    throw new Error(`Cannot access member ${property} of ${target.value}`);
+    return snip(
+      `${ctx.resolve(target.value)}.${property}`,
+      getTypeForPropAccess(target.dataType, property),
+    );
   }
 
   if (expression[0] === NODE.indexAccess) {
     // Index Access
-    const [_, target, property] = expression;
-    const targetExpr = generateExpression(ctx, target);
-    const propertyExpr = generateExpression(ctx, property);
-    const targetStr = resolveRes(ctx, targetExpr);
-    const propertyStr = resolveRes(ctx, propertyExpr);
+    const [_, targetNode, propertyNode] = expression;
+    const target = generateExpression(ctx, targetNode);
+    const property = generateExpression(ctx, propertyNode);
+    const targetStr = ctx.resolve(target.value);
+    const propertyStr = ctx.resolve(property.value);
 
-    if (wgsl.isPtr(targetExpr.dataType)) {
-      return {
-        value: `(*${targetStr})[${propertyStr}]`,
-        dataType: isData(targetExpr.dataType.inner)
-          ? getTypeForIndexAccess(targetExpr.dataType.inner)
-          : UnknownData,
-      };
+    if (target.dataType.type === 'unknown') {
+      // No idea what the type is, so we act on the snippet's value and try to guess
+
+      if (
+        Array.isArray(propertyNode) && propertyNode[0] === NODE.numericLiteral
+      ) {
+        return coerceToSnippet(
+          // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+          (target.value as any)[propertyNode[1] as number],
+        );
+      }
+
+      throw new Error(
+        `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+      );
     }
 
-    return {
-      value: `${targetStr}[${propertyStr}]`,
-      dataType: isData(targetExpr.dataType)
-        ? getTypeForIndexAccess(targetExpr.dataType)
+    if (wgsl.isPtr(target.dataType)) {
+      return snip(
+        `(*${targetStr})[${propertyStr}]`,
+        getTypeForIndexAccess(target.dataType.inner as AnyData),
+      );
+    }
+
+    return snip(
+      `${targetStr}[${propertyStr}]`,
+      isData(target.dataType)
+        ? getTypeForIndexAccess(target.dataType)
         : UnknownData,
-    };
+    );
   }
 
   if (expression[0] === NODE.numericLiteral) {
@@ -299,44 +276,52 @@ export function generateExpression(
     // Function Call
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
-    const idValue = id.value;
 
-    ctx.callStack.push(idValue);
+    ctx.callStack.push(id.value);
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedSnippets = argSnippets.map((res) => ({
-      value: resolveRes(ctx, res),
-      dataType: res.dataType,
-    }));
+    const resolvedSnippets = argSnippets.map((res) =>
+      snip(ctx.resolve(res.value), res.dataType)
+    );
     const argValues = resolvedSnippets.map((res) => res.value);
 
     ctx.callStack.pop();
 
-    if (typeof idValue === 'string') {
-      return {
-        value: `${idValue}(${argValues.join(', ')})`,
-        dataType: id.dataType,
-      };
+    resolvedSnippets.forEach((sn, idx) => {
+      if (sn.dataType === UnknownData) {
+        throw new Error(
+          `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
+            typeof id.value === 'string'
+              ? id.value
+              : getName(id.value) ?? '<unnamed>'
+          }()'`,
+        );
+      }
+    });
+
+    if (typeof id.value === 'string') {
+      return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
     }
 
-    if (wgsl.isWgslStruct(idValue)) {
-      const resolvedId = ctx.resolve(idValue);
+    if (wgsl.isWgslStruct(id.value)) {
+      const resolvedId = ctx.resolve(id.value);
 
-      return {
-        value: `${resolvedId}(${argValues.join(', ')})`,
-        dataType: id.dataType,
-      };
+      return snip(
+        `${resolvedId}(${argValues.join(', ')})`,
+        // Unintuitive, but the type of the return value is the struct itself
+        id.value,
+      );
     }
 
-    if (!isMarkedInternal(idValue)) {
+    if (!isMarkedInternal(id.value)) {
       throw new Error(
         `Function ${
-          String(idValue)
+          String(id.value)
         } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
-    const argTypes = idValue[$internal]?.argTypes as
+    const argTypes = id.value[$internal]?.argTypes as
       | FnArgsConversionHint
       | undefined;
     let convertedResources: Snippet[];
@@ -352,6 +337,13 @@ export function generateExpression(
           .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
 
       convertedResources = pairs.map(([type, sn]) => {
+        if (sn.dataType.type === 'unknown') {
+          console.warn(
+            `Internal error: unknown type when generating expression: ${expression}`,
+          );
+          return sn;
+        }
+
         const conv = convertToCommonType(ctx, [sn], [type])?.[0];
         if (!conv) {
           throw new Error(
@@ -365,14 +357,11 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
+    const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
       ...convertedResources,
     ) as Snippet;
 
-    return {
-      value: resolveRes(ctx, fnRes),
-      dataType: fnRes.dataType,
-    };
+    return snip(ctx.resolve(fnRes.value), fnRes.dataType);
   }
 
   if (expression[0] === NODE.objectExpr) {
@@ -396,10 +385,10 @@ export function generateExpression(
 
       const convertedValues = convertStructValues(ctx, callee, entries);
 
-      return {
-        value: convertedValues.map((v) => resolveRes(ctx, v)).join(', '),
-        dataType: callee,
-      };
+      return snip(
+        convertedValues.map((v) => ctx.resolve(v.value)).join(', '),
+        callee,
+      );
     }
 
     if (isMarkedInternal(callee)) {
@@ -422,10 +411,7 @@ export function generateExpression(
           snippets[key] = converted?.[0] ?? expr;
         }
 
-        return {
-          value: snippets,
-          dataType: UnknownData,
-        };
+        return snip(snippets, UnknownData);
       }
     }
 
@@ -461,15 +447,15 @@ export function generateExpression(
     const typeId = ctx.resolve(type);
 
     const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = convertedValues.map((value) => resolveRes(ctx, value));
+    const arrayValues = convertedValues.map((sn) => ctx.resolve(sn.value));
 
-    return {
-      value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: arrayOf(
+    return snip(
+      `${arrayType}( ${arrayValues.join(', ')} )`,
+      arrayOf(
         type as wgsl.AnyWgslData,
         values.length,
       ) as wgsl.AnyWgslData,
-    };
+    );
   }
 
   if (expression[0] === NODE.stringLiteral) {
@@ -495,17 +481,19 @@ export function generateStatement(
   statement: tinyest.Statement,
 ): string {
   if (typeof statement === 'string') {
-    return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
+    return `${ctx.pre}${
+      ctx.resolve(generateIdentifier(ctx, statement).value)
+    };`;
   }
 
   if (typeof statement === 'boolean') {
-    return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
+    return `${ctx.pre}${statement ? 'true' : 'false'};`;
   }
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
     const returnValue = returnNode !== undefined
-      ? resolveRes(ctx, generateExpression(ctx, returnNode))
+      ? ctx.resolve(generateExpression(ctx, returnNode).value)
       : undefined;
 
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
@@ -534,7 +522,7 @@ export function generateStatement(
     if (converted?.[0]) {
       [condSnippet] = converted;
     }
-    const condition = resolveRes(ctx, condSnippet);
+    const condition = ctx.resolve(condSnippet.value);
 
     ctx.indent(); // {
     const consequent = generateStatement(ctx, blockifySingleStatement(cons));
@@ -582,7 +570,7 @@ ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
+    const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
 
     // If the value is a plain JS object it has to be an output struct
     if (
@@ -606,11 +594,11 @@ ${alternate}`;
       const convertedValues = convertStructValues(ctx, structType, entries);
       const resolvedStruct = ctx.resolve(structType);
       return `${ctx.pre}var ${id} = ${resolvedStruct}(${
-        convertedValues.map((v) => resolveRes(ctx, v)).join(', ')
+        convertedValues.map((sn) => ctx.resolve(sn.value)).join(', ')
       });`;
     }
 
-    return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
+    return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
   }
 
   if (statement[0] === NODE.block) {
@@ -633,7 +621,7 @@ ${alternate}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = condSnippet ? resolveRes(ctx, condSnippet) : '';
+    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
     const updateStatement = update ? generateStatement(ctx, update) : undefined;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
@@ -657,7 +645,7 @@ ${bodyStr}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = resolveRes(ctx, condSnippet);
+    const conditionStr = ctx.resolve(condSnippet.value);
 
     ctx.indent();
     const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
@@ -676,7 +664,7 @@ ${bodyStr}`;
     return `${ctx.pre}break;`;
   }
 
-  return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
+  return `${ctx.pre}${ctx.resolve(generateExpression(ctx, statement).value)};`;
 }
 
 export function generateFunction(

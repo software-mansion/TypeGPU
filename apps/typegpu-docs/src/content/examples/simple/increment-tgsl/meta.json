@@ -1,5 +1,5 @@
 {
   "title": "Increment (TGSL)",
   "category": "simple",
-  "tags": ["experimental"]
+  "tags": ["experimental", "compute"]
 }
