@@ -1053,6 +1053,17 @@ export const VectorOps = {
     vec4h: unary4h(Math.exp),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  exp2: {
+    vec2f: unary2f((val) => 2 ** val),
+    vec2h: unary2h((val) => 2 ** val),
+
+    vec3f: unary3f((val) => 2 ** val),
+    vec3h: unary3h((val) => 2 ** val),
+
+    vec4f: unary4f((val) => 2 ** val),
+    vec4h: unary4h((val) => 2 ** val),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   fract: {
     vec2f: unary2f((value) => value - Math.floor(value)),
     vec2h: unary2h((value) => value - Math.floor(value)),

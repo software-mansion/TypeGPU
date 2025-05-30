@@ -536,6 +536,22 @@ export const exp = createDualImpl(
   (value) => snip(`exp(${value.value})`, value.dataType),
 );
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#exp2-builtin
+ */
+export const exp2 = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return (2 ** value) as T;
+    }
+    return VectorOps.exp2[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`exp2(${value.value})`, value.dataType),
+);
+
 type PowOverload = {
   (base: number, exponent: number): number;
   <T extends AnyFloatVecInstance>(base: T, exponent: T): T;
