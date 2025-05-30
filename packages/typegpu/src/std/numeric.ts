@@ -276,6 +276,28 @@ export const acos = createDualImpl(
   (value) => snip(`acos(${value.value})`, value.dataType),
 );
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#acosh-builtin
+ */
+export const acosh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acosh(value) as T;
+    }
+    return VectorOps.acosh[(value as AnyFloatVecInstance).kind](
+      value as never,
+    ) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `acosh(${value.value})`, dataType: value.dataType }),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#asin-builtin
+ */
 export const asin = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
@@ -341,6 +363,22 @@ export const cos = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`cos(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#cosh-builtin
+ */
+export const cosh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.cosh(value) as T;
+    }
+    return VectorOps.cosh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `cosh(${value.value})`, dataType: value.dataType }),
 );
 
 /**
@@ -496,6 +534,22 @@ export const exp = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`exp(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#exp2-builtin
+ */
+export const exp2 = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return (2 ** value) as T;
+    }
+    return VectorOps.exp2[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`exp2(${value.value})`, value.dataType),
 );
 
 type PowOverload = {
