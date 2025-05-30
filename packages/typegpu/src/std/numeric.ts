@@ -1,4 +1,3 @@
-import { mat4x4f } from '../data/matrix.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -14,7 +13,6 @@ import {
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
-  type m4x4f,
   type mBaseForVec,
   type U32,
   type v2f,
@@ -598,26 +596,4 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
-);
-
-/**
- * Translates a matrix by a given vector.
- * @param {m4x4f} matrix - The matrix to be translated.
- * @param {v3f} vector - The vector by which to translate the matrix.
- * @returns {m4x4f} - The translated matrix.
- */
-export const translate4x4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, vector: v3f) => {
-    return mul(matrix, mat4x4f.translation(vector));
-  },
-  // GPU implementation
-  (matrix, vector) => ({
-    value: `(${matrix.value} * ${
-      (mat4x4f.translation(
-        vector as unknown as v3f,
-      ) as unknown as Snippet).value
-    })`,
-    dataType: matrix.dataType,
-  }),
 );

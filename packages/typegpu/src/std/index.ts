@@ -32,8 +32,12 @@ export {
   sign,
   sin,
   sqrt,
-  translate4x4
 } from './numeric.ts';
+
+// deno-fmt-ignore
+export {
+  translate4x4,
+} from './matrix.ts'
 
 // deno-fmt-ignore
 export {
