@@ -376,7 +376,6 @@ export const cosh = createDualImpl(
     if (typeof value === 'number') {
       return Math.cosh(value) as T;
     }
-    // @ts-expect-error Property 'cosh' does not exist on type 'VectorOpsDefs'.
     return VectorOps.cosh[value.kind](value) as T;
   },
   // GPU implementation

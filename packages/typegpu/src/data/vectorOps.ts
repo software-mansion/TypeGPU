@@ -1014,6 +1014,17 @@ export const VectorOps = {
     vec4h: unary4h(Math.cos),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  cosh: {
+    vec2f: unary2f(Math.cosh),
+    vec2h: unary2h(Math.cosh),
+
+    vec3f: unary3f(Math.cosh),
+    vec3h: unary3h(Math.cosh),
+
+    vec4f: unary4f(Math.cosh),
+    vec4h: unary4h(Math.cosh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   exp: {
     vec2f: unary2f(Math.exp),
     vec2h: unary2h(Math.exp),
