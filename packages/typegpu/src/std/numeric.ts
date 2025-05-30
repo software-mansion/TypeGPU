@@ -286,7 +286,6 @@ export const acosh = createDualImpl(
     if (typeof value === 'number') {
       return Math.acosh(value) as T;
     }
-    // @ts-expect-error Property 'acosh' does not exist on type 'VectorOpsDefs'.
     return VectorOps.acosh[(value as AnyFloatVecInstance).kind](
       value as never,
     ) as T;
