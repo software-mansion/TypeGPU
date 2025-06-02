@@ -108,12 +108,3 @@ export const rotateZ = createDualImpl(
     dataType: matrix.dataType,
   }),
 );
-
-export {
-  identity2,
-  identity3,
-  identity4,
-  rotationX,
-  scaling4,
-  translation4,
-} from '../data/matrix.ts';

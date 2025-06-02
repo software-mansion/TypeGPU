@@ -610,33 +610,9 @@ export const scaling4 = createDualImpl(
 );
 
 // AAA jsdocsy
-// AAA inne std
 // AAA testy do parse
 // AAA testy do parsing test
 // AAA compound testy
-
-export const rotationZ = createDualImpl(
-  // CPU implementation
-  (a: number) =>
-    // deno-fmt-ignore
-    mat4x4f(
-      Math.cos(a), Math.sin(a), 0, 0,
-      -Math.sin(a), Math.cos(a), 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-    ),
-  // GPU implementation
-  (a) =>
-    snip(
-      `mat4x4f(
-        cos(${a.value}), sin(${a.value}), 0, 0,
-        -sin(${a.value}), cos(${a.value}), 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-      )`,
-      mat4x4f,
-    ),
-);
 
 export const rotationX = createDualImpl(
   // CPU implementation
@@ -678,6 +654,29 @@ export const rotationY = createDualImpl(
         cos(${a.value}), 0, -sin(${a.value}), 0,
         0, 1, 0, 0,
         sin(${a.value}), 0, cos(${a.value}), 0,
+        0, 0, 0, 1
+      )`,
+      mat4x4f,
+    ),
+);
+
+export const rotationZ = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      Math.cos(a), Math.sin(a), 0, 0,
+      -Math.sin(a), Math.cos(a), 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(
+        cos(${a.value}), sin(${a.value}), 0, 0,
+        -sin(${a.value}), cos(${a.value}), 0, 0,
+        0, 0, 1, 0,
         0, 0, 0, 1
       )`,
       mat4x4f,

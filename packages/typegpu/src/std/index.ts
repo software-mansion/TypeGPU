@@ -35,17 +35,19 @@ export {
 } from './numeric.ts';
 
 // deno-fmt-ingore
+export { rotateX, rotateY, rotateZ, scale4, translate4 } from './matrix.ts';
+
+// deno-fmt-ingore
 export {
   identity2,
   identity3,
   identity4,
-  rotateX,
   rotationX,
-  scale4,
+  rotationY,
+  rotationZ,
   scaling4,
-  translate4,
   translation4,
-} from './matrix.ts';
+} from '../data/matrix.ts';
 
 // deno-fmt-ignore
 export {
