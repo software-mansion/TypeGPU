@@ -610,7 +610,10 @@ export const scaling4 = createDualImpl(
 );
 
 // AAA jsdocsy
-// AAA wróć translate4x4
+// AAA inne std
+// AAA testy do parse
+// AAA testy do parsing test
+// AAA compound testy
 
 export const rotationZ = createDualImpl(
   // CPU implementation

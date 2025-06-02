@@ -5,7 +5,7 @@ import { createDualImpl } from '../shared/generators.ts';
 import { mul } from './numeric.ts';
 
 /**
- * Translates a matrix by a given vector.
+ * Translates the given 4-by-4 matrix by the given vector.
  * @param {m4x4f} matrix - The matrix to be translated.
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} - The translated matrix.
@@ -13,14 +13,13 @@ import { mul } from './numeric.ts';
 export const translate4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, vector: v3f) => {
-    return mul(matrix, mat4x4f.translation(vector));
+    return mul(mat4x4f.translation(vector), matrix);
   },
   // GPU implementation
   (matrix, vector) => ({
     value: `(${matrix.value} * ${
-      (mat4x4f.translation(
-        vector as unknown as v3f,
-      ) as unknown as Snippet).value
+      (mat4x4f.translation(vector as unknown as v3f) as unknown as Snippet)
+        .value
     })`,
     dataType: matrix.dataType,
   }),
