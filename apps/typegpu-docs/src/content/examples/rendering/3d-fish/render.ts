@@ -37,43 +37,37 @@ export const vertexShader = tgpu['~unstable']
     }
 
     // rotate model
-
     const direction = std.normalize(currentModelData.direction);
+    const yaw = -std.atan2(direction.z, direction.x) + Math.PI;
+    const pitch = std.asin(-direction.y);
 
-    const yaw = std.atan2(direction.z, direction.x) + Math.PI;
-    // deno-fmt-ignore
-    const yawMatrix = d.mat3x3f(
-      std.cos(yaw),  0, std.sin(yaw),
-      0,             1, 0,           
-      -std.sin(yaw), 0, std.cos(yaw),
-    );
+    const scaleMatrix = d.mat4x4f.scaling(d.vec3f(currentModelData.scale));
+    const yawMatrix = d.mat4x4f.rotationZX(yaw);
+    const pitchMatrix = d.mat4x4f.rotationXY(pitch);
+    const translationMatrix = d.mat4x4f.translation(currentModelData.position);
 
-    const pitch = -std.asin(-direction.y);
-    // deno-fmt-ignore
-    const pitchMatrix = d.mat3x3f(
-      std.cos(pitch), -std.sin(pitch), 0,
-      std.sin(pitch), std.cos(pitch),  0,
-      0,              0,               1,
-    );
-
-    const worldPosition = std.add(
+    const worldPosition = std.mul(
+      translationMatrix,
       std.mul(
         yawMatrix,
         std.mul(
           pitchMatrix,
-          std.mul(currentModelData.scale, wavedVertex.position),
+          std.mul(
+            scaleMatrix,
+            d.vec4f(wavedVertex.position, 1),
+          ),
         ),
       ),
-      currentModelData.position,
     );
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.mul(pitchMatrix, std.mul(yawMatrix, wavedVertex.normal)),
+      std.mul(pitchMatrix, std.mul(yawMatrix, d.vec4f(wavedVertex.normal, 1)))
+        .xyz,
     );
 
     // project the world position into the camera
-    const worldPositionUniform = d.vec4f(worldPosition.xyz, 1);
+    const worldPositionUniform = worldPosition;
     const canvasPosition = std.mul(
       layout.$.camera.projection,
       std.mul(layout.$.camera.view, worldPositionUniform),
@@ -83,7 +77,7 @@ export const vertexShader = tgpu['~unstable']
       canvasPosition: canvasPosition,
       textureUV: input.textureUV,
       worldNormal: worldNormal,
-      worldPosition: worldPosition,
+      worldPosition: worldPosition.xyz,
       applySeaFog: currentModelData.applySeaFog,
       applySeaDesaturation: currentModelData.applySeaDesaturation,
       variant: currentModelData.variant,

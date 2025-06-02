@@ -609,10 +609,8 @@ export const scaling4x4 = createDualImpl(
   }),
 );
 
-// AAA rotation, scaling, translation ?? consistency
-// AAA refactor ryb
-// AAA pozbądź się wektorów z konstruktorów
 // AAA jsdocsy
+// AAA wróć translate4x4
 
 export const rotationXY = createDualImpl(
   // CPU implementation
