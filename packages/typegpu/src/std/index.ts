@@ -35,7 +35,7 @@ export {
 } from './numeric.ts';
 
 // deno-fmt-ingore
-export { translate4, translation4 } from './matrix.ts';
+export { scale4, scaling4, translate4, translation4 } from './matrix.ts';
 
 // deno-fmt-ignore
 export {
