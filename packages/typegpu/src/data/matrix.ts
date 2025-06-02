@@ -617,20 +617,21 @@ export const scaling4x4 = createDualImpl(
 export const rotationXY = createDualImpl(
   // CPU implementation
   (a: number) =>
+    // deno-fmt-ignore
     mat4x4f(
-      vec4f(Math.cos(a), Math.sin(a), 0, 0),
-      vec4f(-Math.sin(a), Math.cos(a), 0, 0),
-      vec4f(0, 0, 1, 0),
-      vec4f(0, 0, 0, 1),
+      Math.cos(a), Math.sin(a), 0, 0,
+      -Math.sin(a), Math.cos(a), 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
     ),
   // GPU implementation
   (a) =>
     snip(
       `mat4x4f(
-        vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
-        vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
-        vec4f(0, 0, 1, 0),
-        vec4f(0, 0, 0, 1)
+        cos(${a.value}), sin(${a.value}), 0, 0,
+        -sin(${a.value}), cos(${a.value}), 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
       )`,
       mat4x4f,
     ),
@@ -639,20 +640,21 @@ export const rotationXY = createDualImpl(
 export const rotationYZ = createDualImpl(
   // CPU implementation
   (a: number) =>
+    // deno-fmt-ignore
     mat4x4f(
-      vec4f(1, 0, 0, 0),
-      vec4f(0, Math.cos(a), Math.sin(a), 0),
-      vec4f(0, -Math.sin(a), Math.cos(a), 0),
-      vec4f(0, 0, 0, 1),
+      1, 0, 0, 0,
+      0, Math.cos(a), Math.sin(a), 0,
+      0, -Math.sin(a), Math.cos(a), 0,
+      0, 0, 0, 1,
     ),
   // GPU implementation
   (a) =>
     snip(
       `mat4x4f(
-        vec4f(1, 0, 0, 0),
-        vec4f(0, cos(${a.value}), sin(${a.value}), 0),
-        vec4f(0, -sin(${a.value}), cos(${a.value}), 0),
-        vec4f(0, 0, 0, 1),
+        1, 0, 0, 0,
+        0, cos(${a.value}), sin(${a.value}), 0,
+        0, -sin(${a.value}), cos(${a.value}), 0,
+        0, 0, 0, 1,
       )`,
       mat4x4f,
     ),
@@ -661,20 +663,21 @@ export const rotationYZ = createDualImpl(
 export const rotationZX = createDualImpl(
   // CPU implementation
   (a: number) =>
+    // deno-fmt-ignore
     mat4x4f(
-      vec4f(Math.cos(a), 0, -Math.sin(a), 0),
-      vec4f(0, 1, 0, 0),
-      vec4f(Math.sin(a), 0, Math.cos(a), 0),
-      vec4f(0, 0, 0, 1),
+      Math.cos(a), 0, -Math.sin(a), 0,
+      0, 1, 0, 0,
+      Math.sin(a), 0, Math.cos(a), 0,
+      0, 0, 0, 1,
     ),
   // GPU implementation
   (a) =>
     snip(
       `mat4x4f(
-        vec4f(cos(${a.value}), 0, -sin(${a.value}), 0),
-        vec4f(0, 1, 0, 0),
-        vec4f(sin(${a.value}), 0, cos(${a.value}), 0),
-        vec4f(0, 0, 0, 1),
+        cos(${a.value}), 0, -sin(${a.value}), 0,
+        0, 1, 0, 0,
+        sin(${a.value}), 0, cos(${a.value}), 0,
+        0, 0, 0, 1,
       )`,
       mat4x4f,
     ),
