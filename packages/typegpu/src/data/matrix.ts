@@ -631,8 +631,6 @@ export const scaling4 = createDualImpl(
   }),
 );
 
-// AAA compound testy
-
 /**
  * Creates a 4-by-4 matrix which rotates around the x-axis by the given angle.
  * @param {v3f} angle - The angle by which to rotate (in radians).

@@ -1,6 +1,6 @@
-import { type Snippet } from '../data/dataTypes.ts';
+import type { Snippet } from '../data/dataTypes.ts';
 import { mat4x4f } from '../data/matrix.ts';
-import { type m4x4f, type v3f } from '../data/wgslTypes.ts';
+import type { m4x4f, v3f } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { mul } from './numeric.ts';
 
