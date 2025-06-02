@@ -59,6 +59,7 @@ function createMatSchema<
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4x4 : undefined,
     scaling: options.columns === 4 ? scaling4x4 : undefined,
+    rotationXY: options.columns === 4 ? rotationXY : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -604,6 +605,35 @@ export const scaling4x4 = createDualImpl(
       )`,
     dataType: mat4x4f,
   }),
+);
+
+// AAA rotation, scaling, translation ?? consistency
+// AAA wektor czy 3 liczby
+// AAA testy wektor * to
+// AAA testy w tgsl parsing test
+// AAA refactor ryb
+// AAA pozbądź się wektorów z konstruktorów
+
+export const rotationXY = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    mat4x4f(
+      vec4f(Math.cos(a), Math.sin(a), 0, 0),
+      vec4f(-Math.sin(a), Math.cos(a), 0, 0),
+      vec4f(0, 0, 1, 0),
+      vec4f(0, 0, 0, 1),
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(
+        vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
+        vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
+        vec4f(0, 0, 1, 0),
+        vec4f(0, 0, 0, 1)
+      )`,
+      mat4x4f,
+    ),
 );
 
 // ----------

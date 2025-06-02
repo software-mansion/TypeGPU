@@ -4,6 +4,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 
 import { readData, writeData } from '../src/data/dataIO.ts';
+import { isCloseTo, mul } from '../src/std/index.ts';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
@@ -438,5 +439,16 @@ describe('different matrix constructors', () => {
         d.vec4f(0, 0, 0, 1),
       ),
     );
+  });
+
+  it('returns rotationXY matrix', () => {
+    const result = d.mat4x4f.rotationXY(Math.PI / 2);
+    expect(isCloseTo(result.columns[0], d.vec4f(0, 1, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[1], d.vec4f(-1, 0, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[2], d.vec4f(0, 0, 1, 0))).toBe(true);
+    expect(isCloseTo(result.columns[3], d.vec4f(0, 0, 0, 1))).toBe(true);
+
+    expect(isCloseTo(mul(result, d.vec4f(1, 2, 3, 1)), d.vec4f(-2, 1, 3, 1)))
+      .toBe(true);
   });
 });
