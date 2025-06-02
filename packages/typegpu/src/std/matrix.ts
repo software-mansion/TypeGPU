@@ -52,7 +52,7 @@ export const scale4 = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotateX = createDualImpl(
+export const rotateX4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, angle: number) => {
     return mul(mat4x4f.rotationX(angle), matrix);
@@ -73,7 +73,7 @@ export const rotateX = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotateY = createDualImpl(
+export const rotateY4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, angle: number) => {
     return mul(mat4x4f.rotationY(angle), matrix);
@@ -94,7 +94,7 @@ export const rotateY = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotateZ = createDualImpl(
+export const rotateZ4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, angle: number) => {
     return mul(mat4x4f.rotationZ(angle), matrix);

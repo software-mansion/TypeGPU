@@ -59,9 +59,9 @@ function createMatSchema<
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,
-    rotationX: options.columns === 4 ? rotationX : undefined,
-    rotationY: options.columns === 4 ? rotationY : undefined,
-    rotationZ: options.columns === 4 ? rotationZ : undefined,
+    rotationX: options.columns === 4 ? rotationX4 : undefined,
+    rotationY: options.columns === 4 ? rotationY4 : undefined,
+    rotationZ: options.columns === 4 ? rotationZ4 : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -631,7 +631,6 @@ export const scaling4 = createDualImpl(
   }),
 );
 
-// AAA testy do parsing test
 // AAA compound testy
 
 /**
@@ -639,7 +638,7 @@ export const scaling4 = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotationX = createDualImpl(
+export const rotationX4 = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore
@@ -667,7 +666,7 @@ export const rotationX = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotationY = createDualImpl(
+export const rotationY4 = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore
@@ -695,7 +694,7 @@ export const rotationY = createDualImpl(
  * @param {v3f} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} - The rotated matrix.
  */
-export const rotationZ = createDualImpl(
+export const rotationZ4 = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore
