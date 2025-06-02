@@ -21,6 +21,7 @@ export {
   distance,
   dot,
   exp,
+  exp2,
   floor,
   fract,
   length,
