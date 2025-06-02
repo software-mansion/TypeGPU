@@ -420,7 +420,8 @@ describe('different matrix constructors', () => {
   });
 
   it('returns translation matrix', () => {
-    expect(d.mat4x4f.translation(d.vec3f(3, 4, 5))).toStrictEqual(
+    const result = d.mat4x4f.translation(d.vec3f(3, 4, 5));
+    expect(result).toStrictEqual(
       d.mat4x4f(
         d.vec4f(1, 0, 0, 0),
         d.vec4f(0, 1, 0, 0),
@@ -428,10 +429,13 @@ describe('different matrix constructors', () => {
         d.vec4f(3, 4, 5, 1),
       ),
     );
+    expect(isCloseTo(mul(result, d.vec4f(1, 2, 3, 1)), d.vec4f(4, 6, 8, 1)))
+      .toBe(true);
   });
 
   it('returns scaling matrix', () => {
-    expect(d.mat4x4f.scaling(d.vec3f(3, 4, 5))).toStrictEqual(
+    const result = d.mat4x4f.scaling(d.vec3f(3, 4, 5));
+    expect(result).toStrictEqual(
       d.mat4x4f(
         d.vec4f(3, 0, 0, 0),
         d.vec4f(0, 4, 0, 0),
@@ -439,6 +443,8 @@ describe('different matrix constructors', () => {
         d.vec4f(0, 0, 0, 1),
       ),
     );
+    expect(isCloseTo(mul(result, d.vec4f(1, 2, 3, 1)), d.vec4f(3, 8, 15, 1)))
+      .toBe(true);
   });
 
   it('returns rotationXY matrix', () => {

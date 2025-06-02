@@ -36,11 +36,6 @@ export {
 
 // deno-fmt-ignore
 export {
-  translate4x4,
-} from './matrix.ts'
-
-// deno-fmt-ignore
-export {
   // comparison
   allEq,
   eq,

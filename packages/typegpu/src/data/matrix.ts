@@ -610,9 +610,6 @@ export const scaling4x4 = createDualImpl(
 );
 
 // AAA rotation, scaling, translation ?? consistency
-// AAA wektor czy 3 liczby
-// AAA testy wektor * to
-// AAA testy w tgsl parsing test
 // AAA refactor ryb
 // AAA pozbądź się wektorów z konstruktorów
 // AAA jsdocsy
@@ -651,11 +648,11 @@ export const rotationYZ = createDualImpl(
   // GPU implementation
   (a) =>
     snip(
-      `mat4x4f(AAA
-        vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
-        vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
-        vec4f(0, 0, 1, 0),
-        vec4f(0, 0, 0, 1)
+      `mat4x4f(
+        vec4f(1, 0, 0, 0),
+        vec4f(0, cos(${a.value}), sin(${a.value}), 0),
+        vec4f(0, -sin(${a.value}), cos(${a.value}), 0),
+        vec4f(0, 0, 0, 1),
       )`,
       mat4x4f,
     ),
@@ -673,11 +670,11 @@ export const rotationZX = createDualImpl(
   // GPU implementation
   (a) =>
     snip(
-      `mat4x4f(AAA
-        vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
-        vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
-        vec4f(0, 0, 1, 0),
-        vec4f(0, 0, 0, 1)
+      `mat4x4f(
+        vec4f(cos(${a.value}), 0, -sin(${a.value}), 0),
+        vec4f(0, 1, 0, 0),
+        vec4f(sin(${a.value}), 0, cos(${a.value}), 0),
+        vec4f(0, 0, 0, 1),
       )`,
       mat4x4f,
     ),

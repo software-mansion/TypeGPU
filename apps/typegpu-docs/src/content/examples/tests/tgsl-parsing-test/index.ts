@@ -1,6 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { logicalExpressionTests } from './logical-expressions.ts';
+import { matrixOps } from './matrix-ops.ts';
 
 const root = await tgpu.init();
 const result = root['~unstable'].createMutable(d.i32, 0);
@@ -9,6 +10,7 @@ const computeRunTests = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })(() => {
     let s = true;
     s = s && logicalExpressionTests();
+    s = s && matrixOps();
 
     if (s) {
       result.value = 1;
