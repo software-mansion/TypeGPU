@@ -20,8 +20,8 @@ describe('rotate', () => {
         `fn rotateX4() {
           var angle = 4;
           var resultExpression = (
-            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1) *
-            mat4x4f(1, 0, 0, 0, 0, cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1)
+            mat4x4f(1, 0, 0, 0, 0, cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1) *
+            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)
           );
         }`,
       ),
@@ -42,8 +42,8 @@ describe('rotate', () => {
         `fn rotateY4() {
           var angle = 4;
           var resultExpression = (
-            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1) *
-            mat4x4f(cos(angle), 0, -sin(angle), 0, 0, 1, 0, 0, sin(angle), 0, cos(angle), 0, 0, 0, 0, 1)
+            mat4x4f(cos(angle), 0, -sin(angle), 0, 0, 1, 0, 0, sin(angle), 0, cos(angle), 0, 0, 0, 0, 1) *
+            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)
           );
         }`,
       ),
@@ -64,8 +64,8 @@ describe('rotate', () => {
         `fn rotateZ4() {
           var angle = 4;
           var resultExpression = (
-            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1) *
-            mat4x4f(cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+            mat4x4f(cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) *
+            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)
           );
         }`,
       ),
@@ -100,5 +100,30 @@ describe('rotate', () => {
       ),
     )
       .toBe(true);
+  });
+
+  it('applies order correctly', () => {
+    let transformation1 = mat4x4f.identity();
+    transformation1 = rotateX4(transformation1, Math.PI / 2);
+    transformation1 = rotateZ4(transformation1, Math.PI / 2);
+    expect(
+      isCloseTo(mul(transformation1, vec4f(1, 0, 0, 1)), vec4f(0, 1, 0, 1)),
+    ).toBe(true);
+
+    let transformation2 = mat4x4f.identity();
+    transformation2 = rotateZ4(transformation2, Math.PI / 2);
+    transformation2 = rotateX4(transformation2, Math.PI / 2);
+    expect(
+      isCloseTo(mul(transformation2, vec4f(1, 0, 0, 1)), vec4f(0, 0, 1, 1)),
+    ).toBe(true);
+  });
+
+  it('applies order correctly', () => {
+    let transformation1 = mat4x4f.identity();
+    transformation1 = rotateY4(transformation1, Math.PI / 2);
+    transformation1 = rotateZ4(transformation1, Math.PI / 2);
+    expect(
+      isCloseTo(mul(transformation1, vec4f(0, 1, 0, 1)), vec4f(-1, 0, 0, 1)),
+    ).toBe(true);
   });
 });

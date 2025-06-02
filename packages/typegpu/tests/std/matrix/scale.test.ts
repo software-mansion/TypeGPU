@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mat4x4f, vec3f, vec4f } from '../../../src/data/index.ts';
 import tgpu from '../../../src/index.ts';
-import { isCloseTo, mul, scale4 } from '../../../src/std/index.ts';
+import { isCloseTo, mul, scale4, translate4 } from '../../../src/std/index.ts';
 import { parse, parseResolved } from '../../utils/parseResolved.ts';
 
 describe('scale', () => {
@@ -27,8 +27,8 @@ describe('scale', () => {
       parse(
         `fn scale4() { 
           var resultExpression = (
-            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1) * 
-            mat4x4f(vec3f(2, 2, 4).x, 0, 0, 0, 0, vec3f(2, 2, 4).y, 0, 0, 0, 0, vec3f(2, 2, 4).z, 0, 0, 0, 0, 1)
+            mat4x4f(vec3f(2, 2, 4).x, 0, 0, 0, 0, vec3f(2, 2, 4).y, 0, 0, 0, 0, vec3f(2, 2, 4).z, 0, 0, 0, 0, 1) *
+            mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)
           ); 
         }`,
       ),
@@ -40,5 +40,14 @@ describe('scale', () => {
     expect(isCloseTo(mul(result, vec4f(1, 2, 3, 1)), vec4f(3, 8, 15, 1))).toBe(
       true,
     );
+  });
+
+  it('applies order correctly', () => {
+    let transformation = mat4x4f.identity();
+    transformation = translate4(transformation, vec3f(0, 1, 0));
+    transformation = scale4(transformation, vec3f(2, 3, 4));
+    expect(
+      isCloseTo(mul(transformation, vec4f(0, 0, 0, 1)), vec4f(0, 3, 0, 1)),
+    ).toBe(true);
   });
 });

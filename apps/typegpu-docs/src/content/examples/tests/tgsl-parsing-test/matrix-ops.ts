@@ -82,5 +82,65 @@ export const matrixOps = tgpu['~unstable']
         d.vec4f(-2, 1, 3, 1),
       );
 
+    s = s &&
+      std.isCloseTo(
+        std.mul(
+          std.rotateZ4(
+            std.rotateX4(d.mat4x4f.identity(), Math.PI / 2),
+            Math.PI / 2,
+          ),
+          d.vec4f(1, 0, 0, 1),
+        ),
+        d.vec4f(0, 1, 0, 1),
+      );
+
+    s = s &&
+      std.isCloseTo(
+        std.mul(
+          std.rotateX4(
+            std.rotateZ4(d.mat4x4f.identity(), Math.PI / 2),
+            Math.PI / 2,
+          ),
+          d.vec4f(1, 0, 0, 1),
+        ),
+        d.vec4f(0, 0, 1, 1),
+      );
+
+    s = s &&
+      std.isCloseTo(
+        std.mul(
+          std.translate4(
+            std.scale4(d.mat4x4f.identity(), d.vec3f(2, 3, 4)),
+            d.vec3f(0, 1, 0),
+          ),
+          d.vec4f(1, 0, 0, 1),
+        ),
+        d.vec4f(2, 1, 0, 1),
+      );
+
+    s = s &&
+      std.isCloseTo(
+        std.mul(
+          std.scale4(
+            std.translate4(d.mat4x4f.identity(), d.vec3f(0, 1, 0)),
+            d.vec3f(2, 3, 4),
+          ),
+          d.vec4f(0, 0, 0, 1),
+        ),
+        d.vec4f(0, 3, 0, 1),
+      );
+
+    s = s &&
+      std.isCloseTo(
+        std.mul(
+          std.rotateZ4(
+            std.rotateY4(d.mat4x4f.identity(), Math.PI / 2),
+            Math.PI / 2,
+          ),
+          d.vec4f(0, 1, 0, 1),
+        ),
+        d.vec4f(-1, 0, 0, 1),
+      );
+
     return s;
   });

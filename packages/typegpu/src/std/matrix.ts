@@ -17,10 +17,10 @@ export const translate4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `(${matrix.value} * ${
+    value: `(${
       (mat4x4f.translation(vector as unknown as v3f) as unknown as Snippet)
         .value
-    })`,
+    } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
 );
@@ -38,10 +38,10 @@ export const scale4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `(${matrix.value} * ${
+    value: `(${
       (mat4x4f.scaling(vector as unknown as v3f) as unknown as Snippet)
         .value
-    })`,
+    } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
 );
@@ -59,10 +59,10 @@ export const rotateX4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `(${matrix.value} * ${
+    value: `(${
       (mat4x4f.rotationX(vector as unknown as number) as unknown as Snippet)
         .value
-    })`,
+    } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
 );
@@ -80,10 +80,10 @@ export const rotateY4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `(${matrix.value} * ${
+    value: `(${
       (mat4x4f.rotationY(vector as unknown as number) as unknown as Snippet)
         .value
-    })`,
+    } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
 );
@@ -101,10 +101,10 @@ export const rotateZ4 = createDualImpl(
   },
   // GPU implementation
   (matrix, vector) => ({
-    value: `(${matrix.value} * ${
+    value: `(${
       (mat4x4f.rotationZ(vector as unknown as number) as unknown as Snippet)
         .value
-    })`,
+    } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
 );
