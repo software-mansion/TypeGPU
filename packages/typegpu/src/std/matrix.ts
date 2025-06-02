@@ -10,7 +10,7 @@ import { mul } from './numeric.ts';
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} - The translated matrix.
  */
-export const translate4x4 = createDualImpl(
+export const translate4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, vector: v3f) => {
     return mul(matrix, mat4x4f.translation(vector));
@@ -25,3 +25,5 @@ export const translate4x4 = createDualImpl(
     dataType: matrix.dataType,
   }),
 );
+
+export { translation4 } from '../data/matrix.ts';

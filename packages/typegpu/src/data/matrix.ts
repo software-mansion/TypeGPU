@@ -57,11 +57,11 @@ function createMatSchema<
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
     identity: identityFunctions[options.columns],
-    translation: options.columns === 4 ? translation4x4 : undefined,
-    scaling: options.columns === 4 ? scaling4x4 : undefined,
-    rotationXY: options.columns === 4 ? rotationXY : undefined,
-    rotationYZ: options.columns === 4 ? rotationYZ : undefined,
-    rotationZX: options.columns === 4 ? rotationZX : undefined,
+    translation: options.columns === 4 ? translation4 : undefined,
+    scaling: options.columns === 4 ? scaling4 : undefined,
+    rotationXY: options.columns === 4 ? rotationZ : undefined,
+    rotationYZ: options.columns === 4 ? rotationX : undefined,
+    rotationZX: options.columns === 4 ? rotationY : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -517,7 +517,7 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 // Matrix ops
 // ----------
 
-export const identity2x2 = createDualImpl(
+export const identity2 = createDualImpl(
   // CPU implementation
   () => mat2x2f(1, 0, 0, 1),
   // GPU implementation
@@ -530,7 +530,7 @@ export const identity2x2 = createDualImpl(
   }),
 );
 
-export const identity3x3 = createDualImpl(
+export const identity3 = createDualImpl(
   // CPU implementation
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
   // GPU implementation
@@ -544,7 +544,7 @@ export const identity3x3 = createDualImpl(
   }),
 );
 
-export const identity4x4 = createDualImpl(
+export const identity4 = createDualImpl(
   // CPU implementation
   () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
   // GPU implementation
@@ -560,12 +560,12 @@ export const identity4x4 = createDualImpl(
 );
 
 const identityFunctions = {
-  2: identity2x2,
-  3: identity3x3,
-  4: identity4x4,
+  2: identity2,
+  3: identity3,
+  4: identity4,
 };
 
-export const translation4x4 = createDualImpl(
+export const translation4 = createDualImpl(
   // CPU implementation
   (vector: v3f) =>
     // deno-fmt-ignore
@@ -587,7 +587,7 @@ export const translation4x4 = createDualImpl(
   }),
 );
 
-export const scaling4x4 = createDualImpl(
+export const scaling4 = createDualImpl(
   // CPU implementation
   (vector: v3f) =>
     // deno-fmt-ignore
@@ -612,7 +612,7 @@ export const scaling4x4 = createDualImpl(
 // AAA jsdocsy
 // AAA wróć translate4x4
 
-export const rotationXY = createDualImpl(
+export const rotationZ = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore
@@ -635,7 +635,7 @@ export const rotationXY = createDualImpl(
     ),
 );
 
-export const rotationYZ = createDualImpl(
+export const rotationX = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore
@@ -658,7 +658,7 @@ export const rotationYZ = createDualImpl(
     ),
 );
 
-export const rotationZX = createDualImpl(
+export const rotationY = createDualImpl(
   // CPU implementation
   (a: number) =>
     // deno-fmt-ignore

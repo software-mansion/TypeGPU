@@ -34,6 +34,9 @@ export {
   sqrt,
 } from './numeric.ts';
 
+// deno-fmt-ingore
+export { translate4, translation4 } from './matrix.ts';
+
 // deno-fmt-ignore
 export {
   // comparison
