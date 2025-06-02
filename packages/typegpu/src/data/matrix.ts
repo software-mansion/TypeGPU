@@ -615,6 +615,7 @@ export const scaling4x4 = createDualImpl(
 // AAA testy w tgsl parsing test
 // AAA refactor ryb
 // AAA pozbądź się wektorów z konstruktorów
+// AAA jsdocsy
 
 export const rotationXY = createDualImpl(
   // CPU implementation
