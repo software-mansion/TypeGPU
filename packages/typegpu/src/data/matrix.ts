@@ -61,6 +61,7 @@ function createMatSchema<
     scaling: options.columns === 4 ? scaling4x4 : undefined,
     rotationXY: options.columns === 4 ? rotationXY : undefined,
     rotationYZ: options.columns === 4 ? rotationYZ : undefined,
+    rotationZX: options.columns === 4 ? rotationZX : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -649,7 +650,29 @@ export const rotationYZ = createDualImpl(
   // GPU implementation
   (a) =>
     snip(
-      `mat4x4f(
+      `mat4x4f(AAA
+        vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
+        vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
+        vec4f(0, 0, 1, 0),
+        vec4f(0, 0, 0, 1)
+      )`,
+      mat4x4f,
+    ),
+);
+
+export const rotationZX = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    mat4x4f(
+      vec4f(Math.cos(a), 0, -Math.sin(a), 0),
+      vec4f(0, 1, 0, 0),
+      vec4f(Math.sin(a), 0, Math.cos(a), 0),
+      vec4f(0, 0, 0, 1),
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(AAA
         vec4f(cos(${a.value}), sin(${a.value}), 0, 0),
         vec4f(-sin(${a.value}), cos(${a.value}), 0, 0),
         vec4f(0, 0, 1, 0),
