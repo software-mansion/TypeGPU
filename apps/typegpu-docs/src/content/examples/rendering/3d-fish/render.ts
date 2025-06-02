@@ -42,8 +42,8 @@ export const vertexShader = tgpu['~unstable']
     const pitch = std.asin(-direction.y);
 
     const scaleMatrix = d.mat4x4f.scaling(d.vec3f(currentModelData.scale));
-    const yawMatrix = d.mat4x4f.rotationZX(yaw);
-    const pitchMatrix = d.mat4x4f.rotationXY(pitch);
+    const yawMatrix = d.mat4x4f.rotationY(yaw);
+    const pitchMatrix = d.mat4x4f.rotationZ(pitch);
     const translationMatrix = d.mat4x4f.translation(currentModelData.position);
 
     const worldPosition = std.mul(

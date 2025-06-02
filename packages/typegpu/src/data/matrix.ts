@@ -59,9 +59,9 @@ function createMatSchema<
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,
-    rotationXY: options.columns === 4 ? rotationZ : undefined,
-    rotationYZ: options.columns === 4 ? rotationX : undefined,
-    rotationZX: options.columns === 4 ? rotationY : undefined,
+    rotationX: options.columns === 4 ? rotationX : undefined,
+    rotationY: options.columns === 4 ? rotationY : undefined,
+    rotationZ: options.columns === 4 ? rotationZ : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -655,7 +655,7 @@ export const rotationX = createDualImpl(
         1, 0, 0, 0,
         0, cos(${a.value}), sin(${a.value}), 0,
         0, -sin(${a.value}), cos(${a.value}), 0,
-        0, 0, 0, 1,
+        0, 0, 0, 1
       )`,
       mat4x4f,
     ),
@@ -678,7 +678,7 @@ export const rotationY = createDualImpl(
         cos(${a.value}), 0, -sin(${a.value}), 0,
         0, 1, 0, 0,
         sin(${a.value}), 0, cos(${a.value}), 0,
-        0, 0, 0, 1,
+        0, 0, 0, 1
       )`,
       mat4x4f,
     ),

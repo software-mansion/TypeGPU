@@ -1043,9 +1043,9 @@ export interface Mat4x4f {
   identity(): m4x4f;
   translation(vec: v3f): m4x4f;
   scaling(vec: v3f): m4x4f;
-  rotationXY(angle: number): m4x4f;
-  rotationYZ(angle: number): m4x4f;
-  rotationZX(angle: number): m4x4f;
+  rotationX(angle: number): m4x4f;
+  rotationY(angle: number): m4x4f;
+  rotationZ(angle: number): m4x4f;
 }
 
 /**
