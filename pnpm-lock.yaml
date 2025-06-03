@@ -175,7 +175,7 @@ importers:
         version: 0.23.2(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))
       starlight-typedoc:
         specifier: ^0.19.0
-        version: 0.19.0(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3)))(typedoc@0.27.9(typescript@5.8.3))
+        version: 0.19.0(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)))(typedoc@0.27.9(typescript@5.8.3))
       tinybench:
         specifier: ^3.1.0
         version: 3.1.1
@@ -186,8 +186,8 @@ importers:
         specifier: ^0.27.9
         version: 0.27.9(typescript@5.8.3)
       typedoc-plugin-markdown:
-        specifier: ^4.3.0
-        version: 4.4.2(typedoc@0.27.9(typescript@5.8.3))
+        specifier: ^4.6.4
+        version: 4.6.4(typedoc@0.27.9(typescript@5.8.3))
       typegpu:
         specifier: workspace:*
         version: link:../../packages/typegpu
@@ -5094,11 +5094,11 @@ packages:
   typed-binary@4.3.2:
     resolution: {integrity: sha512-HT3pIBM2njCZUmeczDaQUUErGiM6GXFCqMsHegE12HCoBtvHCkfR10JJni0TeGOTnLilTd6YFyj+YhflqQDrDQ==}
 
-  typedoc-plugin-markdown@4.4.2:
-    resolution: {integrity: sha512-kJVkU2Wd+AXQpyL6DlYXXRrfNrHrEIUgiABWH8Z+2Lz5Sq6an4dQ/hfvP75bbokjNDUskOdFlEEm/0fSVyC7eg==}
+  typedoc-plugin-markdown@4.6.4:
+    resolution: {integrity: sha512-AnbToFS1T1H+n40QbO2+i0wE6L+55rWnj7zxnM1r781+2gmhMF2dB6dzFpaylWLQYkbg4D1Y13sYnne/6qZwdw==}
     engines: {node: '>= 18'}
     peerDependencies:
-      typedoc: 0.27.x
+      typedoc: 0.28.x
 
   typedoc@0.27.9:
     resolution: {integrity: sha512-/z585740YHURLl9DN2jCWe6OW7zKYm6VoQ93H0sxZ1cwHQEQrUn5BJrEnkWhfzUdyO+BLGjnKUZ9iz9hKloFDw==}
@@ -10455,12 +10455,12 @@ snapshots:
       - astro
       - supports-color
 
-  starlight-typedoc@0.19.0(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3)))(typedoc@0.27.9(typescript@5.8.3)):
+  starlight-typedoc@0.19.0(@astrojs/starlight@0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0)))(typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)))(typedoc@0.27.9(typescript@5.8.3)):
     dependencies:
       '@astrojs/starlight': 0.34.3(astro@5.7.12(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.7.0))
       github-slugger: 2.0.0
       typedoc: 0.27.9(typescript@5.8.3)
-      typedoc-plugin-markdown: 4.4.2(typedoc@0.27.9(typescript@5.8.3))
+      typedoc-plugin-markdown: 4.6.4(typedoc@0.27.9(typescript@5.8.3))
 
   state-local@1.0.7: {}
 
@@ -10688,7 +10688,7 @@ snapshots:
 
   typed-binary@4.3.2: {}
 
-  typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3)):
+  typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)):
     dependencies:
       typedoc: 0.27.9(typescript@5.8.3)
 
