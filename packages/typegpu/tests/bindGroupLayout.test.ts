@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   arrayOf,
+  atomic,
   type F32,
   f32,
+  type I32,
+  i32,
   type U32,
   u32,
   type Vec3f,
@@ -297,6 +300,88 @@ describe('TgpuBindGroup', () => {
             binding: 0,
             resource: {
               buffer: root.unwrap(buffer),
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('primitive buffer layout', () => {
+    let layout: TgpuBindGroupLayout<{
+      foo: { uniform: U32 };
+      bar: { uniform: WgslArray<I32> };
+    }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: u32 },
+          bar: { uniform: arrayOf(i32, 4) },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw buffer', ({ root }) => {
+      const buffer = root.createBuffer(u32).$usage('uniform');
+      const buffer2 = root.createBuffer(arrayOf(i32, 4)).$usage('uniform');
+      const bindGroup = root.createBindGroup(layout, {
+        foo: root.unwrap(buffer),
+        bar: root.unwrap(buffer2),
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(buffer),
+            },
+          },
+          {
+            binding: 1,
+            resource: {
+              buffer: root.unwrap(buffer2),
+            },
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with an atomic version of a primitive buffer', ({ root }) => {
+      const buffer = root.createBuffer(atomic(u32)).$usage('uniform');
+      const buffer2 = root
+        .createBuffer(arrayOf(atomic(i32), 4))
+        .$usage('uniform');
+      const bindGroup = root.createBindGroup(layout, {
+        foo: buffer,
+        bar: buffer2,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(buffer),
+            },
+          },
+          {
+            binding: 1,
+            resource: {
+              buffer: root.unwrap(buffer2),
             },
           },
         ],
