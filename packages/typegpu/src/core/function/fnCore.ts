@@ -103,7 +103,7 @@ export function createFnCore(
 
           if (providedArgs.args.length !== shell.argTypes.length) {
             throw new Error(
-              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments!`,
+              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments.`,
             );
           }
 
