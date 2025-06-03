@@ -326,7 +326,7 @@ export const controls = {
   },
 };
 
-// Variables for mouse interaction.
+// Variables for interaction
 
 let isLeftPressed = false;
 let previousMouseX = 0;
@@ -406,6 +406,8 @@ canvas.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
 
+// Mouse controls
+
 canvas.addEventListener('mousedown', async (event) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
@@ -453,6 +455,35 @@ window.addEventListener('mousemove', (event) => {
     updateMouseRay(event.clientX, event.clientY);
   }
 });
+
+// Touch controls
+
+canvas.addEventListener('touchstart', async (event) => {
+  if (event.touches.length === 1) {
+    previousMouseX = event.touches[0].clientX;
+    previousMouseY = event.touches[0].clientY;
+  }
+});
+
+window.addEventListener('touchmove', (event) => {
+  if (event.touches.length === 1) {
+    const dx = event.touches[0].clientX - previousMouseX;
+    const dy = event.touches[0].clientY - previousMouseY;
+    previousMouseX = event.touches[0].clientX;
+    previousMouseY = event.touches[0].clientY;
+
+    updateCameraTarget(dx, dy);
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+  }
+});
+
+window.addEventListener('touchend', () => {
+  mouseRayBuffer.writePartial({
+    activated: 0,
+  });
+});
+
+// observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
   camera.projection = m.mat4.perspective(
