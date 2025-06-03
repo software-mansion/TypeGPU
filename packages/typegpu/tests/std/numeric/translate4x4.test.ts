@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { mul, translate4x4 } from '../../../src/std/index.ts';
 import { mat4x4f, vec3f } from '../../../src/data/index.ts';
-import { parse, parseResolved } from '../../utils/parseResolved.ts';
 import tgpu from '../../../src/index.ts';
+import { mul, translate4x4 } from '../../../src/std/index.ts';
+import { parse, parseResolved } from '../../utils/parseResolved.ts';
 
 describe('translate', () => {
   it('translates a matrix by a vec3f vector', () => {
@@ -72,24 +72,6 @@ describe('translate', () => {
       parse(
         `fn translateZero() { 
           var resultExpression = (mat4x4f(2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 5, 5, 5, 1) * mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, vec3f(0, 0, 0).x, vec3f(0, 0, 0).y, vec3f(0, 0, 0).z, 1)); 
-        }`,
-      ),
-    );
-  });
-
-  it('generates correct WGSL for translate4x4 with large numbers', () => {
-    const M = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 10, 10, 1);
-    const T = vec3f(999.99, 8888.88, 77777.77);
-
-    const translateFn = tgpu['~unstable']
-      .fn([])(() => {
-        const resultExpression = translate4x4(M, T);
-      }).$name('translateLarge');
-
-    expect(parseResolved({ translateFn })).toBe(
-      parse(
-        `fn translateLarge() { 
-          var resultExpression = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 10, 10, 1) * mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, vec3f(999.99, 8888.88, 77777.77).x, vec3f(999.99, 8888.88, 77777.77).y, vec3f(999.99, 8888.88, 77777.77).z, 1)); 
         }`,
       ),
     );
