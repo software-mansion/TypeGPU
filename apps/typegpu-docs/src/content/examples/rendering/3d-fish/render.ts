@@ -19,8 +19,7 @@ export const vertexShader = tgpu['~unstable']
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const currentModelData = layout.$.modelData[input.instanceIndex];
 
-    // apply sin wave
-
+    // apply sin wave to imitate swimming motion
     let wavedVertex = PosAndNormal({
       position: input.modelPosition,
       normal: input.modelNormal,
@@ -42,8 +41,8 @@ export const vertexShader = tgpu['~unstable']
     const pitch = std.asin(-direction.y);
 
     const scaleMatrix = d.mat4x4f.scaling(d.vec3f(currentModelData.scale));
-    const yawMatrix = d.mat4x4f.rotationY(yaw);
     const pitchMatrix = d.mat4x4f.rotationZ(pitch);
+    const yawMatrix = d.mat4x4f.rotationY(yaw);
     const translationMatrix = d.mat4x4f.translation(currentModelData.position);
 
     const worldPosition = std.mul(
@@ -62,7 +61,7 @@ export const vertexShader = tgpu['~unstable']
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.mul(pitchMatrix, std.mul(yawMatrix, d.vec4f(wavedVertex.normal, 1)))
+      std.mul(yawMatrix, std.mul(pitchMatrix, d.vec4f(wavedVertex.normal, 1)))
         .xyz,
     );
 

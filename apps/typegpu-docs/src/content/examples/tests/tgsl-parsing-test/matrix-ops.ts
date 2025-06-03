@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
-export const matrixOps = tgpu['~unstable']
+export const matrixOpsTests = tgpu['~unstable']
   .fn([], d.bool)(() => {
     let s = true;
 

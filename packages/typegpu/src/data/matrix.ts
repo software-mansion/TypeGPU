@@ -519,7 +519,7 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 
 /**
  * Returns a 2-by-2 identity matrix.
- * @returns {m2x2f} - The result matrix.
+ * @returns {m2x2f} The result matrix.
  */
 export const identity2 = createDualImpl(
   // CPU implementation
@@ -536,7 +536,7 @@ export const identity2 = createDualImpl(
 
 /**
  * Returns a 3-by-3 identity matrix.
- * @returns {m3x3f} - The result matrix.
+ * @returns {m3x3f} The result matrix.
  */
 export const identity3 = createDualImpl(
   // CPU implementation
@@ -554,7 +554,7 @@ export const identity3 = createDualImpl(
 
 /**
  * Returns a 4-by-4 identity matrix.
- * @returns {m4x4f} - The result matrix.
+ * @returns {m4x4f} The result matrix.
  */
 export const identity4 = createDualImpl(
   // CPU implementation
@@ -580,7 +580,7 @@ const identityFunctions = {
 /**
  * Creates a 4-by-4 matrix which translates by the given vector v.
  * @param {v3f} vector - The vector by which to translate.
- * @returns {m4x4f} - The translation matrix.
+ * @returns {m4x4f} The translation matrix.
  */
 export const translation4 = createDualImpl(
   // CPU implementation
@@ -607,7 +607,7 @@ export const translation4 = createDualImpl(
 /**
  * Creates a 4-by-4 matrix which scales in each dimension by an amount given by the corresponding entry in the given vector.
  * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
- * @returns {m4x4f} - The scaling matrix.
+ * @returns {m4x4f} The scaling matrix.
  */
 export const scaling4 = createDualImpl(
   // CPU implementation
@@ -633,8 +633,8 @@ export const scaling4 = createDualImpl(
 
 /**
  * Creates a 4-by-4 matrix which rotates around the x-axis by the given angle.
- * @param {v3f} angle - The angle by which to rotate (in radians).
- * @returns {m4x4f} - The rotated matrix.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
  */
 export const rotationX4 = createDualImpl(
   // CPU implementation
@@ -661,8 +661,8 @@ export const rotationX4 = createDualImpl(
 
 /**
  * Creates a 4-by-4 matrix which rotates around the y-axis by the given angle.
- * @param {v3f} angle - The angle by which to rotate (in radians).
- * @returns {m4x4f} - The rotated matrix.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
  */
 export const rotationY4 = createDualImpl(
   // CPU implementation
@@ -689,8 +689,8 @@ export const rotationY4 = createDualImpl(
 
 /**
  * Creates a 4-by-4 matrix which rotates around the z-axis by the given angle.
- * @param {v3f} angle - The angle by which to rotate (in radians).
- * @returns {m4x4f} - The rotated matrix.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
  */
 export const rotationZ4 = createDualImpl(
   // CPU implementation
