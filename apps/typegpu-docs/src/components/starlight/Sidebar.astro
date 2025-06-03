@@ -1,19 +1,27 @@
 ---
-import VanillaSidebar from '@astrojs/starlight/components/Sidebar.astro';
+import VanillaSidebar from "@astrojs/starlight/components/Sidebar.astro";
 ---
 
 <div class="md:sl-hidden">
-  <a href="/TypeGPU/examples">Live Examples</a>
+  <a href="/TypeGPU/getting-started">Documentation</a>
+</div>
+<div class="md:sl-hidden">
+  <a href="/TypeGPU/examples">Examples</a>
 </div>
 <div class="md:sl-hidden">
   <a href="/TypeGPU/blog">Blog</a>
 </div>
+
 <VanillaSidebar />
 
 <style>
+  div {
+    padding: 0 1rem;
+  }
+
   div a {
     color: var(--sl-color-white);
-    font-size: var(--sl-text-lg);
+    font-size: var(--sl-text-md);
     font-weight: 600;
     text-decoration: none;
     display: block;

@@ -1,6 +1,6 @@
-import type { TgpuDualFn } from '../data/dataTypes.ts';
+import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
-import type { FnArgsConversionHint, Snippet } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import { $internal } from './symbols.ts';
 
 /**
@@ -22,8 +22,7 @@ export function* naturalsExcept(
 
 type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
-// biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
-export function createDualImpl<T extends (...args: any[]) => any>(
+export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
   argTypes?: FnArgsConversionHint,

@@ -1,3 +1,4 @@
+import { snip } from '../data/dataTypes.ts';
 import { Void } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 
@@ -7,8 +8,5 @@ export const discard = createDualImpl(
     throw new Error('discard() can only be used on the GPU.');
   },
   // GPU
-  () => ({
-    value: 'discard;',
-    dataType: Void,
-  }),
+  () => snip('discard;', Void),
 );

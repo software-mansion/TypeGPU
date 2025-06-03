@@ -2,10 +2,15 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import {
+  $getNameForward,
+  $gpuValueOf,
+  $internal,
+  $wgslDataType,
+} from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -123,21 +128,23 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
+  [$gpuValueOf](): InferGPU<TData> {
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+        [$wgslDataType]: this.buffer.dataType,
+      },
+      valueProxyHandler,
+    ) as InferGPU<TData>;
+  }
+
   get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
 
-    return new Proxy(
-      {
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.buffer.dataType,
-        },
-      },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
+    return this[$gpuValueOf]();
   }
 }
 export class TgpuLaidOutBufferImpl<
@@ -176,21 +183,23 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
+  [$gpuValueOf](): InferGPU<TData> {
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+        [$wgslDataType]: this.dataType,
+      },
+      valueProxyHandler,
+    ) as InferGPU<TData>;
+  }
+
   get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
 
-    return new Proxy(
-      {
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$internal]: {
-          dataType: this.dataType,
-        },
-      },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
+    return this[$gpuValueOf]();
   }
 }
 

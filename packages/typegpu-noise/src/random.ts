@@ -54,6 +54,14 @@ export const randInUnitCircle: TgpuFn<[], d.Vec2f> = tgpu['~unstable'].fn(
   return d.vec2f(cos(angle) * radius, sin(angle) * radius);
 });
 
+export const randOnUnitCircle: TgpuFn<[], d.Vec2f> = tgpu['~unstable'].fn(
+  [],
+  d.vec2f,
+)(() => {
+  const angle = randomGeneratorSlot.value.sample() * TWO_PI;
+  return d.vec2f(cos(angle), sin(angle));
+});
+
 export const randOnUnitSphere: TgpuFn<[], d.Vec3f> = tgpu['~unstable'].fn(
   [],
   d.vec3f,

@@ -1,4 +1,4 @@
-import { getName } from './name.ts';
+import { getName } from './shared/meta.ts';
 
 export interface NotAllowed<TMsg> {
   reason: TMsg;

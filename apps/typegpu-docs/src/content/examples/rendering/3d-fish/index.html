@@ -21,19 +21,30 @@
     z-index: 1;
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 0.625rem;
+    border-radius: 0.625rem;
     user-select: none;
     pointer-events: none;
     transition: opacity 0.5s;
   }
+
+  .spinner-background {
+    inset: 0;
+    position: absolute;
+    display: grid;
+    place-items: center;
+    background-color: var(--color-tameplum-50, white);
+    z-index: 4;
+  }
 </style>
+
+<div class="spinner-background">
+  <div class="spinner">Loading...</div>
+</div>
 <div id="help">
   <h3 class="controls-header">Controls (click to dismiss)</h3>
   <p class="controls"><b>Left Mouse Button:</b> Look around</p>
-  <p class="controls">
-    <b>Right Mouse Button:</b> Repel fish from the cursor
-  </p>
+  <p class="controls"><b>Right Mouse Button:</b> Repel fish from the cursor</p>
   <p id="attribution">
     Uses "Animated Low Poly Fish" by Sketchfab user Atlas, used under CC BY 4.0
     / Modified from original

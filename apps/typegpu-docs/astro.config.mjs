@@ -8,6 +8,7 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
+import { imagetools } from 'vite-imagetools';
 
 /**
  * @template T
@@ -24,14 +25,20 @@ export default defineConfig({
   base: 'TypeGPU',
   vite: {
     // Allowing query params, for invalidation
-    plugins: [tailwindVite(), typegpu({ include: [/\.m?[jt]sx?/] })],
+    plugins: [
+      tailwindVite(),
+      typegpu({ include: [/\.m?[jt]sx?/] }),
+      /** @type {any} */ imagetools(),
+    ],
   },
   integrations: [
     starlight({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: stripFalsy([
-        starlightBlog(),
+        starlightBlog({
+          navigation: 'none',
+        }),
         DEV &&
         starlightTypeDoc({
           entryPoints: [

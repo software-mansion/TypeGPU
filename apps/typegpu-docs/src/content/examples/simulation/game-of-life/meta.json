@@ -1,4 +1,5 @@
 {
   "title": "Game of Life",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["cellular automata", "compute", "double buffering"]
 }

@@ -57,6 +57,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 
 const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 canvas.parentElement?.appendChild(video);
 
 function resizeVideo() {
@@ -145,6 +146,7 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
   ],
 };
 
+let ready = false;
 let frameRequest = requestAnimationFrame(run);
 
 function run() {
@@ -176,6 +178,13 @@ function run() {
   pass.end();
 
   device.queue.submit([encoder.finish()]);
+
+  if (!ready) {
+    device.queue.onSubmittedWorkDone().then(() => {
+      spinner.style.display = 'none';
+      ready = true;
+    });
+  }
 }
 
 // #region Example controls & Cleanup

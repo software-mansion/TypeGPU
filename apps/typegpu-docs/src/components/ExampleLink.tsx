@@ -2,20 +2,17 @@ import cs from 'classnames';
 import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
-import SelectedDotSvg from '../assets/selected-dot.svg';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { PLAYGROUND_KEY } from '../utils/examples/exampleContent.ts';
 import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
 import useEvent from '../utils/useEvent.ts';
 
 type Props = {
   exampleKey: string | undefined;
-  children?: string;
-  isExperimental: boolean;
+  children?: React.ReactNode;
 };
 
 export function ExampleLink(props: Props) {
-  const { exampleKey, children, isExperimental } = props;
+  const { exampleKey, children } = props;
 
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
@@ -26,9 +23,7 @@ export function ExampleLink(props: Props) {
     setMenuShownMobile(false);
   });
 
-  const active = currentExample === exampleKey ||
-    (exampleKey === PLAYGROUND_KEY &&
-      currentExample?.startsWith(PLAYGROUND_KEY));
+  const isCurrentExample = currentExample === exampleKey;
 
   return (
     <a
@@ -37,17 +32,13 @@ export function ExampleLink(props: Props) {
       href={`#example=${exampleKey}`}
       onClick={handleClick}
       className={cs(
-        'flex cursor-pointer items-center justify-between no-underline',
-        active
-          ? 'bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent'
-          : isExperimental
-          ? 'text-gray-400'
-          : 'text-black',
+        'block overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow',
+        isCurrentExample
+          ? 'shadow-lg ring-3 ring-purple-500'
+          : 'hover:shadow-lg',
       )}
     >
       {children}
-
-      {active ? <img src={SelectedDotSvg.src} alt='' /> : null}
     </a>
   );
 }

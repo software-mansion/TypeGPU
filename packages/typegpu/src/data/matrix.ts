@@ -1,8 +1,9 @@
-import { setName } from '../name.ts';
+import { setName } from '../shared/meta.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
+import { snip } from './dataTypes.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
@@ -34,8 +35,8 @@ type vBase = {
 
 interface MatSchemaOptions<TType extends string, ValueType> {
   type: TType;
-  rows: number;
-  columns: number;
+  rows: 2 | 3 | 4;
+  columns: 2 | 3 | 4;
   makeFromElements(...elements: number[]): ValueType;
 }
 
@@ -55,6 +56,8 @@ function createMatSchema<
     [$internal]: true,
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
+    identity: identityFunctions[options.columns],
+    translation: options.columns === 4 ? translation4x4 : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -73,7 +76,15 @@ function createMatSchema<
         }
       }
 
-      // Fill the rest with zeros
+      if (
+        elements.length !== 0 &&
+        elements.length !== options.columns * options.rows
+      ) {
+        throw new Error(
+          `'${options.type}' constructor called with invalid number of arguments.`,
+        );
+      }
+
       for (let i = elements.length; i < options.columns * options.rows; ++i) {
         elements.push(0);
       }
@@ -81,12 +92,11 @@ function createMatSchema<
       return options.makeFromElements(...elements);
     },
     // GPU implementation
-    (...args) => {
-      return {
-        value: `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
-        dataType: MatSchema,
-      };
-    },
+    (...args) =>
+      snip(
+        `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
+        MatSchema,
+      ),
   );
 
   return Object.assign(construct, MatSchema) as unknown as {
@@ -159,7 +169,81 @@ abstract class mat2x2Impl<TColumn extends v2f>
     })`;
   }
 }
+export const identity4x4 = createDualImpl(
+  // CPU implementation
+  () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    )`,
+    dataType: mat4x4f,
+  }),
+);
 
+export const identity3x3 = createDualImpl(
+  // CPU implementation
+  () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0,
+    )`,
+    dataType: mat3x3f,
+  }),
+);
+
+export const identity2x2 = createDualImpl(
+  // CPU implementation
+  () => mat2x2f(1, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0,
+      0.0, 1.0
+    )`,
+    dataType: mat2x2f,
+  }),
+);
+const identityFunctions = {
+  2: identity2x2,
+  3: identity3x3,
+  4: identity4x4,
+};
+
+export const translation4x4 = createDualImpl(
+  // CPU implementation
+  (vector: v3f) =>
+    mat4x4f(
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      vector.x,
+      vector.y,
+      vector.z,
+      1,
+    ),
+  // GPU implementation
+  (vector) => ({
+    value:
+      `mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+    dataType: mat4x4f,
+  }),
+);
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   public readonly kind = 'mat2x2f';
 
