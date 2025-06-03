@@ -1,15 +1,16 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
+import CrossSvg from '../assets/cross.svg';
 import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import {
   menuShownAtom,
   menuShownMobileAtom,
 } from '../utils/examples/menuShownAtom.ts';
-import ExampleList from './ExampleList.tsx';
+import { SearchableExampleList } from './SearchableExampleList.tsx';
 import ExamplePage from './ExamplePage.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
@@ -52,11 +53,11 @@ const experimentalShowingLSKey = 'experimental-showing';
 
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
-  const menuShownMobile = useAtomValue(menuShownMobileAtom);
+  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
   const [experimentalShowing, setExperimentalShowing] = useState(
     localStorage.getItem(experimentalShowingLSKey) === 'true',
   );
-
+  const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
 
   return (
@@ -66,10 +67,10 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col gap-5 overflow-auto bg-white p-5 md:w-75 md:rounded-2xl',
+        'box-border flex flex-col bg-white md:w-75 md:rounded-2xl',
       )}
     >
-      <header className='grid gap-5'>
+      <header className='p-5'>
         <div className='grid place-items-center'>
           <a href='/TypeGPU' className='box-border block cursor-pointer py-4'>
             <img
@@ -79,12 +80,32 @@ function SideMenu() {
             />
           </a>
         </div>
+        <div className='absolute top-5 right-5 md:hidden'>
+          {menuShownMobile && (
+            <Button
+              onClick={() => setMenuShownMobile(false)}
+            >
+              <img
+                src={CrossSvg.src}
+                alt='Close menu'
+                className='h-3 w-3'
+              />
+            </Button>
+          )}
+        </div>
+      </header>
 
+      <div className='box-border w-full px-5'>
         <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+      </div>
 
-        <div className='grid gap-6'>
-          <h1 className='m-0 font-medium text-xl'>Welcome to examples page</h1>
-          <p className='m-0 text-sm'>
+      <div
+        className='my-5 min-h-0 flex-1 overflow-y-auto px-5'
+        ref={scrollRef}
+      >
+        <section className='mb-5 space-y-2 border-tameplum-100 border-b pb-5'>
+          <h1 className='font-medium text-lg'>Welcome to examples page</h1>
+          <p className='text-sm'>
             Test out the power of our TypeScript library and get to know
             TypeGPU.
           </p>
@@ -94,23 +115,24 @@ function SideMenu() {
           >
             Learn more about TypeGPU here
           </a>
-        </div>
-      </header>
+        </section>
 
-      <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+        <SearchableExampleList
+          excludeTags={[
+            experimentalShowing ? [] : ['experimental'],
+            typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
+          ].flat()}
+          scrollContainerRef={scrollRef}
+        />
+      </div>
 
-      <ExampleList
-        excludeTags={[
-          experimentalShowing ? [] : ['experimental'],
-          typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
-        ].flat()}
-      />
-
-      <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+      <div className='box-border w-full px-5'>
+        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+      </div>
 
       <label
         htmlFor={experimentalExamplesToggleId}
-        className='flex cursor-pointer items-center justify-between gap-3 text-sm'
+        className='flex cursor-pointer items-center justify-between gap-3 p-5 text-sm'
       >
         <span>Experimental examples</span>
         <Toggle
@@ -127,7 +149,7 @@ function SideMenu() {
         />
       </label>
 
-      <div className='flex justify-between text-tameplum-800 text-xs'>
+      <div className='flex justify-between px-5 pb-5 text-tameplum-800 text-xs'>
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className='flex items-center gap-3'>
           <a
