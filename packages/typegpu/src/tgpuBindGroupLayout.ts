@@ -56,7 +56,7 @@ import {
 } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
-import type { Infer } from './shared/repr.ts';
+import type { Infer, MemIdentity } from './shared/repr.ts';
 import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
@@ -265,10 +265,16 @@ type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> = T extends
   TgpuLayoutUniform ?
-    | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & UniformFlag)
+    | (
+      & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+      & UniformFlag
+    )
     | GPUBuffer
   : T extends TgpuLayoutStorage ?
-      | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & StorageFlag)
+      | (
+        & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+        & StorageFlag
+      )
       | GPUBuffer
   : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
