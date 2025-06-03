@@ -1,3 +1,4 @@
+import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -25,10 +26,9 @@ import {
   type v4i,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
-import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
-import { $internal } from '../shared/symbols.ts';
 import { setName } from '../name.ts';
+import { createDualImpl } from '../shared/generators.ts';
+import { $internal } from '../shared/symbols.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -596,4 +596,38 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
+);
+
+/**
+ * Translates a matrix by a given vector.
+ * @param {m4x4f} matrix - The matrix to be translated.
+ * @param {v3f} vector - The vector by which to translate the matrix.
+ * @returns {m4x4f} - The translated matrix.
+ */
+export const translate4x4 = createDualImpl(
+  // CPU implementation
+  (matrix: m4x4f, vector: v3f) => {
+    return mul(matrix, mat4x4f.translation(vector));
+  },
+  // GPU implementation
+  (matrix, vector) => ({
+    value: `(${matrix.value} * ${
+      (mat4x4f.translation(
+        vector as unknown as v3f,
+      ) as unknown as Snippet).value
+    })`,
+    dataType: matrix.dataType,
+  }),
+);
+
+export const tanh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.tanh(value) as T;
+    }
+    return VectorOps.tanh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`tanh(${value.value})`, value.dataType),
 );
