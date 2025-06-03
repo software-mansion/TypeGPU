@@ -48,7 +48,7 @@
     "tinybench": "^3.1.0",
     "typed-binary": "^4.0.0",
     "typedoc": "^0.27.9",
-    "typedoc-plugin-markdown": "^4.3.0",
+    "typedoc-plugin-markdown": "^4.6.4",
     "typegpu": "workspace:*",
     "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",
