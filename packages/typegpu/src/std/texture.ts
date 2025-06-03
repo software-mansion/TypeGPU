@@ -20,6 +20,7 @@ import {
   Void,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 
 type TextureSampleOverload = {
   <T extends TgpuSampledTexture<'1d'>>(
@@ -132,6 +133,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     return snip(`textureSample(${args.map((v) => v.value).join(', ')})`, vec4f);
   },
 );
+setName(textureSample, 'textureSample');
 
 type TextureSampleLevelOverload = {
   <T extends TgpuSampledTexture<'2d'>>(
@@ -190,6 +192,7 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     );
   },
 );
+setName(textureSampleLevel, 'textureSampleLevel');
 
 type TexelDataToInstance<TF extends TexelData> = {
   vec4f: v4f;
@@ -281,6 +284,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     );
   },
 );
+setName(textureLoad, 'textureLoad');
 
 type TextureStoreOverload = {
   <T extends TgpuStorageTexture<'1d'>>(
@@ -327,6 +331,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
       Void,
     ),
 );
+setName(textureStore, 'textureStore');
 
 type TextureDimensionsOverload = {
   <T extends TgpuSampledTexture<'1d'> | TgpuStorageTexture<'1d'>>(
@@ -382,3 +387,4 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
     );
   },
 );
+setName(textureDimensions, 'textureDimensions');
