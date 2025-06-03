@@ -313,7 +313,8 @@ describe('TgpuBindGroup', () => {
     let layout: TgpuBindGroupLayout<{
       foo: { uniform: U32 };
       bar: { uniform: WgslArray<I32> };
-      baz: { uniform: WgslStruct<{ a: U32; b: I32 }> };
+      baz: { storage: WgslStruct<{ a: U32; b: I32 }> };
+      qux: { storage: (n: number) => WgslArray<I32> };
     }>;
 
     beforeEach(() => {
@@ -321,21 +322,26 @@ describe('TgpuBindGroup', () => {
         .bindGroupLayout({
           foo: { uniform: u32 },
           bar: { uniform: arrayOf(i32, 4) },
-          baz: { uniform: struct({ a: u32, b: i32 }) },
+          baz: { storage: struct({ a: u32, b: i32 }) },
+          qux: { storage: (n: number) => arrayOf(i32, n) },
         })
         .$name('example');
     });
 
     it('populates a simple layout with a raw buffer', ({ root }) => {
       const scalarBuffer = root.createBuffer(u32).$usage('uniform');
-      const arrayBuffer = root.createBuffer(arrayOf(i32, 4)).$usage('uniform');
+      const arrayBuffer = root.createBuffer(arrayOf(i32, 4)).$usage('storage');
       const structBuffer = root
         .createBuffer(struct({ a: u32, b: i32 }))
         .$usage('uniform');
+      const runtimeArrayBuffer = root
+        .createBuffer(arrayOf(i32, 4))
+        .$usage('storage');
       const bindGroup = root.createBindGroup(layout, {
         foo: root.unwrap(scalarBuffer),
         bar: root.unwrap(arrayBuffer),
         baz: root.unwrap(structBuffer),
+        qux: root.unwrap(runtimeArrayBuffer),
       });
 
       expect(root.device.createBindGroupLayout).not.toBeCalled();
@@ -364,6 +370,12 @@ describe('TgpuBindGroup', () => {
               buffer: root.unwrap(structBuffer),
             },
           },
+          {
+            binding: 3,
+            resource: {
+              buffer: root.unwrap(runtimeArrayBuffer),
+            },
+          },
         ],
       });
     });
@@ -377,11 +389,15 @@ describe('TgpuBindGroup', () => {
         .$usage('uniform');
       const atomicStructBuffer = root
         .createBuffer(struct({ a: atomic(u32), b: atomic(i32) }))
-        .$usage('uniform');
+        .$usage('storage');
+      const atomicRuntimeArrayBuffer = root
+        .createBuffer(arrayOf(atomic(i32), 4))
+        .$usage('storage');
       const bindGroup = root.createBindGroup(layout, {
         foo: atomicScalarBuffer,
         bar: atomicArrayBuffer,
         baz: atomicStructBuffer,
+        qux: atomicRuntimeArrayBuffer,
       });
 
       expect(root.device.createBindGroupLayout).not.toBeCalled();
@@ -408,6 +424,12 @@ describe('TgpuBindGroup', () => {
             binding: 2,
             resource: {
               buffer: root.unwrap(atomicStructBuffer),
+            },
+          },
+          {
+            binding: 3,
+            resource: {
+              buffer: root.unwrap(atomicRuntimeArrayBuffer),
             },
           },
         ],
