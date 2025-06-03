@@ -394,6 +394,30 @@ struct fragment_Output {
     `),
     );
   });
+
+  it('resolves compound types with structs provided in externals', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)], d.u32)(
+        /* wgsl */ `(a: array<MyPoint, 4>) {
+        var b: MyPoint = a[0];
+        return b.a;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      struct P { a: u32, }
+      fn get_color(a: array<P, 4>) -> u32 {
+        var b: P = a[0];
+        return b.a;
+      }
+    `),
+    );
+  });
 });
 
 describe('tgpu.fn with raw wgsl and missing types', () => {
@@ -475,33 +499,86 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     );
   });
 
-  // TODO: handle nested structs, which blocks type checking
-  // it('throws when parameter type mismatch', () => {
-  //   const getColor = tgpu['~unstable']
-  //     .fn([d.vec3f])(
-  //       /* wgsl */ `(a: vec4f) {
-  //       return;
-  //     }`,
-  //     )
-  //     .$name('get_color');
+  it('replaces references when one struct is named in wgsl', () => {
+    const Point = d
+      .struct({
+        a: d.u32,
+        b: d.u32,
+      })
+      .$name('P');
 
-  //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot();
-  // });
+    const func = tgpu['~unstable']
+      .fn([Point, Point], Point)(/* wgsl */ `(a, b: PointStruct) {
+          return b;
+        }`)
+      .$name('newPointF');
 
-  // TODO: handle nested structs, which blocks type checking
-  // it('throws when return type mismatch', () => {
-  //   const getColor = tgpu['~unstable']
-  //     .fn([], d.vec4f)(
-  //       /* wgsl */ `() -> vec2f {
-  //       return;
-  //     }`,
-  //     )
-  //     .$name('get_color');
+    expect(parseResolved({ func })).toBe(
+      parse(`
+        struct P {
+          a: u32,
+          b: u32,
+        }
 
-  //   expect(() => parseResolved({ getColor }))
-  //     .toThrowErrorMatchingInlineSnapshot();
-  // });
+        fn newPointF(a: P, b: P) -> P {
+          return b;
+        }`),
+    );
+  });
+
+  it('throws when parameter type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f])(
+        /* wgsl */ `(a: vec4f) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "vec3f", WGSL type "vec4f".]
+      `);
+  });
+
+  it('throws when compound parameter type mismatch', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)])(
+        /* wgsl */ `(a: arrayOf<MyPoint, 3>) {
+        return;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "array<P,4>", WGSL type "arrayOf<P,3>".]
+      `);
+  });
+
+  it('throws when return type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec4f)(
+        /* wgsl */ `() -> vec2f {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: return type, JS type "vec4f", WGSL type "vec2f".]
+      `);
+  });
 
   it('throws when wrong argument count', () => {
     const getColor = tgpu['~unstable']

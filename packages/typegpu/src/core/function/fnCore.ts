@@ -111,13 +111,27 @@ export function createFnCore(
 
           const input = providedArgs.args.map((argInfo, i) =>
             `${argInfo.identifier}: ${
-              argInfo.type ?? ctx.resolve(shell.argTypes[i])
+              checkAndReturnType(
+                `parameter ${argInfo.identifier}`,
+                argInfo.type,
+                shell.argTypes[i],
+                ctx,
+                externalMap,
+              )
             }`
           ).join(', ');
 
           const output = shell.returnType === Void
             ? ''
-            : `-> ${providedArgs.ret?.type ?? ctx.resolve(shell.returnType)}`;
+            : `-> ${
+              checkAndReturnType(
+                'return type',
+                providedArgs.ret?.type,
+                shell.returnType,
+                ctx,
+                externalMap,
+              )
+            }`;
 
           header = `(${input}) ${output}`;
 
@@ -200,4 +214,29 @@ export function createFnCore(
   }
 
   return core;
+}
+
+function checkAndReturnType(
+  name: string,
+  wgslType: string | undefined,
+  jsType: unknown,
+  ctx: ResolutionCtx,
+  externals: ExternalMap,
+) {
+  const resolvedJsType = ctx.resolve(jsType).replace(/\s/g, '');
+
+  if (!wgslType) {
+    return resolvedJsType;
+  }
+
+  const resolvedWgslType = replaceExternalsInWgsl(ctx, externals, wgslType)
+    .replace(/\s/g, '');
+
+  if (resolvedWgslType !== resolvedJsType) {
+    throw new Error(
+      `Type mismatch between TGPU shell and WGSL code string: ${name}, JS type "${resolvedJsType}", WGSL type "${resolvedWgslType}".`,
+    );
+  }
+
+  return wgslType;
 }
