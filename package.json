@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
-    "fix:style": "biome lint --write . && deno fmt",
+    "fix": "biome lint --write . && deno fmt",
     "test": "pnpm run test:circular-deps && pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
     "test:types": "pnpm run -r --parallel test:types && pwd",
