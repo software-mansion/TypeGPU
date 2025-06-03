@@ -516,7 +516,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed: 
         - <root>
-        - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments!]
+        - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments.]
       `);
   });
 
