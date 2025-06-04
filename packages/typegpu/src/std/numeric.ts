@@ -291,7 +291,7 @@ export const acosh = createDualImpl(
     ) as T;
   },
   // GPU implementation
-  (value) => ({ value: `acosh(${value.value})`, dataType: value.dataType }),
+  (value) => snip(`acosh(${value.value})`, value.dataType),
 );
 
 /**
