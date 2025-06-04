@@ -32,6 +32,7 @@ export {
   sign,
   sin,
   sqrt,
+  tanh
 } from './numeric.ts';
 
 // deno-fmt-ingore

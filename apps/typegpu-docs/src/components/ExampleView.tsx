@@ -98,7 +98,7 @@ export function ExampleView({ example }: Props) {
       <div className='flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]'>
         <div
           className={cs(
-            'grid flex-1 gap-4',
+            'grid flex-1 gap-4 overflow-auto',
             codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
@@ -109,13 +109,13 @@ export function ExampleView({ example }: Props) {
                   scrollbarGutter: 'stable both-edges',
                 }}
                 className={cs(
-                  'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly md:flex-row md:gap-4',
+                  'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly gap-4 overflow-auto md:flex-row',
                   codeEditorShowing
                     ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                     : '',
                 )}
               >
-                <div ref={exampleHtmlRef} className='contents h-full w-full' />
+                <div ref={exampleHtmlRef} className='contents' />
               </div>
             )
             : <GPUUnsupportedPanel />}

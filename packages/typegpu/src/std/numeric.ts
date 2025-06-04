@@ -597,3 +597,15 @@ export const sqrt = createDualImpl(
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
 );
+
+export const tanh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.tanh(value) as T;
+    }
+    return VectorOps.tanh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`tanh(${value.value})`, value.dataType),
+);
