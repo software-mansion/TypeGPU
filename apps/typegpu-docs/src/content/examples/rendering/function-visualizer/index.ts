@@ -488,9 +488,41 @@ canvas.addEventListener('wheel', (event) => {
 
 // Mouse interaction
 
-// TODO
+canvas.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 1) {
+    lastPos = [event.touches[0].clientX, event.touches[0].clientY];
+  }
+});
+
+window.addEventListener('touchmove', (event) => {
+  if (lastPos === null || event.touches.length !== 1) {
+    return;
+  }
+  const currentPos = [event.touches[0].clientX, event.touches[0].clientY];
+  const translation = [
+    (-(currentPos[0] - lastPos[0]) / canvas.width) *
+    2.0 *
+    window.devicePixelRatio,
+    ((currentPos[1] - lastPos[1]) / canvas.height) *
+    2.0 *
+    window.devicePixelRatio,
+    0.0,
+  ];
+  mat4.translate(
+    properties.transformation,
+    translation,
+    properties.transformation,
+  );
+
+  lastPos = currentPos;
+});
+
+window.addEventListener('touchend', () => {
+  lastPos = null;
+});
 
 // Resize observer and cleanup
+
 const resizeObserver = new ResizeObserver(() => {
   msTexture.destroy();
   msTexture = device.createTexture({
