@@ -309,8 +309,13 @@ export const VectorOps = {
 
   acosh: {
     vec2f: unary2f(Math.acosh),
+    vec2h: unary2h(Math.acosh),
+
     vec3f: unary3f(Math.acosh),
+    vec3h: unary3h(Math.acosh),
+
     vec4f: unary4f(Math.acosh),
+    vec4h: unary4h(Math.acosh),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   asin: {
