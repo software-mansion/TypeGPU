@@ -87,10 +87,15 @@ const thumbnailFiles = R.pipe(
   R.mapKeys(pathToExampleKey),
   R.mapValues((
     value,
-  ): ThumbnailPair => (typeof value === 'string'
-    ? { small: value, large: value }
-    : { small: value[0], large: value[1] })
-  ),
+    key,
+  ): ThumbnailPair => {
+    if (typeof value === 'string') {
+      throw new Error(
+        `Thumbnail for example "${key}" is too small (required width is at least 513 pixels).`,
+      );
+    }
+    return { small: value[0], large: value[1] };
+  }),
 );
 
 export const examples = R.pipe(
