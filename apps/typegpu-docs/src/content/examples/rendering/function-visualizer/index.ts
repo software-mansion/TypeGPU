@@ -438,22 +438,19 @@ function queuePropertiesBufferUpdate() {
 }
 
 // Canvas controls
-
 let lastPos: number[] | null = null;
 
-canvas.onmousedown = (event) => {
-  lastPos = [event.offsetX, event.offsetY];
-};
+// Mouse interaction
 
-canvas.onmouseup = (_) => {
-  lastPos = null;
-};
+canvas.addEventListener('mousedown', (event) => {
+  lastPos = [event.clientX, event.clientY];
+});
 
-canvas.onmousemove = (event) => {
+window.addEventListener('mousemove', (event) => {
   if (lastPos === null) {
     return;
   }
-  const currentPos = [event.offsetX, event.offsetY];
+  const currentPos = [event.clientX, event.clientY];
   const translation = [
     (-(currentPos[0] - lastPos[0]) / canvas.width) *
     2.0 *
@@ -470,9 +467,13 @@ canvas.onmousemove = (event) => {
   );
 
   lastPos = currentPos;
-};
+});
 
-canvas.onwheel = (event) => {
+window.addEventListener('mouseup', (_) => {
+  lastPos = null;
+});
+
+canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
 
   const delta = Math.abs(event.deltaY) / 1000.0 + 1;
@@ -483,9 +484,13 @@ canvas.onwheel = (event) => {
     [scale, scale, 1],
     properties.transformation,
   );
-};
+});
 
-// recreate the multisampled texture on canvas resize
+// Mouse interaction
+
+// TODO
+
+// Resize observer and cleanup
 const resizeObserver = new ResizeObserver(() => {
   msTexture.destroy();
   msTexture = device.createTexture({
