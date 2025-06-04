@@ -92,24 +92,22 @@ export function createFnCore(
         let body = '';
 
         if (shell.isEntry) {
-          const input = isWgslStruct(shell.argTypes[0]) ? '(in: In)' : '()';
+          const input = isWgslStruct(shell.argTypes[0])
+            ? `(in: ${ctx.resolve(shell.argTypes[0])})`
+            : '()';
 
           const attributes = isWgslData(shell.returnType)
             ? getAttributesString(shell.returnType)
             : '';
           const output = shell.returnType !== Void
             ? isWgslStruct(shell.returnType)
-              ? '-> Out'
+              ? `-> ${ctx.resolve(shell.returnType)}`
               : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
                 ctx.resolve(shell.returnType)
               }`
             : '';
 
-          header = replaceExternalsInWgsl(
-            ctx,
-            externalMap,
-            `${input} ${output} `,
-          );
+          header = `${input} ${output} `;
           body = replacedImpl;
         } else {
           const providedArgs = extractArgs(replacedImpl);
