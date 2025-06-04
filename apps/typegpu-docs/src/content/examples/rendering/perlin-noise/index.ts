@@ -1,7 +1,7 @@
-import tgpu, { type TgpuFn } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { perlin3d } from '@typegpu/noise';
-import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
+import { abs, mix, mul, pow, sign } from 'typegpu/std';
 
 /** Used for clean-up of this example */
 const abortController = new AbortController();
@@ -25,18 +25,6 @@ const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const timeAccess = tgpu['~unstable'].accessor(d.f32);
 const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
-const exponentialSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
-  (n, sharpness) => sign(n) * pow(abs(n), 1 - sharpness),
-);
-
-const tanhSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
-  (n, sharpness) => tanh(n * (1 + sharpness * 10)),
-);
-
-const sharpenFnSlot = tgpu['~unstable'].slot<TgpuFn<[d.F32, d.F32], d.F32>>(
-  exponentialSharpen,
-);
-
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -45,10 +33,10 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const n = perlin3d.sample(d.vec3f(uv, timeAccess.value));
 
-  // Apply sharpening function
-  const sharp = sharpenFnSlot.value(n, sharpnessAccess.value);
+  // Sharpening
+  const sharp = sign(n) * pow(abs(n), 1 - sharpnessAccess.value);
 
-  // Map to 0-1 range
+  // Remapping to 0-1 range
   const n01 = sharp * 0.5 + 0.5;
 
   // Gradient map
@@ -83,27 +71,15 @@ const gridSizeUniform = root['~unstable'].createUniform(d.f32);
 const timeUniform = root['~unstable'].createUniform(d.f32, 0);
 const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
 
-const renderPipelineBase = root['~unstable']
+const renderPipeline = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)
   .with(timeAccess, timeUniform)
   .with(sharpnessAccess, sharpnessUniform)
   .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
-  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value);
-
-const renderPipelines = {
-  exponential: renderPipelineBase
-    .with(sharpenFnSlot, exponentialSharpen)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
-  tanh: renderPipelineBase
-    .with(sharpenFnSlot, tanhSharpen)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
-};
-
-let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';
+  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value)
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline();
 
 function draw() {
   if (abortController.signal.aborted) {
@@ -114,7 +90,7 @@ function draw() {
 
   const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
 
-  renderPipelines[activeSharpenFn]
+  renderPipeline
     .with(dynamicLayout, group)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -144,13 +120,6 @@ export const controls = {
     max: 0.99,
     step: 0.01,
     onSliderChange: (value: number) => sharpnessUniform.write(value),
-  },
-  'sharpening function': {
-    initial: 'exponential',
-    options: ['exponential', 'tanh'],
-    onSelectChange: (value: 'exponential' | 'tanh') => {
-      activeSharpenFn = value;
-    },
   },
 };
 
