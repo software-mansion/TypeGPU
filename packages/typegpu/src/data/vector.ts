@@ -1,4 +1,3 @@
-import { setName } from '../shared/meta.ts';
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/repr.ts';
 import { snip } from './dataTypes.ts';
@@ -326,6 +325,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `${type}(${args.map((v) => v.value).join(', ')})`,
         vecTypeToConstructor[type],
       ),
+    'construct',
     (...args) =>
       args.map((arg) => {
         let argType = arg.dataType;
@@ -336,7 +336,6 @@ function makeVecSchema<TValue, S extends number | boolean>(
         return isVec(argType) ? argType : vecTypeToPrimitive[type];
       }),
   );
-  setName(construct, type);
 
   return Object.assign(construct, {
     type,

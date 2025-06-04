@@ -20,6 +20,7 @@ export const unpack2x16float = createDualImpl(
   },
   // GPU implementation
   (e) => snip(`unpack2x16float(${e.value})`, vec2f),
+  'unpack2x16float',
 );
 
 /**
@@ -38,6 +39,7 @@ export const pack2x16float = createDualImpl(
   },
   // GPU implementation
   (e) => snip(`pack2x16float(${e.value})`, u32),
+  'pack2x16float',
 );
 
 /**
@@ -60,6 +62,7 @@ export const unpack4x8unorm = createDualImpl(
   },
   // GPU implementation
   (e) => snip(`unpack4x8unorm(${e.value})`, vec4f),
+  'unpack4x8unorm',
 );
 
 /**
@@ -80,4 +83,5 @@ export const pack4x8unorm = createDualImpl(
   },
   // GPU implementation
   (e) => snip(`pack4x8unorm(${e.value})`, u32),
+  'pack4x8unorm',
 );

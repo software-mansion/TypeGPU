@@ -29,7 +29,6 @@ import {
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
-import { setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -125,6 +124,7 @@ export const sub = createDualImpl(
       `(${lhs.value} - ${rhs.value})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
+  'sub',
   'coerce',
 );
 
@@ -192,6 +192,7 @@ export const mul = createDualImpl(
       : lhs.dataType;
     return snip(`(${lhs.value} * ${rhs.value})`, returnType);
   },
+  'mul',
 );
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
@@ -232,8 +233,8 @@ export const div = createDualImpl(
     }
     return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
   },
+  'div',
 );
-setName(mul, 'mul');
 
 export const abs = createDualImpl(
   // CPU implementation
@@ -245,6 +246,7 @@ export const abs = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`abs(${value.value})`, value.dataType),
+  'abs',
 );
 
 export const atan2 = createDualImpl(
@@ -260,6 +262,7 @@ export const atan2 = createDualImpl(
   },
   // GPU implementation
   (y, x) => snip(`atan2(${y.value}, ${x.value})`, y.dataType),
+  'atan2',
 );
 
 export const acos = createDualImpl(
@@ -274,6 +277,7 @@ export const acos = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`acos(${value.value})`, value.dataType),
+  'acos',
 );
 
 export const asin = createDualImpl(
@@ -288,6 +292,7 @@ export const asin = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`asin(${value.value})`, value.dataType),
+  'asin',
 );
 
 /**
@@ -304,6 +309,7 @@ export const ceil = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`ceil(${value.value})`, value.dataType),
+  'ceil',
 );
 
 /**
@@ -325,6 +331,7 @@ export const clamp = createDualImpl(
   // GPU implementation
   (value, low, high) =>
     snip(`clamp(${value.value}, ${low.value}, ${high.value})`, value.dataType),
+  'clamp',
 );
 
 /**
@@ -341,6 +348,7 @@ export const cos = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`cos(${value.value})`, value.dataType),
+  'cos',
 );
 
 /**
@@ -352,6 +360,7 @@ export const cross = createDualImpl(
   <T extends v3f | v3h>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
   // GPU implementation
   (a, b) => snip(`cross(${a.value}, ${b.value})`, a.dataType),
+  'cross',
 );
 
 /**
@@ -364,6 +373,7 @@ export const dot = createDualImpl(
     VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => snip(`dot(${lhs.value}, ${rhs.value})`, f32),
+  'dot',
 );
 
 export const normalize = createDualImpl(
@@ -371,6 +381,7 @@ export const normalize = createDualImpl(
   <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
   // GPU implementation
   (v) => snip(`normalize(${v.value})`, v.dataType),
+  'normalize',
 );
 
 /**
@@ -387,6 +398,7 @@ export const floor = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`floor(${value.value})`, value.dataType),
+  'floor',
 );
 
 export const fract = createDualImpl(
@@ -399,6 +411,7 @@ export const fract = createDualImpl(
   },
   // GPU implementation
   (a) => snip(`fract(${a.value})`, a.dataType),
+  'fract',
 );
 
 /**
@@ -415,6 +428,7 @@ export const length = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`length(${value.value})`, f32),
+  'length',
 );
 
 /**
@@ -431,6 +445,7 @@ export const max = createDualImpl(
   },
   // GPU implementation
   (a, b) => snip(`max(${a.value}, ${b.value})`, a.dataType),
+  'max',
   'coerce',
 );
 
@@ -448,6 +463,7 @@ export const min = createDualImpl(
   },
   // GPU implementation
   (a, b) => snip(`min(${a.value}, ${b.value})`, a.dataType),
+  'min',
   'coerce',
 );
 
@@ -464,6 +480,7 @@ export const sign = createDualImpl(
   },
   // GPU implementation
   (e) => snip(`sign(${e.value})`, e.dataType),
+  'sign',
 );
 
 /**
@@ -480,6 +497,7 @@ export const sin = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`sin(${value.value})`, value.dataType),
+  'sin',
 );
 
 /**
@@ -496,6 +514,7 @@ export const exp = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`exp(${value.value})`, value.dataType),
+  'exp',
 );
 
 type PowOverload = {
@@ -522,8 +541,8 @@ export const pow: PowOverload = createDualImpl(
   // GPU implementation
   (base, exponent) =>
     snip(`pow(${base.value}, ${exponent.value})`, base.dataType),
+  'pow',
 );
-setName(pow, 'pow');
 
 type MixOverload = {
   (e1: number, e2: number, e3: number): number;
@@ -552,6 +571,7 @@ export const mix: MixOverload = createDualImpl(
   // GPU implementation
   (e1, e2, e3) =>
     snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
+  'mix',
 );
 
 export const reflect = createDualImpl(
@@ -560,6 +580,7 @@ export const reflect = createDualImpl(
     sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
   (e1, e2) => snip(`reflect(${e1.value}, ${e2.value})`, e1.dataType),
+  'reflect',
 );
 
 export const distance = createDualImpl(
@@ -574,6 +595,7 @@ export const distance = createDualImpl(
   },
   // GPU implementation
   (a, b) => snip(`distance(${a.value}, ${b.value})`, f32),
+  'distance',
 );
 
 export const neg = createDualImpl(
@@ -586,6 +608,7 @@ export const neg = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`-(${value.value})`, value.dataType),
+  'neg',
 );
 
 export const sqrt = createDualImpl(
@@ -598,6 +621,7 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
+  'sqrt',
 );
 
 /**
@@ -620,6 +644,7 @@ export const translate4x4 = createDualImpl(
     })`,
     dataType: matrix.dataType,
   }),
+  'translate4x4',
 );
 
 export const tanh = createDualImpl(

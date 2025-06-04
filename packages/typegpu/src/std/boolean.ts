@@ -41,6 +41,7 @@ export const allEq = createDualImpl(
   <T extends AnyVecInstance>(lhs: T, rhs: T) => all(eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => snip(`all(${lhs.value} == ${rhs.value})`, bool),
+  'allEq',
 );
 
 /**
@@ -62,6 +63,7 @@ export const eq = createDualImpl(
       `(${lhs.value} == ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'eq',
 );
 
 /**
@@ -81,6 +83,7 @@ export const ne = createDualImpl(
       `(${lhs.value} != ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'ne',
 );
 
 /**
@@ -101,6 +104,7 @@ export const lt = createDualImpl(
       `(${lhs.value} < ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'lt',
 );
 
 /**
@@ -121,6 +125,7 @@ export const le = createDualImpl(
       `(${lhs.value} <= ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'le',
 );
 
 /**
@@ -141,6 +146,7 @@ export const gt = createDualImpl(
       `(${lhs.value} > ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'gt',
 );
 
 /**
@@ -160,6 +166,7 @@ export const ge = createDualImpl(
       `(${lhs.value} >= ${rhs.value})`,
       correspondingBooleanVectorSchema(lhs),
     ),
+  'ge',
 );
 
 // logical ops
@@ -176,6 +183,7 @@ export const not = createDualImpl(
     VectorOps.neg[value.kind](value),
   // GPU implementation
   (value) => snip(`!(${value.value})`, value.dataType),
+  'not',
 );
 
 /**
@@ -190,6 +198,7 @@ export const or = createDualImpl(
     VectorOps.or[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => snip(`(${lhs.value} | ${rhs.value})`, lhs.dataType),
+  'or',
 );
 
 /**
@@ -204,6 +213,7 @@ export const and = createDualImpl(
     not(or(not(lhs), not(rhs))),
   // GPU implementation
   (lhs, rhs) => snip(`(${lhs.value} & ${rhs.value})`, lhs.dataType),
+  'and',
 );
 
 // logical aggregation
@@ -219,6 +229,7 @@ export const all = createDualImpl(
   (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value),
   // GPU implementation
   (value) => snip(`all(${value.value})`, bool),
+  'all',
 );
 
 /**
@@ -232,6 +243,7 @@ export const any = createDualImpl(
   (value: AnyBooleanVecInstance) => !all(not(value)),
   // GPU implementation
   (value) => snip(`any(${value.value})`, bool),
+  'any',
 );
 
 // other
@@ -281,6 +293,7 @@ export const isCloseTo = createDualImpl(
     }
     return snip('false', bool);
   },
+  'isCloseTo',
 );
 
 export type SelectOverload = {
@@ -322,4 +335,5 @@ export const select: SelectOverload = createDualImpl(
   // GPU implementation
   (f, t, cond) =>
     snip(`select(${f.value}, ${t.value}, ${cond.value})`, f.dataType),
+  'select',
 );

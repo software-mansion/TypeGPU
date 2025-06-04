@@ -131,6 +131,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
 
     return snip(`textureSample(${args.map((v) => v.value).join(', ')})`, vec4f);
   },
+  'textureSample',
 );
 
 type TextureSampleLevelOverload = {
@@ -189,6 +190,7 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
       vec4f,
     );
   },
+  'textureSampleLevel',
 );
 
 type TexelDataToInstance<TF extends TexelData> = {
@@ -280,6 +282,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
         : channelDataToInstance[textureInfo.channelDataType.type],
     );
   },
+  'textureLoad',
 );
 
 type TextureStoreOverload = {
@@ -326,6 +329,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
       })`,
       Void,
     ),
+  'textureStore',
 );
 
 type TextureDimensionsOverload = {
@@ -381,4 +385,5 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     );
   },
+  'textureDimensions',
 );
