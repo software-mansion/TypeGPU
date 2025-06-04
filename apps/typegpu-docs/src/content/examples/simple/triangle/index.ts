@@ -63,6 +63,8 @@ setTimeout(() => {
       storeOp: 'store',
     })
     .draw(3);
-
-  root.destroy();
 }, 100);
+
+export function onCleanup() {
+  root.destroy();
+}
