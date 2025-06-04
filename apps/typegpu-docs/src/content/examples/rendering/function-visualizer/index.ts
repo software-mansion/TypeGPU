@@ -499,13 +499,10 @@ window.addEventListener('touchmove', (event) => {
     return;
   }
   const currentPos = [event.touches[0].clientX, event.touches[0].clientY];
+  const s = 2.0 * window.devicePixelRatio;
   const translation = [
-    (-(currentPos[0] - lastPos[0]) / canvas.width) *
-    2.0 *
-    window.devicePixelRatio,
-    ((currentPos[1] - lastPos[1]) / canvas.height) *
-    2.0 *
-    window.devicePixelRatio,
+    ((currentPos[0] - lastPos[0]) / canvas.width) * -s,
+    ((currentPos[1] - lastPos[1]) / canvas.height) * s,
     0.0,
   ];
   mat4.translate(
