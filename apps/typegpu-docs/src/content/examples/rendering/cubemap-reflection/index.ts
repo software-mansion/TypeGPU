@@ -66,6 +66,7 @@ const cubeVertexBuffer = root
 
 // Camera Setup
 
+const test = root.createBuffer(d.arrayOf(d.bool, 12)).$usage('');
 const cameraInitialPos = d.vec3f(0, 1, 5);
 const cameraBuffer = root
   .createBuffer(Camera, {
