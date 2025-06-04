@@ -66,32 +66,31 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   let color = textureSample(inTexture, inSampler, uv).rgb;
   let inputLuminance = dot(color, vec3f(0.299, 0.587, 0.114));
   let normColor = clamp((color - lut.min) / (lut.max - lut.min), vec3f(0.0), vec3f(1.0));
+
   let lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0.0).rgb, bool(lut.enabled));
+  let lutColorNormalized = clamp(lutColor, vec3f(0.0), vec3f(1.0));
 
-  let normalizedLutColor = clamp(lutColor, vec3f(0.0), vec3f(1.0));
-  let biasedExposure = adjustments.exposure * 0.25;
-  let exposureColor = normalizedLutColor * pow(2.0, biasedExposure);
-  let exposureLuminance = inputLuminance * pow(2.0, biasedExposure);
-  let clampedExposureColor = clamp(exposureColor, vec3f(0.0), vec3f(2.0));
-  let clampedExposureLuminance = clamp(exposureLuminance, 0.0, 2.0);
+  let exposureBiased = adjustments.exposure * 0.25;
+  let exposureColor = clamp(lutColorNormalized * pow(2.0, exposureBiased), vec3f(0.0), vec3f(2.0));
+  let exposureLuminance = clamp(inputLuminance * pow(2.0, exposureBiased), 0.0, 2.0);
 
-  let contrastColor = (clampedExposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
-  let contrastLuminance = (clampedExposureLuminance - 0.5) * adjustments.contrast + 0.5;
-
-  let luminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
-  let highlightWeight = smoothstep(0.5, 1.0, luminance);
-  let adjustment = adjustments.highlights - 1.0;
-  let scaledAdjustment = select(adjustment * 0.25, adjustment, adjustments.highlights >= 1.0);
-  let highlightFactor = 1.0 + scaledAdjustment * 0.5 * luminance;
-  let highlightAdjust = contrastColor * highlightFactor;
-  let highlightColor = mix(contrastColor, clamp(highlightAdjust, vec3f(0.0), vec3f(1.0)), highlightWeight);
+  let contrastColor = (exposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
+  let contrastLuminance = (exposureLuminance - 0.5) * adjustments.contrast + 0.5;
+  let contrastColorLuminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
+  
+  let highlightShift = adjustments.highlights - 1.0;
+  let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments.highlights >= 1.0);
+  let highlightFactor = 1.0 + highlightBiased * 0.5 * contrastColorLuminance;
+  let highlightWeight = smoothstep(0.5, 1.0, contrastColorLuminance);
   let highlightLuminanceAdjust = contrastLuminance * highlightFactor;
   let highlightLuminance = mix(contrastLuminance, clamp(highlightLuminanceAdjust, 0.0, 1.0), highlightWeight);
+  let highlightColor = mix(contrastColor, clamp(contrastColor * highlightFactor, vec3f(0.0), vec3f(1.0)), highlightWeight);
 
-  let shadowWeight = 1.0 - luminance;
+  let shadowWeight = 1.0 - contrastColorLuminance;
   let shadowAdjust = pow(highlightColor, vec3f(1.0 / adjustments.shadows));
-  let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
   let shadowLuminanceAdjust = pow(highlightLuminance, 1.0 / adjustments.shadows);
+
+  let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
   let toneLuminance = mix(highlightLuminance, shadowLuminanceAdjust, shadowWeight);
 
   let finalToneColor = clamp(toneColor, vec3f(0.0), vec3f(1.0));
@@ -328,13 +327,13 @@ async function updateLUT(file: string) {
 
 const LUTFiles = {
   None: '',
-  Chrome: '/TypeGPU/assets/image-tuning/chrome.cube',
-  Hollywood: '/TypeGPU/assets/image-tuning/hollywood.cube',
-  Dramatic: '/TypeGPU/assets/image-tuning/dramatic.cube',
-  'Pro Neg': '/TypeGPU/assets/image-tuning/pro_neg.cube',
-  'Cold Ice': '/TypeGPU/assets/image-tuning/cold_ice.cube',
-  Bluecine: '/TypeGPU/assets/image-tuning/bluecine.cube',
-  'Sam Kolder': '/TypeGPU/assets/image-tuning/sam_kolder.cube',
+  Chrome: 'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/classic%20chrome.cube',
+  Hollywood: 'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/luts/lumix_color_lab_A/HollywoodBlue_Day.cube',
+  Dramatic: 'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/recommended/Dramatic_BlockBuster_33.cube',
+  'Pro Neg': 'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/srgb/pro%20neg%20hi_srgb.cube',
+  'Cold Ice': 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Cold_Ice.cube',
+  Bluecine: 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Bluecine_75.cube',
+  'Sam Kolder': 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Sam_Kolder.cube',
 };
 
 export const controls = {
