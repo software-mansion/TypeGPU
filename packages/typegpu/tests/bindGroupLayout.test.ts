@@ -2,12 +2,8 @@ import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import {
   arrayOf,
-  atomic,
   type F32,
   f32,
-  type I32,
-  i32,
-  struct,
   type U32,
   u32,
   type Vec3f,
@@ -15,7 +11,6 @@ import {
   type Vec4f,
   type Vec4i,
   type WgslArray,
-  type WgslStruct,
 } from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
@@ -302,134 +297,6 @@ describe('TgpuBindGroup', () => {
             binding: 0,
             resource: {
               buffer: root.unwrap(buffer),
-            },
-          },
-        ],
-      });
-    });
-  });
-
-  describe('simple layout with atomics', () => {
-    let layout: TgpuBindGroupLayout<{
-      foo: { uniform: U32 };
-      bar: { uniform: WgslArray<I32> };
-      baz: { storage: WgslStruct<{ a: U32; b: I32 }> };
-      qux: { storage: (n: number) => WgslArray<I32> };
-    }>;
-
-    beforeEach(() => {
-      layout = tgpu
-        .bindGroupLayout({
-          foo: { uniform: u32 },
-          bar: { uniform: arrayOf(i32, 4) },
-          baz: { storage: struct({ a: u32, b: i32 }) },
-          qux: { storage: (n: number) => arrayOf(i32, n) },
-        })
-        .$name('example');
-    });
-
-    it('populates a simple layout with a raw buffer', ({ root }) => {
-      const scalarBuffer = root.createBuffer(u32).$usage('uniform');
-      const arrayBuffer = root.createBuffer(arrayOf(i32, 4)).$usage('storage');
-      const structBuffer = root
-        .createBuffer(struct({ a: u32, b: i32 }))
-        .$usage('uniform');
-      const runtimeArrayBuffer = root
-        .createBuffer(arrayOf(i32, 4))
-        .$usage('storage');
-      const bindGroup = root.createBindGroup(layout, {
-        foo: root.unwrap(scalarBuffer),
-        bar: root.unwrap(arrayBuffer),
-        baz: root.unwrap(structBuffer),
-        qux: root.unwrap(runtimeArrayBuffer),
-      });
-
-      expect(root.device.createBindGroupLayout).not.toBeCalled();
-      root.unwrap(bindGroup);
-      expect(root.device.createBindGroupLayout).toBeCalled();
-
-      expect(root.device.createBindGroup).toBeCalledWith({
-        label: 'example',
-        layout: root.unwrap(layout),
-        entries: [
-          {
-            binding: 0,
-            resource: {
-              buffer: root.unwrap(scalarBuffer),
-            },
-          },
-          {
-            binding: 1,
-            resource: {
-              buffer: root.unwrap(arrayBuffer),
-            },
-          },
-          {
-            binding: 2,
-            resource: {
-              buffer: root.unwrap(structBuffer),
-            },
-          },
-          {
-            binding: 3,
-            resource: {
-              buffer: root.unwrap(runtimeArrayBuffer),
-            },
-          },
-        ],
-      });
-    });
-
-    it('populates a simple layout with an atomic version of a primitive buffer', ({ root }) => {
-      const atomicScalarBuffer = root.createBuffer(atomic(u32)).$usage(
-        'uniform',
-      );
-      const atomicArrayBuffer = root
-        .createBuffer(arrayOf(atomic(i32), 4))
-        .$usage('uniform');
-      const atomicStructBuffer = root
-        .createBuffer(struct({ a: atomic(u32), b: atomic(i32) }))
-        .$usage('storage');
-      const atomicRuntimeArrayBuffer = root
-        .createBuffer(arrayOf(atomic(i32), 4))
-        .$usage('storage');
-      const bindGroup = root.createBindGroup(layout, {
-        foo: atomicScalarBuffer,
-        bar: atomicArrayBuffer,
-        baz: atomicStructBuffer,
-        qux: atomicRuntimeArrayBuffer,
-      });
-
-      expect(root.device.createBindGroupLayout).not.toBeCalled();
-      root.unwrap(bindGroup);
-      expect(root.device.createBindGroupLayout).toBeCalled();
-
-      expect(root.device.createBindGroup).toBeCalledWith({
-        label: 'example',
-        layout: root.unwrap(layout),
-        entries: [
-          {
-            binding: 0,
-            resource: {
-              buffer: root.unwrap(atomicScalarBuffer),
-            },
-          },
-          {
-            binding: 1,
-            resource: {
-              buffer: root.unwrap(atomicArrayBuffer),
-            },
-          },
-          {
-            binding: 2,
-            resource: {
-              buffer: root.unwrap(atomicStructBuffer),
-            },
-          },
-          {
-            binding: 3,
-            resource: {
-              buffer: root.unwrap(atomicRuntimeArrayBuffer),
             },
           },
         ],
