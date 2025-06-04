@@ -33,7 +33,6 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
     if (inGPUMode()) {
       return gpuImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
     }
-    // in place where there is dual impl raise exception
     return jsImpl(...args);
   }) as T;
 

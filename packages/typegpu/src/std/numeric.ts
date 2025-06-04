@@ -657,4 +657,5 @@ export const tanh = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`tanh(${value.value})`, value.dataType),
+  'tanh',
 );
