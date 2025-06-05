@@ -268,9 +268,7 @@ export const acos = createDualImpl(
     if (typeof value === 'number') {
       return Math.acos(value) as T;
     }
-    return VectorOps.acos[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
+    return VectorOps.acos[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`acos(${value.value})`, value.dataType),
@@ -286,9 +284,7 @@ export const acosh = createDualImpl(
     if (typeof value === 'number') {
       return Math.acosh(value) as T;
     }
-    return VectorOps.acosh[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
+    return VectorOps.acosh[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`acosh(${value.value})`, value.dataType),
@@ -304,9 +300,7 @@ export const asin = createDualImpl(
     if (typeof value === 'number') {
       return Math.asin(value) as T;
     }
-    return VectorOps.asin[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
+    return VectorOps.asin[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`asin(${value.value})`, value.dataType),
