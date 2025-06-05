@@ -490,6 +490,7 @@ canvas.addEventListener('wheel', (event) => {
 
 canvas.addEventListener('touchstart', (event) => {
   if (event.touches.length === 1) {
+    event.preventDefault();
     lastPos = [event.touches[0].clientX, event.touches[0].clientY];
   }
 });
