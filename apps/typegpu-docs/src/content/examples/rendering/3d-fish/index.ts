@@ -54,11 +54,8 @@ const presets = {
   },
 } as const;
 
-const currentPreset: keyof typeof presets = 'init';
-
-const spinner = document.getElementById('spinner') as HTMLDivElement;
-const spinnerBackground = document.getElementById(
-  'spinner-background',
+const spinnerBackground = document.querySelector(
+  '.spinner-background',
 ) as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
@@ -86,9 +83,7 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
 
 function enqueuePresetChanges() {
   speedMultiplier = 3;
-
-  spinnerBackground.style.display = 'block';
-
+  spinnerBackground.style.display = 'grid';
   fishBehaviorBuffer.write(presets.init);
 
   setTimeout(() => {
@@ -331,7 +326,7 @@ export const controls = {
   },
 };
 
-// Variables for mouse interaction.
+// Variables for interaction
 
 let isLeftPressed = false;
 let previousMouseX = 0;
@@ -411,6 +406,8 @@ canvas.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
 
+// Mouse controls
+
 canvas.addEventListener('mousedown', async (event) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
@@ -458,6 +455,37 @@ window.addEventListener('mousemove', (event) => {
     updateMouseRay(event.clientX, event.clientY);
   }
 });
+
+// Touch controls
+
+canvas.addEventListener('touchstart', async (event) => {
+  if (event.touches.length === 1) {
+    previousMouseX = event.touches[0].clientX;
+    previousMouseY = event.touches[0].clientY;
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+    controlsPopup.style.opacity = '0';
+  }
+});
+
+window.addEventListener('touchmove', (event) => {
+  if (event.touches.length === 1) {
+    const dx = event.touches[0].clientX - previousMouseX;
+    const dy = event.touches[0].clientY - previousMouseY;
+    previousMouseX = event.touches[0].clientX;
+    previousMouseY = event.touches[0].clientY;
+
+    updateCameraTarget(dx, dy);
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+  }
+});
+
+window.addEventListener('touchend', () => {
+  mouseRayBuffer.writePartial({
+    activated: 0,
+  });
+});
+
+// observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
   camera.projection = m.mat4.perspective(

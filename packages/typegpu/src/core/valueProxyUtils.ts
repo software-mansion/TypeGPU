@@ -1,18 +1,17 @@
+import type { AnyData } from '../data/dataTypes.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
-import { getName } from '../name.ts';
-import { $internal } from '../shared/symbols.ts';
-import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import {
-  isBufferUsage,
-  type ResolutionCtx,
-  type SelfResolvable,
-  type Wgsl,
-} from '../types.ts';
-import { isAccessor, isDerived, isSlot } from './slot/slotTypes.ts';
+  extractGpuValueGetter,
+  type GpuValueGetter,
+} from '../extractGpuValueGetter.ts';
+import { getName } from '../name.ts';
+import { $wgslDataType } from '../shared/symbols.ts';
+import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 
 export const valueProxyHandler: ProxyHandler<
   & SelfResolvable
-  & { readonly [$internal]: { readonly dataType: BaseData } }
+  & { readonly [$wgslDataType]: BaseData }
 > = {
   get(target, prop) {
     if (prop in target) {
@@ -39,28 +38,26 @@ export const valueProxyHandler: ProxyHandler<
         toString: () =>
           `.value(...).${String(prop)}:${getName(target) ?? '<unnamed>'}`,
 
-        [$internal]: {
-          dataType: getTypeForPropAccess(
-            target[$internal].dataType as Wgsl,
-            String(prop),
-          ) as BaseData,
-        },
+        [$wgslDataType]: getTypeForPropAccess(
+          target[$wgslDataType] as AnyData,
+          String(prop),
+        ) as BaseData,
       },
       valueProxyHandler,
     );
   },
 };
 
-export function unwrapProxy<T>(value: unknown): T {
+export function getGpuValueRecursively<T>(
+  ctx: ResolutionCtx,
+  value: unknown,
+): T {
   let unwrapped = value;
+  let valueGetter: GpuValueGetter | undefined;
 
-  while (
-    isSlot(unwrapped) ||
-    isDerived(unwrapped) ||
-    isAccessor(unwrapped) ||
-    isBufferUsage(unwrapped)
-  ) {
-    unwrapped = unwrapped.value;
+  // biome-ignore lint/suspicious/noAssignInExpressions: it's exactly what we want biome
+  while (valueGetter = extractGpuValueGetter(unwrapped)) {
+    unwrapped = valueGetter(ctx);
   }
 
   return unwrapped as T;

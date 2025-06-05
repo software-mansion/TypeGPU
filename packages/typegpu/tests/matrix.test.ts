@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 
@@ -232,7 +232,7 @@ describe('mat3x3f', () => {
   });
 
   it('should work with for...of', () => {
-    const mat = d.mat3x3f(...Array(9).keys());
+    const mat = d.mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8);
     let i = 0;
     for (const x of mat) {
       expect(x).toBe(mat[i]);
@@ -373,7 +373,7 @@ describe('mat4x4f', () => {
   });
 
   it('should work with for...of', () => {
-    const mat = d.mat4x4f(...Array(16).keys());
+    const mat = d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     let i = 0;
     for (const x of mat) {
       expect(x).toBe(mat[i]);
@@ -381,5 +381,15 @@ describe('mat4x4f', () => {
       i++;
     }
     expect(i).toBe(16);
+  });
+
+  it('has correct column types', () => {
+    expectTypeOf(d.mat2x2f().columns).toEqualTypeOf<readonly [d.v2f, d.v2f]>();
+    expectTypeOf(d.mat3x3f().columns).toEqualTypeOf<
+      readonly [d.v3f, d.v3f, d.v3f]
+    >();
+    expectTypeOf(d.mat4x4f().columns).toEqualTypeOf<
+      readonly [d.v4f, d.v4f, d.v4f, d.v4f]
+    >();
   });
 });

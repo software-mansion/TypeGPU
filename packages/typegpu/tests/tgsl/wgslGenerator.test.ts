@@ -13,6 +13,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { snip } from '../../src/data/dataTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -161,10 +162,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.u32,
-      )(() => {
+      .fn([], d.u32)(() => {
         return testUsage.value.a + testUsage.value.b.x;
       })
       .$name('testFn');
@@ -181,6 +179,7 @@ describe('wgslGenerator', () => {
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -229,10 +228,7 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('uniform');
 
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       return testUsage.value[3] as number;
     });
 
@@ -250,6 +246,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -289,10 +286,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn(
-        [d.u32],
-        d.vec4f,
-      )((idx) => {
+      .fn([d.u32], d.vec4f)((idx) => {
         // biome-ignore lint/style/noNonNullAssertion: <no thanks>
         const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
         const vec = std.mix(d.vec4f(), testUsage.value.a, value);
@@ -314,17 +308,19 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
-    if (astInfo.ast.argNames.type !== 'identifiers') {
+    if (
+      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
+    ) {
       throw new Error('Expected arguments as identifier names in ast');
     }
 
-    const args = astInfo.ast.argNames.names.map((name) => ({
-      value: name,
-      dataType: d.u32,
-    }));
+    const args = astInfo.ast.params.map((arg) =>
+      snip((arg as { type: 'i'; name: string }).name, d.u32)
+    );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       args,
+      {},
       d.vec4f,
       astInfo.externals ?? {},
     );
@@ -437,10 +433,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for derived values and slots', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec4u,
-      )(() => {
+      .fn([], d.vec4u)(() => {
         return derivedV4u.value;
       })
       .$name('testFn');
@@ -466,6 +459,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.vec4u,
       astInfo.externals ?? {},
     );
@@ -482,10 +476,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for indexing into a derived value', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [d.u32],
-        d.f32,
-      )((idx) => {
+      .fn([d.u32], d.f32)((idx) => {
         return derivedV2f.value[idx] as number;
       })
       .$name('testFn');
@@ -503,7 +494,8 @@ describe('wgslGenerator', () => {
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
-      [{ value: 'idx', dataType: d.u32 }],
+      [snip('idx', d.u32)],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -519,10 +511,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions', () => {
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       const arr = [d.u32(1), 2, 3];
       return arr[1] as number;
     });
@@ -549,6 +538,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.u32,
       astInfo.externals ?? {},
     );
@@ -567,10 +557,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for complex array expressions', () => {
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.u32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
       const arr = [
         d.vec2u(1, 2),
         d.vec2u(3, 4),
@@ -596,10 +583,7 @@ describe('wgslGenerator', () => {
       })
       .$name('TestStruct');
 
-    const testFn = tgpu['~unstable'].fn(
-      [],
-      d.f32,
-    )(() => {
+    const testFn = tgpu['~unstable'].fn([], d.f32)(() => {
       const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
       return (arr[1] as { x: number; y: number }).y;
     });
@@ -631,6 +615,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -647,10 +632,7 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for array expressions with derived elements', () => {
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const arr = [
           derivedV2f.value,
           std.mul(derivedV2f.value, d.vec2f(2, 2)),
@@ -724,6 +706,7 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
@@ -753,10 +736,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
     const testSlot = tgpu['~unstable'].slot(testUsage);
     const testFn = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(() => {
+      .fn([], d.f32)(() => {
         const value = testSlot.value.value;
         return value.x + value.y + value.z;
       })
@@ -776,10 +756,10 @@ describe('wgslGenerator', () => {
 
     ctx[$internal].itemStateStack.pushFunctionScope(
       [],
+      {},
       d.f32,
       astInfo.externals ?? {},
     );
-    console.log('astInfo.externals', astInfo.externals);
 
     // Check for: const value = testSlot.value.value;
     //                  ^ this should be a vec3f

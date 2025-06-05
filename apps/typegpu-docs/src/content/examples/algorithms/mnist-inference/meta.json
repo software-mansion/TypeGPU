@@ -1,4 +1,5 @@
 {
   "title": "MNIST Inference",
-  "category": "algorithms"
+  "category": "algorithms",
+  "tags": ["ai", "compute", "inference"]
 }

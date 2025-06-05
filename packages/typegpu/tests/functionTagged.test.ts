@@ -32,7 +32,7 @@ describe('tagged syntax', () => {
     });
 
     it('parses template literal with arguments of different types, object args', () => {
-      const addFn = tgpu['~unstable'].fn({}, d.f32)`{
+      const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`.$name('add');
 
@@ -49,14 +49,14 @@ describe('tagged syntax', () => {
   describe('vertex', () => {
     it('parses template literal without arguments', () => {
       const vertexFn = tgpu['~unstable'].vertexFn({
-        in: { pos: d.builtin.position },
+        in: { idx: d.builtin.instanceIndex },
         out: { pos: d.builtin.position },
       })`{ return in.pos; }`.$name('vertexFn');
 
       const actual = parseResolved({ vertexFn });
 
       const expected = parse(`
-        struct vertexFn_Input { @builtin(position) pos: vec4f, }
+        struct vertexFn_Input { @builtin(instance_index) idx: u32, }
         struct vertexFn_Output { @builtin(position) pos: vec4f, } 
         @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { return in.pos; }
         `);
@@ -66,7 +66,7 @@ describe('tagged syntax', () => {
 
     it('parses template literal with arguments of different types', () => {
       const vertexFn = tgpu['~unstable'].vertexFn({
-        in: { pos: d.builtin.position },
+        in: { idx: d.builtin.instanceIndex },
         out: { pos: d.builtin.position },
       })`{
         var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
@@ -76,7 +76,7 @@ describe('tagged syntax', () => {
       const actual = parseResolved({ vertexFn });
 
       const expected = parse(`
-        struct vertexFn_Input { @builtin(position) pos: vec4f, }
+        struct vertexFn_Input { @builtin(instance_index) idx: u32, }
         struct vertexFn_Output { @builtin(position) pos: vec4f, } 
         @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { 
           var a = f32(10) + f32(20) + f32(30.1);

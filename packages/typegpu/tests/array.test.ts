@@ -8,6 +8,7 @@ import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { arrayLength } from '../src/std/array.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -151,5 +152,61 @@ describe('array.length', () => {
         }
       `),
     );
+  });
+
+  describe('arrayLength', () => {
+    it('returns the length of a static array', () => {
+      const staticArray = d.arrayOf(d.f32, 5);
+      const layout = tgpu.bindGroupLayout({
+        values: {
+          storage: staticArray,
+          access: 'mutable',
+        },
+      });
+
+      const testFn = tgpu['~unstable'].fn(
+        [],
+        d.i32,
+      )(() => {
+        return arrayLength(layout.$.values);
+      });
+
+      expect(parseResolved({ testFn })).toBe(
+        parse(/* wgsl */ `
+          @group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
+  
+          fn testFn() -> i32 {
+            return 5;
+          }
+        `),
+      );
+    });
+
+    it('returns the length of a dynamic array', () => {
+      const dynamicArray = d.arrayOf(d.f32, 0);
+      const layout = tgpu.bindGroupLayout({
+        values: {
+          storage: dynamicArray,
+          access: 'mutable',
+        },
+      });
+
+      const testFn = tgpu['~unstable'].fn(
+        [],
+        d.u32,
+      )(() => {
+        return arrayLength(layout.bound.values.value);
+      });
+
+      expect(parseResolved({ testFn })).toBe(
+        parse(/* wgsl */ `
+          @group(0) @binding(0) var<storage, read_write> values: array<f32>;
+  
+          fn testFn() -> u32 {
+            return arrayLength(&values);
+          }
+        `),
+      );
+    });
   });
 });

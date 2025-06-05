@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { $internal } from '../src/shared/symbols.ts';
+import { $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
 import { setName } from '../src/name.ts';
@@ -29,21 +28,23 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
-      [$internal]: {
-        dataType: d.f32,
-      },
-
-      get value() {
-        return this;
+      get value(): number {
+        return {
+          [$wgslDataType]: d.f32,
+          '~resolve'(ctx: ResolutionCtx) {
+            return ctx.resolve(intensity);
+          },
+        } as unknown as number;
       },
 
       '~resolve'(ctx: ResolutionCtx) {
+        const name = ctx.names.makeUnique('intensity');
         ctx.addDeclaration(
-          '@group(0) @binding(0) var<uniform> intensity_1: f32;',
+          `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return 'intensity_1';
+        return name;
       },
-    } as unknown as TgpuBufferReadonly<d.F32>;
+    };
     setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
@@ -61,12 +62,12 @@ describe('tgpu resolve', () => {
 
     expect(parse(resolved)).toBe(
       parse(
-        `@group(0) @binding(0) var<uniform> intensity_1: f32;
+        `@group(0) @binding(0) var<uniform> intensity: f32;
         @fragment fn fragment1() -> @location(0) vec4f {
-          return vec4f(0, intensity_1, 0, 1);
+          return vec4f(0, intensity, 0, 1);
         }
         @fragment fn fragment2() -> @location(0) vec4f {
-          return vec4f(intensity_1, 0, 0, 1);
+          return vec4f(intensity, 0, 0, 1);
         }`,
       ),
     );
@@ -80,10 +81,7 @@ describe('tgpu resolve', () => {
     });
 
     const getPlayerHealth = tgpu['~unstable']
-      .fn(
-        [PlayerData],
-        d.f32,
-      )((pInfo) => {
+      .fn([PlayerData], d.f32)((pInfo) => {
         return pInfo.health;
       })
       .$name('getPlayerHealthTest');
@@ -134,10 +132,7 @@ describe('tgpu resolve', () => {
     });
 
     const random = tgpu['~unstable']
-      .fn(
-        [],
-        d.f32,
-      )(/* wgsl */ `() -> f32 {
+      .fn([], d.f32)(/* wgsl */ `() -> f32 {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
         r.range = vec2<f32>(0.0, 1.0);
@@ -287,10 +282,7 @@ describe('tgpu resolve', () => {
 
   it('should resolve object externals and replace their usages in template', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -316,7 +308,7 @@ describe('tgpu resolve', () => {
       parse(`
       @group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() {
+      fn get_color() -> vec3f {
         let color = vec3f();
         return color;
       }
@@ -330,20 +322,14 @@ describe('tgpu resolve', () => {
 
   it('should resolve only used object externals and ignore non-existing', () => {
     const getColor = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getIntensity = tgpu['~unstable']
-      .fn(
-        [],
-        d.vec3f,
-      )(`() {
+      .fn([], d.vec3f)(`() -> vec3f {
         return 1;
       }`)
       .$name('get_intensity');

@@ -1,4 +1,4 @@
-import type { ArgNames, Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
@@ -10,13 +10,14 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData } from './data/dataTypes.ts';
 import {
-  type AnyWgslData,
-  type BaseData,
-  isWgslArray,
-  isWgslStruct,
-} from './data/wgslTypes.ts';
+  type AnyData,
+  isData,
+  snip,
+  type Snippet,
+  type UnknownData,
+} from './data/dataTypes.ts';
+import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
 import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
 import type { JitTranspiler } from './jitTranspiler.ts';
@@ -38,10 +39,9 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  Snippet,
   Wgsl,
 } from './types.ts';
-import { isSelfResolvable, isWgsl, type UnknownData } from './types.ts';
+import { isSelfResolvable, isWgsl } from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -69,13 +69,14 @@ type SlotBindingLayer = {
 type FunctionScopeLayer = {
   type: 'functionScope';
   args: Snippet[];
+  argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
-  returnType: AnyWgslData | undefined;
+  returnType: AnyData;
 };
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyWgslData | UnknownData>;
+  declarations: Map<string, AnyData | UnknownData>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -124,12 +125,14 @@ class ItemStateStackImpl implements ItemStateStack {
 
   pushFunctionScope(
     args: Snippet[],
-    returnType: AnyWgslData | undefined,
+    argAliases: Record<string, Snippet>,
+    returnType: AnyData,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
       type: 'functionScope',
       args,
+      argAliases,
       returnType,
       externalMap,
     });
@@ -142,7 +145,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
-      declarations: new Map<string, AnyWgslData | UnknownData>(),
+      declarations: new Map<string, AnyData | UnknownData>(),
     });
   }
 
@@ -197,7 +200,12 @@ class ItemStateStackImpl implements ItemStateStack {
           return arg;
         }
 
+        if (layer.argAliases[id]) {
+          return layer.argAliases[id];
+        }
+
         const external = layer.externalMap[id];
+
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
         }
@@ -210,7 +218,7 @@ class ItemStateStackImpl implements ItemStateStack {
       if (layer?.type === 'blockScope') {
         const declarationType = layer.declarations.get(id);
         if (declarationType !== undefined) {
-          return { value: id, dataType: declarationType };
+          return snip(id, declarationType);
         }
       } else {
         // Skip
@@ -220,14 +228,18 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet {
+  defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
+    if (type.type === 'unknown') {
+      throw Error(`Tried to define variable '${id}' of unknown type`);
+    }
+
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
       if (layer?.type === 'blockScope') {
         layer.declarations.set(id, type);
 
-        return { value: id, dataType: type };
+        return snip(id, type);
       }
     }
 
@@ -345,7 +357,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet {
+  defineVariable(id: string, dataType: AnyData | UnknownData): Snippet {
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
@@ -358,7 +370,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   transpileFn(fn: string): {
-    argNames: ArgNames;
+    params: FuncParameter[];
     body: Block;
     externalNames: string[];
   } {
@@ -374,6 +386,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
     this._itemStateStack.pushFunctionScope(
       options.args,
+      options.argAliases,
       options.returnType,
       options.externalMap,
     );
@@ -697,13 +710,13 @@ export function resolve(
 export function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
-  returnType: AnyWgslData,
+  returnType: AnyData,
 ) {
   const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyWgslData)}`)
+    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData)}`)
     .join(', ');
 
-  return returnType !== undefined
+  return returnType.type !== 'void'
     ? `(${argList}) -> ${getAttributesString(returnType)} ${
       ctx.resolve(returnType)
     }`
