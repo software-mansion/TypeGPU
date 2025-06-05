@@ -82,23 +82,6 @@ type IsIndexCompatible<TData extends BaseData> = TData extends {
 } ? true
   : false;
 
-type HasNestedType<TData extends BaseData, TType extends string> = TData extends
-  {
-    readonly type: 'array';
-    readonly elementType: infer TElement;
-  }
-  ? TElement extends AnyData ? TElement extends { readonly type: TType } ? true
-    : HasNestedType<TElement, TType>
-  : false
-  : TData extends { readonly type: 'struct'; readonly propTypes: infer TProps }
-    ? {
-      [K in keyof TProps]: TProps[K] extends AnyData
-        ? TProps[K] extends { readonly type: TType } ? true
-        : HasNestedType<TProps[K], TType>
-        : false;
-    }[keyof TProps]
-  : false;
-
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
@@ -181,7 +164,6 @@ type RestrictUsages<TData extends BaseData> = IsIndexCompatible<TData> extends
   ? IsArrayOfU32<TData> extends true
     ? ('uniform' | 'storage' | 'vertex' | 'index')[]
   : ['index']
-  : HasNestedType<TData, 'u16' | 'bool'> extends true ? []
   : IsWgslLiteral<TData> extends true ? ('uniform' | 'storage' | 'vertex')[]
   : ['vertex'];
 

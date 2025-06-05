@@ -1,6 +1,16 @@
-import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
+import type {
+  IndexFlag,
+  TgpuBuffer,
+  VertexFlag,
+} from '../../core/buffer/buffer.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  isWgslData,
+  type U16,
+  type U32,
+  type WgslArray,
+} from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
@@ -30,6 +40,7 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
+import { isGPUBuffer } from '../../types.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -40,27 +51,52 @@ interface RenderPipelineInternals {
 // Public API
 // ----------
 
+export interface HasIndexBuffer {
+  readonly hasIndexBuffer: true;
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void;
+}
+
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   extends TgpuNamable {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
+  readonly hasIndexBuffer: boolean;
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): this;
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): this;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): this;
 
   withDepthStencilAttachment(
     attachment: DepthStencilAttachment,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): this;
+
+  withIndexBuffer(
+    buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
+    offsetElements?: number,
+    sizeElements?: number,
+  ): this & HasIndexBuffer;
+  withIndexBuffer(
+    buffer: GPUBuffer,
+    indexFormat: GPUIndexFormat,
+    offsetBytes?: number,
+    sizeBytes?: number,
+  ): this & HasIndexBuffer;
 
   draw(
     vertexCount: number,
@@ -189,7 +225,12 @@ export type RenderPipelineCoreOptions = {
   vertexAttribs: AnyVertexAttribs;
   vertexFn: TgpuVertexFn;
   fragmentFn: TgpuFragmentFn;
-  primitiveState: GPUPrimitiveState | undefined;
+  primitiveState:
+    | GPUPrimitiveState
+    | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+      stripIndexFormat?: U32 | U16;
+    }
+    | undefined;
   depthStencilState: GPUDepthStencilState | undefined;
   targets: AnyFragmentTargets;
   multisampleState: GPUMultisampleState | undefined;
@@ -219,6 +260,14 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
+  readonly indexBuffer?:
+    | {
+      buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer;
+      indexFormat: GPUIndexFormat;
+      offsetBytes?: number | undefined;
+      sizeBytes?: number | undefined;
+    }
+    | undefined;
 };
 
 type Memo = {
@@ -231,6 +280,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
+  public readonly hasIndexBuffer = false;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {
@@ -248,15 +298,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   with<TData extends WgslArray<AnyWgslData>>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
-  ): TgpuRenderPipeline;
+  ): this;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
-  ): TgpuRenderPipeline;
+  ): this;
   with(
     definition: TgpuVertexLayout | TgpuBindGroupLayout,
     resource: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
-  ): TgpuRenderPipeline {
+  ): this {
     const internals = this[$internal];
 
     if (isBindGroupLayout(definition)) {
@@ -266,7 +316,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           ...(internals.priors.bindGroupLayoutMap ?? []),
           [definition, resource as TgpuBindGroup],
         ]),
-      });
+      }) as this;
     }
 
     if (isVertexLayout(definition)) {
@@ -276,7 +326,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           ...(internals.priors.vertexLayoutMap ?? []),
           [definition, resource as TgpuBuffer<AnyWgslData> & VertexFlag],
         ]),
-      });
+      }) as this;
     }
 
     throw new Error('Unsupported value passed into .with()');
@@ -284,34 +334,87 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withColorAttachment(
     attachment: AnyFragmentColorAttachment,
-  ): TgpuRenderPipeline {
+  ): this {
     const internals = this[$internal];
 
     return new TgpuRenderPipelineImpl(internals.core, {
       ...internals.priors,
       colorAttachment: attachment,
-    });
+    }) as this;
   }
 
   withDepthStencilAttachment(
     attachment: DepthStencilAttachment,
-  ): TgpuRenderPipeline {
+  ): this {
     const internals = this[$internal];
 
     return new TgpuRenderPipelineImpl(internals.core, {
       ...internals.priors,
       depthStencilAttachment: attachment,
-    });
+    }) as this;
   }
 
-  draw(
-    vertexCount: number,
-    instanceCount?: number,
-    firstVertex?: number,
-    firstInstance?: number,
-  ): void {
+  withIndexBuffer(
+    buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
+    offsetElements?: number,
+    sizeElements?: number,
+  ): this & HasIndexBuffer;
+  withIndexBuffer(
+    buffer: GPUBuffer,
+    indexFormat: GPUIndexFormat,
+    offsetBytes?: number,
+    sizeBytes?: number,
+  ): this & HasIndexBuffer;
+  withIndexBuffer(
+    buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer,
+    indexFormatOrOffset?: GPUIndexFormat | number,
+    offsetElementsOrSizeBytes?: number,
+    sizeElementsOrUndefined?: number,
+  ): this & HasIndexBuffer {
     const internals = this[$internal];
 
+    if (isGPUBuffer(buffer)) {
+      if (typeof indexFormatOrOffset !== 'string') {
+        throw new Error(
+          'If a GPUBuffer is passed, indexFormat must be provided.',
+        );
+      }
+
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        indexBuffer: {
+          buffer,
+          indexFormat: indexFormatOrOffset,
+          offsetBytes: offsetElementsOrSizeBytes,
+          sizeBytes: sizeElementsOrUndefined,
+        },
+      }) as unknown as this & HasIndexBuffer;
+    }
+
+    const dataTypeToIndexFormat = {
+      'u32': 'uint32',
+      'u16': 'uint16',
+    } as const;
+
+    return new TgpuRenderPipelineImpl(internals.core, {
+      ...internals.priors,
+      indexBuffer: {
+        buffer,
+        indexFormat: dataTypeToIndexFormat[
+          (buffer.dataType as WgslArray<U32 | U16>).elementType.type
+        ],
+        offsetBytes: indexFormatOrOffset !== undefined
+          ? (indexFormatOrOffset as number) * 4
+          : undefined,
+        sizeBytes: sizeElementsOrUndefined !== undefined
+          ? sizeElementsOrUndefined * 4
+          : undefined,
+      },
+    }) as unknown as this & HasIndexBuffer;
+  }
+
+  private setupRenderPass(): GPURenderPassEncoder {
+    const internals = this[$internal];
     const memo = internals.core.unwrap();
     const { branch, fragmentFn } = internals.core.options;
 
@@ -390,7 +493,61 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       throw new MissingVertexBuffersError(missingVertexLayouts);
     }
 
+    return pass;
+  }
+
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void {
+    const pass = this.setupRenderPass();
+    const { branch } = this[$internal].core.options;
+
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+
+    pass.end();
+    branch.flush();
+  }
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void {
+    const internals = this[$internal];
+
+    if (!internals.priors.indexBuffer) {
+      throw new Error('No index buffer set for this render pipeline.');
+    }
+
+    const { buffer, indexFormat, offsetBytes, sizeBytes } =
+      internals.priors.indexBuffer;
+
+    const pass = this.setupRenderPass();
+    const { branch } = internals.core.options;
+
+    if (isGPUBuffer(buffer)) {
+      pass.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
+    } else {
+      pass.setIndexBuffer(
+        branch.unwrap(buffer),
+        indexFormat,
+        offsetBytes,
+        sizeBytes,
+      );
+    }
+
+    pass.drawIndexed(
+      indexCount,
+      instanceCount,
+      firstIndex,
+      baseVertex,
+      firstInstance,
+    );
 
     pass.end();
     branch.flush();
@@ -484,7 +641,17 @@ class RenderPipelineCore {
       }
 
       if (primitiveState) {
-        descriptor.primitive = primitiveState;
+        if (isWgslData(primitiveState.stripIndexFormat)) {
+          descriptor.primitive = {
+            ...primitiveState,
+            stripIndexFormat: {
+              'u32': 'uint32',
+              'u16': 'uint16',
+            }[primitiveState.stripIndexFormat.type] as GPUIndexFormat,
+          };
+        } else {
+          descriptor.primitive = primitiveState as GPUPrimitiveState;
+        }
       }
 
       if (depthStencilState) {
