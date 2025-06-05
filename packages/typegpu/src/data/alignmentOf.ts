@@ -18,6 +18,7 @@ const knownAlignmentMap: Record<string, number> = {
   f16: 2,
   i32: 4,
   u32: 4,
+  u16: 2,
   vec2f: 8,
   vec2h: 4,
   vec2i: 8,
