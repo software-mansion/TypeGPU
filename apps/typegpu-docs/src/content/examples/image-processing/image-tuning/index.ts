@@ -327,13 +327,20 @@ async function updateLUT(file: string) {
 
 const LUTFiles = {
   None: '',
-  Chrome: 'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/classic%20chrome.cube',
-  Hollywood: 'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/luts/lumix_color_lab_A/HollywoodBlue_Day.cube',
-  Dramatic: 'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/recommended/Dramatic_BlockBuster_33.cube',
-  'Pro Neg': 'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/srgb/pro%20neg%20hi_srgb.cube',
-  'Cold Ice': 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Cold_Ice.cube',
-  Bluecine: 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Bluecine_75.cube',
-  'Sam Kolder': 'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Sam_Kolder.cube',
+  Chrome:
+    'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/classic%20chrome.cube',
+  Hollywood:
+    'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/luts/lumix_color_lab_A/HollywoodBlue_Day.cube',
+  Dramatic:
+    'https://raw.githubusercontent.com/changyun233/Lumix-V-log-LUTs/refs/heads/main/recommended/Dramatic_BlockBuster_33.cube',
+  'Pro Neg':
+    'https://raw.githubusercontent.com/abpy/FujifilmCameraProfiles/refs/heads/master/cube%20lut/srgb/pro%20neg%20hi_srgb.cube',
+  'Cold Ice':
+    'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Cold_Ice.cube',
+  Bluecine:
+    'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Bluecine_75.cube',
+  'Sam Kolder':
+    'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Sam_Kolder.cube',
 };
 
 export const controls = {
