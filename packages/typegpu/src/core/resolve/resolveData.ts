@@ -265,12 +265,11 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
   }
 
-  if (data.type === 'abstractInt' || data.type === 'abstractFloat') {
-    throw new Error('Abstract types have no concrete representation in WGSL');
-  }
-
-  if (data.type === 'void') {
-    throw new Error('Void has no representation in WGSL');
+  if (
+    data.type === 'abstractInt' || data.type === 'abstractFloat' ||
+    data.type === 'void' || data.type === 'u16'
+  ) {
+    throw new Error(`${data.type} has no representation in WGSL`);
   }
 
   assertExhaustive(data, 'resolveData');
