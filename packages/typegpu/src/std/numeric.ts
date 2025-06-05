@@ -372,7 +372,7 @@ export const cosh = createDualImpl(
     return VectorOps.cosh[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => ({ value: `cosh(${value.value})`, dataType: value.dataType }),
+  (value) => snip(`cosh(${value.value})`, value.dataType),
 );
 
 /**
