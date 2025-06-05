@@ -31,3 +31,6 @@ yarn-error.log*
 .DS_Store
 .idea
 .husky
+
+# keys
+*.pem
