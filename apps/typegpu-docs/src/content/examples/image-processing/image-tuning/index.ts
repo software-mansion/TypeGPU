@@ -292,7 +292,7 @@ async function updateLUT(file: string) {
   }
 
   lutParamsBuffer.write({
-    size: d.f32(parsed.size),
+    size: parsed.size,
     min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
     max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
     enabled: 1,
