@@ -1,5 +1,5 @@
 {
   "title": "Square",
   "category": "simple",
-  "tags": ["experimental"]
+  "tags": ["experimental", "index buffer"]
 }
