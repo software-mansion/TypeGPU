@@ -206,3 +206,29 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
+  TData[0] extends { readonly type: TType } ? true
+    : TData[0] extends {
+      readonly type: 'array';
+      readonly elementType: infer TElement;
+    }
+      ? TElement extends wgsl.BaseData
+        ? TElement extends { readonly type: TType } ? true
+        : HasNestedType<[TElement], TType>
+      : false
+    : TData[0] extends
+      { readonly type: 'struct'; readonly propTypes: infer TProps }
+      ? TProps extends Record<string, wgsl.BaseData> ? true extends {
+          [K in keyof TProps]: TProps[K] extends { readonly type: TType } ? true
+            : HasNestedType<[TProps[K]], TType>;
+        }[keyof TProps] ? true
+        : false
+      : false
+    : false;
+
+// d.struct({ a: d.u32, b: d.struct({ aa: d.arrayOf(d.bool, 12) }) })
+type test = HasNestedType<
+  [wgsl.WgslStruct<{ a: wgsl.U32; b: wgsl.WgslStruct<{ aa: wgsl.Bool }> }>],
+  'u32'
+>; // false -> should be true
