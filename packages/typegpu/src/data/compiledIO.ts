@@ -180,5 +180,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
 
   compiledWriters.set(schema, fn);
 
+  console.log(schema, body);
+
   return fn;
 }

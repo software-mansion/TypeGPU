@@ -40,20 +40,28 @@ const pipeline = device!.createComputePipeline({
 
 const sourceBuffer = device!.createBuffer({
   label: 'source buffer',
-  size: 16,
+  size: 48,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
     GPUBufferUsage.COPY_DST,
 });
-const input = new DataView(new ArrayBuffer(16));
+const input = new DataView(new ArrayBuffer(48));
 input.setFloat32(0, 1);
 input.setFloat32(4, 3);
 input.setFloat32(8, 5);
 input.setUint32(12, 7);
+input.setFloat32(16 + 0, 100);
+input.setFloat32(16 + 4, 300);
+input.setFloat32(16 + 8, 500);
+input.setUint32(16 + 12, 700);
+input.setFloat32(32 + 0, 10000);
+input.setFloat32(32 + 4, 30000);
+input.setFloat32(32 + 8, 50000);
+input.setUint32(32 + 12, 70000);
 device!.queue.writeBuffer(sourceBuffer, 0, input);
 
 const targetBuffer = device!.createBuffer({
   label: 'source buffer',
-  size: 16,
+  size: 48,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
     GPUBufferUsage.COPY_DST,
 });
@@ -76,16 +84,16 @@ const pass = encoder.beginComputePass({
 });
 pass.setPipeline(pipeline);
 pass.setBindGroup(0, bindGroup);
-pass.dispatchWorkgroups(4);
+pass.dispatchWorkgroups(3);
 pass.end();
 
 const resultBuffer = device!.createBuffer({
   label: 'result buffer',
-  size: 16,
+  size: 48,
   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
 });
 
-encoder.copyBufferToBuffer(targetBuffer, 0, resultBuffer, 0, 16);
+encoder.copyBufferToBuffer(targetBuffer, 0, resultBuffer, 0, 48);
 const commandBuffer = encoder.finish();
 device!.queue.submit([commandBuffer]);
 
