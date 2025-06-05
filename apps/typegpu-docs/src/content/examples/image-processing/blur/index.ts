@@ -295,7 +295,7 @@ function render() {
   device.queue.submit([encoder.finish()]);
 }
 
-render();
+setTimeout(() => render(), 100);
 
 // #region Example controls & Cleanup
 
