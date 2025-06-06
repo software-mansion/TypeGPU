@@ -5,8 +5,6 @@ import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
-import fs from 'fs';
-import path from 'path';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
@@ -32,14 +30,6 @@ export default defineConfig({
       typegpu({ include: [/\.m?[jt]sx?/] }),
       /** @type {any} */ imagetools(),
     ],
-    server: {
-      host: '0.0.0.0',
-      port: 4321,
-      https: {
-        key: fs.readFileSync(path.resolve('../../192.168.83.239-key.pem')),
-        cert: fs.readFileSync(path.resolve('../../192.168.83.239.pem')),
-      },
-    },
   },
   integrations: [
     starlight({
