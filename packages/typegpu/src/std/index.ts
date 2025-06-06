@@ -35,9 +35,23 @@ export {
   sign,
   sin,
   sqrt,
-  translate4x4,
   tanh
 } from './numeric.ts';
+
+// deno-fmt-ingore
+export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';
+
+// deno-fmt-ingore
+export {
+  identity2,
+  identity3,
+  identity4,
+  rotationX4,
+  rotationY4,
+  rotationZ4,
+  scaling4,
+  translation4,
+} from '../data/matrix.ts';
 
 // deno-fmt-ignore
 export {
