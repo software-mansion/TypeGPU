@@ -13,12 +13,12 @@ const copyModule = device!.createShaderModule({
       num: u32,
     }
 
-    @group(0) @binding(0) var<storage, read> sourceBuffer: array<Item>;
-    @group(0) @binding(1) var<storage, read_write> targetBuffer: array<Item>;
+    @group(0) @binding(0) var<storage, read> sourceBuffer: Item;
+    @group(0) @binding(1) var<storage, read_write> targetBuffer: Item;
 
     @compute @workgroup_size(1) fn computeShader_0(@builtin(global_invocation_id) gid: vec3u){
-      var item = sourceBuffer[gid.x];
-      targetBuffer[gid.x] = item;
+      var item = sourceBuffer;
+      targetBuffer = item;
     }
     `,
 });
@@ -34,7 +34,7 @@ const pipeline = device!.createComputePipeline({
 // work buffer 1
 const sourceBuffer = device!.createBuffer({
   label: 'source buffer',
-  size: 32,
+  size: 16,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
     GPUBufferUsage.COPY_DST,
 });
@@ -42,7 +42,7 @@ const sourceBuffer = device!.createBuffer({
 // work buffer 2
 const targetBuffer = device!.createBuffer({
   label: 'target buffer',
-  size: 32,
+  size: 16,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
     GPUBufferUsage.COPY_DST,
 });
@@ -50,12 +50,12 @@ const targetBuffer = device!.createBuffer({
 // buffer for reading the results
 const resultBuffer = device!.createBuffer({
   label: 'result buffer',
-  size: 32,
+  size: 16,
   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
 });
 
 const bindGroup = device!.createBindGroup({
-  label: 'bind group for work buffer',
+  label: 'bind group for work buffers',
   layout: pipeline.getBindGroupLayout(0),
   entries: [
     { binding: 0, resource: { buffer: sourceBuffer } },
@@ -63,17 +63,13 @@ const bindGroup = device!.createBindGroup({
   ],
 });
 
-//
+// input copying and compute pass
 
-const input = new DataView(new ArrayBuffer(32));
+const input = new DataView(new ArrayBuffer(16));
 input.setFloat32(0, 1);
 input.setFloat32(4, 3);
 input.setFloat32(8, 5);
 input.setUint32(12, 7);
-input.setFloat32(16, 100);
-input.setFloat32(20, 300);
-input.setFloat32(24, 500);
-input.setUint32(28, 700);
 device!.queue.writeBuffer(sourceBuffer, 0, input);
 
 const encoder = device!.createCommandEncoder({
@@ -84,10 +80,10 @@ const pass = encoder.beginComputePass({
 });
 pass.setPipeline(pipeline);
 pass.setBindGroup(0, bindGroup);
-pass.dispatchWorkgroups(2);
+pass.dispatchWorkgroups(1);
 pass.end();
 
-encoder.copyBufferToBuffer(targetBuffer, 0, resultBuffer, 0, 32);
+encoder.copyBufferToBuffer(targetBuffer, 0, resultBuffer, 0, 16);
 device!.queue.submit([encoder.finish()]);
 
 await resultBuffer.mapAsync(GPUMapMode.READ);
