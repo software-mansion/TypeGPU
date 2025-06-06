@@ -1,3 +1,4 @@
+// useless import so the file becomes a module
 import fs from 'fs';
 const f = fs;
 
@@ -9,7 +10,7 @@ const copyModule = device!.createShaderModule({
   label: 'copying compute module',
   code: `
     struct Item {
-      vec: vec3f,
+      vec: vec3u,
       num: u32,
     }
 
@@ -66,9 +67,9 @@ const bindGroup = device!.createBindGroup({
 // input copying and compute pass
 
 const input = new DataView(new ArrayBuffer(16));
-input.setFloat32(0, 1);
-input.setFloat32(4, 3);
-input.setFloat32(8, 5);
+input.setUint32(0, 1);
+input.setUint32(4, 3);
+input.setUint32(8, 5);
 input.setUint32(12, 7);
 device!.queue.writeBuffer(sourceBuffer, 0, input);
 
