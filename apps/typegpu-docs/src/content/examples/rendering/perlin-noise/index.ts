@@ -3,9 +3,6 @@ import * as d from 'typegpu/data';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign } from 'typegpu/std';
 
-/** Used for clean-up of this example */
-const abortController = new AbortController();
-
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
 
@@ -81,17 +78,18 @@ const renderPipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
+let isRunning = true;
+let bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
+
 function draw() {
-  if (abortController.signal.aborted) {
+  if (!isRunning) {
     return;
   }
 
   timeUniform.write(performance.now() * 0.0002 % DEPTH);
 
-  const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
-
   renderPipeline
-    .with(dynamicLayout, group)
+    .with(dynamicLayout, bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
@@ -112,6 +110,7 @@ export const controls = {
       const iSize = Number.parseInt(value);
       perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
       gridSizeUniform.write(iSize);
+      bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
     },
   },
   'sharpness': {
@@ -124,7 +123,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  abortController.abort();
+  isRunning = false;
   perlinCache.destroy();
   root.destroy();
 }
