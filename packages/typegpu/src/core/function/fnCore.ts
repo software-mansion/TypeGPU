@@ -220,11 +220,10 @@ export function createFnCore(
 }
 
 function checkAndReturnType(
+  ctx: ResolutionCtx,
   name: string,
   wgslType: string | undefined,
   jsType: unknown,
-  ctx: ResolutionCtx,
-  externals: ExternalMap,
 ) {
   const resolvedJsType = ctx.resolve(jsType).replace(/\s/g, '');
 
