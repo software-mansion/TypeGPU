@@ -1,4 +1,3 @@
-import { mat4x4f } from '../data/matrix.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -14,7 +13,6 @@ import {
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
-  type m4x4f,
   type mBaseForVec,
   type U32,
   type v2f,
@@ -268,23 +266,39 @@ export const acos = createDualImpl(
     if (typeof value === 'number') {
       return Math.acos(value) as T;
     }
-    return VectorOps.acos[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
+    return VectorOps.acos[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`acos(${value.value})`, value.dataType),
 );
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#acosh-builtin
+ */
+export const acosh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acosh(value) as T;
+    }
+    return VectorOps.acosh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`acosh(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#asin-builtin
+ */
 export const asin = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.asin(value) as T;
     }
-    return VectorOps.asin[(value as AnyFloatVecInstance).kind](
-      value as never,
-    ) as T;
+    return VectorOps.asin[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`asin(${value.value})`, value.dataType),
@@ -341,6 +355,22 @@ export const cos = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`cos(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#cosh-builtin
+ */
+export const cosh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.cosh(value) as T;
+    }
+    return VectorOps.cosh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`cosh(${value.value})`, value.dataType),
 );
 
 /**
@@ -498,6 +528,22 @@ export const exp = createDualImpl(
   (value) => snip(`exp(${value.value})`, value.dataType),
 );
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#exp2-builtin
+ */
+export const exp2 = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return (2 ** value) as T;
+    }
+    return VectorOps.exp2[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`exp2(${value.value})`, value.dataType),
+);
+
 type PowOverload = {
   (base: number, exponent: number): number;
   <T extends AnyFloatVecInstance>(base: T, exponent: T): T;
@@ -598,28 +644,6 @@ export const sqrt = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`sqrt(${value.value})`, value.dataType),
-);
-
-/**
- * Translates a matrix by a given vector.
- * @param {m4x4f} matrix - The matrix to be translated.
- * @param {v3f} vector - The vector by which to translate the matrix.
- * @returns {m4x4f} - The translated matrix.
- */
-export const translate4x4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, vector: v3f) => {
-    return mul(matrix, mat4x4f.translation(vector));
-  },
-  // GPU implementation
-  (matrix, vector) => ({
-    value: `(${matrix.value} * ${
-      (mat4x4f.translation(
-        vector as unknown as v3f,
-      ) as unknown as Snippet).value
-    })`,
-    dataType: matrix.dataType,
-  }),
 );
 
 export const tanh = createDualImpl(

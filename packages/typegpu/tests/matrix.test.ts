@@ -4,6 +4,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 
 import { readData, writeData } from '../src/data/dataIO.ts';
+import { isCloseTo } from '../src/std/index.ts';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
@@ -394,10 +395,16 @@ describe('mat4x4f', () => {
   });
 });
 
-describe('identity matrix', () => {
-  it('returns identity matrix of size 4x4', () => {
-    expect(d.mat4x4f.identity()).toStrictEqual(
-      d.mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+describe('different matrix constructors', () => {
+  it('returns identity matrix of size 2x2', () => {
+    expect(d.mat2x2f.identity()).toStrictEqual(
+      d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1)),
+    );
+  });
+
+  it('returns identity matrix of size 3x3', () => {
+    expect(d.mat3x3f.identity()).toStrictEqual(
+      d.mat3x3f(d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)),
     );
   });
 
@@ -412,22 +419,49 @@ describe('identity matrix', () => {
     );
   });
 
-  it('returns identity matrix of size 3x3', () => {
-    expect(d.mat3x3f.identity()).toStrictEqual(
-      d.mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
+  it('returns translation matrix', () => {
+    expect(d.mat4x4f.translation(d.vec3f(3, 4, 5))).toStrictEqual(
+      d.mat4x4f(
+        d.vec4f(1, 0, 0, 0),
+        d.vec4f(0, 1, 0, 0),
+        d.vec4f(0, 0, 1, 0),
+        d.vec4f(3, 4, 5, 1),
+      ),
     );
   });
-  it('returns identity matrix of size 3x3', () => {
-    expect(d.mat3x3f.identity()).toStrictEqual(
-      d.mat3x3f(d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)),
+
+  it('returns scaling matrix', () => {
+    expect(d.mat4x4f.scaling(d.vec3f(3, 4, 5))).toStrictEqual(
+      d.mat4x4f(
+        d.vec4f(3, 0, 0, 0),
+        d.vec4f(0, 4, 0, 0),
+        d.vec4f(0, 0, 5, 0),
+        d.vec4f(0, 0, 0, 1),
+      ),
     );
   });
-  it('returns identity matrix of size 2x2', () => {
-    expect(d.mat2x2f.identity()).toStrictEqual(d.mat2x2f(1, 0, 0, 1));
+
+  it('returns rotationX matrix', () => {
+    const result = d.mat4x4f.rotationX(Math.PI / 2);
+    expect(isCloseTo(result.columns[0], d.vec4f(1, 0, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[1], d.vec4f(0, 0, 1, 0))).toBe(true);
+    expect(isCloseTo(result.columns[2], d.vec4f(0, -1, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[3], d.vec4f(0, 0, 0, 1))).toBe(true);
   });
-  it('returns identity matrix of size 2x2', () => {
-    expect(d.mat2x2f.identity()).toStrictEqual(
-      d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1)),
-    );
+
+  it('returns rotationY matrix', () => {
+    const result = d.mat4x4f.rotationY(Math.PI / 2);
+    expect(isCloseTo(result.columns[0], d.vec4f(0, 0, -1, 0))).toBe(true);
+    expect(isCloseTo(result.columns[1], d.vec4f(0, 1, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[2], d.vec4f(1, 0, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[3], d.vec4f(0, 0, 0, 1))).toBe(true);
+  });
+
+  it('returns rotationZ matrix', () => {
+    const result = d.mat4x4f.rotationZ(Math.PI / 2);
+    expect(isCloseTo(result.columns[0], d.vec4f(0, 1, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[1], d.vec4f(-1, 0, 0, 0))).toBe(true);
+    expect(isCloseTo(result.columns[2], d.vec4f(0, 0, 1, 0))).toBe(true);
+    expect(isCloseTo(result.columns[3], d.vec4f(0, 0, 0, 1))).toBe(true);
   });
 });
