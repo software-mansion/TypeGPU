@@ -224,6 +224,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         shell.returnType ?? UnknownData,
       ),
+    'call',
     shell.argTypes,
   );
 
@@ -292,6 +293,7 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         innerFn.shell.returnType ?? UnknownData,
       ),
+    'call',
     innerFn.shell.argTypes,
   );
 

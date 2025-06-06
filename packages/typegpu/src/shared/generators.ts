@@ -2,6 +2,7 @@ import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import { $internal } from './symbols.ts';
+import { setName } from './meta.ts';
 
 /**
  * Yields values in the sequence 0,1,2..∞ except for the ones in the `excluded` set.
@@ -25,6 +26,7 @@ type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
+  name: string,
   argTypes?: FnArgsConversionHint,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
@@ -38,6 +40,8 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
     implementation: jsImpl,
     argTypes,
   };
+
+  setName(impl, name);
 
   return impl as TgpuDualFn<T>;
 }

@@ -24,6 +24,7 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
+import { ResolutionError } from '../errors.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -325,43 +326,52 @@ export function generateExpression(
       | FnArgsConversionHint
       | undefined;
     let convertedResources: Snippet[];
-
+    try {
     if (!argTypes || argTypes === 'keep') {
       convertedResources = resolvedSnippets;
     } else if (argTypes === 'coerce') {
       convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
-        resolvedSnippets;
+      resolvedSnippets;
     } else {
       const pairs =
-        (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
-          .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
-
+      (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
+      .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
+      
       convertedResources = pairs.map(([type, sn]) => {
-        if (sn.dataType.type === 'unknown') {
-          console.warn(
-            `Internal error: unknown type when generating expression: ${expression}`,
-          );
-          return sn;
-        }
+          if (sn.dataType.type === 'unknown') {
+            console.warn(
+              `Internal error: unknown type when generating expression: ${expression}`,
+            );
+            return sn;
+          }
+          
+          const conv = convertToCommonType(ctx, [sn], [type])?.[0];
+          if (!conv) {
+            throw new Error(
+              `Cannot convert ${ctx.resolve(sn.dataType)} to ${
+                ctx.resolve(type)
+              }`,
+            );
+          }
+          return conv;
+        });
+      }
+      
+      // Assuming that `id` is callable
+      const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
+        ...convertedResources,
+      ) as Snippet;
+      return snip(ctx.resolve(fnRes.value), fnRes.dataType);
+    } catch (error) {
 
-        const conv = convertToCommonType(ctx, [sn], [type])?.[0];
-        if (!conv) {
-          throw new Error(
-            `Cannot convert ${ctx.resolve(sn.dataType)} to ${
-              ctx.resolve(type)
-            }`,
-          );
-        }
-        return conv;
-      });
+      throw new ResolutionError(error, [{
+        functionName: getName(id.value),
+        function: id.value,
+        callStack: ctx.callStack,
+        error: error instanceof Error ? error.message : String(error),
+        toString: () => getName(id.value)
+      }]);
     }
-
-    // Assuming that `id` is callable
-    const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
-      ...convertedResources,
-    ) as Snippet;
-
-    return snip(ctx.resolve(fnRes.value), fnRes.dataType);
   }
 
   if (expression[0] === NODE.objectExpr) {
