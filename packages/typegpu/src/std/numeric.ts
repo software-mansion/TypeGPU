@@ -292,6 +292,7 @@ export const acosh = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`acosh(${value.value})`, value.dataType),
+  'acosh',
 );
 
 /**
@@ -381,6 +382,7 @@ export const cosh = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`cosh(${value.value})`, value.dataType),
+  'cosh',
 );
 
 /**
@@ -563,6 +565,7 @@ export const exp2 = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`exp2(${value.value})`, value.dataType),
+  'exp2',
 );
 
 type PowOverload = {
