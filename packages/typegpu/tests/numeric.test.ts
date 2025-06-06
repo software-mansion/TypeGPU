@@ -1,5 +1,7 @@
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
+import { tgpu } from '../src/index.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -46,5 +48,56 @@ describe('f16', () => {
     acceptsF16Schema(d.i32);
     // @ts-expect-error
     acceptsF16Schema(d.u32);
+  });
+});
+
+it('has correct default values', () => {
+  expect(d.f32()).toBe(0);
+  expect(d.f16()).toBe(0);
+  expect(d.i32()).toBe(0);
+  expect(d.u32()).toBe(0);
+  expect(d.bool()).toBe(false);
+});
+
+describe('argument coercion', () => {
+  it('correctly coerces to integers', () => {
+    expect(d.i32(1)).toBe(1);
+    expect(d.i32(4.1)).toBe(4);
+    expect(d.i32(-4.1)).toBe(-4);
+    expect(d.u32(1)).toBe(1);
+    expect(d.u32(4.1)).toBe(4);
+    expect(d.u32(-1)).toBe(4294967295);
+  });
+
+  it('correctly coerces to booleans', () => {
+    expect(d.bool(1)).toBe(true);
+    expect(d.bool(0)).toBe(false);
+    expect(d.bool(-4.1)).toBe(true);
+  });
+});
+
+describe('TGSL', () => {
+  it('works for default constructors', () => {
+    const main = tgpu['~unstable']
+      .fn([])(() => {
+        const f = d.f32();
+        const h = d.f16();
+        const i = d.i32();
+        const u = d.u32();
+        const b = d.bool();
+      })
+      .$name('main');
+
+    expect(parseResolved({ main })).toBe(
+      parse(`
+      fn main() {
+        var f = f32();
+        var h = f16();
+        var i = i32();
+        var u = u32();
+        var b = bool();
+      }
+      `),
+    );
   });
 });
