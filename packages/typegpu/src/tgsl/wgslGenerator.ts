@@ -24,6 +24,7 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
+import { ResolutionError } from '../errors.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -326,24 +327,24 @@ export function generateExpression(
       | undefined;
     let convertedResources: Snippet[];
     try {
-      if (!argTypes || argTypes === 'keep') {
-        convertedResources = resolvedSnippets;
-      } else if (argTypes === 'coerce') {
-        convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
-          resolvedSnippets;
-      } else {
-        const pairs =
-          (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
-            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
-
-        convertedResources = pairs.map(([type, sn]) => {
+    if (!argTypes || argTypes === 'keep') {
+      convertedResources = resolvedSnippets;
+    } else if (argTypes === 'coerce') {
+      convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
+      resolvedSnippets;
+    } else {
+      const pairs =
+      (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
+      .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
+      
+      convertedResources = pairs.map(([type, sn]) => {
           if (sn.dataType.type === 'unknown') {
             console.warn(
               `Internal error: unknown type when generating expression: ${expression}`,
             );
             return sn;
           }
-
+          
           const conv = convertToCommonType(ctx, [sn], [type])?.[0];
           if (!conv) {
             throw new Error(
@@ -355,20 +356,21 @@ export function generateExpression(
           return conv;
         });
       }
-
+      
       // Assuming that `id` is callable
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
         ...convertedResources,
       ) as Snippet;
       return snip(ctx.resolve(fnRes.value), fnRes.dataType);
     } catch (error) {
-      console.error('Error when calling function:', {
+
+      throw new ResolutionError(error, [{
         functionName: getName(id.value),
         function: id.value,
         callStack: ctx.callStack,
         error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+        toString: () => getName(id.value)
+      }]);
     }
   }
 
