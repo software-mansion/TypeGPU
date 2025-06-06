@@ -121,11 +121,10 @@ export function createFnCore(
           const input = providedArgs.args.map((argInfo, i) =>
             `${argInfo.identifier}: ${
               checkAndReturnType(
+                ctx,
                 `parameter ${argInfo.identifier}`,
                 argInfo.type,
                 shell.argTypes[i],
-                ctx,
-                externalMap,
               )
             }`
           ).join(', ');
@@ -134,11 +133,10 @@ export function createFnCore(
             ? ''
             : `-> ${
               checkAndReturnType(
+                ctx,
                 'return type',
                 providedArgs.ret?.type,
                 shell.returnType,
-                ctx,
-                externalMap,
               )
             }`;
 
