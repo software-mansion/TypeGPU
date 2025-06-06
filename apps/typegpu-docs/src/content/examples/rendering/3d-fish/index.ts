@@ -459,8 +459,8 @@ window.addEventListener('mousemove', (event) => {
 // Touch controls
 
 canvas.addEventListener('touchstart', async (event) => {
+  event.preventDefault();
   if (event.touches.length === 1) {
-    event.preventDefault();
     previousMouseX = event.touches[0].clientX;
     previousMouseY = event.touches[0].clientY;
     updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
