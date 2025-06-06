@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { radiusOf } from './helpers.ts';
 import {
+  CelestialBody,
   renderBindGroupLayout as renderLayout,
   renderSkyBoxBindGroupLayout as skyBoxLayout,
   VertexOutput,
@@ -57,7 +58,21 @@ export const mainVertex = tgpu['~unstable']
     },
     out: VertexOutput,
   })((input) => {
-    const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
+    // TODO: replace it with struct copy when Chromium is fixed
+    const currentBody = CelestialBody({
+      position: renderLayout.$.celestialBodies[input.instanceIndex].position,
+      velocity: renderLayout.$.celestialBodies[input.instanceIndex].velocity,
+      mass: renderLayout.$.celestialBodies[input.instanceIndex].mass,
+      collisionBehavior:
+        renderLayout.$.celestialBodies[input.instanceIndex].collisionBehavior,
+      textureIndex:
+        renderLayout.$.celestialBodies[input.instanceIndex].textureIndex,
+      radiusMultiplier:
+        renderLayout.$.celestialBodies[input.instanceIndex].radiusMultiplier,
+      ambientLightFactor:
+        renderLayout.$.celestialBodies[input.instanceIndex].ambientLightFactor,
+      destroyed: renderLayout.$.celestialBodies[input.instanceIndex].destroyed,
+    });
 
     const inputPosition = std.mul(1 / input.position.w, input.position.xyz);
     const worldPosition = std.add(
