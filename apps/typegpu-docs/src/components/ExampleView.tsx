@@ -14,7 +14,9 @@ import type { Example } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
+import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
+import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 type Props = {
   example: Example;
@@ -166,6 +168,19 @@ export function ExampleView({ example }: Props) {
                       file={file}
                     />
                   ))}
+                </div>
+
+                <div className='absolute right-0 z-5 md:top-15 md:right-8'>
+                  <Button
+                    onClick={() => openInStackBlitz(example)}
+                  >
+                    <span className='font-bold'>Edit on</span>
+                    <img
+                      src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
+                      alt='stackblitz logo'
+                      className='h-4'
+                    />
+                  </Button>
                 </div>
               </div>
             )
