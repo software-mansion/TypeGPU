@@ -1,4 +1,4 @@
-import type { TgpuQuerySet } from 'src/core/querySet/querySet.ts';
+import type { TgpuQuerySet } from './core/querySet/querySet.ts';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
