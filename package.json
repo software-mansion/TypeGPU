@@ -35,7 +35,7 @@
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/node": "^22.13.14",
+    "@types/node": "^22.15.30",
     "@vitest/coverage-v8": "3.1.2",
     "@webgpu/types": "catalog:",
     "dpdm": "^3.14.0",
