@@ -1,3 +1,4 @@
+import type { TgpuQuerySet } from 'src/core/querySet/querySet.ts';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
@@ -37,4 +38,5 @@ export interface Unwrapper {
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
+  unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
 }

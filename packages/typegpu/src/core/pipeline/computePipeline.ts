@@ -10,6 +10,7 @@ import type {
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -26,6 +27,10 @@ export interface TgpuComputePipeline extends TgpuNamable {
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
+  ): TgpuComputePipeline;
+
+  withPerformanceListener(
+    listener: (start: bigint, end: bigint) => void | Promise<void>,
   ): TgpuComputePipeline;
 
   dispatchWorkgroups(
@@ -59,6 +64,11 @@ export function isComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
+  readonly querySet?: TgpuQuerySet<GPUQueryType>;
+  readonly performanceListener?: (
+    start: bigint,
+    end: bigint,
+  ) => void | Promise<void>;
 };
 
 type Memo = {
@@ -100,6 +110,26 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     });
   }
 
+  withPerformanceListener(
+    listener: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuComputePipeline {
+    if (!this._priors.querySet) {
+      return new TgpuComputePipelineImpl(this._core, {
+        ...this._priors,
+        performanceListener: listener,
+        querySet: this._core.branch.createQuerySet(
+          'timestamp',
+          2,
+        ),
+      });
+    }
+
+    return new TgpuComputePipelineImpl(this._core, {
+      ...this._priors,
+      performanceListener: listener,
+    });
+  }
+
   dispatchWorkgroups(
     x: number,
     y?: number | undefined,
@@ -108,9 +138,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const memo = this._core.unwrap();
     const { branch } = this._core;
 
-    const pass = branch.commandEncoder.beginComputePass({
-      label: getName(this._core) ?? '<unnamed>',
-    });
+    const pass = this._priors.querySet
+      ? branch.commandEncoder.beginComputePass({
+        label: getName(this._core) ?? '<unnamed>',
+        timestampWrites: {
+          querySet: branch.unwrap(this._priors.querySet),
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+        },
+      })
+      : branch.commandEncoder.beginComputePass({
+        label: getName(this._core) ?? '<unnamed>',
+      });
 
     pass.setPipeline(memo.pipeline);
 
@@ -136,6 +175,48 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+
+    const listener = this._priors.performanceListener;
+
+    if (listener) {
+      const querySet = this._priors.querySet;
+      if (!querySet) {
+        throw new Error(
+          'Cannot dispatch workgroups with performance listener without a query set.',
+        );
+      }
+
+      if (querySet[$internal].resolveBuffer === null) {
+        querySet[$internal].resolveBuffer = branch.device.createBuffer({
+          size: 2 * BigUint64Array.BYTES_PER_ELEMENT,
+          usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE,
+        });
+      }
+
+      branch.commandEncoder.resolveQuerySet(
+        branch.unwrap(querySet),
+        0,
+        2,
+        querySet[$internal].resolveBuffer,
+        0,
+      );
+
+      this._core.branch.flush();
+      branch.device.queue.onSubmittedWorkDone().then(async () => {
+        if (!querySet[$internal].available) {
+          return;
+        }
+        const result = await querySet.read();
+        const start = result[0];
+        const end = result[1];
+
+        if (start === undefined || end === undefined) {
+          throw new Error('QuerySet did not return valid timestamps.');
+        }
+
+        await listener(start, end);
+      });
+    }
   }
 
   $name(label: string): this {

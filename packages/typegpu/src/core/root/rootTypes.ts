@@ -1,3 +1,4 @@
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
@@ -389,6 +390,22 @@ export interface TgpuRoot extends Unwrapper {
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
+
+  /**
+   * Creates a query set for collecting timestamps or occlusion queries.
+   *
+   * @remarks
+   * Typed wrapper around a GPUQuerySet.
+   *
+   * @param type The type of queries to collect ('occlusion' or 'timestamp').
+   * @param count The number of queries in the set.
+   * @param rawQuerySet An optional pre-existing GPUQuerySet to use instead of creating a new one.
+   */
+  createQuerySet<T extends GPUQueryType>(
+    type: T,
+    count: number,
+    rawQuerySet?: GPUQuerySet | undefined,
+  ): TgpuQuerySet<T>;
 
   /**
    * Creates a group of resources that can be bound to a shader based on a specified layout.

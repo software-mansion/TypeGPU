@@ -1,3 +1,8 @@
+import {
+  INTERNAL_createQuerySet,
+  isQuerySet,
+  type TgpuQuerySet,
+} from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
@@ -281,6 +286,14 @@ class TgpuRootImpl extends WithBindingImpl
         & TgpuFixedBufferUsage<TData>;
   }
 
+  createQuerySet<T extends GPUQueryType>(
+    type: T,
+    count: number,
+    rawQuerySet?: GPUQuerySet,
+  ): TgpuQuerySet<T> {
+    return INTERNAL_createQuerySet(this, type, count, rawQuerySet);
+  }
+
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<
       string,
@@ -357,6 +370,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
+  unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -371,7 +385,8 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuSampledTexture
       | TgpuVertexLayout
       | TgpuSampler
-      | TgpuComparisonSampler,
+      | TgpuComparisonSampler
+      | TgpuQuerySet<GPUQueryType>,
   ):
     | GPUComputePipeline
     | GPURenderPipeline
@@ -381,7 +396,8 @@ class TgpuRootImpl extends WithBindingImpl
     | GPUTexture
     | GPUTextureView
     | GPUVertexBufferLayout
-    | GPUSampler {
+    | GPUSampler
+    | GPUQuerySet {
     if (isComputePipeline(resource)) {
       return resource[$internal].rawPipeline;
     }
@@ -436,6 +452,10 @@ class TgpuRootImpl extends WithBindingImpl
         return resource[$internal].unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out comparison sampler.');
+    }
+
+    if (isQuerySet(resource)) {
+      return resource.querySet;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

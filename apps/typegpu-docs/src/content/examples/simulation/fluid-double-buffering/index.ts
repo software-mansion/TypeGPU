@@ -7,7 +7,11 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const root = await tgpu.init();
+const root = await tgpu.init({
+  device: {
+    requiredFeatures: ['timestamp-query'],
+  },
+});
 
 context.configure({
   device: root.device,
