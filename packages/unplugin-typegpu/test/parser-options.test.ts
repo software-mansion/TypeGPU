@@ -73,7 +73,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
             console.log(increment);
         
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -98,7 +98,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
             console.log(increment);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);

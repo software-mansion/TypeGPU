@@ -23,7 +23,7 @@ describe('[ROLLUP] auto naming', () => {
             console.log(bindGroupLayout, vertexLayout);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -61,7 +61,7 @@ describe('[ROLLUP] auto naming', () => {
             console.log(accessor, shell, fn, cst);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -144,7 +144,7 @@ describe('[ROLLUP] auto naming', () => {
             console.log(vertexLayout, cst, myStruct);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -163,7 +163,7 @@ describe('[ROLLUP] auto naming', () => {
             const c = $autoName(() => {}, c);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);

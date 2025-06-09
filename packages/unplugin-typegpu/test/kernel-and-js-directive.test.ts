@@ -266,7 +266,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             console.log(addCPU);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -308,7 +308,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             });
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -374,7 +374,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
               return a + b;
             });
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -416,7 +416,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             });
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);

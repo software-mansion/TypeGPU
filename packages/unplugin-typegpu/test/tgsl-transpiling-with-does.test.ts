@@ -135,7 +135,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }) && $.f))({})), increment);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
@@ -193,7 +193,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const d = $autoName(tgpu['~unstable'].fn([]).does('() {}'), d);
           
       function $autoName(exp, label) {
-        return exp?.$name ? exp.$name(label) : exp;
+        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
       }
       "
     `);
