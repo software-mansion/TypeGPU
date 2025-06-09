@@ -318,7 +318,7 @@ export function generateExpression(
       throw new Error(
         `Function ${
           String(id.value)
-        } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+        } ${getName(id.value)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
@@ -347,10 +347,14 @@ export function generateExpression(
           
           const conv = convertToCommonType(ctx, [sn], [type])?.[0];
           if (!conv) {
-            throw new Error(
-              `Cannot convert ${ctx.resolve(sn.dataType)} to ${
-                ctx.resolve(type)
-              }`,
+            throw new ResolutionError(
+              `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}' for function ${getName(id.value)}`,
+              [{
+                function: id.value,
+                callStack: ctx.callStack,
+                error: `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
+                toString: () => getName(id.value),
+              }],
             );
           }
           return conv;
