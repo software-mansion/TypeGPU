@@ -307,6 +307,17 @@ export const VectorOps = {
     vec4u: unary4u(Math.acos),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  acosh: {
+    vec2f: unary2f(Math.acosh),
+    vec2h: unary2h(Math.acosh),
+
+    vec3f: unary3f(Math.acosh),
+    vec3h: unary3h(Math.acosh),
+
+    vec4f: unary4f(Math.acosh),
+    vec4h: unary4h(Math.acosh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   asin: {
     vec2f: unary2f(Math.asin),
     vec2h: unary2h(Math.asin),
@@ -1014,6 +1025,17 @@ export const VectorOps = {
     vec4h: unary4h(Math.cos),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  cosh: {
+    vec2f: unary2f(Math.cosh),
+    vec2h: unary2h(Math.cosh),
+
+    vec3f: unary3f(Math.cosh),
+    vec3h: unary3h(Math.cosh),
+
+    vec4f: unary4f(Math.cosh),
+    vec4h: unary4h(Math.cosh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   exp: {
     vec2f: unary2f(Math.exp),
     vec2h: unary2h(Math.exp),
@@ -1023,6 +1045,17 @@ export const VectorOps = {
 
     vec4f: unary4f(Math.exp),
     vec4h: unary4h(Math.exp),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  exp2: {
+    vec2f: unary2f((val) => 2 ** val),
+    vec2h: unary2h((val) => 2 ** val),
+
+    vec3f: unary3f((val) => 2 ** val),
+    vec3h: unary3h((val) => 2 ** val),
+
+    vec4f: unary4f((val) => 2 ** val),
+    vec4h: unary4h((val) => 2 ** val),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   fract: {
@@ -1120,4 +1153,15 @@ export const VectorOps = {
         : wgsl.v4b,
     ) => T
   >,
+
+  tanh: {
+    vec2f: unary2f(Math.tanh),
+    vec2h: unary2h(Math.tanh),
+
+    vec3f: unary3f(Math.tanh),
+    vec3h: unary3h(Math.tanh),
+
+    vec4f: unary4f(Math.tanh),
+    vec4h: unary4h(Math.tanh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
 };

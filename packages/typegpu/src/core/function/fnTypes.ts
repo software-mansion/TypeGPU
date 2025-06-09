@@ -40,26 +40,13 @@ export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: Infer<T[Idx]>;
 };
 
-export type InferReturn<T> = T extends undefined
-  // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
-  ? void
-  : Infer<T>;
-
 export type JsImplementation<
-  Args extends unknown[] | Record<string, unknown> =
-    | unknown[]
-    | Record<string, unknown>,
+  Args extends unknown[] | [] = unknown[] | [],
   Return = unknown,
-> = (
-  ...args: Args extends unknown[] ? InferArgs<Args>
-    : Args extends Record<string, never> ? []
-    : [InferIO<Args>]
-) => InferReturn<Return>;
+> = (...args: InferArgs<Args>) => Infer<Return>;
 
 export type Implementation<
-  Args extends unknown[] | Record<string, unknown> =
-    | unknown[]
-    | Record<string, unknown>,
+  Args extends unknown[] | [] = unknown[] | [],
   Return = unknown,
 > = string | JsImplementation<Args, Return>;
 

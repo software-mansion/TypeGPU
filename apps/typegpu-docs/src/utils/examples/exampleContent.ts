@@ -1,6 +1,11 @@
 import pathe from 'pathe';
 import * as R from 'remeda';
-import type { Example, ExampleMetadata, ExampleSrcFile } from './types.ts';
+import type {
+  Example,
+  ExampleMetadata,
+  ExampleSrcFile,
+  ThumbnailPair,
+} from './types.ts';
 
 const contentExamplesPath = '../../content/examples/';
 
@@ -73,6 +78,19 @@ const htmlFiles = R.pipe(
   globToExampleFiles,
 );
 
+const thumbnailFiles = R.pipe(
+  import.meta.glob('../../content/examples/**/thumbnail.png', {
+    eager: true,
+    import: 'default',
+    query: 'w=512;1024',
+  }) as Record<string, [string, string]>,
+  R.mapKeys(pathToExampleKey),
+  R.mapValues((value): ThumbnailPair => ({
+    small: value[0],
+    large: value[1],
+  })),
+);
+
 export const examples = R.pipe(
   metaFiles,
   R.mapValues(
@@ -82,7 +100,8 @@ export const examples = R.pipe(
         metadata: value,
         tsFiles: readonlyTsFiles[key] ?? [],
         tsImport: tsFilesImportFunctions[key],
-        htmlFile: htmlFiles[key][0] ?? '',
+        htmlFile: htmlFiles[key]?.[0] ?? '',
+        thumbnails: thumbnailFiles[key],
       }) satisfies Example,
   ),
 );
