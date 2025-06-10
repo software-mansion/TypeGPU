@@ -97,7 +97,7 @@ function createMatSchema<
         `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
         MatSchema,
       ),
-    'construct',
+    'MatSchemaOptions',
   );
 
   return Object.assign(construct, MatSchema) as unknown as {
