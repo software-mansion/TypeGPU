@@ -58,13 +58,13 @@ function assignMetadata(
   node: acorn.AnyNode,
   metadata: string,
 ) {
-  magicString.appendLeft(
+  magicString.prependLeft(
     node.start,
-    `(($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+    `((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                 $.f = (`,
   ).appendRight(
     node.end,
-    `) , ${metadata}) && $.f))({})`,
+    `) , ${metadata}) && $.f))({}))`,
   );
 }
 
@@ -74,15 +74,11 @@ function tryAssignName(
   name: string,
 ) {
   magicString
-    .appendLeft(node.start, '$autoName(')
-    .appendRight(node.end, `, ${name})`);
-}
-
-function includeAutoNameFunction(magicString: MagicStringAST) {
-  magicString.append(`
-function $autoName(exp, label) {
-  return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-}`);
+    .prependLeft(
+      node.start,
+      '(globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((',
+    )
+    .appendRight(node.end, `), "${name}")`);
 }
 
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
@@ -206,11 +202,11 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               externals: {${externalNames.join(', ')}},
             }`;
 
-            if (isFunctionStatement && name) {
-              magicString.appendLeft(def.start, `const ${name} = `);
-            }
-
             assignMetadata(magicString, def, metadata);
+
+            if (isFunctionStatement && name) {
+              magicString.prependLeft(def.start, `const ${name} = `);
+            }
 
             if (removeJsImplementation) {
               magicString.overwriteNode(
@@ -222,7 +218,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             }
           }
 
-          includeAutoNameFunction(magicString);
           return generateTransform(magicString, id);
         },
       },

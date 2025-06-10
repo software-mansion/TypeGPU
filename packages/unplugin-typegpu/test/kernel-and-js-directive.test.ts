@@ -250,24 +250,23 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = $autoName((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                      $.f = (addGPU)) , {
+      const addGPU = ((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+                      $.f = ((globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))(((a, b) => {
+              'kernel & js';
+              return a + b;
+            }), "addGPU")) , {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({});
+                  }) && $.f))({}));
 
             console.log(addGPU);
 
-            const addCPU = $autoName((a, b) => {
+            const addCPU = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))(((a, b) => {
               return a + b;
-            }, addCPU);
+            }), "addCPU");
 
             console.log(addCPU);
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -291,9 +290,9 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = $autoName(tgpu['~unstable'].fn([]), shell);
+      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
 
-            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
               'kernel & js';
               return a + b;
@@ -301,15 +300,11 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})));
 
             shell((a, b) => {
               return a + b;
             });
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -327,7 +322,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      tgpu['~unstable'].fn([])(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
               'kernel & js';
               return a + b;
@@ -335,7 +330,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})));
       "
     `);
   });
@@ -358,9 +353,9 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = $autoName(tgpu['~unstable'].fn([]), shell);
+      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
 
-            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function(a, b){
               'kernel & js';
               return a + b;
@@ -368,14 +363,11 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})));
 
             shell(function(a, b) {
               return a + b;
             });
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -399,9 +391,9 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = $autoName(tgpu['~unstable'].fn([]), shell);
+      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
 
-            shell((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+            shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function addGPU(a, b){
               'kernel & js';
               return a + b;
@@ -409,15 +401,11 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({}));
+                  }) && $.f))({})));
 
             shell(function addCPU(a, b) {
               return a + b;
             });
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -443,7 +431,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      const addGPU = ((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function addGPU(a, b) {
               'kernel & js';
               return a + b;
@@ -451,7 +439,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({});
+                  }) && $.f))({}));
 
             console.log(addGPU);
 
@@ -491,7 +479,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "(($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      "((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function add(a, b) {
               'kernel & js';
               return a + b;
@@ -499,7 +487,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({});
+                  }) && $.f))({}));
       "
     `);
   });

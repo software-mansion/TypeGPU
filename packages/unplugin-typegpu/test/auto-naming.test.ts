@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rollupTransform } from './transform';
+import { rollupTransform } from './transform.ts';
 
 describe('[ROLLUP] auto naming', () => {
   it('works with tgpu items', async () => {
@@ -17,14 +17,10 @@ describe('[ROLLUP] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      const bindGroupLayout = $autoName(tgpu.bindGroupLayout({}), bindGroupLayout);
-            const vertexLayout = $autoName(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), vertexLayout);
+      const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu.bindGroupLayout({})), "bindGroupLayout");
+            const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu.vertexLayout((n) => d.arrayOf(d.u32, n))), "vertexLayout");
 
             console.log(bindGroupLayout, vertexLayout);
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -46,23 +42,19 @@ describe('[ROLLUP] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      let accessor = $autoName(tgpu['~unstable'].accessor(d.u32), accessor);
-            let shell = $autoName(tgpu['~unstable'].fn([]), shell);
-            var fn = $autoName(tgpu['~unstable'].fn([])((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+      let accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].accessor(d.u32)), "accessor");
+            let shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
+            var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({})), fn);
-            const cst = $autoName(tgpu['~unstable'].const(d.u32, 1), cst);
+                  }) && $.f))({})))), "fn");
+            const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].const(d.u32, 1)), "cst");
 
             console.log(accessor, shell, fn, cst);
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -135,17 +127,13 @@ describe('[ROLLUP] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      const vertexLayout = $autoName(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)).$name(
+      const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)).$name(
               'myLayout',
-            ), vertexLayout);
-            const cst = $autoName(tgpu['~unstable'].const(d.u32, 1).$name('myConst'), cst);
-            const myStruct = $autoName(d.struct({ a: d.u32 }).$name('myStruct'), myStruct);
+            )), "vertexLayout");
+            const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].const(d.u32, 1).$name('myConst')), "cst");
+            const myStruct = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((d.struct({ a: d.u32 }).$name('myStruct')), "myStruct");
 
             console.log(vertexLayout, cst, myStruct);
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
       "
     `);
   });
@@ -158,13 +146,9 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const a = $autoName(1, a);
-            const b = $autoName("tgpu", b);
-            const c = $autoName(() => {}, c);
-          
-      function $autoName(exp, label) {
-        return (exp?.$name && exp?.[globalThis.__TYPEGPU_META__?.$internal]) ? exp.$name(label) : exp;
-      }
+      "(globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((1), "a");
+            (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))(("tgpu"), "b");
+            (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((() => {}), "c");
       "
     `);
   });
