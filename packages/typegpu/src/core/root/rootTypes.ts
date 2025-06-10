@@ -444,6 +444,12 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBindGroup<Entries>;
 
   /**
+   * Retrieves a read-only list of all enabled features of the GPU device.
+   * @returns A set of strings representing the enabled features.
+   */
+  get enabledFeatures(): ReadonlySet<GPUFeatureName>;
+
+  /**
    * Destroys all underlying resources (i.e. buffers...) created through this root object.
    * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
    * then the inner GPU device is destroyed as well.

@@ -103,6 +103,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup: TgpuBindGroup,
   ): TgpuComputePipeline {
     return new TgpuComputePipelineImpl(this._core, {
+      ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
         [bindGroupLayout, bindGroup],
@@ -113,6 +114,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   withPerformanceListener(
     listener: (start: bigint, end: bigint) => void | Promise<void>,
   ): TgpuComputePipeline {
+    if (!this._core.branch.enabledFeatures.has('timestamp-query')) {
+      throw new Error(
+        'Performance listener requires the "timestamp-query" feature to be enabled on GPU device.',
+      );
+    }
+
     if (!this._priors.querySet) {
       return new TgpuComputePipelineImpl(this._core, {
         ...this._priors,
@@ -177,7 +184,6 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.end();
 
     const listener = this._priors.performanceListener;
-
     if (listener) {
       const querySet = this._priors.querySet;
       if (!querySet) {

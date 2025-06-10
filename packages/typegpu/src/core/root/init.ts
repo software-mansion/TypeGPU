@@ -248,6 +248,10 @@ class TgpuRootImpl extends WithBindingImpl
     return this._commandEncoder;
   }
 
+  get enabledFeatures() {
+    return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
@@ -629,7 +633,9 @@ class TgpuRootImpl extends WithBindingImpl
  */
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
-  device?: GPUDeviceDescriptor | undefined;
+  device?:
+    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
+    | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
@@ -681,8 +687,30 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     throw new Error('Could not find a compatible GPU');
   }
 
+  const availableFeatures: GPUFeatureName[] = [];
+  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+    if (!adapter.features.has(feature)) {
+      throw new Error(
+        `Requested feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+    availableFeatures.push(feature);
+  }
+  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+    if (adapter.features.has(feature)) {
+      availableFeatures.push(feature);
+    } else {
+      console.warn(
+        `Optional feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+  }
+
   return new TgpuRootImpl(
-    await adapter.requestDevice(deviceOpt),
+    await adapter.requestDevice({
+      ...deviceOpt,
+      requiredFeatures: availableFeatures,
+    }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
     true,
