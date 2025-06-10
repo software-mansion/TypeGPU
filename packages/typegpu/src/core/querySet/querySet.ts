@@ -9,13 +9,14 @@ export interface TgpuQuerySet<T extends GPUQueryType> extends TgpuNamable {
 
   readonly querySet: GPUQuerySet;
   readonly destroyed: boolean;
+  readonly available: boolean;
 
   readonly [$internal]: {
     readBuffer: GPUBuffer | null;
     resolveBuffer: GPUBuffer | null;
-    available: boolean;
   };
 
+  resolve(): void;
   read(): Promise<bigint[]>;
   destroy(): void;
 }
@@ -40,14 +41,13 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   private _querySet: GPUQuerySet | null = null;
   private _ownQuerySet: boolean;
   private _destroyed = false;
+  private _available = true;
   [$internal]: {
     readBuffer: GPUBuffer | null;
     resolveBuffer: GPUBuffer | null;
-    available: boolean;
   } = {
     readBuffer: null,
     resolveBuffer: null,
-    available: true,
   };
 
   constructor(
@@ -91,12 +91,43 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     return this._destroyed;
   }
 
+  get available(): boolean {
+    return this._available;
+  }
+
   $name(label: string) {
     setName(this, label);
     if (this._querySet) {
       this._querySet.label = label;
     }
     return this;
+  }
+
+  resolve(): void {
+    if (this._destroyed) {
+      throw new Error('This QuerySet has been destroyed.');
+    }
+
+    if (!this._available) {
+      throw new Error('This QuerySet is busy resolving or reading.');
+    }
+
+    if (!this[$internal].resolveBuffer) {
+      this[$internal].resolveBuffer = this._group.device.createBuffer({
+        size: this.count * BigUint64Array.BYTES_PER_ELEMENT,
+        usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+      });
+    }
+
+    const commandEncoder = this._group.device.createCommandEncoder();
+    commandEncoder.resolveQuerySet(
+      this.querySet,
+      0,
+      this.count,
+      this[$internal].resolveBuffer,
+      0,
+    );
+    this._group.device.queue.submit([commandEncoder.finish()]);
   }
 
   async read(): Promise<bigint[]> {
@@ -108,7 +139,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       );
     }
 
-    this[$internal].available = false;
+    this._available = false;
 
     if (!this[$internal].readBuffer) {
       this[$internal].readBuffer = this._group.device.createBuffer({
@@ -134,7 +165,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     );
     this[$internal].readBuffer.unmap();
 
-    this[$internal].available = true;
+    this._available = true;
     return Array.from(data);
   }
 
