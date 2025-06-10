@@ -217,7 +217,7 @@ function createTimingDisplay() {
   timingDisplay.style.cssText =
     'text-align: center; font-weight: bold; margin-bottom: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 0.25rem; border: 1px solid #e9ecef; font-family: monospace;';
 
-  const container = document.querySelector('.matrices-container');
+  const container = document.querySelector('.matrices');
   container?.parentElement?.insertBefore(timingDisplay, container);
 }
 

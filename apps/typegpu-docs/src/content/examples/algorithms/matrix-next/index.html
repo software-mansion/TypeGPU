@@ -1,41 +1,40 @@
-<div class="matrices-container">
-  <div class="matrix-section">
+<div class="matrices">
+  <div>
     <h3>First Matrix</h3>
-    <div class="matrix-a matrix"></div>
+    <div class="matrix-a"></div>
   </div>
 
-  <div class="matrix-section">
+  <div>
     <h3>Second Matrix</h3>
-    <div class="matrix-b matrix"></div>
+    <div class="matrix-b"></div>
   </div>
 
-  <div class="matrix-section">
+  <div>
     <h3>Result Matrix</h3>
-    <div class="matrix-result matrix"></div>
+    <div class="matrix-result"></div>
   </div>
 </div>
 
 <style>
-  .matrices-container {
+  .matrices {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   }
 
-  .matrix-section {
+  .matrices h3 {
+    text-align: center;
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+  }
+
+  .matrices > div {
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  h3 {
-    text-align: center;
-    margin: 0 0 0.75rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .matrix {
+  .matrices [class*='matrix'] {
     display: grid;
     gap: 2px;
     background: #f8f9fa;
@@ -45,10 +44,9 @@
     font-size: 0.85rem;
     border: 1px solid #e9ecef;
     width: fit-content;
-    max-width: 100%;
   }
 
-  .matrix > div {
+  .matrices [class*='matrix'] > div {
     background: white;
     padding: 0.3rem;
     text-align: center;
@@ -58,34 +56,29 @@
   }
 
   @media (max-width: 768px) {
-    .matrices-container {
+    .matrices {
       grid-template-columns: 1fr;
-      gap: 1.5rem;
     }
 
-    .matrix {
+    .matrices [class*='matrix'] {
       font-size: 0.75rem;
       padding: 0.5rem;
       gap: 1px;
     }
 
-    .matrix > div {
+    .matrices [class*='matrix'] > div {
       padding: 0.25rem;
       min-width: 1.8rem;
     }
   }
 
   @media (max-width: 480px) {
-    .matrices-container {
-      gap: 1.25rem;
-    }
-
-    .matrix {
+    .matrices [class*='matrix'] {
       font-size: 0.7rem;
       padding: 0.4rem;
     }
 
-    .matrix > div {
+    .matrices [class*='matrix'] > div {
       padding: 0.2rem;
       min-width: 1.5rem;
     }
