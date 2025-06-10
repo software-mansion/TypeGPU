@@ -316,9 +316,9 @@ export function generateExpression(
 
     if (!isMarkedInternal(id.value)) {
       throw new Error(
-        `Function ${
-          String(id.value)
-        } ${getName(id.value)} has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+        `Function ${String(id.value)} ${
+          getName(id.value)
+        } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
@@ -327,32 +327,35 @@ export function generateExpression(
       | undefined;
     let convertedResources: Snippet[];
     try {
-    if (!argTypes || argTypes === 'keep') {
-      convertedResources = resolvedSnippets;
-    } else if (argTypes === 'coerce') {
-      convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
-      resolvedSnippets;
-    } else {
-      const pairs =
-      (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
-      .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
-      
-      convertedResources = pairs.map(([type, sn]) => {
+      if (!argTypes || argTypes === 'keep') {
+        convertedResources = resolvedSnippets;
+      } else if (argTypes === 'coerce') {
+        convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
+          resolvedSnippets;
+      } else {
+        const pairs =
+          (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
+            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
+
+        convertedResources = pairs.map(([type, sn]) => {
           if (sn.dataType.type === 'unknown') {
             console.warn(
               `Internal error: unknown type when generating expression: ${expression}`,
             );
             return sn;
           }
-          
+
           const conv = convertToCommonType(ctx, [sn], [type])?.[0];
           if (!conv) {
             throw new ResolutionError(
-              `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}' for function ${getName(id.value)}`,
+              `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}' for function ${
+                getName(id.value)
+              }`,
               [{
                 function: id.value,
                 callStack: ctx.callStack,
-                error: `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
+                error:
+                  `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
                 toString: () => getName(id.value),
               }],
             );
@@ -360,20 +363,20 @@ export function generateExpression(
           return conv;
         });
       }
-      
+
       // Assuming that `id` is callable
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
         ...convertedResources,
       ) as Snippet;
       return snip(ctx.resolve(fnRes.value), fnRes.dataType);
     } catch (error) {
-
       throw new ResolutionError(error, [{
         functionName: getName(id.value),
         function: id.value,
         callStack: ctx.callStack,
         error: error instanceof Error ? error.message : String(error),
-        toString: () => getName(id.value)
+      
+        toString: () => getName(id.value),
       }]);
     }
   }
