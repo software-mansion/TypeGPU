@@ -105,10 +105,26 @@ export function isShellImplementationCall(
 }
 
 const resourceConstructors: string[] = [
+  // tgpu
+  'bindGroupLayout',
+  'vertexLayout',
+  // tgpu['~unstable']
+  'slot',
+  'accessor',
+  'privateVar',
+  'workgroupVar',
+  'const',
+  // d
   'struct',
+  // root
   'createBuffer',
 ];
 
+/**
+ * Checks if `node` should be wrapped in an autoname function.
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ */
 export function containsResourceConstructorCall(
   node: acorn.AnyNode | babel.Node,
   ctx: Context,
