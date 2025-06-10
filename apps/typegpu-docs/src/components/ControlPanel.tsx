@@ -3,9 +3,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom.ts';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
-import { examples } from '../utils/examples/exampleContent.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
@@ -19,7 +17,6 @@ import { Slider } from './design/Slider.tsx';
 import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
-import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 function ToggleRow({
   label,
@@ -306,7 +303,6 @@ export function ControlPanel() {
   const [codeEditorShowing, setCodeEditorShowing] = useAtom(
     codeEditorShownAtom,
   );
-  const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   const showLeftMenuId = useId();
@@ -344,14 +340,6 @@ export function ControlPanel() {
             onChange={(e) => setCodeEditorShowing(e.target.checked)}
           />
         </label>
-
-        {currentExample && currentExample in examples
-          ? (
-            <Button onClick={() => openInStackBlitz(examples[currentExample])}>
-              Edit on StackBlitz
-            </Button>
-          )
-          : null}
 
         <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
       </div>

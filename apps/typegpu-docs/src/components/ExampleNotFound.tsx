@@ -1,26 +1,24 @@
 import { useSetAtom } from 'jotai';
-import type { MouseEvent } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import useEvent from '../utils/useEvent.ts';
+import { Button } from './design/Button.tsx';
 
 export function ExampleNotFound() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
 
-  const handleGoHome = useEvent((e: MouseEvent) => {
-    e.preventDefault();
-    setCurrentExample(undefined);
-  });
-
   return (
-    <div className='flex flex-1 flex-col items-center justify-center'>
-      <h1 className='font-bold text-4xl'>404 Example Not Found</h1>
-      <button
-        type='button'
-        className='mt-4 text-lg text-slate-600 underline'
-        onClick={handleGoHome}
+    <div className='flex h-full flex-1 flex-col items-center justify-center gap-4'>
+      <h1 className='font-bold text-3xl'>
+        Example Not Found
+      </h1>
+      <Button
+        accent
+        onClick={useEvent(() => {
+          setCurrentExample(undefined);
+        })}
       >
-        Go back home
-      </button>
+        Show default example
+      </Button>
     </div>
   );
 }

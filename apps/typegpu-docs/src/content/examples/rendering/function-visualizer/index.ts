@@ -438,22 +438,19 @@ function queuePropertiesBufferUpdate() {
 }
 
 // Canvas controls
-
 let lastPos: number[] | null = null;
 
-canvas.onmousedown = (event) => {
-  lastPos = [event.offsetX, event.offsetY];
-};
+// Mouse interaction
 
-canvas.onmouseup = (_) => {
-  lastPos = null;
-};
+canvas.addEventListener('mousedown', (event) => {
+  lastPos = [event.clientX, event.clientY];
+});
 
-canvas.onmousemove = (event) => {
+window.addEventListener('mousemove', (event) => {
   if (lastPos === null) {
     return;
   }
-  const currentPos = [event.offsetX, event.offsetY];
+  const currentPos = [event.clientX, event.clientY];
   const translation = [
     (-(currentPos[0] - lastPos[0]) / canvas.width) *
     2.0 *
@@ -470,9 +467,13 @@ canvas.onmousemove = (event) => {
   );
 
   lastPos = currentPos;
-};
+});
 
-canvas.onwheel = (event) => {
+window.addEventListener('mouseup', (_) => {
+  lastPos = null;
+});
+
+canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
 
   const delta = Math.abs(event.deltaY) / 1000.0 + 1;
@@ -483,9 +484,43 @@ canvas.onwheel = (event) => {
     [scale, scale, 1],
     properties.transformation,
   );
-};
+});
 
-// recreate the multisampled texture on canvas resize
+// Mouse interaction
+
+canvas.addEventListener('touchstart', (event) => {
+  event.preventDefault();
+  if (event.touches.length === 1) {
+    lastPos = [event.touches[0].clientX, event.touches[0].clientY];
+  }
+});
+
+window.addEventListener('touchmove', (event) => {
+  if (lastPos === null || event.touches.length !== 1) {
+    return;
+  }
+  const currentPos = [event.touches[0].clientX, event.touches[0].clientY];
+  const s = 2.0 * window.devicePixelRatio;
+  const translation = [
+    ((currentPos[0] - lastPos[0]) / canvas.width) * -s,
+    ((currentPos[1] - lastPos[1]) / canvas.height) * s,
+    0.0,
+  ];
+  mat4.translate(
+    properties.transformation,
+    translation,
+    properties.transformation,
+  );
+
+  lastPos = currentPos;
+});
+
+window.addEventListener('touchend', () => {
+  lastPos = null;
+});
+
+// Resize observer and cleanup
+
 const resizeObserver = new ResizeObserver(() => {
   msTexture.destroy();
   msTexture = device.createTexture({

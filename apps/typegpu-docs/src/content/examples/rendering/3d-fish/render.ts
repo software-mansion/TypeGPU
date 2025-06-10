@@ -4,6 +4,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import {
+  ModelData,
   ModelVertexInput,
   ModelVertexOutput,
   renderBindGroupLayout as layout,
@@ -17,7 +18,17 @@ export const vertexShader = tgpu['~unstable']
   })((input) => {
     // rotate the model so that it aligns with model's direction of movement
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-    const currentModelData = layout.$.modelData[input.instanceIndex];
+    // TODO: replace it with struct copy when Chromium is fixed
+    const currentModelData = ModelData({
+      position: layout.$.modelData[input.instanceIndex].position,
+      direction: layout.$.modelData[input.instanceIndex].direction,
+      scale: layout.$.modelData[input.instanceIndex].scale,
+      variant: layout.$.modelData[input.instanceIndex].variant,
+      applySeaDesaturation:
+        layout.$.modelData[input.instanceIndex].applySeaDesaturation,
+      applySeaFog: layout.$.modelData[input.instanceIndex].applySeaFog,
+      applySinWave: layout.$.modelData[input.instanceIndex].applySinWave,
+    });
 
     // apply sin wave
 

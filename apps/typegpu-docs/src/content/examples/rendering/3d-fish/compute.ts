@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
-import { computeBindGroupLayout as layout } from './schemas.ts';
+import { computeBindGroupLayout as layout, ModelData } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
 
 export const computeShader = tgpu['~unstable']
@@ -11,7 +11,17 @@ export const computeShader = tgpu['~unstable']
     workgroupSize: [p.workGroupSize],
   })((input) => {
     const fishIndex = input.gid.x;
-    const fishData = layout.$.currentFishData[fishIndex];
+    // TODO: replace it with struct copy when Chromium is fixed
+    const fishData = ModelData({
+      position: layout.$.currentFishData[fishIndex].position,
+      direction: layout.$.currentFishData[fishIndex].direction,
+      scale: layout.$.currentFishData[fishIndex].scale,
+      variant: layout.$.currentFishData[fishIndex].variant,
+      applySeaDesaturation:
+        layout.$.currentFishData[fishIndex].applySeaDesaturation,
+      applySeaFog: layout.$.currentFishData[fishIndex].applySeaFog,
+      applySinWave: layout.$.currentFishData[fishIndex].applySinWave,
+    });
     let separation = d.vec3f();
     let alignment = d.vec3f();
     let alignmentCount = 0;
@@ -25,7 +35,16 @@ export const computeShader = tgpu['~unstable']
         continue;
       }
 
-      const other = layout.$.currentFishData[i];
+      // TODO: replace it with struct copy when Chromium is fixed
+      const other = ModelData({
+        position: layout.$.currentFishData[i].position,
+        direction: layout.$.currentFishData[i].direction,
+        scale: layout.$.currentFishData[i].scale,
+        variant: layout.$.currentFishData[i].variant,
+        applySeaDesaturation: layout.$.currentFishData[i].applySeaDesaturation,
+        applySeaFog: layout.$.currentFishData[i].applySeaFog,
+        applySinWave: layout.$.currentFishData[i].applySinWave,
+      });
       const dist = std.length(std.sub(fishData.position, other.position));
       if (dist < layout.$.fishBehavior.separationDist) {
         separation = std.add(
