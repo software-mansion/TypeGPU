@@ -325,7 +325,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `${type}(${args.map((v) => v.value).join(', ')})`,
         vecTypeToConstructor[type],
       ),
-    'makeVecSchema',
+    type,
     (...args) =>
       args.map((arg) => {
         let argType = arg.dataType;

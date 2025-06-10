@@ -371,11 +371,6 @@ export function generateExpression(
       return snip(ctx.resolve(fnRes.value), fnRes.dataType);
     } catch (error) {
       throw new ResolutionError(error, [{
-        functionName: getName(id.value),
-        function: id.value,
-        callStack: ctx.callStack,
-        error: error instanceof Error ? error.message : String(error),
-      
         toString: () => getName(id.value),
       }]);
     }
