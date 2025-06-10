@@ -20,6 +20,7 @@ const state = {
     result: [] as number[],
   },
   kernelTime: 0,
+  hasComputed: false,
 };
 
 const root = await tgpu.init({
@@ -175,37 +176,6 @@ async function compute() {
       0,
       firstRowCount * secondColumnCount,
     );
-
-    // ===== DEBUG: GPU vs CPU VALIDATION =====
-    const cpuResult = multiplyMatricesCPU(
-      state.matrices.first,
-      state.matrices.second,
-      firstRowCount,
-      firstColumnCount,
-      secondColumnCount,
-    );
-
-    console.log('=== DEBUG: Comparing GPU vs CPU results ===');
-    const resultLength = firstRowCount * secondColumnCount;
-    let mismatchCount = 0;
-    for (let i = 0; i < resultLength; i++) {
-      if (state.matrices.result[i] !== cpuResult[i]) {
-        console.error(
-          `Mismatch at index ${i}: GPU=${state.matrices.result[i]}, CPU=${
-            cpuResult[i]
-          }`,
-        );
-        mismatchCount++;
-      }
-    }
-    if (mismatchCount === 0) {
-      console.log('✅ GPU and CPU results match perfectly!');
-    } else {
-      console.error(
-        `❌ Found ${mismatchCount} mismatches out of ${resultLength} elements`,
-      );
-    }
-    // ===== END DEBUG =====
   }
 
   const totalTime = performance.now() - startTime;
@@ -222,6 +192,7 @@ async function compute() {
     showKernel ? state.kernelTime : undefined,
   );
 
+  state.hasComputed = true;
   printMatrixToHtml(
     resultTable,
     state.matrices.result,
@@ -237,6 +208,7 @@ const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 generateMatrices();
+showInitialResultMessage();
 
 let timingDisplay: HTMLDivElement | null = null;
 
@@ -262,9 +234,32 @@ function updateTimingDisplay(
   timingDisplay.innerHTML = kernelTime !== undefined
     ? `<div>${strategy} computation:</div>
        <div style="font-size: 0.9em; margin-top: 0.25rem;">
-         Total: ${totalTime.toFixed(2)}ms | Kernel: ${kernelTime.toFixed(2)}ms
+         Total: ${totalTime.toFixed(2)}ms | Kernel: ${
+      kernelTime >= 0.01 ? kernelTime.toFixed(2) : '<0.01'
+    }ms
        </div>`
     : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
+}
+
+function showInitialResultMessage() {
+  resultTable.style.gridTemplateColumns = '1fr';
+  resultTable.innerHTML = `
+    <div style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #666;
+      font-style: italic;
+      text-align: center;
+      min-height: 100px;
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    ">
+      Press Compute to calculate the result
+    </div>
+  `;
 }
 
 function printMatrixToHtml(
@@ -334,6 +329,9 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.firstRowCount = value;
       generateMatrices();
+      if (!state.hasComputed) {
+        showInitialResultMessage();
+      }
     },
   },
   '#1 columns': {
@@ -342,6 +340,9 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.firstColumnCount = value;
       generateMatrices();
+      if (!state.hasComputed) {
+        showInitialResultMessage();
+      }
     },
   },
   '#2 columns': {
@@ -350,6 +351,9 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.secondColumnCount = value;
       generateMatrices();
+      if (!state.hasComputed) {
+        showInitialResultMessage();
+      }
     },
   },
 };
