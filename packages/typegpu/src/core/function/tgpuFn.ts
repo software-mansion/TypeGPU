@@ -22,12 +22,7 @@ import {
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type {
-  Implementation,
-  InferArgs,
-  InferReturn,
-  JsImplementation,
-} from './fnTypes.ts';
+import type { Implementation, InferArgs, JsImplementation } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -58,7 +53,7 @@ export type TgpuFnShell<
 > =
   & TgpuFnShellHeader<Args, Return>
   & ((
-    implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
+    implementation: (...args: InferArgs<Args>) => Infer<Return>,
   ) => TgpuFn<Args, Return>)
   & ((implementation: string) => TgpuFn<Args, Return>)
   & ((
@@ -73,7 +68,7 @@ export type TgpuFnShell<
       & ((
         implementation: (
           ...args: InferArgs<Args>
-        ) => InferReturn<Return>,
+        ) => Infer<Return>,
       ) => TgpuFn<Args, Return>)
       & ((implementation: string) => TgpuFn<Args, Return>);
   };
@@ -103,7 +98,7 @@ export type TgpuFn<
   Return extends AnyData = AnyData,
 > =
   & TgpuFnBase<Args, Return>
-  & ((...args: InferArgs<Args>) => InferReturn<Return>);
+  & ((...args: InferArgs<Args>) => Infer<Return>);
 
 export function fn<
   Args extends AnyData[] | [],
@@ -135,7 +130,7 @@ export function fn<
   }) as TgpuFnShell<Args, Return>;
 }
 
-export function isTgpuFn<Args extends AnyData[], Return extends AnyData>(
+export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
   value: unknown | TgpuFn<Args, Return>,
 ): value is TgpuFn<Args, Return> {
   return !!(value as TgpuFn<Args, Return>)?.[$internal] &&
