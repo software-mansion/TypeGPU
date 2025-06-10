@@ -59,7 +59,7 @@ describe('[ROLLUP] auto naming', () => {
     `);
   });
 
-  it(`works with structs`, async () => {
+  it('works with structs', async () => {
     const code = `\
       import * as d from 'typegpu/data';
 
@@ -80,7 +80,7 @@ describe('[ROLLUP] auto naming', () => {
     `);
   });
 
-  it(`works with directly imported structs`, async () => {
+  it('works with directly imported structs', async () => {
     const code = `\
       import { struct, u32 } from 'typegpu/data';
 

@@ -14,15 +14,12 @@ export interface MetaData {
 
 interface GlobalWithMeta {
   __TYPEGPU_META__: WeakMap<object, MetaData>;
-  __TYPEGPU_AUTONAME__: <T extends unknown>(exp: T, label: string) => T;
+  __TYPEGPU_AUTONAME__: <T>(exp: T, label: string) => T;
 }
 
 Object.assign(globalThis, {
-  '__TYPEGPU_AUTONAME__': function <
-    T extends unknown,
-  >(exp: T, label: string): T {
-    return isNamable(exp) && !getName(exp) ? exp.$name(label) : exp;
-  },
+  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T =>
+    isNamable(exp) && !getName(exp) ? exp.$name(label) : exp,
 });
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
