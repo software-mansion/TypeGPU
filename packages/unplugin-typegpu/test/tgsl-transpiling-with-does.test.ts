@@ -121,7 +121,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       const counterBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((root
                   .createBuffer(d.vec3f, d.vec3f(0, 1, 0))
                   .$usage('storage')), "counterBuffer");
-              const counter = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((counterBuffer.as('mutable')), "counter");
+              const counter = counterBuffer.as('mutable');
               
               (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable']
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
@@ -176,7 +176,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                     externals: {},
                   }) && $.f))({})))), "b");
 
-              const cx = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((2), "cx");
+              const cx = 2;
               (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([]).does(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);

@@ -86,10 +86,9 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     expect(
       await rollupTransform(codeWithoutImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
-      "const increment = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable']
+      "const increment = tgpu['~unstable']
               .fn([])(() => {
-                (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((2+2), "x");
-              })), "increment");
+              });
 
             console.log(increment);
       "

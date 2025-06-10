@@ -7,6 +7,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
+  containsResourceConstructorCall,
   type Context,
   defaultOptions,
   embedJSON,
@@ -119,7 +120,8 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               if (
                 node.type === 'VariableDeclarator' &&
                 node.id.type === 'Identifier' &&
-                node.init
+                node.init &&
+                containsResourceConstructorCall(node.init, ctx)
               ) {
                 tryAssignName(magicString, node.init, node.id.name);
               }

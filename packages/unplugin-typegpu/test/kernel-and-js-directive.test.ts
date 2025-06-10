@@ -251,10 +251,10 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       "import 'typegpu';
 
       const addGPU = ((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                      $.f = ((globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))(((a, b) => {
+                      $.f = ((a, b) => {
               'kernel & js';
               return a + b;
-            }), "addGPU")) , {
+            }) , {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -262,9 +262,9 @@ describe('[ROLLUP] "kernel & js" directive', () => {
 
             console.log(addGPU);
 
-            const addCPU = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))(((a, b) => {
+            const addCPU = (a, b) => {
               return a + b;
-            }), "addCPU");
+            };
 
             console.log(addCPU);
       "
@@ -290,7 +290,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = ((a, b) => {
@@ -353,7 +353,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function(a, b){
@@ -391,7 +391,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])), "shell");
+      const shell = tgpu['~unstable'].fn([]);
 
             shell(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
                       $.f = (function addGPU(a, b){

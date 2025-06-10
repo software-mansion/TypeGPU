@@ -21,7 +21,7 @@ Object.assign(globalThis, {
   '__TYPEGPU_AUTONAME__': function <
     T extends unknown,
   >(exp: T, label: string): T {
-    return exp;
+    return isNamable(exp) && !getName(exp) ? exp.$name(label) : exp;
   },
 });
 

@@ -104,6 +104,42 @@ export function isShellImplementationCall(
   );
 }
 
+const resourceConstructors: string[] = [
+  'struct',
+  'createBuffer',
+];
+
+export function containsResourceConstructorCall(
+  node: acorn.AnyNode | babel.Node,
+  ctx: Context,
+) {
+  if (node.type === 'CallExpression') {
+    // shell(() => ...)
+    if (isShellImplementationCall(node, ctx)) {
+      return true;
+    }
+    // struct({...})
+    if (
+      node.callee.type === 'Identifier' &&
+      resourceConstructors.includes(node.callee.name)
+    ) {
+      return true;
+    }
+    if (node.callee.type === 'MemberExpression') {
+      // root.createBuffer({...})
+      if (
+        node.callee.property.type === 'Identifier' &&
+        resourceConstructors.includes(node.callee.property.name)
+      ) {
+        return true;
+      }
+      // root.createBuffer(d.f32).$usage('storage')
+      return containsResourceConstructorCall(node.callee.object, ctx);
+    }
+  }
+  return false;
+}
+
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;
 export type KernelDirective = (typeof kernelDirectives)[number];
 
