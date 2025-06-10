@@ -201,8 +201,6 @@ async function compute() {
   );
 }
 
-// #region Example controls & Cleanup
-
 const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
@@ -248,11 +246,11 @@ function showInitialResultMessage() {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      padding: 1.5rem;
       color: #666;
       font-style: italic;
       text-align: center;
-      min-height: 100px;
+      min-height: 80px;
       border: 2px dashed #ddd;
       border-radius: 8px;
       background-color: #f9f9f9;
@@ -268,7 +266,9 @@ function printMatrixToHtml(
   rows: number,
   cols: number,
 ) {
-  const maxDisplaySize = 8;
+  const isMobile = window.innerWidth <= 480;
+  const isTablet = window.innerWidth <= 768;
+  const maxDisplaySize = isMobile ? 3 : isTablet ? 5 : 8;
   const shouldTruncate = rows > maxDisplaySize || cols > maxDisplaySize;
 
   if (shouldTruncate) {
@@ -297,8 +297,7 @@ function printMatrixToHtml(
     element.innerHTML = html;
 
     const sizeInfo = document.createElement('div');
-    sizeInfo.textContent =
-      `${rows}×${cols} (showing ${displayRows}×${displayCols})`;
+    sizeInfo.textContent = `${rows}×${cols}`;
     sizeInfo.style.cssText =
       'grid-column: 1 / -1; text-align: center; font-size: 0.8em; color: #666; margin-top: 0.5rem;';
     element.appendChild(sizeInfo);
