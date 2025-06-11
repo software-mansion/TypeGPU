@@ -17,8 +17,8 @@ describe('[ROLLUP] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu.bindGroupLayout({})), "bindGroupLayout");
-            const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu.vertexLayout((n) => d.arrayOf(d.u32, n))), "vertexLayout");
+      const bindGroupLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
+            const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), "vertexLayout"));
 
             console.log(bindGroupLayout, vertexLayout);
       "
@@ -42,17 +42,16 @@ describe('[ROLLUP] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      let accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].accessor(d.u32)), "accessor");
+      let accessor = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor"));
             let shell = tgpu['~unstable'].fn([]);
-            var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].fn([])(((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                      $.f = (() => {
+            var fn = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     externals: {},
-                  }) && $.f))({})))), "fn");
-            const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((tgpu['~unstable'].const(d.u32, 1)), "cst");
+                  }) && $.f)({}))), "fn"));
+            const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].const(d.u32, 1), "cst"));
 
             console.log(accessor, shell, fn, cst);
       "
@@ -72,7 +71,7 @@ describe('[ROLLUP] auto naming', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as d from 'typegpu/data';
 
-      const myStruct = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((d.struct({ a: d.u32 })), "myStruct");
+      const myStruct = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct"));
             const bait = d.i32(1);
 
             console.log(myStruct, bait);
@@ -92,7 +91,7 @@ describe('[ROLLUP] auto naming', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import { struct, u32 } from 'typegpu/data';
 
-      const myStruct = (globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((struct({ a: u32 }).$name('myStruct')), "myStruct");
+      const myStruct = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }).$name('myStruct'), "myStruct"));
 
             console.log(myStruct);
       "

@@ -61,15 +61,14 @@ function assignMetadata(
 ) {
   magicString.prependLeft(
     node.start,
-    `((($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                $.f = (`,
+    `(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (`,
   ).appendRight(
     node.end,
-    `) , ${metadata}) && $.f))({}))`,
+    `) , ${metadata}) && $.f)({}))`,
   );
 }
 
-function tryAssignName(
+function wrapInAutoName(
   magicString: MagicStringAST,
   node: acorn.Node,
   name: string,
@@ -77,9 +76,9 @@ function tryAssignName(
   magicString
     .prependLeft(
       node.start,
-      '(globalThis.__TYPEGPU_AUTONAME__ ?? ((a) => a))((',
+      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
     )
-    .appendRight(node.end, `), "${name}")`);
+    .appendRight(node.end, `, "${name}"))`);
 }
 
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
@@ -125,7 +124,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                 node.init &&
                 containsResourceConstructorCall(node.init, ctx)
               ) {
-                tryAssignName(magicString, node.init, node.id.name);
+                wrapInAutoName(magicString, node.init, node.id.name);
               }
 
               if (node.type === 'ImportDeclaration') {
