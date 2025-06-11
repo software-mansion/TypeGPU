@@ -9,11 +9,11 @@ export interface Timeable<T extends TgpuComputePipeline | TgpuRenderPipeline> {
     listener: (start: bigint, end: bigint) => void | Promise<void>,
   ): T;
 
-  withTimeStampWrites(
-    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
-    beginningOfPassWriteIndex?: number,
-    endOfPassWriteIndex?: number,
-  ): T;
+  withTimeStampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): T;
 }
 
 export type TimestampWritesPriors = {
@@ -59,10 +59,12 @@ export function createWithPerformanceListener<T extends TimestampWritesPriors>(
 
 export function createWithTimestampWrites<T extends TimestampWritesPriors>(
   currentPriors: T,
-  querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
+  options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  },
   root: ExperimentalTgpuRoot,
-  beginningOfPassWriteIndex?: number,
-  endOfPassWriteIndex?: number,
 ): T {
   if (!root.enabledFeatures.has('timestamp-query')) {
     throw new Error(
@@ -71,14 +73,15 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
   }
 
   const timestampWrites: TimestampWritesPriors['timestampWrites'] = {
-    querySet,
+    querySet: options.querySet,
   };
 
-  if (beginningOfPassWriteIndex !== undefined) {
-    timestampWrites.beginningOfPassWriteIndex = beginningOfPassWriteIndex;
+  if (options.beginningOfPassWriteIndex !== undefined) {
+    timestampWrites.beginningOfPassWriteIndex =
+      options.beginningOfPassWriteIndex;
   }
-  if (endOfPassWriteIndex !== undefined) {
-    timestampWrites.endOfPassWriteIndex = endOfPassWriteIndex;
+  if (options.endOfPassWriteIndex !== undefined) {
+    timestampWrites.endOfPassWriteIndex = options.endOfPassWriteIndex;
   }
 
   return {
@@ -156,17 +159,10 @@ export function triggerPerformanceListener({
     );
   }
 
-  if (querySet[$internal].resolveBuffer === null) {
-    querySet[$internal].resolveBuffer = root.device.createBuffer({
-      size: 2 * BigUint64Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE,
-    });
-  }
-
   root.commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
-    2,
+    querySet.count,
     querySet[$internal].resolveBuffer,
     0,
   );
@@ -177,8 +173,9 @@ export function triggerPerformanceListener({
       return;
     }
     const result = await querySet.read();
-    const start = result[0];
-    const end = result[1];
+    const start =
+      result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
+    const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
 
     if (start === undefined || end === undefined) {
       throw new Error('QuerySet did not return valid timestamps.');

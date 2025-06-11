@@ -1,5 +1,127 @@
 ---
 title: Timing Your Pipelines
 description: How to use timestamp queries to measure the performance of your pipelines.
-draft: true
 ---
+
+To measure kernel execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
+
+:::tip
+To use performance listeners and timestamp queries, you must enable the `timestamp-query` feature on your GPU device. See [Enabling Features](/TypeGPU/fundamentals/enabling-features) for details.
+:::
+
+TypeGPU offers two ways to employ timestamp queries:
+
+1. **High-level API** via the pipeline’s `.withPerformanceListener()` method  
+2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
+
+## Performance Listeners
+
+Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceListener()` onto a compute or render pipeline:
+
+```ts
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withPerformanceListener((start, end) => {
+    const durationNs = Number(end - start);
+    console.log(`Pipeline execution time: ${durationNs} ns`);
+  });
+````
+
+* **Callback signature**
+
+  ```ts
+  (start: bigint, end: bigint) => void | Promise<void>
+  ```
+
+  Both `start` and `end` are timestamps in nanoseconds.
+
+* **Multiple listeners**
+  If you call `.withPerformanceListener()` more than once, only the *last* callback is used. If your timing logic doesn’t change, attach it a single time *after* creating the pipeline rather than on every dispatch.
+
+* **Automatic query set**
+  If you haven’t provided a `TgpuQuerySet` before calling `.withPerformanceListener()`, TypeGPU will allocate one for you along with the necessary resolve buffers.
+
+## Using `TgpuQuerySet`
+
+For finer control, create and manage your own `TgpuQuerySet`. You can attach it either to a TypeGPU pipeline or directly to a raw WebGPU encoder.
+
+### Creating and Attaching to a Pipeline
+
+```ts
+// Create a query set with two timestamp slots
+const querySet = root.createQuerySet('timestamp', 2);
+
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withTimeStampWrites({
+    querySet: querySet,
+    beginningOfPassWriteIndex: 0,  // Write start time at index 0
+    endOfPassWriteIndex: 1,        // Write end time at index 1
+  });
+```
+
+Omit `beginningOfPassWriteIndex` or `endOfPassWriteIndex` to skip writing at the start or end of the pass, respectively.
+
+### Attaching to a Raw WebGPU Command Encoder
+
+```ts
+commandEncoder.writeTimestamp(querySet, 0);
+// …dispatch or draw calls…
+commandEncoder.writeTimestamp(querySet, 1);
+```
+
+### Resolving and Reading
+
+After submitting your commands, call:
+
+```ts
+querySet.resolve();
+const timestamps: bigint[] = await querySet.read();
+// timestamps[0] is start, timestamps[1] is end
+```
+
+### Continuous Timestamp Queries
+
+When profiling in a loop, check availability before resolving and reading:
+
+```ts
+async function renderLoop() {
+  // …your rendering logic…
+
+  if (querySet.available) {
+    querySet.resolve();
+    const timestamps: bigint[] = await querySet.read();
+    console.log(`Start: ${timestamps[0]}, End: ${timestamps[1]}`);
+  } else {
+    console.warn('Query set not available yet');
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+```
+
+The `querySet.available` property returns `true` once the last resolve has completed.
+
+## Combining `TgpuQuerySet` with Performance Listeners
+
+You can use a custom query set and still attach a performance listener. TypeGPU will write to the indices you specify, then resolve and read the full set for the listener:
+
+```ts
+const querySet = root.createQuerySet('timestamp', 36);
+
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withTimeStampWrites({
+    querySet: querySet,
+    beginningOfPassWriteIndex: 3,   // start at slot 3
+    endOfPassWriteIndex: 21,        // end at slot 21
+  })
+  .withPerformanceListener((start, end) => {
+    console.log(`Pipeline execution time: ${Number(end - start)} ns`);
+  });
+```
+
+The listener respects your chosen indices but still resolves and reads the entire query set under the hood.

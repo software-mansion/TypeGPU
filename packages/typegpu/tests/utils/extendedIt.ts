@@ -29,6 +29,7 @@ const mockCommandEncoder = {
   copyBufferToTexture: vi.fn(),
   copyTextureToBuffer: vi.fn(),
   copyTextureToTexture: vi.fn(),
+  resolveQuerySet: vi.fn(),
   finish: vi.fn(),
 };
 
@@ -45,6 +46,17 @@ const mockRenderPassEncoder = {
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
+};
+
+const mockQuerySet = {
+  destroy: vi.fn(),
+  get label() {
+    return this._label || '<unnamed>';
+  },
+  set label(value) {
+    this._label = value;
+  },
+  _label: '<unnamed>',
 };
 
 const mockDevice = {
@@ -80,6 +92,15 @@ const mockDevice = {
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
+  createQuerySet: vi.fn(
+    ({ type, count }: GPUQuerySetDescriptor) => {
+      const querySet = Object.create(mockQuerySet);
+      querySet.type = type;
+      querySet.count = count;
+      querySet._label = '<unnamed>';
+      return querySet;
+    },
+  ),
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
@@ -87,7 +108,7 @@ const mockDevice = {
   importExternalTexture: vi.fn(() => 'mockExternalTexture'),
   queue: {
     copyExternalImageToTexture: vi.fn(),
-    onSubmittedWorkDone: vi.fn(),
+    onSubmittedWorkDone: vi.fn(() => Promise.resolve()),
     submit: vi.fn(),
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),

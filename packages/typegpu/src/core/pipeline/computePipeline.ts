@@ -122,17 +122,15 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return new TgpuComputePipelineImpl(this._core, newPriors);
   }
 
-  withTimeStampWrites(
-    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
-    beginningOfPassWriteIndex?: number,
-    endOfPassWriteIndex?: number,
-  ): TgpuComputePipeline {
+  withTimeStampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuComputePipeline {
     const newPriors = createWithTimestampWrites(
       this._priors,
-      querySet,
+      options,
       this._core.branch,
-      beginningOfPassWriteIndex,
-      endOfPassWriteIndex,
     );
     return new TgpuComputePipelineImpl(this._core, newPriors);
   }

@@ -12,8 +12,8 @@ export interface TgpuQuerySet<T extends GPUQueryType> extends TgpuNamable {
   readonly available: boolean;
 
   readonly [$internal]: {
-    readBuffer: GPUBuffer | null;
-    resolveBuffer: GPUBuffer | null;
+    readonly readBuffer: GPUBuffer;
+    readonly resolveBuffer: GPUBuffer;
   };
 
   resolve(): void;
@@ -42,12 +42,11 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   private _ownQuerySet: boolean;
   private _destroyed = false;
   private _available = true;
+  private _readBuffer: GPUBuffer | null = null;
+  private _resolveBuffer: GPUBuffer | null = null;
   [$internal]: {
-    readBuffer: GPUBuffer | null;
-    resolveBuffer: GPUBuffer | null;
-  } = {
-    readBuffer: null,
-    resolveBuffer: null,
+    readonly readBuffer: GPUBuffer;
+    readonly resolveBuffer: GPUBuffer;
   };
 
   constructor(
@@ -62,6 +61,28 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     } else {
       this._ownQuerySet = true;
     }
+
+    const self = this;
+    this[$internal] = {
+      get readBuffer(): GPUBuffer {
+        if (!self._readBuffer) {
+          self._readBuffer = self._group.device.createBuffer({
+            size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          });
+        }
+        return self._readBuffer;
+      },
+      get resolveBuffer(): GPUBuffer {
+        if (!self._resolveBuffer) {
+          self._resolveBuffer = self._group.device.createBuffer({
+            size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+          });
+        }
+        return self._resolveBuffer;
+      },
+    };
   }
 
   get querySet(): GPUQuerySet {
@@ -112,13 +133,6 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       throw new Error('This QuerySet is busy resolving or reading.');
     }
 
-    if (!this[$internal].resolveBuffer) {
-      this[$internal].resolveBuffer = this._group.device.createBuffer({
-        size: this.count * BigUint64Array.BYTES_PER_ELEMENT,
-        usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-      });
-    }
-
     const commandEncoder = this._group.device.createCommandEncoder();
     commandEncoder.resolveQuerySet(
       this.querySet,
@@ -133,20 +147,13 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   async read(): Promise<bigint[]> {
     this._group.flush();
 
-    if (!this[$internal].resolveBuffer) {
+    if (!this._resolveBuffer) {
       throw new Error(
         'QuerySet was read before it was resolved. Resolve the query set first.',
       );
     }
 
     this._available = false;
-
-    if (!this[$internal].readBuffer) {
-      this[$internal].readBuffer = this._group.device.createBuffer({
-        size: this.count * BigUint64Array.BYTES_PER_ELEMENT,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-      });
-    }
 
     const commandEncoder = this._group.device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer(
@@ -180,14 +187,14 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       this._querySet.destroy();
     }
 
-    if (this[$internal].readBuffer) {
-      this[$internal].readBuffer.destroy();
-      this[$internal].readBuffer = null;
+    if (this._readBuffer) {
+      this._readBuffer.destroy();
+      this._readBuffer = null;
     }
 
-    if (this[$internal].resolveBuffer) {
-      this[$internal].resolveBuffer.destroy();
-      this[$internal].resolveBuffer = null;
+    if (this._resolveBuffer) {
+      this._resolveBuffer.destroy();
+      this._resolveBuffer = null;
     }
   }
 }

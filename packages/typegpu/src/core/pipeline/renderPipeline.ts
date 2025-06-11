@@ -325,18 +325,16 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return new TgpuRenderPipelineImpl(internals.core, newPriors);
   }
 
-  withTimeStampWrites(
-    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
-    beginningOfPassWriteIndex?: number,
-    endOfPassWriteIndex?: number,
-  ): TgpuRenderPipeline {
+  withTimeStampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuRenderPipeline {
     const internals = this[$internal];
     const newPriors = createWithTimestampWrites(
       internals.priors,
-      querySet,
+      options,
       internals.core.options.branch,
-      beginningOfPassWriteIndex,
-      endOfPassWriteIndex,
     );
     return new TgpuRenderPipelineImpl(internals.core, newPriors);
   }
