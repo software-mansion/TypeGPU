@@ -10,7 +10,15 @@ import type {
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import { isQuerySet, type TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import {
+  createWithPerformanceListener,
+  createWithTimestampWrites,
+  handlePerformanceListener,
+  setupTimestampWrites,
+  type Timeable,
+  type TimestampWritesPriors,
+} from '../../core/pipeline/timable.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -20,23 +28,14 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline extends TgpuNamable {
+export interface TgpuComputePipeline
+  extends TgpuNamable, Timeable<TgpuComputePipeline> {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline;
-
-  withPerformanceListener(
-    listener: (start: bigint, end: bigint) => void | Promise<void>,
-  ): TgpuComputePipeline;
-
-  withTimeStampWrites(
-    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
-    beginningOfPassWriteIndex?: number,
-    endOfPassWriteIndex?: number,
   ): TgpuComputePipeline;
 
   dispatchWorkgroups(
@@ -70,16 +69,7 @@ export function isComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
-  readonly timestampWrites?: {
-    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
-    beginningOfPassWriteIndex?: number;
-    endOfPassWriteIndex?: number;
-  };
-  readonly performanceListener?: (
-    start: bigint,
-    end: bigint,
-  ) => void | Promise<void>;
-};
+} & TimestampWritesPriors;
 
 type Memo = {
   pipeline: GPUComputePipeline;
@@ -124,31 +114,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   withPerformanceListener(
     listener: (start: bigint, end: bigint) => void | Promise<void>,
   ): TgpuComputePipeline {
-    if (!this._core.branch.enabledFeatures.has('timestamp-query')) {
-      throw new Error(
-        'Performance listener requires the "timestamp-query" feature to be enabled on GPU device.',
-      );
-    }
-
-    if (!this._priors.timestampWrites) {
-      return new TgpuComputePipelineImpl(this._core, {
-        ...this._priors,
-        performanceListener: listener,
-        timestampWrites: {
-          querySet: this._core.branch.createQuerySet(
-            'timestamp',
-            2,
-          ),
-          beginningOfPassWriteIndex: 0,
-          endOfPassWriteIndex: 1,
-        },
-      });
-    }
-
-    return new TgpuComputePipelineImpl(this._core, {
-      ...this._priors,
-      performanceListener: listener,
-    });
+    const newPriors = createWithPerformanceListener(
+      this._priors,
+      listener,
+      this._core.branch,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors);
   }
 
   withTimeStampWrites(
@@ -156,27 +127,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number,
     endOfPassWriteIndex?: number,
   ): TgpuComputePipeline {
-    if (!this._core.branch.enabledFeatures.has('timestamp-query')) {
-      throw new Error(
-        'Timestamp writes require the "timestamp-query" feature to be enabled on GPU device.',
-      );
-    }
-
-    const timestampWrites: TgpuComputePipelinePriors['timestampWrites'] = {
+    const newPriors = createWithTimestampWrites(
+      this._priors,
       querySet,
-    };
-
-    if (beginningOfPassWriteIndex !== undefined) {
-      timestampWrites.beginningOfPassWriteIndex = beginningOfPassWriteIndex;
-    }
-    if (endOfPassWriteIndex !== undefined) {
-      timestampWrites.endOfPassWriteIndex = endOfPassWriteIndex;
-    }
-
-    return new TgpuComputePipelineImpl(this._core, {
-      ...this._priors,
-      timestampWrites,
-    });
+      this._core.branch,
+      beginningOfPassWriteIndex,
+      endOfPassWriteIndex,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors);
   }
 
   dispatchWorkgroups(
@@ -188,27 +146,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const { branch } = this._core;
 
     const label = getName(this._core) ?? '<unnamed>';
-    const passDescriptor: GPUComputePassDescriptor = { label };
-
-    if (this._priors.timestampWrites) {
-      const {
-        querySet,
-        beginningOfPassWriteIndex,
-        endOfPassWriteIndex,
-      } = this._priors.timestampWrites;
-
-      passDescriptor.timestampWrites = {
-        querySet: isQuerySet(querySet) ? branch.unwrap(querySet) : querySet,
-      };
-      if (beginningOfPassWriteIndex !== undefined) {
-        passDescriptor.timestampWrites.beginningOfPassWriteIndex =
-          beginningOfPassWriteIndex;
-      }
-      if (endOfPassWriteIndex !== undefined) {
-        passDescriptor.timestampWrites.endOfPassWriteIndex =
-          endOfPassWriteIndex;
-      }
-    }
+    const passDescriptor: GPUComputePassDescriptor = {
+      label,
+      ...setupTimestampWrites(this._priors, branch),
+    };
 
     const pass = branch.commandEncoder.beginComputePass(passDescriptor);
 
@@ -237,52 +178,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    const listener = this._priors.performanceListener;
-    if (listener) {
-      const querySet = this._priors.timestampWrites?.querySet;
-      if (!querySet) {
-        throw new Error(
-          'Cannot dispatch workgroups with performance listener without a query set.',
-        );
-      }
-
-      if (!isQuerySet(querySet)) {
-        throw new Error(
-          'Performance listener with raw GPUQuerySet is not supported. Use TgpuQuerySet instead.',
-        );
-      }
-
-      if (querySet[$internal].resolveBuffer === null) {
-        querySet[$internal].resolveBuffer = branch.device.createBuffer({
-          size: 2 * BigUint64Array.BYTES_PER_ELEMENT,
-          usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE,
-        });
-      }
-
-      branch.commandEncoder.resolveQuerySet(
-        branch.unwrap(querySet),
-        0,
-        2,
-        querySet[$internal].resolveBuffer,
-        0,
-      );
-
-      this._core.branch.flush();
-      branch.device.queue.onSubmittedWorkDone().then(async () => {
-        if (!querySet.available) {
-          return;
-        }
-        const result = await querySet.read();
-        const start = result[0];
-        const end = result[1];
-
-        if (start === undefined || end === undefined) {
-          throw new Error('QuerySet did not return valid timestamps.');
-        }
-
-        await listener(start, end);
-      });
-    }
+    handlePerformanceListener(this._priors, branch);
   }
 
   $name(label: string): this {

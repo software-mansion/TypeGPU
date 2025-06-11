@@ -30,6 +30,15 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
+import {
+  createWithPerformanceListener,
+  createWithTimestampWrites,
+  handlePerformanceListener,
+  setupTimestampWrites,
+  type Timeable,
+  type TimestampWritesPriors,
+} from '../../core/pipeline/timable.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -41,26 +50,26 @@ interface RenderPipelineInternals {
 // ----------
 
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
-  extends TgpuNamable {
+  extends TgpuNamable, Timeable<TgpuRenderPipeline> {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): TgpuRenderPipeline;
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): TgpuRenderPipeline;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): TgpuRenderPipeline;
 
   withDepthStencilAttachment(
     attachment: DepthStencilAttachment,
-  ): TgpuRenderPipeline<IOLayout>;
+  ): TgpuRenderPipeline;
 
   draw(
     vertexCount: number,
@@ -219,7 +228,7 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
-};
+} & TimestampWritesPriors;
 
 type Memo = {
   pipeline: GPURenderPipeline;
@@ -304,6 +313,34 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     });
   }
 
+  withPerformanceListener(
+    listener: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuRenderPipeline {
+    const internals = this[$internal];
+    const newPriors = createWithPerformanceListener(
+      internals.priors,
+      listener,
+      internals.core.options.branch,
+    );
+    return new TgpuRenderPipelineImpl(internals.core, newPriors);
+  }
+
+  withTimeStampWrites(
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet,
+    beginningOfPassWriteIndex?: number,
+    endOfPassWriteIndex?: number,
+  ): TgpuRenderPipeline {
+    const internals = this[$internal];
+    const newPriors = createWithTimestampWrites(
+      internals.priors,
+      querySet,
+      internals.core.options.branch,
+      beginningOfPassWriteIndex,
+      endOfPassWriteIndex,
+    );
+    return new TgpuRenderPipelineImpl(internals.core, newPriors);
+  }
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -329,14 +366,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       return attachment;
     }) as GPURenderPassColorAttachment[];
 
+    const label = getName(internals.core) ?? '<unnamed>';
     const renderPassDescriptor: GPURenderPassDescriptor = {
+      label,
       colorAttachments,
+      ...setupTimestampWrites(
+        internals.priors,
+        branch,
+      ),
     };
-
-    const label = getName(internals.core);
-    if (label !== undefined) {
-      renderPassDescriptor.label = label;
-    }
 
     if (internals.priors.depthStencilAttachment !== undefined) {
       const attachment = internals.priors.depthStencilAttachment;
@@ -393,7 +431,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
-    branch.flush();
+
+    handlePerformanceListener(internals.priors, branch, () => branch.flush());
   }
 }
 
