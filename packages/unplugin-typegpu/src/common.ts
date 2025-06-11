@@ -145,12 +145,14 @@ export function containsResourceConstructorCall(
       return true;
     }
     if (node.callee.type === 'MemberExpression') {
-      // root.createBuffer({...})
-      if (
-        node.callee.property.type === 'Identifier' &&
-        resourceConstructors.includes(node.callee.property.name)
-      ) {
-        return true;
+      if (node.callee.property.type === 'Identifier') {
+        // root.createBuffer({...})
+        if (resourceConstructors.includes(node.callee.property.name)) {
+          return true;
+        }
+        if (node.callee.property.name === '$name') {
+          return false;
+        }
       }
       // root.createBuffer(d.f32).$usage('storage')
       return containsResourceConstructorCall(node.callee.object, ctx);

@@ -64,7 +64,7 @@ describe('[ROLLUP] auto naming', () => {
       import { struct } from 'typegpu/data';
 
       const myStruct1 = d.struct({ a: d.u32 });
-      const myStruct2 = struct({ a: u32 }).$name('myStruct');
+      const myStruct2 = struct({ a: u32 });
       const bait = d.i32(1);
 
       console.log(myStruct, bait);
@@ -75,7 +75,7 @@ describe('[ROLLUP] auto naming', () => {
       import { struct } from 'typegpu/data';
 
       ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }).$name('myStruct'), "myStruct2"));
+            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }), "myStruct2"));
             const bait = d.i32(1);
 
             console.log(myStruct, bait);
@@ -90,16 +90,46 @@ describe('[ROLLUP] auto naming', () => {
       const root = await tgpu.init();
       const myBuffer = root.createBuffer(d.u32, 2);
 
-      console.log(myStruct, bait);
+      console.log(myBuffer);
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
       const root = await tgpu.init();
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
+            const myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
 
-            console.log(myStruct, bait);
+            console.log(myBuffer);
+      "
+    `);
+  });
+
+  it('does not name already named items', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+      import { struct } from 'typegpu/data';
+
+      const root = await tgpu.init();
+      const myBuffer = root.createBuffer(d.u32, 2).$name('int buffer');
+
+      const myStruct = struct({ a: u32 }).$name('myStruct');
+
+      console.log(myBuffer, myStruct)
+
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+      import { struct } from 'typegpu/data';
+
+      const root = await tgpu.init();
+            const myBuffer = root.createBuffer(d.u32, 2).$name('int buffer');
+
+            const myStruct = struct({ a: u32 }).$name('myStruct');
+
+            console.log(myBuffer, myStruct);
       "
     `);
   });
