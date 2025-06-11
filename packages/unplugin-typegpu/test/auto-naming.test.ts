@@ -62,7 +62,7 @@ describe('[BABEL] auto naming', () => {
       const myStruct2 = struct({ a: u32 });
       const bait = d.i32(1);
 
-      console.log(myStruct, bait);
+      console.log(myStruct1, myStruct2, bait);
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
@@ -75,7 +75,7 @@ describe('[BABEL] auto naming', () => {
         a: u32
       }), "myStruct2");
       const bait = d.i32(1);
-      console.log(myStruct, bait);"
+      console.log(myStruct1, myStruct2, bait);"
     `);
   });
 
@@ -274,18 +274,18 @@ describe('[ROLLUP] auto naming', () => {
       const myStruct2 = struct({ a: u32 });
       const bait = d.i32(1);
 
-      console.log(myStruct, bait);
+      console.log(myStruct1, myStruct2, bait);
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
 
-      ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }), "myStruct2"));
+      const myStruct1 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
+            const myStruct2 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }), "myStruct2"));
             const bait = d.i32(1);
 
-            console.log(myStruct, bait);
+            console.log(myStruct1, myStruct2, bait);
       "
     `);
   });
