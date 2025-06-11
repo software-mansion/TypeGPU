@@ -1,5 +1,5 @@
-import { setName } from '../shared/meta.ts';
 import { createDualImpl } from '../shared/generators.ts';
+import { setName } from '../shared/meta.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
@@ -57,7 +57,11 @@ function createMatSchema<
     [$repr]: undefined as unknown as ValueType,
     type: options.type,
     identity: identityFunctions[options.columns],
-    translation: options.columns === 4 ? translation4x4 : undefined,
+    translation: options.columns === 4 ? translation4 : undefined,
+    scaling: options.columns === 4 ? scaling4 : undefined,
+    rotationX: options.columns === 4 ? rotationX4 : undefined,
+    rotationY: options.columns === 4 ? rotationY4 : undefined,
+    rotationZ: options.columns === 4 ? rotationZ4 : undefined,
   } as unknown as AnyWgslData;
   setName(MatSchema, options.type);
 
@@ -170,86 +174,6 @@ abstract class mat2x2Impl<TColumn extends v2f>
     })`;
   }
 }
-export const identity4x4 = createDualImpl(
-  // CPU implementation
-  () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0, 0.0, 0.0,
-      0.0, 1.0, 0.0, 0.0,
-      0.0, 0.0, 1.0, 0.0,
-      0.0, 0.0, 0.0, 1.0
-    )`,
-    dataType: mat4x4f,
-  }),
-  'identity4x4',
-);
-
-export const identity3x3 = createDualImpl(
-  // CPU implementation
-  () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      0.0, 0.0, 1.0,
-    )`,
-    dataType: mat3x3f,
-  }),
-  'identity3x3',
-);
-
-export const identity2x2 = createDualImpl(
-  // CPU implementation
-  () => mat2x2f(1, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0,
-      0.0, 1.0
-    )`,
-    dataType: mat2x2f,
-  }),
-  'identity2x2',
-);
-
-const identityFunctions = {
-  2: identity2x2,
-  3: identity3x3,
-  4: identity4x4,
-};
-
-export const translation4x4 = createDualImpl(
-  // CPU implementation
-  (vector: v3f) =>
-    mat4x4f(
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      vector.x,
-      vector.y,
-      vector.z,
-      1,
-    ),
-  // GPU implementation
-  (vector) => ({
-    value:
-      `mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
-    dataType: mat4x4f,
-  }),
-  'translation4x4',
-);
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   public readonly kind = 'mat2x2f';
 
@@ -588,6 +512,216 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
     return vec4f(x, y, z, w);
   }
 }
+
+// ----------
+// Matrix ops
+// ----------
+
+/**
+ * Returns a 2-by-2 identity matrix.
+ * @returns {m2x2f} The result matrix.
+ */
+export const identity2 = createDualImpl(
+  // CPU implementation
+  () => mat2x2f(1, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0,
+      0.0, 1.0
+    )`,
+    dataType: mat2x2f,
+  }),
+  'identity2',
+);
+
+/**
+ * Returns a 3-by-3 identity matrix.
+ * @returns {m3x3f} The result matrix.
+ */
+export const identity3 = createDualImpl(
+  // CPU implementation
+  () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0,
+    )`,
+    dataType: mat3x3f,
+  }),
+  'identity3',
+);
+
+/**
+ * Returns a 4-by-4 identity matrix.
+ * @returns {m4x4f} The result matrix.
+ */
+export const identity4 = createDualImpl(
+  // CPU implementation
+  () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+  // GPU implementation
+  () => ({
+    value: `mat4x4f(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    )`,
+    dataType: mat4x4f,
+  }),
+  'identity4',
+);
+
+const identityFunctions = {
+  2: identity2,
+  3: identity3,
+  4: identity4,
+};
+
+/**
+ * Creates a 4-by-4 matrix which translates by the given vector v.
+ * @param {v3f} vector - The vector by which to translate.
+ * @returns {m4x4f} The translation matrix.
+ */
+export const translation4 = createDualImpl(
+  // CPU implementation
+  (vector: v3f) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      vector.x, vector.y, vector.z, 1,
+    ),
+  // GPU implementation
+  (vector) => ({
+    value: `mat4x4f(
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0, 
+        ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1
+      )`,
+    dataType: mat4x4f,
+  }),
+  'translation4',
+);
+
+/**
+ * Creates a 4-by-4 matrix which scales in each dimension by an amount given by the corresponding entry in the given vector.
+ * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
+ * @returns {m4x4f} The scaling matrix.
+ */
+export const scaling4 = createDualImpl(
+  // CPU implementation
+  (vector: v3f) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      vector.x, 0, 0, 0,
+      0, vector.y, 0, 0,
+      0, 0, vector.z, 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (vector) => ({
+    value: `mat4x4f(
+        ${vector.value}.x, 0, 0, 0,
+        0, ${vector.value}.y, 0, 0,
+        0, 0, ${vector.value}.z, 0, 
+        0, 0, 0, 1
+      )`,
+    dataType: mat4x4f,
+  }),
+  'scaling4',
+);
+
+/**
+ * Creates a 4-by-4 matrix which rotates around the x-axis by the given angle.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
+ */
+export const rotationX4 = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      1, 0, 0, 0,
+      0, Math.cos(a), Math.sin(a), 0,
+      0, -Math.sin(a), Math.cos(a), 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(
+        1, 0, 0, 0,
+        0, cos(${a.value}), sin(${a.value}), 0,
+        0, -sin(${a.value}), cos(${a.value}), 0,
+        0, 0, 0, 1
+      )`,
+      mat4x4f,
+    ),
+  'rotationX4',
+);
+
+/**
+ * Creates a 4-by-4 matrix which rotates around the y-axis by the given angle.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
+ */
+export const rotationY4 = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      Math.cos(a), 0, -Math.sin(a), 0,
+      0, 1, 0, 0,
+      Math.sin(a), 0, Math.cos(a), 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(
+        cos(${a.value}), 0, -sin(${a.value}), 0,
+        0, 1, 0, 0,
+        sin(${a.value}), 0, cos(${a.value}), 0,
+        0, 0, 0, 1
+      )`,
+      mat4x4f,
+    ),
+  'rotationY4',
+);
+
+/**
+ * Creates a 4-by-4 matrix which rotates around the z-axis by the given angle.
+ * @param {number} angle - The angle by which to rotate (in radians).
+ * @returns {m4x4f} The rotation matrix.
+ */
+export const rotationZ4 = createDualImpl(
+  // CPU implementation
+  (a: number) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      Math.cos(a), Math.sin(a), 0, 0,
+      -Math.sin(a), Math.cos(a), 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ),
+  // GPU implementation
+  (a) =>
+    snip(
+      `mat4x4f(
+        cos(${a.value}), sin(${a.value}), 0, 0,
+        -sin(${a.value}), cos(${a.value}), 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      )`,
+      mat4x4f,
+    ),
+  'rotationZ4',
+);
 
 // ----------
 // Public API

@@ -342,6 +342,28 @@ struct fragment_Output {
     );
   });
 
+  // TODO: handle nested structs
+  // it('adds return type nested struct definitions when resolving wgsl-defined functions', () => {
+  //   const Point = d.struct({ a: d.u32 }).$name('P');
+
+  //   const func = tgpu['~unstable']
+  //     .fn([d.arrayOf(Point, 4)])(/* wgsl */ `(a: array<MyPoint, 4>) {
+  //       return;
+  //     }`)
+  //     .$name('f');
+
+  //   expect(parseResolved({ func })).toBe(
+  //     parse(`
+  //   struct P {
+  //     a: u32,
+  //   }
+
+  //   fn f(a: array<P, 4>) {
+  //     return;
+  //   }`),
+  //   );
+  // });
+
   it('resolves object externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(`() -> vec3f {
@@ -371,6 +393,228 @@ struct fragment_Output {
       }
     `),
     );
+  });
+
+  it('resolves compound types with structs provided in externals', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)], d.u32)(
+        /* wgsl */ `(a: array<MyPoint, 4>) {
+        var b: MyPoint = a[0];
+        return b.a;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      struct P { a: u32, }
+      fn get_color(a: array<P, 4>) -> u32 {
+        var b: P = a[0];
+        return b.a;
+      }
+    `),
+    );
+  });
+});
+
+describe('tgpu.fn with raw wgsl and missing types', () => {
+  it('resolves missing base types', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f, d.u32, d.mat2x2f, d.bool, d.vec2b], d.vec4u)(
+        /* wgsl */ `(a, b: u32, c, d, e) {
+        return vec4u();
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u {
+        return vec4u();
+      }
+    `),
+    );
+  });
+
+  it('resolves void functions', () => {
+    const getColor = tgpu['~unstable']
+      .fn([])(
+        `() {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      fn get_color() {
+        return;
+      }
+    `),
+    );
+  });
+
+  it('resolves compound types', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(d.u32, 4)], d.u32)(
+        /* wgsl */ `(a) {
+        return a[0];
+      }`,
+      )
+      .$name('get_color');
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      fn get_color(a: array<u32, 4>) -> u32 {
+        return a[0];
+      }
+    `),
+    );
+  });
+
+  it('resolves compound types with structs provided in externals', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)], d.u32)(
+        /* wgsl */ `(a) {
+        var b: MyPoint = a[0];
+        return b.a;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(parseResolved({ getColor })).toBe(
+      parse(`
+      struct P { a: u32, }
+      fn get_color(a: array<P, 4>) -> u32 {
+        var b: P = a[0];
+        return b.a;
+      }
+    `),
+    );
+  });
+
+  it('replaces references when one struct is named in wgsl', () => {
+    const Point = d
+      .struct({
+        a: d.u32,
+        b: d.u32,
+      })
+      .$name('P');
+
+    const func = tgpu['~unstable']
+      .fn([Point, Point], Point)(/* wgsl */ `(a, b: PointStruct) {
+          return b;
+        }`)
+      .$name('newPointF');
+
+    expect(parseResolved({ func })).toBe(
+      parse(`
+        struct P {
+          a: u32,
+          b: u32,
+        }
+
+        fn newPointF(a: P, b: P) -> P {
+          return b;
+        }`),
+    );
+  });
+
+  it('throws when parameter type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f])(
+        /* wgsl */ `(a: vec4f) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "vec3f", WGSL type "vec4f".]
+      `);
+  });
+
+  it('throws when compound parameter type mismatch', () => {
+    const Point = d.struct({ a: d.u32 }).$name('P');
+
+    const getColor = tgpu['~unstable']
+      .fn([d.arrayOf(Point, 4)])(
+        /* wgsl */ `(a: arrayOf<MyPoint, 3>) {
+        return;
+      }`,
+      )
+      .$name('get_color')
+      .$uses({ MyPoint: Point });
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "array<P,4>", WGSL type "arrayOf<P,3>".]
+      `);
+  });
+
+  it('throws when return type mismatch', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec4f)(
+        /* wgsl */ `() -> vec2f {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: Type mismatch between TGPU shell and WGSL code string: return type, JS type "vec4f", WGSL type "vec2f".]
+      `);
+  });
+
+  it('throws when wrong argument count', () => {
+    const getColor = tgpu['~unstable']
+      .fn([d.vec3f, d.vec4f])(
+        /* wgsl */ `(a, b, c) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    expect(() => parseResolved({ getColor }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments.]
+      `);
+  });
+
+  it('resolves implicitly typed struct without externals', () => {
+    const Point = d.struct({ a: d.i32 }).$name('myStruct');
+    const getColor = tgpu['~unstable']
+      .fn([Point])(
+        /* wgsl */ `(a) {
+        return;
+      }`,
+      )
+      .$name('get_color');
+
+    console.log(parseResolved({ getColor }));
+
+    expect(parseResolved({ getColor })).toBe(parse(`
+      struct myStruct { a: i32, }
+      fn get_color(a: myStruct) {
+        return;
+      }
+      `));
   });
 });
 
