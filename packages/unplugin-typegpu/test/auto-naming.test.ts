@@ -61,8 +61,10 @@ describe('[ROLLUP] auto naming', () => {
   it('works with structs', async () => {
     const code = `\
       import * as d from 'typegpu/data';
+      import { struct } from 'typegpu/data';
 
-      const myStruct = d.struct({ a: d.u32 });
+      const myStruct1 = d.struct({ a: d.u32 });
+      const myStruct2 = struct({ a: u32 }).$name('myStruct');
       const bait = d.i32(1);
 
       console.log(myStruct, bait);
@@ -70,8 +72,10 @@ describe('[ROLLUP] auto naming', () => {
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as d from 'typegpu/data';
+      import { struct } from 'typegpu/data';
 
-      const myStruct = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct"));
+      ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
+            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }).$name('myStruct'), "myStruct2"));
             const bait = d.i32(1);
 
             console.log(myStruct, bait);
@@ -79,21 +83,23 @@ describe('[ROLLUP] auto naming', () => {
     `);
   });
 
-  it('works with directly imported structs', async () => {
+  it('works with root items', async () => {
     const code = `\
-      import { struct, u32 } from 'typegpu/data';
+      import tgpu from 'typegpu';
 
-      const myStruct = struct({ a: u32 }).$name('myStruct');
+      const root = await tgpu.init();
+      const myBuffer = root.createBuffer(d.u32, 2);
 
-      console.log(myStruct);
+      console.log(myStruct, bait);
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import { struct, u32 } from 'typegpu/data';
+      "import tgpu from 'typegpu';
 
-      const myStruct = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }).$name('myStruct'), "myStruct"));
+      const root = await tgpu.init();
+            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
 
-            console.log(myStruct);
+            console.log(myStruct, bait);
       "
     `);
   });
