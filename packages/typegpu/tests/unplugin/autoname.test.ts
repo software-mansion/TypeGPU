@@ -6,30 +6,63 @@ import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 
 describe('autonaming', () => {
-  it('autonames created resources', ({ root }) => {
+  it('autonames resources created using tgpu', () => {
     const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } });
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
+
+    expect(getName(myLayout)).toBe('myLayout');
+    expect(getName(myVertexLayout)).toBe('myVertexLayout');
+  });
+
+  it("autonames resources created using tgpu['~unstable']", () => {
     const mySlot = tgpu['~unstable'].slot<number>();
     const myAccessor = tgpu['~unstable'].accessor(d.f32);
     const myPrivateVar = tgpu['~unstable'].privateVar(d.vec2f);
     const myWorkgroupVar = tgpu['~unstable'].workgroupVar(d.f32);
     const myConst = tgpu['~unstable'].const(d.f32, 1);
-    const myStruct1 = d.struct({ a: d.u32 });
-    const myStruct2 = struct({ a: d.i32 });
-    const myBuffer = root.createBuffer(d.u32, 2);
 
-    expect(getName(myLayout)).toBe('myLayout');
-    expect(getName(myVertexLayout)).toBe('myVertexLayout');
     expect(getName(mySlot)).toBe('mySlot');
     expect(getName(myAccessor)).toBe('myAccessor');
     expect(getName(myPrivateVar)).toBe('myPrivateVar');
     expect(getName(myWorkgroupVar)).toBe('myWorkgroupVar');
     expect(getName(myConst)).toBe('myConst');
+  });
+
+  it('autonames structs', () => {
+    const myStruct1 = d.struct({ a: d.u32 });
+    const myStruct2 = struct({ a: d.i32 });
+
     expect(getName(myStruct1)).toBe('myStruct1');
     expect(getName(myStruct2)).toBe('myStruct2');
+  });
+
+  it('autonames resources created using root', ({ root }) => {
+    const myBuffer = root.createBuffer(d.u32, 2);
+
     expect(getName(myBuffer)).toBe('myBuffer');
+  });
+
+  it("autonames resources created using root['~unstable']", ({ root }) => {
+    const myPipeline = root['~unstable']
+      .withCompute(
+        tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+      )
+      .createPipeline();
+    const myMutableBuffer = root['~unstable'].createMutable(d.u32);
+    const myReadonlyBuffer = root['~unstable'].createReadonly(d.u32);
+    const myUniformBuffer = root['~unstable'].createUniform(d.u32);
+    const myTexture = root['~unstable'].createTexture({
+      size: [1, 1],
+      format: 'rgba8unorm',
+    });
+
+    expect(getName(myPipeline)).toBe('myPipeline');
+    expect(getName(myMutableBuffer)).toBe('myMutableBuffer');
+    expect(getName(myReadonlyBuffer)).toBe('myReadonlyBuffer');
+    expect(getName(myUniformBuffer)).toBe('myUniformBuffer');
+    expect(getName(myTexture)).toBe('myTexture');
   });
 
   it('does not rename already named resources', () => {

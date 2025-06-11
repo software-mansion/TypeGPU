@@ -121,6 +121,12 @@ const resourceConstructors: string[] = [
   'struct',
   // root
   'createBuffer',
+  // root['~unstable']
+  'createPipeline',
+  'createMutable',
+  'createReadonly',
+  'createUniform',
+  'createTexture',
 ];
 
 /**
@@ -133,7 +139,7 @@ export function containsResourceConstructorCall(
   ctx: Context,
 ) {
   if (node.type === 'CallExpression') {
-    // shell(() => ...)
+    // <shell>(() => ...)
     if (isShellImplementationCall(node, ctx)) {
       return true;
     }
