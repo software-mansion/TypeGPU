@@ -139,7 +139,6 @@ export function containsResourceConstructorCall(
   ctx: Context,
 ) {
   if (node.type === 'CallExpression') {
-    // <shell>(() => ...)
     if (isShellImplementationCall(node, ctx)) {
       return true;
     }

@@ -75,8 +75,23 @@ describe('autonaming', () => {
 
   it('names TGPU functions', () => {
     const myFunction = tgpu['~unstable'].fn([])(() => 0);
+    const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      () => {},
+    );
+    const myVertexFn = tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+      () => ({ ret: 0 }),
+    );
+    const myFragmentFn = tgpu['~unstable'].fragmentFn({
+      in: { position: d.builtin.position },
+      out: d.vec4f,
+    })(
+      () => d.vec4f(),
+    );
 
     expect(getName(myFunction)).toBe('myFunction');
+    expect(getName(myComputeFn)).toBe('myComputeFn');
+    expect(getName(myVertexFn)).toBe('myVertexFn');
+    expect(getName(myFragmentFn)).toBe('myFragmentFn');
   });
 
   // TODO: make it work
