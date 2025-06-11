@@ -7,4 +7,3 @@
 </div>
 
 A concurrent sum module. for use in WebGPU/TypeGPU apps.
-
