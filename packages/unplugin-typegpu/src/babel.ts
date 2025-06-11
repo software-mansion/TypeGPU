@@ -111,7 +111,7 @@ function wrapInAutoName(
   name: string,
 ) {
   return types.callExpression(
-    template.expression(`globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)`, {
+    template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
       placeholderPattern: false,
     })(),
     [node, types.stringLiteral(name)],
