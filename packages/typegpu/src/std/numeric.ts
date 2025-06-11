@@ -449,6 +449,32 @@ export const length = createDualImpl(
 
 /**
  * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#log-builtin
+ */
+export const log = createDualImpl(
+  // CPU implementation
+  <T extends number>(value: T): T => {
+    return Math.log(value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`log(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#log2-builtin
+ */
+export const log2 = createDualImpl(
+  // CPU implementation
+  <T extends number>(value: T): T => {
+    return Math.log2(value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`log2(${value.value})`, value.dataType),
+);
+
+/**
+ * @privateRemarks
  * https://www.w3.org/TR/WGSL/#max-float-builtin
  */
 export const max = createDualImpl(
