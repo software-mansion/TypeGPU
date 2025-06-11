@@ -1,2 +1,2 @@
 
-export * as prefixSum from './compute.ts';
+export * as computeShader from './compute.ts';

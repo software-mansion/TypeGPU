@@ -5,8 +5,7 @@ import { dataBindGroupLayout } from './schemas.ts';
 
 export const workGroupSize = 256;
 
-const { inputArray } = dataBindGroupLayout.$;
-const length = inputArray.in.length;
+const { inputArray } = dataBindGroupLayout.bound;
 
 export const computeShader = tgpu['~unstable'].computeFn({
   in: { in: d.builtin.globalInvocationId },
@@ -14,20 +13,20 @@ export const computeShader = tgpu['~unstable'].computeFn({
 })((input) => {
   const threadId = input.in.x;
   let sum = d.f32(0);
-
+  const length = 1024;
   // Up-sweep phase
-  for (let i = 0; i < Math.log2(length); i++) {
+  for (let i = 0; i < std.log2(length); i++) {
     sum = std.add(sum, sum + 1);
     const step = d.u32(std.exp2(i + 1));
     for (let j = 0; j < length; j += step) {
         const leftIdx = j + std.exp2(i) - 1;
         const rightIdx = j + step - 1;
-        inputArray.in[rightIdx] = std.add(inputArray.in[leftIdx], inputArray.in[rightIdx]);
+        inputArray.value.in[rightIdx] = (inputArray.value.in[leftIdx] as number) + (inputArray.value.in[rightIdx] as number);
       }
       std.workgroupBarrier();
     }
     // Down-sweep phase
-    inputArray.in[length - 1] = 0;
+    inputArray.value.in[length - 1] = 0;
 
     for (let i = Math.log2(length) - 1; i >= 0; i--) {
       const step = d.u32(std.exp2(i + 1));
@@ -35,9 +34,9 @@ export const computeShader = tgpu['~unstable'].computeFn({
         const leftIdx = j + std.exp2(i) - 1;
         const rightIdx = j + step - 1;
 
-        const temp = inputArray.in[leftIdx];
-        inputArray.in[leftIdx] = inputArray.in[rightIdx];
-        inputArray.in[rightIdx] = temp + inputArray.in[rightIdx];
+        const temp = inputArray.value.in[leftIdx] as number;
+        inputArray.value.in[leftIdx] = (inputArray.value.in[rightIdx] as number);
+        inputArray.value.in[rightIdx] = temp + (inputArray.value.in[rightIdx] as number);
       }
       std.workgroupBarrier();
 

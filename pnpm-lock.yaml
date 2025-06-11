@@ -110,6 +110,9 @@ importers:
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
+      '@typegpu/concurrent-sum':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-concurrent-sum
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise

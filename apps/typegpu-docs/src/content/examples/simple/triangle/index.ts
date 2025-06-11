@@ -1,4 +1,6 @@
-import tgpu from 'typegpu';
+import { computeShader } from '@typegpu/concurrent-sum';
+import { dataBindGroupLayout, inputValueType } from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
+import tgpu, { type TgpuComputeFn } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -15,6 +17,15 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
+
+const buffer = root.createBuffer(inputValueType).$usage('storage');
+const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  inputArray: buffer,
+});
+
+
+
+
 
 const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)(
   /* wgsl */ `(ratio: f32) -> vec4f {
@@ -49,12 +60,23 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 }
 `.$uses({ getGradientColor });
 
+const computePipeline = root['~unstable']
+  .withCompute(computeShader as unknown as TgpuComputeFn)
+  .createPipeline()
+  .$name('compute');
+
+
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
 setTimeout(() => {
+  computePipeline
+    .with(dataBindGroupLayout, fooBindGroup)
+    .dispatchWorkgroups(1);
+  console.log('Compute shader dispatched');
+
   pipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
