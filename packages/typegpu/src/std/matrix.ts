@@ -23,6 +23,7 @@ export const translate4 = createDualImpl(
     } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
+  'translate4',
 );
 
 /**
@@ -44,6 +45,7 @@ export const scale4 = createDualImpl(
     } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
+  'scale4',
 );
 
 /**
@@ -65,6 +67,7 @@ export const rotateX4 = createDualImpl(
     } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
+  'rotateX4',
 );
 
 /**
@@ -86,6 +89,7 @@ export const rotateY4 = createDualImpl(
     } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
+  'rotateY4',
 );
 
 /**
@@ -107,4 +111,5 @@ export const rotateZ4 = createDualImpl(
     } * ${matrix.value})`,
     dataType: matrix.dataType,
   }),
+  'rotateZ4',
 );
