@@ -1,5 +1,4 @@
 import { createDualImpl } from '../shared/generators.ts';
-import { setName } from '../shared/meta.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
@@ -63,7 +62,6 @@ function createMatSchema<
     rotationY: options.columns === 4 ? rotationY4 : undefined,
     rotationZ: options.columns === 4 ? rotationZ4 : undefined,
   } as unknown as AnyWgslData;
-  setName(MatSchema, options.type);
 
   const construct = createDualImpl(
     // CPU implementation

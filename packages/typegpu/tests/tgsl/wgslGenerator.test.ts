@@ -903,7 +903,7 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it('throws error when initializing sin function', () => {
+  it('throws error when initializing translate4 function', () => {
     const testFn = tgpu['~unstable']
       .fn([], d.mat4x4f)(() => {
         // @ts-expect-error
@@ -919,7 +919,7 @@ describe('wgslGenerator', () => {
 `);
   });
 
-  it('throws error when initializing sin function', () => {
+  it('throws error when initializing vec4f with an array', () => {
     const testFn = tgpu['~unstable']
       .fn([], d.mat4x4f)(() => {
         // @ts-expect-error
