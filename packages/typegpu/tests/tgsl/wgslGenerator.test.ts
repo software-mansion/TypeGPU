@@ -903,6 +903,30 @@ describe('wgslGenerator', () => {
     });
   });
 
+  it('throws error when incorrectly initializing function', () => {
+    const internalTestFn = tgpu['~unstable']
+      .fn([d.vec2f], d.mat4x4f)(() => {
+        return d.mat4x4f();
+      })
+      .$name('internalTestFn');
+
+    const testFn = tgpu['~unstable']
+      .fn([])(() => {
+        // @ts-expect-error
+        return internalTestFn([1, 23, 3]);
+      })
+      .$name('testFn');
+
+    expect(() => parseResolved({ cleantestFn: testFn }))
+      .toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testFn
+- internalTestFn: Resolution of the following tree failed: 
+- internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
+`);
+  });
+
   it('throws error when initializing translate4 function', () => {
     const testFn = tgpu['~unstable']
       .fn([], d.mat4x4f)(() => {
