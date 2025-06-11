@@ -63,6 +63,7 @@ const mockDevice = {
   get mock() {
     return mockDevice;
   },
+  features: new Set(['timestamp-query']),
   createBindGroup: vi.fn(
     (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
   ),

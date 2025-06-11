@@ -22,6 +22,7 @@ import {
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
+  readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
 }
 
 // ----------
@@ -89,6 +90,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this[$internal] = {
       get rawPipeline() {
         return _core.unwrap().pipeline;
+      },
+      get priors() {
+        return _priors;
       },
     };
     this[$getNameForward] = _core;

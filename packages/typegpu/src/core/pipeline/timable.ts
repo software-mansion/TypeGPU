@@ -26,6 +26,7 @@ export type TimestampWritesPriors = {
     start: bigint,
     end: bigint,
   ) => void | Promise<void>;
+  readonly hasAutoQuerySet?: boolean;
 };
 
 export function createWithPerformanceListener<T extends TimestampWritesPriors>(
@@ -43,6 +44,7 @@ export function createWithPerformanceListener<T extends TimestampWritesPriors>(
     return {
       ...currentPriors,
       performanceListener: listener,
+      hasAutoQuerySet: true,
       timestampWrites: {
         querySet: root.createQuerySet('timestamp', 2),
         beginningOfPassWriteIndex: 0,
@@ -72,6 +74,12 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
     );
   }
 
+  if (currentPriors.hasAutoQuerySet) {
+    if (currentPriors.timestampWrites) {
+      currentPriors.timestampWrites.querySet.destroy();
+    }
+  }
+
   const timestampWrites: TimestampWritesPriors['timestampWrites'] = {
     querySet: options.querySet,
   };
@@ -86,6 +94,7 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
 
   return {
     ...currentPriors,
+    hasAutoQuerySet: false,
     timestampWrites,
   } as T;
 }

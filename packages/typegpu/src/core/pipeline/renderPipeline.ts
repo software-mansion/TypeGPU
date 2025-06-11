@@ -42,7 +42,7 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
-  readonly priors: TgpuRenderPipelinePriors;
+  readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
 }
 
 // ----------
