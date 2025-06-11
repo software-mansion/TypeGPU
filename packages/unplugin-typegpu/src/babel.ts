@@ -5,6 +5,7 @@ import type * as babel from '@babel/types';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
+  containsResourceConstructorCall,
   type Context,
   embedJSON,
   gatherTgpuAliases,
@@ -105,8 +106,33 @@ function functionToTranspiled(
   );
 }
 
+function wrapInAutoName(
+  node: babel.Expression,
+  name: string,
+) {
+  return types.callExpression(
+    template.expression(`globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)`, {
+      placeholderPattern: false,
+    })(),
+    [node, types.stringLiteral(name)],
+  );
+}
+
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
+    VariableDeclarator(path) {
+      if (
+        ctx.autoNamingEnabled &&
+        path.node.id.type === 'Identifier' &&
+        path.node.init &&
+        containsResourceConstructorCall(path.node.init, ctx)
+      ) {
+        path.get('init').replaceWith(
+          wrapInAutoName(path.node.init, path.node.id.name),
+        );
+      }
+    },
+
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
     },

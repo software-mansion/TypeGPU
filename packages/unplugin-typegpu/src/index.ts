@@ -61,7 +61,7 @@ function assignMetadata(
 ) {
   magicString.prependLeft(
     node.start,
-    `(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (`,
+    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
   ).appendRight(
     node.end,
     `) , ${metadata}) && $.f)({}))`,
