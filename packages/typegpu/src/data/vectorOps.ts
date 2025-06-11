@@ -1058,6 +1058,28 @@ export const VectorOps = {
     vec4h: unary4h((val) => 2 ** val),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  log: {
+    vec2f: unary2f(Math.log),
+    vec2h: unary2h(Math.log),
+
+    vec3f: unary3f(Math.log),
+    vec3h: unary3h(Math.log),
+
+    vec4f: unary4f(Math.log),
+    vec4h: unary4h(Math.log),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  log2: {
+    vec2f: unary2f(Math.log2),
+    vec2h: unary2h(Math.log2),
+
+    vec3f: unary3f(Math.log2),
+    vec3h: unary3h(Math.log2),
+
+    vec4f: unary4f(Math.log2),
+    vec4h: unary4h(Math.log2),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   fract: {
     vec2f: unary2f((value) => value - Math.floor(value)),
     vec2h: unary2h((value) => value - Math.floor(value)),

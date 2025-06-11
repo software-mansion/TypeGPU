@@ -1,4 +1,3 @@
-import { f32 } from 'typegpu/data';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -447,7 +446,6 @@ export const length = createDualImpl(
   // GPU implementation
   (value) => snip(`length(${value.value})`, f32),
 );
-
 
 /**
  * @privateRemarks
