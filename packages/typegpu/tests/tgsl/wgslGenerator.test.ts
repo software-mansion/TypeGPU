@@ -902,4 +902,38 @@ describe('wgslGenerator', () => {
       ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
     });
   });
+
+  it('throws error when initializing sin function', () => {
+    const testFn = tgpu['~unstable']
+      .fn([], d.mat4x4f)(() => {
+        // @ts-expect-error
+        return std.translate4x4();
+      })
+      .$name('testSineError');
+
+    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testSineError
+- translate4x4: Cannot read properties of undefined (reading 'value')]
+`);
+  });
+
+  it('throws error when initializing sin function', () => {
+    const testFn = tgpu['~unstable']
+      .fn([], d.mat4x4f)(() => {
+        // @ts-expect-error
+        const x = d.vec4f([1, 2, 3, 4]);
+        return d.mat4x4f();
+      })
+      .$name('testSineError');
+
+    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testSineError
+- vec4f: Resolution of the following tree failed: 
+- vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
+`);
+  });
 });
