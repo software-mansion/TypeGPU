@@ -341,7 +341,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
@@ -374,7 +374,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet: rawQuerySet,
           beginningOfPassWriteIndex: 2,
           endOfPassWriteIndex: 3,
@@ -403,7 +403,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
         });
@@ -412,7 +412,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           endOfPassWriteIndex: 1,
         });
@@ -421,7 +421,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
         });
 
@@ -463,7 +463,7 @@ describe('Inter-Stage Variables', () => {
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 1,
           endOfPassWriteIndex: 2,
@@ -506,7 +506,7 @@ describe('Inter-Stage Variables', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
       .createPipeline()
-      .withTimeStampWrites({
+      .withTimestampWrites({
         querySet,
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,

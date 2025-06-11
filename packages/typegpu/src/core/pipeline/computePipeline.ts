@@ -126,7 +126,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return new TgpuComputePipelineImpl(this._core, newPriors);
   }
 
-  withTimeStampWrites(options: {
+  withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;

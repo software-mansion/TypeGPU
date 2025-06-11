@@ -114,7 +114,7 @@ const querySet = root.createQuerySet('timestamp', 36);
 const pipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
-  .withTimeStampWrites({
+  .withTimestampWrites({
     querySet: querySet,
     beginningOfPassWriteIndex: 3,   // start at slot 3
     endOfPassWriteIndex: 21,        // end at slot 21

@@ -9,7 +9,7 @@ export interface Timeable<T extends TgpuComputePipeline | TgpuRenderPipeline> {
     listener: (start: bigint, end: bigint) => void | Promise<void>,
   ): T;
 
-  withTimeStampWrites(options: {
+  withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;

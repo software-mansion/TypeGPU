@@ -325,7 +325,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return new TgpuRenderPipelineImpl(internals.core, newPriors);
   }
 
-  withTimeStampWrites(options: {
+  withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;

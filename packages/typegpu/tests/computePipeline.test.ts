@@ -173,7 +173,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
@@ -201,7 +201,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet: rawQuerySet,
           beginningOfPassWriteIndex: 2,
           endOfPassWriteIndex: 3,
@@ -225,7 +225,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline1 = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
         });
@@ -233,7 +233,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline2 = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           endOfPassWriteIndex: 1,
         });
@@ -241,7 +241,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline3 = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
         });
 
@@ -278,7 +278,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 1,
           endOfPassWriteIndex: 2,
@@ -319,7 +319,7 @@ describe('TgpuComputePipeline', () => {
 
       const pipeline = root
         .withCompute(entryFn)
-        .createPipeline().withTimeStampWrites({
+        .createPipeline().withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
@@ -330,7 +330,7 @@ describe('TgpuComputePipeline', () => {
         .withCompute(entryFn)
         .createPipeline()
         .with(layout, bindGroup)
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 2,
           endOfPassWriteIndex: 3,
@@ -371,7 +371,7 @@ describe('TgpuComputePipeline', () => {
       const pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withTimeStampWrites({
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 3,
           endOfPassWriteIndex: 7,
@@ -419,7 +419,7 @@ describe('TgpuComputePipeline', () => {
 
       const autoQuerySet = pipeline[$internal].priors.timestampWrites?.querySet;
 
-      pipeline = pipeline.withTimeStampWrites({
+      pipeline = pipeline.withTimestampWrites({
         querySet,
         beginningOfPassWriteIndex: 2,
         endOfPassWriteIndex: 5,
