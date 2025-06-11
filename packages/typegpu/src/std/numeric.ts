@@ -1,3 +1,4 @@
+import { f32 } from 'typegpu/data';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -447,14 +448,18 @@ export const length = createDualImpl(
   (value) => snip(`length(${value.value})`, f32),
 );
 
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#log-builtin
  */
 export const log = createDualImpl(
   // CPU implementation
-  <T extends number>(value: T): T => {
-    return Math.log(value) as T;
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.log(value) as T;
+    }
+    return VectorOps.log[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`log(${value.value})`, value.dataType),
@@ -466,8 +471,11 @@ export const log = createDualImpl(
  */
 export const log2 = createDualImpl(
   // CPU implementation
-  <T extends number>(value: T): T => {
-    return Math.log2(value) as T;
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.log2(value) as T;
+    }
+    return VectorOps.log2[value.kind](value) as T;
   },
   // GPU implementation
   (value) => snip(`log2(${value.value})`, value.dataType),
