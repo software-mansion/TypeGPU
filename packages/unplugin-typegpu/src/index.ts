@@ -99,6 +99,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
             ),
             fileId: id,
+            autoNamingEnabled: options.autoNamingEnabled,
           };
 
           const ast = this.parse(code, {
@@ -118,6 +119,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               const node = _node as acorn.AnyNode;
 
               if (
+                ctx.autoNamingEnabled &&
                 node.type === 'VariableDeclarator' &&
                 node.id.type === 'Identifier' &&
                 node.init &&

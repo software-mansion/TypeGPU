@@ -217,6 +217,7 @@ export default function () {
             options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
           ),
           fileId: id,
+          autoNamingEnabled: options?.autoNamingEnabled ?? true,
         };
 
         path.traverse(functionVisitor(ctx));

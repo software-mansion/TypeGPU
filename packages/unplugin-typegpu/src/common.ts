@@ -9,6 +9,7 @@ export type Context = {
    */
   tgpuAliases: Set<string>;
   fileId?: string | undefined;
+  autoNamingEnabled: boolean;
 };
 
 export interface Options {
@@ -16,10 +17,12 @@ export interface Options {
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
   forceTgpuAlias?: string;
+  autoNamingEnabled?: boolean;
 }
 
 export const defaultOptions = {
   include: [/\.m?[jt]sx?$/],
+  autoNamingEnabled: true,
 };
 
 export function embedJSON(jsValue: unknown) {
