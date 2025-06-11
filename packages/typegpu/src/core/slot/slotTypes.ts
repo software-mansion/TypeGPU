@@ -1,10 +1,12 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'slot';
   readonly [$repr]: Infer<T>;
   readonly '~gpuRepr': InferGPU<T>;
@@ -36,6 +38,7 @@ export interface TgpuDerived<T> {
 }
 
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'accessor';
   readonly [$repr]: Infer<T>;
   readonly '~gpuRepr': InferGPU<T>;

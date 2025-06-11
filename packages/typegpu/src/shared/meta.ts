@@ -1,5 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
-import { $getNameForward } from './symbols.ts';
+import { $getNameForward, $internal } from './symbols.ts';
 
 export interface MetaData {
   name?: string | undefined;
@@ -19,7 +19,10 @@ interface GlobalWithMeta {
 
 Object.assign(globalThis, {
   '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T =>
-    isNamable(exp) && !getName(exp) ? exp.$name(label) : exp,
+    isNamable(exp) &&
+      (exp as unknown as { [$internal]: unknown })?.[$internal] && !getName(exp)
+      ? exp.$name(label)
+      : exp,
 });
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
