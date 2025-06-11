@@ -219,7 +219,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         shell.returnType ?? UnknownData,
       ),
-    'call',
+    'tgpuFnCall',
     shell.argTypes,
   );
 
