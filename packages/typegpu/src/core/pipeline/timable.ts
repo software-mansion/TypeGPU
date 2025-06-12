@@ -50,13 +50,13 @@ export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
       },
-    } as T;
+    };
   }
 
   return {
     ...currentPriors,
     performanceCallback: callback,
-  } as T;
+  };
 }
 
 export function createWithTimestampWrites<T extends TimestampWritesPriors>(
@@ -96,7 +96,7 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
     ...currentPriors,
     hasAutoQuerySet: false,
     timestampWrites,
-  } as T;
+  };
 }
 
 export function setupTimestampWrites(
