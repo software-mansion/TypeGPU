@@ -478,7 +478,7 @@ describe('TgpuBuffer', () => {
     root.createBuffer(nestedBoolSchema);
   });
 
-  it('should thron an error on the type level when using a u16 schema outside of an array', ({ root }) => {
+  it('should throw an error on the type level when using a u16 schema outside of an array', ({ root }) => {
     const fine = d.arrayOf(d.u16, 32);
     root.createBuffer(fine);
 

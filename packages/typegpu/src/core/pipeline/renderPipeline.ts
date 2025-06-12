@@ -41,6 +41,7 @@ import {
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
 import { isGPUBuffer } from '../../types.ts';
+import { sizeOf } from '../../data/index.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -396,18 +397,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       'u16': 'uint16',
     } as const;
 
+    const elementType = (buffer.dataType as WgslArray<U32 | U16>).elementType;
+
     return new TgpuRenderPipelineImpl(internals.core, {
       ...internals.priors,
       indexBuffer: {
         buffer,
-        indexFormat: dataTypeToIndexFormat[
-          (buffer.dataType as WgslArray<U32 | U16>).elementType.type
-        ],
+        indexFormat: dataTypeToIndexFormat[elementType.type],
         offsetBytes: indexFormatOrOffset !== undefined
-          ? (indexFormatOrOffset as number) * 4
+          ? (indexFormatOrOffset as number) * sizeOf(elementType)
           : undefined,
         sizeBytes: sizeElementsOrUndefined !== undefined
-          ? sizeElementsOrUndefined * 4
+          ? sizeElementsOrUndefined * sizeOf(elementType)
           : undefined,
       },
     }) as unknown as this & HasIndexBuffer;
