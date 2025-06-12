@@ -454,4 +454,71 @@ describe('TgpuBuffer', () => {
       [rawDecoratedBuffer, 0, expectedData.buffer, 0, 32],
     ]);
   });
+
+  it('should throw an error on the type level when using a schema containing boolean', ({ root }) => {
+    const boolSchema = d.struct({
+      a: d.u32,
+      b: d.bool,
+    });
+
+    // @ts-expect-error: boolean is not allowed in buffer schemas
+    root.createBuffer(boolSchema);
+
+    const nestedBoolSchema = d.struct({
+      a: d.u32,
+      b: d.struct({
+        c: d.f32,
+        d: d.struct({
+          e: d.bool,
+        }),
+      }),
+    });
+
+    // @ts-expect-error: boolean is not allowed in buffer schemas
+    root.createBuffer(nestedBoolSchema);
+  });
+
+  it('should thron an error on the type level when using a u16 schema outside of an array', ({ root }) => {
+    const fine = d.arrayOf(d.u16, 32);
+    root.createBuffer(fine);
+
+    const notFine = d.struct({
+      a: d.u16,
+      b: d.u32,
+    });
+    // @ts-expect-error
+    root.createBuffer(notFine);
+
+    const alsoNotFine = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.u16, 32),
+      c: d.f32,
+    });
+
+    // @ts-expect-error
+    root.createBuffer(alsoNotFine);
+  });
+
+  it('should only allow index usage for valid u16 schemas', ({ root }) => {
+    const validSchema = d.arrayOf(d.u16, 32);
+    const buffer = root.createBuffer(validSchema);
+
+    buffer.$usage('index');
+    // @ts-expect-error
+    buffer.$usage('storage');
+    // @ts-expect-error
+    buffer.$usage('uniform');
+    // @ts-expect-error
+    buffer.$usage('vertex');
+  });
+
+  it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({ root }) => {
+    const validSchema = d.arrayOf(d.u32, 32);
+    const buffer = root.createBuffer(validSchema);
+
+    buffer.$usage('index');
+    buffer.$usage('storage');
+    buffer.$usage('uniform');
+    buffer.$usage('vertex');
+  });
 });
