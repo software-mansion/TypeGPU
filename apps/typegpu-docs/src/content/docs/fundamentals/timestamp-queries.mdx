@@ -83,21 +83,21 @@ pass.end();
 
 device.queue.submit([encoder.finish()]);
 await device.queue.onSubmittedWorkDone();
-
-// Read the timestamps directly
-const timestamps: bigint[] = await querySet.read();
-// timestamps[0] is start, timestamps[1] is end
 ```
 
-### Resolving and Reading
+### Reading Timestamps
 
-After submitting your commands, call:
+To read timestamp results, you must first resolve the query set, then read the data:
 
 ```ts
 querySet.resolve();
 const timestamps: bigint[] = await querySet.read();
 // timestamps[0] is start, timestamps[1] is end
 ```
+
+:::caution
+If you don't resolve the query set, the read operation will throw an error or return stale data (if the query set was previously resolved).
+:::
 
 ### Continuous Timestamp Queries
 
