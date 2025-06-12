@@ -71,6 +71,10 @@ const dataWriters = {
     output.writeUint32(value);
   },
 
+  u16(output, _schema: wgsl.U16, value: number) {
+    output.writeUint16(value);
+  },
+
   vec2f(output, _, value: wgsl.v2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
@@ -479,6 +483,10 @@ const dataReaders = {
 
   u32(input: ISerialInput): number {
     return input.readUint32();
+  },
+
+  u16(input: ISerialInput): number {
+    return input.readUint16();
   },
 
   vec2f(input: ISerialInput): wgsl.v2f {

@@ -30,6 +30,7 @@ const typeToPrimitive = {
   vec2u: 'u32',
   vec3u: 'u32',
   vec4u: 'u32',
+  u16: 'u16',
 
   i32: 'i32',
   vec2i: 'i32',
@@ -54,6 +55,7 @@ const primitiveToWriteFunction = {
   u32: 'setUint32',
   i32: 'setInt32',
   f32: 'setFloat32',
+  u16: 'setUint16',
 } as const;
 
 export function buildWriter(

@@ -226,4 +226,25 @@ describe('createCompileInstructions', () => {
     expect(arr.byteLength).toBe(16);
     expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 3]);
   });
+
+  it('should compile a writer for an array of u16', () => {
+    const array = d.arrayOf(d.u16, 5);
+
+    const builtWriter = buildWriter(array, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 5; i++) {
+      output.setUint16((offset + i * 2), value[i], littleEndian);
+      }
+      "
+    `);
+
+    const writer = getCompiledWriterForSchema(array);
+
+    const arr = new ArrayBuffer(sizeOf(array));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [1, 2, 3, 4, 5]);
+
+    expect([...new Uint16Array(arr)]).toStrictEqual([1, 2, 3, 4, 5]);
+  });
 });
