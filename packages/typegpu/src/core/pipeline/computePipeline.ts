@@ -14,10 +14,10 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
-  handlePerformanceCallback,
   setupTimestampWrites,
   type Timeable,
   type TimestampWritesPriors,
+  triggerPerformanceCallback,
 } from '../../core/pipeline/timable.ts';
 
 interface ComputePipelineInternals {
@@ -180,7 +180,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    handlePerformanceCallback(this._priors, branch);
+    if (this._priors.performanceCallback) {
+      triggerPerformanceCallback({
+        root: branch,
+        priors: this._priors,
+      });
+    }
   }
 
   $name(label: string): this {

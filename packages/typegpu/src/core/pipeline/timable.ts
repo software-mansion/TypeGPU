@@ -130,19 +130,6 @@ export function setupTimestampWrites(
   return { timestampWrites };
 }
 
-export function handlePerformanceCallback(
-  priors: TimestampWritesPriors,
-  root: ExperimentalTgpuRoot,
-  defaultFlush?: () => void,
-): void {
-  const callback = priors.performanceCallback;
-  if (callback) {
-    triggerPerformanceCallback({ root, priors });
-  } else if (defaultFlush) {
-    defaultFlush();
-  }
-}
-
 export function triggerPerformanceCallback({
   root,
   priors,

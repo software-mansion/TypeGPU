@@ -33,10 +33,10 @@ import { connectTargetsToShader } from './connectTargetsToShader.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
-  handlePerformanceCallback,
   setupTimestampWrites,
   type Timeable,
   type TimestampWritesPriors,
+  triggerPerformanceCallback,
 } from '../../core/pipeline/timable.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
@@ -430,7 +430,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    handlePerformanceCallback(internals.priors, branch, () => branch.flush());
+    internals.priors.performanceCallback
+      ? triggerPerformanceCallback({
+        root: branch,
+        priors: internals.priors,
+      })
+      : branch.flush();
   }
 }
 
