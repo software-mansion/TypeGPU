@@ -1,6 +1,7 @@
 import bin from 'typed-binary';
 import { createDualImpl } from '../shared/generators.ts';
 import { $internal } from '../shared/symbols.ts';
+import { snip } from './dataTypes.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -10,7 +11,6 @@ import type {
   I32,
   U32,
 } from './wgslTypes.ts';
-import { snip } from './dataTypes.ts';
 
 export const abstractInt = {
   [$internal]: true,
@@ -22,17 +22,45 @@ export const abstractFloat = {
   type: 'abstractFloat',
 } as AbstractFloat;
 
+const boolCast = createDualImpl(
+  // CPU implementation
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return false;
+    }
+    if (typeof v === 'boolean') {
+      return v;
+    }
+    return !!v;
+  },
+  // GPU implementation
+  (v) => snip(`bool(${v?.value ?? ''})`, bool),
+);
+
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
+ *
+ * Can also be called to cast a value to a bool in accordance with WGSL casting rules.
+ *
+ * @example
+ * const value = bool(); // false
+ * @example
+ * const value = bool(0); // false
+ * @example
+ * const value = bool(-0); // false
+ * @example
+ * const value = bool(21.37); // true
  */
-export const bool: Bool = {
-  [$internal]: true,
+export const bool: Bool = Object.assign(boolCast, {
   type: 'bool',
-} as Bool;
+}) as unknown as Bool;
 
 const u32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -46,7 +74,7 @@ const u32Cast = createDualImpl(
     return Math.max(0, Math.min(0xffffffff, Math.floor(v)));
   },
   // GPU implementation
-  (v) => snip(`u32(${v.value})`, u32),
+  (v) => snip(`u32(${v?.value ?? ''})`, u32),
 );
 
 /**
@@ -54,6 +82,8 @@ const u32Cast = createDualImpl(
  *
  * Can also be called to cast a value to an u32 in accordance with WGSL casting rules.
  *
+ * @example
+ * const value = u32(); // 0
  * @example
  * const value = u32(3.14); // 3
  * @example
@@ -67,7 +97,10 @@ export const u32: U32 = Object.assign(u32Cast, {
 
 const i32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -83,9 +116,7 @@ const i32Cast = createDualImpl(
     return Math.max(-0x80000000, Math.min(0x7fffffff, value));
   },
   // GPU implementation
-  (v) => {
-    return snip(`i32(${v.value})`, i32);
-  },
+  (v) => snip(`i32(${v?.value ?? ''})`, i32),
 );
 
 /**
@@ -93,6 +124,8 @@ const i32Cast = createDualImpl(
  *
  * Can also be called to cast a value to an i32 in accordance with WGSL casting rules.
  *
+ * @example
+ * const value = i32(); // 0
  * @example
  * const value = i32(3.14); // 3
  * @example
@@ -106,7 +139,10 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -115,7 +151,7 @@ const f32Cast = createDualImpl(
     return arr[0];
   },
   // GPU implementation
-  (v) => snip(`f32(${v.value})`, f32),
+  (v) => snip(`f32(${v?.value ?? ''})`, f32),
 );
 
 /**
@@ -123,6 +159,8 @@ const f32Cast = createDualImpl(
  *
  * Can also be called to cast a value to an f32.
  *
+ * @example
+ * const value = f32(); // 0
  * @example
  * const value = f32(true); // 1
  */
@@ -132,7 +170,10 @@ export const f32: F32 = Object.assign(f32Cast, {
 
 const f16Cast = createDualImpl(
   // CPU implementation
-  (v: number | boolean) => {
+  (v?: number | boolean) => {
+    if (v === undefined) {
+      return 0;
+    }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
@@ -142,7 +183,7 @@ const f16Cast = createDualImpl(
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => snip(`f16(${v.value})`, f16),
+  (v) => snip(`f16(${v?.value ?? ''})`, f16),
 );
 
 /**
@@ -150,6 +191,8 @@ const f16Cast = createDualImpl(
  *
  * Can also be called to cast a value to an f16.
  *
+ * @example
+ * const value = f16(); // 0
  * @example
  * const value = f16(true); // 1
  * @example
