@@ -22,7 +22,7 @@ export type TimestampWritesPriors = {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   };
-  readonly withPerformanceCallback?: (
+  readonly performanceCallback?: (
     start: bigint,
     end: bigint,
   ) => void | Promise<void>;
@@ -43,7 +43,7 @@ export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
   if (!currentPriors.timestampWrites) {
     return {
       ...currentPriors,
-      withPerformanceCallback: callback,
+      performanceCallback: callback,
       hasAutoQuerySet: true,
       timestampWrites: {
         querySet: root.createQuerySet('timestamp', 2),
@@ -55,7 +55,7 @@ export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
 
   return {
     ...currentPriors,
-    withPerformanceCallback: callback,
+    performanceCallback: callback,
   } as T;
 }
 
@@ -135,7 +135,7 @@ export function handlePerformanceCallback(
   root: ExperimentalTgpuRoot,
   defaultFlush?: () => void,
 ): void {
-  const callback = priors.withPerformanceCallback;
+  const callback = priors.performanceCallback;
   if (callback) {
     triggerPerformanceCallback({ root, priors });
   } else if (defaultFlush) {
@@ -151,7 +151,7 @@ export function triggerPerformanceCallback({
   priors: TimestampWritesPriors;
 }): void | Promise<void> {
   const querySet = priors.timestampWrites?.querySet;
-  const callback = priors.withPerformanceCallback as (
+  const callback = priors.performanceCallback as (
     start: bigint,
     end: bigint,
   ) => void | Promise<void>;

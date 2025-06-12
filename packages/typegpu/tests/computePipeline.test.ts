@@ -85,7 +85,7 @@ describe('TgpuComputePipeline', () => {
       expect(pipeline).toBeDefined();
       expectTypeOf(pipeline).toEqualTypeOf<TgpuComputePipeline>();
 
-      expect(pipeline[$internal].priors.withPerformanceCallback).toBe(callback);
+      expect(pipeline[$internal].priors.performanceCallback).toBe(callback);
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
       expect(timestampWrites).toBeDefined();
@@ -131,10 +131,10 @@ describe('TgpuComputePipeline', () => {
 
       expect(pipeline).toBeDefined();
 
-      expect(pipeline[$internal].priors.withPerformanceCallback).toBe(
+      expect(pipeline[$internal].priors.performanceCallback).toBe(
         callback2,
       );
-      expect(pipeline[$internal].priors.withPerformanceCallback).not.toBe(
+      expect(pipeline[$internal].priors.performanceCallback).not.toBe(
         callback1,
       );
     });
@@ -381,7 +381,7 @@ describe('TgpuComputePipeline', () => {
         .withPerformanceCallback(callback);
 
       const priors = pipeline[$internal].priors;
-      expect(priors.withPerformanceCallback).toBe(callback);
+      expect(priors.performanceCallback).toBe(callback);
       expect(priors.timestampWrites?.querySet).toBe(querySet);
       expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(3);
       expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(7);
@@ -430,7 +430,7 @@ describe('TgpuComputePipeline', () => {
       expect((autoQuerySet as TgpuQuerySet<'timestamp'>).destroyed).toBe(true);
 
       const priors = pipeline[$internal].priors;
-      expect(priors.withPerformanceCallback).toBe(callback);
+      expect(priors.performanceCallback).toBe(callback);
       expect(priors.timestampWrites?.querySet).toBe(querySet);
       expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(2);
       expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(5);

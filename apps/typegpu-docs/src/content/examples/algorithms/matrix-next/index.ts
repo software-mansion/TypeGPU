@@ -57,11 +57,9 @@ function createBindGroup() {
 }
 
 function createPipelines() {
-  const withPerformanceCallback = hasTimestampQuery
-    ? (start: bigint, end: bigint) => {
-      state.kernelTime = Number(end - start) / 1_000_000;
-    }
-    : undefined;
+  const performanceCallback = (start: bigint, end: bigint) => {
+    state.kernelTime = Number(end - start) / 1_000_000;
+  };
 
   const optimized = root['~unstable']
     .withCompute(computeSharedMemory)
@@ -69,11 +67,11 @@ function createPipelines() {
   const simple = root['~unstable'].withCompute(computeSimple).createPipeline();
 
   return {
-    'gpu-optimized': withPerformanceCallback
-      ? optimized.withPerformanceCallback(withPerformanceCallback)
+    'gpu-optimized': performanceCallback
+      ? optimized.withPerformanceCallback(performanceCallback)
       : optimized,
-    'gpu-simple': withPerformanceCallback
-      ? simple.withPerformanceCallback(withPerformanceCallback)
+    'gpu-simple': performanceCallback
+      ? simple.withPerformanceCallback(performanceCallback)
       : simple,
   };
 }
