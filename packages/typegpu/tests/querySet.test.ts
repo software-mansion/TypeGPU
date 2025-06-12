@@ -99,7 +99,7 @@ describe('TgpuQuerySet', () => {
     const querySet = root.createQuerySet('timestamp', 2);
 
     await expect(querySet.read()).rejects.toThrow(
-      'QuerySet was read before it was resolved. Resolve the query set first.',
+      'QuerySet must be resolved before reading.',
     );
   });
 
