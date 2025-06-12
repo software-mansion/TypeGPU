@@ -57,12 +57,21 @@ describe('autonaming', () => {
       size: [1, 1],
       format: 'rgba8unorm',
     });
+    const mySampler = tgpu['~unstable'].sampler({
+      magFilter: 'linear',
+      minFilter: 'linear',
+    });
+    const myComparisonSampler = tgpu['~unstable'].comparisonSampler({
+      compare: 'equal',
+    });
 
     expect(getName(myPipeline)).toBe('myPipeline');
     expect(getName(myMutableBuffer)).toBe('myMutableBuffer');
     expect(getName(myReadonlyBuffer)).toBe('myReadonlyBuffer');
     expect(getName(myUniformBuffer)).toBe('myUniformBuffer');
     expect(getName(myTexture)).toBe('myTexture');
+    expect(getName(mySampler)).toBe('mySampler');
+    expect(getName(myComparisonSampler)).toBe('myComparisonSampler');
   });
 
   it('does not rename already named resources', () => {

@@ -127,6 +127,8 @@ const resourceConstructors: string[] = [
   'createReadonly',
   'createUniform',
   'createTexture',
+  'sampler',
+  'comparisonSampler',
 ];
 
 /**
