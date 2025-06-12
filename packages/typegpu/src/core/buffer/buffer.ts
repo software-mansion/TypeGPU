@@ -25,6 +25,7 @@ import {
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
 import type { AnyData } from '../../data/index.ts';
+import type { UnwrapDecorated } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -76,10 +77,15 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
-type IsIndexCompatible<TData extends BaseData> = TData extends {
-  readonly type: 'array';
-  readonly elementType: { readonly type: 'u32' | 'u16' };
-} ? true
+type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
+  {
+    readonly type: 'array';
+    readonly elementType: infer TElement;
+  }
+  ? TElement extends BaseData
+    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' | 'u16' } ? true
+    : false
+  : false
   : false;
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
@@ -148,10 +154,14 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // --------------
 const endianness = getSystemEndianness();
 
-type IsArrayOfU32<TData extends BaseData> = TData extends {
+type IsArrayOfU32<TData extends BaseData> = UnwrapDecorated<TData> extends {
   readonly type: 'array';
-  readonly elementType: { readonly type: 'u32' };
-} ? true
+  readonly elementType: infer TElement;
+}
+  ? TElement extends BaseData
+    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' } ? true
+    : false
+  : false
   : false;
 
 type IsWgslLiteral<TData extends BaseData> = TData extends {

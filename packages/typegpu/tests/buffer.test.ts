@@ -521,4 +521,15 @@ describe('TgpuBuffer', () => {
     buffer.$usage('uniform');
     buffer.$usage('vertex');
   });
+
+  it('should ignore decorated types when determining validity usage', ({ root }) => {
+    const validSchema = d.size(1024, d.arrayOf(d.align(16, d.u32), 32));
+
+    const buffer = root.createBuffer(validSchema);
+
+    buffer.$usage('index');
+    buffer.$usage('storage');
+    buffer.$usage('uniform');
+    buffer.$usage('vertex');
+  });
 });
