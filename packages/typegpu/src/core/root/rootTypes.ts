@@ -402,8 +402,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: HasNestedType<[TData], 'bool'> extends true ? 'DO BETTER DUMMY'
-      : TData,
+    typeSchema: ValidateSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
