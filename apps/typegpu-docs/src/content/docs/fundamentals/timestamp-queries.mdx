@@ -66,10 +66,27 @@ Omit `beginningOfPassWriteIndex` or `endOfPassWriteIndex` to skip writing at the
 
 ### Attaching to a Raw WebGPU Command Encoder
 
+You can also attach timestamp queries directly to a raw WebGPU command encoder by specifying `timestampWrites` in the pass descriptor:
+
 ```ts
-commandEncoder.writeTimestamp(querySet, 0);
-// …dispatch or draw calls…
-commandEncoder.writeTimestamp(querySet, 1);
+const encoder = device.createCommandEncoder();
+
+const timestampWrites = {
+  querySet: root.unwrap(querySet),
+  beginningOfPassWriteIndex: 0,  // Write start time at index 0
+  endOfPassWriteIndex: 1,        // Write end time at index 1
+};
+
+const pass = encoder.beginComputePass({ timestampWrites });
+// …dispatch calls…
+pass.end();
+
+device.queue.submit([encoder.finish()]);
+await device.queue.onSubmittedWorkDone();
+
+// Read the timestamps directly
+const timestamps: bigint[] = await querySet.read();
+// timestamps[0] is start, timestamps[1] is end
 ```
 
 ### Resolving and Reading
