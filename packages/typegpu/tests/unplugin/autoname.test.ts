@@ -74,6 +74,25 @@ describe('autonaming', () => {
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');
   });
 
+  it('autonames when the constructor is hidden behind other methods', ({ root }) => {
+    const myBuffer = root.createBuffer(d.u32)
+      .$usage('storage')
+      .$addFlags(GPUBufferUsage.STORAGE);
+    const Item = d.struct({ a: d.u32 });
+    const myFn = tgpu['~unstable'].fn(
+      [Item],
+      Item,
+    ) /* wgsl */`(item: Item) -> Item { return item; }`
+      .$uses({ Item });
+    const myLayout = tgpu
+      .bindGroupLayout({ foo: { uniform: d.vec3f } })
+      .$idx(0);
+
+    expect(getName(myBuffer)).toBe('myBuffer');
+    expect(getName(myFn)).toBe('myFn');
+    expect(getName(myLayout)).toBe('myLayout');
+  });
+
   it('does not rename already named resources', () => {
     const myStruct = d.struct({ a: d.u32 }).$name('IntStruct');
     const myFunction = tgpu['~unstable'].fn([])(() => 0).$name('ConstFunction');

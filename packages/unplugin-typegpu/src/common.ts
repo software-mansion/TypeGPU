@@ -117,6 +117,7 @@ const resourceConstructors: string[] = [
   'privateVar',
   'workgroupVar',
   'const',
+  ...fnShellFunctionNames,
   // d
   'struct',
   // root
@@ -164,6 +165,9 @@ export function containsResourceConstructorCall(
       // root.createBuffer(d.f32).$usage('storage')
       return containsResourceConstructorCall(node.callee.object, ctx);
     }
+  }
+  if (node.type === 'TaggedTemplateExpression') {
+    return containsResourceConstructorCall(node.tag, ctx);
   }
   return false;
 }
