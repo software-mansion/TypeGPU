@@ -34,15 +34,13 @@ const boolCast = createDualImpl(
     return !!v;
   },
   // GPU implementation
-  (v) => {
-    return snip(`bool(${v?.value ?? ''})`, bool);
-  },
+  (v) => snip(`bool(${v?.value ?? ''})`, bool),
 );
 
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  *
- * Can also be called to cast a value to an bool in accordance with WGSL casting rules.
+ * Can also be called to cast a value to a bool in accordance with WGSL casting rules.
  *
  * @example
  * const value = bool(); // false
@@ -76,9 +74,7 @@ const u32Cast = createDualImpl(
     return Math.max(0, Math.min(0xffffffff, Math.floor(v)));
   },
   // GPU implementation
-  (v) => {
-    return snip(`u32(${v?.value ?? ''})`, u32);
-  },
+  (v) => snip(`u32(${v?.value ?? ''})`, u32),
 );
 
 /**
@@ -120,9 +116,7 @@ const i32Cast = createDualImpl(
     return Math.max(-0x80000000, Math.min(0x7fffffff, value));
   },
   // GPU implementation
-  (v) => {
-    return snip(`i32(${v?.value ?? ''})`, i32);
-  },
+  (v) => snip(`i32(${v?.value ?? ''})`, i32),
 );
 
 /**
@@ -157,9 +151,7 @@ const f32Cast = createDualImpl(
     return arr[0];
   },
   // GPU implementation
-  (v) => {
-    return snip(`f32(${v?.value ?? ''})`, f32);
-  },
+  (v) => snip(`f32(${v?.value ?? ''})`, f32),
 );
 
 /**
@@ -191,9 +183,7 @@ const f16Cast = createDualImpl(
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => {
-    return snip(`f16(${v?.value ?? ''})`, f16);
-  },
+  (v) => snip(`f16(${v?.value ?? ''})`, f16),
 );
 
 /**
