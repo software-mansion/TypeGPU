@@ -6,23 +6,23 @@ description: How to use timestamp queries to measure the performance of your pip
 To measure kernel execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
 
 :::tip
-To use performance listeners and timestamp queries, you must enable the `timestamp-query` feature on your GPU device. See [Enabling Features](/TypeGPU/fundamentals/enabling-features) for details.
+To use performance callbacks and timestamp queries, you must enable the `timestamp-query` feature on your GPU device. See [Enabling Features](/TypeGPU/fundamentals/enabling-features) for details.
 :::
 
 TypeGPU offers two ways to employ timestamp queries:
 
-1. **High-level API** via the pipeline’s `.withPerformanceListener()` method  
+1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method  
 2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
 
-## Performance Listeners
+## Performance Callbacks
 
-Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceListener()` onto a compute or render pipeline:
+Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceCallback()` onto a compute or render pipeline:
 
 ```ts
 const pipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
-  .withPerformanceListener((start, end) => {
+  .withPerformanceCallback((start, end) => {
     const durationNs = Number(end - start);
     console.log(`Pipeline execution time: ${durationNs} ns`);
   });
@@ -36,11 +36,11 @@ const pipeline = root['~unstable']
 
   Both `start` and `end` are timestamps in nanoseconds.
 
-* **Multiple listeners**
-  If you call `.withPerformanceListener()` more than once, only the *last* callback is used. If your timing logic doesn’t change, attach it a single time *after* creating the pipeline rather than on every dispatch.
+* **Multiple callbacks**
+  If you call `.withPerformanceCallback()` more than once, only the *last* callback is used. If your timing logic doesn’t change, attach it a single time *after* creating the pipeline rather than on every dispatch.
 
 * **Automatic query set**
-  If you haven’t provided a `TgpuQuerySet` before calling `.withPerformanceListener()`, TypeGPU will allocate one for you along with the necessary resolve buffers.
+  If you haven’t provided a `TgpuQuerySet` before calling `.withPerformanceCallback()`, TypeGPU will allocate one for you along with the necessary resolve buffers.
 
 ## Using `TgpuQuerySet`
 
@@ -104,9 +104,9 @@ async function renderLoop() {
 
 The `querySet.available` property returns `true` once the last resolve has completed.
 
-## Combining `TgpuQuerySet` with Performance Listeners
+## Combining `TgpuQuerySet` with Performance Callbacks
 
-You can use a custom query set and still attach a performance listener. TypeGPU will write to the indices you specify, then resolve and read the full set for the listener:
+You can use a custom query set and still attach a performance callback. TypeGPU will write to the indices you specify, then resolve and read the full set for the callback:
 
 ```ts
 const querySet = root.createQuerySet('timestamp', 36);
@@ -119,9 +119,9 @@ const pipeline = root['~unstable']
     beginningOfPassWriteIndex: 3,   // start at slot 3
     endOfPassWriteIndex: 21,        // end at slot 21
   })
-  .withPerformanceListener((start, end) => {
+  .withPerformanceCallback((start, end) => {
     console.log(`Pipeline execution time: ${Number(end - start)} ns`);
   });
 ```
 
-The listener respects your chosen indices but still resolves and reads the entire query set under the hood.
+The callback respects your chosen indices but still resolves and reads the entire query set under the hood.

@@ -3,7 +3,7 @@ title: Enabling GPU Features
 description: How to declare and activate WebGPU device features in TypeGPU.
 ---
 
-Some advanced GPU capabilities—such as timestamp queries or subgroup operations—must be explicitly requested before use. TypeGPU passes your configuration directly to the WebGPU API, with a convenient extension for marking features as optional.
+Some GPU capabilities, such as timestamp queries or subgroup operations, must be explicitly requested before use. TypeGPU passes your configuration directly to the WebGPU API, with a convenient extension for marking features as optional.
 
 :::tip
 For a complete list of feature names, consult the [WebGPU specification](https://www.w3.org/TR/webgpu/#gpufeaturename).
@@ -41,7 +41,7 @@ const root = await tgpu.init({
 
 ## Verifying Availability
 
-After `tgpu.init()` completes, inspect the `root.enabledFeatures` set to see which features were actually activated:
+After `tgpu.init()` resolves, you can check which features are enabled using the `enabledFeatures` property on the root object:
 
 ```ts
 if (root.enabledFeatures.has('timestamp-query')) {

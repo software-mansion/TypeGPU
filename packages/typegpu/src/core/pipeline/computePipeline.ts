@@ -12,9 +12,9 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import {
-  createWithPerformanceListener,
+  createWithPerformanceCallback,
   createWithTimestampWrites,
-  handlePerformanceListener,
+  handlePerformanceCallback,
   setupTimestampWrites,
   type Timeable,
   type TimestampWritesPriors,
@@ -115,12 +115,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     });
   }
 
-  withPerformanceListener(
-    listener: (start: bigint, end: bigint) => void | Promise<void>,
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
   ): TgpuComputePipeline {
-    const newPriors = createWithPerformanceListener(
+    const newPriors = createWithPerformanceCallback(
       this._priors,
-      listener,
+      callback,
       this._core.branch,
     );
     return new TgpuComputePipelineImpl(this._core, newPriors);
@@ -180,7 +180,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    handlePerformanceListener(this._priors, branch);
+    handlePerformanceCallback(this._priors, branch);
   }
 
   $name(label: string): this {

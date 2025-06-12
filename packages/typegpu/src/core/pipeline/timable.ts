@@ -5,8 +5,8 @@ import type { ExperimentalTgpuRoot } from '../../core/root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 
 export interface Timeable<T extends TgpuComputePipeline | TgpuRenderPipeline> {
-  withPerformanceListener(
-    listener: (start: bigint, end: bigint) => void | Promise<void>,
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
   ): T;
 
   withTimestampWrites(options: {
@@ -22,28 +22,28 @@ export type TimestampWritesPriors = {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   };
-  readonly performanceListener?: (
+  readonly withPerformanceCallback?: (
     start: bigint,
     end: bigint,
   ) => void | Promise<void>;
   readonly hasAutoQuerySet?: boolean;
 };
 
-export function createWithPerformanceListener<T extends TimestampWritesPriors>(
+export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
   currentPriors: T,
-  listener: (start: bigint, end: bigint) => void | Promise<void>,
+  callback: (start: bigint, end: bigint) => void | Promise<void>,
   root: ExperimentalTgpuRoot,
 ): T {
   if (!root.enabledFeatures.has('timestamp-query')) {
     throw new Error(
-      'Performance listener requires the "timestamp-query" feature to be enabled on GPU device.',
+      'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
     );
   }
 
   if (!currentPriors.timestampWrites) {
     return {
       ...currentPriors,
-      performanceListener: listener,
+      withPerformanceCallback: callback,
       hasAutoQuerySet: true,
       timestampWrites: {
         querySet: root.createQuerySet('timestamp', 2),
@@ -55,7 +55,7 @@ export function createWithPerformanceListener<T extends TimestampWritesPriors>(
 
   return {
     ...currentPriors,
-    performanceListener: listener,
+    withPerformanceCallback: callback,
   } as T;
 }
 
@@ -130,20 +130,20 @@ export function setupTimestampWrites(
   return { timestampWrites };
 }
 
-export function handlePerformanceListener(
+export function handlePerformanceCallback(
   priors: TimestampWritesPriors,
   root: ExperimentalTgpuRoot,
   defaultFlush?: () => void,
 ): void {
-  const listener = priors.performanceListener;
-  if (listener) {
-    triggerPerformanceListener({ root, priors });
+  const callback = priors.withPerformanceCallback;
+  if (callback) {
+    triggerPerformanceCallback({ root, priors });
   } else if (defaultFlush) {
     defaultFlush();
   }
 }
 
-export function triggerPerformanceListener({
+export function triggerPerformanceCallback({
   root,
   priors,
 }: {
@@ -151,20 +151,20 @@ export function triggerPerformanceListener({
   priors: TimestampWritesPriors;
 }): void | Promise<void> {
   const querySet = priors.timestampWrites?.querySet;
-  const listener = priors.performanceListener as (
+  const callback = priors.withPerformanceCallback as (
     start: bigint,
     end: bigint,
   ) => void | Promise<void>;
 
   if (!querySet) {
     throw new Error(
-      'Cannot dispatch workgroups with performance listener without a query set.',
+      'Cannot dispatch workgroups with performance callback without a query set.',
     );
   }
 
   if (!isQuerySet(querySet)) {
     throw new Error(
-      'Performance listener with raw GPUQuerySet is not supported. Use TgpuQuerySet instead.',
+      'Performance callback with raw GPUQuerySet is not supported. Use TgpuQuerySet instead.',
     );
   }
 
@@ -190,6 +190,6 @@ export function triggerPerformanceListener({
       throw new Error('QuerySet did not return valid timestamps.');
     }
 
-    await listener(start, end);
+    await callback(start, end);
   });
 }

@@ -31,9 +31,9 @@ import {
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
 import {
-  createWithPerformanceListener,
+  createWithPerformanceCallback,
   createWithTimestampWrites,
-  handlePerformanceListener,
+  handlePerformanceCallback,
   setupTimestampWrites,
   type Timeable,
   type TimestampWritesPriors,
@@ -313,13 +313,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     });
   }
 
-  withPerformanceListener(
-    listener: (start: bigint, end: bigint) => void | Promise<void>,
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
   ): TgpuRenderPipeline {
     const internals = this[$internal];
-    const newPriors = createWithPerformanceListener(
+    const newPriors = createWithPerformanceCallback(
       internals.priors,
-      listener,
+      callback,
       internals.core.options.branch,
     );
     return new TgpuRenderPipelineImpl(internals.core, newPriors);
@@ -430,7 +430,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    handlePerformanceListener(internals.priors, branch, () => branch.flush());
+    handlePerformanceCallback(internals.priors, branch, () => branch.flush());
   }
 }
 
