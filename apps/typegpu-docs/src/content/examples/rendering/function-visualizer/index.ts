@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 
 // Globals and init
@@ -134,6 +135,7 @@ const rawRenderBackgroundCode = /* wgsl */ `
 ) -> @builtin(position) vec4f {
   let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
   let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
+  let ratio = (rightTop.y - leftBot.y) / (rightTop.x - leftBot.x);
 
   let transformedPoints = array(
     vec2f(leftBot.x, 0.0),
@@ -144,7 +146,7 @@ const rawRenderBackgroundCode = /* wgsl */ `
 
   let currentPoint = properties.inverseTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
   return vec4f(
-    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
+    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005 * ratio,
     currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
     currentPoint.zw
   );
@@ -247,7 +249,13 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   let currentVertex = vertexIndex/2;
   let orthonormal = orthonormalForVertex(currentVertex);
   let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2 == 0);
-  return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
+
+  let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
+  let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
+  let ratio = (rightTop.y - leftBot.y) / (rightTop.x - leftBot.x);
+  let adjustedOffset = vec2f(offset.x * ratio, offset.y);
+
+  return vec4f(lineVertices[currentVertex] + adjustedOffset, 0.0, 1.0);
 }
 
 @fragment fn fs() -> @location(0) vec4f {
@@ -522,6 +530,20 @@ window.addEventListener('touchend', () => {
 // Resize observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
+  const topRight = std.mul(properties.transformation, d.vec4f(1, 1, 0, 1));
+  const bottomLeft = std.mul(properties.transformation, d.vec4f(-1, -1, 0, 1));
+  const rescaleMatrix = mat4.scaling(
+    [
+      (canvas.clientWidth / canvas.clientHeight) /
+      ((topRight.x - bottomLeft.x) /
+        (topRight.y - bottomLeft.y)),
+      1,
+      1,
+    ],
+    d.mat4x4f(),
+  );
+  properties.transformation = std.mul(properties.transformation, rescaleMatrix);
+
   msTexture.destroy();
   msTexture = device.createTexture({
     size: [
