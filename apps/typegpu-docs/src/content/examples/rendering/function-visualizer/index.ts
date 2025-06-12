@@ -530,13 +530,12 @@ window.addEventListener('touchend', () => {
 // Resize observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
-  const topRight = std.mul(properties.transformation, d.vec4f(1, 1, 0, 1));
-  const bottomLeft = std.mul(properties.transformation, d.vec4f(-1, -1, 0, 1));
+  const leftBot = std.mul(properties.transformation, d.vec4f(-1, -1, 0, 1));
+  const rightTop = std.mul(properties.transformation, d.vec4f(1, 1, 0, 1));
   const rescaleMatrix = mat4.scaling(
     [
       (canvas.clientWidth / canvas.clientHeight) /
-      ((topRight.x - bottomLeft.x) /
-        (topRight.y - bottomLeft.y)),
+      ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y)),
       1,
       1,
     ],
