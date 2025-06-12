@@ -13,7 +13,8 @@ describe('[BABEL] auto naming', () => {
       console.log(bindGroupLayout, vertexLayout);
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
@@ -35,7 +36,8 @@ describe('[BABEL] auto naming', () => {
       console.log(accessor, shell, fn, cst);
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       let nothing,
@@ -65,7 +67,8 @@ describe('[BABEL] auto naming', () => {
       console.log(myStruct1, myStruct2, bait);
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
       const myStruct1 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
@@ -89,7 +92,8 @@ describe('[BABEL] auto naming', () => {
       console.log(myBuffer);
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const root = await tgpu.init();
       const myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer");
@@ -117,7 +121,8 @@ describe('[BABEL] auto naming', () => {
       );
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       const myFunction = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
@@ -177,7 +182,8 @@ describe('[BABEL] auto naming', () => {
 
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
@@ -199,7 +205,8 @@ describe('[BABEL] auto naming', () => {
       console.log(a, b, c);
     `;
 
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "const a = 1;
       const b = "root.createBuffer()";
       const c = () => {};
@@ -220,16 +227,17 @@ describe('[ROLLUP] auto naming', () => {
       console.log(bindGroupLayout, vertexLayout);
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
 
-      const bindGroupLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
-            const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), "vertexLayout"));
+        const bindGroupLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
+              const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), "vertexLayout"));
 
-            console.log(bindGroupLayout, vertexLayout);
-      "
-    `);
+              console.log(bindGroupLayout, vertexLayout);
+        "
+      `);
   });
 
   it(`works with tgpu['~unstable'] items`, async () => {
@@ -245,24 +253,25 @@ describe('[ROLLUP] auto naming', () => {
       console.log(accessor, shell, fn, cst);
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
 
-      let accessor = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor"));
-            let shell = tgpu['~unstable'].fn([]);
-            var fn = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }) , {
-                    v: 1,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
-                  }) && $.f)({}))), "fn"));
-            const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].const(d.u32, 1), "cst"));
+        let accessor = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor"));
+              let shell = tgpu['~unstable'].fn([]);
+              var fn = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                        }) , {
+                      v: 1,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: {},
+                    }) && $.f)({}))), "fn"));
+              const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].const(d.u32, 1), "cst"));
 
-            console.log(accessor, shell, fn, cst);
-      "
-    `);
+              console.log(accessor, shell, fn, cst);
+        "
+      `);
   });
 
   it('works with structs', async () => {
@@ -277,17 +286,18 @@ describe('[ROLLUP] auto naming', () => {
       console.log(myStruct1, myStruct2, bait);
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import * as d from 'typegpu/data';
-      import { struct } from 'typegpu/data';
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import * as d from 'typegpu/data';
+        import { struct } from 'typegpu/data';
 
-      const myStruct1 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
-            const myStruct2 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }), "myStruct2"));
-            const bait = d.i32(1);
+        const myStruct1 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.u32 }), "myStruct1"));
+              const myStruct2 = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(struct({ a: u32 }), "myStruct2"));
+              const bait = d.i32(1);
 
-            console.log(myStruct1, myStruct2, bait);
-      "
-    `);
+              console.log(myStruct1, myStruct2, bait);
+        "
+      `);
   });
 
   it('works with root items', async () => {
@@ -300,15 +310,16 @@ describe('[ROLLUP] auto naming', () => {
       console.log(myBuffer);
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
 
-      const root = await tgpu.init();
-            const myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
+        const root = await tgpu.init();
+              const myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
 
-            console.log(myBuffer);
-      "
-    `);
+              console.log(myBuffer);
+        "
+      `);
   });
 
   it('works with functions', async () => {
@@ -331,49 +342,50 @@ describe('[ROLLUP] auto naming', () => {
       );
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
 
-      ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }) , {
-                    v: 1,
-                    ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-                    externals: {},
-                  }) && $.f)({}))), "myFunction"));
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
-              (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }) , {
-                    v: 1,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
-                  }) && $.f)({})),
-            ), "myComputeFn"));
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
-              (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }) , {
-                    v: 1,
-                    ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
-                    externals: {},
-                  }) && $.f)({})),
-            ), "myVertexFn"));
-            ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
-              in: { position: d.builtin.position },
-              out: d.vec4f,
-            })(
-              (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }) , {
-                    v: 1,
-                    ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-                    externals: {d},
-                  }) && $.f)({})),
-            ), "myFragmentFn"));
-      "
-    `);
+        ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                        }) , {
+                      v: 1,
+                      ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+                      externals: {},
+                    }) && $.f)({}))), "myFunction"));
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                        }) , {
+                      v: 1,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: {},
+                    }) && $.f)({})),
+              ), "myComputeFn"));
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                        }) , {
+                      v: 1,
+                      ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
+                      externals: {},
+                    }) && $.f)({})),
+              ), "myVertexFn"));
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
+                in: { position: d.builtin.position },
+                out: d.vec4f,
+              })(
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
+                        }) , {
+                      v: 1,
+                      ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
+                      externals: {d},
+                    }) && $.f)({})),
+              ), "myFragmentFn"));
+        "
+      `);
   });
 
   it('does not name already named items', async () => {
@@ -391,7 +403,8 @@ describe('[ROLLUP] auto naming', () => {
 
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
@@ -415,7 +428,8 @@ describe('[ROLLUP] auto naming', () => {
       console.log(a, b, c);
     `;
 
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
       "const a = 1;
             const b = "root.createBuffer()";
             const c = () => {};

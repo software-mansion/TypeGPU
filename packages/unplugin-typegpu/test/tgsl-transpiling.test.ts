@@ -24,9 +24,9 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
-      const counterBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.vec3f, d.vec3f(0, 1, 0)).$usage('storage'), "counterBuffer");
+      const counterBuffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 0)).$usage('storage');
       const counter = counterBuffer.as('mutable');
-      const increment = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({
+      const increment = tgpu.computeFn({
         in: {
           num: d.builtin.numWorkgroups
         },
@@ -37,7 +37,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
           externals: {counter, d},
-        }) && $.f)({})), "increment");"
+        }) && $.f)({}));"
     `);
   });
 
@@ -61,7 +61,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const a = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+      const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
@@ -69,23 +69,23 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
-        }) && $.f)({})), "a");
-      const b = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        }) && $.f)({}));
+      const b = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
           ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
-        }) && $.f)({})), "b");
+        }) && $.f)({}));
       const cx = 2;
-      const c = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const c = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
           ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
           externals: {cx},
-        }) && $.f)({})), "c");
-      const d = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])('() {}'), "d");"
+        }) && $.f)({}));
+      const d = tgpu['~unstable'].fn([])('() {}');"
     `);
   });
 
@@ -123,7 +123,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const fun = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+      const fun = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
@@ -131,8 +131,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
-        }) && $.f)({})), "fun");
-      const funcWithAs = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+        }) && $.f)({}));
+      const funcWithAs = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
@@ -140,8 +140,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
-        }) && $.f)({})), "funcWithAs");
-      const funcWithSatisfies = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+        }) && $.f)({}));
+      const funcWithSatisfies = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
@@ -149,7 +149,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
-        }) && $.f)({})), "funcWithSatisfies");"
+        }) && $.f)({}));"
     `);
   });
 });
@@ -178,19 +178,19 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      const counterBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root
+      const counterBuffer = root
                   .createBuffer(d.vec3f, d.vec3f(0, 1, 0))
-                  .$usage('storage'), "counterBuffer"));
+                  .$usage('storage');
               const counter = counterBuffer.as('mutable');
               
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu
+              tgpu
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
                     externals: {counter, d},
-                  }) && $.f)({}))), "increment"));
+                  }) && $.f)({})));
       "
     `);
   });
@@ -216,32 +216,32 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f)({}))), "a"));
+                  }) && $.f)({})));
 
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
-                  }) && $.f)({}))), "b"));
+                  }) && $.f)({})));
 
               const cx = 2;
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }) , {
                     v: 1,
                     ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
                     externals: {cx},
-                  }) && $.f)({}))), "c"));
+                  }) && $.f)({})));
 
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])('() {}'), "d"));
+              tgpu['~unstable'].fn([])('() {}');
       "
     `);
   });
