@@ -93,16 +93,16 @@ describe('TgpuComputePipeline', () => {
       expect(timestampWrites?.endOfPassWriteIndex).toBe(1);
     });
 
-    it('should create automatic query set when adding performance Callback', ({ root, device }) => {
+    it('should create automatic query set when adding performance callback', ({ root, device }) => {
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {})
         .$name('main');
 
-      const Callback = vi.fn();
+      const callback = vi.fn();
       const pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withPerformanceCallback(Callback);
+        .withPerformanceCallback(callback);
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
       expect(timestampWrites?.querySet).toBeDefined();
@@ -115,7 +115,7 @@ describe('TgpuComputePipeline', () => {
       });
     });
 
-    it('should replace previous performance Callback', ({ root }) => {
+    it('should replace previous performance callback', ({ root }) => {
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {})
         .$name('main');
@@ -148,15 +148,15 @@ describe('TgpuComputePipeline', () => {
         .computeFn({ workgroupSize: [1] })(() => {})
         .$name('main');
 
-      const Callback = vi.fn();
+      const callback = vi.fn();
 
       expect(() => {
         root
           .withCompute(entryFn)
           .createPipeline()
-          .withPerformanceCallback(Callback);
+          .withPerformanceCallback(callback);
       }).toThrow(
-        'Performance Callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
       //@ts-ignore
@@ -361,14 +361,14 @@ describe('TgpuComputePipeline', () => {
     });
   });
 
-  describe('Combined Performance Callback and Timestamp Writes', () => {
-    it('should work with both performance Callback and custom timestamp writes', ({ root, commandEncoder }) => {
+  describe('Combined Performance callback and Timestamp Writes', () => {
+    it('should work with both performance callback and custom timestamp writes', ({ root, commandEncoder }) => {
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {})
         .$name('main');
 
       const querySet = root.createQuerySet('timestamp', 10);
-      const Callback = vi.fn();
+      const callback = vi.fn();
 
       const pipeline = root
         .withCompute(entryFn)
@@ -378,10 +378,10 @@ describe('TgpuComputePipeline', () => {
           beginningOfPassWriteIndex: 3,
           endOfPassWriteIndex: 7,
         })
-        .withPerformanceCallback(Callback);
+        .withPerformanceCallback(callback);
 
       const priors = pipeline[$internal].priors;
-      expect(priors.withPerformanceCallback).toBe(Callback);
+      expect(priors.withPerformanceCallback).toBe(callback);
       expect(priors.timestampWrites?.querySet).toBe(querySet);
       expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(3);
       expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(7);
@@ -412,12 +412,12 @@ describe('TgpuComputePipeline', () => {
         .$name('main');
 
       const querySet = root.createQuerySet('timestamp', 8);
-      const Callback = vi.fn();
+      const callback = vi.fn();
 
       let pipeline = root
         .withCompute(entryFn)
         .createPipeline()
-        .withPerformanceCallback(Callback);
+        .withPerformanceCallback(callback);
 
       const autoQuerySet = pipeline[$internal].priors.timestampWrites?.querySet;
 
@@ -430,7 +430,7 @@ describe('TgpuComputePipeline', () => {
       expect((autoQuerySet as TgpuQuerySet<'timestamp'>).destroyed).toBe(true);
 
       const priors = pipeline[$internal].priors;
-      expect(priors.withPerformanceCallback).toBe(Callback);
+      expect(priors.withPerformanceCallback).toBe(callback);
       expect(priors.timestampWrites?.querySet).toBe(querySet);
       expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(2);
       expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(5);

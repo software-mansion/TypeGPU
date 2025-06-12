@@ -203,7 +203,7 @@ describe('Inter-Stage Variables', () => {
   });
 
   describe('Performance Callbacks', () => {
-    it('should add performance Callback with automatic query set', ({ root }) => {
+    it('should add performance callback with automatic query set', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
       })('').$name('vertex');
@@ -212,17 +212,17 @@ describe('Inter-Stage Variables', () => {
         out: { color: d.vec4f },
       })('').$name('fragment');
 
-      const Callback = vi.fn();
+      const callback = vi.fn();
       const pipeline = root
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withPerformanceCallback(Callback);
+        .withPerformanceCallback(callback);
 
       expect(pipeline).toBeDefined();
       expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline>();
 
-      expect(pipeline[$internal].priors.withPerformanceCallback).toBe(Callback);
+      expect(pipeline[$internal].priors.withPerformanceCallback).toBe(callback);
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
       expect(timestampWrites).toBeDefined();
@@ -230,7 +230,7 @@ describe('Inter-Stage Variables', () => {
       expect(timestampWrites?.endOfPassWriteIndex).toBe(1);
     });
 
-    it('should create automatic query set when adding performance Callback', ({ root, device }) => {
+    it('should create automatic query set when adding performance callback', ({ root, device }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
       })('').$name('vertex');
@@ -239,12 +239,12 @@ describe('Inter-Stage Variables', () => {
         out: { color: d.vec4f },
       })('').$name('fragment');
 
-      const Callback = vi.fn();
+      const callback = vi.fn();
       const pipeline = root
         .withVertex(vertexFn, {})
         .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
         .createPipeline()
-        .withPerformanceCallback(Callback)
+        .withPerformanceCallback(callback)
         .withColorAttachment({
           color: {
             view: {} as unknown as GPUTextureView,
@@ -268,7 +268,7 @@ describe('Inter-Stage Variables', () => {
       });
     });
 
-    it('should replace previous performance Callback', ({ root }) => {
+    it('should replace previous performance callback', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
       })('').$name('vertex');
@@ -310,16 +310,16 @@ describe('Inter-Stage Variables', () => {
         out: { color: d.vec4f },
       })('').$name('fragment');
 
-      const Callback = vi.fn();
+      const callback = vi.fn();
 
       expect(() => {
         root
           .withVertex(vertexFn, {})
           .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
           .createPipeline()
-          .withPerformanceCallback(Callback);
+          .withPerformanceCallback(callback);
       }).toThrow(
-        'Performance Callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
       //@ts-ignore
