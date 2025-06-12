@@ -20,7 +20,6 @@ const state = {
     result: [] as number[],
   },
   kernelTime: 0,
-  hasComputed: false,
 };
 
 const root = await tgpu.init({
@@ -77,11 +76,15 @@ function createPipelines() {
 }
 
 function resizeBuffersIfNeeded(requiredSize: number) {
-  if (requiredSize <= state.bufferCapacity) return;
+  if (requiredSize <= state.bufferCapacity) {
+    return;
+  }
 
-  while (state.bufferCapacity < requiredSize) state.bufferCapacity *= 2;
+  while (state.bufferCapacity < requiredSize) {
+    state.bufferCapacity *= 2;
+  }
 
-  for (const buffer of Object.values(buffers).slice(0, 3)) {
+  for (const buffer of [buffers.first, buffers.second, buffers.result]) {
     buffer.destroy();
   }
 
@@ -190,7 +193,6 @@ async function compute() {
     showKernel ? state.kernelTime : undefined,
   );
 
-  state.hasComputed = true;
   printMatrixToHtml(
     resultTable,
     state.matrices.result,
@@ -199,32 +201,22 @@ async function compute() {
   );
 }
 
+// #region UI
+
 const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
+const timingDisplay = document.querySelector(
+  '.timing-content',
+) as HTMLDivElement;
 
 generateMatrices();
-showInitialResultMessage();
-
-let timingDisplay: HTMLDivElement | null = null;
-
-function createTimingDisplay() {
-  if (timingDisplay) return;
-
-  timingDisplay = document.createElement('div');
-  timingDisplay.style.cssText =
-    'text-align: center; font-weight: bold; margin-bottom: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 0.25rem; border: 1px solid #e9ecef; font-family: monospace;';
-
-  const container = document.querySelector('.matrices');
-  container?.parentElement?.insertBefore(timingDisplay, container);
-}
 
 function updateTimingDisplay(
   strategy: string,
   totalTime: number,
   kernelTime?: number,
 ) {
-  createTimingDisplay();
   if (!timingDisplay) return;
 
   timingDisplay.innerHTML = kernelTime !== undefined
@@ -235,27 +227,6 @@ function updateTimingDisplay(
     }ms
        </div>`
     : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
-}
-
-function showInitialResultMessage() {
-  resultTable.style.gridTemplateColumns = '1fr';
-  resultTable.innerHTML = `
-    <div style="
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      color: #666;
-      font-style: italic;
-      text-align: center;
-      min-height: 80px;
-      border: 2px dashed #ddd;
-      border-radius: 8px;
-      background-color: #f9f9f9;
-    ">
-      Press Compute to calculate the result
-    </div>
-  `;
 }
 
 function printMatrixToHtml(
@@ -308,6 +279,10 @@ function printMatrixToHtml(
   }
 }
 
+// #endregion
+
+// #region Example controls & Cleanup
+
 const paramSettings = { min: 1, max: 512, step: 1 };
 
 export const controls = {
@@ -326,9 +301,6 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.firstRowCount = value;
       generateMatrices();
-      if (!state.hasComputed) {
-        showInitialResultMessage();
-      }
     },
   },
   '#1 columns': {
@@ -337,9 +309,6 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.firstColumnCount = value;
       generateMatrices();
-      if (!state.hasComputed) {
-        showInitialResultMessage();
-      }
     },
   },
   '#2 columns': {
@@ -348,9 +317,6 @@ export const controls = {
     onSliderChange: (value: number) => {
       state.dimensions.secondColumnCount = value;
       generateMatrices();
-      if (!state.hasComputed) {
-        showInitialResultMessage();
-      }
     },
   },
 };
