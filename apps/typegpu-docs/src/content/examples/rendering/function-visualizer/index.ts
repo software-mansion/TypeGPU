@@ -135,7 +135,7 @@ const rawRenderBackgroundCode = /* wgsl */ `
 ) -> @builtin(position) vec4f {
   let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
   let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
-  let ratio = (rightTop.y - leftBot.y) / (rightTop.x - leftBot.x);
+  let canvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
 
   let transformedPoints = array(
     vec2f(leftBot.x, 0.0),
@@ -146,7 +146,7 @@ const rawRenderBackgroundCode = /* wgsl */ `
 
   let currentPoint = properties.inverseTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
   return vec4f(
-    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005 * ratio,
+    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005 / canvasRatio,
     currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
     currentPoint.zw
   );
@@ -252,8 +252,8 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 
   let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
   let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
-  let ratio = (rightTop.y - leftBot.y) / (rightTop.x - leftBot.x);
-  let adjustedOffset = vec2f(offset.x * ratio, offset.y);
+  let canvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
+  let adjustedOffset = vec2f(offset.x / canvasRatio, offset.y);
 
   return vec4f(lineVertices[currentVertex] + adjustedOffset, 0.0, 1.0);
 }
@@ -532,10 +532,10 @@ window.addEventListener('touchend', () => {
 const resizeObserver = new ResizeObserver(() => {
   const leftBot = std.mul(properties.transformation, d.vec4f(-1, -1, 0, 1));
   const rightTop = std.mul(properties.transformation, d.vec4f(1, 1, 0, 1));
-  let currentRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
-  let desiredRatio = canvas.clientWidth / canvas.clientHeight;
+  let currentCanvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
+  let desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
   const rescaleMatrix = mat4.scaling(
-    [desiredRatio / currentRatio, 1, 1],
+    [desiredCanvasRatio / currentCanvasRatio, 1, 1],
     d.mat4x4f(),
   );
   properties.transformation = std.mul(properties.transformation, rescaleMatrix);
