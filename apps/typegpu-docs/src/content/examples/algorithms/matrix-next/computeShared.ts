@@ -25,71 +25,75 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
     wid: d.builtin.workgroupId,
   },
 })((input) => {
-  const tileSize = d.u32(TILE_SIZE);
-  const numTiles =
-    (computeLayout.$.dimensions.firstColumnCount + tileSize - 1) /
-    tileSize;
-  const row = input.wid.x * tileSize + input.lid.x;
-  const col = input.wid.y * tileSize + input.lid.y;
+  const dimensions = computeLayout.$.dimensions;
+  const numTiles = (dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE;
 
-  let result = 0;
+  const globalRow = input.wid.x * TILE_SIZE + input.lid.x;
+  const globalCol = input.wid.y * TILE_SIZE + input.lid.y;
+  const localRow = input.lid.x;
+  const localCol = input.lid.y;
+  const tileIdx = getTileIndex(localRow, localCol);
 
-  for (let t = d.u32(0); t < numTiles; t++) {
-    const aCol = t * tileSize + input.lid.y;
+  let accumulatedResult = 0;
+
+  for (let tileIndex = d.u32(0); tileIndex < numTiles; tileIndex++) {
+    const matrixACol = tileIndex * TILE_SIZE + localCol;
+    let valueA = 0;
+
     if (
-      row < computeLayout.$.dimensions.firstRowCount &&
-      aCol < computeLayout.$.dimensions.firstColumnCount
+      globalRow < dimensions.firstRowCount &&
+      matrixACol < dimensions.firstColumnCount
     ) {
-      tileA.value[getTileIndex(input.lid.x, input.lid.y)] = computeLayout.$
-        .firstMatrix[
-          getIndex(
-            row,
-            aCol,
-            computeLayout.$.dimensions.firstColumnCount,
-          )
-        ];
-    } else {
-      tileA.value[getTileIndex(input.lid.x, input.lid.y)] = 0;
+      const indexA = getIndex(
+        globalRow,
+        matrixACol,
+        dimensions.firstColumnCount,
+      );
+      valueA = computeLayout.$.firstMatrix[indexA];
     }
+    tileA.value[tileIdx] = valueA;
 
-    const bRow = t * tileSize + input.lid.x;
+    const matrixBRow = tileIndex * TILE_SIZE + localRow;
+    let valueB = 0;
+
     if (
-      bRow < computeLayout.$.dimensions.firstColumnCount &&
-      col < computeLayout.$.dimensions.secondColumnCount
+      matrixBRow < dimensions.firstColumnCount &&
+      globalCol < dimensions.secondColumnCount
     ) {
-      tileB.value[getTileIndex(input.lid.x, input.lid.y)] = computeLayout.$
-        .secondMatrix[
-          getIndex(
-            bRow,
-            col,
-            computeLayout.$.dimensions.secondColumnCount,
-          )
-        ];
-    } else {
-      tileB.value[getTileIndex(input.lid.x, input.lid.y)] = 0;
+      const indexB = getIndex(
+        matrixBRow,
+        globalCol,
+        dimensions.secondColumnCount,
+      );
+      valueB = computeLayout.$.secondMatrix[indexB];
     }
+    tileB.value[tileIdx] = valueB;
 
     std.workgroupBarrier();
 
-    const kLimit = std.min(
-      tileSize,
-      computeLayout.$.dimensions.firstColumnCount - t * tileSize,
+    const effectiveTileSize = std.min(
+      TILE_SIZE,
+      dimensions.firstColumnCount - tileIndex * TILE_SIZE,
     );
-    for (let k = d.u32(0); k < kLimit; k++) {
-      result += tileA.value[getTileIndex(input.lid.x, k)] *
-        tileB.value[getTileIndex(k, input.lid.y)];
+
+    for (let k = d.u32(0); k < effectiveTileSize; k++) {
+      const tileA_element = tileA.value[getTileIndex(localRow, k)];
+      const tileB_element = tileB.value[getTileIndex(k, localCol)];
+      accumulatedResult += tileA_element * tileB_element;
     }
 
     std.workgroupBarrier();
   }
 
   if (
-    row < computeLayout.$.dimensions.firstRowCount &&
-    col < computeLayout.$.dimensions.secondColumnCount
+    globalRow < dimensions.firstRowCount &&
+    globalCol < dimensions.secondColumnCount
   ) {
-    computeLayout.$
-      .resultMatrix[
-        getIndex(row, col, computeLayout.$.dimensions.secondColumnCount)
-      ] = result;
+    const outputIndex = getIndex(
+      globalRow,
+      globalCol,
+      dimensions.secondColumnCount,
+    );
+    computeLayout.$.resultMatrix[outputIndex] = accumulatedResult;
   }
 });
