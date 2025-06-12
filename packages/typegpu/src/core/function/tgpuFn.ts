@@ -288,7 +288,7 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         innerFn.shell.returnType ?? UnknownData,
       ),
-    'call',
+    'tgpuFnCall',
     innerFn.shell.argTypes,
   );
 

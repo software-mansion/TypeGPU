@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createDualImpl } from '../../src/shared/generators.ts';
 import { getName } from '../../src/shared/meta.ts';
 
-describe('wgslGenerator', () => {
+describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
     const dual = createDualImpl(
       (a) => a,
