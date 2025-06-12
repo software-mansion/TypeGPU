@@ -532,8 +532,9 @@ window.addEventListener('touchend', () => {
 const resizeObserver = new ResizeObserver(() => {
   const leftBot = std.mul(properties.transformation, d.vec4f(-1, -1, 0, 1));
   const rightTop = std.mul(properties.transformation, d.vec4f(1, 1, 0, 1));
-  let currentCanvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
-  let desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
+  const currentCanvasRatio = (rightTop.x - leftBot.x) /
+    (rightTop.y - leftBot.y);
+  const desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
   const rescaleMatrix = mat4.scaling(
     [desiredCanvasRatio / currentCanvasRatio, 1, 1],
     d.mat4x4f(),
