@@ -21,7 +21,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const buffer = root.createBuffer(inputValueType).$usage('storage');
+const buffer = root.createBuffer(inputValueType, { in: Array.from({ length: 1024 }, (_, k) => k)} ).$usage('storage');
 const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
   inputArray: buffer,
 });
@@ -83,6 +83,14 @@ setTimeout(() => {
       storeOp: 'store',
     })
     .draw(3);
+
+    // read buffer
+  buffer.read().then((result) => {
+    console.log('Result:', result);
+  }
+  ).catch((error) => {
+    console.error('Error reading buffer:', error);
+  });
 }, 100);
 
 export function onCleanup() {
