@@ -6,7 +6,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
@@ -74,6 +74,7 @@ export interface TgpuComputeFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
   ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuComputeFnShellHeader<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -148,6 +149,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
+    [$internal]: true;
     [$getNameForward]: FnCore;
   };
 
@@ -162,6 +164,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
