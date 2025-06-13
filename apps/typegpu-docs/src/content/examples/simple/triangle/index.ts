@@ -1,5 +1,8 @@
 import { computeShader } from '@typegpu/concurrent-sum';
-import { dataBindGroupLayout, inputValueType } from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
+import {
+  dataBindGroupLayout,
+  inputValueType,
+} from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -22,10 +25,6 @@ const buffer = root.createBuffer(inputValueType).$usage('storage');
 const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
   inputArray: buffer,
 });
-
-
-
-
 
 const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)(
   /* wgsl */ `(ratio: f32) -> vec4f {
@@ -64,7 +63,6 @@ const computePipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
   .$name('compute');
-
 
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})

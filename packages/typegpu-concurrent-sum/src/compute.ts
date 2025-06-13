@@ -12,34 +12,40 @@ export const computeShader = tgpu['~unstable'].computeFn({
   workgroupSize: [workGroupSize],
 })((input) => {
   const threadId = input.in.x;
-  let sum = d.f32(0);
-  const length = d.f32(1024);
-  // Up-sweep phase
-  for (let i = 0; i < d.u32(std.log2(length)); i++) {
-    sum = std.add(sum, sum + 1);
-    const step = d.u32(std.exp2(d.f32(i + 1)));
-    for (let j = 0; j < length; j += step) {
-        const leftIdx = d.u32(j + d.u32(std.exp2(d.f32(i))) - 1);
-        const rightIdx = d.u32(j + d.u32(step) - 1);
-        inputArray.value.in[rightIdx] = (inputArray.value.in[leftIdx] as number) + (inputArray.value.in[rightIdx] as number);
-      }
-      std.workgroupBarrier();
+  const length = d.u32(1024);
+
+  // Up sweep phase
+  for (let dLevel = 0; dLevel < d.u32(std.log2(d.f32(length))); dLevel++) {
+    const step = d.u32(std.exp2(d.f32(dLevel + 1)));
+    const offset = d.u32(std.exp2(d.f32(dLevel)));
+
+    for (let i = threadId * step; i < length; i += workGroupSize * step) {
+      const leftIdx = i + offset - 1;
+      const rightIdx = i + step - 1;
+
+      inputArray.value.in[rightIdx] = (inputArray.value.in[leftIdx] as number) +
+        (inputArray.value.in[rightIdx] as number);
     }
-    // Down-sweep phase
-    inputArray.value.in[d.u32(length - 1)] = 0;
-
-    for (let i = d.u32(std.log2(length) - 1); i >= 0; i--) {
-      const step = d.u32(std.exp2(d.f32(i + 1)));
-      for (let j = 0; j < length; j += step) {
-        const leftIdx = d.u32(j + std.ceil(std.exp2(d.f32(i))) - 1);
-        const rightIdx = d.u32(leftIdx + d.u32(step) - 1);
-
-        const temp = inputArray.value.in[leftIdx] as number;
-        inputArray.value.in[leftIdx] = (inputArray.value.in[rightIdx] as number);
-        inputArray.value.in[rightIdx] = temp + (inputArray.value.in[rightIdx] as number);
-      }
-      std.workgroupBarrier();
-
-    }
+    std.workgroupBarrier();
   }
-);
+
+  // Down sweep phase
+  inputArray.value.in[length - 1] = 0;
+  std.workgroupBarrier();
+
+  for (let dLevel = d.u32(std.log2(d.f32(length))) - 1; dLevel >= 0; dLevel--) {
+    const step = d.u32(std.exp2(d.f32(dLevel + 1)));
+    const offset = d.u32(std.exp2(d.f32(dLevel)));
+
+    for (let i = threadId * step; i < length; i += workGroupSize * step) {
+      const leftIdx = i + offset - 1;
+      const rightIdx = i + step - 1;
+
+      const temp = inputArray.value.in[leftIdx] as number;
+      inputArray.value.in[leftIdx] = inputArray.value.in[rightIdx] as number;
+      inputArray.value.in[rightIdx] = temp +
+        (inputArray.value.in[rightIdx] as number);
+    }
+    std.workgroupBarrier();
+  }
+});
