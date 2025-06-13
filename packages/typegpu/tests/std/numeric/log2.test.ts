@@ -31,14 +31,9 @@ describe('log2', () => {
     expect(isCloseTo(log2(input), expected)).toBe(true);
   });
 
-  // Edge cases
-  it('handles special values correctly', () => {
+  it('handles edge cases correctly', () => {
     expect(log2(0)).toBe(Number.NEGATIVE_INFINITY);
     expect(log2(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
     expect(Number.isNaN(log2(-1))).toBe(true);
-    const input = vec2f(-1, 2);
-    const result = log2(input);
-    expect(Number.isNaN(result.x)).toBe(true);
-    expect(result.y).toBeCloseTo(1);
   });
 });

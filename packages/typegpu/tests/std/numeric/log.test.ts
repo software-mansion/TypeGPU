@@ -32,11 +32,9 @@ describe('log', () => {
     expect(isCloseTo(log(input), expected)).toBe(true);
   });
 
-  // Edge cases
-  it('handles special values correctly', () => {
-    // small positive values -> log approaches negative infinity
-    expect(log(1e-10)).toBeCloseTo(Math.log(1e-10));
-    // large values
-    expect(log(1e10)).toBeCloseTo(Math.log(1e10));
+  it('handles edge cases correctly', () => {
+    expect(log(0)).toBe(Number.NEGATIVE_INFINITY);
+    expect(log(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+    expect(Number.isNaN(log(-1))).toBe(true);
   });
 });
