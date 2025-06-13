@@ -2,7 +2,7 @@ import { computeShader } from '@typegpu/concurrent-sum';
 import {
   dataBindGroupLayout,
   inputValueType,
-} from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
+} from '../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
 import tgpu from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -24,6 +24,8 @@ const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
   inputArray: buffer,
 });
 
+console.log('Buffer created:', buffer.initial?.in);
+
 const computePipeline = root['~unstable']
   .withCompute(computeShader)
   .createPipeline()
@@ -35,7 +37,6 @@ setTimeout(() => {
     .dispatchWorkgroups(1);
   console.log('Compute shader dispatched');
 
-  // read buffer
   buffer.read().then((result) => {
     console.log('Result:', result);
   }).catch((error) => {
