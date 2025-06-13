@@ -1,6 +1,6 @@
 import { computeShader } from '@typegpu/concurrent-sum';
 import { dataBindGroupLayout, inputValueType } from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
-import tgpu, { type TgpuComputeFn } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -61,7 +61,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 `.$uses({ getGradientColor });
 
 const computePipeline = root['~unstable']
-  .withCompute(computeShader as unknown as TgpuComputeFn)
+  .withCompute(computeShader)
   .createPipeline()
   .$name('compute');
 

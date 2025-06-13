@@ -1,2 +1,1 @@
-
-export * as computeShader from './compute.ts';
+export * from './compute.ts';
