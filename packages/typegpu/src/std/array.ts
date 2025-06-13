@@ -18,5 +18,6 @@ export const arrayLength = createDualImpl(
     }
     return snip(`arrayLength(${a.value})`, u32);
   },
+  'arrayLength',
   (a) => [ptrFn(a.dataType as AnyWgslData)],
 );
