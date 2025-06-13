@@ -1,3 +1,8 @@
+import {
+  INTERNAL_createQuerySet,
+  isQuerySet,
+  type TgpuQuerySet,
+} from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
@@ -243,6 +248,10 @@ class TgpuRootImpl extends WithBindingImpl
     return this._commandEncoder;
   }
 
+  get enabledFeatures() {
+    return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
@@ -279,6 +288,14 @@ class TgpuRootImpl extends WithBindingImpl
       .as('readonly') as
         & TgpuBufferReadonly<TData>
         & TgpuFixedBufferUsage<TData>;
+  }
+
+  createQuerySet<T extends GPUQueryType>(
+    type: T,
+    count: number,
+    rawQuerySet?: GPUQuerySet,
+  ): TgpuQuerySet<T> {
+    return INTERNAL_createQuerySet(this, type, count, rawQuerySet);
   }
 
   createBindGroup<
@@ -357,6 +374,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
+  unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -371,7 +389,8 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuSampledTexture
       | TgpuVertexLayout
       | TgpuSampler
-      | TgpuComparisonSampler,
+      | TgpuComparisonSampler
+      | TgpuQuerySet<GPUQueryType>,
   ):
     | GPUComputePipeline
     | GPURenderPipeline
@@ -381,7 +400,8 @@ class TgpuRootImpl extends WithBindingImpl
     | GPUTexture
     | GPUTextureView
     | GPUVertexBufferLayout
-    | GPUSampler {
+    | GPUSampler
+    | GPUQuerySet {
     if (isComputePipeline(resource)) {
       return resource[$internal].rawPipeline;
     }
@@ -436,6 +456,10 @@ class TgpuRootImpl extends WithBindingImpl
         return resource[$internal].unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out comparison sampler.');
+    }
+
+    if (isQuerySet(resource)) {
+      return resource.querySet;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
@@ -609,7 +633,9 @@ class TgpuRootImpl extends WithBindingImpl
  */
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
-  device?: GPUDeviceDescriptor | undefined;
+  device?:
+    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
+    | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
@@ -661,8 +687,30 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     throw new Error('Could not find a compatible GPU');
   }
 
+  const availableFeatures: GPUFeatureName[] = [];
+  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+    if (!adapter.features.has(feature)) {
+      throw new Error(
+        `Requested feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+    availableFeatures.push(feature);
+  }
+  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+    if (adapter.features.has(feature)) {
+      availableFeatures.push(feature);
+    } else {
+      console.warn(
+        `Optional feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+  }
+
   return new TgpuRootImpl(
-    await adapter.requestDevice(deviceOpt),
+    await adapter.requestDevice({
+      ...deviceOpt,
+      requiredFeatures: availableFeatures,
+    }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
     true,
