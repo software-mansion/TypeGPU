@@ -1,9 +1,9 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { dataBindGroupLayout } from './schemas.ts';
+import { dataBindGroupLayout, fixedArrayLength } from './schemas.ts';
 
-export const workGroupSize = 256;
+export const workGroupSize = fixedArrayLength;
 
 const { inputArray } = dataBindGroupLayout.bound;
 
@@ -12,7 +12,7 @@ export const computeShader = tgpu['~unstable'].computeFn({
   workgroupSize: [workGroupSize],
 })((input) => {
   const threadId = input.in.x;
-  const length = d.u32(1024);
+  const length = d.u32(fixedArrayLength);
   const log2Length = d.i32(std.log2(d.f32(length)));
 
   // Up-sweep phase

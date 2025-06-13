@@ -1,8 +1,9 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
+export const fixedArrayLength = 256;
 export const inputValueType = d.struct({
-  in: d.arrayOf(d.f32, 1024),
+  in: d.arrayOf(d.f32, fixedArrayLength),
 })
   .$name('inArray');
 
