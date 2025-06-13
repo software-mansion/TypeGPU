@@ -1,5 +1,4 @@
 import { createDualImpl } from '../shared/generators.ts';
-import { setName } from '../shared/meta.ts';
 import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
@@ -63,7 +62,6 @@ function createMatSchema<
     rotationY: options.columns === 4 ? rotationY4 : undefined,
     rotationZ: options.columns === 4 ? rotationZ4 : undefined,
   } as unknown as AnyWgslData;
-  setName(MatSchema, options.type);
 
   const construct = createDualImpl(
     // CPU implementation
@@ -101,6 +99,7 @@ function createMatSchema<
         `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
         MatSchema,
       ),
+    MatSchema.type,
   );
 
   return Object.assign(construct, MatSchema) as unknown as {
@@ -173,7 +172,6 @@ abstract class mat2x2Impl<TColumn extends v2f>
     })`;
   }
 }
-
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   public readonly kind = 'mat2x2f';
 
@@ -532,6 +530,7 @@ export const identity2 = createDualImpl(
     )`,
     dataType: mat2x2f,
   }),
+  'identity2',
 );
 
 /**
@@ -550,6 +549,7 @@ export const identity3 = createDualImpl(
     )`,
     dataType: mat3x3f,
   }),
+  'identity3',
 );
 
 /**
@@ -569,6 +569,7 @@ export const identity4 = createDualImpl(
     )`,
     dataType: mat4x4f,
   }),
+  'identity4',
 );
 
 const identityFunctions = {
@@ -602,6 +603,7 @@ export const translation4 = createDualImpl(
       )`,
     dataType: mat4x4f,
   }),
+  'translation4',
 );
 
 /**
@@ -629,6 +631,7 @@ export const scaling4 = createDualImpl(
       )`,
     dataType: mat4x4f,
   }),
+  'scaling4',
 );
 
 /**
@@ -657,6 +660,7 @@ export const rotationX4 = createDualImpl(
       )`,
       mat4x4f,
     ),
+  'rotationX4',
 );
 
 /**
@@ -685,6 +689,7 @@ export const rotationY4 = createDualImpl(
       )`,
       mat4x4f,
     ),
+  'rotationY4',
 );
 
 /**
@@ -713,6 +718,7 @@ export const rotationZ4 = createDualImpl(
       )`,
       mat4x4f,
     ),
+  'rotationZ4',
 );
 
 // ----------
