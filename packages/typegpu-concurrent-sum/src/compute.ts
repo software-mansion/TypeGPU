@@ -26,7 +26,7 @@ export const computeShader = tgpu['~unstable'].computeFn({
         const leftIdx = i + offset - 1;
         const rightIdx = i + step - 1;
 
-        inputArray.value.in[rightIdx] = 
+        inputArray.value.in[rightIdx] =
           (inputArray.value.in[leftIdx] as number) +
           (inputArray.value.in[rightIdx] as number);
       }
@@ -46,7 +46,8 @@ export const computeShader = tgpu['~unstable'].computeFn({
 
         const temp = inputArray.value.in[leftIdx] as number;
         inputArray.value.in[leftIdx] = inputArray.value.in[rightIdx] as number;
-        inputArray.value.in[rightIdx] = temp + (inputArray.value.in[rightIdx] as number);
+        inputArray.value.in[rightIdx] = temp +
+          (inputArray.value.in[rightIdx] as number);
       }
     }
   }

@@ -1,8 +1,3 @@
-import { computeShader } from '@typegpu/concurrent-sum';
-import {
-  dataBindGroupLayout,
-  inputValueType,
-} from './../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -19,11 +14,6 @@ context.configure({
   device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
-});
-
-const buffer = root.createBuffer(inputValueType, { in: Array.from({ length: 1024 }, (_, k) => k)} ).$usage('storage');
-const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
-  inputArray: buffer,
 });
 
 const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)(
@@ -59,22 +49,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 }
 `.$uses({ getGradientColor });
 
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline()
-  .$name('compute');
-
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
 setTimeout(() => {
-  computePipeline
-    .with(dataBindGroupLayout, fooBindGroup)
-    .dispatchWorkgroups(1);
-  console.log('Compute shader dispatched');
-
   pipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -83,14 +63,6 @@ setTimeout(() => {
       storeOp: 'store',
     })
     .draw(3);
-
-    // read buffer
-  buffer.read().then((result) => {
-    console.log('Result:', result);
-  }
-  ).catch((error) => {
-    console.error('Error reading buffer:', error);
-  });
 }, 100);
 
 export function onCleanup() {
