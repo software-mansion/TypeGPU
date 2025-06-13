@@ -477,6 +477,7 @@ export const log = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`log(${value.value})`, value.dataType),
+  'log',
 );
 
 /**
@@ -493,6 +494,7 @@ export const log2 = createDualImpl(
   },
   // GPU implementation
   (value) => snip(`log2(${value.value})`, value.dataType),
+  'log2',
 );
 
 /**
