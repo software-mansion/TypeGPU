@@ -3,13 +3,24 @@ import * as d from 'typegpu/data';
 
 const SIZE = 28;
 
-const root = await tgpu.init();
-const device = root.device;
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) {
+  throw new Error('No adapter found');
+}
+
+const hasSubgroups = adapter.features.has('subgroups');
+console.debug(`Subgroups supported: ${hasSubgroups}`);
+
+const device = await adapter.requestDevice({
+  requiredFeatures: hasSubgroups ? ['subgroups' as GPUFeatureName] : [],
+});
+const root = tgpu.initFromDevice({ device });
+
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
 // Shader code
 
-const layerShader = `
+const fallbackShader = `
   @binding(0) @group(0) var<storage, read> input: array<f32>;
   @binding(1) @group(0) var<storage, read_write> output: array<f32>;
 
@@ -33,8 +44,62 @@ const layerShader = `
       sum = sum + input[j] * weights[weightsOffset + j];
     }
 
-    sum = sum + biases[i];
-    output[i] = relu(sum);
+    let total = sum + biases[i];
+    output[i] = relu(total);
+  }
+`;
+
+const subgroupShader = `
+  enable subgroups;
+
+  @binding(0) @group(0) var<storage, read> input: array<f32>;
+  @binding(1) @group(0) var<storage, read_write> output: array<f32>;
+
+  @binding(0) @group(1) var<storage, read> weights: array<f32>;
+  @binding(1) @group(1) var<storage, read> biases: array<f32>;
+
+  fn relu(x: f32) -> f32 {
+    return max(0.0, x);
+  }
+
+  // WebGPU guarantees a subgroup size of at least 4
+  var<workgroup> subgroupSums: array<f32, 64 / 4>;
+
+  @compute @workgroup_size(64)
+  fn main(
+      @builtin(local_invocation_id) lid: vec3u,
+      @builtin(workgroup_id) wid: vec3u,
+      @builtin(subgroup_invocation_id) sid: u32,
+      @builtin(subgroup_size) ssize: u32
+  ) {
+      let neuronIndex = wid.x;
+      let inputSize = arrayLength(&input);
+      let weightsOffset = neuronIndex * inputSize;
+
+      var partial: f32 = 0.0;
+      for (var j = lid.x; j < inputSize; j = j + 64) {
+        partial = partial + input[j] * weights[weightsOffset + j];
+      }
+
+      let subgroupSum = subgroupAdd(partial);
+      let subgroupId = lid.x / ssize;
+
+      let numSubgroups = 64 / ssize;
+
+      if (sid == 0u) {
+        subgroupSums[subgroupId] = subgroupSum;
+      }
+
+      workgroupBarrier();
+
+      var total: f32 = 0.0;
+      if (lid.x == 0u) {
+        for (var i = 0u; i < numSubgroups; i = i + 1u) {
+          total = total + subgroupSums[i];
+        }
+        total = total + biases[neuronIndex];
+        output[neuronIndex] = relu(total);
+      }
   }
 `;
 
@@ -64,7 +129,7 @@ const pipeline = device.createComputePipeline({
   }),
   compute: {
     module: device.createShaderModule({
-      code: layerShader,
+      code: hasSubgroups ? subgroupShader : fallbackShader,
     }),
   },
 });
