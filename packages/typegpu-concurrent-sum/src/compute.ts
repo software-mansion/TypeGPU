@@ -13,44 +13,48 @@ export const computeShader = tgpu['~unstable'].computeFn({
 })((input) => {
   const threadId = input.in.x;
   const length = d.u32(1024);
-
   const log2Length = d.i32(std.log2(d.f32(length)));
 
-  if (threadId === 0) {
-    // === Up-sweep ===
-    for (let dLevel = 0; dLevel < log2Length; dLevel++) {
-      const step = d.u32(std.exp2(d.f32(dLevel + 1)));
-      const offset = d.u32(std.exp2(d.f32(dLevel)));
+  // Up-sweep phase
+  for (let dLevel = 0; dLevel < log2Length; dLevel++) {
+    const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
+    const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-      for (let i = 0; i < length; i += step) {
-        const leftIdx = i + offset - 1;
-        const rightIdx = i + step - 1;
+    if (threadId < length / windowSize) {
+      const i = threadId * windowSize;
+      const leftIdx = i + offset - 1;
+      const rightIdx = i + windowSize - 1;
 
-        inputArray.value.in[rightIdx] =
-          (inputArray.value.in[leftIdx] as number) +
-          (inputArray.value.in[rightIdx] as number);
-      }
+      inputArray.value.in[rightIdx] = (inputArray.value.in[leftIdx] as number) +
+        (inputArray.value.in[rightIdx] as number);
     }
 
-    // === Down-sweep ===
-    inputArray.value.in[length - 1] = 0;
-
-    for (let k = 0; k < log2Length; k++) {
-      const dLevel = log2Length - 1 - k;
-      const step = d.u32(std.exp2(d.f32(dLevel + 1)));
-      const offset = d.u32(std.exp2(d.f32(dLevel)));
-
-      for (let i = 0; i < length; i += step) {
-        const leftIdx = i + offset - 1;
-        const rightIdx = i + step - 1;
-
-        const temp = inputArray.value.in[leftIdx] as number;
-        inputArray.value.in[leftIdx] = inputArray.value.in[rightIdx] as number;
-        inputArray.value.in[rightIdx] = temp +
-          (inputArray.value.in[rightIdx] as number);
-      }
-    }
+    std.workgroupBarrier();
   }
 
+  if (threadId === 0) {
+    inputArray.value.in[length - 1] = 0;
+  }
+  std.workgroupBarrier();
+
+  // Down-sweep phase
+  for (let k = 0; k < log2Length; k++) {
+    const dLevel = log2Length - 1 - k;
+    const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
+    const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
+
+    if (threadId < length / windowSize) {
+      const i = threadId * windowSize;
+      const leftIdx = i + offset - 1;
+      const rightIdx = i + windowSize - 1;
+
+      const temp = inputArray.value.in[leftIdx] as number;
+      inputArray.value.in[leftIdx] = inputArray.value.in[rightIdx] as number;
+      inputArray.value.in[rightIdx] = temp +
+        (inputArray.value.in[rightIdx] as number);
+    }
+
+    std.workgroupBarrier();
+  }
   std.workgroupBarrier();
 });
