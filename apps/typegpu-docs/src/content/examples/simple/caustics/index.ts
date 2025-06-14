@@ -21,17 +21,8 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 })(({ vertexIndex }) => {
-  const pos = [
-    d.vec2f(0.0, 0.5),
-    d.vec2f(-0.5, -0.5),
-    d.vec2f(0.5, -0.5),
-  ];
-
-  const uv = [
-    d.vec2f(0.5, 1.0),
-    d.vec2f(0.0, 0.0),
-    d.vec2f(1.0, 0.0),
-  ];
+  const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+  const uv = [d.vec2f(0.5, 1.0), d.vec2f(0.0, 0.0), d.vec2f(1.0, 0.0)];
 
   return {
     outPos: d.vec4f(pos[vertexIndex], 0.0, 1.0),
@@ -46,18 +37,17 @@ const tilePattern = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
   return tile;
 });
 
-const caustics = tgpu['~unstable'].fn(
-  [d.vec2f, d.f32, d.vec3f, d.vec3f],
-  d.vec3f,
-)((uv, time, profile, color) => {
-  const uv2 = std.add(
-    uv,
-    perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2)),
-  );
-  const uv3 = std.mul(uv2, 5);
-  const noise = 1 - std.abs(perlin3d.sample(d.vec3f(uv3, time)));
-  return std.mul(std.pow(d.vec3f(noise), profile), color);
-});
+const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
+  (uv, time, profile) => {
+    const uv2 = std.add(
+      uv,
+      perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2)),
+    );
+    const uv3 = std.mul(uv2, 5);
+    const noise = 1 - std.abs(perlin3d.sample(d.vec3f(uv3, time)));
+    return std.pow(d.vec3f(noise), profile);
+  },
+);
 
 /** Controls the angle of rotation for the pool tile texture */
 const angle = 0.2;
@@ -89,17 +79,15 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
     std.pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1,
   );
   // Generating two layers of caustics (large scale, and small scale)
-  const c1 = caustics(
-    cuv,
-    time * 0.2,
-    /* profile */ d.vec3f(4, 4, 1),
-    /* color */ d.vec3f(0.3, 0.5, 1),
+  const c1 = std.mul(
+    caustics(cuv, time * 0.2, /* profile */ d.vec3f(4, 4, 1)),
+    // Tinting
+    d.vec3f(0.3, 0.5, 1),
   );
-  const c2 = caustics(
-    std.mul(cuv, 2),
-    time * 0.4,
-    /* profile */ d.vec3f(16, 1, 4),
-    /* color */ d.vec3f(0.18, 0.3, 0.3),
+  const c2 = std.mul(
+    caustics(std.mul(cuv, 2), time * 0.4, /* profile */ d.vec3f(16, 1, 4)),
+    // Tinting
+    d.vec3f(0.18, 0.3, 0.3),
   );
 
   const noFogColor = d.vec3f(std.mul(albedo, std.add(c1, c2)));
@@ -115,7 +103,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 function draw() {
-  timeUniform.write((performance.now()) * 0.001 % 1000);
+  timeUniform.write((performance.now() * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
