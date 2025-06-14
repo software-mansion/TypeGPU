@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { abs, add, clamp, cos, fract, max, min, mix, mul, pow, sin, sub } from 'typegpu/std';
+import * as std from 'typegpu/std';
 import { perlin3d } from '@typegpu/noise';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -24,14 +24,8 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   const pos = [
     d.vec2f(0.0, 0.5),
     d.vec2f(-0.5, -0.5),
-    d.vec2f(0.5, -0.5)
+    d.vec2f(0.5, -0.5),
   ];
-
-  const time = timeUniform.value;
-  const outPos = pos[vertexIndex];
-  const right = d.vec3f(sin(time), 0, cos(time));
-  // const forward = d.vec3f(cos(time), 0, -sin(time));
-  const outPos2 = add(mul(right, outPos.x), d.vec3f(0, outPos.y, 0.5));
 
   const uv = [
     d.vec2f(0.5, 1.0),
@@ -40,45 +34,79 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   ];
 
   return {
-    outPos: d.vec4f(outPos, 0.0, 1.0),
+    outPos: d.vec4f(pos[vertexIndex], 0.0, 1.0),
     uv: uv[vertexIndex],
   };
 });
 
-const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32], d.f32)((uv, time) => {
-  const uv2 = add(uv, perlin3d.sample(d.vec3f(mul(uv, 0.5), time * 0.2)));
-  const uv3 = mul(uv2, 5);
-  const noise = 1 - abs(perlin3d.sample(d.vec3f(uv3, time)));
-  return noise;
+const tilePattern = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
+  const prox = std.abs(std.sub(std.mul(std.sub(1, std.fract(uv)), 2), 1));
+  const maxProx = std.max(prox.x, prox.y);
+  const tile = std.clamp(std.pow(1 - maxProx, 0.6) * 5, 0, 1);
+  return tile;
 });
+
+const caustics = tgpu['~unstable'].fn(
+  [d.vec2f, d.f32, d.vec3f, d.vec3f],
+  d.vec3f,
+)((uv, time, profile, color) => {
+  const uv2 = std.add(
+    uv,
+    perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2)),
+  );
+  const uv3 = std.mul(uv2, 5);
+  const noise = 1 - std.abs(perlin3d.sample(d.vec3f(uv3, time)));
+  return std.mul(std.pow(d.vec3f(noise), profile), color);
+});
+
+/** Controls the angle of rotation for the pool tile texture */
+const angle = 0.2;
+/** The bigger the number, the denser the pool tile texture is */
+const tileDensity = 10;
+const fogColor = d.vec3f(0.05, 0.2, 0.7);
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const angle = 0.2;
-  const right = d.vec2f(cos(angle), sin(angle));
-  const up = d.vec2f(-sin(angle) * 10 + uv.x * 3, cos(angle) * 5);
-  const ruv = add(mul(right, uv.x), mul(up, uv.y));
-  const tileUv = fract(add(mul(ruv, 10), d.vec2f(0.5, 0.5)));
-  const prox = abs(sub(mul(sub(1, tileUv), 2), 1));
-  const maxProx = max(prox.x, prox.y);
-  const tile = clamp(pow(1 - maxProx, 0.6) * 5, 0, 1);
-  const albedo = mix(d.vec3f(0.1), d.vec3f(1), tile);
+  const time = timeUniform.value;
 
-  const cuv = d.vec2f(uv.x * (pow(uv.y * 1.5, 3) + 0.1) * 5, pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1);
-  const c1 = caustics(cuv, timeUniform.value * 0.2);
-  const c2 = caustics(mul(cuv, 2), timeUniform.value * 0.4);
-  let caustics1 = d.vec3f(pow(c1, 4) * 0.3, pow(c1, 4) * 0.5, c1);
-  let caustics2 = d.vec3f(pow(c2, 16) * 0.3, c2 * 0.5, pow(c2, 4) * 0.5);
-  caustics1 = mul(caustics1, 1);
-  caustics2 = mul(caustics2, 0.6);
+  /**
+   * A transformation matrix that skews the perspective a bit
+   * when applied to UV coordinates
+   */
+  const skewMat = d.mat2x2f(
+    d.vec2f(std.cos(angle), std.sin(angle)),
+    d.vec2f(-std.sin(angle) * 10 + uv.x * 3, std.cos(angle) * 5),
+  );
+  const skewedUv = std.mul(skewMat, uv);
+  const tile = tilePattern(std.mul(skewedUv, tileDensity));
+  const albedo = std.mix(d.vec3f(0.1), d.vec3f(1), tile);
 
-  const noFogColor = d.vec3f(mul(albedo, add(caustics1, caustics2)));
-  const fogColor = d.vec3f(0.05, 0.2, 0.7);
-  const fog = min(pow(uv.y, 0.5) * 1.2, 1);
+  // Transforming coordinates to simulate perspective squash
+  const cuv = d.vec2f(
+    uv.x * (std.pow(uv.y * 1.5, 3) + 0.1) * 5,
+    std.pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1,
+  );
+  // Generating two layers of caustics (large scale, and small scale)
+  const c1 = caustics(
+    cuv,
+    time * 0.2,
+    /* profile */ d.vec3f(4, 4, 1),
+    /* color */ d.vec3f(0.3, 0.5, 1),
+  );
+  const c2 = caustics(
+    std.mul(cuv, 2),
+    time * 0.4,
+    /* profile */ d.vec3f(16, 1, 4),
+    /* color */ d.vec3f(0.18, 0.3, 0.3),
+  );
 
-  return d.vec4f(mix(noFogColor, fogColor, fog), 1);
+  const noFogColor = d.vec3f(std.mul(albedo, std.add(c1, c2)));
+  // Fog blending factor, based on the height of the pixels
+  const fog = std.min(std.pow(uv.y, 0.5) * 1.2, 1);
+
+  return d.vec4f(std.mix(noFogColor, fogColor, fog), 1);
 });
 
 const pipeline = root['~unstable']
