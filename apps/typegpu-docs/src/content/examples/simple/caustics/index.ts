@@ -15,37 +15,39 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const timeUniform = root['~unstable'].createUniform(d.f32, Date.now() * 0.001);
+const timeUniform = root['~unstable'].createUniform(d.f32);
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position, uv: d.vec2f },
+  out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ vertexIndex }) => {
   const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
   const uv = [d.vec2f(0.5, 1.0), d.vec2f(0.0, 0.0), d.vec2f(1.0, 0.0)];
 
   return {
-    outPos: d.vec4f(pos[vertexIndex], 0.0, 1.0),
+    pos: d.vec4f(pos[vertexIndex], 0.0, 1.0),
     uv: uv[vertexIndex],
   };
 });
 
+/**
+ * Given a coordinate, it returns a grayscale floor tile pattern at that
+ * location.
+ */
 const tilePattern = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
-  const prox = std.abs(std.sub(std.mul(std.sub(1, std.fract(uv)), 2), 1));
-  const maxProx = std.max(prox.x, prox.y);
-  const tile = std.clamp(std.pow(1 - maxProx, 0.6) * 5, 0, 1);
-  return tile;
+  const tiledUv = std.fract(uv);
+  const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
+  const maxProximity = std.max(proximity.x, proximity.y);
+  return std.clamp(std.pow(1 - maxProximity, 0.6) * 5, 0, 1);
 });
 
 const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
   (uv, time, profile) => {
-    const uv2 = std.add(
-      uv,
-      perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2)),
-    );
-    const uv3 = std.mul(uv2, 5);
-    const noise = 1 - std.abs(perlin3d.sample(d.vec3f(uv3, time)));
-    return std.pow(d.vec3f(noise), profile);
+    const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
+    // Distorting UV coordinates
+    const uv2 = std.add(uv, distortion);
+    const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
+    return std.pow(d.vec3f(1 - noise), profile);
   },
 );
 
@@ -53,6 +55,7 @@ const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
 const angle = 0.2;
 /** The bigger the number, the denser the pool tile texture is */
 const tileDensity = 10;
+/** The scene fades into this color at a distance */
 const fogColor = d.vec3f(0.05, 0.2, 0.7);
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
