@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { abs, add, clamp, cos, fract, max, mix, mul, pow, sin, sub } from 'typegpu/std';
+import { abs, add, clamp, cos, fract, max, min, mix, mul, pow, sin, sub } from 'typegpu/std';
 import { perlin3d } from '@typegpu/noise';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -46,9 +46,9 @@ const mainVertex = tgpu['~unstable'].vertexFn({
 });
 
 const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32], d.f32)((uv, time) => {
-  const uv2 = add(uv, perlin3d.sample(d.vec3f(mul(uv, 1), time * 0.2)));
-  const uv3 = mul(uv2, 1);
-  const noise = 1 - abs(perlin3d.sample(d.vec3f(mul(uv3, 10), time)));
+  const uv2 = add(uv, perlin3d.sample(d.vec3f(mul(uv, 0.5), time * 0.2)));
+  const uv3 = mul(uv2, 5);
+  const noise = 1 - abs(perlin3d.sample(d.vec3f(uv3, time)));
   return noise;
 });
 
@@ -56,26 +56,29 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const big = perlin3d.sample(d.vec3f(timeUniform.value * 0.1)) * 0.1;
-  const angle = 0.2 + big;
+  const angle = 0.2;
   const right = d.vec2f(cos(angle), sin(angle));
   const up = d.vec2f(-sin(angle) * 10 + uv.x * 3, cos(angle) * 5);
   const ruv = add(mul(right, uv.x), mul(up, uv.y));
-  const tileUv = fract(add(mul(ruv, 5), d.vec2f(0.5, 0.5)));
+  const tileUv = fract(add(mul(ruv, 10), d.vec2f(0.5, 0.5)));
   const prox = abs(sub(mul(sub(1, tileUv), 2), 1));
   const maxProx = max(prox.x, prox.y);
   const tile = clamp(pow(1 - maxProx, 0.6) * 5, 0, 1);
   const albedo = mix(d.vec3f(0.1), d.vec3f(1), tile);
 
-  const cuv = d.vec2f(uv.x, uv.y * 2);
+  const cuv = d.vec2f(uv.x * (pow(uv.y * 1.5, 3) + 0.1) * 5, pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1);
   const c1 = caustics(cuv, timeUniform.value * 0.2);
-  const c2 = caustics(mul(cuv, 2), timeUniform.value * 0.7);
+  const c2 = caustics(mul(cuv, 2), timeUniform.value * 0.4);
   let caustics1 = d.vec3f(pow(c1, 4) * 0.3, pow(c1, 4) * 0.5, c1);
   let caustics2 = d.vec3f(pow(c2, 16) * 0.3, c2 * 0.5, pow(c2, 4) * 0.5);
   caustics1 = mul(caustics1, 1);
   caustics2 = mul(caustics2, 0.6);
 
-  return d.vec4f(mul(albedo, add(caustics1, caustics2)), 1);
+  const noFogColor = d.vec3f(mul(albedo, add(caustics1, caustics2)));
+  const fogColor = d.vec3f(0.05, 0.2, 0.7);
+  const fog = min(pow(uv.y, 0.5) * 1.2, 1);
+
+  return d.vec4f(mix(noFogColor, fogColor, fog), 1);
 });
 
 const pipeline = root['~unstable']
