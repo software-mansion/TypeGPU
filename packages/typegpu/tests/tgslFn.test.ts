@@ -212,6 +212,18 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toBe(expected);
   });
 
+  it('throws when empty object is passed to vertexFn', () => {
+    expect(() =>
+      tgpu['~unstable']
+        .vertexFn({
+          in: { vi: builtin.vertexIndex },
+          out: {},
+        })
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: A vertexFn's shell output cannot be empty since must include the 'position' builtin.]`,
+    );
+  });
+
   it('allows destructuring the input argument in vertexFn', () => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({

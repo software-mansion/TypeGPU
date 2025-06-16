@@ -3,7 +3,12 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
+import type {
+  Decorated,
+  Interpolate,
+  Location,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -21,7 +26,11 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import {
+  createIoSchema,
+  type IOLayoutToSchema,
+  type WithLocations,
+} from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -46,7 +55,7 @@ type TgpuVertexFnShellHeader<
   VertexOut extends VertexOutConstrained,
 > = {
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut> | undefined;
+  readonly returnType: IOLayoutToSchema<VertexOut>;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
@@ -132,12 +141,14 @@ export function vertexFn<
   in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
+  if (Object.keys(options.out).length === 0) {
+    throw new Error(
+      `A vertexFn output cannot be empty since must include the 'position' builtin.`,
+    );
+  }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType:
-      (Object.keys(options.out).length !== 0
-        ? createIoSchema(options.out)
-        : undefined),
+    returnType: createIoSchema(options.out),
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -180,10 +191,10 @@ function createVertexFn(
     );
   }
 
-  return {
+  const result: This = {
     shell,
     outputType,
-    inputType,
+    inputType: inputType as WgslStruct<WithLocations<VertexInConstrained>>,
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
@@ -225,5 +236,6 @@ function createVertexFn(
     toString() {
       return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }
