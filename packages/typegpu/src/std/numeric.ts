@@ -465,6 +465,40 @@ export const length = createDualImpl(
 
 /**
  * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#log-builtin
+ */
+export const log = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.log(value) as T;
+    }
+    return VectorOps.log[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`log(${value.value})`, value.dataType),
+  'log',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#log2-builtin
+ */
+export const log2 = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.log2(value) as T;
+    }
+    return VectorOps.log2[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`log2(${value.value})`, value.dataType),
+  'log2',
+);
+
+/**
+ * @privateRemarks
  * https://www.w3.org/TR/WGSL/#max-float-builtin
  */
 export const max = createDualImpl(

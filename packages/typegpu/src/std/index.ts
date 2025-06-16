@@ -25,6 +25,8 @@ export {
   floor,
   fract,
   length,
+  log,
+  log2,
   max,
   min,
   mix,
