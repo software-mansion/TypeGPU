@@ -1,17 +1,17 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useId, useRef, useState } from 'react';
+import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import CrossSvg from '../assets/cross.svg';
 import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import {
   menuShownAtom,
   menuShownMobileAtom,
 } from '../utils/examples/menuShownAtom.ts';
-import { SearchableExampleList } from './SearchableExampleList.tsx';
 import ExamplePage from './ExamplePage.tsx';
+import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
 
@@ -24,12 +24,12 @@ export function ExampleLayout() {
 
   return (
     <>
-      <div className='absolute top-4 left-4 z-50 flex gap-4 text-sm md:hidden'>
+      <div className='absolute top-4 left-4 z-50 flex gap-2 text-sm md:hidden'>
         {menuShownMobile
           ? null
           : (
             <Button onClick={() => setMenuShownMobile(true)}>
-              <img src={HamburgerSvg.src} alt='menu' className='h-6 w-6' />
+              <img src={HamburgerSvg.src} alt='menu' className='-m-2 h-6 w-6' />
             </Button>
           )}
 
