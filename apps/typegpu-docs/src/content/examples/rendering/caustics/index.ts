@@ -54,7 +54,7 @@ const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
 /** Controls the angle of rotation for the pool tile texture */
 const angle = 0.2;
 /** The bigger the number, the denser the pool tile texture is */
-const tileDensity = 10;
+const tileDensityUniform = root['~unstable'].createUniform(d.f32);
 /** The scene fades into this color at a distance */
 const fogColor = d.vec3f(0.05, 0.2, 0.7);
 
@@ -63,6 +63,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   const time = timeUniform.value;
+  const tileDensity = tileDensityUniform.value;
 
   /**
    * A transformation matrix that skews the perspective a bit
@@ -124,6 +125,22 @@ function draw() {
 
 draw();
 
+// #region Example controls and cleanup
+
+export const controls = {
+  'tile density': {
+    initial: 10,
+    min: 5,
+    max: 20,
+    step: 1,
+    onSliderChange: (density: number) => {
+      tileDensityUniform.write(density);
+    },
+  },
+};
+
 export function onCleanup() {
   root.destroy();
 }
+
+// #endregion
