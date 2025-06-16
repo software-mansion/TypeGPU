@@ -96,10 +96,8 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const blend = std.clamp(perlin3d.sample(d.vec3f(std.mul(uv, d.vec2f(5, 10)), time * 0.2 + 5)) + 0.3, 0, 1);
 
   const noFogColor = std.mix(std.mul(albedo, fogColor), d.vec3f(std.mul(albedo, std.add(c1, c2))), blend);
-  // const noFogColor = d.vec3f(blend);
   // Fog blending factor, based on the height of the pixels
   const fog = std.min(std.pow(uv.y, 0.5) * 1.2, 1);
-  // const fog = 0.1;
 
   return d.vec4f(std.mix(noFogColor, fogColor, fog), 1);
 });
