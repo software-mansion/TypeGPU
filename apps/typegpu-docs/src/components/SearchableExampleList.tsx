@@ -72,7 +72,7 @@ export function SearchableExampleList(
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if ((e.metaKey === true || e.ctrlKey === true) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         inputRef.current?.focus();
         e.preventDefault();
       }
