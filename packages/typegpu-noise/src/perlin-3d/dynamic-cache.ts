@@ -219,7 +219,7 @@ export function dynamicCacheConfig<Prefix extends string>(
         } as Bindings<Prefix>;
       },
       set size(_value: d.v3u) {
-        const value = d.vec4u(_value, 0); // temporary workaround because of vec4u uniform breaking on Safari
+        const value = d.vec4u(_value, 0); // temporary workaround because of vec3u uniform breaking on Safari
         if (allEq(size, value)) {
           // Nothing to update
           return;
