@@ -1,10 +1,40 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { abs, add, cos, max, min, mul, normalize, sin, sub } from 'typegpu/std';
 
 const root = await tgpu.init();
 
 const timeUniform = root['~unstable'].createUniform(d.f32);
+const scaleUniform = root['~unstable'].createUniform(d.f32, 2);
+const colorUniform = root['~unstable'].createUniform(d.vec3f);
+
+/**
+ * For some reason, tanh in WebGPU breaks down hard outside
+ * of the <10, -10> range.
+ */
+const tanh = tgpu['~unstable'].fn([d.f32], d.f32)`(v) {
+  return select(tanh(v), sign(v), abs(v) > 10);
+}`;
+
+// TODO: Implement tanh in `typegpu/std`
+const tanh3 = tgpu['~unstable'].fn([d.vec3f], d.vec3f)`(v) {
+  return tanh(v);
+}`;
+
+const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
+  return fract(v / a) * a;
+}`;
+
+const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
+  return d.mat3x3f(
+    // right
+    d.vec3f(cos(angle), 0, sin(angle)),
+    // up
+    d.vec3f(0, 1, 0),
+    // forward
+    d.vec3f(-sin(angle), 0, cos(angle)),
+  );
+});
 
 /**
  * Credits: XorDev (xordev.com) for the idea and original implementation
@@ -17,47 +47,36 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const nuv = std.normalize(uv);
   const t = timeUniform.value;
-  let q = d.vec3f();
-  let p = d.vec3f();
-  let o = d.vec4f();
+  // Increasing the color intensity
+  const color = mul(colorUniform.value, 4);
+  const dir = normalize(d.vec3f(uv, -1));
+  let acc = d.vec3f();
 
-  let z = 0;
-  let dd = 0;
-  let i = 0;
-  let l = 0;
-  while (l++ < 3e1) {
-    p = std.sub(std.mul(z, d.vec3f(nuv, 0)), 2.);
-    p.x -= t + 3.;
-    p.x -= t + 3.;
-    for (q = p, dd = p.y, i = 4e1; i > .01; i *= .2) {
-      q = std.sub(i * .9, std.abs(std.sub(d.vec3f(q.x % (i + i), q.y % (i + i), q.z % (i + i)), i)));
-      dd = std.max(dd, std.min(std.min(q, d.vec3f(q.y)).x, q.z));
-      // TODO: The 9. could be in radians, or in degrees
-      const rotMat = rotate2D(9.);
-      const rotQ = std.mul(q.xz, rotMat);
-      q.x = rotQ.x;
-      q.z = rotQ.y;
+  let z = d.f32(0);
+  let dd = d.f32(0);
+  for (let l = d.u32(0); l < 30; l++) {
+    const p = sub(mul(z, dir), scaleUniform.value);
+    // p.xz-=t+3.;
+    p.x -= t + 3;
+    p.z -= t + 3;
+    let q = p;
+    dd = p.y;
+    for (let i = d.f32(40); i > 0.01; i *= 0.2) {
+      // q=i*.9-abs(mod(q,i+i)-i)
+      q = sub(i * 0.9, abs(sub(mod(q, i + i), i)));
+      // d=max(d,min(min(q=<...hoisted...>,q.y).x,q.z))
+      dd = max(dd, min(min(q.x, q.y), q.z));
+      q = mul(q, rotateXZ(9));
     }
     z += dd;
-    o += .1 * (d.vec4f(4, 2, 1, 0) - std.tanh(p.y + 4.)) * dd / (1. + z);
+    acc = add(acc, mul(sub(color, tanh(p.y + 4)), 0.1 * dd / (1 + z)));
   }
-  o = std.tanh(std.mul(o, o));
-});
 
-// TODO: Implement tanh in `typegpu/std`
-const tanh = tgpu['~unstable'].fn([d.f32], d.f32)`(angle) -> f32 {
-  
-}`;
+  // Tone mapping
+  acc = tanh3(mul(acc, acc));
 
-const rotate2D = tgpu['~unstable'].fn([d.f32], d.mat2x2f)((angle) => {
-  return d.mat2x2f(
-    // right
-    std.cos(angle), std.sin(angle),
-    // up
-    -std.sin(angle), std.cos(angle),
-  );
+  return d.vec4f(acc.xyz, 1);
 });
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -103,6 +122,24 @@ function draw() {
 }
 
 draw();
+
+export const controls = {
+  scale: {
+    initial: 2,
+    min: -100,
+    max: 100,
+    step: 0.001,
+    onSliderChange(v: number) {
+      scaleUniform.write(v);
+    },
+  },
+  color: {
+    onColorChange(value: readonly [number, number, number]) {
+      colorUniform.write(d.vec3f(...value));
+    },
+    initial: [1, 0.7, 0],
+  },
+};
 
 export function onCleanup() {
   root.destroy();
