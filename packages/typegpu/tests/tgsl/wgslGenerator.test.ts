@@ -902,4 +902,62 @@ describe('wgslGenerator', () => {
       ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
     });
   });
+
+  it('throws error when incorrectly initializing function', () => {
+    const internalTestFn = tgpu['~unstable']
+      .fn([d.vec2f], d.mat4x4f)(() => {
+        return d.mat4x4f();
+      })
+      .$name('internalTestFn');
+
+    const testFn = tgpu['~unstable']
+      .fn([])(() => {
+        // @ts-expect-error
+        return internalTestFn([1, 23, 3]);
+      })
+      .$name('testFn');
+
+    expect(() => parseResolved({ cleantestFn: testFn }))
+      .toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testFn
+- internalTestFn: Resolution of the following tree failed: 
+- internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
+`);
+  });
+
+  it('throws error when initializing translate4 function', () => {
+    const testFn = tgpu['~unstable']
+      .fn([], d.mat4x4f)(() => {
+        // @ts-expect-error
+        return std.translate4();
+      })
+      .$name('testTranslateError');
+
+    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testTranslateError
+- translate4: Cannot read properties of undefined (reading 'value')]
+`);
+  });
+
+  it('throws error when initializing vec4f with an array', () => {
+    const testFn = tgpu['~unstable']
+      .fn([], d.mat4x4f)(() => {
+        // @ts-expect-error
+        const x = d.vec4f([1, 2, 3, 4]);
+        return d.mat4x4f();
+      })
+      .$name('testVec4fError');
+
+    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
+[Error: Resolution of the following tree failed: 
+- <root>
+- fn:testVec4fError
+- vec4f: Resolution of the following tree failed: 
+- vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
+`);
+  });
 });

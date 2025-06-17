@@ -326,6 +326,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `${type}(${args.map((v) => v.value).join(', ')})`,
         vecTypeToConstructor[type],
       ),
+    type,
     (...args) =>
       args.map((arg) => {
         let argType = arg.dataType;
@@ -336,7 +337,6 @@ function makeVecSchema<TValue, S extends number | boolean>(
         return isVec(argType) ? argType : vecTypeToPrimitive[type];
       }),
   );
-  setName(construct, type);
 
   return Object.assign(construct, {
     type,
