@@ -60,6 +60,7 @@ const timeUniform = root['~unstable'].createUniform(d.f32);
 const scaleUniform = root['~unstable'].createUniform(d.f32);
 const colorUniform = root['~unstable'].createUniform(d.vec3f);
 const shiftUniform = root['~unstable'].createUniform(d.f32);
+const aspectRatioUniform = root['~unstable'].createUniform(d.f32);
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -69,7 +70,8 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const shift = shiftUniform.value;
   // Increasing the color intensity
   const color = mul(colorUniform.value, 4);
-  const dir = normalize(d.vec3f(uv, -1));
+  const ratio = d.vec2f(aspectRatioUniform.value, 1);
+  const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
   let acc = d.vec3f();
   let z = d.f32(0);
@@ -126,6 +128,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 function draw() {
+  aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
   timeUniform.write((performance.now() * 0.001) % 1000);
 
   pipeline
@@ -147,9 +150,9 @@ draw();
 export const controls = {
   scale: {
     initial: 2,
-    min: -100,
+    min: -15,
     max: 100,
-    step: 0.001,
+    step: 0.01,
     onSliderChange(v: number) {
       scaleUniform.write(v);
     },
