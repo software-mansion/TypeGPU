@@ -33,7 +33,8 @@ export function INTERNAL_createQuerySet<T extends GPUQueryType>(
 export function isQuerySet<T extends GPUQueryType>(
   value: unknown,
 ): value is TgpuQuerySet<T> {
-  return (value as TgpuQuerySet<T>)?.resourceType === 'query-set';
+  const maybe = value as TgpuQuerySet<T>;
+  return maybe?.resourceType === 'query-set' && !!maybe[$internal];
 }
 
 class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
