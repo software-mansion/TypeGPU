@@ -1,7 +1,7 @@
-import type { TgpuComputePipeline } from '../../core/pipeline/computePipeline.ts';
-import { isQuerySet, type TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import type { TgpuRenderPipeline } from '../../core/pipeline/renderPipeline.ts';
-import type { ExperimentalTgpuRoot } from '../../core/root/rootTypes.ts';
+import type { TgpuComputePipeline } from './computePipeline.ts';
+import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
+import type { TgpuRenderPipeline } from './renderPipeline.ts';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 
 export interface Timeable<T extends TgpuComputePipeline | TgpuRenderPipeline> {

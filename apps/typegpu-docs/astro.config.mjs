@@ -119,10 +119,12 @@ export default defineConfig({
             {
               label: 'Enabling Features',
               slug: 'fundamentals/enabling-features',
+              badge: { text: 'new' },
             },
             {
               label: 'Timing Your Pipelines',
               slug: 'fundamentals/timestamp-queries',
+              badge: { text: 'new' },
             },
             DEV && {
               label: 'Slots',

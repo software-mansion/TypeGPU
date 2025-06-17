@@ -37,7 +37,7 @@ import {
   type Timeable,
   type TimestampWritesPriors,
   triggerPerformanceCallback,
-} from '../../core/pipeline/timable.ts';
+} from './timeable.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
@@ -364,9 +364,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       return attachment;
     }) as GPURenderPassColorAttachment[];
 
-    const label = getName(internals.core) ?? '<unnamed>';
     const renderPassDescriptor: GPURenderPassDescriptor = {
-      label,
+      label: getName(internals.core) ?? '<unnamed>',
       colorAttachments,
       ...setupTimestampWrites(
         internals.priors,

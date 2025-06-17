@@ -3,6 +3,10 @@ title: Timing Your Pipelines
 description: How to use timestamp queries to measure the performance of your pipelines.
 ---
 
+:::caution[Experimental]
+This feature is under heavy development and is yet to reach stability.
+:::
+
 To measure kernel execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
 
 :::tip
@@ -69,6 +73,7 @@ Omit `beginningOfPassWriteIndex` or `endOfPassWriteIndex` to skip writing at the
 You can also attach timestamp queries directly to a raw WebGPU command encoder by specifying `timestampWrites` in the pass descriptor:
 
 ```ts
+const querySet = root.createQuerySet('timestamp', 2);
 const encoder = device.createCommandEncoder();
 
 const timestampWrites = {
@@ -101,7 +106,11 @@ If you don't resolve the query set, the read operation will throw an error or re
 
 ### Continuous Timestamp Queries
 
-When profiling in a loop, check availability before resolving and reading:
+Reading timestamp queries involves several steps on both the GPU and CPU. While the query set can be written to and resolved every frame, mapping the read buffer on the CPU often takes longer than the GPU pipeline execution. If you attempt to resolve or read the query results while a previous read is still in progress, you risk conflicting operations.
+
+To prevent such issues, TgpuQuerySet enforces a safety check: an error will be thrown if you call resolve() or read() while the query set is busy. Use the TgpuQuerySet.available property to check if the data is ready before accessing it.
+
+When profiling inside a render loop, structure your logic like this:
 
 ```ts
 async function renderLoop() {

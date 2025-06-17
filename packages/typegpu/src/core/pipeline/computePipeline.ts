@@ -18,7 +18,7 @@ import {
   type Timeable,
   type TimestampWritesPriors,
   triggerPerformanceCallback,
-} from '../../core/pipeline/timable.ts';
+} from './timeable.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -147,9 +147,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const memo = this._core.unwrap();
     const { branch } = this._core;
 
-    const label = getName(this._core) ?? '<unnamed>';
     const passDescriptor: GPUComputePassDescriptor = {
-      label,
+      label: getName(this._core) ?? '<unnamed>',
       ...setupTimestampWrites(this._priors, branch),
     };
 

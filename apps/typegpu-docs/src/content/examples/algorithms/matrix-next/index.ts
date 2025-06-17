@@ -136,69 +136,81 @@ function updateInputDisplays() {
   );
 }
 
+let isComputing = false;
+
 async function compute() {
-  const { firstRowCount, firstColumnCount, secondColumnCount } =
-    state.dimensions;
-  const maxSize = Math.max(
-    firstRowCount * firstColumnCount,
-    firstColumnCount * secondColumnCount,
-    firstRowCount * secondColumnCount,
-  );
+  if (isComputing) {
+    console.warn('Computation already in progress');
+    return;
+  }
+  isComputing = true;
 
-  const startTime = performance.now();
-
-  if (state.strategy === 'cpu') {
-    state.matrices.result = multiplyMatricesCPU(
-      state.matrices.first,
-      state.matrices.second,
-      firstRowCount,
-      firstColumnCount,
-      secondColumnCount,
-    );
-  } else {
-    resizeBuffersIfNeeded(maxSize);
-    buffers.info.write(state.dimensions);
-    buffers.first.write(state.matrices.first);
-    buffers.second.write(state.matrices.second);
-
-    const workgroupCount = {
-      x: Math.ceil(firstRowCount / TILE_SIZE),
-      y: Math.ceil(secondColumnCount / TILE_SIZE),
-    };
-
-    pipelines[state.strategy]
-      .with(computeLayout, bindGroup)
-      .dispatchWorkgroups(workgroupCount.x, workgroupCount.y);
-
-    await root.device.queue.onSubmittedWorkDone();
-
-    const gpuResult = await buffers.result.read();
-    state.matrices.result = gpuResult.slice(
-      0,
+  try {
+    const { firstRowCount, firstColumnCount, secondColumnCount } =
+      state.dimensions;
+    const maxSize = Math.max(
+      firstRowCount * firstColumnCount,
+      firstColumnCount * secondColumnCount,
       firstRowCount * secondColumnCount,
     );
+
+    const startTime = performance.now();
+
+    if (state.strategy === 'cpu') {
+      state.matrices.result = multiplyMatricesCPU(
+        state.matrices.first,
+        state.matrices.second,
+        firstRowCount,
+        firstColumnCount,
+        secondColumnCount,
+      );
+    } else {
+      resizeBuffersIfNeeded(maxSize);
+      buffers.info.write(state.dimensions);
+      buffers.first.write(state.matrices.first);
+      buffers.second.write(state.matrices.second);
+
+      const workgroupCount = {
+        x: Math.ceil(firstRowCount / TILE_SIZE),
+        y: Math.ceil(secondColumnCount / TILE_SIZE),
+      };
+
+      pipelines[state.strategy]
+        .with(computeLayout, bindGroup)
+        .dispatchWorkgroups(workgroupCount.x, workgroupCount.y);
+
+      await root.device.queue.onSubmittedWorkDone();
+
+      const gpuResult = await buffers.result.read();
+      state.matrices.result = gpuResult.slice(
+        0,
+        firstRowCount * secondColumnCount,
+      );
+    }
+
+    const totalTime = performance.now() - startTime;
+    const strategyName = {
+      'gpu-optimized': 'GPU (Optimized)',
+      'gpu-simple': 'GPU (Simple)',
+      cpu: 'CPU',
+    }[state.strategy];
+
+    const showKernel = state.strategy !== 'cpu' && hasTimestampQuery;
+    updateTimingDisplay(
+      strategyName,
+      totalTime,
+      showKernel ? state.kernelTime : undefined,
+    );
+
+    printMatrixToHtml(
+      resultTable,
+      state.matrices.result,
+      firstRowCount,
+      secondColumnCount,
+    );
+  } finally {
+    isComputing = false;
   }
-
-  const totalTime = performance.now() - startTime;
-  const strategyName = {
-    'gpu-optimized': 'GPU (Optimized)',
-    'gpu-simple': 'GPU (Simple)',
-    cpu: 'CPU',
-  }[state.strategy];
-
-  const showKernel = state.strategy !== 'cpu' && hasTimestampQuery;
-  updateTimingDisplay(
-    strategyName,
-    totalTime,
-    showKernel ? state.kernelTime : undefined,
-  );
-
-  printMatrixToHtml(
-    resultTable,
-    state.matrices.result,
-    firstRowCount,
-    secondColumnCount,
-  );
 }
 
 // #region UI
