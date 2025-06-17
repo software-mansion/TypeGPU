@@ -22,6 +22,7 @@ const buffer = root.createBuffer(inputValueType, {
 }).$usage('storage');
 const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
   inputArray: buffer,
+  workArray: root.createBuffer(inputValueType).$usage('storage'),
 });
 
 console.log('Buffer created:', buffer.initial?.in);

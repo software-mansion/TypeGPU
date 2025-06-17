@@ -9,4 +9,5 @@ export const inputValueType = d.struct({
 
 export const dataBindGroupLayout = tgpu.bindGroupLayout({
   inputArray: { storage: inputValueType, access: 'mutable' },
+  workArray: { storage: inputValueType, access: 'mutable' },
 });
