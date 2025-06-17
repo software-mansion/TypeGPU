@@ -11,66 +11,6 @@ import { it } from './utils/extendedIt.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 
 describe('Inter-Stage Variables', () => {
-  describe('Empty vertex output', () => {
-    const emptyVert = tgpu['~unstable'].vertexFn({ out: {} })('');
-    const emptyVertWithBuiltin = tgpu['~unstable'].vertexFn({
-      out: { pos: d.builtin.position },
-    })('');
-
-    it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-      const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
-        '',
-      );
-      const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
-        in: { pos: d.builtin.position },
-        out: {},
-      })('');
-
-      // Using none of none
-      const pipeline = root
-        .withVertex(emptyVert, {})
-        .withFragment(emptyFragment, {})
-        .createPipeline();
-
-      // Using none of none (builtins are erased from the vertex output)
-      const pipeline2 = root
-        .withVertex(emptyVertWithBuiltin, {})
-        .withFragment(emptyFragment, {})
-        .createPipeline();
-
-      // Using none of none (builtins are ignored in the fragment input)
-      const pipeline3 = root
-        .withVertex(emptyVert, {})
-        .withFragment(emptyFragmentWithBuiltin, {})
-        .createPipeline();
-
-      // Using none of none (builtins are ignored in both input and output,
-      // so their conflict of the `pos` key is fine)
-      const pipeline4 = root
-        .withVertex(emptyVertWithBuiltin, {})
-        .withFragment(emptyFragmentWithBuiltin, {})
-        .createPipeline();
-
-      expect(pipeline).toBeDefined();
-      expect(pipeline2).toBeDefined();
-      expect(pipeline3).toBeDefined();
-      expect(pipeline4).toBeDefined();
-    });
-
-    it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
-      const fragment = tgpu['~unstable'].fragmentFn({
-        in: { a: d.vec3f, c: d.f32 },
-        out: {},
-      })('');
-
-      root
-        .withVertex(emptyVert, {})
-        // @ts-expect-error: Missing from vertex output
-        .withFragment(fragment, {})
-        .createPipeline();
-    });
-  });
-
   describe('Non-empty vertex output', () => {
     const vert = tgpu['~unstable'].vertexFn({
       out: { a: d.vec3f, b: d.vec2f },
@@ -159,7 +99,9 @@ describe('Inter-Stage Variables', () => {
       .$name('example-layout');
 
     const vertexFn = utgpu
-      .vertexFn({ out: {} })('() { layout.bound.alpha; }')
+      .vertexFn({ out: { pos: d.builtin.position } })(
+        '() { layout.bound.alpha; }',
+      )
       .$uses({ layout });
 
     const fragmentFn = utgpu.fragmentFn({ out: { out: d.vec4f } })('() {}');
@@ -182,14 +124,14 @@ describe('Inter-Stage Variables', () => {
 
   it('allows to omit input in entry function shell', () => {
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ in: {}, out: {} }),
+      tgpu['~unstable'].vertexFn({ in: {}, out: { pos: d.builtin.position } }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ out: {} }),
+      tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
