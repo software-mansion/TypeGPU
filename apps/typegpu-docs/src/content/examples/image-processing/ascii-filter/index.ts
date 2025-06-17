@@ -17,21 +17,27 @@ const layout = tgpu.bindGroupLayout({
 const useExtendedCharacters = root['~unstable'].createUniform(d.u32);
 const displayModeBuffer = root['~unstable'].createUniform(d.u32);
 const gammaCorrectionBuffer = root['~unstable'].createUniform(d.f32);
+const glyphSizeBuffer = root['~unstable'].createUniform(d.f32);
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
+/**
+ * Adapted from the original Shadertoy implementation by movAX13h:
+ * https://www.shadertoy.com/view/lssGDj
+ */
 const characterFn = tgpu['~unstable'].fn([d.u32, d.vec2f], d.f32)((n, p) => {
   const pos = std.floor(std.add(std.mul(p, d.vec2f(-4.0, 4.0)), 2.5));
-  if (std.clamp(pos.x, 0.0, 4.0) === pos.x) {
-    if (std.clamp(pos.y, 0.0, 4.0) === pos.y) {
-      const a = d.u32(std.add(pos.x, std.mul(5.0, pos.y)));
-      if ((n >> a) & 1) {
-        return 1.0;
-      }
-    }
+
+  if (pos.x < 0.0 || pos.x > 4.0 || pos.y < 0.0 || pos.y > 4.0) {
+    return 0.0;
+  }
+
+  const a = d.u32(std.add(pos.x, std.mul(5.0, pos.y)));
+  if ((n >> a) & 1) {
+    return 1.0;
   }
   return 0.0;
 });
@@ -48,20 +54,25 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
+/**
+ * Adapted from the original Shadertoy implementation by movAX13h:
+ * https://www.shadertoy.com/view/lssGDj
+ */
 const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: {
     uv: d.vec2f,
   },
   out: d.vec4f,
 })((input) => {
-  // Fix the y-axis flip and offset issues
   const correctedUV = d.vec2f(input.uv.x + 0.5, 1.0 - (input.uv.y + 0.5));
-
   const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
   const pix = std.mul(correctedUV, textureSize);
 
+  const cellSize = glyphSizeBuffer.value;
+  const halfCell = std.mul(cellSize, 0.5);
+
   const blockCoord = std.div(
-    std.mul(std.floor(std.div(pix, 8.0)), 8.0),
+    std.mul(std.floor(std.div(pix, cellSize)), cellSize),
     textureSize,
   );
   const color = std.textureSample(
@@ -127,21 +138,28 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
     if (gray > 0.9767) n = 11512810;
   }
 
-  const p = d.vec2f(((pix.x / 4.0) % 2.0) - 1.0, ((pix.y / 4.0) % 2.0) - 1.0);
+  const p = d.vec2f(
+    ((pix.x / halfCell) % 2.0) - 1.0,
+    1.0 - ((pix.y / halfCell) % 2.0),
+  );
 
   const charValue = characterFn(n, p);
 
   const colorMode = displayModeBuffer.value;
+  let resultColor = d.vec3f(1);
+  // Color mode
   if (colorMode === 0) {
-    // Color mode
-    return d.vec4f(std.mul(color, charValue).xyz, 1.0);
+    resultColor = d.vec3f(std.mul(color, charValue).xyz);
   }
+  // Grayscale mode
   if (colorMode === 1) {
-    // Grayscale mode
-    return d.vec4f(std.mul(d.vec3f(gray), charValue), 1.0);
+    resultColor = d.vec3f(std.mul(d.vec3f(gray), charValue));
   }
   // White mode
-  return d.vec4f(std.mul(d.vec3f(1), charValue), 1.0);
+  if (colorMode === 2) {
+    resultColor = d.vec3f(std.mul(d.vec3f(1), charValue));
+  }
+  return d.vec4f(resultColor, 1.0);
 });
 
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -241,6 +259,10 @@ function run() {
   spinner.style.display = 'none';
   requestAnimationFrame(run);
 }
+
+// Initialize glyph size to default value
+glyphSizeBuffer.write(8.0);
+
 requestAnimationFrame(run);
 
 let displayMode: 'color' | 'grayscale' | 'white' = 'color';
@@ -263,9 +285,16 @@ export const controls = {
   'gamma correction': {
     initial: 1.0,
     min: 0.1,
-    max: 3.0,
+    max: 10.0,
     step: 0.1,
     onSliderChange: (value: number) => gammaCorrectionBuffer.write(value),
+  },
+  'glyph size (px)': {
+    initial: 8,
+    min: 2,
+    max: 32,
+    step: 2,
+    onSliderChange: (value: number) => glyphSizeBuffer.write(value),
   },
 };
 
