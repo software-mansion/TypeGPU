@@ -150,8 +150,8 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-function draw() {
-  timeUniform.write((performance.now() * 0.001) % 1000);
+function draw(timestamp: DOMHighResTimeStamp) {
+  timeUniform.write((timestamp * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
@@ -163,8 +163,7 @@ function draw() {
 
   requestAnimationFrame(draw);
 }
-
-draw();
+requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
