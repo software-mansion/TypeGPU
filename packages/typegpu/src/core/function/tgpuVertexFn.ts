@@ -133,7 +133,7 @@ export function vertexFn<
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   if (Object.keys(options.out).length === 0) {
     throw new Error(
-      `A vertexFn output cannot be empty since must include the 'position' builtin.`,
+      `A vertexFn output cannot be empty since it must include the 'position' builtin.`,
     );
   }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
