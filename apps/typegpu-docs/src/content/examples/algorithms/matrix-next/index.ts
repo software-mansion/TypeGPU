@@ -66,10 +66,10 @@ function createPipelines() {
   const simple = root['~unstable'].withCompute(computeSimple).createPipeline();
 
   return {
-    'gpu-optimized': performanceCallback
+    'gpu-optimized': hasTimestampQuery
       ? optimized.withPerformanceCallback(performanceCallback)
       : optimized,
-    'gpu-simple': performanceCallback
+    'gpu-simple': hasTimestampQuery
       ? simple.withPerformanceCallback(performanceCallback)
       : simple,
   };
