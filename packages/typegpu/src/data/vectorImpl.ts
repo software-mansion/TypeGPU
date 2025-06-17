@@ -379,13 +379,29 @@ type Tuple4<S> = [S, S, S, S];
 abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
 
-  0: S;
-  1: S;
+  e0: S;
+  e1: S;
 
-  constructor(x?: S, y?: S) {
+  constructor(x?: S, y?: S, z?: S) {
     super(2);
-    this[0] = this.getElementSchema()(x);
-    this[1] = this.getElementSchema()(y ?? x);
+    this.e0 = this.getElementSchema()(x);
+    this.e1 = this.getElementSchema()(y ?? x);
+  }
+
+  get [0]() {
+    return this.e0;
+  }
+
+  get [1]() {
+    return this.e1;
+  }
+
+  set [0](value: S) {
+    this.e0 = this.getElementSchema()(value);
+  }
+
+  set [1](value: S) {
+    this.e1 = this.getElementSchema()(value);
   }
 
   get x() {
@@ -397,26 +413,50 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   set x(value: S) {
-    this[0] = value;
+    this[0] = this.getElementSchema()(value);
   }
 
   set y(value: S) {
-    this[1] = value;
+    this[1] = this.getElementSchema()(value);
   }
 }
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   declare readonly length = 3;
 
-  0: S;
-  1: S;
-  2: S;
+  e0: S;
+  e1: S;
+  e2: S;
 
   constructor(x?: S, y?: S, z?: S) {
     super(3);
-    this[0] = this.getElementSchema()(x);
-    this[1] = this.getElementSchema()(y ?? x);
-    this[2] = this.getElementSchema()(z ?? x);
+    this.e0 = this.getElementSchema()(x);
+    this.e1 = this.getElementSchema()(y ?? x);
+    this.e2 = this.getElementSchema()(z ?? x);
+  }
+
+  get [0]() {
+    return this.e0;
+  }
+
+  get [1]() {
+    return this.e1;
+  }
+
+  get [2]() {
+    return this.e2;
+  }
+
+  set [0](value: S) {
+    this.e0 = this.getElementSchema()(value);
+  }
+
+  set [1](value: S) {
+    this.e1 = this.getElementSchema()(value);
+  }
+
+  set [2](value: S) {
+    this.e2 = this.getElementSchema()(value);
   }
 
   get x() {
@@ -432,32 +472,64 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   }
 
   set x(value: S) {
-    this[0] = value;
+    this[0] = this.getElementSchema()(value);
   }
 
   set y(value: S) {
-    this[1] = value;
+    this[1] = this.getElementSchema()(value);
   }
 
   set z(value: S) {
-    this[2] = value;
+    this[2] = this.getElementSchema()(value);
   }
 }
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   declare readonly length = 4;
 
-  0: S;
-  1: S;
-  2: S;
-  3: S;
+  e0: S;
+  e1: S;
+  e2: S;
+  e3: S;
 
   constructor(x?: S, y?: S, z?: S, w?: S) {
     super(4);
-    this[0] = this.getElementSchema()(x);
-    this[1] = this.getElementSchema()(y ?? x);
-    this[2] = this.getElementSchema()(z ?? x);
-    this[3] = this.getElementSchema()(w ?? x);
+    this.e0 = this.getElementSchema()(x);
+    this.e1 = this.getElementSchema()(y ?? x);
+    this.e2 = this.getElementSchema()(z ?? x);
+    this.e3 = this.getElementSchema()(w ?? x);
+  }
+
+  get [0]() {
+    return this.e0;
+  }
+
+  get [1]() {
+    return this.e1;
+  }
+
+  get [2]() {
+    return this.e2;
+  }
+
+  get [3]() {
+    return this.e3;
+  }
+
+  set [0](value: S) {
+    this.e0 = this.getElementSchema()(value);
+  }
+
+  set [1](value: S) {
+    this.e1 = this.getElementSchema()(value);
+  }
+
+  set [2](value: S) {
+    this.e2 = this.getElementSchema()(value);
+  }
+
+  set [3](value: S) {
+    this.e3 = this.getElementSchema()(value);
   }
 
   get x() {

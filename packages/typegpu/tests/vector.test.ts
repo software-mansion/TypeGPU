@@ -22,6 +22,25 @@ describe('constructors', () => {
   });
 });
 
+describe('setters', () => {
+  it('coerces to singed integer values', () => {
+    const vec = d.vec4i();
+    vec[0] = 1.1;
+    vec[1] = -1.1;
+    vec.z = 2.2;
+    vec.w = -2.2;
+    expect(vec).toStrictEqual(d.vec4i(1, -1, 2, -2));
+  });
+
+  it('coerces to unsigned integer values', () => {
+    const vec = d.vec3u();
+    vec[0] = 1.1;
+    vec[1] = -1.1;
+    vec.z = 2.2;
+    expect(vec).toStrictEqual(d.vec3u(1, 4294967295, 2));
+  });
+});
+
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
     expect(sizeOf(d.vec2f)).toBe(8);
