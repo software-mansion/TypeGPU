@@ -96,7 +96,9 @@ describe('Inter-Stage Variables', () => {
       .$name('example-layout');
 
     const vertexFn = utgpu
-      .vertexFn({ out: {} })('() { layout.bound.alpha; }')
+      .vertexFn({ out: { pos: d.builtin.position } })(
+        '() { layout.bound.alpha; }',
+      )
       .$uses({ layout });
 
     const fragmentFn = utgpu.fragmentFn({ out: { out: d.vec4f } })('() {}');
@@ -119,14 +121,14 @@ describe('Inter-Stage Variables', () => {
 
   it('allows to omit input in entry function shell', () => {
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ in: {}, out: {} }),
+      tgpu['~unstable'].vertexFn({ in: {}, out: { pos: d.builtin.position } }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ out: {} }),
+      tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),

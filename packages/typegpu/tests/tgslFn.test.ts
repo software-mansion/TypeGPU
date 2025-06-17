@@ -212,7 +212,27 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toBe(expected);
   });
 
-  it('throws when empty object is passed to vertexFn', () => {
+  it('resolves vertexFn with empty in', () => {
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })(() => ({ pos: d.vec4f() }));
+
+    const actual = parseResolved({ vertexFn });
+
+    const expected = parse(`
+      struct vertexFn_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vertexFn() -> vertexFn_Output{
+        return vertexFn_Output(vec4f());
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('throws when vertexFn with empty out', () => {
     expect(() =>
       tgpu['~unstable']
         .vertexFn({
@@ -220,7 +240,7 @@ describe('TGSL tgpu.fn function', () => {
           out: {},
         })
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: A vertexFn's shell output cannot be empty since must include the 'position' builtin.]`,
+      `[Error: A vertexFn output cannot be empty since must include the 'position' builtin.]`,
     );
   });
 

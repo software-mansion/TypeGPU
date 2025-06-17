@@ -3,12 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type {
-  Decorated,
-  Interpolate,
-  Location,
-  WgslStruct,
-} from '../../data/wgslTypes.ts';
+import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -26,11 +21,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createIoSchema,
-  type IOLayoutToSchema,
-  type WithLocations,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -101,8 +92,7 @@ export interface TgpuVertexFn<
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn>;
-
+  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -194,7 +184,7 @@ function createVertexFn(
   const result: This = {
     shell,
     outputType,
-    inputType: inputType as WgslStruct<WithLocations<VertexInConstrained>>,
+    inputType,
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
