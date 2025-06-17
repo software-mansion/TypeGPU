@@ -17,7 +17,7 @@ const layout = tgpu.bindGroupLayout({
 const useExtendedCharacters = root['~unstable'].createUniform(d.u32);
 const displayModeBuffer = root['~unstable'].createUniform(d.u32);
 const gammaCorrectionBuffer = root['~unstable'].createUniform(d.f32);
-const glyphSizeBuffer = root['~unstable'].createUniform(d.f32);
+const glyphSizeBuffer = root['~unstable'].createUniform(d.u32, 8);
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
@@ -68,7 +68,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
   const pix = std.mul(correctedUV, textureSize);
 
-  const cellSize = glyphSizeBuffer.value;
+  const cellSize = d.f32(glyphSizeBuffer.value);
   const halfCell = std.mul(cellSize, 0.5);
 
   const blockCoord = std.div(
@@ -180,24 +180,6 @@ const pipeline = root['~unstable'].withVertex(fullScreenTriangle, {})
   .withFragment(fragmentFn, { format: presentationFormat })
   .createPipeline();
 
-function resizeVideo() {
-  if (video.videoHeight === 0) {
-    return;
-  }
-
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-}
-
-const videoSizeObserver = new ResizeObserver(resizeVideo);
-videoSizeObserver.observe(video);
-video.addEventListener('resize', resizeVideo);
-
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
     video: true,
@@ -223,8 +205,9 @@ let bindGroup:
   }>
   | undefined;
 
+let ready = true;
 function run() {
-  if (!(video.currentTime > 0)) {
+  if (!(video.currentTime > 0) || video.readyState < 2 || !ready) {
     requestAnimationFrame(run);
     return;
   }
@@ -260,8 +243,35 @@ function run() {
   requestAnimationFrame(run);
 }
 
-// Initialize glyph size to default value
-glyphSizeBuffer.write(8.0);
+function resizeVideo() {
+  ready = false;
+  if (video.videoHeight === 0) {
+    return;
+  }
+
+  renderTexture?.destroy();
+  renderTexture = root['~unstable'].createTexture({
+    size: [video.videoWidth, video.videoHeight],
+    format: presentationFormat as 'rgba8unorm' | 'bgra8unorm',
+  }).$usage('render', 'sampled');
+  bindGroup = root.createBindGroup(layout, {
+    inputTexture: renderTexture,
+  });
+
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+
+  ready = true;
+}
+
+const videoSizeObserver = new ResizeObserver(resizeVideo);
+videoSizeObserver.observe(video);
+video.addEventListener('resize', resizeVideo);
 
 requestAnimationFrame(run);
 
