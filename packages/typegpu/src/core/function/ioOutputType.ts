@@ -29,12 +29,13 @@ export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
   : never;
 
 export function withLocations<T extends IOData>(
-  members: IORecord<T>,
+  members: IORecord<T> | undefined,
+  locations: Record<string, number | undefined> = {},
 ): WithLocations<IORecord<T>> {
   let nextLocation = 0;
 
   return Object.fromEntries(
-    Object.entries(members).map(([key, member]) => {
+    Object.entries(members ?? {}).map(([key, member]) => {
       if (isBuiltin(member)) {
         // Skipping builtins
         return [key, member];
@@ -47,7 +48,7 @@ export function withLocations<T extends IOData>(
         return [key, member];
       }
 
-      return [key, location(nextLocation++, member)];
+      return [key, location(locations[key] ?? nextLocation++, member)];
     }),
   );
 }
@@ -55,14 +56,14 @@ export function withLocations<T extends IOData>(
 export function createIoSchema<
   T extends IOData,
   Layout extends IORecord<T> | IOLayout<T>,
->(returnType: Layout) {
+>(layout: Layout) {
   return (
-    isData(returnType)
-      ? isVoid(returnType)
-        ? returnType
-        : getCustomLocation(returnType) !== undefined
-        ? returnType
-        : location(0, returnType)
-      : struct(withLocations(returnType) as Record<string, T>)
+    isData(layout)
+      ? isVoid(layout)
+        ? layout
+        : getCustomLocation(layout) !== undefined
+        ? layout
+        : location(0, layout)
+      : struct(withLocations(layout) as Record<string, T>)
   ) as IOLayoutToSchema<Layout>;
 }

@@ -3,6 +3,7 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import { struct } from '../../data/struct.ts';
 import type {
   Decorated,
   Interpolate,
@@ -27,7 +28,11 @@ import type {
   IOLayout,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import {
+  createIoSchema,
+  type IOLayoutToSchema,
+  withLocations,
+} from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -53,6 +58,8 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
+  readonly in: FragmentIn | undefined;
+  readonly out: FragmentOut;
   readonly argTypes: [IOLayoutToSchema<FragmentIn>] | [];
   readonly targets: FragmentOut;
   readonly returnType: IOLayoutToSchema<FragmentOut>;
@@ -150,6 +157,8 @@ export function fragmentFn<
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
+    in: options.in,
+    out: options.out,
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -214,8 +223,24 @@ function createFragmentFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
+      const inputWithLocation = shell.argTypes[0]?.propTypes
+        ? struct(withLocations(
+          shell.in,
+          ctx.varyingLocations?.fragmentLocations ?? {},
+        )).$name(getName(inputType) ?? 'In')
+        : undefined;
+
       if (typeof implementation === 'string') {
-        return core.resolve(ctx, '@fragment ');
+        return core.resolve(
+          ctx,
+          inputWithLocation ? [inputWithLocation] : [],
+          shell.returnType,
+          '@fragment ',
+        );
+      }
+
+      if (inputWithLocation) {
+        core.applyExternals({ In: inputWithLocation });
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -227,7 +252,12 @@ function createFragmentFn(
 
       try {
         generationCtx.callStack.push(outputType);
-        return core.resolve(ctx, '@fragment ');
+        return core.resolve(
+          ctx,
+          inputWithLocation ? [inputWithLocation] : [],
+          shell.returnType,
+          '@fragment ',
+        );
       } finally {
         generationCtx.callStack.pop();
       }

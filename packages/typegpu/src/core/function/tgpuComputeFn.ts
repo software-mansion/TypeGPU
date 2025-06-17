@@ -174,6 +174,8 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(
         ctx,
+        shell.argTypes,
+        shell.returnType,
         `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
       );
     },

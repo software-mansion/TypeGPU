@@ -3,6 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import { struct } from '../../data/struct.ts';
 import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -21,7 +22,11 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import {
+  createIoSchema,
+  type IOLayoutToSchema,
+  withLocations,
+} from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -45,8 +50,10 @@ type TgpuVertexFnShellHeader<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
 > = {
+  readonly in: VertexIn | undefined;
+  readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut> | undefined;
+  readonly returnType: IOLayoutToSchema<VertexOut>;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
@@ -133,11 +140,10 @@ export function vertexFn<
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
+    in: options.in,
+    out: options.out,
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType:
-      (Object.keys(options.out).length !== 0
-        ? createIoSchema(options.out)
-        : undefined),
+    returnType: createIoSchema(options.out),
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -203,9 +209,21 @@ function createVertexFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
+      const outputWithLocation = struct(withLocations(
+        shell.out,
+        ctx.varyingLocations?.vertexLocations ?? {},
+      )).$name(getName(outputType) ?? 'Out');
+
       if (typeof implementation === 'string') {
-        return core.resolve(ctx, '@vertex ');
+        return core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+          '@vertex ',
+        );
       }
+
+      core.applyExternals({ Out: outputWithLocation });
 
       const generationCtx = ctx as GenerationCtx;
       if (generationCtx.callStack === undefined) {
@@ -216,7 +234,12 @@ function createVertexFn(
 
       try {
         generationCtx.callStack.push(outputType);
-        return core.resolve(ctx, '@vertex ');
+        return core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+          '@vertex ',
+        );
       } finally {
         generationCtx.callStack.pop();
       }

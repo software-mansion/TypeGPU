@@ -1,8 +1,8 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
@@ -185,7 +185,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
     '~resolve'(ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
-        return core.resolve(ctx);
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -197,7 +197,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
       try {
         generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx);
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
         generationCtx.callStack.pop();
       }
