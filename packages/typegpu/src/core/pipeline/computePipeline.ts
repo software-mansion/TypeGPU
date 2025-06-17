@@ -1,12 +1,13 @@
 import { MissingBindGroupsError } from '../../errors.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
@@ -19,7 +20,7 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline extends TgpuNamable {
+export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -82,6 +83,15 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       },
     };
     this[$getNameForward] = _core;
+  }
+
+  '~resolve'(ctx: ResolutionCtx): string {
+    ctx.addDeclaration(ctx.resolve(this._core));
+    return '';
+  }
+
+  toString(): string {
+    return `${this.resourceType}`;
   }
 
   get rawPipeline(): GPUComputePipeline {
@@ -153,22 +163,25 @@ class ComputePipelineCore {
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
+  '~resolve'(ctx: ResolutionCtx) {
+    ctx.withSlots(this._slotBindings, () => {
+      ctx.resolve(this._entryFn);
+    });
+
+    return '';
+  }
+
+  toString() {
+    return `computePipeline:${getName(this) ?? '<unnamed>'}`;
+  }
+
   public unwrap(): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
 
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
-        {
-          '~resolve': (ctx) => {
-            ctx.withSlots(this._slotBindings, () => {
-              ctx.resolve(this._entryFn);
-            });
-            return '';
-          },
-
-          toString: () => `computePipeline:${getName(this) ?? '<unnamed>'}`,
-        },
+        this,
         {
           names: this.branch.nameRegistry,
           jitTranspiler: this.branch.jitTranspiler,
