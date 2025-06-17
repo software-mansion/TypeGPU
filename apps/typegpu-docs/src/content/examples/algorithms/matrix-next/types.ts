@@ -14,15 +14,15 @@ export const createMatrixData = (capacity: number) =>
 
 export const computeLayout = tgpu.bindGroupLayout({
   firstMatrix: {
-    storage: (n: number) => createMatrixData(n),
+    storage: createMatrixData,
     access: 'readonly',
   },
   secondMatrix: {
-    storage: (n: number) => createMatrixData(n),
+    storage: createMatrixData,
     access: 'readonly',
   },
   resultMatrix: {
-    storage: (n: number) => createMatrixData(n),
+    storage: createMatrixData,
     access: 'mutable',
   },
   dimensions: { uniform: MatrixInfo },

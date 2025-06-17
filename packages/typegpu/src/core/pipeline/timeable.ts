@@ -74,10 +74,8 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
     );
   }
 
-  if (currentPriors.hasAutoQuerySet) {
-    if (currentPriors.timestampWrites) {
-      currentPriors.timestampWrites.querySet.destroy();
-    }
+  if (currentPriors.hasAutoQuerySet && currentPriors.timestampWrites) {
+    currentPriors.timestampWrites.querySet.destroy();
   }
 
   const timestampWrites: TimestampWritesPriors['timestampWrites'] = {

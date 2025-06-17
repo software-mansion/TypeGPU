@@ -18,7 +18,7 @@ TypeGPU offers two ways to employ timestamp queries:
 1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method  
 2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
 
-## Performance Callbacks
+## Performance callbacks
 
 Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceCallback()` onto a compute or render pipeline:
 
@@ -50,7 +50,7 @@ const pipeline = root['~unstable']
 
 For finer control, create and manage your own `TgpuQuerySet`. You can attach it either to a TypeGPU pipeline or directly to a raw WebGPU encoder.
 
-### Creating and Attaching to a Pipeline
+### Creating and attaching to a pipeline
 
 ```ts
 // Create a query set with two timestamp slots
@@ -68,7 +68,7 @@ const pipeline = root['~unstable']
 
 Omit `beginningOfPassWriteIndex` or `endOfPassWriteIndex` to skip writing at the start or end of the pass, respectively.
 
-### Attaching to a Raw WebGPU Command Encoder
+### Attaching to a raw WebGPU command encoder
 
 You can also attach timestamp queries directly to a raw WebGPU command encoder by specifying `timestampWrites` in the pass descriptor:
 
@@ -104,7 +104,7 @@ const timestamps: bigint[] = await querySet.read();
 If you don't resolve the query set, the read operation will throw an error or return stale data (if the query set was previously resolved).
 :::
 
-### Continuous Timestamp Queries
+### Continuous timestamp queries
 
 Reading timestamp queries involves several steps on both the GPU and CPU. While the query set can be written to and resolved every frame, mapping the read buffer on the CPU often takes longer than the GPU pipeline execution. If you attempt to resolve or read the query results while a previous read is still in progress, you risk conflicting operations.
 
@@ -130,7 +130,7 @@ async function renderLoop() {
 
 The `querySet.available` property returns `true` once the last resolve has completed.
 
-## Combining `TgpuQuerySet` with Performance Callbacks
+## Combining `TgpuQuerySet` with performance callbacks
 
 You can use a custom query set and still attach a performance callback. TypeGPU will write to the indices you specify, then resolve and read the full set for the callback:
 

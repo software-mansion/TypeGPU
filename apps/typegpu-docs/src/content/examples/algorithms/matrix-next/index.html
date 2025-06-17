@@ -1,6 +1,4 @@
-<div class="timing-display">
-  <div class="timing-content">Press Compute to time</div>
-</div>
+<div class="timing-content">Press Compute to time</div>
 
 <div class="matrices">
   <div>
@@ -24,7 +22,9 @@
 </div>
 
 <style>
-  .timing-display {
+  .timing-content {
+    color: #666;
+    font-style: italic;
     text-align: center;
     font-weight: bold;
     margin-bottom: 1rem;
@@ -33,11 +33,6 @@
     border: 1px solid #e9ecef;
     border-radius: 0.25rem;
     font-family: monospace;
-  }
-
-  .timing-content {
-    color: #666;
-    font-style: italic;
   }
 
   .matrices {
@@ -81,13 +76,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
     color: #666;
     font-style: italic;
-    text-align: center;
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    background: #f9f9f9;
     grid-column: 1 / -1;
   }
 

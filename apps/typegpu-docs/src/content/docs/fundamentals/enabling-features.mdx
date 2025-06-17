@@ -9,7 +9,7 @@ Some GPU capabilities, such as timestamp queries or subgroup operations, must be
 For a complete list of feature names, consult the [WebGPU specification](https://www.w3.org/TR/webgpu/#gpufeaturename).
 :::
 
-## Requesting Features
+## Requesting features
 
 When initializing TypeGPU, include `requiredFeatures` and/or `optionalFeatures` in the `device` descriptor:
 
@@ -39,7 +39,7 @@ const root = await tgpu.init({
 * **`optionalFeatures: GPUFeatureName[]`**
   The GPU will enable supported features and ignore unsupported ones without error.
 
-## Verifying Availability
+## Verifying availability
 
 After `tgpu.init()` resolves, you can check which features are enabled using the `enabledFeatures` property on the root object:
 
