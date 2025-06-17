@@ -153,10 +153,10 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                   .slice(0, def.start)
                   .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
             ) {
-              throw new Error(
+              console.warn(
                 `File ${id}: function "${name}", containing ${
                   removeJsImplementation ? 'kernel' : 'kernel & js'
-                } directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+                } directive, might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
               );
             }
 
