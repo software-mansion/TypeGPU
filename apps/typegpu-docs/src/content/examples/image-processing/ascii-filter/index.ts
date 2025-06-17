@@ -291,7 +291,7 @@ export const controls = {
   },
   'glyph size (px)': {
     initial: 8,
-    min: 2,
+    min: 4,
     max: 32,
     step: 2,
     onSliderChange: (value: number) => glyphSizeBuffer.write(value),
