@@ -7,7 +7,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ vertexIndex }) => {
-  const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+  const pos = [d.vec2f(0.0, 0.8), d.vec2f(-0.8, -0.8), d.vec2f(0.8, -0.8)];
   const uv = [d.vec2f(0.5, 1.0), d.vec2f(0.0, 0.0), d.vec2f(1.0, 0.0)];
 
   return {
