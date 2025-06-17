@@ -109,7 +109,10 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
   // -- FOG --
 
-  const noFogColor = std.mul(albedo, std.mix(ambientColor, std.add(c1, c2), blend));
+  const noFogColor = std.mul(
+    albedo,
+    std.mix(ambientColor, std.add(c1, c2), blend),
+  );
   // Fog blending factor, based on the height of the pixels
   const fog = std.min(std.pow(uv.y, 0.5) * 1.2, 1);
 
@@ -117,7 +120,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const godRayUv = std.mul(std.mul(rotateXY(-0.3), uv), d.vec2f(15, 3));
   const godRayFactor = std.pow(uv.y, 2);
-  const godRay = std.mul(
+  const godRay1 = std.mul(
     std.add(perlin3d.sample(d.vec3f(godRayUv, time * 0.5)), 1),
     // Tinting
     std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor),
@@ -127,8 +130,9 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
     // Tinting
     std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor * 0.4),
   );
+  const godRays = std.add(godRay1, godRay2);
 
-  return d.vec4f(std.add(std.mix(noFogColor, fogColor, fog), std.add(godRay, godRay2)), 1);
+  return d.vec4f(std.add(std.mix(noFogColor, fogColor, fog), godRays), 1);
 });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
