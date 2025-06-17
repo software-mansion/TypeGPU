@@ -240,7 +240,7 @@ describe('TGSL tgpu.fn function', () => {
           out: {},
         })
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: A vertexFn output cannot be empty since must include the 'position' builtin.]`,
+      `[Error: A vertexFn output cannot be empty since it must include the 'position' builtin.]`,
     );
   });
 
