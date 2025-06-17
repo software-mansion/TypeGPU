@@ -10,19 +10,35 @@ const root = await tgpu.init({
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups' as GPUFeatureName);
+let useSubgroups = hasSubgroups;
 const device = root.device;
 
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
+const ReadonlyFloats = {
+  storage: (n: number) => d.arrayOf(d.f32, n),
+  access: 'readonly',
+} as const;
+
+const MutableFloats = {
+  storage: (n: number) => d.arrayOf(d.f32, n),
+  access: 'mutable',
+} as const;
+
+const ioLayout = tgpu.bindGroupLayout({
+  input: ReadonlyFloats,
+  output: MutableFloats,
+}).$idx(0);
+
+const weightsBiasesLayout = tgpu.bindGroupLayout({
+  weights: ReadonlyFloats,
+  biases: ReadonlyFloats,
+}).$idx(1);
+
 // Shader code
 
-const fallbackShader = `
-  @binding(0) @group(0) var<storage, read> input: array<f32>;
-  @binding(1) @group(0) var<storage, read_write> output: array<f32>;
-
-  @binding(0) @group(1) var<storage, read> weights: array<f32>;
-  @binding(1) @group(1) var<storage, read> biases: array<f32>;
-
+const fallbackShader = tgpu.resolve({
+  template: `
   fn relu(x: f32) -> f32 {
     return max(0.0, x);
   }
@@ -43,17 +59,17 @@ const fallbackShader = `
     let total = sum + biases[i];
     output[i] = relu(total);
   }
-`;
+`,
+  externals: {
+    ...weightsBiasesLayout.bound,
+    ...ioLayout.bound,
+  },
+});
 
-const subgroupShader = `
-  enable subgroups;
-
-  @binding(0) @group(0) var<storage, read> input: array<f32>;
-  @binding(1) @group(0) var<storage, read_write> output: array<f32>;
-
-  @binding(0) @group(1) var<storage, read> weights: array<f32>;
-  @binding(1) @group(1) var<storage, read> biases: array<f32>;
-
+const subgroupShader = `enable subgroups;
+  ${
+  tgpu.resolve({
+    template: `
   fn relu(x: f32) -> f32 {
     return max(0.0, x);
   }
@@ -97,35 +113,21 @@ const subgroupShader = `
         output[neuronIndex] = relu(total);
       }
   }
-`;
+`,
+    externals: {
+      ...weightsBiasesLayout.bound,
+      ...ioLayout.bound,
+    },
+  })
+}`;
 
-const ReadonlyFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
-  access: 'readonly',
-} as const;
-
-const MutableFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
-  access: 'mutable',
-} as const;
-
-const ioLayout = tgpu.bindGroupLayout({
-  input: ReadonlyFloats,
-  output: MutableFloats,
-});
-
-const weightsBiasesLayout = tgpu.bindGroupLayout({
-  weights: ReadonlyFloats,
-  biases: ReadonlyFloats,
-});
-
-const pipeline = device.createComputePipeline({
+let pipeline = device.createComputePipeline({
   layout: device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
   }),
   compute: {
     module: device.createShaderModule({
-      code: hasSubgroups ? subgroupShader : fallbackShader,
+      code: useSubgroups ? subgroupShader : fallbackShader,
     }),
   },
 });
@@ -237,9 +239,12 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     if (querySet?.available) {
       querySet.resolve();
       const results = await querySet.read();
-      console.log(
-        `Inference took ${Number(results[1] - results[0]) / 1_000_000} ms`,
-      );
+      const inferenceTimeMs = Number(results[1] - results[0]) / 1_000_000;
+      console.log(`Inference took ${inferenceTimeMs} ms`);
+
+      inferenceTimeEl.textContent = `${inferenceTimeMs.toFixed(2)} ms`;
+    } else {
+      inferenceTimeEl.textContent = 'N/A';
     }
 
     // Read the output
@@ -253,6 +258,22 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     inference,
   };
 }
+
+const recreatePipeline = () => {
+  pipeline = device.createComputePipeline({
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [
+        root.unwrap(ioLayout),
+        root.unwrap(weightsBiasesLayout),
+      ],
+    }),
+    compute: {
+      module: device.createShaderModule({
+        code: useSubgroups ? subgroupShader : fallbackShader,
+      }),
+    },
+  });
+};
 
 const network = createNetwork(await downloadLayers());
 
@@ -328,6 +349,12 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
+const subgroupsEl = document.getElementById(
+  'subgroups-status',
+) as HTMLSpanElement;
+const inferenceTimeEl = document.getElementById(
+  'inference-time',
+) as HTMLSpanElement;
 
 const uiState = {
   isDrawing: false,
@@ -385,6 +412,20 @@ function run() {
 }
 
 document.querySelector('.loading')?.classList.add('loaded');
+
+function updateSubgroupsStatus() {
+  const text = !hasSubgroups
+    ? 'Not Supported'
+    : useSubgroups
+    ? 'Enabled'
+    : 'Disabled';
+  const cls = !hasSubgroups || !useSubgroups ? 'disabled' : 'enabled';
+  subgroupsEl.textContent = text;
+  subgroupsEl.className = cls;
+}
+
+updateSubgroupsStatus();
+
 run();
 
 canvas.addEventListener('mousedown', () => {
@@ -510,6 +551,14 @@ canvas.addEventListener('touchmove', (event) => {
 export const controls = {
   Reset: {
     onButtonClick: resetDrawing,
+  },
+  'Use Subgroups': {
+    initial: hasSubgroups,
+    onToggleChange: (value: boolean) => {
+      useSubgroups = value;
+      recreatePipeline();
+      updateSubgroupsStatus();
+    },
   },
 };
 
