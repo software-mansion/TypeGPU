@@ -455,14 +455,23 @@ class RenderPipelineCore {
     }
     for (const [key, value] of Object.entries(fragmentIn ?? {})) {
       const customLocation = getCustomLocation(value);
+      if (customLocation === undefined) {
+        continue;
+      }
+
       if (
-        fragmentLocations[key] === undefined &&
-        customLocation !== undefined
+        fragmentLocations[key] === undefined
       ) {
         fragmentLocations[key] = customLocation;
         if (key in (vertexOut ?? {})) {
           vertexLocations[key] = customLocation;
         }
+      } else if (fragmentLocations[key] !== customLocation) {
+        console.warn(
+          `Mismatched custom location for key: ${key}, using location set on vertex output: ${
+            fragmentLocations[key]
+          }`,
+        );
       }
     }
 

@@ -1,4 +1,11 @@
-import { describe, expect, expectTypeOf } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  vi,
+} from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
@@ -9,84 +16,90 @@ import { it } from './utils/extendedIt.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuRenderPipeline', () => {
-  describe('with non-empty vertex output', () => {
-    const vert = tgpu['~unstable'].vertexFn({
-      out: { a: d.vec3f, b: d.vec2f },
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
+  const vert = tgpu['~unstable'].vertexFn({
+    out: { a: d.vec3f, b: d.vec2f },
+  })`{}`;
+  const vertWithBuiltin = tgpu['~unstable'].vertexFn({
+    out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
+  })`{}`;
+
+  it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
+    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
+      '',
+    );
+    const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
+      in: { pos: d.builtin.frontFacing },
+      out: {},
     })('');
-    const vertWithBuiltin = tgpu['~unstable'].vertexFn({
-      out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
+    const fullFragment = tgpu['~unstable'].fragmentFn({
+      in: { a: d.vec3f, b: d.vec2f },
+      out: d.vec4f,
     })('');
 
-    it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-      const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
-        '',
-      );
-      const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
-        in: { pos: d.builtin.frontFacing },
-        out: {},
-      })('');
-      const fullFragment = tgpu['~unstable'].fragmentFn({
-        in: { a: d.vec3f, b: d.vec2f },
-        out: d.vec4f,
-      })('');
+    // Using none
+    const pipeline = root
+      .withVertex(vert, {})
+      .withFragment(emptyFragment, {})
+      .createPipeline();
 
-      // Using none
-      const pipeline = root
-        .withVertex(vert, {})
-        .withFragment(emptyFragment, {})
-        .createPipeline();
+    // Using none (builtins are erased from the vertex output)
+    const pipeline2 = root
+      .withVertex(vertWithBuiltin, {})
+      .withFragment(emptyFragment, {})
+      .createPipeline();
 
-      // Using none (builtins are erased from the vertex output)
-      const pipeline2 = root
-        .withVertex(vertWithBuiltin, {})
-        .withFragment(emptyFragment, {})
-        .createPipeline();
+    // Using none (builtins are ignored in the fragment input)
+    const pipeline3 = root
+      .withVertex(vert, {})
+      .withFragment(emptyFragmentWithBuiltin, {})
+      .createPipeline();
 
-      // Using none (builtins are ignored in the fragment input)
-      const pipeline3 = root
-        .withVertex(vert, {})
-        .withFragment(emptyFragmentWithBuiltin, {})
-        .createPipeline();
+    // Using none (builtins are ignored in both input and output,
+    // so their conflict of the `pos` key is fine)
+    const pipeline4 = root
+      .withVertex(vertWithBuiltin, {})
+      .withFragment(emptyFragmentWithBuiltin, {})
+      .createPipeline();
 
-      // Using none (builtins are ignored in both input and output,
-      // so their conflict of the `pos` key is fine)
-      const pipeline4 = root
-        .withVertex(vertWithBuiltin, {})
-        .withFragment(emptyFragmentWithBuiltin, {})
-        .createPipeline();
+    // Using all
+    const pipeline5 = root
+      .withVertex(vert, {})
+      .withFragment(fullFragment, { format: 'rgba8unorm' })
+      .createPipeline();
 
-      // Using all
-      const pipeline5 = root
-        .withVertex(vert, {})
-        .withFragment(fullFragment, { format: 'rgba8unorm' })
-        .createPipeline();
+    expect(pipeline).toBeDefined();
+    expect(pipeline2).toBeDefined();
+    expect(pipeline3).toBeDefined();
+    expect(pipeline4).toBeDefined();
+    expect(pipeline5).toBeDefined();
+  });
 
-      expect(pipeline).toBeDefined();
-      expect(pipeline2).toBeDefined();
-      expect(pipeline3).toBeDefined();
-      expect(pipeline4).toBeDefined();
-      expect(pipeline5).toBeDefined();
-    });
+  it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
+    const fragment = tgpu['~unstable'].fragmentFn({
+      in: { a: d.vec3f, c: d.f32 },
+      out: {},
+    })('');
 
-    it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
-      const fragment = tgpu['~unstable'].fragmentFn({
-        in: { a: d.vec3f, c: d.f32 },
-        out: {},
-      })('');
+    // @ts-expect-error: Missing from vertex output
+    root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
+  });
 
-      // @ts-expect-error: Missing from vertex output
-      root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
-    });
+  it('rejects fragment functions that use mismatched vertex output data types', ({ root }) => {
+    const fragment = tgpu['~unstable'].fragmentFn({
+      in: { a: d.vec3f, b: d.f32 },
+      out: {},
+    })('');
 
-    it('rejects fragment functions that use mismatched vertex output data types', ({ root }) => {
-      const fragment = tgpu['~unstable'].fragmentFn({
-        in: { a: d.vec3f, b: d.f32 },
-        out: {},
-      })('');
-
-      // @ts-expect-error: Mismatched vertex output
-      root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
-    });
+    // @ts-expect-error: Mismatched vertex output
+    root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
   });
 
   it('throws an error if bind groups are missing', ({ root }) => {
@@ -138,6 +151,40 @@ describe('TgpuRenderPipeline', () => {
       tgpu['~unstable'].fragmentFn({ out: {} }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+  });
+
+  it('is resolvable', ({ root }) => {
+    const pipeline = root['~unstable'].withVertex(
+      vertWithBuiltin.$name('vertex'),
+      {},
+    )
+      .withFragment(
+        tgpu['~unstable'].fragmentFn({
+          in: { a: d.builtin.position },
+          out: d.vec4f,
+        })(() => d.vec4f(1, 2, 3, 4)).$name('fragment'),
+        { format: 'r8unorm' },
+      ).createPipeline();
+
+    expect(parseResolved({ pipeline })).toEqual(parse(`
+
+      struct vertex_Output { 
+        @location(0) a: vec3f,
+        @location (1) b: vec2f,
+        @builtin (position) pos: vec4f,
+      } 
+        
+      @vertex fn vertex() -> vertex_Output {
+
+      }
+      struct fragment_Input { 
+        @builtin (position) a: vec4f,
+      }
+      
+      @fragment fn fragment (_arg_0 : fragment_Input) -> @location(0) vec4f { 
+        return vec4f (1, 2, 3, 4); 
+      }
+    `));
   });
 
   it('resolves with correct locations when pairing up a vertex and a fragment function', ({ root }) => {
@@ -249,5 +296,70 @@ describe('TgpuRenderPipeline', () => {
 
       @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0) vec4f {}
     `));
+  });
+
+  it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({ root }) => {
+    const vertexMain = tgpu['~unstable']
+      .vertexFn({
+        out: {
+          foo: d.vec3f,
+          bar: d.location(0, d.vec3f),
+        },
+      })(() => ({
+        foo: d.vec3f(),
+        bar: d.vec3f(),
+      }))
+      .$name('vertexMain');
+
+    const fragmentMain = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          bar: d.location(1, d.vec3f),
+        },
+        out: d.vec4f,
+      })(() => d.vec4f()).$name('fragmentMain');
+
+    const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
+      fragmentMain,
+      { format: 'r8unorm' },
+    ).createPipeline();
+
+    tgpu.resolve({ externals: { pipeline } });
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Mismatched custom location for key: bar, using location set on vertex output: 0',
+    );
+  });
+
+  it('does not throw error when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
+    const vertexMain = tgpu['~unstable']
+      .vertexFn({
+        out: {
+          foo: d.vec3f,
+          bar: d.location(0, d.vec3f),
+        },
+      })(() => ({
+        foo: d.vec3f(),
+        bar: d.vec3f(),
+      }))
+      .$name('vertexMain');
+
+    const fragmentMain = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          bar: d.location(0, d.vec3f),
+        },
+        out: d.vec4f,
+      })(() => d.vec4f()).$name('fragmentMain');
+
+    const pipeline = root['~unstable'].withVertex(vertexMain, {})
+      .withFragment(
+        fragmentMain,
+        { format: 'r8unorm' },
+      ).createPipeline();
+
+    tgpu.resolve({ externals: { pipeline } });
+    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+      'Mismatched custom location for key: bar, using location set on vertex output: 0',
+    );
   });
 });
