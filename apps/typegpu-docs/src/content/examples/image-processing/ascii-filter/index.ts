@@ -29,17 +29,17 @@ const shaderSampler = tgpu['~unstable'].sampler({
  * https://www.shadertoy.com/view/lssGDj
  */
 const characterFn = tgpu['~unstable'].fn([d.u32, d.vec2f], d.f32)((n, p) => {
-  const pos = std.floor(std.add(std.mul(p, d.vec2f(-4.0, 4.0)), 2.5));
+  const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
 
-  if (pos.x < 0.0 || pos.x > 4.0 || pos.y < 0.0 || pos.y > 4.0) {
-    return 0.0;
+  if (pos.x < 0 || pos.x > 4 || pos.y < 0 || pos.y > 4) {
+    return 0;
   }
 
-  const a = d.u32(std.add(pos.x, std.mul(5.0, pos.y)));
+  const a = d.u32(std.add(pos.x, std.mul(5, pos.y)));
   if ((n >> a) & 1) {
-    return 1.0;
+    return 1;
   }
-  return 0.0;
+  return 0;
 });
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -47,10 +47,11 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const uv = [d.vec2f(0, 0), d.vec2f(2, 0), d.vec2f(0, 2)];
 
   return {
-    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: std.mul(0.5, pos[input.vertexIndex]),
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+    uv: uv[input.vertexIndex],
   };
 });
 
@@ -64,9 +65,8 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })((input) => {
-  const correctedUV = d.vec2f(input.uv.x + 0.5, 1.0 - (input.uv.y + 0.5));
   const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
-  const pix = std.mul(correctedUV, textureSize);
+  const pix = std.mul(input.uv, textureSize);
 
   const cellSize = d.f32(glyphSizeBuffer.value);
   const halfCell = std.mul(cellSize, 0.5);
@@ -139,8 +139,8 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   }
 
   const p = d.vec2f(
-    ((pix.x / halfCell) % 2.0) - 1.0,
-    1.0 - ((pix.y / halfCell) % 2.0),
+    ((pix.x / halfCell) % 2) - 1,
+    ((pix.y / halfCell) % 2) - 1,
   );
 
   const charValue = characterFn(n, p);
@@ -176,7 +176,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable'].withVertex(fullScreenTriangle, {})
+const pipeline = root['~unstable']
+  .withVertex(fullScreenTriangle, {})
   .withFragment(fragmentFn, { format: presentationFormat })
   .createPipeline();
 
@@ -223,7 +224,7 @@ function run() {
 
   try {
     device.queue.copyExternalImageToTexture(
-      { source: video },
+      { source: video, flipY: true },
       { texture: root.unwrap(renderTexture) },
       [video.videoWidth, video.videoHeight],
     );
