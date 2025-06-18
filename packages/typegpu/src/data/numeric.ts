@@ -48,6 +48,7 @@ const u32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => snip(`u32(${v.value})`, u32),
+  'u32Cast',
 );
 
 /**
@@ -87,6 +88,7 @@ const i32Cast = createDualImpl(
   (v) => {
     return snip(`i32(${v.value})`, i32);
   },
+  'i32Cast',
 );
 
 export const u16: U16 = {
@@ -122,6 +124,7 @@ const f32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => snip(`f32(${v.value})`, f32),
+  'f32Cast',
 );
 
 /**
@@ -149,6 +152,7 @@ const f16Cast = createDualImpl(
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => snip(`f16(${v.value})`, f16),
+  'f16Cast',
 );
 
 /**

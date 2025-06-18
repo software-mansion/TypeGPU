@@ -42,10 +42,19 @@ import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
 import { isGPUBuffer } from '../../types.ts';
 import { sizeOf } from '../../data/index.ts';
+import {
+  createWithPerformanceCallback,
+  createWithTimestampWrites,
+  setupTimestampWrites,
+  type Timeable,
+  type TimestampWritesPriors,
+  triggerPerformanceCallback,
+} from './timeable.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
-  readonly priors: TgpuRenderPipelinePriors;
+  readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
 }
 
 // ----------
@@ -65,7 +74,7 @@ export interface HasIndexBuffer {
 }
 
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
-  extends TgpuNamable {
+  extends TgpuNamable, Timeable<TgpuRenderPipeline> {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
   readonly hasIndexBuffer: boolean;
@@ -269,7 +278,7 @@ type TgpuRenderPipelinePriors = {
       sizeBytes?: number | undefined;
     }
     | undefined;
-};
+} & TimestampWritesPriors;
 
 type Memo = {
   pipeline: GPURenderPipeline;
@@ -331,6 +340,32 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     throw new Error('Unsupported value passed into .with()');
+  }
+
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuRenderPipeline {
+    const internals = this[$internal];
+    const newPriors = createWithPerformanceCallback(
+      internals.priors,
+      callback,
+      internals.core.options.branch,
+    );
+    return new TgpuRenderPipelineImpl(internals.core, newPriors);
+  }
+
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuRenderPipeline {
+    const internals = this[$internal];
+    const newPriors = createWithTimestampWrites(
+      internals.priors,
+      options,
+      internals.core.options.branch,
+    );
+    return new TgpuRenderPipelineImpl(internals.core, newPriors);
   }
 
   withColorAttachment(
@@ -434,13 +469,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as GPURenderPassColorAttachment[];
 
     const renderPassDescriptor: GPURenderPassDescriptor = {
+      label: getName(internals.core) ?? '<unnamed>',
       colorAttachments,
+      ...setupTimestampWrites(
+        internals.priors,
+        branch,
+      ),
     };
-
-    const label = getName(internals.core);
-    if (label !== undefined) {
-      renderPassDescriptor.label = label;
-    }
 
     if (internals.priors.depthStencilAttachment !== undefined) {
       const attachment = internals.priors.depthStencilAttachment;
@@ -505,11 +540,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const pass = this.setupRenderPass();
     const { branch } = this[$internal].core.options;
+    const internals = this[$internal];
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
-    branch.flush();
+
+    internals.priors.performanceCallback
+      ? triggerPerformanceCallback({
+        root: branch,
+        priors: internals.priors,
+      })
+      : branch.flush();
   }
 
   drawIndexed(
@@ -551,7 +593,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     );
 
     pass.end();
-    branch.flush();
+
+    internals.priors.performanceCallback
+      ? triggerPerformanceCallback({
+        root: branch,
+        priors: internals.priors,
+      })
+      : branch.flush();
   }
 }
 

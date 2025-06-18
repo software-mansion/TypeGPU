@@ -154,7 +154,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   const core = createFnCore(shell, implementation);
   const inputType = shell.argTypes[0];
 
-  return {
+  const result: This = {
     shell,
 
     $uses(newExternals) {
@@ -181,5 +181,6 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     toString() {
       return `computeFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }
