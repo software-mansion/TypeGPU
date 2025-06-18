@@ -1,11 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  vi,
-} from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
@@ -16,14 +9,6 @@ import { it } from './utils/extendedIt.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuRenderPipeline', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-  });
-
   const vert = tgpu['~unstable'].vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
   })`{}`;
@@ -299,6 +284,10 @@ describe('TgpuRenderPipeline', () => {
   });
 
   it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
     const vertexMain = tgpu['~unstable']
       .vertexFn({
         out: {
@@ -331,6 +320,10 @@ describe('TgpuRenderPipeline', () => {
   });
 
   it('does not throw error when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
     const vertexMain = tgpu['~unstable']
       .vertexFn({
         out: {
