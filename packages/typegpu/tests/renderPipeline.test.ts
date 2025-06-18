@@ -600,4 +600,104 @@ describe('Inter-Stage Variables', () => {
       },
     });
   });
+
+  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device }) => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        out: { pos: d.builtin.position },
+      })('')
+      .$name('vertex');
+
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        out: { color: d.vec4f },
+      })('')
+      .$name('fragment');
+
+    const querySet = root.createQuerySet('timestamp', 2);
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
+    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+
+    const callback = vi.fn();
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .createPipeline()
+      .withIndexBuffer(indexBuffer)
+      .withTimestampWrites({
+        querySet,
+        beginningOfPassWriteIndex: 0,
+        endOfPassWriteIndex: 1,
+      })
+      .withPerformanceCallback(callback)
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    expect(pipeline[$internal].priors.indexBuffer).toEqual({
+      buffer: indexBuffer,
+      indexFormat: 'uint16',
+      offsetBytes: undefined,
+      sizeBytes: undefined,
+    });
+    expect(pipeline[$internal].priors.timestampWrites).toEqual({
+      querySet,
+      beginningOfPassWriteIndex: 0,
+      endOfPassWriteIndex: 1,
+    });
+    expect(pipeline[$internal].priors.performanceCallback).toBe(callback);
+
+    pipeline.drawIndexed(3);
+
+    expect(device.mock.createQuerySet).toHaveBeenCalledWith({
+      type: 'timestamp',
+      count: 2,
+    });
+
+    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
+      colorAttachments: [
+        {
+          loadOp: 'clear',
+          storeOp: 'store',
+          view: expect.any(Object),
+        },
+      ],
+      label: '<unnamed>',
+      timestampWrites: {
+        beginningOfPassWriteIndex: 0,
+        endOfPassWriteIndex: 1,
+        querySet: querySet.querySet,
+      },
+    });
+
+    expect(resolveQuerySetSpy).toHaveBeenCalledWith(
+      querySet.querySet,
+      0,
+      2,
+      querySet[$internal].resolveBuffer,
+      0,
+    );
+
+    expect(beginRenderPassSpy).toHaveBeenCalledWith({
+      colorAttachments: [
+        {
+          loadOp: 'clear',
+          storeOp: 'store',
+          view: expect.any(Object),
+        },
+      ],
+      label: '<unnamed>',
+      timestampWrites: {
+        beginningOfPassWriteIndex: 0,
+        endOfPassWriteIndex: 1,
+        querySet: querySet.querySet,
+      },
+    });
+  });
 });
