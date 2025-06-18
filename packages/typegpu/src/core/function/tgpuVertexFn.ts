@@ -3,6 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import { struct } from '../../data/struct.ts';
 import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -13,7 +14,6 @@ import {
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -21,7 +21,11 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import {
+  createIoSchema,
+  type IOLayoutToSchema,
+  withLocations,
+} from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -45,9 +49,9 @@ type TgpuVertexFnShellHeader<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
 > = {
+  readonly in: VertexIn | undefined;
+  readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut>;
-  readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
 
@@ -91,8 +95,6 @@ export interface TgpuVertexFn<
   VertexOut extends VertexOutConstrained = any,
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
-  readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -137,8 +139,8 @@ export function vertexFn<
     );
   }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
-    attributes: [options.in ?? ({} as VertexIn)],
-    returnType: createIoSchema(options.out),
+    in: options.in,
+    out: options.out,
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -170,21 +172,11 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(shell, implementation);
-  const outputType = shell.returnType;
+  const core = createFnCore(implementation, true);
   const inputType = shell.argTypes[0];
-  if (typeof implementation === 'string') {
-    addReturnTypeToExternals(
-      implementation,
-      outputType,
-      (externals) => core.applyExternals(externals),
-    );
-  }
 
   const result: This = {
     shell,
-    outputType,
-    inputType,
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
@@ -194,9 +186,6 @@ function createVertexFn(
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
-      if (isNamable(outputType)) {
-        outputType.$name(`${newLabel}_Output`);
-      }
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
@@ -204,8 +193,23 @@ function createVertexFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
+      const outputWithLocation = struct(withLocations(
+        shell.out,
+        ctx.varyingLocations?.vertexLocations ?? {},
+      )).$name(`${getName(this) ?? ''}_Output`);
+
+      if (inputType) {
+        core.applyExternals({ In: inputType });
+      }
+      core.applyExternals({ Out: outputWithLocation });
+
       if (typeof implementation === 'string') {
-        return core.resolve(ctx, '@vertex ');
+        return core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+          '@vertex ',
+        );
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -216,8 +220,13 @@ function createVertexFn(
       }
 
       try {
-        generationCtx.callStack.push(outputType);
-        return core.resolve(ctx, '@vertex ');
+        generationCtx.callStack.push(outputWithLocation);
+        return core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+          '@vertex ',
+        );
       } finally {
         generationCtx.callStack.pop();
       }

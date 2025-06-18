@@ -3,6 +3,7 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import { struct } from '../../data/struct.ts';
 import type {
   Decorated,
   Interpolate,
@@ -27,7 +28,11 @@ import type {
   IOLayout,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import {
+  createIoSchema,
+  type IOLayoutToSchema,
+  withLocations,
+} from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -53,8 +58,8 @@ type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
-  readonly argTypes: [IOLayoutToSchema<FragmentIn>] | [];
-  readonly targets: FragmentOut;
+  readonly in: FragmentIn | undefined;
+  readonly out: FragmentOut;
   readonly returnType: IOLayoutToSchema<FragmentOut>;
   readonly isEntry: true;
 };
@@ -150,10 +155,8 @@ export function fragmentFn<
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
-    argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createIoSchema(options.in)]
-      : [],
-    targets: options.out,
+    in: options.in,
+    out: options.out,
     returnType: createIoSchema(options.out),
     isEntry: true,
   };
@@ -181,9 +184,8 @@ function createFragmentFn(
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(implementation, true);
   const outputType = shell.returnType;
-  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(
       implementation,
@@ -207,15 +209,29 @@ function createFragmentFn(
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
-      if (isNamable(inputType)) {
-        inputType.$name(`${newLabel}_Input`);
-      }
       return this;
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
+      const inputWithLocation = shell.in
+        ? struct(withLocations(
+          shell.in,
+          ctx.varyingLocations?.fragmentLocations ?? {},
+        )).$name(`${getName(this) ?? ''}_Input`)
+        : undefined;
+
+      if (inputWithLocation) {
+        core.applyExternals({ In: inputWithLocation });
+      }
+      core.applyExternals({ Out: outputType });
+
       if (typeof implementation === 'string') {
-        return core.resolve(ctx, '@fragment ');
+        return core.resolve(
+          ctx,
+          inputWithLocation ? [inputWithLocation] : [],
+          shell.returnType,
+          '@fragment ',
+        );
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -227,7 +243,12 @@ function createFragmentFn(
 
       try {
         generationCtx.callStack.push(outputType);
-        return core.resolve(ctx, '@fragment ');
+        return core.resolve(
+          ctx,
+          inputWithLocation ? [inputWithLocation] : [],
+          shell.returnType,
+          '@fragment ',
+        );
       } finally {
         generationCtx.callStack.pop();
       }
