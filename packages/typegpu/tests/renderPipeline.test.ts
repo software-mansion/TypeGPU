@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
