@@ -65,6 +65,9 @@ setTimeout(() => {
     .draw(3);
 }, 100);
 
+const nums = tgpu['~unstable'].const(d.arrayOf(d.u32, 4), [1, 2, 3, 4]);
+console.log(tgpu.resolve({ externals: { nums } }));
+
 export function onCleanup() {
   root.destroy();
 }
