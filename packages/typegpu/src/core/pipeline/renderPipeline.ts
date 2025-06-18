@@ -74,7 +74,7 @@ export interface HasIndexBuffer {
 }
 
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
-  extends TgpuNamable, Timeable<TgpuRenderPipeline> {
+  extends TgpuNamable, Timeable {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
   readonly hasIndexBuffer: boolean;
@@ -344,28 +344,28 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withPerformanceCallback(
     callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): TgpuRenderPipeline {
+  ): this {
     const internals = this[$internal];
     const newPriors = createWithPerformanceCallback(
       internals.priors,
       callback,
       internals.core.options.branch,
     );
-    return new TgpuRenderPipelineImpl(internals.core, newPriors);
+    return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
   withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
-  }): TgpuRenderPipeline {
+  }): this {
     const internals = this[$internal];
     const newPriors = createWithTimestampWrites(
       internals.priors,
       options,
       internals.core.options.branch,
     );
-    return new TgpuRenderPipelineImpl(internals.core, newPriors);
+    return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
   withColorAttachment(

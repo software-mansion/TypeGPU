@@ -162,7 +162,9 @@ describe('Inter-Stage Variables', () => {
         .withPerformanceCallback(callback);
 
       expect(pipeline).toBeDefined();
-      expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline>();
+      expectTypeOf(pipeline).toEqualTypeOf<
+        TgpuRenderPipeline<{ color: d.Vec4f }>
+      >();
 
       expect(pipeline[$internal].priors.performanceCallback).toBe(callback);
 
@@ -292,7 +294,9 @@ describe('Inter-Stage Variables', () => {
         });
 
       expect(pipeline).toBeDefined();
-      expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline>();
+      expectTypeOf(pipeline).toEqualTypeOf<
+        TgpuRenderPipeline<{ color: d.Vec4f }>
+      >();
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
       expect(timestampWrites?.querySet).toBe(querySet);
