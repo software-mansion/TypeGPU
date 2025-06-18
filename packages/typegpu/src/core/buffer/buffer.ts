@@ -24,8 +24,7 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
-import type { AnyData } from '../../data/index.ts';
-import type { UnwrapDecorated } from '../../data/dataTypes.ts';
+import type { AnyData, UnwrapDecorated } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
