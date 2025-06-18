@@ -14,15 +14,21 @@ const layout = tgpu.bindGroupLayout({
   inputTexture: { texture: 'float' },
 });
 
-const useExtendedCharacters = root['~unstable'].createUniform(d.u32);
-const displayModeBuffer = root['~unstable'].createUniform(d.u32);
-const gammaCorrectionBuffer = root['~unstable'].createUniform(d.f32);
-const glyphSizeBuffer = root['~unstable'].createUniform(d.u32, 8);
+const charsetExtendedUniform = root['~unstable'].createUniform(d.u32);
+const displayModeUniform = root['~unstable'].createUniform(d.u32);
+const gammaCorrectionUniform = root['~unstable'].createUniform(d.f32);
+const glyphSizeUniform = root['~unstable'].createUniform(d.u32, 8);
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
+
+const colorModes = {
+  color: 0,
+  grayscale: 1,
+  white: 2,
+} as const;
 
 /**
  * Adapted from the original Shadertoy implementation by movAX13h:
@@ -68,7 +74,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
   const pix = std.mul(input.uv, textureSize);
 
-  const cellSize = d.f32(glyphSizeBuffer.value);
+  const cellSize = d.f32(glyphSizeUniform.value);
   const halfCell = std.mul(cellSize, 0.5);
 
   const blockCoord = std.div(
@@ -82,10 +88,10 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   );
 
   const rawGray = 0.3 * color.x + 0.59 * color.y + 0.11 * color.z;
-  const gray = std.pow(rawGray, gammaCorrectionBuffer.value);
+  const gray = std.pow(rawGray, gammaCorrectionUniform.value);
 
   let n = d.u32(4096);
-  if (useExtendedCharacters.value === 0) {
+  if (charsetExtendedUniform.value === 0) {
     if (gray > 0.2) n = 65600; // :
     if (gray > 0.3) n = 163153; // *
     if (gray > 0.4) n = 15255086; // o
@@ -145,7 +151,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const charValue = characterFn(n, p);
 
-  const colorMode = displayModeBuffer.value;
+  const colorMode = displayModeUniform.value;
   let resultColor = d.vec3f(1);
   // Color mode
   if (colorMode === 0) {
@@ -282,15 +288,14 @@ export const controls = {
   'use extended characters': {
     initial: false,
     onToggleChange: (value: boolean) =>
-      useExtendedCharacters.write(value ? 1 : 0),
+      charsetExtendedUniform.write(value ? 1 : 0),
   },
   'display mode': {
     initial: displayMode,
     options: ['color', 'grayscale', 'white'],
     onSelectChange: (value: 'color' | 'grayscale' | 'white') => {
       displayMode = value;
-      const modeValue = value === 'color' ? 0 : value === 'grayscale' ? 1 : 2;
-      displayModeBuffer.write(modeValue);
+      displayModeUniform.write(colorModes[value]);
     },
   },
   'gamma correction': {
@@ -298,14 +303,14 @@ export const controls = {
     min: 0.1,
     max: 10.0,
     step: 0.1,
-    onSliderChange: (value: number) => gammaCorrectionBuffer.write(value),
+    onSliderChange: (value: number) => gammaCorrectionUniform.write(value),
   },
   'glyph size (px)': {
     initial: 8,
     min: 4,
     max: 32,
     step: 2,
-    onSliderChange: (value: number) => glyphSizeBuffer.write(value),
+    onSliderChange: (value: number) => glyphSizeUniform.write(value),
   },
 };
 
