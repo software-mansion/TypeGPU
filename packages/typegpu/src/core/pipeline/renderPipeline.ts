@@ -290,7 +290,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
-  public readonly hasIndexBuffer = false;
+  public readonly hasIndexBuffer: boolean = false;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$internal] = {

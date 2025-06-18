@@ -483,4 +483,49 @@ describe('Inter-Stage Variables', () => {
       }),
     );
   });
+
+  it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        out: { pos: d.builtin.position },
+      })('')
+      .$name('vertex');
+
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        out: { color: d.vec4f },
+      })('')
+      .$name('fragment');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .createPipeline().withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    //@ts-expect-error: No index buffer assigned
+    expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
+      '[Error: No index buffer set for this render pipeline.]',
+    );
+
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
+
+    const pipelineWithIndex = pipeline.withIndexBuffer(indexBuffer);
+
+    expect(pipelineWithIndex[$internal].priors.indexBuffer).toEqual(
+      {
+        buffer: indexBuffer,
+        indexFormat: 'uint16',
+        offsetBytes: undefined,
+        sizeBytes: undefined,
+      },
+    );
+
+    expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
+  });
 });
