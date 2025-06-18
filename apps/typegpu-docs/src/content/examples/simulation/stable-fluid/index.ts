@@ -147,7 +147,7 @@ function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
   return root['~unstable']
-    .withVertex(renderFn, renderFn.shell.attributes)
+    .withVertex(renderFn, [renderFn.shell.in])
     .withFragment(fragmentFn, { format })
     .withPrimitive({
       topology: 'triangle-strip',
