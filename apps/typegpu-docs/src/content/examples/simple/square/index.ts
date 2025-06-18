@@ -122,4 +122,7 @@ export const controls = {
   },
 };
 
+export function onCleanup() {
+  root.destroy();
+}
 // #endregion
