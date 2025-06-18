@@ -14,7 +14,6 @@ import {
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -197,12 +196,12 @@ function createVertexFn(
         ctx.varyingLocations?.vertexLocations ?? {},
       )).$name(`${getName(this) ?? ''}_Output`);
 
+      if (inputType) {
+        core.applyExternals({ In: inputType });
+      }
+      core.applyExternals({ Out: outputWithLocation });
+
       if (typeof implementation === 'string') {
-        addReturnTypeToExternals(
-          implementation,
-          outputWithLocation,
-          (externals) => core.applyExternals(externals),
-        );
         return core.resolve(
           ctx,
           shell.argTypes,
@@ -210,8 +209,6 @@ function createVertexFn(
           '@vertex ',
         );
       }
-
-      core.applyExternals({ Out: outputWithLocation });
 
       const generationCtx = ctx as GenerationCtx;
       if (generationCtx.callStack === undefined) {

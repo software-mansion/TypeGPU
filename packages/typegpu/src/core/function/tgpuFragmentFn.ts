@@ -220,6 +220,11 @@ function createFragmentFn(
         )).$name(`${getName(this) ?? ''}_Input`)
         : undefined;
 
+      if (inputWithLocation) {
+        core.applyExternals({ In: inputWithLocation });
+      }
+      core.applyExternals({ Out: outputType });
+
       if (typeof implementation === 'string') {
         return core.resolve(
           ctx,
@@ -227,10 +232,6 @@ function createFragmentFn(
           shell.returnType,
           '@fragment ',
         );
-      }
-
-      if (inputWithLocation) {
-        core.applyExternals({ In: inputWithLocation });
       }
 
       const generationCtx = ctx as GenerationCtx;

@@ -68,8 +68,6 @@ describe('TgpuComputePipeline', () => {
       .createPipeline()
       .$name('test_pipeline');
 
-    console.log(tgpu.resolve({ externals: { computePipeline } }));
-
     expect(parseResolved({ computePipeline })).toStrictEqual(parse(`
       @compute @workgroup_size(32) fn main() {}
     `));
