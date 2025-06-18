@@ -1,19 +1,18 @@
-import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
+import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
 import { dataBindGroupLayout, inputValueType } from './schemas.ts';
 import { computeShader } from './compute.ts';
-import type { F32, WgslArray, WgslStruct } from 'typegpu/data';
-
-const root = await tgpu.init();
+import type { F32, WgslArray } from 'typegpu/data';
 
 export function currentSum(
-  inputBuffor: TgpuBuffer<WgslStruct<{ in: WgslArray<F32> }>> & StorageFlag,
+  root: TgpuRoot,
+  inputBuffor: TgpuBuffer<WgslArray<F32>> & StorageFlag,
 ) {
   const workBuffer = root.createBuffer(inputValueType).$usage('storage');
   const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: inputBuffor,
     workArray: workBuffer,
   });
-  
+
   const computePipeline = root['~unstable']
     .withCompute(computeShader)
     .createPipeline()
@@ -30,5 +29,5 @@ export function currentSum(
       console.error('Error reading buffer:', error);
     });
 
-  return fooBindGroup;
+  return workBuffer;
 }
