@@ -13,7 +13,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const Colors = {
+const colors = {
   bottomLeft: d.vec4f(1, 0, 0, 1),
   bottomRight: d.vec4f(0, 1, 0, 1),
   topRight: d.vec4f(0, 0, 1, 1),
@@ -27,12 +27,9 @@ const colorIndices = {
   topLeft: 3,
 } as const;
 
-const colorBuffer = root.createBuffer(
-  d.arrayOf(d.vec4f, 4),
-  Object.values(Colors),
-).$usage(
-  'vertex',
-);
+const colorBuffer = root
+  .createBuffer(d.arrayOf(d.vec4f, 4), Object.values(colors))
+  .$usage('vertex');
 const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec4f, n));
 
 const vertex = tgpu['~unstable'].vertexFn({
@@ -44,18 +41,16 @@ const vertex = tgpu['~unstable'].vertexFn({
     color: d.vec4f,
     pos: d.builtin.position,
   },
-})((input) => {
+})(({ idx, color }) => {
   const vertices = [
     d.vec2f(-1, -1),
     d.vec2f(1, -1),
     d.vec2f(1, 1),
     d.vec2f(-1, 1),
   ];
-  const pos = vertices[input.idx];
-
   return {
-    color: input.color,
-    pos: d.vec4f(pos, 0, 1),
+    color,
+    pos: d.vec4f(vertices[idx], 0, 1),
   };
 });
 
@@ -69,23 +64,21 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
-const pipeline = root['~unstable'].withVertex(vertex, {
-  color: vertexLayout.attrib,
-}).withFragment(
-  mainFragment,
-  {
-    format: presentationFormat,
-  },
-).createPipeline()
+const pipeline = root['~unstable']
+  .withVertex(vertex, { color: vertexLayout.attrib })
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline()
   .withIndexBuffer(indexBuffer);
 
 function render() {
-  pipeline.with(vertexLayout, colorBuffer)
+  pipeline
+    .with(vertexLayout, colorBuffer)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
-    }).drawIndexed(6);
+    })
+    .drawIndexed(6);
 }
 render();
 
@@ -93,14 +86,14 @@ render();
 
 function updateColor(
   color: readonly [number, number, number],
-  position: keyof typeof Colors,
+  position: keyof typeof colors,
 ): void {
-  Colors[position] = d.vec4f(color[0], color[1], color[2], 1);
+  colors[position] = d.vec4f(color[0], color[1], color[2], 1);
   const idx = colorIndices[position];
   colorBuffer.writePartial([
     {
       idx,
-      value: Colors[position],
+      value: colors[position],
     },
   ]);
   render();
@@ -110,22 +103,22 @@ export const controls = {
   topLeft: {
     onColorChange: (value: readonly [number, number, number]) =>
       updateColor(value, 'topLeft'),
-    initial: [...Colors.topLeft.xyz],
+    initial: [...colors.topLeft.xyz],
   },
   topRight: {
     onColorChange: (value: readonly [number, number, number]) =>
       updateColor(value, 'topRight'),
-    initial: [...Colors.topRight.xyz],
+    initial: [...colors.topRight.xyz],
   },
   bottomLeft: {
     onColorChange: (value: readonly [number, number, number]) =>
       updateColor(value, 'bottomLeft'),
-    initial: [...Colors.bottomLeft.xyz],
+    initial: [...colors.bottomLeft.xyz],
   },
   bottomRight: {
     onColorChange: (value: readonly [number, number, number]) =>
       updateColor(value, 'bottomRight'),
-    initial: [...Colors.bottomRight.xyz],
+    initial: [...colors.bottomRight.xyz],
   },
 };
 
