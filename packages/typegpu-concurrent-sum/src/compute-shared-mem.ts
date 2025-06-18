@@ -7,19 +7,26 @@ import {
   workgroupSize,
 } from './schemas.ts';
 
-export const computeShader = tgpu['~unstable'].computeFn({
-  in: { in: d.builtin.globalInvocationId },
+const sharedMem = tgpu['~unstable'].workgroupVar(
+  d.arrayOf(d.f32, workgroupSize),
+);
+
+export const computeShaderSharedMem = tgpu['~unstable'].computeFn({
+  in: { lid: d.builtin.localInvocationId, gid: d.builtin.globalInvocationId },
   workgroupSize: [workgroupSize],
 })((input) => {
-  const threadId = input.in.x;
+  const localThreadId = input.lid.x;
+  const threadId = input.gid.x;
   const length = d.u32(fixedArrayLength);
   const log2Length = d.i32(std.log2(d.f32(length)));
 
   if (threadId < length) {
-    layout.$.workArray[threadId] = layout.$.inputArray[threadId] as number;
+    sharedMem.value[localThreadId] = layout.$.inputArray[threadId] as number;
   }
 
+  // Waiting for all threads to copy their values
   std.workgroupBarrier();
+
   // Up-sweep phase
   for (let dLevel = 0; dLevel < log2Length; dLevel++) {
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
@@ -27,18 +34,17 @@ export const computeShader = tgpu['~unstable'].computeFn({
 
     if (threadId < length / windowSize) {
       const i = threadId * windowSize;
-      const leftIdx = i + offset - 1;
-      const rightIdx = i + windowSize - 1;
+      const leftIdx = (i + offset - 1) % workgroupSize;
+      const rightIdx = (i + windowSize - 1) % workgroupSize;
 
-      layout.$.workArray[rightIdx] = (layout.$.workArray[leftIdx] as number) +
-        (layout.$.workArray[rightIdx] as number);
+      (sharedMem.value[rightIdx] as number) += (sharedMem.value[leftIdx] as number);
     }
 
     std.workgroupBarrier();
   }
 
   if (threadId === 0) {
-    layout.$.workArray[length - 1] = 0;
+    sharedMem.value[length - 1] = 0;
   }
 
   std.workgroupBarrier();
@@ -54,12 +60,16 @@ export const computeShader = tgpu['~unstable'].computeFn({
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
-      const temp = layout.$.workArray[leftIdx] as number;
-      layout.$.workArray[leftIdx] = layout.$.workArray[rightIdx] as number;
-      layout.$.workArray[rightIdx] = temp +
-        (layout.$.workArray[rightIdx] as number);
+      const temp = sharedMem.value[leftIdx] as number;
+      sharedMem.value[leftIdx] = sharedMem.value[rightIdx] as number;
+      sharedMem.value[rightIdx] = temp +
+        (sharedMem.value[rightIdx] as number);
     }
 
     std.workgroupBarrier();
+  }
+
+  if (threadId < length) {
+    layout.$.workArray[threadId] = sharedMem.value[localThreadId] as number; // we copy it back, so huge overhead?
   }
 });
