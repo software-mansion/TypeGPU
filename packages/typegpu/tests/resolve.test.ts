@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { setName } from '../src/shared/meta.ts';
 import { $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
-import { setName } from '../src/shared/meta.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -161,7 +161,7 @@ describe('tgpu resolve', () => {
           range: vec2f,
         }
 
-        fn randomTest() -> f32 {
+        fn random() -> f32 {
           var r: Random;
           r.seed = vec2<f32>(3.14, 1.59);
           r.range = vec2<f32>(0.0, 1.0);
@@ -172,7 +172,7 @@ describe('tgpu resolve', () => {
 
         @compute @workgroup_size(1)
         fn main() {
-          var value = randomTest();
+          var value = random();
         }
       `),
     );

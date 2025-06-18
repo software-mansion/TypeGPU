@@ -57,6 +57,7 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
+import { $internal } from './shared/symbols.ts';
 import type { Default, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
@@ -158,6 +159,7 @@ export interface TgpuBindGroupLayout<
     TgpuLayoutEntry | null
   >,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   readonly bound: {
@@ -391,6 +393,7 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
+  public readonly [$internal] = true;
   private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;

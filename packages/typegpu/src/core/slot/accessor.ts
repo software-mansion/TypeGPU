@@ -5,6 +5,7 @@ import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
+  $internal,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
@@ -35,6 +36,7 @@ export function accessor<T extends AnyWgslData>(
 
 export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable {
+  public readonly [$internal] = true;
   public readonly resourceType = 'accessor';
   public readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 

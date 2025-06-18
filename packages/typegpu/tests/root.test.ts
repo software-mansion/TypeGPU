@@ -1,8 +1,8 @@
 import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
+import { Void } from '../src/data/wgslTypes.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { Void } from '../src/data/wgslTypes.ts';
 
 describe('TgpuRoot', () => {
   describe('.createBuffer', () => {
@@ -14,7 +14,7 @@ describe('TgpuRoot', () => {
       expect(mockBuffer.getMappedRange).not.toBeCalled();
 
       expect(root.device.createBuffer).toBeCalledWith({
-        label: '<unnamed>',
+        label: 'dataBuffer',
         mappedAtCreation: false,
         size: 4,
         usage: global.GPUBufferUsage.UNIFORM |
@@ -33,7 +33,7 @@ describe('TgpuRoot', () => {
       expect(mockBuffer.getMappedRange).toBeCalled();
 
       expect(root.device.createBuffer).toBeCalledWith({
-        label: '<unnamed>',
+        label: 'dataBuffer',
         mappedAtCreation: true,
         size: 12,
         usage: global.GPUBufferUsage.UNIFORM |
@@ -49,7 +49,7 @@ describe('TgpuRoot', () => {
 
       root.unwrap(dataBuffer);
       expect(root.device.createBuffer).toBeCalledWith({
-        label: '<unnamed>',
+        label: 'dataBuffer',
         mappedAtCreation: false,
         size: 12,
         usage: global.GPUBufferUsage.UNIFORM |

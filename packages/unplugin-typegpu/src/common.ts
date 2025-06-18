@@ -9,6 +9,7 @@ export type Context = {
    */
   tgpuAliases: Set<string>;
   fileId?: string | undefined;
+  autoNamingEnabled: boolean;
 };
 
 export interface Options {
@@ -16,10 +17,12 @@ export interface Options {
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
   forceTgpuAlias?: string;
+  autoNamingEnabled?: boolean;
 }
 
 export const defaultOptions = {
   include: [/\.m?[jt]sx?$/],
+  autoNamingEnabled: true,
 };
 
 export function embedJSON(jsValue: unknown) {
@@ -102,6 +105,71 @@ export function isShellImplementationCall(
       // making it hard to detect.
       node.callee.property.name === 'does')
   );
+}
+
+const resourceConstructors: string[] = [
+  // tgpu
+  'bindGroupLayout',
+  'vertexLayout',
+  // tgpu['~unstable']
+  'slot',
+  'accessor',
+  'privateVar',
+  'workgroupVar',
+  'const',
+  ...fnShellFunctionNames,
+  // d
+  'struct',
+  // root
+  'createBuffer',
+  // root['~unstable']
+  'createPipeline',
+  'createMutable',
+  'createReadonly',
+  'createUniform',
+  'createTexture',
+  'sampler',
+  'comparisonSampler',
+];
+
+/**
+ * Checks if `node` should be wrapped in an autoname function.
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ */
+export function containsResourceConstructorCall(
+  node: acorn.AnyNode | babel.Node,
+  ctx: Context,
+) {
+  if (node.type === 'CallExpression') {
+    if (isShellImplementationCall(node, ctx)) {
+      return true;
+    }
+    // struct({...})
+    if (
+      node.callee.type === 'Identifier' &&
+      resourceConstructors.includes(node.callee.name)
+    ) {
+      return true;
+    }
+    if (node.callee.type === 'MemberExpression') {
+      if (node.callee.property.type === 'Identifier') {
+        // root.createBuffer({...})
+        if (resourceConstructors.includes(node.callee.property.name)) {
+          return true;
+        }
+        if (node.callee.property.name === '$name') {
+          return false;
+        }
+      }
+      // root.createBuffer(d.f32).$usage('storage')
+      return containsResourceConstructorCall(node.callee.object, ctx);
+    }
+  }
+  if (node.type === 'TaggedTemplateExpression') {
+    return containsResourceConstructorCall(node.tag, ctx);
+  }
+  return false;
 }
 
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;

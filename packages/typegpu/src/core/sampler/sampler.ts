@@ -114,13 +114,13 @@ export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler, TgpuNamable {}
 
-export function sampler(props: SamplerProps): TgpuSampler {
+export function sampler(props: SamplerProps): TgpuFixedSampler {
   return new TgpuFixedSamplerImpl(props);
 }
 
 export function comparisonSampler(
   props: ComparisonSamplerProps,
-): TgpuComparisonSampler {
+): TgpuFixedComparisonSampler {
   return new TgpuFixedComparisonSamplerImpl(props);
 }
 
