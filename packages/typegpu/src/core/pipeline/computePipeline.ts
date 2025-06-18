@@ -1,3 +1,4 @@
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -11,16 +12,26 @@ import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import {
+  createWithPerformanceCallback,
+  createWithTimestampWrites,
+  setupTimestampWrites,
+  type Timeable,
+  type TimestampWritesPriors,
+  triggerPerformanceCallback,
+} from './timeable.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
+  readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
 }
 
 // ----------
 // Public API
 // ----------
 
-export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable {
+export interface TgpuComputePipeline
+  extends TgpuNamable, SelfResolvable, Timeable<TgpuComputePipeline> {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -60,7 +71,7 @@ export function isComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
-};
+} & TimestampWritesPriors;
 
 type Memo = {
   pipeline: GPUComputePipeline;
@@ -80,6 +91,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this[$internal] = {
       get rawPipeline() {
         return _core.unwrap().pipeline;
+      },
+      get priors() {
+        return _priors;
       },
     };
     this[$getNameForward] = _core;
@@ -103,11 +117,36 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup: TgpuBindGroup,
   ): TgpuComputePipeline {
     return new TgpuComputePipelineImpl(this._core, {
+      ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
         [bindGroupLayout, bindGroup],
       ]),
     });
+  }
+
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuComputePipeline {
+    const newPriors = createWithPerformanceCallback(
+      this._priors,
+      callback,
+      this._core.branch,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors);
+  }
+
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuComputePipeline {
+    const newPriors = createWithTimestampWrites(
+      this._priors,
+      options,
+      this._core.branch,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors);
   }
 
   dispatchWorkgroups(
@@ -118,9 +157,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const memo = this._core.unwrap();
     const { branch } = this._core;
 
-    const pass = branch.commandEncoder.beginComputePass({
+    const passDescriptor: GPUComputePassDescriptor = {
       label: getName(this._core) ?? '<unnamed>',
-    });
+      ...setupTimestampWrites(this._priors, branch),
+    };
+
+    const pass = branch.commandEncoder.beginComputePass(passDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
@@ -146,6 +188,13 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+
+    if (this._priors.performanceCallback) {
+      triggerPerformanceCallback({
+        root: branch,
+        priors: this._priors,
+      });
+    }
   }
 
   $name(label: string): this {

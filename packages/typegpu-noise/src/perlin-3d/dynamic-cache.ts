@@ -7,15 +7,15 @@ import tgpu, {
   type UniformFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
+import { allEq } from 'typegpu/std';
 import type { PrefixKeys, Prettify } from '../utils.ts';
 import { computeJunctionGradient } from './algorithm.ts';
-import { allEq } from 'typegpu/std';
 
 const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
 
 type Layout<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    readonly size: { uniform: d.Vec3u };
+    readonly size: { uniform: d.Vec4u };
     readonly memory: {
       storage: typeof MemorySchema;
       access: 'readonly';
@@ -25,14 +25,14 @@ type Layout<Prefix extends string> = Prettify<
 
 type LayoutValue<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    readonly size: d.v3u;
+    readonly size: d.v4u;
     readonly memory: d.v3f[];
   }>
 >;
 
 type Bindings<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    size: TgpuBuffer<d.Vec3u> & UniformFlag;
+    size: TgpuBuffer<d.Vec4u> & UniformFlag;
     memory: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
   }>
 >;
@@ -129,7 +129,7 @@ export function dynamicCacheConfig<Prefix extends string>(
     return {
       get size() {
         // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}size`] as d.v3u;
+        return (valuesSlot.value as any)[`${prefix}size`] as d.v4u;
       },
       get memory() {
         // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
@@ -140,7 +140,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
   const getJunctionGradient = tgpu['~unstable'].fn([d.vec3i], d.vec3f)(
     (pos) => {
-      const size = d.vec3i(cleanValuesSlot.value.size);
+      const size = d.vec3i(cleanValuesSlot.value.size.xyz);
       const x = (pos.x % size.x + size.x) % size.x;
       const y = (pos.y % size.y + size.y) % size.y;
       const z = (pos.z % size.z + size.z) % size.z;
@@ -151,7 +151,7 @@ export function dynamicCacheConfig<Prefix extends string>(
   );
 
   const computeLayout = tgpu.bindGroupLayout({
-    size: { uniform: d.vec3u },
+    size: { uniform: d.vec4u },
     memory: { storage: MemorySchema, access: 'mutable' },
   });
 
@@ -174,10 +174,10 @@ export function dynamicCacheConfig<Prefix extends string>(
     initialSize: d.v3u,
   ): DynamicPerlin3DCache<Prefix> => {
     let dirty = false;
-    let size = initialSize;
+    let size = d.vec4u(initialSize, 0);
 
     const sizeBuffer = root
-      .createBuffer(d.vec3u, size)
+      .createBuffer(d.vec4u, size)
       .$usage('uniform');
 
     const computePipeline = root['~unstable']
@@ -205,7 +205,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
     return {
       get size() {
-        return size;
+        return size.xyz;
       },
       get bindings() {
         if (dirty) {
@@ -218,7 +218,8 @@ export function dynamicCacheConfig<Prefix extends string>(
           [`${prefix}memory` as const]: memoryBuffer,
         } as Bindings<Prefix>;
       },
-      set size(value: d.v3u) {
+      set size(_value: d.v3u) {
+        const value = d.vec4u(_value, 0); // temporary workaround because of vec3u uniform breaking on Safari
         if (allEq(size, value)) {
           // Nothing to update
           return;
@@ -236,7 +237,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
   return {
     layout: {
-      [`${prefix}size`]: { uniform: d.vec3u },
+      [`${prefix}size`]: { uniform: d.vec4u },
       [`${prefix}memory`]: { storage: MemorySchema, access: 'readonly' },
     } as Layout<Prefix>,
     valuesSlot,

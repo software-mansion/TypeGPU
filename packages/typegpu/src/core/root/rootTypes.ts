@@ -1,3 +1,4 @@
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { Undecorate } from '../../data/attributes.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
@@ -399,6 +400,22 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBuffer<TData>;
 
   /**
+   * Creates a query set for collecting timestamps or occlusion queries.
+   *
+   * @remarks
+   * Typed wrapper around a GPUQuerySet.
+   *
+   * @param type The type of queries to collect ('occlusion' or 'timestamp').
+   * @param count The number of queries in the set.
+   * @param rawQuerySet An optional pre-existing GPUQuerySet to use instead of creating a new one.
+   */
+  createQuerySet<T extends GPUQueryType>(
+    type: T,
+    count: number,
+    rawQuerySet?: GPUQuerySet | undefined,
+  ): TgpuQuerySet<T>;
+
+  /**
    * Creates a group of resources that can be bound to a shader based on a specified layout.
    *
    * @remarks
@@ -433,6 +450,12 @@ export interface TgpuRoot extends Unwrapper {
       [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
     },
   ): TgpuBindGroup<Entries>;
+
+  /**
+   * Retrieves a read-only list of all enabled features of the GPU device.
+   * @returns A set of strings representing the enabled features.
+   */
+  get enabledFeatures(): ReadonlySet<GPUFeatureName>;
 
   /**
    * Destroys all underlying resources (i.e. buffers...) created through this root object.

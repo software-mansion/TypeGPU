@@ -96,8 +96,7 @@ export interface TgpuVertexFn<
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn>;
-
+  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -136,6 +135,11 @@ export function vertexFn<
   in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
+  if (Object.keys(options.out).length === 0) {
+    throw new Error(
+      `A vertexFn output cannot be empty since it must include the 'position' builtin.`,
+    );
+  }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     in: options.in,
     out: options.out,
@@ -173,7 +177,7 @@ function createVertexFn(
   const core = createFnCore(implementation, true);
   const inputType = shell.argTypes[0];
 
-  return {
+  const result: This = {
     shell,
 
     $uses(newExternals) {
@@ -233,5 +237,6 @@ function createVertexFn(
     toString() {
       return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }
