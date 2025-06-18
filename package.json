@@ -33,7 +33,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@types/node": "^22.13.14",
+    "@types/node": "^24.0.3",
     "@vitest/coverage-v8": "3.1.2",
     "@webgpu/types": "catalog:",
     "dpdm": "^3.14.0",
