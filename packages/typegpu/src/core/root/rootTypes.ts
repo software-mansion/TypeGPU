@@ -1,4 +1,5 @@
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type { Undecorate } from '../../data/attributes.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import type { JitTranspiler } from '../../jitTranspiler.ts';
@@ -55,11 +56,16 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
+type UndecorateRecord<T extends Record<string, unknown>> = {
+  [Key in keyof T]: Undecorate<T[Key]>;
+};
+
 export type ValidateFragmentIn<
-  VertexOut extends IORecord,
+  VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> = FragmentIn extends Partial<VertexOut> ? VertexOut extends FragmentIn ? [
+> = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
       entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
       targets: FragmentOutToTargets<FragmentOut>,
     ]
@@ -83,7 +89,9 @@ export type ValidateFragmentIn<
     },
   ];
 
-export interface WithVertex<VertexOut extends IORecord = IORecord> {
+export interface WithVertex<
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+> {
   withFragment<
     FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,

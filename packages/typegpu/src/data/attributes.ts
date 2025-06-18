@@ -77,7 +77,8 @@ export type ExtractAttributes<T> = T extends {
 } ? T['attribs']
   : [];
 
-type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
+export type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner
+  : T;
 
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.

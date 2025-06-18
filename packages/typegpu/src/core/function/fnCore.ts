@@ -21,12 +21,6 @@ import {
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
-export interface TgpuFnShellBase<Args extends unknown[], Return> {
-  readonly argTypes: Args;
-  readonly returnType: Return;
-  readonly isEntry: boolean;
-}
-
 export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
@@ -38,8 +32,8 @@ export interface FnCore {
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation,
+  isEntry: boolean,
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
@@ -63,7 +57,7 @@ export function createFnCore(
       const externalMap: ExternalMap = {};
 
       if (typeof implementation === 'string') {
-        if (!shell.isEntry) {
+        if (!isEntry) {
           addArgTypesToExternals(
             implementation,
             argTypes,
@@ -93,7 +87,7 @@ export function createFnCore(
         let header = '';
         let body = '';
 
-        if (shell.isEntry) {
+        if (isEntry) {
           const input = isWgslStruct(argTypes[0])
             ? `(in: ${ctx.resolve(argTypes[0])})`
             : '()';
@@ -116,7 +110,7 @@ export function createFnCore(
 
           if (providedArgs.args.length !== argTypes.length) {
             throw new Error(
-              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments.`,
+              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${argTypes.length} arguments.`,
             );
           }
 

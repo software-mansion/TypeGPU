@@ -60,8 +60,6 @@ type TgpuFragmentFnShellHeader<
 > = {
   readonly in: FragmentIn | undefined;
   readonly out: FragmentOut;
-  readonly argTypes: [IOLayoutToSchema<FragmentIn>] | [];
-  readonly targets: FragmentOut;
   readonly returnType: IOLayoutToSchema<FragmentOut>;
   readonly isEntry: true;
 };
@@ -159,10 +157,6 @@ export function fragmentFn<
   const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
     in: options.in,
     out: options.out,
-    argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createIoSchema(options.in)]
-      : [],
-    targets: options.out,
     returnType: createIoSchema(options.out),
     isEntry: true,
   };
@@ -190,9 +184,8 @@ function createFragmentFn(
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(implementation, true);
   const outputType = shell.returnType;
-  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(
       implementation,
@@ -216,18 +209,15 @@ function createFragmentFn(
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
-      if (isNamable(inputType)) {
-        inputType.$name(`${newLabel}_Input`);
-      }
       return this;
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      const inputWithLocation = shell.argTypes[0]?.propTypes
+      const inputWithLocation = shell.in
         ? struct(withLocations(
           shell.in,
           ctx.varyingLocations?.fragmentLocations ?? {},
-        )).$name(getName(inputType) ?? 'In')
+        )).$name(`${getName(this) ?? ''}_Input`)
         : undefined;
 
       if (typeof implementation === 'string') {

@@ -327,7 +327,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { branch, fragmentFn } = internals.core.options;
 
     const colorAttachments = connectAttachmentToShader(
-      fragmentFn.shell.targets,
+      fragmentFn.shell.out,
       internals.priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
@@ -417,7 +417,7 @@ class RenderPipelineCore {
 
   constructor(public readonly options: RenderPipelineCoreOptions) {
     const connectedAttribs = connectAttributesToShader(
-      options.vertexFn.shell.attributes[0],
+      options.vertexFn.shell.in ?? {},
       options.vertexAttribs,
     );
 
@@ -425,21 +425,15 @@ class RenderPipelineCore {
     this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
 
     this._targets = connectTargetsToShader(
-      options.fragmentFn.shell.targets,
+      options.fragmentFn.shell.out,
       options.targets,
     );
   }
 
-  '~resolve'(ctx: ResolutionCtx) {
-    const {
-      vertexFn,
-      fragmentFn,
-      slotBindings,
-    } = this.options;
-
-    const vertexOut = vertexFn.shell.out as IORecord;
-    const fragmentIn = fragmentFn.shell.in;
-
+  matchUpVaryingLocations(
+    vertexOut: IORecord,
+    fragmentIn: IORecord | undefined,
+  ) {
     const vertexLocations: Record<
       string,
       number
@@ -506,11 +500,27 @@ class RenderPipelineCore {
       }
     }
 
+    return {
+      vertexLocations,
+      fragmentLocations,
+    };
+  }
+
+  '~resolve'(ctx: ResolutionCtx) {
+    const {
+      vertexFn,
+      fragmentFn,
+      slotBindings,
+    } = this.options;
+
     return ctx.resolve(
       {
         '~resolve': (ctx: ResolutionCtx) => {
           ctx.withVaryingLocations(
-            { vertexLocations, fragmentLocations },
+            this.matchUpVaryingLocations(
+              vertexFn.shell.out,
+              fragmentFn.shell.in,
+            ),
             () =>
               ctx.withSlots(slotBindings, () => {
                 ctx.resolve(vertexFn);

@@ -6,10 +6,10 @@ import tgpu, {
   type TgpuVertexFnShell,
 } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
-describe('Inter-Stage Variables', () => {
-  describe('Non-empty vertex output', () => {
+describe('TgpuRenderPipeline', () => {
+  describe('with non-empty vertex output', () => {
     const vert = tgpu['~unstable'].vertexFn({
       out: { a: d.vec3f, b: d.vec2f },
     })('');
@@ -148,8 +148,16 @@ describe('Inter-Stage Variables', () => {
           bar: d.vec3f,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
+          baz3: d.u32,
         },
-      })`() {}`;
+      })(() => ({
+        foo: d.vec3f(),
+        bar: d.vec3f(),
+        baz: d.vec3f(),
+        baz2: 0,
+        baz3: 0,
+      }))
+      .$name('vertexMain');
 
     const fragmentMain = tgpu['~unstable']
       .fragmentFn({
@@ -160,33 +168,36 @@ describe('Inter-Stage Variables', () => {
           baz2: d.f32,
         },
         out: d.vec4f,
-      })`() {}`;
+      })(() => d.vec4f()).$name('fragmentMain');
 
     const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
       fragmentMain,
       { format: 'r8unorm' },
     ).createPipeline();
 
-    const resolved = tgpu.resolve({ externals: { pipeline } });
-
-    expect(parse(resolved)).toStrictEqual(parse(`
-      struct Out_1 {
+    expect(parseResolved({ pipeline })).toStrictEqual(parse(`
+      struct vertexMain_Output {
         @location(2) foo: vec3f,
         @location(1) bar: vec3f,
         @location(0) baz: vec3f,
         @location(5) baz2: f32,
+        @location(3) baz3: u32,
       }
 
-      @vertex fn item_0() -> Out_1 () {}
+      @vertex fn vertexMain() -> vertexMain_Output {
+        return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0, 0);
+      }
 
-      struct In_3 {
+      struct fragmentMain_Input {
         @location(3) baz3: u32,
         @location(1) bar: vec3f,
         @location(2) foo: vec3f,
         @location(5) baz2: f32,
       }
 
-      @fragment fn item_2(in: In_3) -> @location(0)  vec4f () {}
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        return vec4f();
+      }
     `));
   });
 
@@ -198,8 +209,9 @@ describe('Inter-Stage Variables', () => {
           bar: d.vec3f,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
+          baz3: d.u32,
         },
-      })`() {}`;
+      })`{}`.$name('vertexMain');
 
     const fragmentMain = tgpu['~unstable']
       .fragmentFn({
@@ -210,33 +222,32 @@ describe('Inter-Stage Variables', () => {
           baz2: d.f32,
         },
         out: d.vec4f,
-      })`() {}`;
+      })`{}`.$name('fragmentMain');
 
     const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
       fragmentMain,
       { format: 'r8unorm' },
     ).createPipeline();
 
-    const resolved = tgpu.resolve({ externals: { pipeline } });
-
-    expect(parse(resolved)).toStrictEqual(parse(`
-      struct Out_1 {
+    expect(parseResolved({ pipeline })).toStrictEqual(parse(`
+      struct vertexMain_Output {
         @location(2) foo: vec3f,
         @location(1) bar: vec3f,
         @location(0) baz: vec3f,
         @location(5) baz2: f32,
+        @location(3) baz3: u32,
       }
 
-      @vertex fn item_0() -> Out_1 () {}
+      @vertex fn vertexMain() -> vertexMain_Output {}
 
-      struct In_3 {
+      struct fragmentMain_Input {
         @location(3) baz3: u32,
         @location(1) bar: vec3f,
         @location(2) foo: vec3f,
         @location(5) baz2: f32,
       }
 
-      @fragment fn item_2(in: In_3) -> @location(0)  vec4f () {}
+      @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0) vec4f {}
     `));
   });
 });

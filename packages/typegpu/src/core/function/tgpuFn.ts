@@ -153,7 +153,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation as Implementation);
+  const core = createFnCore(implementation as Implementation, false);
 
   const fnBase: This = {
     [$internal]: {

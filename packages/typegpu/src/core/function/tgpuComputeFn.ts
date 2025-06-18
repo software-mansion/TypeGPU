@@ -151,7 +151,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(implementation, true);
   const inputType = shell.argTypes[0];
 
   return {

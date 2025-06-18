@@ -53,8 +53,6 @@ type TgpuVertexFnShellHeader<
   readonly in: VertexIn | undefined;
   readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut>;
-  readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
 
@@ -142,8 +140,6 @@ export function vertexFn<
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     in: options.in,
     out: options.out,
-    attributes: [options.in ?? ({} as VertexIn)],
-    returnType: createIoSchema(options.out),
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -175,21 +171,11 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(shell, implementation);
-  const outputType = shell.returnType;
+  const core = createFnCore(implementation, true);
   const inputType = shell.argTypes[0];
-  if (typeof implementation === 'string') {
-    addReturnTypeToExternals(
-      implementation,
-      outputType,
-      (externals) => core.applyExternals(externals),
-    );
-  }
 
   return {
     shell,
-    outputType,
-    inputType,
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
@@ -199,9 +185,6 @@ function createVertexFn(
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
-      if (isNamable(outputType)) {
-        outputType.$name(`${newLabel}_Output`);
-      }
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
@@ -212,9 +195,14 @@ function createVertexFn(
       const outputWithLocation = struct(withLocations(
         shell.out,
         ctx.varyingLocations?.vertexLocations ?? {},
-      )).$name(getName(outputType) ?? 'Out');
+      )).$name(`${getName(this) ?? ''}_Output`);
 
       if (typeof implementation === 'string') {
+        addReturnTypeToExternals(
+          implementation,
+          outputWithLocation,
+          (externals) => core.applyExternals(externals),
+        );
         return core.resolve(
           ctx,
           shell.argTypes,
@@ -233,7 +221,7 @@ function createVertexFn(
       }
 
       try {
-        generationCtx.callStack.push(outputType);
+        generationCtx.callStack.push(outputWithLocation);
         return core.resolve(
           ctx,
           shell.argTypes,
