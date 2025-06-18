@@ -55,9 +55,8 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const resolvedValue = ctx.resolveValue(this._value, this.dataType);
-    const resolvedDataType = ctx.resolve(this.dataType);
 
-    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
+    ctx.addDeclaration(`const ${id} = ${resolvedValue};`);
 
     return id;
   }
