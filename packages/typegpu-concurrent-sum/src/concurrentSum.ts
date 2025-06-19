@@ -1,5 +1,5 @@
 import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
-import { dataBindGroupLayout, inputValueType } from './schemas.ts';
+import { dataBindGroupLayout, fixedArrayLength, inputValueType, workgroupSize } from './schemas.ts';
 import { computeShader } from './compute.ts';
 import type { F32, WgslArray } from 'typegpu/data';
 
@@ -18,7 +18,7 @@ export function currentSum(
     .createPipeline()
     .$name('compute');
 
-  computePipeline.with(dataBindGroupLayout, fooBindGroup).dispatchWorkgroups(1);
+  computePipeline.with(dataBindGroupLayout, fooBindGroup).dispatchWorkgroups(fixedArrayLength/workgroupSize);
 
   workBuffer
     .read()
