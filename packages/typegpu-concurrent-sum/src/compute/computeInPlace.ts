@@ -5,19 +5,15 @@ import {
   dataBindGroupLayout as layout,
   fixedArrayLength,
   workgroupSize,
-} from './schemas.ts';
+} from '../schemas.ts';
 
-export const computeShader = tgpu['~unstable'].computeFn({
+export const computeShaderInPlace = tgpu['~unstable'].computeFn({
   in: { in: d.builtin.globalInvocationId },
   workgroupSize: [workgroupSize],
 })((input) => {
   const threadId = input.in.x;
   const length = d.u32(fixedArrayLength);
   const log2Length = d.i32(std.log2(d.f32(length)));
-
-  if (threadId < length) {
-    layout.$.workArray[threadId] = layout.$.inputArray[threadId] as number;
-  }
 
   std.workgroupBarrier();
   // Up-sweep phase
@@ -30,15 +26,15 @@ export const computeShader = tgpu['~unstable'].computeFn({
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
-      layout.$.workArray[rightIdx] = (layout.$.workArray[leftIdx] as number) +
-        (layout.$.workArray[rightIdx] as number);
+      layout.$.inputArray[rightIdx] = (layout.$.inputArray[leftIdx] as number) +
+        (layout.$.inputArray[rightIdx] as number);
     }
 
     std.workgroupBarrier();
   }
 
   if (threadId === 0) {
-    layout.$.workArray[length - 1] = 0;
+    layout.$.inputArray[length - 1] = 0;
   }
 
   std.workgroupBarrier();
@@ -54,10 +50,10 @@ export const computeShader = tgpu['~unstable'].computeFn({
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
-      const temp = layout.$.workArray[leftIdx] as number;
-      layout.$.workArray[leftIdx] = layout.$.workArray[rightIdx] as number;
-      layout.$.workArray[rightIdx] = temp +
-        (layout.$.workArray[rightIdx] as number);
+      const temp = layout.$.inputArray[leftIdx] as number;
+      layout.$.inputArray[leftIdx] = layout.$.inputArray[rightIdx] as number;
+      layout.$.inputArray[rightIdx] = temp +
+        (layout.$.inputArray[rightIdx] as number);
     }
 
     std.workgroupBarrier();

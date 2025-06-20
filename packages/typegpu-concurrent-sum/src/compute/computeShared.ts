@@ -5,26 +5,30 @@ import {
   dataBindGroupLayout as layout,
   fixedArrayLength,
   workgroupSize,
-} from './schemas.ts';
+} from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize),
+  d.arrayOf(d.f32, workgroupSize * 2),
 );
 
-export const computeShader = tgpu['~unstable'].computeFn({
+export const computeShaderShared = tgpu['~unstable'].computeFn({
   in: { lid: d.builtin.localInvocationId, gid: d.builtin.globalInvocationId },
   workgroupSize: [workgroupSize],
 })((input) => {
   const localThreadId = input.lid.x;
   const threadId = input.gid.x;
-  const length = d.u32(fixedArrayLength);
+  const length = d.u32(workgroupSize * 2); // Process workgroupSize * 2 elements per workgroup
   const log2Length = d.i32(std.log2(d.f32(length)));
 
-  if (threadId < length) {
-    sharedMem.value[localThreadId] = layout.$.inputArray[threadId] as number;
+  // copy
+  const idx0 = threadId * 2;
+  const idx1 = threadId * 2 + 1;
+  if (idx0 < d.u32(fixedArrayLength)) {
+    sharedMem.value[localThreadId * 2] = layout.$.inputArray[idx0] as number;
   }
-
-  // Waiting for all threads to copy their values
+  if (idx1 < d.u32(fixedArrayLength)) {
+    sharedMem.value[localThreadId * 2 + 1] = layout.$.inputArray[idx1] as number;
+  }
   std.workgroupBarrier();
 
   // Up-sweep phase
@@ -32,10 +36,10 @@ export const computeShader = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    if (threadId < length / windowSize) {
-      const i = threadId * windowSize;
-      const leftIdx = (i + offset - 1) % workgroupSize;
-      const rightIdx = (i + windowSize - 1) % workgroupSize;
+    if (localThreadId < length / windowSize) {
+      const i = localThreadId * windowSize;
+      const leftIdx = i + offset - 1;
+      const rightIdx = i + windowSize - 1;
 
       (sharedMem.value[rightIdx] as number) += (sharedMem.value[leftIdx] as number);
     }
@@ -43,7 +47,7 @@ export const computeShader = tgpu['~unstable'].computeFn({
     std.workgroupBarrier();
   }
 
-  if (threadId === 0) {
+  if (localThreadId === 0) {
     sharedMem.value[length - 1] = 0;
   }
 
@@ -55,8 +59,8 @@ export const computeShader = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    if (threadId < length / windowSize) {
-      const i = threadId * windowSize;
+    if (localThreadId < length / windowSize) {
+      const i = localThreadId * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
@@ -69,7 +73,11 @@ export const computeShader = tgpu['~unstable'].computeFn({
     std.workgroupBarrier();
   }
 
-  if (threadId < length) {
-    layout.$.workArray[threadId] = sharedMem.value[localThreadId] as number; // we copy it back, so huge overhead?
+  // copy back
+  if (idx0 < d.u32(fixedArrayLength)) {
+    layout.$.workArray[idx0] = sharedMem.value[localThreadId * 2] as number;
+  }
+  if (idx1 < d.u32(fixedArrayLength)) {
+    layout.$.workArray[idx1] = sharedMem.value[localThreadId * 2 + 1] as number;
   }
 });
