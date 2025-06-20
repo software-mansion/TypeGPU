@@ -14,6 +14,15 @@ export const $wgslDataType = Symbol(`typegpu:${version}:$wgslDataType`);
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);
 export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
 /**
+ * Marks an object with slot-value bindings
+ */
+export const $providing = Symbol(`typegpu:${version}:$providing`);
+
+//
+// Type tokens
+//
+
+/**
  * Type token for the inferred (CPU & GPU) representation of a resource
  */
 export const $repr = Symbol(`typegpu:${version}:$repr`);
@@ -28,10 +37,6 @@ export const $gpuRepr = Symbol(`typegpu:${version}:$gpuRepr`);
  */
 export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
 /**
- * TODO: Document
- */
-export const $providing = Symbol(`typegpu:${version}:$providing`);
-/**
- * TODO: Document
+ * Type token holding schemas that are identical in memory layout.
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);

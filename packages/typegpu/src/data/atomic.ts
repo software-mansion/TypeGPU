@@ -31,10 +31,9 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly type = 'atomic';
 
   // Type-tokens, not available at runtime
-  declare public readonly [$repr]: Infer<TSchema>;
-  declare public readonly [$memIdent]: MemIdentity<TSchema>;
-  declare public readonly [$gpuRepr]: TSchema extends U32 ? atomicU32
-    : atomicI32;
+  declare readonly [$repr]: Infer<TSchema>;
+  declare readonly [$memIdent]: MemIdentity<TSchema>;
+  declare readonly [$gpuRepr]: TSchema extends U32 ? atomicU32 : atomicI32;
   // ---
 
   constructor(public readonly inner: TSchema) {}
