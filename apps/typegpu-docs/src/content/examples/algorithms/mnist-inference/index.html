@@ -16,6 +16,11 @@
       <div class="bar">8</div>
       <div class="bar">9</div>
     </div>
+
+    <div class="info">
+      <div>Subgroups: <span id="subgroups-status">-</span></div>
+      <div>Inference: <span id="inference-time">-</span></div>
+    </div>
   </div>
 </div>
 
@@ -64,6 +69,40 @@
       width: calc(100% + 8rem);
       row-gap: 0.1rem;
     }
+  }
+
+  .info {
+    width: 100%;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    @media (max-width: 1024px) {
+      font-size: 0.75rem;
+    }
+  }
+
+  .info div {
+    display: flex;
+    justify-content: space-between;
+    color: #64748b;
+  }
+
+  .info span {
+    font-family: 'Monaco', monospace;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .info .enabled {
+    color: #16a34a;
+  }
+
+  .info .disabled {
+    color: #dc2626;
   }
 
   .bar {
