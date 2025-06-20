@@ -42,10 +42,12 @@ const mockComputePassEncoder = {
 
 const mockRenderPassEncoder = {
   draw: vi.fn(),
+  drawIndexed: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
 };
 
 const mockQuerySet = {
