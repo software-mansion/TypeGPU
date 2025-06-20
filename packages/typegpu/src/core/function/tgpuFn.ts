@@ -29,6 +29,8 @@ import { stripTemplate } from './templateUtils.ts';
 // Public API
 // ----------
 
+type AnyFn = (...args: never[]) => unknown;
+
 /**
  * Describes a function signature (its arguments and return type)
  */
@@ -38,8 +40,7 @@ type TgpuFnShellHeader<
 > = {
   readonly [$internal]: true;
   readonly argTypes: Args;
-  // TODO: Maybe the `| undefined` is not necessary here?
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
   readonly isEntry: false;
 };
 
@@ -74,8 +75,7 @@ export type TgpuFnShell<
       & ((implementation: string) => TgpuFn<(...args: Args) => Return>);
   };
 
-interface TgpuFnBase<ImplSchema extends (...args: never[]) => unknown>
-  extends TgpuNamable {
+interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
     implementation: Implementation<ImplSchema>;
     argTypes: FnArgsConversionHint;
@@ -96,9 +96,8 @@ interface TgpuFnBase<ImplSchema extends (...args: never[]) => unknown>
 }
 
 export type TgpuFn<
-  ImplSchema extends (...args: never[]) => unknown = (
-    ...args: never[]
-  ) => unknown,
+  // biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
+  ImplSchema extends AnyFn = (...args: any[]) => any,
 > =
   & TgpuFnBase<ImplSchema>
   & InferImplSchema<ImplSchema>;
@@ -152,7 +151,7 @@ function stringifyPair([slot, value]: SlotValuePair): string {
   return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
-function createFn<ImplSchema extends (...args: never) => unknown>(
+function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<
     Extract<Parameters<ImplSchema>, AnyData[]>,
     Extract<ReturnType<ImplSchema>, AnyData>
@@ -248,7 +247,7 @@ function createFn<ImplSchema extends (...args: never) => unknown>(
   return fn;
 }
 
-function createBoundFunction<ImplSchema extends (...args: never) => unknown>(
+function createBoundFunction<ImplSchema extends AnyFn>(
   innerFn: TgpuFn<ImplSchema>,
   pairs: SlotValuePair[],
 ): TgpuFn<ImplSchema> {
@@ -316,8 +315,7 @@ function createBoundFunction<ImplSchema extends (...args: never) => unknown>(
   return fn;
 }
 
-class FnCall<ImplSchema extends (...args: never[]) => unknown>
-  implements SelfResolvable {
+class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$getNameForward]: TgpuFnBase<ImplSchema>;
 
   constructor(
