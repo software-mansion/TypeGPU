@@ -42,6 +42,28 @@ export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: Infer<T[Idx]>;
 };
 
+type InheritTupleValues<T, From> = {
+  [K in keyof T]: K extends keyof From ? From[K] : never;
+};
+
+/**
+ * Returns a type that has arg and return types of `T`, but argument
+ * names of `From`
+ *
+ * Wrapped in an object type with `result` prop just so that it's easier
+ * to remove InheritArgNames<...> from Intellisense with Prettify<T>['result']
+ */
+export type InheritArgNames<T extends AnyFn, From extends AnyFn> = {
+  result: (
+    ...args: Parameters<
+      & ((
+        ...args: InheritTupleValues<Parameters<From>, Parameters<T>>
+      ) => ReturnType<T>)
+      & T
+    >
+  ) => ReturnType<T>;
+};
+
 export type InferImplSchema<ImplSchema extends AnyFn> = (
   ...args: InferArgs<Parameters<ImplSchema>>
 ) => Infer<ReturnType<ImplSchema>>;

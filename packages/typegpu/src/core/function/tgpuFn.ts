@@ -27,8 +27,10 @@ import type {
   Implementation,
   InferArgs,
   InferImplSchema,
+  InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 
 // ----------
 // Public API
@@ -57,9 +59,11 @@ export type TgpuFnShell<
   Return extends AnyData,
 > =
   & TgpuFnShellHeader<Args, Return>
-  & ((
-    implementation: (...args: InferArgs<Args>) => Infer<Return>,
-  ) => TgpuFn<(...args: Args) => Return>)
+  & (<T extends (...args: InferArgs<Args>) => Infer<Return>>(
+    implementation: T,
+  ) => TgpuFn<
+    Prettify<InheritArgNames<(...args: Args) => Return, T>>['result']
+  >)
   & ((implementation: string) => TgpuFn<(...args: Args) => Return>)
   & ((
     strings: TemplateStringsArray,
