@@ -22,7 +22,7 @@ import {
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { Implementation, InferArgs, JsImplementation } from './fnTypes.ts';
+import type { Implementation, InferArgs, InferImplSchema } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -38,6 +38,7 @@ type TgpuFnShellHeader<
 > = {
   readonly [$internal]: true;
   readonly argTypes: Args;
+  // TODO: Maybe the `| undefined` is not necessary here?
   readonly returnType: Return | undefined;
   readonly isEntry: false;
 };
@@ -54,12 +55,12 @@ export type TgpuFnShell<
   & TgpuFnShellHeader<Args, Return>
   & ((
     implementation: (...args: InferArgs<Args>) => Infer<Return>,
-  ) => TgpuFn<Args, Return>)
-  & ((implementation: string) => TgpuFn<Args, Return>)
+  ) => TgpuFn<(...args: Args) => Return>)
+  & ((implementation: string) => TgpuFn<(...args: Args) => Return>)
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFn<Args, Return>)
+  ) => TgpuFn<(...args: Args) => Return>)
   & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -69,36 +70,34 @@ export type TgpuFnShell<
         implementation: (
           ...args: InferArgs<Args>
         ) => Infer<Return>,
-      ) => TgpuFn<Args, Return>)
-      & ((implementation: string) => TgpuFn<Args, Return>);
+      ) => TgpuFn<(...args: Args) => Return>)
+      & ((implementation: string) => TgpuFn<(...args: Args) => Return>);
   };
 
-interface TgpuFnBase<
-  Args extends AnyData[],
-  Return extends AnyData,
-> extends TgpuNamable {
+interface TgpuFnBase<ImplSchema extends (...args: never[]) => unknown>
+  extends TgpuNamable {
   readonly [$internal]: {
-    implementation: Implementation<Args, Return>;
+    implementation: Implementation<ImplSchema>;
     argTypes: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
-  readonly shell: TgpuFnShellHeader<Args, Return>;
+  readonly shell: TgpuFnShellHeader<
+    Parameters<ImplSchema>,
+    Extract<ReturnType<ImplSchema>, AnyData>
+  >;
   readonly '~providing'?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
-  ): TgpuFn<Args, Return>;
+    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+  ): TgpuFn<ImplSchema>;
 }
 
-export type TgpuFn<
-  Args extends AnyData[] = AnyData[],
-  Return extends AnyData = AnyData,
-> =
-  & TgpuFnBase<Args, Return>
-  & ((...args: InferArgs<Args>) => Infer<Return>);
+export type TgpuFn<ImplSchema extends (...args: never[]) => unknown> =
+  & TgpuFnBase<ImplSchema>
+  & InferImplSchema<ImplSchema>;
 
 export function fn<
   Args extends AnyData[] | [],
@@ -145,7 +144,7 @@ function stringifyPair([slot, value]: SlotValuePair): string {
   return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
-function createFn<Args extends AnyData[], Return extends AnyData>(
+function createFn<ImplSchema extends (...args: AnyData[]) => AnyData>(
   shell: TgpuFnShellHeader<Args, Return>,
   implementation: Implementation<Args, Return>,
 ): TgpuFn<Args, Return> {

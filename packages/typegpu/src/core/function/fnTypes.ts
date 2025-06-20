@@ -40,15 +40,12 @@ export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: Infer<T[Idx]>;
 };
 
-export type JsImplementation<
-  Args extends unknown[] | [] = unknown[] | [],
-  Return = unknown,
-> = (...args: InferArgs<Args>) => Infer<Return>;
+export type InferImplSchema<ImplSchema extends (...args: never[]) => unknown> =
+  (...args: InferArgs<Parameters<ImplSchema>>) => Infer<ReturnType<ImplSchema>>;
 
-export type Implementation<
-  Args extends unknown[] | [] = unknown[] | [],
-  Return = unknown,
-> = string | JsImplementation<Args, Return>;
+export type Implementation<ImplSchema extends (...args: never[]) => unknown> =
+  | string
+  | InferImplSchema<ImplSchema>;
 
 export type BaseIOData =
   | F32
