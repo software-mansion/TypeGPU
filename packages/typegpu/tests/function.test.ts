@@ -107,16 +107,18 @@ describe('tgpu.fn', () => {
     const two = tgpu['~unstable'].fn([d.f32, d.u32]);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Void>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<[], d.Void>>();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
+      TgpuFn<() => d.Void>
+    >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Void>>();
     expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<[d.F32], d.Void>
+      TgpuFn<(arg_0: d.F32) => d.Void>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Void>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
-      TgpuFn<[d.F32, d.U32], d.Void>
+      TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Void>
     >();
   });
 
@@ -126,16 +128,18 @@ describe('tgpu.fn', () => {
     const two = tgpu['~unstable'].fn([d.f32, d.u32], d.bool);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Bool>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<[], d.Bool>>();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
+      TgpuFn<() => d.Bool>
+    >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Bool>>();
     expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<[d.F32], d.Bool>
+      TgpuFn<(arg_0: d.F32) => d.Bool>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Bool>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
-      TgpuFn<[d.F32, d.U32], d.Bool>
+      TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Bool>
     >();
   });
 });

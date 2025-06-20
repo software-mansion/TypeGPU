@@ -43,7 +43,11 @@ export type InferArgs<T extends unknown[]> = {
 export type InferImplSchema<ImplSchema extends (...args: never[]) => unknown> =
   (...args: InferArgs<Parameters<ImplSchema>>) => Infer<ReturnType<ImplSchema>>;
 
-export type Implementation<ImplSchema extends (...args: never[]) => unknown> =
+export type Implementation<
+  ImplSchema extends (...args: never[]) => unknown = (
+    ...args: never[]
+  ) => unknown,
+> =
   | string
   | InferImplSchema<ImplSchema>;
 
