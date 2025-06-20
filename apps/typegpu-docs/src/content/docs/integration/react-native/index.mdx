@@ -45,7 +45,7 @@ npm install react-native-wgpu
 npm install typegpu
 ```
 
-If you use TypeScript, then it's also recommended to install WebGPU types:
+Since WebGPU is still yet to reach baseline in browsers, types for it need to be installed separately:
 
 ```sh
 npm i --save-dev @webgpu/types
@@ -54,9 +54,7 @@ npm i --save-dev @webgpu/types
 ```js title="tsconfig.json"
 {
   "compilerOptions": {
-    "typeRoots": [
-      "./node_modules/@webgpu/types"
-    ]
+    "types": ["@webgpu/types"]
   },
 }
 ```
