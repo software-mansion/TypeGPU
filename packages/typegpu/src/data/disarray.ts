@@ -1,5 +1,6 @@
-import type { $repr, Infer, InferPartial } from '../shared/repr.ts';
+import type { Infer, InferPartial } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
+import type { $repr, $reprPartial } from '../shared/symbols.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
 
 // ----------
@@ -37,13 +38,14 @@ export function disarrayOf<TElement extends AnyData>(
 class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   public readonly [$internal] = true;
   public readonly type = 'disarray';
-  /** Type-token, not available at runtime */
-  declare public readonly [$repr]: Infer<TElement>[];
-  /** Type-token, not available at runtime */
-  public readonly '~reprPartial'!: {
+
+  // Type-tokens, not available at runtime
+  declare readonly [$repr]: Infer<TElement>[];
+  declare readonly [$reprPartial]: {
     idx: number;
     value: InferPartial<TElement>;
   }[];
+  // ---
 
   constructor(
     public readonly elementType: TElement,

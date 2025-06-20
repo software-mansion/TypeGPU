@@ -1,6 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
-import { $repr } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
+import type { $repr } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { snip } from './dataTypes.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
@@ -53,7 +53,6 @@ function createMatSchema<
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
   const MatSchema = {
     [$internal]: true,
-    [$repr]: undefined as unknown as ValueType,
     type: options.type,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
