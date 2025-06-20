@@ -98,10 +98,8 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   ): TgpuFn<ImplSchema>;
 }
 
-export type TgpuFn<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
-  ImplSchema extends AnyFn = (...args: any[]) => any,
-> =
+// biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
+export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & TgpuFnBase<ImplSchema>
   & InferImplSchema<ImplSchema>;
 
@@ -126,7 +124,7 @@ export function fn<
   };
 
   const call = (
-    arg: InferImplSchema<(...args: Args) => Return> | TemplateStringsArray,
+    arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
   ) =>
     createFn(
@@ -156,7 +154,7 @@ function stringifyPair([slot, value]: SlotValuePair): string {
 
 function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<
-    Extract<Parameters<ImplSchema>, AnyData[]>,
+    Parameters<ImplSchema>,
     Extract<ReturnType<ImplSchema>, AnyData>
   >,
   implementation: Implementation<ImplSchema>,
