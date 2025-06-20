@@ -3,11 +3,11 @@ import * as d from 'typegpu/data';
 import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
-  seed: TgpuFn<[d.F32], d.Void>;
-  seed2: TgpuFn<[d.Vec2f], d.Void>;
-  seed3: TgpuFn<[d.Vec3f], d.Void>;
-  seed4: TgpuFn<[d.Vec4f], d.Void>;
-  sample: TgpuFn<[], d.F32>;
+  seed: TgpuFn<(seed: d.F32) => d.Void>;
+  seed2: TgpuFn<(seed: d.Vec2f) => d.Void>;
+  seed3: TgpuFn<(seed: d.Vec3f) => d.Void>;
+  seed4: TgpuFn<(seed: d.Vec4f) => d.Void>;
+  sample: TgpuFn<() => d.F32>;
 }
 
 export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu[

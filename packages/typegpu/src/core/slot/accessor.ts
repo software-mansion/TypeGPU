@@ -24,7 +24,7 @@ import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 export function accessor<T extends AnyWgslData>(
   schema: T,
-  defaultValue?: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+  defaultValue?: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
 ): TgpuAccessor<T> {
   return new TgpuAccessorImpl(schema, defaultValue);
 }
@@ -36,7 +36,9 @@ export function accessor<T extends AnyWgslData>(
 export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable {
   public readonly resourceType = 'accessor';
-  public readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
+  public readonly slot: TgpuSlot<
+    TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>
+  >;
 
   declare public readonly [$repr]: Infer<T>;
   declare public readonly '~gpuRepr': InferGPU<T>;
@@ -45,7 +47,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   constructor(
     public readonly schema: T,
     public readonly defaultValue:
-      | TgpuFn<[], T>
+      | TgpuFn<() => T>
       | TgpuBufferUsage<T>
       | Infer<T>
       | undefined = undefined,

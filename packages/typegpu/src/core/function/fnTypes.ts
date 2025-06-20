@@ -23,6 +23,8 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 
+export type AnyFn = (...args: never[]) => unknown;
+
 /**
  * Information extracted from transpiling a JS function.
  */
@@ -40,15 +42,35 @@ export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: Infer<T[Idx]>;
 };
 
-export type JsImplementation<
-  Args extends unknown[] | [] = unknown[] | [],
-  Return = unknown,
-> = (...args: InferArgs<Args>) => Infer<Return>;
+type InheritTupleValues<T, From> = {
+  [K in keyof T]: K extends keyof From ? From[K] : never;
+};
 
-export type Implementation<
-  Args extends unknown[] | [] = unknown[] | [],
-  Return = unknown,
-> = string | JsImplementation<Args, Return>;
+/**
+ * Returns a type that has arg and return types of `T`, but argument
+ * names of `From`
+ *
+ * Wrapped in an object type with `result` prop just so that it's easier
+ * to remove InheritArgNames<...> from Intellisense with Prettify<T>['result']
+ */
+export type InheritArgNames<T extends AnyFn, From extends AnyFn> = {
+  result: (
+    ...args: Parameters<
+      & ((
+        ...args: InheritTupleValues<Parameters<From>, Parameters<T>>
+      ) => ReturnType<T>)
+      & T
+    >
+  ) => ReturnType<T>;
+};
+
+export type InferImplSchema<ImplSchema extends AnyFn> = (
+  ...args: InferArgs<Parameters<ImplSchema>>
+) => Infer<ReturnType<ImplSchema>>;
+
+export type Implementation<ImplSchema extends AnyFn = AnyFn> =
+  | string
+  | InferImplSchema<ImplSchema>;
 
 export type BaseIOData =
   | F32

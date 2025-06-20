@@ -112,7 +112,7 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,

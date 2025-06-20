@@ -65,8 +65,7 @@ export type ResolvableObject =
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
-  // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
-  | TgpuFn<any, any>;
+  | TgpuFn;
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 

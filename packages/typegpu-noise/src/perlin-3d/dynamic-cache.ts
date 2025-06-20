@@ -40,7 +40,7 @@ type Bindings<Prefix extends string> = Prettify<
 export interface DynamicPerlin3DCacheConfig<Prefix extends string> {
   readonly layout: Layout<Prefix>;
   readonly valuesSlot: TgpuSlot<LayoutValue<Prefix>>;
-  readonly getJunctionGradient: TgpuFn<[pos: d.Vec3i], d.Vec3f>;
+  readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
 
   instance(
     root: TgpuRoot,

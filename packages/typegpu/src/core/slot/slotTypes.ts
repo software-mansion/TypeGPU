@@ -42,11 +42,11 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
 
   readonly schema: T;
   readonly defaultValue:
-    | TgpuFn<[], T>
+    | TgpuFn<() => T>
     | TgpuBufferUsage<T>
     | Infer<T>
     | undefined;
-  readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
+  readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
 
   readonly value: InferGPU<T>;
 }
