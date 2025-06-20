@@ -23,6 +23,8 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 
+export type AnyFn = (...args: never[]) => unknown;
+
 /**
  * Information extracted from transpiling a JS function.
  */
@@ -40,14 +42,11 @@ export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: Infer<T[Idx]>;
 };
 
-export type InferImplSchema<ImplSchema extends (...args: never[]) => unknown> =
-  (...args: InferArgs<Parameters<ImplSchema>>) => Infer<ReturnType<ImplSchema>>;
+export type InferImplSchema<ImplSchema extends AnyFn> = (
+  ...args: InferArgs<Parameters<ImplSchema>>
+) => Infer<ReturnType<ImplSchema>>;
 
-export type Implementation<
-  ImplSchema extends (...args: never[]) => unknown = (
-    ...args: never[]
-  ) => unknown,
-> =
+export type Implementation<ImplSchema extends AnyFn = AnyFn> =
   | string
   | InferImplSchema<ImplSchema>;
 

@@ -22,14 +22,17 @@ import {
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { Implementation, InferArgs, InferImplSchema } from './fnTypes.ts';
+import type {
+  AnyFn,
+  Implementation,
+  InferArgs,
+  InferImplSchema,
+} from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
 // Public API
 // ----------
-
-type AnyFn = (...args: never[]) => unknown;
 
 /**
  * Describes a function signature (its arguments and return type)
