@@ -31,6 +31,22 @@ describe('withLocations', () => {
       pos: d.builtin.position,
     });
   });
+
+  it('uses passed locations map, if no custom location specified', () => {
+    expect(
+      withLocations({
+        a: d.location(5, d.vec4f),
+        b: d.vec4f,
+        c: d.vec4f,
+        pos: d.builtin.position,
+      }, { b: 1 }),
+    ).toStrictEqual({
+      a: d.location(5, d.vec4f),
+      b: d.location(1, d.vec4f),
+      c: d.location(6, d.vec4f),
+      pos: d.builtin.position,
+    });
+  });
 });
 
 describe('IOLayoutToOutputSchema', () => {

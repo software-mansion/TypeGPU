@@ -311,7 +311,7 @@ const vertex = tgpu['~unstable'].vertexFn({
 
 const fragment = tgpu['~unstable'].fragmentFn({
   in: { cell: d.f32 },
-  out: d.location(0, d.vec4f),
+  out: d.vec4f,
 })((input) => {
   if (input.cell === -1) {
     return d.vec4f(0.5, 0.5, 0.5, 1);

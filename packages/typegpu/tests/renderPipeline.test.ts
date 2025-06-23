@@ -160,19 +160,20 @@ describe('TgpuRenderPipeline', () => {
 
       struct vertex_Output { 
         @location(0) a: vec3f,
-        @location (1) b: vec2f,
-        @builtin (position) pos: vec4f,
+        @location(1) b: vec2f,
+        @builtin(position) pos: vec4f,
       } 
         
       @vertex fn vertex() -> vertex_Output {
 
       }
+      
       struct fragment_Input { 
-        @builtin (position) a: vec4f,
+        @builtin(position) a: vec4f,
       }
       
-      @fragment fn fragment (_arg_0 : fragment_Input) -> @location(0) vec4f { 
-        return vec4f (1, 2, 3, 4); 
+      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f { 
+        return vec4f(1, 2, 3, 4); 
       }
     `));
   });
@@ -324,7 +325,7 @@ describe('TgpuRenderPipeline', () => {
     );
   });
 
-  it('does not throw error when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
+  it('does not log warning when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
       () => {},
     );
