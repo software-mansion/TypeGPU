@@ -2,3 +2,15 @@
 title: "@typegpu/noise"
 ---
 
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
+
+const randomVec2f = tgpu['~unstable'].fn([], d.vec2f)(() => {
+  const x = randf.sample();
+  const y = randf.sample();
+  return d.vec2f(x, y);
+});
+```
