@@ -1,5 +1,5 @@
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { Undecorate } from '../../data/attributes.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
