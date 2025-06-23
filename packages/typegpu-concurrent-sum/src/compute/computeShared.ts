@@ -50,7 +50,7 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
 
     std.workgroupBarrier();
   }
-  
+
   // save to sums
   if (lId === 0) {
     layout.$.sumsArray[gId] = sharedMem.value[length - 1] as number;
@@ -85,7 +85,6 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
     layout.$.workArray[idx1] = sharedMem.value[lId * 2 + 1] as number;
   }
 });
-
 
 export * from './computeShared.ts';
 export * from './applySumsShader.ts';

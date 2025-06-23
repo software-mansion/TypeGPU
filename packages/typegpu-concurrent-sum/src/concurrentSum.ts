@@ -1,8 +1,14 @@
 import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
-import { batchType, dataBindGroupLayout, fixedArrayLength, inputValueType, workgroupSize } from './schemas.ts';
+import {
+  batchType,
+  dataBindGroupLayout,
+  fixedArrayLength,
+  inputValueType,
+  workgroupSize,
+} from './schemas.ts';
 import type { F32, WgslArray } from 'typegpu/data';
 import { computeShaderShared } from './compute/computeShared.ts';
-import { applySumsShader, scanBlockSumsShader } from './compute/applySumsShader.ts';
+import { applySumsShader } from './compute/applySumsShader.ts';
 
 export function currentSum(
   root: TgpuRoot,
@@ -10,30 +16,32 @@ export function currentSum(
 ) {
   const workBuffer = root.createBuffer(inputValueType).$usage('storage');
   const sumsBuffer = root.createBuffer(batchType).$usage('storage');
-  const fooBindGroup = root.createBindGroup(dataBindGroupLayout, {
+
+  const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: inputBuffor,
     workArray: workBuffer,
-    sumsArray: sumsBuffer
+    sumsArray: sumsBuffer,
   });
 
-  const computePipelineSharedMem = root['~unstable']
+  const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+    inputArray: sumsBuffer, // Use the sums as input
+    workArray: sumsBuffer, // Write results back to the sums buffer
+    sumsArray: root.createBuffer(batchType).$usage('storage'), // unused but required
+  });
+
+  // Pipelines
+  const scanPipeline = root['~unstable']
     .withCompute(computeShaderShared)
     .createPipeline()
-    .$name('blockScan');
-
-  const scanSumsPipeline = root['~unstable']
-    .withCompute(scanBlockSumsShader)
-    .createPipeline()
-    .$name('scanSums');
+    .$name('scan');
 
   const applySumsPipeline = root['~unstable']
     .withCompute(applySumsShader)
     .createPipeline()
     .$name('applySums');
 
-
-  // 1: scan each block and collect block sums
-  computePipelineSharedMem.with(dataBindGroupLayout, fooBindGroup)
+  // 1: Bieloch's Block Scan
+  scanPipeline.with(dataBindGroupLayout, mainArrayBindGroup)
     .withPerformanceCallback((start, end) => {
       const durationNs = Number(end - start);
       console.log(
@@ -44,20 +52,25 @@ export function currentSum(
     })
     .dispatchWorkgroups(fixedArrayLength / (workgroupSize * 2));
 
-  // 2: Scan the sums array
-  scanSumsPipeline.with(dataBindGroupLayout, fooBindGroup)
-    .withPerformanceCallback((start, end) => {
-      const durationNs = Number(end - start);
-      console.log(
-        `Scan Sums execution time: ${durationNs} ns (${
-          durationNs / 1000000
-        } ms)`,
-      );
-    })
-    .dispatchWorkgroups(1); // Single workgroup for sequential scan
+  // 2: Sums scan
+  const numSumBlocks = Math.ceil(
+    (fixedArrayLength / (workgroupSize * 2)) / (workgroupSize * 2),
+  );
+  if (numSumBlocks > 0) {
+    scanPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
+      .withPerformanceCallback((start, end) => {
+        const durationNs = Number(end - start);
+        console.log(
+          `Scan Sums execution time: ${durationNs} ns (${
+            durationNs / 1000000
+          } ms)`,
+        );
+      })
+      .dispatchWorkgroups(numSumBlocks || 1);
+  }
 
-  // 3: Apply scanned sums to each block
-  applySumsPipeline.with(dataBindGroupLayout, fooBindGroup)
+  // 3: Apply sums to each block
+  applySumsPipeline.with(dataBindGroupLayout, mainArrayBindGroup)
     .withPerformanceCallback((start, end) => {
       const durationNs = Number(end - start);
       console.log(
