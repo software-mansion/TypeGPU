@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
@@ -700,5 +701,136 @@ describe('TgpuRenderPipeline', () => {
         },
       }),
     );
+  });
+});
+
+describe('matchUpVaryingLocations', () => {
+  it('works for empty arguments', () => {
+    expect(matchUpVaryingLocations({}, {})).toStrictEqual({});
+  });
+
+  it('works for empty fragment', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+    }, undefined)).toStrictEqual({
+      a: 0,
+    });
+  });
+
+  it('works for non-empty', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+    }, {
+      a: d.u32,
+    })).toStrictEqual({
+      a: 0,
+    });
+  });
+
+  it('works with unsused vertex attributes', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.u32,
+      c: d.u32,
+    }, {
+      b: d.u32,
+    })).toStrictEqual({
+      a: 0,
+      b: 1,
+      c: 2,
+    });
+  });
+
+  it('works with custom locations in vertex out', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.location(5, d.u32),
+      c: d.u32,
+    }, {
+      b: d.u32,
+    })).toStrictEqual({
+      a: 0,
+      b: 5,
+      c: 1,
+    });
+  });
+
+  it('works with custom locations in fragment in', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.u32,
+      c: d.u32,
+    }, {
+      b: d.u32,
+      c: d.location(0, d.u32),
+    })).toStrictEqual({
+      a: 1,
+      b: 2,
+      c: 0,
+    });
+  });
+
+  it('works with custom locations in both', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.location(1, d.u32),
+      c: d.u32,
+    }, {
+      b: d.u32,
+      c: d.location(0, d.u32),
+    })).toStrictEqual({
+      a: 2,
+      b: 1,
+      c: 0,
+    });
+  });
+
+  it('works with builtins in vertex out', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.location(1, d.u32),
+      c: d.u32,
+      d: d.builtin.position,
+    }, {
+      b: d.u32,
+      c: d.location(0, d.u32),
+    })).toStrictEqual({
+      a: 2,
+      b: 1,
+      c: 0,
+    });
+  });
+
+  it('works with builtins in fragment in', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      b: d.location(1, d.u32),
+      c: d.u32,
+    }, {
+      b: d.u32,
+      c: d.location(0, d.u32),
+      d: d.builtin.position,
+    })).toStrictEqual({
+      a: 2,
+      b: 1,
+      c: 0,
+    });
+  });
+
+  it('works with builtins in both', () => {
+    expect(matchUpVaryingLocations({
+      a: d.u32,
+      d: d.builtin.position,
+      b: d.location(1, d.u32),
+      c: d.u32,
+    }, {
+      d: d.builtin.position,
+      b: d.u32,
+      c: d.location(0, d.u32),
+    })).toStrictEqual({
+      a: 2,
+      b: 1,
+      c: 0,
+    });
   });
 });
