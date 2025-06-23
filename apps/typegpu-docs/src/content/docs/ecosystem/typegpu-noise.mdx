@@ -131,9 +131,9 @@ To improve performance, you can precompute the gradients using either a *Static*
 A static cache presumes that the domain of the noise function is fixed, and cannot change between shader invocations.
 
 ```ts twoslash
-// 2d
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+// ---cut---
 import { perlin3d } from '@typegpu/noise';
 
 const root = await tgpu.init();
@@ -142,5 +142,31 @@ const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
 const main = tgpu['~unstable'].fn([])(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
+});
+```
+Or in WebGPU:
+```ts
+/// <reference types="@webgpu/types" />
+import * as d from 'typegpu/data';
+
+declare const device: GPUDevice;
+// ---cut---
+import tgpu from 'typegpu';
+import { perlin3d } from '@typegpu/noise';
+
+const root = tgpu.initFromDevice({ device });
+const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
+
+const { code, layouts, catchall } = tgpu.superResolve({
+  template: `
+    fn main() {
+      let value = perlin3d.sample(vec3f(0.5, 0., 0.));
+      let wrappedValue = perlin3d.sample(vec3f(10.5, 0., 0.)); // the same as 'value'!
+      // ...
+    }
+
+    // ...
+  `,
+  externals: { perlin3d },
 });
 ```
