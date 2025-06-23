@@ -41,7 +41,8 @@ export function currentSum(
     .$name('applySums');
 
   // 1: Bieloch's Block Scan
-  scanPipeline.with(dataBindGroupLayout, mainArrayBindGroup)
+  scanPipeline
+    .with(dataBindGroupLayout, mainArrayBindGroup)
     .withPerformanceCallback((start, end) => {
       const durationNs = Number(end - start);
       console.log(
@@ -89,6 +90,15 @@ export function currentSum(
     .catch((error) => {
       console.error('Error reading buffer:', error);
     });
+
+  // COMPUTE EXPECTED
+  const arr = [...Array(fixedArrayLength).keys()];
+  // slice off the last element
+  arr.slice(0, fixedArrayLength - 1).map((v) => v + 1);
+  console.log(
+    'Expected sum: ',
+    arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0),
+  );
 
   return inputBuffor;
 }

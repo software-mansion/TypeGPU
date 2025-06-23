@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const workgroupSize = 256;
-export const fixedArrayLength = 2048;
+export const fixedArrayLength = 2 ** 16;
 export const inputValueType = d.arrayOf(d.f32, fixedArrayLength);
 export const batchType = d.arrayOf(d.f32, fixedArrayLength / workgroupSize * 2);
 

@@ -18,8 +18,8 @@ export const incrementShader = tgpu['~unstable'].computeFn({
     const blockId = d.u32(gId / (workgroupSize * 2));
 
     if (blockId > 0) {
-      const previousBlockSum = layout.$.sumsArray[blockId - 1] as number;
-      (layout.$.workArray[gId] as number) += previousBlockSum;
+      (layout.$.workArray[gId] as number) += layout.$
+        .sumsArray[blockId - 1] as number;
     }
   }
 });
