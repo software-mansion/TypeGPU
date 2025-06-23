@@ -12,22 +12,25 @@ const sharedMem = tgpu['~unstable'].workgroupVar(
 );
 
 export const computeShaderShared = tgpu['~unstable'].computeFn({
-  in: { lid: d.builtin.localInvocationId, gid: d.builtin.globalInvocationId },
+  in: {
+    lid: d.builtin.localInvocationIndex,
+    gid: d.builtin.globalInvocationId,
+  },
   workgroupSize: [workgroupSize],
 })((input) => {
-  const localThreadId = input.lid.x;
-  const threadId = input.gid.x;
-  const length = d.u32(workgroupSize * 2); // Process workgroupSize * 2 elements per workgroup
+  const lId = input.lid;
+  const gId = input.gid.x;
+  const length = d.u32(workgroupSize);
   const log2Length = d.i32(std.log2(d.f32(length)));
 
   // copy
-  const idx0 = threadId * 2;
-  const idx1 = threadId * 2 + 1;
+  const idx0 = gId * 2;
+  const idx1 = gId * 2 + 1;
   if (idx0 < d.u32(fixedArrayLength)) {
-    sharedMem.value[localThreadId * 2] = layout.$.inputArray[idx0] as number;
+    sharedMem.value[lId * 2] = layout.$.inputArray[idx0] as number;
   }
   if (idx1 < d.u32(fixedArrayLength)) {
-    sharedMem.value[localThreadId * 2 + 1] = layout.$.inputArray[idx1] as number;
+    sharedMem.value[lId * 2 + 1] = layout.$.inputArray[idx1] as number;
   }
   std.workgroupBarrier();
 
@@ -36,48 +39,50 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    if (localThreadId < length / windowSize) {
-      const i = localThreadId * windowSize;
+    if (lId < (length / (windowSize / 2))) { //workgroup length
+      const i = lId * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
-      (sharedMem.value[rightIdx] as number) += (sharedMem.value[leftIdx] as number);
+      (sharedMem.value[rightIdx] as number) += sharedMem
+        .value[leftIdx] as number;
     }
 
     std.workgroupBarrier();
   }
-
-  if (localThreadId === 0) {
-    sharedMem.value[length - 1] = 0;
-  }
-
   std.workgroupBarrier();
 
-  // Down-sweep phase
-  for (let k = 0; k < log2Length; k++) {
-    const dLevel = log2Length - 1 - k;
-    const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
-    const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
+  // if (lId === 0) {
+  //   sharedMem.value[length - 1] = 0;
+  // }
 
-    if (localThreadId < length / windowSize) {
-      const i = localThreadId * windowSize;
-      const leftIdx = i + offset - 1;
-      const rightIdx = i + windowSize - 1;
+  // std.workgroupBarrier();
 
-      const temp = sharedMem.value[leftIdx] as number;
-      sharedMem.value[leftIdx] = sharedMem.value[rightIdx] as number;
-      sharedMem.value[rightIdx] = temp +
-        (sharedMem.value[rightIdx] as number);
-    }
+  // // Down-sweep phase
+  // for (let k = 0; k < log2Length; k++) {
+  //   const dLevel = log2Length - 1 - k;
+  //   const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
+  //   const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    std.workgroupBarrier();
-  }
+  //   if (lId < length / windowSize) {
+  //     const i = lId * windowSize;
+  //     const leftIdx = (i + offset - 1) % (length * 2);
+  //     const rightIdx = (i + windowSize - 1) % (length * 2);
+
+  //     const temp = sharedMem.value[leftIdx] as number;
+  //     sharedMem.value[leftIdx] = sharedMem.value[rightIdx] as number;
+  //     sharedMem.value[rightIdx] = temp +
+  //       (sharedMem.value[rightIdx] as number);
+  //   }
+
+  //   std.workgroupBarrier();
+  // }
 
   // copy back
   if (idx0 < d.u32(fixedArrayLength)) {
-    layout.$.workArray[idx0] = sharedMem.value[localThreadId * 2] as number;
+    layout.$.workArray[idx0] = sharedMem.value[lId * 2] as number;
   }
   if (idx1 < d.u32(fixedArrayLength)) {
-    layout.$.workArray[idx1] = sharedMem.value[localThreadId * 2 + 1] as number;
+    layout.$.workArray[idx1] = sharedMem.value[lId * 2 + 1] as number;
   }
 });

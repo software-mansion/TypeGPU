@@ -5,7 +5,7 @@ import {
   inputValueType,
   workgroupSize,
 } from './schemas.ts';
-import { computeShader } from './compute.ts';
+// import { computeShader } from './compute.ts';
 import type { F32, WgslArray } from 'typegpu/data';
 import { computeShaderShared } from './compute/computeShared.ts';
 
@@ -24,22 +24,22 @@ export function currentSum(
     .createPipeline()
     .$name('compute');
 
-  const computePipeline = root['~unstable']
-    .withCompute(computeShader)
-    // .withCompute(computeShaderInPlace)
-    .createPipeline()
-    .$name('compute');
+  // const computePipeline = root['~unstable']
+  //   .withCompute(computeShader)
+  //   // .withCompute(computeShaderInPlace)
+  //   .createPipeline()
+  //   .$name('compute');
 
-  computePipeline.with(dataBindGroupLayout, fooBindGroup)
-    .withPerformanceCallback((start, end) => {
-      const durationNs = Number(end - start);
-      console.log(
-        `Concurrent sum execution time: ${durationNs} ns (${
-          durationNs / 1000000
-        } ms)`,
-      );
-    })
-    .dispatchWorkgroups(fixedArrayLength / workgroupSize);
+  // computePipeline.with(dataBindGroupLayout, fooBindGroup)
+  //   .withPerformanceCallback((start, end) => {
+  //     const durationNs = Number(end - start);
+  //     console.log(
+  //       `Concurrent sum execution time: ${durationNs} ns (${
+  //         durationNs / 1000000
+  //       } ms)`,
+  //     );
+  //   })
+  //   .dispatchWorkgroups(fixedArrayLength / workgroupSize);
 
   computePipelineSharedMem.with(dataBindGroupLayout, fooBindGroup)
     .withPerformanceCallback((start, end) => {
@@ -50,8 +50,7 @@ export function currentSum(
         } ms)`,
       );
     })
-    .dispatchWorkgroups(fixedArrayLength / (workgroupSize));
-
+    .dispatchWorkgroups(fixedArrayLength / (workgroupSize / 2));
 
   workBuffer
     .read()
