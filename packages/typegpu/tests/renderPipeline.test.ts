@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
@@ -8,7 +9,6 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 
 describe('Inter-Stage Variables', () => {
   describe('Non-empty vertex output', () => {
@@ -424,7 +424,7 @@ describe('Inter-Stage Variables', () => {
 
       expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith(
         expect.objectContaining({
-          label: '<unnamed>',
+          label: 'pipeline',
           timestampWrites: {
             querySet: querySet.querySet,
             beginningOfPassWriteIndex: 1,
