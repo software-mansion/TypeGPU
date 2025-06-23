@@ -105,7 +105,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   toString(): string {
-    return `${this.resourceType}`;
+    return `computePipeline:${getName(this) ?? '<unnamed>'}`;
   }
 
   get rawPipeline(): GPUComputePipeline {
@@ -203,7 +203,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 }
 
-class ComputePipelineCore {
+class ComputePipelineCore implements SelfResolvable {
   private _memo: Memo | undefined;
 
   constructor(
@@ -221,7 +221,7 @@ class ComputePipelineCore {
   }
 
   toString() {
-    return `computePipeline:${getName(this) ?? '<unnamed>'}`;
+    return 'computePipelineCore';
   }
 
   public unwrap(): Memo {

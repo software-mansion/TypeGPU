@@ -257,7 +257,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   toString(): string {
-    return `${this.resourceType}`;
+    return `renderPipeline:${getName(this) ?? '<unnamed>'}`;
   }
 
   $name(label: string): this {
@@ -449,7 +449,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 }
 
-class RenderPipelineCore {
+class RenderPipelineCore implements SelfResolvable {
   public readonly usedVertexLayouts: TgpuVertexLayout[];
 
   private _memo: Memo | undefined;
@@ -583,6 +583,10 @@ class RenderPipelineCore {
         toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
       },
     );
+  }
+
+  toString() {
+    return 'renderPipelineCore';
   }
 
   public unwrap(): Memo {
