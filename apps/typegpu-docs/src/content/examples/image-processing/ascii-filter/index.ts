@@ -35,13 +35,17 @@ const colorModes = {
  * https://www.shadertoy.com/view/lssGDj
  */
 const characterFn = tgpu['~unstable'].fn([d.u32, d.vec2f], d.f32)((n, p) => {
+  // Transform texture coordinates to character bitmap coordinates (5x5 grid)
   const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
 
+  // Check if position is outside the 5x5 character bitmap bounds
   if (pos.x < 0 || pos.x > 4 || pos.y < 0 || pos.y > 4) {
     return 0;
   }
 
+  // Convert 2D bitmap position to 1D bit index (row-major order)
   const a = d.u32(std.add(pos.x, std.mul(5, pos.y)));
+  // Extract the bit at position 'a' from the character bitmap 'n'
   if ((n >> a) & 1) {
     return 1;
   }
