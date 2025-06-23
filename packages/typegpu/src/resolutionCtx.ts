@@ -24,7 +24,7 @@ import type { JitTranspiler } from './jitTranspiler.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $internal, $providing } from './shared/symbols.ts';
 import {
   bindGroupLayout,
   type TgpuBindGroup,
@@ -472,8 +472,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
       return this.withSlots(
-        eventual['~providing'].pairs,
-        () => this.unwrap(eventual['~providing'].inner) as T,
+        eventual[$providing].pairs,
+        () => this.unwrap(eventual[$providing].inner) as T,
       );
     }
 
@@ -601,8 +601,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   resolve(item: unknown): string {
     if (isProviding(item)) {
       return this.withSlots(
-        item['~providing'].pairs,
-        () => this.resolve(item['~providing'].inner),
+        item[$providing].pairs,
+        () => this.resolve(item[$providing].inner),
       );
     }
 

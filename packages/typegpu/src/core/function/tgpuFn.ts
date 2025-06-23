@@ -4,7 +4,11 @@ import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import {
+  $getNameForward,
+  $internal,
+  $providing,
+} from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
@@ -83,7 +87,7 @@ interface TgpuFnBase<
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<Args, Return>;
-  readonly '~providing'?: Providing | undefined;
+  readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
@@ -254,7 +258,7 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
     },
     resourceType: 'function',
     shell: innerFn.shell,
-    '~providing': {
+    [$providing]: {
       inner: innerFn,
       pairs,
     },

@@ -3,11 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "typeRoots": [
-      "./node_modules/@webgpu/types",
-      "./node_modules/@types",
-      "src/types"
-    ]
+    "types": ["@webgpu/types", "@types/dom-mediacapture-transform"]
   },
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"]
