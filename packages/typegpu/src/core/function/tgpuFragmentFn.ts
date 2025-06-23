@@ -209,7 +209,7 @@ function createFragmentFn(
 
     '~resolve'(ctx: ResolutionCtx): string {
       const inputWithLocation = shell.in
-        ? createIoSchema(shell.in, ctx.varyingLocations?.fragmentLocations)
+        ? createIoSchema(shell.in, ctx.varyingLocations)
           .$name(`${getName(this) ?? ''}_Input`)
         : undefined;
 

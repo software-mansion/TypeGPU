@@ -39,7 +39,6 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  VaryingLocations,
   Wgsl,
 } from './types.ts';
 import { isSelfResolvable, isWgsl } from './types.ts';
@@ -308,7 +307,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _jitTranspiler: JitTranspiler | undefined;
   private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
-  private _varyingLocations: VaryingLocations | undefined;
+  private _varyingLocations: Record<string, number> | undefined;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -457,7 +456,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  withVaryingLocations<T>(locations: VaryingLocations, callback: () => T): T {
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T {
     this._varyingLocations = locations;
 
     try {

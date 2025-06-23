@@ -108,11 +108,6 @@ export interface ItemStateStack {
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
 
-export type VaryingLocations = {
-  vertexLocations: Record<string, number>;
-  fragmentLocations: Record<string, number>;
-};
-
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -165,8 +160,11 @@ export interface ResolutionCtx {
     body: Wgsl;
   };
 
-  withVaryingLocations<T>(locations: VaryingLocations, callback: () => T): T;
-  get varyingLocations(): VaryingLocations | undefined;
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T;
+  get varyingLocations(): Record<string, number> | undefined;
 
   [$internal]: {
     itemStateStack: ItemStateStack;

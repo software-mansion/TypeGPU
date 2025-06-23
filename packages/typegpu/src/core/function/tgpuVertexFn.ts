@@ -188,7 +188,7 @@ function createVertexFn(
     '~resolve'(ctx: ResolutionCtx): string {
       const outputWithLocation = createIoSchema(
         shell.out,
-        ctx.varyingLocations?.vertexLocations,
+        ctx.varyingLocations,
       ).$name(`${getName(this) ?? ''}_Output`);
 
       if (typeof implementation === 'string') {

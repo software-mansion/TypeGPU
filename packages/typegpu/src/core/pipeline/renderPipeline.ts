@@ -1,6 +1,7 @@
 import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
 
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import {
@@ -579,11 +580,7 @@ function matchUpVaryingLocations(
   vertexOut: IORecord,
   fragmentIn: IORecord | undefined,
 ) {
-  const vertexLocations: Record<
-    string,
-    number
-  > = {};
-  const fragmentLocations: Record<
+  const locations: Record<
     string,
     number
   > = {};
@@ -595,11 +592,9 @@ function matchUpVaryingLocations(
       continue;
     }
 
-    vertexLocations[key] = customLocation;
-    if (key in (fragmentIn ?? {})) {
-      fragmentLocations[key] = customLocation;
-    }
+    locations[key] = customLocation;
   }
+
   for (const [key, value] of Object.entries(fragmentIn ?? {})) {
     const customLocation = getCustomLocation(value);
     if (customLocation === undefined) {
@@ -607,16 +602,13 @@ function matchUpVaryingLocations(
     }
 
     if (
-      fragmentLocations[key] === undefined
+      locations[key] === undefined
     ) {
-      fragmentLocations[key] = customLocation;
-      if (key in (vertexOut ?? {})) {
-        vertexLocations[key] = customLocation;
-      }
-    } else if (fragmentLocations[key] !== customLocation) {
+      locations[key] = customLocation;
+    } else if (locations[key] !== customLocation) {
       console.warn(
         `Mismatched custom location for key: ${key}, using location set on vertex output: ${
-          fragmentLocations[key]
+          locations[key]
         }`,
       );
     }
@@ -625,41 +617,18 @@ function matchUpVaryingLocations(
   // automatically assign remaining locations to the rest
   let nextLocation = 0;
   for (const key of Object.keys(vertexOut ?? {})) {
-    if (vertexLocations[key] !== undefined) {
+    if (isBuiltin(vertexOut[key]) || locations[key] !== undefined) {
       continue;
     }
 
     while (
-      Object.values(vertexLocations).includes(nextLocation) ||
-      Object.values(fragmentLocations).includes(nextLocation)
+      Object.values(locations).includes(nextLocation)
     ) {
       nextLocation++;
     }
 
-    vertexLocations[key] = nextLocation;
-    if (key in (fragmentIn ?? {})) {
-      fragmentLocations[key] = nextLocation;
-    }
-  }
-  for (const key of Object.keys(fragmentIn ?? {})) {
-    if (fragmentLocations[key] !== undefined) {
-      continue;
-    }
-    while (
-      Object.values(vertexLocations).includes(nextLocation) ||
-      Object.values(fragmentLocations).includes(nextLocation)
-    ) {
-      nextLocation++;
-    }
-
-    fragmentLocations[key] = nextLocation;
-    if (key in (vertexOut ?? {})) {
-      vertexLocations[key] = nextLocation;
-    }
+    locations[key] = nextLocation;
   }
 
-  return {
-    vertexLocations,
-    fragmentLocations,
-  };
+  return locations;
 }

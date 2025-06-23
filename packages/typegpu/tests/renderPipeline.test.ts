@@ -245,6 +245,7 @@ describe('TgpuRenderPipeline', () => {
         out: {
           foo: d.vec3f,
           bar: d.vec3f,
+          position: d.builtin.position,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
           baz3: d.u32,
@@ -254,6 +255,7 @@ describe('TgpuRenderPipeline', () => {
     const fragmentMain = tgpu['~unstable']
       .fragmentFn({
         in: {
+          position: d.builtin.position,
           baz3: d.u32,
           bar: d.vec3f,
           foo: d.location(2, d.vec3f),
@@ -271,6 +273,7 @@ describe('TgpuRenderPipeline', () => {
       struct vertexMain_Output {
         @location(2) foo: vec3f,
         @location(1) bar: vec3f,
+        @builtin(position) position: vec4f,
         @location(0) baz: vec3f,
         @location(5) baz2: f32,
         @location(3) baz3: u32,
@@ -279,6 +282,7 @@ describe('TgpuRenderPipeline', () => {
       @vertex fn vertexMain() -> vertexMain_Output {}
 
       struct fragmentMain_Input {
+        @builtin(position) position: vec4f,
         @location(3) baz3: u32,
         @location(1) bar: vec3f,
         @location(2) foo: vec3f,
