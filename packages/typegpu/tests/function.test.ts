@@ -1,9 +1,15 @@
+import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { InferIO, IOLayout } from '../src/core/function/fnTypes.ts';
+import type {
+  InferIO,
+  InheritArgNames,
+  IOLayout,
+} from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 import { Void } from '../src/data/wgslTypes.ts';
+import type { Prettify } from '../src/shared/utilityTypes.ts';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
@@ -191,20 +197,6 @@ describe('tgpu.vertexFn', () => {
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
-
-  it('does not create In struct when there is empty object for arguments', () => {
-    const foo = tgpu['~unstable'].vertexFn({
-      in: {},
-      out: { pos: d.builtin.position },
-    })(() => {
-      return {
-        pos: d.vec4f(),
-      };
-    });
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
-    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
-    expect(foo.shell.argTypes).toStrictEqual([]);
-  });
 });
 
 describe('tgpu.fragmentFn', () => {
@@ -247,5 +239,23 @@ describe('InferIO', () => {
       a: number;
       b: number;
     }>();
+  });
+});
+
+describe('InheritArgNames', () => {
+  it('should inherit argument names from one fn to another', () => {
+    const isEven = (x: number) => (x & 1) === 0;
+    const identity = (num: number) => num;
+    // Should have the same argument names as `identity`, but the signature of `isEven`
+    const isEvenWithNames = undefined as unknown as Prettify<
+      InheritArgNames<
+        typeof isEven,
+        typeof identity
+      >
+    >['result'];
+
+    attest(isEven).type.toString.snap('(x: number) => boolean');
+    attest(identity).type.toString.snap('(num: number) => number');
+    attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });
