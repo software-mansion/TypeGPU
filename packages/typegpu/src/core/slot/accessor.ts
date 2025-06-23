@@ -1,11 +1,13 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import { getName } from '../../shared/meta.ts';
-import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
+  $gpuRepr,
   $gpuValueOf,
   $internal,
+  $repr,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
@@ -40,9 +42,11 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   public readonly resourceType = 'accessor';
   public readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 
-  declare public readonly [$repr]: Infer<T>;
-  declare public readonly '~gpuRepr': InferGPU<T>;
+  // Type-tokens, not available at runtime
+  declare readonly [$repr]: Infer<T>;
+  declare readonly [$gpuRepr]: InferGPU<T>;
   declare readonly [$getNameForward]: unknown;
+  // ---
 
   constructor(
     public readonly schema: T,

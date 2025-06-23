@@ -4,11 +4,12 @@ import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $repr,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';

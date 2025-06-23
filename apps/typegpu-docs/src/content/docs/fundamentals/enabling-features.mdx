@@ -1,0 +1,53 @@
+---
+title: Enabling GPU Features
+description: How to declare and activate WebGPU device features in TypeGPU.
+---
+
+Some GPU capabilities, such as timestamp queries or subgroup operations, must be explicitly requested before use. TypeGPU passes your configuration directly to the WebGPU API, with a convenient extension for marking features as optional.
+
+:::tip
+For a complete list of feature names, consult the [WebGPU specification](https://www.w3.org/TR/webgpu/#gpufeaturename).
+:::
+
+## Requesting features
+
+When initializing TypeGPU, include `requiredFeatures` and/or `optionalFeatures` in the `device` descriptor:
+
+```ts
+const root = await tgpu.init({
+  adapter: {
+    powerPreference: 'high-performance',
+  },
+  device: {
+    // These features must be supported or initialization will fail
+    requiredFeatures: [
+      'timestamp-query',
+      'subgroup-operations',
+    ],
+    // These features will be enabled if available; missing ones are ignored
+    optionalFeatures: [
+      'shader-f16',
+    ],
+  },
+  // …other TypeGPU options…
+});
+````
+
+* **`requiredFeatures: GPUFeatureName[]`**
+  All listed features must be supported by the GPU; otherwise `requestDevice()` rejects.
+
+* **`optionalFeatures: GPUFeatureName[]`**
+  The GPU will enable supported features and ignore unsupported ones without error.
+
+## Verifying availability
+
+After `tgpu.init()` resolves, you can check which features are enabled using the `enabledFeatures` property on the root object:
+
+```ts
+if (root.enabledFeatures.has('timestamp-query')) {
+  console.log('Timestamp queries are available');
+}
+if (root.enabledFeatures.has('subgroup-operations')) {
+  console.log('Subgroup operations are enabled');
+}
+```

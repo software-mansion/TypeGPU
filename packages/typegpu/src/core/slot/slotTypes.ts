@@ -1,15 +1,23 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
+import {
+  $gpuRepr,
+  $internal,
+  $providing,
+  $repr,
+} from '../../shared/symbols.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'slot';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<T>;
-  readonly '~gpuRepr': InferGPU<T>;
+  readonly [$gpuRepr]: InferGPU<T>;
+  // ---
 
   readonly defaultValue: T | undefined;
 
@@ -25,9 +33,12 @@ export interface TgpuSlot<T> extends TgpuNamable {
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: InferGPU<T>;
-  [$repr]: Infer<T>;
-  '~gpuRepr': InferGPU<T>;
-  readonly '~providing'?: Providing | undefined;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: Infer<T>;
+  readonly [$gpuRepr]: InferGPU<T>;
+  readonly [$providing]?: Providing | undefined;
+  // ---
 
   with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
 
@@ -40,8 +51,11 @@ export interface TgpuDerived<T> {
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<T>;
-  readonly '~gpuRepr': InferGPU<T>;
+  readonly [$gpuRepr]: InferGPU<T>;
+  // ---
 
   readonly schema: T;
   readonly defaultValue:
@@ -78,8 +92,8 @@ export function isDerived<T extends TgpuDerived<unknown>>(
 
 export function isProviding(
   value: unknown,
-): value is { '~providing': Providing } {
-  return (value as { '~providing': Providing })?.['~providing'] !== undefined;
+): value is { [$providing]: Providing } {
+  return (value as { [$providing]: Providing })?.[$providing] !== undefined;
 }
 
 export function isAccessor<T extends AnyData>(

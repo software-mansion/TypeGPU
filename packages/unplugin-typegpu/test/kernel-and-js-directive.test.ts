@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('[BABEL] "kernel & js" directive', () => {
@@ -229,6 +229,16 @@ describe('[BABEL] "kernel & js" directive', () => {
 });
 
 describe('[ROLLUP] "kernel & js" directive', () => {
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
   it('makes plugin transpile marked arrow functions', async () => {
     const code = `\
       import tgpu from 'typegpu';
@@ -457,11 +467,10 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       };
     `;
 
-    expect(rollupTransform(code))
-      .rejects
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: File  virtual:code: function "add", containing kernel & js directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.]`,
-      );
+    await rollupTransform(code);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `File  virtual:code: function "add", containing kernel & js directive, might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+    );
   });
 
   it('parses when no typegpu import', async () => {

@@ -83,12 +83,19 @@ const thumbnailFiles = R.pipe(
     eager: true,
     import: 'default',
     query: 'w=512;1024',
-  }) as Record<string, [string, string]>,
+  }) as Record<string, string | [string, string]>,
   R.mapKeys(pathToExampleKey),
-  R.mapValues((value): ThumbnailPair => ({
-    small: value[0],
-    large: value[1],
-  })),
+  R.mapValues((
+    value,
+    key,
+  ): ThumbnailPair => {
+    if (typeof value === 'string') {
+      throw new Error(
+        `Thumbnail for example "${key}" is too small (required width is at least 513 pixels).`,
+      );
+    }
+    return { small: value[0], large: value[1] };
+  }),
 );
 
 export const examples = R.pipe(

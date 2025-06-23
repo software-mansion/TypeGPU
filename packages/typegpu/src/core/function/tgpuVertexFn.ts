@@ -46,7 +46,7 @@ type TgpuVertexFnShellHeader<
   VertexOut extends VertexOutConstrained,
 > = {
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut> | undefined;
+  readonly returnType: IOLayoutToSchema<VertexOut>;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
@@ -93,8 +93,7 @@ export interface TgpuVertexFn<
   readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn>;
-
+  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -133,12 +132,14 @@ export function vertexFn<
   in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
+  if (Object.keys(options.out).length === 0) {
+    throw new Error(
+      `A vertexFn output cannot be empty since it must include the 'position' builtin.`,
+    );
+  }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType:
-      (Object.keys(options.out).length !== 0
-        ? createIoSchema(options.out)
-        : undefined),
+    returnType: createIoSchema(options.out),
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -182,7 +183,7 @@ function createVertexFn(
     );
   }
 
-  return {
+  const result: This = {
     shell,
     outputType,
     inputType,
@@ -228,5 +229,6 @@ function createVertexFn(
     toString() {
       return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }
