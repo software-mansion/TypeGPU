@@ -30,7 +30,7 @@ export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
 
 export function withLocations<T extends IOData>(
   members: IORecord<T> | undefined,
-  locations: Record<string, number | undefined> = {},
+  locations: Record<string, number> = {},
 ): WithLocations<IORecord<T>> {
   let nextLocation = 0;
 
@@ -56,7 +56,7 @@ export function withLocations<T extends IOData>(
 export function createIoSchema<
   T extends IOData,
   Layout extends IORecord<T> | IOLayout<T>,
->(layout: Layout) {
+>(layout: Layout, locations: Record<string, number> = {}) {
   return (
     isData(layout)
       ? isVoid(layout)
@@ -64,6 +64,6 @@ export function createIoSchema<
         : getCustomLocation(layout) !== undefined
         ? layout
         : location(0, layout)
-      : struct(withLocations(layout) as Record<string, T>)
+      : struct(withLocations(layout, locations) as Record<string, T>)
   ) as IOLayoutToSchema<Layout>;
 }

@@ -3,7 +3,6 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import { struct } from '../../data/struct.ts';
 import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -21,11 +20,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createIoSchema,
-  type IOLayoutToSchema,
-  withLocations,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -193,10 +188,10 @@ function createVertexFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      const outputWithLocation = struct(withLocations(
+      const outputWithLocation = createIoSchema(
         shell.out,
-        ctx.varyingLocations?.vertexLocations ?? {},
-      )).$name(`${getName(this) ?? ''}_Output`);
+        ctx.varyingLocations?.vertexLocations,
+      ).$name(`${getName(this) ?? ''}_Output`);
 
       if (inputType) {
         core.applyExternals({ In: inputType });

@@ -3,7 +3,6 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import { struct } from '../../data/struct.ts';
 import type {
   Decorated,
   Interpolate,
@@ -28,11 +27,7 @@ import type {
   IOLayout,
   IORecord,
 } from './fnTypes.ts';
-import {
-  createIoSchema,
-  type IOLayoutToSchema,
-  withLocations,
-} from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -214,10 +209,8 @@ function createFragmentFn(
 
     '~resolve'(ctx: ResolutionCtx): string {
       const inputWithLocation = shell.in
-        ? struct(withLocations(
-          shell.in,
-          ctx.varyingLocations?.fragmentLocations ?? {},
-        )).$name(`${getName(this) ?? ''}_Input`)
+        ? createIoSchema(shell.in, ctx.varyingLocations?.fragmentLocations)
+          .$name(`${getName(this) ?? ''}_Input`)
         : undefined;
 
       if (inputWithLocation) {
