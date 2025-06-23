@@ -86,5 +86,3 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
   }
 });
 
-export * from './computeShared.ts';
-export * from './applySumsShader.ts';

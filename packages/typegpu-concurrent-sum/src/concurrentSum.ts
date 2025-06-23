@@ -24,8 +24,8 @@ export function currentSum(
   });
 
   const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
-    inputArray: sumsBuffer, // Use the sums as input
-    workArray: sumsBuffer, // Write results back to the sums buffer
+    inputArray: sumsBuffer,
+    workArray: sumsBuffer, 
     sumsArray: root.createBuffer(batchType).$usage('storage'), // unused but required
   });
 
