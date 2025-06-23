@@ -15,7 +15,8 @@
     "test:unit": "ATTEST_skipTypes=1 vitest run",
     "test:unit:watch": "ATTEST_skipTypes=1 vitest",
     "test:coverage": "vitest --coverage run",
-    "nightly-build": "pnpm --filter typegpu prepublishOnly --skip-publish-tag-check"
+    "nightly-build": "pnpm --filter typegpu prepublishOnly --skip-publish-tag-check",
+    "changes": "tgpu-dev-cli changes"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -24,17 +25,14 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl"
-  ],
+  "keywords": ["webgpu", "wgpu", "wgsl"],
   "bugs": {
     "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/node": "^22.13.14",
     "@vitest/coverage-v8": "3.1.2",
     "@webgpu/types": "catalog:",
@@ -46,11 +44,7 @@
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "esbuild",
-      "sharp"
-    ],
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"],
     "overrides": {
       "rollup": "4.34.8"
     }
