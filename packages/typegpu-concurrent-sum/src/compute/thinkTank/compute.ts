@@ -5,7 +5,7 @@ import {
   dataBindGroupLayout as layout,
   fixedArrayLength,
   workgroupSize,
-} from './schemas.ts';
+} from '../../schemas.ts';
 
 export const computeShader = tgpu['~unstable'].computeFn({
   in: { in: d.builtin.globalInvocationId },

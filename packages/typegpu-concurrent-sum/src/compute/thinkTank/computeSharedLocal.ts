@@ -5,7 +5,7 @@ import {
   dataBindGroupLayout as layout,
   fixedArrayLength,
   workgroupSize,
-} from '../schemas.ts';
+} from '../../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
   d.arrayOf(d.f32, workgroupSize * 2),
@@ -23,7 +23,7 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
   const length = d.u32(workgroupSize * 2);
   const log2Length = d.i32(std.log2(d.f32(length)));
 
-  // Copy input data to shared memory
+  // copy
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
   if (idx0 < d.u32(fixedArrayLength)) {
@@ -34,7 +34,7 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
   }
   std.workgroupBarrier();
 
-  // Up-sweep phase (reduce)
+  // Up-sweep phase
   for (let dLevel = 0; dLevel < log2Length; dLevel++) {
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
@@ -50,12 +50,12 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
 
     std.workgroupBarrier();
   }
-  
-  // save to sums
+  std.workgroupBarrier();
+
   if (lId === 0) {
-    layout.$.sumsArray[gId] = sharedMem.value[length - 1] as number;
     sharedMem.value[length - 1] = 0;
   }
+
   std.workgroupBarrier();
 
   // Down-sweep phase
@@ -64,20 +64,21 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    if (lId < (length / windowSize)) {
+    if (lId < length / windowSize) {
       const i = lId * windowSize;
-      const leftIdx = i + offset - 1;
-      const rightIdx = i + windowSize - 1;
+      const leftIdx = (i + offset - 1) % (length * 2);
+      const rightIdx = (i + windowSize - 1) % (length * 2);
 
       const temp = sharedMem.value[leftIdx] as number;
       sharedMem.value[leftIdx] = sharedMem.value[rightIdx] as number;
-      sharedMem.value[rightIdx] = temp + (sharedMem.value[rightIdx] as number);
+      sharedMem.value[rightIdx] = temp +
+        (sharedMem.value[rightIdx] as number);
     }
 
     std.workgroupBarrier();
   }
 
-  // copy back to work array
+  // copy back
   if (idx0 < d.u32(fixedArrayLength)) {
     layout.$.workArray[idx0] = sharedMem.value[lId * 2] as number;
   }
@@ -85,7 +86,3 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
     layout.$.workArray[idx1] = sharedMem.value[lId * 2 + 1] as number;
   }
 });
-
-
-export * from './computeShared.ts';
-export * from './applySumsShader.ts';
