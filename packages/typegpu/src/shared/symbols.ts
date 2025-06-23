@@ -33,7 +33,7 @@ export const $repr = Symbol(`typegpu:${version}:$repr`);
 export const $gpuRepr = Symbol(`typegpu:${version}:$gpuRepr`);
 /**
  * Type token for the inferred partial representation of a resource.
- * If present, it shadows the value of `$repr`
+ * If present, it shadows the value of `$repr` for use in partial IO.
  */
 export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
 /**
