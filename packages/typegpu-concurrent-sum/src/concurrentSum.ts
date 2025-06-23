@@ -8,7 +8,7 @@ import {
 } from './schemas.ts';
 import type { F32, WgslArray } from 'typegpu/data';
 import { computeShaderShared } from './compute/computeShared.ts';
-import { applySumsShader } from './compute/applySumsShader.ts';
+import { incrementShader } from './compute/incrementShader.ts';
 
 export function currentSum(
   root: TgpuRoot,
@@ -25,7 +25,7 @@ export function currentSum(
 
   const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: sumsBuffer,
-    workArray: sumsBuffer, 
+    workArray: sumsBuffer,
     sumsArray: root.createBuffer(batchType).$usage('storage'), // unused but required
   });
 
@@ -36,7 +36,7 @@ export function currentSum(
     .$name('scan');
 
   const applySumsPipeline = root['~unstable']
-    .withCompute(applySumsShader)
+    .withCompute(incrementShader)
     .createPipeline()
     .$name('applySums');
 

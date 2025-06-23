@@ -85,4 +85,3 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
     layout.$.workArray[idx1] = sharedMem.value[lId * 2 + 1] as number;
   }
 });
-
