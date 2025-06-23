@@ -84,10 +84,8 @@ export type TgpuVertexFnShell<
   };
 
 export interface TgpuVertexFn<
-  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
-  VertexIn extends VertexInConstrained = any,
-  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
-  VertexOut extends VertexOutConstrained = any,
+  VertexIn extends VertexInConstrained = VertexInConstrained,
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -193,12 +191,12 @@ function createVertexFn(
         ctx.varyingLocations?.vertexLocations,
       ).$name(`${getName(this) ?? ''}_Output`);
 
-      if (inputType) {
-        core.applyExternals({ In: inputType });
-      }
-      core.applyExternals({ Out: outputWithLocation });
-
       if (typeof implementation === 'string') {
+        if (inputType) {
+          core.applyExternals({ In: inputType });
+        }
+        core.applyExternals({ Out: outputWithLocation });
+
         return core.resolve(
           ctx,
           shell.argTypes,

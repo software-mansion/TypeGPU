@@ -471,91 +471,6 @@ class RenderPipelineCore implements SelfResolvable {
     );
   }
 
-  matchUpVaryingLocations(
-    vertexOut: IORecord,
-    fragmentIn: IORecord | undefined,
-  ) {
-    const vertexLocations: Record<
-      string,
-      number
-    > = {};
-    const fragmentLocations: Record<
-      string,
-      number
-    > = {};
-
-    // respect custom locations and pair up vertex and fragment varying with the same key
-    for (const [key, value] of Object.entries(vertexOut)) {
-      const customLocation = getCustomLocation(value);
-      if (customLocation !== undefined) {
-        vertexLocations[key] = customLocation;
-        if (key in (fragmentIn ?? {})) {
-          fragmentLocations[key] = customLocation;
-        }
-      }
-    }
-    for (const [key, value] of Object.entries(fragmentIn ?? {})) {
-      const customLocation = getCustomLocation(value);
-      if (customLocation === undefined) {
-        continue;
-      }
-
-      if (
-        fragmentLocations[key] === undefined
-      ) {
-        fragmentLocations[key] = customLocation;
-        if (key in (vertexOut ?? {})) {
-          vertexLocations[key] = customLocation;
-        }
-      } else if (fragmentLocations[key] !== customLocation) {
-        console.warn(
-          `Mismatched custom location for key: ${key}, using location set on vertex output: ${
-            fragmentLocations[key]
-          }`,
-        );
-      }
-    }
-
-    // automatically assign remaining locations to the rest
-    let nextLocation = 0;
-    for (const key of Object.keys(vertexOut ?? {})) {
-      if (vertexLocations[key] === undefined) {
-        nextLocation = 0;
-        while (
-          Object.values(vertexLocations).includes(nextLocation) ||
-          Object.values(fragmentLocations).includes(nextLocation)
-        ) {
-          nextLocation++;
-        }
-
-        vertexLocations[key] = nextLocation;
-        if (key in (fragmentIn ?? {})) {
-          fragmentLocations[key] = nextLocation;
-        }
-      }
-    }
-    for (const key of Object.keys(fragmentIn ?? {})) {
-      if (fragmentLocations[key] === undefined) {
-        while (
-          Object.values(vertexLocations).includes(nextLocation) ||
-          Object.values(fragmentLocations).includes(nextLocation)
-        ) {
-          nextLocation++;
-        }
-
-        fragmentLocations[key] = nextLocation;
-        if (key in (vertexOut ?? {})) {
-          vertexLocations[key] = nextLocation;
-        }
-      }
-    }
-
-    return {
-      vertexLocations,
-      fragmentLocations,
-    };
-  }
-
   '~resolve'(ctx: ResolutionCtx) {
     const {
       vertexFn,
@@ -567,7 +482,7 @@ class RenderPipelineCore implements SelfResolvable {
       {
         '~resolve': (ctx: ResolutionCtx) => {
           ctx.withVaryingLocations(
-            this.matchUpVaryingLocations(
+            matchUpVaryingLocations(
               vertexFn.shell.out,
               fragmentFn.shell.in,
             ),
@@ -658,4 +573,93 @@ class RenderPipelineCore implements SelfResolvable {
 
     return this._memo;
   }
+}
+
+function matchUpVaryingLocations(
+  vertexOut: IORecord,
+  fragmentIn: IORecord | undefined,
+) {
+  const vertexLocations: Record<
+    string,
+    number
+  > = {};
+  const fragmentLocations: Record<
+    string,
+    number
+  > = {};
+
+  // respect custom locations and pair up vertex and fragment varying with the same key
+  for (const [key, value] of Object.entries(vertexOut)) {
+    const customLocation = getCustomLocation(value);
+    if (customLocation === undefined) {
+      continue;
+    }
+
+    vertexLocations[key] = customLocation;
+    if (key in (fragmentIn ?? {})) {
+      fragmentLocations[key] = customLocation;
+    }
+  }
+  for (const [key, value] of Object.entries(fragmentIn ?? {})) {
+    const customLocation = getCustomLocation(value);
+    if (customLocation === undefined) {
+      continue;
+    }
+
+    if (
+      fragmentLocations[key] === undefined
+    ) {
+      fragmentLocations[key] = customLocation;
+      if (key in (vertexOut ?? {})) {
+        vertexLocations[key] = customLocation;
+      }
+    } else if (fragmentLocations[key] !== customLocation) {
+      console.warn(
+        `Mismatched custom location for key: ${key}, using location set on vertex output: ${
+          fragmentLocations[key]
+        }`,
+      );
+    }
+  }
+
+  // automatically assign remaining locations to the rest
+  let nextLocation = 0;
+  for (const key of Object.keys(vertexOut ?? {})) {
+    if (vertexLocations[key] !== undefined) {
+      continue;
+    }
+
+    while (
+      Object.values(vertexLocations).includes(nextLocation) ||
+      Object.values(fragmentLocations).includes(nextLocation)
+    ) {
+      nextLocation++;
+    }
+
+    vertexLocations[key] = nextLocation;
+    if (key in (fragmentIn ?? {})) {
+      fragmentLocations[key] = nextLocation;
+    }
+  }
+  for (const key of Object.keys(fragmentIn ?? {})) {
+    if (fragmentLocations[key] !== undefined) {
+      continue;
+    }
+    while (
+      Object.values(vertexLocations).includes(nextLocation) ||
+      Object.values(fragmentLocations).includes(nextLocation)
+    ) {
+      nextLocation++;
+    }
+
+    fragmentLocations[key] = nextLocation;
+    if (key in (vertexOut ?? {})) {
+      vertexLocations[key] = nextLocation;
+    }
+  }
+
+  return {
+    vertexLocations,
+    fragmentLocations,
+  };
 }
