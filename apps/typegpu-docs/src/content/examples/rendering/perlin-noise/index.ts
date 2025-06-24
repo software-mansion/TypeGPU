@@ -78,14 +78,14 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const gridSizeUniform = root.createUniform(d.f32);
-const timeUniform = root.createUniform(d.f32, 0);
-const sharpnessUniform = root.createUniform(d.f32, 0.1);
+const gridSize = root.createUniform(d.f32);
+const time = root.createUniform(d.f32, 0);
+const sharpness = root.createUniform(d.f32, 0.1);
 
 const renderPipelineBase = root['~unstable']
-  .with(gridSizeAccess, gridSizeUniform)
-  .with(timeAccess, timeUniform)
-  .with(sharpnessAccess, sharpnessUniform)
+  .with(gridSizeAccess, gridSize)
+  .with(timeAccess, time)
+  .with(sharpnessAccess, sharpness)
   .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
   .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value);
 
@@ -107,12 +107,12 @@ let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';
 let isRunning = true;
 let bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
 
-function draw() {
+function draw(timestamp: number) {
   if (!isRunning) {
     return;
   }
 
-  timeUniform.write(performance.now() * 0.0002 % DEPTH);
+  time.write(timestamp * 0.0002 % DEPTH);
 
   renderPipelines[activeSharpenFn]
     .with(dynamicLayout, bindGroup)
@@ -126,7 +126,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 
 export const controls = {
   'grid size': {
@@ -135,7 +135,7 @@ export const controls = {
     onSelectChange: (value: string) => {
       const iSize = Number.parseInt(value);
       perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
-      gridSizeUniform.write(iSize);
+      gridSize.write(iSize);
       bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
     },
   },
@@ -144,7 +144,7 @@ export const controls = {
     min: 0,
     max: 0.99,
     step: 0.01,
-    onSliderChange: (value: number) => sharpnessUniform.write(value),
+    onSliderChange: (value: number) => sharpness.write(value),
   },
   'sharpening function': {
     initial: 'exponential',
@@ -157,6 +157,5 @@ export const controls = {
 
 export function onCleanup() {
   isRunning = false;
-  perlinCache.destroy();
   root.destroy();
 }

@@ -65,12 +65,9 @@ const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const aspectRatioUniform = root.createUniform(
-  d.f32,
-  canvas.width / canvas.height,
-);
-const deltaTimeUniform = root.createUniform(d.f32);
-const timeMutable = root.createMutable(d.f32);
+const aspectRatio = root.createUniform(d.f32, canvas.width / canvas.height);
+const deltaTime = root.createUniform(d.f32);
+const time = root.createMutable(d.f32);
 
 const particleDataStorage = particleDataBuffer.as('mutable');
 
@@ -118,16 +115,16 @@ const mainVert = tgpu['~unstable'].vertexFn({
     vec2f(width, height),
   )[in.index] / 350, in.angle) + in.center;
 
-  if (aspectRatioUniform < 1) {
-    pos.x /= aspectRatioUniform;
+  if (aspectRatio < 1) {
+    pos.x /= aspectRatio;
   } else {
-    pos.y *= aspectRatioUniform;
+    pos.y *= aspectRatio;
   }
 
   return Out(vec4f(pos, 0.0, 1.0), in.color);
 }`.$uses({
   rotate,
-  aspectRatioUniform,
+  aspectRatio,
 });
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
@@ -147,8 +144,8 @@ const mainCompute = tgpu['~unstable'].computeFn({
   particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
 }`.$uses({
   particleData: particleDataStorage,
-  deltaTime: deltaTimeUniform,
-  time: timeMutable,
+  deltaTime: deltaTime,
+  time: time,
 });
 
 // pipelines
@@ -212,9 +209,9 @@ function onFrame(loop: (deltaTime: number) => unknown) {
   requestAnimationFrame(runner);
 }
 
-onFrame((deltaTime) => {
-  deltaTimeUniform.write(deltaTime);
-  aspectRatioUniform.write(canvas.width / canvas.height);
+onFrame((dt) => {
+  deltaTime.write(dt);
+  aspectRatio.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 

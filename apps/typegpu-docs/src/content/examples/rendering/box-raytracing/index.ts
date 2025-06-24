@@ -71,7 +71,7 @@ const IntersectionStruct = d.struct({
 
 // buffers
 
-const boxMatrixReadonly = root.createReadonly(
+const boxMatrix = root.createReadonly(
   d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
   Array.from(
     { length: X },
@@ -216,7 +216,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   for (let i = 0; i < X; i++) {
     for (let j = 0; j < Y; j++) {
       for (let k = 0; k < Z; k++) {
-        if (boxMatrixReadonly.$[i][j][k].isActive === 0) {
+        if (boxMatrix.$[i][j][k].isActive === 0) {
           continue;
         }
 
@@ -238,7 +238,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
             invColor,
             mul(
               boxDensity,
-              div(d.vec3f(1), boxMatrixReadonly.$[i][j][k].albedo),
+              div(d.vec3f(1), boxMatrix.$[i][j][k].albedo),
             ),
           );
           tMin = intersection.tMin;

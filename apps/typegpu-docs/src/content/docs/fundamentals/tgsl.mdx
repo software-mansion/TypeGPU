@@ -120,18 +120,17 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 
-const backgroundColorUniform = root['~unstable'].createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
+const bgColor = root.createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
 
-const fragmentTgsl = tgpu['~unstable'].fragmentFn({
-  out: d.location(0, d.vec4f),
-})(() => backgroundColorUniform.value);
-//                              ^?
+const fragmentTgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+  return bgColor.$;
+//               ^?
+}); 
 
-const fragmentWgsl = tgpu['~unstable'].fragmentFn({
-  out: d.location(0, d.vec4f),
-})`{ 
-  return backgroundColorUniform; 
-}`.$uses({ backgroundColorUniform });
+const fragmentWgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`{ 
+  return bgColor; 
+}
+`.$uses({ bgColor });
 ```
 
 * **Operators** --

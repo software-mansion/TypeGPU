@@ -56,39 +56,37 @@ const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
 const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
-const timeUniform = root.createUniform(d.f32);
-const scaleUniform = root.createUniform(d.f32);
-const colorUniform = root.createUniform(d.vec3f);
-const shiftUniform = root.createUniform(d.f32);
-const aspectRatioUniform = root.createUniform(d.f32);
+const time = root.createUniform(d.f32);
+const scale = root.createUniform(d.f32);
+const color = root.createUniform(d.vec3f);
+const shift = root.createUniform(d.f32);
+const aspectRatio = root.createUniform(d.f32);
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const t = timeUniform.$;
-  const shift = shiftUniform.$;
   // Increasing the color intensity
-  const color = mul(colorUniform.$, 4);
-  const ratio = d.vec2f(aspectRatioUniform.$, 1);
+  const icolor = mul(color.$, 4);
+  const ratio = d.vec2f(aspectRatio.$, 1);
   const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = sub(mul(z, dir), scaleUniform.$);
-    p.x -= t + 3;
-    p.z -= t + 3;
+    const p = sub(mul(z, dir), scale.$);
+    p.x -= time.$ + 3;
+    p.z -= time.$ + 3;
     let q = p;
     let prox = p.y;
     for (let i = 40.1; i > 0.01; i *= 0.2) {
       q = sub(i * 0.9, abs(sub(mod(q, i + i), i)));
       const minQ = min(min(q.x, q.y), q.z);
       prox = max(prox, minQ);
-      q = mul(q, rotateXZ(shift));
+      q = mul(q, rotateXZ(shift.$));
     }
     z += prox;
-    acc = add(acc, mul(sub(color, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
+    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
   }
 
   // Tone mapping
@@ -127,9 +125,15 @@ const pipeline = root['~unstable']
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
+let isRunning = true;
+
 function draw() {
-  aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
-  timeUniform.write((performance.now() * 0.001) % 1000);
+  if (!isRunning) {
+    return;
+  }
+
+  aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
+  time.write((performance.now() * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
@@ -154,7 +158,7 @@ export const controls = {
     max: 100,
     step: 0.01,
     onSliderChange(v: number) {
-      scaleUniform.write(v);
+      scale.write(v);
     },
   },
   'pattern shift': {
@@ -163,18 +167,19 @@ export const controls = {
     max: 200,
     step: 0.001,
     onSliderChange(v: number) {
-      shiftUniform.write(v / 180 * Math.PI);
+      shift.write(v / 180 * Math.PI);
     },
   },
   color: {
     onColorChange(value: readonly [number, number, number]) {
-      colorUniform.write(d.vec3f(...value));
+      color.write(d.vec3f(...value));
     },
     initial: [1, 0.7, 0],
   },
 };
 
 export function onCleanup() {
+  isRunning = false;
   root.destroy();
 }
 
