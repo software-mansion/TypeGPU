@@ -92,7 +92,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   // Tone mapping
   acc = tanh(mul(acc, acc));
 
-  return d.vec4f(acc.xyz, 1);
+  return d.vec4f(acc, 1);
 });
 
 /**
@@ -138,7 +138,6 @@ function draw() {
   pipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -171,10 +170,10 @@ export const controls = {
     },
   },
   color: {
+    initial: [1, 0.7, 0],
     onColorChange(value: readonly [number, number, number]) {
       color.write(d.vec3f(...value));
     },
-    initial: [1, 0.7, 0],
   },
 };
 
