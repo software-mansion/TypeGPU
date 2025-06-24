@@ -127,13 +127,13 @@ const pipeline = root['~unstable']
 
 let isRunning = true;
 
-function draw() {
+function draw(timestamp: number) {
   if (!isRunning) {
     return;
   }
 
   aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
-  time.write((performance.now() * 0.001) % 1000);
+  time.write((timestamp * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
@@ -146,7 +146,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 

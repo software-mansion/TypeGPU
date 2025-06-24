@@ -144,8 +144,8 @@ const mainCompute = tgpu['~unstable'].computeFn({
   particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
 }`.$uses({
   particleData: particleDataStorage,
-  deltaTime: deltaTime,
-  time: time,
+  deltaTime,
+  time,
 });
 
 // pipelines

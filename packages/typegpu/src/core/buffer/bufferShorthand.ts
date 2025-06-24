@@ -11,15 +11,18 @@ import type { TgpuBufferUsage } from './bufferUsage.ts';
 // Public API
 // ----------
 
-export interface TgpuMutable<TData extends BaseData> extends TgpuNamable {
-  readonly resourceType: 'mutable';
-  readonly buffer: TgpuBuffer<TData> & StorageFlag;
-
+interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // Accessible on the CPU
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
   read(): Promise<Infer<TData>>;
   // ---
+}
+
+export interface TgpuMutable<TData extends BaseData>
+  extends TgpuBufferShorthandBase<TData> {
+  readonly resourceType: 'mutable';
+  readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
   value: InferGPU<TData>;
@@ -27,57 +30,37 @@ export interface TgpuMutable<TData extends BaseData> extends TgpuNamable {
   // ---
 }
 
-export interface TgpuReadonly<TData extends BaseData> extends TgpuNamable {
+export interface TgpuReadonly<TData extends BaseData>
+  extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
-  // Accessible on the CPU
-  write(data: Infer<TData>): void;
-  writePartial(data: InferPartial<TData>): void;
-  read(): Promise<Infer<TData>>;
-  // ---
-
   // Accessible on the GPU
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
 }
 
-export interface TgpuUniform<TData extends BaseData> extends TgpuNamable {
+export interface TgpuUniform<TData extends BaseData>
+  extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
-  // Accessible on the CPU
-  write(data: Infer<TData>): void;
-  writePartial(data: InferPartial<TData>): void;
-  read(): Promise<Infer<TData>>;
-  // ---
-
   // Accessible on the GPU
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
 }
 
-export function isMutable<TData extends BaseData>(
-  value: unknown | TgpuMutable<TData>,
-): value is TgpuMutable<TData> {
-  return value instanceof TgpuBufferShorthandImpl &&
-    value.resourceType === 'mutable';
-}
+export type TgpuBufferShorthand<TData extends BaseData> =
+  | TgpuMutable<TData>
+  | TgpuReadonly<TData>
+  | TgpuUniform<TData>;
 
-export function isReadonly<TData extends BaseData>(
-  value: unknown | TgpuMutable<TData>,
-): value is TgpuMutable<TData> {
-  return value instanceof TgpuBufferShorthandImpl &&
-    value.resourceType === 'readonly';
-}
-
-export function isUniform<TData extends BaseData>(
-  value: unknown | TgpuMutable<TData>,
-): value is TgpuMutable<TData> {
-  return value instanceof TgpuBufferShorthandImpl &&
-    value.resourceType === 'uniform';
+export function isBufferShorthand<TData extends BaseData>(
+  value: unknown | TgpuBufferShorthand<TData>,
+): value is TgpuBufferShorthand<TData> {
+  return value instanceof TgpuBufferShorthandImpl;
 }
 
 // --------------
