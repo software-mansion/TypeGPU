@@ -42,6 +42,7 @@ import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts'
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type {
+  TgpuBufferShorthand,
   TgpuMutable,
   TgpuReadonly,
   TgpuUniform,
@@ -117,9 +118,7 @@ export interface WithBinding {
     value:
       | TgpuFn<() => T>
       | TgpuBufferUsage<T>
-      | TgpuMutable<T>
-      | TgpuReadonly<T>
-      | TgpuUniform<T>
+      | TgpuBufferShorthand<T>
       | Infer<T>,
   ): WithBinding;
 
