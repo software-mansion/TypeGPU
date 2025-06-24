@@ -46,18 +46,10 @@ const inputGridSlot = tgpu['~unstable'].slot<
 const outputGridSlot = tgpu['~unstable'].slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
+const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
 
-const prevObstaclesBuffer = root
-  .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$usage('storage');
-
-const prevObstacleReadonly = prevObstaclesBuffer.as('readonly');
-
-const obstaclesBuffer = root
-  .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$usage('storage');
-
-const obstaclesReadonly = obstaclesBuffer.as('readonly');
+const prevObstacles = root.createReadonly(BoxObstacleArray);
+const obstacles = root.createReadonly(BoxObstacleArray);
 
 const isValidCoord = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)((x, y) =>
   x < gridSizeUniform.value && x >= 0 && y < gridSizeUniform.value && y >= 0
@@ -126,7 +118,7 @@ const timeUniform = timeBuffer.as('uniform');
 const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
   (x, y) => {
     for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = obstaclesReadonly.value[obsIdx];
+      const obs = obstacles.$[obsIdx];
 
       if (obs.enabled === 0) {
         continue;
@@ -231,8 +223,8 @@ const mainInitWorld = tgpu['~unstable'].computeFn({
 const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
   () => {
     for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = prevObstacleReadonly.value[obsIdx];
-      const nextObs = obstaclesReadonly.value[obsIdx];
+      const obs = prevObstacles.$[obsIdx];
+      const nextObs = obstacles.$[obsIdx];
 
       if (obs.enabled === 0) {
         continue;
@@ -399,7 +391,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
 
-const obstacles: {
+const obstaclesCpu: {
   x: number;
   y: number;
   width: number;
@@ -413,7 +405,7 @@ const obstacles: {
 ];
 
 function obstaclesToConcrete(): d.Infer<BoxObstacle>[] {
-  return obstacles.map(({ x, y, width, height, enabled }) => ({
+  return obstaclesCpu.map(({ x, y, width, height, enabled }) => ({
     center: d.vec2i(Math.round(x * gridSize), Math.round(y * gridSize)),
     size: d.vec2i(Math.round(width * gridSize), Math.round(height * gridSize)),
     enabled: enabled ? 1 : 0,
@@ -422,7 +414,7 @@ function obstaclesToConcrete(): d.Infer<BoxObstacle>[] {
 
 let boxX = 0.5;
 const limitedBoxX = () => {
-  const leftWallWidth = obstacles[OBSTACLE_LEFT_WALL].width;
+  const leftWallWidth = obstaclesCpu[OBSTACLE_LEFT_WALL].width;
   return Math.max(boxX, leftWallX + leftWallWidth / 2 + 0.15);
 };
 
@@ -527,9 +519,9 @@ function makePipelines(
     },
 
     applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
-      obstaclesBuffer.write(bufferData);
+      obstacles.write(bufferData);
       moveObstaclesPipeline.dispatchWorkgroups(1);
-      prevObstaclesBuffer.write(bufferData);
+      prevObstacles.write(bufferData);
     },
 
     compute() {
@@ -571,8 +563,8 @@ const odd = makePipelines(
 let primary = even;
 
 gridSizeBuffer.write(gridSize);
-obstaclesBuffer.write(obstaclesToConcrete());
-prevObstaclesBuffer.write(obstaclesToConcrete());
+obstacles.write(obstaclesToConcrete());
+prevObstacles.write(obstaclesToConcrete());
 primary.init();
 
 let msSinceLastTick = 0;
@@ -649,7 +641,7 @@ export const controls = {
     step: 0.01,
     onSliderChange: (value: number) => {
       boxX = value;
-      obstacles[OBSTACLE_BOX].x = limitedBoxX();
+      obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
@@ -661,7 +653,7 @@ export const controls = {
     step: 0.01,
     onSliderChange: (value: number) => {
       boxY = value;
-      obstacles[OBSTACLE_BOX].y = boxY;
+      obstaclesCpu[OBSTACLE_BOX].y = boxY;
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
@@ -673,8 +665,8 @@ export const controls = {
     step: 0.01,
     onSliderChange: (value: number) => {
       leftWallX = value;
-      obstacles[OBSTACLE_LEFT_WALL].x = leftWallX;
-      obstacles[OBSTACLE_BOX].x = limitedBoxX();
+      obstaclesCpu[OBSTACLE_LEFT_WALL].x = leftWallX;
+      obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
