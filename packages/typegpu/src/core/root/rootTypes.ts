@@ -123,7 +123,7 @@ export interface WithBinding {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding;
 
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(

@@ -5,7 +5,7 @@ import { computeJunctionGradient } from './algorithm.ts';
 const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
 
 export interface StaticPerlin3DCache {
-  readonly getJunctionGradient: TgpuFn<[pos: d.Vec3i], d.Vec3f>;
+  readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
   readonly size: d.v3u;
   destroy(): void;
 }

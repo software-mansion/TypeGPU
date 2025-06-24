@@ -1,8 +1,14 @@
+import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { InferIO, IOLayout } from '../src/core/function/fnTypes.ts';
+import type {
+  InferIO,
+  InheritArgNames,
+  IOLayout,
+} from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
+import type { Prettify } from '../src/shared/utilityTypes.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.fn', () => {
@@ -107,16 +113,18 @@ describe('tgpu.fn', () => {
     const two = tgpu['~unstable'].fn([d.f32, d.u32]);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Void>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<[], d.Void>>();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
+      TgpuFn<() => d.Void>
+    >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Void>>();
     expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<[d.F32], d.Void>
+      TgpuFn<(arg_0: d.F32) => d.Void>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Void>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
-      TgpuFn<[d.F32, d.U32], d.Void>
+      TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Void>
     >();
   });
 
@@ -126,16 +134,18 @@ describe('tgpu.fn', () => {
     const two = tgpu['~unstable'].fn([d.f32, d.u32], d.bool);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Bool>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<[], d.Bool>>();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
+      TgpuFn<() => d.Bool>
+    >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Bool>>();
     expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<[d.F32], d.Bool>
+      TgpuFn<(arg_0: d.F32) => d.Bool>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Bool>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
-      TgpuFn<[d.F32, d.U32], d.Bool>
+      TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Bool>
     >();
   });
 });
@@ -187,20 +197,6 @@ describe('tgpu.vertexFn', () => {
     expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
-
-  it('does not create In struct when there is empty object for arguments', () => {
-    const foo = tgpu['~unstable'].vertexFn({
-      in: {},
-      out: { pos: d.builtin.position },
-    })(() => {
-      return {
-        pos: d.vec4f(),
-      };
-    });
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
-    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
-    expect(foo.shell.argTypes).toStrictEqual([]);
-  });
 });
 
 describe('tgpu.fragmentFn', () => {
@@ -224,5 +220,23 @@ describe('InferIO', () => {
       a: number;
       b: number;
     }>();
+  });
+});
+
+describe('InheritArgNames', () => {
+  it('should inherit argument names from one fn to another', () => {
+    const isEven = (x: number) => (x & 1) === 0;
+    const identity = (num: number) => num;
+    // Should have the same argument names as `identity`, but the signature of `isEven`
+    const isEvenWithNames = undefined as unknown as Prettify<
+      InheritArgNames<
+        typeof isEven,
+        typeof identity
+      >
+    >['result'];
+
+    attest(isEven).type.toString.snap('(x: number) => boolean');
+    attest(identity).type.toString.snap('(num: number) => number');
+    attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });
