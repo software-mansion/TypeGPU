@@ -265,33 +265,36 @@ class TgpuRootImpl extends WithBindingImpl
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
-    const backingBuffer = this.createBuffer<TData>(typeSchema, initialOrBuffer)
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('uniform' as any);
+    this._disposables.push(buffer);
 
-    return new TgpuBufferShorthandImpl('uniform', backingBuffer);
+    return new TgpuBufferShorthandImpl('uniform', buffer);
   }
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
-    const backingBuffer = this.createBuffer<TData>(typeSchema, initialOrBuffer)
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
+    this._disposables.push(buffer);
 
-    return new TgpuBufferShorthandImpl('mutable', backingBuffer);
+    return new TgpuBufferShorthandImpl('mutable', buffer);
   }
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
-    const backingBuffer = this.createBuffer<TData>(typeSchema, initialOrBuffer)
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
+    this._disposables.push(buffer);
 
-    return new TgpuBufferShorthandImpl('readonly', backingBuffer);
+    return new TgpuBufferShorthandImpl('readonly', buffer);
   }
 
   createQuerySet<T extends GPUQueryType>(

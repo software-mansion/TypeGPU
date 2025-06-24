@@ -2,7 +2,7 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferPartial } from '../../shared/repr.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 import type { TgpuBufferUsage } from './bufferUsage.ts';
@@ -12,6 +12,8 @@ import type { TgpuBufferUsage } from './bufferUsage.ts';
 // ----------
 
 interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
+  readonly [$internal]: true;
+
   // Accessible on the CPU
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
@@ -71,6 +73,7 @@ export class TgpuBufferShorthandImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
 > implements SelfResolvable {
+  readonly [$internal] = true;
   readonly [$getNameForward]: object;
   readonly #usage: TgpuBufferUsage<TData, TType>;
 

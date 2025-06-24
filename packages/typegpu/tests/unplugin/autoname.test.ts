@@ -50,9 +50,9 @@ describe('autonaming', () => {
         tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
       )
       .createPipeline();
-    const myMutableBuffer = root['~unstable'].createMutable(d.u32);
-    const myReadonlyBuffer = root['~unstable'].createReadonly(d.u32);
-    const myUniformBuffer = root['~unstable'].createUniform(d.u32);
+    const myMutable = root.createMutable(d.u32);
+    const myReadonly = root.createReadonly(d.u32);
+    const myUniform = root.createUniform(d.u32);
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -66,9 +66,9 @@ describe('autonaming', () => {
     });
 
     expect(getName(myPipeline)).toBe('myPipeline');
-    expect(getName(myMutableBuffer)).toBe('myMutableBuffer');
-    expect(getName(myReadonlyBuffer)).toBe('myReadonlyBuffer');
-    expect(getName(myUniformBuffer)).toBe('myUniformBuffer');
+    expect(getName(myMutable)).toBe('myMutable');
+    expect(getName(myReadonly)).toBe('myReadonly');
+    expect(getName(myUniform)).toBe('myUniform');
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');

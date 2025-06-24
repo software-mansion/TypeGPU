@@ -122,11 +122,11 @@ const resourceConstructors: string[] = [
   'struct',
   // root
   'createBuffer',
-  // root['~unstable']
-  'createPipeline',
   'createMutable',
   'createReadonly',
   'createUniform',
+  // root['~unstable']
+  'createPipeline',
   'createTexture',
   'sampler',
   'comparisonSampler',
