@@ -274,8 +274,8 @@ function frame(timestamp: DOMHighResTimeStamp) {
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
+      loadOp: 'clear',
+      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -297,8 +297,8 @@ function frame(timestamp: DOMHighResTimeStamp) {
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'load' as const,
-      storeOp: 'store' as const,
+      loadOp: 'load',
+      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
