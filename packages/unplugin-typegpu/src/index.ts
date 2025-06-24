@@ -64,7 +64,7 @@ function assignMetadata(
     '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
   ).appendRight(
     node.end,
-    `) , ${metadata}) && $.f)({}))`,
+    `), ${metadata}) && $.f)({}))`,
   );
 }
 

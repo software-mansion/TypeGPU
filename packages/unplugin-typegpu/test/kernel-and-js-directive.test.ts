@@ -263,7 +263,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -304,7 +304,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -333,7 +333,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -365,7 +365,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -402,7 +402,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -439,7 +439,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},
@@ -485,7 +485,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'kernel & js';
               return a + b;
-            }) , {
+            }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     externals: {},

@@ -295,7 +295,7 @@ describe('[ROLLUP] auto naming', () => {
               let shell = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([]), "shell"));
               var fn = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                           throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }) , {
+                        }), {
                       v: 1,
                       ast: {"params":[],"body":[0,[]],"externalNames":[]},
                       externals: {},
@@ -382,7 +382,7 @@ describe('[ROLLUP] auto naming', () => {
 
         ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                           throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }) , {
+                        }), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
                       externals: {},
@@ -390,7 +390,7 @@ describe('[ROLLUP] auto naming', () => {
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
                 (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                           throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }) , {
+                        }), {
                       v: 1,
                       ast: {"params":[],"body":[0,[]],"externalNames":[]},
                       externals: {},
@@ -399,7 +399,7 @@ describe('[ROLLUP] auto naming', () => {
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
                 (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                           throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }) , {
+                        }), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
                       externals: {},
@@ -411,7 +411,7 @@ describe('[ROLLUP] auto naming', () => {
               })(
                 (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                           throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }) , {
+                        }), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
                       externals: {d},
