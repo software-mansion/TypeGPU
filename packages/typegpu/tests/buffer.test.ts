@@ -55,7 +55,7 @@ describe('TgpuBuffer', () => {
 
     root.unwrap(dataBuffer);
     expect(root.device.createBuffer).toBeCalledWith({
-      label: '<unnamed>',
+      label: 'dataBuffer',
       mappedAtCreation: false,
       size: 64,
       usage: global.GPUBufferUsage.UNIFORM |
@@ -146,7 +146,7 @@ describe('TgpuBuffer', () => {
       // First call (raw buffer)
       [
         {
-          label: '<unnamed>',
+          label: 'buffer',
           mappedAtCreation: false,
           size: 12,
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,

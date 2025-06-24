@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
@@ -7,7 +8,6 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -289,7 +289,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 1,
@@ -342,7 +342,7 @@ describe('TgpuComputePipeline', () => {
       pipeline2.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 0,
@@ -351,7 +351,7 @@ describe('TgpuComputePipeline', () => {
       });
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline2',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 2,
@@ -389,7 +389,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 3,
@@ -438,7 +438,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 2,
