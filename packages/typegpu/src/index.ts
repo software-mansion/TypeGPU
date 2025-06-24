@@ -85,6 +85,11 @@ export {
   asUniform as unstable_asUniform,
   isUsableAsUniform,
 } from './core/buffer/bufferUsage.ts';
+export {
+  isMutable,
+  isReadonly,
+  isUniform,
+} from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 
 // types

@@ -3,7 +3,9 @@ import type { StorageFlag } from '../../extension.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferPartial } from '../../shared/repr.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
+import type { TgpuBufferUsage } from './bufferUsage.ts';
 
 // ----------
 // Public API
@@ -57,6 +59,27 @@ export interface TgpuUniform<TData extends BaseData> extends TgpuNamable {
   // ---
 }
 
+export function isMutable<TData extends BaseData>(
+  value: unknown | TgpuMutable<TData>,
+): value is TgpuMutable<TData> {
+  return value instanceof TgpuBufferShorthandImpl &&
+    value.resourceType === 'mutable';
+}
+
+export function isReadonly<TData extends BaseData>(
+  value: unknown | TgpuMutable<TData>,
+): value is TgpuMutable<TData> {
+  return value instanceof TgpuBufferShorthandImpl &&
+    value.resourceType === 'readonly';
+}
+
+export function isUniform<TData extends BaseData>(
+  value: unknown | TgpuMutable<TData>,
+): value is TgpuMutable<TData> {
+  return value instanceof TgpuBufferShorthandImpl &&
+    value.resourceType === 'uniform';
+}
+
 // --------------
 // Implementation
 // --------------
@@ -64,8 +87,9 @@ export interface TgpuUniform<TData extends BaseData> extends TgpuNamable {
 export class TgpuBufferShorthandImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
-> {
+> implements SelfResolvable {
   readonly [$getNameForward]: object;
+  readonly #usage: TgpuBufferUsage<TData, TType>;
 
   constructor(
     public readonly resourceType: TType,
@@ -74,6 +98,8 @@ export class TgpuBufferShorthandImpl<
       & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
     this[$getNameForward] = buffer;
+    // biome-ignore lint/suspicious/noExplicitAny: too complex a type
+    this.#usage = (this.buffer as any).as(this.resourceType);
   }
 
   $name(label: string): this {
@@ -94,8 +120,11 @@ export class TgpuBufferShorthandImpl<
   }
 
   get value(): InferGPU<TData> {
-    // biome-ignore lint/suspicious/noExplicitAny: too complex a type
-    return (this.buffer as any).as(this.resourceType).value;
+    return this.#usage.value;
+  }
+
+  '~resolve'(ctx: ResolutionCtx): string {
+    return ctx.resolve(this.#usage);
   }
 
   get $(): InferGPU<TData> {

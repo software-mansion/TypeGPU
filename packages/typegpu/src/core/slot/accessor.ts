@@ -14,6 +14,7 @@ import {
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
+import { isMutable, isReadonly, isUniform } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -95,7 +96,12 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   '~resolve'(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this.slot);
 
-    if (isBufferUsage(value)) {
+    if (
+      isBufferUsage(value) ||
+      isMutable(value) ||
+      isReadonly(value) ||
+      isUniform(value)
+    ) {
       return ctx.resolve(value);
     }
 
