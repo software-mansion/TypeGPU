@@ -47,11 +47,6 @@ const ParticleData = d.struct({
 
 // buffers
 
-const canvasAspectRatioUniform = root['~unstable'].createUniform(
-  d.f32,
-  canvas.width / canvas.height,
-);
-
 const particleGeometryBuffer = root
   .createBuffer(
     d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT),
@@ -70,8 +65,12 @@ const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const deltaTimeUniform = root['~unstable'].createUniform(d.f32);
-const timeStorage = root['~unstable'].createMutable(d.f32);
+const aspectRatioUniform = root.createUniform(
+  d.f32,
+  canvas.width / canvas.height,
+);
+const deltaTimeUniform = root.createUniform(d.f32);
+const timeMutable = root.createMutable(d.f32);
 
 const particleDataStorage = particleDataBuffer.as('mutable');
 
@@ -119,16 +118,16 @@ const mainVert = tgpu['~unstable'].vertexFn({
     vec2f(width, height),
   )[in.index] / 350, in.angle) + in.center;
 
-  if (canvasAspectRatio < 1) {
-    pos.x /= canvasAspectRatio;
+  if (aspectRatioUniform < 1) {
+    pos.x /= aspectRatioUniform;
   } else {
-    pos.y *= canvasAspectRatio;
+    pos.y *= aspectRatioUniform;
   }
 
   return Out(vec4f(pos, 0.0, 1.0), in.color);
 }`.$uses({
   rotate,
-  canvasAspectRatio: canvasAspectRatioUniform,
+  aspectRatioUniform,
 });
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
@@ -149,7 +148,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({
   particleData: particleDataStorage,
   deltaTime: deltaTimeUniform,
-  time: timeStorage,
+  time: timeMutable,
 });
 
 // pipelines
@@ -215,7 +214,7 @@ function onFrame(loop: (deltaTime: number) => unknown) {
 
 onFrame((deltaTime) => {
   deltaTimeUniform.write(deltaTime);
-  canvasAspectRatioUniform.write(canvas.width / canvas.height);
+  aspectRatioUniform.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 

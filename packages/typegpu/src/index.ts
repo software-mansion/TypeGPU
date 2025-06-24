@@ -113,6 +113,11 @@ export type {
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
 export type {
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferShorthand.ts';
+export type {
   Eventual,
   TgpuAccessor,
   TgpuDerived,

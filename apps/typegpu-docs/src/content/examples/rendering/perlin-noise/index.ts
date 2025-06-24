@@ -78,9 +78,9 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const gridSizeUniform = root['~unstable'].createUniform(d.f32);
-const timeUniform = root['~unstable'].createUniform(d.f32, 0);
-const sharpnessUniform = root['~unstable'].createUniform(d.f32, 0.1);
+const gridSizeUniform = root.createUniform(d.f32);
+const timeUniform = root.createUniform(d.f32, 0);
+const sharpnessUniform = root.createUniform(d.f32, 0.1);
 
 const renderPipelineBase = root['~unstable']
   .with(gridSizeAccess, gridSizeUniform)

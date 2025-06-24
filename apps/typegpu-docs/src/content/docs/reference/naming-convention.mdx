@@ -50,9 +50,9 @@ const boidsUniform = boidsBuffer.as('uniform');
 const boidsMutable = boidsBuffer.as('mutable');
 const boidsReadonly = boidsBuffer.as('readonly');
 
-const cellsUniform = root['~unstable'].createUniform(Cells);
-const cellsMutable = root['~unstable'].createMutable(Cells);
-const cellsReadonly = root['~unstable'].createReadonly(Cells);
+const cellsUniform = root.createUniform(Cells);
+const cellsMutable = root.createMutable(Cells);
+const cellsReadonly = root.createReadonly(Cells);
 ```
 
 ## Slots

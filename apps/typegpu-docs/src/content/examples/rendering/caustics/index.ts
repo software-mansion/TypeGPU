@@ -54,12 +54,12 @@ const rotateXY = tgpu['~unstable'].fn([d.f32], d.mat2x2f)((angle) => {
 
 const root = await tgpu.init();
 
-const timeUniform = root['~unstable'].createUniform(d.f32);
+const timeUniform = root.createUniform(d.f32);
 
 /** Controls the angle of rotation for the pool tile texture */
 const angle = 0.2;
 /** The bigger the number, the denser the pool tile texture is */
-const tileDensityUniform = root['~unstable'].createUniform(d.f32);
+const tileDensityUniform = root.createUniform(d.f32);
 /** The scene fades into this color at a distance */
 const fogColor = d.vec3f(0.05, 0.2, 0.7);
 /** The ambient light color */
@@ -69,8 +69,8 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const time = timeUniform.value;
-  const tileDensity = tileDensityUniform.value;
+  const time = timeUniform.$;
+  const tileDensity = tileDensityUniform.$;
 
   /**
    * A transformation matrix that skews the perspective a bit

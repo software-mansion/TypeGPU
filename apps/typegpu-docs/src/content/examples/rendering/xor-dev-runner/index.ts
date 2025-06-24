@@ -56,27 +56,27 @@ const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
 const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
-const timeUniform = root['~unstable'].createUniform(d.f32);
-const scaleUniform = root['~unstable'].createUniform(d.f32);
-const colorUniform = root['~unstable'].createUniform(d.vec3f);
-const shiftUniform = root['~unstable'].createUniform(d.f32);
-const aspectRatioUniform = root['~unstable'].createUniform(d.f32);
+const timeUniform = root.createUniform(d.f32);
+const scaleUniform = root.createUniform(d.f32);
+const colorUniform = root.createUniform(d.vec3f);
+const shiftUniform = root.createUniform(d.f32);
+const aspectRatioUniform = root.createUniform(d.f32);
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const t = timeUniform.value;
-  const shift = shiftUniform.value;
+  const t = timeUniform.$;
+  const shift = shiftUniform.$;
   // Increasing the color intensity
-  const color = mul(colorUniform.value, 4);
-  const ratio = d.vec2f(aspectRatioUniform.value, 1);
+  const color = mul(colorUniform.$, 4);
+  const ratio = d.vec2f(aspectRatioUniform.$, 1);
   const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = sub(mul(z, dir), scaleUniform.value);
+    const p = sub(mul(z, dir), scaleUniform.$);
     p.x -= t + 3;
     p.z -= t + 3;
     let q = p;
