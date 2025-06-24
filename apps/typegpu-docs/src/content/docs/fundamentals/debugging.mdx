@@ -1,0 +1,23 @@
+---
+title: Debugging
+---
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const debugMutable = root['~unstable'].createMutable(d.f32);
+
+const foo = tgpu['~unstable'].fn([])(() => {
+  // Complex shader logic
+  debugMutable.value = 123;
+  // More complex shader logic...
+});
+
+// Invoking the shader, using it in a pipeline, etc.
+// ...
+
+console.log('Debug value:', await debugMutable.buffer.read());
+```
