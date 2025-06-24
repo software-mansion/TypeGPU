@@ -74,10 +74,7 @@ const cameraInitial = Camera({
     d.mat4x4f(),
   ),
 });
-const cameraBuffer = root
-  .createBuffer(Camera, cameraInitial)
-  .$usage('uniform')
-  .$name('camera');
+const camera = root.createUniform(Camera, cameraInitial).$name('camera');
 
 const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
@@ -86,7 +83,7 @@ const skyBoxVertexBuffer = root
 const skyBoxTexture = await loadSkyBox(root);
 const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 const skyBoxBindGroup = root.createBindGroup(renderSkyBoxBindGroupLayout, {
-  camera: cameraBuffer,
+  camera: camera.buffer,
   skyBox: skyBox,
   sampler: sampler,
 });
@@ -273,7 +270,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   );
 
   const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
-    camera: cameraBuffer,
+    camera: camera.buffer,
     sampler,
     lightSource: lightSourceBuffer,
     celestialBodyTextures: sphereTextures,
@@ -328,7 +325,7 @@ const resizeObserver = new ResizeObserver(() => {
     d.mat4x4f(),
   );
 
-  cameraBuffer.writePartial({ projection: proj });
+  camera.writePartial({ projection: proj });
   depthTexture.destroy();
   depthTexture = root.device.createTexture({
     size: [canvas.width, canvas.height, 1],
@@ -350,7 +347,7 @@ function updateCameraPosition() {
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.writePartial({ view: newView, position: cameraPosition });
+  camera.writePartial({ view: newView, position: cameraPosition });
 }
 
 function updateCameraOrbit(dx: number, dy: number) {

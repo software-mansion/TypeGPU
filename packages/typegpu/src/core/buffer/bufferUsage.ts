@@ -33,6 +33,7 @@ export interface TgpuBufferUsage<
   readonly usage: TUsage;
   readonly [$repr]: Infer<TData>;
   value: InferGPU<TData>;
+  $: InferGPU<TData>;
 
   readonly [$internal]: {
     readonly dataType: TData;
@@ -42,11 +43,13 @@ export interface TgpuBufferUsage<
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
   readonly value: InferGPU<TData>;
+  readonly $: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
   readonly value: InferGPU<TData>;
+  readonly $: InferGPU<TData>;
 }
 
 export interface TgpuFixedBufferUsage<TData extends BaseData>
@@ -147,7 +150,12 @@ class TgpuFixedBufferImpl<
 
     return this[$gpuValueOf]();
   }
+
+  get $(): InferGPU<TData> {
+    return this.value;
+  }
 }
+
 export class TgpuLaidOutBufferImpl<
   TData extends BaseData,
   TUsage extends BindableBufferUsage,
@@ -201,6 +209,10 @@ export class TgpuLaidOutBufferImpl<
     }
 
     return this[$gpuValueOf]();
+  }
+
+  get $(): InferGPU<TData> {
+    return this.value;
   }
 }
 

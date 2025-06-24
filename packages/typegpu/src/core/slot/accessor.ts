@@ -88,6 +88,10 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this[$gpuValueOf]();
   }
 
+  get $(): InferGPU<T> {
+    return this.value;
+  }
+
   '~resolve'(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this.slot);
 

@@ -53,4 +53,8 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
 
     return this[$gpuValueOf](ctx);
   }
+
+  get $(): InferGPU<T> {
+    return this.value;
+  }
 }

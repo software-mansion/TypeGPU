@@ -40,12 +40,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv = mul(gridSizeAccess.value, input.uv);
+  const uv = mul(gridSizeAccess.$, input.uv);
 
-  const n = perlin3d.sample(d.vec3f(uv, timeAccess.value));
+  const n = perlin3d.sample(d.vec3f(uv, timeAccess.$));
 
   // Apply sharpening function
-  const sharp = sharpenFnSlot.value(n, sharpnessAccess.value);
+  const sharp = sharpenFnSlot.$(n, sharpnessAccess.$);
 
   // Map to 0-1 range
   const n01 = sharp * 0.5 + 0.5;
@@ -87,7 +87,7 @@ const renderPipelineBase = root['~unstable']
   .with(timeAccess, time)
   .with(sharpnessAccess, sharpness)
   .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
-  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value);
+  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.$);
 
 const renderPipelines = {
   exponential: renderPipelineBase
