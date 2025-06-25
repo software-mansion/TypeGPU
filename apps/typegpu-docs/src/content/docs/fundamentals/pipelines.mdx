@@ -38,10 +38,10 @@ The underlying WebGPU resource is created lazily, that is just before the first 
 
 * **withVertex**
 
-Creating a render pipeline requires first calling a `withVertex` method, which accepts a tgpu vertexFn and a record of vertex attributes.
+Creating a render pipeline requires calling a `withVertex` method first, which accepts a tgpu vertexFn and vertex attributes.
+The attributes are passed in a record where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
 If the vertex shader does not use vertex attributes, then the latter argument is `{}`.
-It is also possible to use some parts of multiple [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts) by specifying selected attributes in the passed record.
-The compatibility between vertex input types and vertex attribute formats is performed at the type level.
+The compatibility between vertex input types and vertex attribute formats is validated at the type level.
 
 ```ts
 .withVertex(mainVert, {
