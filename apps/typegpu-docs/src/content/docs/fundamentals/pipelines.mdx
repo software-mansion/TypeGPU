@@ -32,7 +32,7 @@ const computePipeline = root['~unstable']
   .createPipeline();
 ```
 
-* **withVertex**
+### withVertex
 
 Creating a render pipeline requires calling a `withVertex` method first, which accepts a tgpu vertexFn and vertex attributes.
 The attributes are passed in a record where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
@@ -47,7 +47,7 @@ The compatibility between vertex input types and vertex attribute formats is val
 })
 ```
 
-* **withFragment**
+### withFragment
 
 The next step is calling the `withFragment` method, which accepts a tgpu fragmentFn and a *targets* argument defining the formats and behaviors of the color targets the pipeline writes to.
 Each target is specified the same as in the WebGPU API (*GPUColorTargetState*). 
@@ -85,7 +85,7 @@ const renderPipeline = root['~unstable']
   .createPipeline();
 ```
 
-* **Type-level validation**
+### Type-level validation
 
 Using the pipelines should ensure the compatibility of the vertex output and fragment input on the type level -- 
 `withFragment` only accepts fragment functions, which all non-builtin parameters are returned in the vertex stage. 
@@ -118,7 +118,7 @@ root['~unstable']
 // ^?
 ```
 
-* **Additional render pipeline methods**
+### Additional render pipeline methods
 
 After calling `withFragment`, but before `createPipeline`, it is possible to set additional pipeline settings.
 It is done through builder methods like `withDepthStencil`, `withMultisample`, `withPrimitive`.
@@ -140,12 +140,12 @@ const renderPipeline = root['~unstable']
   .createPipeline();
 ```
 
-* **withCompute**
+### withCompute
 
 Creating a compute pipeline is even easier -- the `withCompute` method accepts just a tgpu computeFn with no additional parameters.
 Please note that compute pipelines are separate identities from render pipelines. You cannot combine `withVertex` and `withFragment` methods with `withCompute` in a singular pipeline.
  
-* **createPipeline**
+### createPipeline
 
 The creation of TypeGPU pipelines ends with calling a `createPipeline` method.
 
@@ -167,11 +167,12 @@ renderPipeline
 computePipeline.dispatchWorkgroups(16);
 ```
 
-* **Attachments**
+### Attachments
 
-Render pipelines require specifying color attachments for each target. 
-For each target, the color attachment is specified in the same way as in the WebGPU API, 
-however same as in the *targets* argument, multiple targets require passing in a record, where each target is identified via a name.
+Render pipelines require specifying a color attachments for each target. 
+The attachment is specified in the same way as in the WebGPU API 
+(but accepting tgpu resourced, as well as vanilla WebGPU), 
+however akin to the *targets* argument, multiple targets require being passed in a record, where each target is identified via a name.
 
 Similarly, when using `withDepthStencil` it is necessary to pass in a depth stencil attachment, via the `withDepthStencilAttachment` method.
 
@@ -200,50 +201,63 @@ renderPipeline
   .draw(vertexCount);
 ```
 
-* **Timing performance**
+### Resource bindings
 
-Pipelines expose also the `withPerformanceCallback` and `withTimestampWrites` methods for timing the execution time on the GPU.
+Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts a pair of arguments: [a bind group layout and a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
+
+```ts
+// vertex layout
+const vertexLayout = tgpu.vertexLayout(
+  (n) => d.disarrayOf(d.float16, n),
+  'vertex',
+);
+const vertexBuffer = root
+  .createBuffer(d.disarrayOf(d.float16, 8), [0, 0, 1, 0, 0, 1, 1, 1])
+  .$usage('vertex');
+
+// bind group layout
+const bindGroupLayout = tgpu.bindGroupLayout({
+  size: {
+    uniform: d.vec2u,
+  },
+});
+
+const sizeBuffer = root
+  .createBuffer(d.vec2u, d.vec2u(64, 64))
+  .$usage('uniform');
+
+const bindGroup = root.createBindGroup(bindGroupLayout, {
+  size: sizeBuffer,
+});
+
+// binding and execution
+renderPipeline
+  .with(vertexLayout, vertexBuffer)
+  .with(bindGroupLayout, bindGroup)
+  .draw(8);
+
+computePipeline
+  .with(bindGroupLayout, bindGroup)
+  .dispatchWorkgroups(1);
+```
+
+### Timing performance
+
+Pipelines also expose the `withPerformanceCallback` and `withTimestampWrites` methods for timing the execution time on the GPU.
 For more info about them, refer to the [Timinging Your Pipelines guide](/TypeGPU/fundamentals/timestamp-queries/).
 
-* **draw** and **dispatchWorkgroups**
+### draw, dispatchWorkgroups
 
-After creating the render pipeline and setting all of the attachments, it can be used put to use by calling the `draw` method.
+After creating the render pipeline and setting all of the attachments, it can be put to use by calling the `draw` method.
 It accepts the number of vertices and optionally the instance count, first vertex index and first instance index.
-After calling the method the shader is set for execution immediately.
+After calling the method, the shader is set for execution immediately.
 
 Compute pipelines are executed using the `dispatchWorkgroups` method, which accepts the number of workgroups in each dimension.
 Unlike render pipelines, after running this method, the execution is not submitted to the GPU immediately.
 In order to do so, `root['~unstable'].flush()` needs to be run. 
 However, that is usually not necessary, as it is done automatically when trying to read the results.
 
-## Setting resource bindings
-
-Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers
-
-```ts
-computePipeline
-  .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
-  .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
-
-renderPipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
-  .withDepthStencilAttachment({
-    view: depthTexture.createView(),
-    depthClearValue: 1,
-    depthLoadOp: 'clear',
-    depthStoreOp: 'store',
-  })
-  .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
-  .with(renderInstanceLayout, oceanFloorDataBuffer)
-  .with(renderBindGroupLayout, renderOceanFloorBindGroup)
-  .draw(oceanFloorModel.polygonCount, 1);
-```
-
-## Low level execution API
+## Low-level execution API
 
 The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios.
 
@@ -263,7 +277,7 @@ root['~unstable'].beginRenderPass(
 ## WebGPU interoperability
 
 It is possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
-That way, they can be used with a standard WebGPU API.
+That way, they can be used with a regular WebGPU API.
 
 ```ts twoslash
 import tgpu from 'typegpu';
