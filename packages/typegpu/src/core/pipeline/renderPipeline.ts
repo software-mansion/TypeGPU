@@ -538,9 +538,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstVertex?: number,
     firstInstance?: number,
   ): void {
-    const pass = this.setupRenderPass();
-    const { branch } = this[$internal].core.options;
     const internals = this[$internal];
+    const pass = this.setupRenderPass();
+    const { branch } = internals.core.options;
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 

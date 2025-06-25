@@ -592,7 +592,7 @@ describe('Inter-Stage Variables', () => {
           view: expect.any(Object),
         },
       ],
-      label: '<unnamed>',
+      label: 'pipeline',
       timestampWrites: {
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
@@ -668,7 +668,7 @@ describe('Inter-Stage Variables', () => {
           view: expect.any(Object),
         },
       ],
-      label: '<unnamed>',
+      label: 'pipeline',
       timestampWrites: {
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
@@ -692,7 +692,7 @@ describe('Inter-Stage Variables', () => {
           view: expect.any(Object),
         },
       ],
-      label: '<unnamed>',
+      label: 'pipeline',
       timestampWrites: {
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,

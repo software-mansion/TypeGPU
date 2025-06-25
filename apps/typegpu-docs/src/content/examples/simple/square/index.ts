@@ -88,7 +88,7 @@ function updateColor(
   color: readonly [number, number, number],
   position: keyof typeof colors,
 ): void {
-  colors[position] = d.vec4f(color[0], color[1], color[2], 1);
+  colors[position] = d.vec4f(...color, 1);
   const idx = colorIndices[position];
   colorBuffer.writePartial([
     {
