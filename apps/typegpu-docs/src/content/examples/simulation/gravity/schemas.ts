@@ -48,7 +48,7 @@ export const Time = d
   .$name('Time');
 
 // layouts
-export const computeCollisionsBindGroupLayout = tgpu
+export const computeLayout = tgpu
   .bindGroupLayout({
     celestialBodiesCount: {
       uniform: d.i32,
@@ -65,25 +65,8 @@ export const computeCollisionsBindGroupLayout = tgpu
   })
   .$name('compute collisions');
 
-export const computeGravityBindGroupLayout = tgpu
-  .bindGroupLayout({
-    celestialBodiesCount: {
-      uniform: d.i32,
-      access: 'readonly',
-    },
-    inState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'readonly',
-    },
-    outState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'mutable',
-    },
-  })
-  .$name('compute gravity');
-
 export const renderSkyBoxVertexLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(SkyBoxVertex, n))
+  .vertexLayout((n) => d.arrayOf(SkyBoxVertex, n))
   .$name('render skybox');
 
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);

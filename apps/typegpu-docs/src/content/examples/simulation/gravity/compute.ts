@@ -3,12 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { collisionBehaviors } from './enums.ts';
 import { radiusOf } from './helpers.ts';
-import {
-  CelestialBody,
-  computeCollisionsBindGroupLayout as collisionsLayout,
-  computeGravityBindGroupLayout as gravityLayout,
-  timeAccess,
-} from './schemas.ts';
+import { CelestialBody, computeLayout, timeAccess } from './schemas.ts';
 
 const { none, bounce, merge } = collisionBehaviors;
 
@@ -16,14 +11,14 @@ const { none, bounce, merge } = collisionBehaviors;
 const isSmaller = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
   (currentId, otherId) => {
     if (
-      collisionsLayout.$.inState[currentId].mass <
-        collisionsLayout.$.inState[otherId].mass
+      computeLayout.$.inState[currentId].mass <
+        computeLayout.$.inState[otherId].mass
     ) {
       return true;
     }
     if (
-      collisionsLayout.$.inState[currentId].mass ===
-        collisionsLayout.$.inState[otherId].mass
+      computeLayout.$.inState[currentId].mass ===
+        computeLayout.$.inState[otherId].mass
     ) {
       return currentId < otherId;
     }
@@ -39,35 +34,31 @@ export const computeCollisionsShader = tgpu['~unstable']
     const currentId = input.gid.x;
     // TODO: replace it with struct copy when Chromium is fixed
     const current = CelestialBody({
-      position: collisionsLayout.$.inState[currentId].position,
-      velocity: collisionsLayout.$.inState[currentId].velocity,
-      mass: collisionsLayout.$.inState[currentId].mass,
-      collisionBehavior:
-        collisionsLayout.$.inState[currentId].collisionBehavior,
-      textureIndex: collisionsLayout.$.inState[currentId].textureIndex,
-      radiusMultiplier: collisionsLayout.$.inState[currentId].radiusMultiplier,
-      ambientLightFactor:
-        collisionsLayout.$.inState[currentId].ambientLightFactor,
-      destroyed: collisionsLayout.$.inState[currentId].destroyed,
+      position: computeLayout.$.inState[currentId].position,
+      velocity: computeLayout.$.inState[currentId].velocity,
+      mass: computeLayout.$.inState[currentId].mass,
+      collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
+      textureIndex: computeLayout.$.inState[currentId].textureIndex,
+      radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
+      ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
+      destroyed: computeLayout.$.inState[currentId].destroyed,
     });
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {
-      for (let i = 0; i < collisionsLayout.$.celestialBodiesCount; i++) {
+      for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
         const otherId = d.u32(i);
         // TODO: replace it with struct copy when Chromium is fixed
         const other = CelestialBody({
-          position: collisionsLayout.$.inState[otherId].position,
-          velocity: collisionsLayout.$.inState[otherId].velocity,
-          mass: collisionsLayout.$.inState[otherId].mass,
-          collisionBehavior:
-            collisionsLayout.$.inState[otherId].collisionBehavior,
-          textureIndex: collisionsLayout.$.inState[otherId].textureIndex,
-          radiusMultiplier:
-            collisionsLayout.$.inState[otherId].radiusMultiplier,
+          position: computeLayout.$.inState[otherId].position,
+          velocity: computeLayout.$.inState[otherId].velocity,
+          mass: computeLayout.$.inState[otherId].mass,
+          collisionBehavior: computeLayout.$.inState[otherId].collisionBehavior,
+          textureIndex: computeLayout.$.inState[otherId].textureIndex,
+          radiusMultiplier: computeLayout.$.inState[otherId].radiusMultiplier,
           ambientLightFactor:
-            collisionsLayout.$.inState[otherId].ambientLightFactor,
-          destroyed: collisionsLayout.$.inState[otherId].destroyed,
+            computeLayout.$.inState[otherId].ambientLightFactor,
+          destroyed: computeLayout.$.inState[otherId].destroyed,
         });
         // no collision occurs...
         if (
@@ -135,7 +126,7 @@ export const computeCollisionsShader = tgpu['~unstable']
       }
     }
 
-    collisionsLayout.$.outState[input.gid.x] = updatedCurrent;
+    computeLayout.$.outState[input.gid.x] = updatedCurrent;
   })
   .$name('collisions');
 
@@ -146,31 +137,31 @@ export const computeGravityShader = tgpu['~unstable']
   })((input) => {
     // TODO: replace it with struct copy when Chromium is fixed
     const current = CelestialBody({
-      position: gravityLayout.$.inState[input.gid.x].position,
-      velocity: gravityLayout.$.inState[input.gid.x].velocity,
-      mass: gravityLayout.$.inState[input.gid.x].mass,
-      collisionBehavior: gravityLayout.$.inState[input.gid.x].collisionBehavior,
-      textureIndex: gravityLayout.$.inState[input.gid.x].textureIndex,
-      radiusMultiplier: gravityLayout.$.inState[input.gid.x].radiusMultiplier,
+      position: computeLayout.$.inState[input.gid.x].position,
+      velocity: computeLayout.$.inState[input.gid.x].velocity,
+      mass: computeLayout.$.inState[input.gid.x].mass,
+      collisionBehavior: computeLayout.$.inState[input.gid.x].collisionBehavior,
+      textureIndex: computeLayout.$.inState[input.gid.x].textureIndex,
+      radiusMultiplier: computeLayout.$.inState[input.gid.x].radiusMultiplier,
       ambientLightFactor:
-        gravityLayout.$.inState[input.gid.x].ambientLightFactor,
-      destroyed: gravityLayout.$.inState[input.gid.x].destroyed,
+        computeLayout.$.inState[input.gid.x].ambientLightFactor,
+      destroyed: computeLayout.$.inState[input.gid.x].destroyed,
     });
     const dt = timeAccess.$.passed * timeAccess.$.multiplier;
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {
-      for (let i = 0; i < gravityLayout.$.celestialBodiesCount; i++) {
+      for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
         // TODO: replace it with struct copy when Chromium is fixed
         const other = CelestialBody({
-          position: gravityLayout.$.inState[i].position,
-          velocity: gravityLayout.$.inState[i].velocity,
-          mass: gravityLayout.$.inState[i].mass,
-          collisionBehavior: gravityLayout.$.inState[i].collisionBehavior,
-          textureIndex: gravityLayout.$.inState[i].textureIndex,
-          radiusMultiplier: gravityLayout.$.inState[i].radiusMultiplier,
-          ambientLightFactor: gravityLayout.$.inState[i].ambientLightFactor,
-          destroyed: gravityLayout.$.inState[i].destroyed,
+          position: computeLayout.$.inState[i].position,
+          velocity: computeLayout.$.inState[i].velocity,
+          mass: computeLayout.$.inState[i].mass,
+          collisionBehavior: computeLayout.$.inState[i].collisionBehavior,
+          textureIndex: computeLayout.$.inState[i].textureIndex,
+          radiusMultiplier: computeLayout.$.inState[i].radiusMultiplier,
+          ambientLightFactor: computeLayout.$.inState[i].ambientLightFactor,
+          destroyed: computeLayout.$.inState[i].destroyed,
         });
 
         if (d.u32(i) === input.gid.x || other.destroyed === 1) {
@@ -198,6 +189,6 @@ export const computeGravityShader = tgpu['~unstable']
       );
     }
 
-    gravityLayout.$.outState[input.gid.x] = updatedCurrent;
+    computeLayout.$.outState[input.gid.x] = updatedCurrent;
   })
   .$name('gravity');

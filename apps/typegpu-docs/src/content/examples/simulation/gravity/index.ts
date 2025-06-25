@@ -31,8 +31,7 @@ import {
   Camera,
   cameraAccess,
   CelestialBody,
-  computeCollisionsBindGroupLayout,
-  computeGravityBindGroupLayout,
+  computeLayout,
   filteringSamplerSlot,
   lightSourceAccess,
   renderBindGroupLayout,
@@ -107,12 +106,8 @@ interface DynamicResources {
   celestialBodiesBufferB:
     & TgpuBuffer<d.WgslArray<typeof CelestialBody>>
     & StorageFlag;
-  computeCollisionsBindGroup: TgpuBindGroup<
-    (typeof computeCollisionsBindGroupLayout)['entries']
-  >;
-  computeGravityBindGroup: TgpuBindGroup<
-    (typeof computeGravityBindGroupLayout)['entries']
-  >;
+  computeCollisionsBindGroup: TgpuBindGroup<(typeof computeLayout)['entries']>;
+  computeGravityBindGroup: TgpuBindGroup<(typeof computeLayout)['entries']>;
   renderBindGroup: TgpuBindGroup<(typeof renderBindGroupLayout)['entries']>;
 }
 
@@ -164,17 +159,11 @@ let depthTexture = root.device.createTexture({
 
 function render() {
   computeCollisionsPipeline
-    .with(
-      computeCollisionsBindGroupLayout,
-      dynamicResourcesBox.data.computeCollisionsBindGroup,
-    )
+    .with(computeLayout, dynamicResourcesBox.data.computeCollisionsBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   computeGravityPipeline
-    .with(
-      computeGravityBindGroupLayout,
-      dynamicResourcesBox.data.computeGravityBindGroup,
-    )
+    .with(computeLayout, dynamicResourcesBox.data.computeGravityBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   skyBoxPipeline
@@ -253,7 +242,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     .$name('compute B');
 
   const computeCollisionsBindGroup = root.createBindGroup(
-    computeCollisionsBindGroupLayout,
+    computeLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
       inState: computeBufferA,
@@ -262,7 +251,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   );
 
   const computeGravityBindGroup = root.createBindGroup(
-    computeGravityBindGroupLayout,
+    computeLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
       inState: computeBufferB,
