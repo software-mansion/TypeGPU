@@ -8,21 +8,23 @@ Pipelines are an *unstable* feature. The API may be subject to change in the nea
 :::
 
 :::note[Recommended reading]
-We assume that you are familiar with the following concepts:
+It is assumed that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
 - [TypeGPU Functions](/TypeGPU/fundamentals/functions)
 :::
 
 TypeGPU introduces a custom API to easily define and execute render and compute pipelines.
-It replaces the standard `device.createRenderPipeline` and `device.createComputePipeline`, as well as `device.createCommandEncoder` and `encoder.beginRenderPass`, to offer a convenient, type-safe way to run shaders on the GPU.
-Pipeline definition starts with a [root](/TypeGPU/fundamentals/roots) object and follows a builder pattern.
+It abstracts away the standard `device.createRenderPipeline`/`device.createComputePipeline`, `device.createCommandEncoder`, `encoder.beginRenderPass`/`encoder.beginComputePass`... APIs,
+to offer a convenient, type-safe way to run shaders on the GPU. 
 
 ## Creating pipelines
+
+Pipeline definition starts with a [root](/TypeGPU/fundamentals/roots) object and follows a builder pattern.
 
 ```ts
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
+  .withFragment(mainFragment, { format: navigator.gpu.getPreferredCanvasFormat() })
   .createPipeline();
 
 const computePipeline = root['~unstable']
@@ -31,15 +33,15 @@ const computePipeline = root['~unstable']
 ```
 
 :::caution
-The underlying WebGPU resource is created lazily, that is, just before the first execution, not immediately after the `createPipeline` invocation.
+The underlying WebGPU resource is created lazily, that is just before the first execution or as part of a `root.unwrap`, not immediately after the `createPipeline` invocation.
 :::
 
 * **withVertex**
 
-Creating a render pipeline starts with a `withVertex` method, which accepts a tgpu vertexFn and a record of vertex attributes.
+Creating a render pipeline requires first calling a `withVertex` method, which accepts a tgpu vertexFn and a record of vertex attributes.
 If the vertex shader does not use vertex attributes, then the latter argument is `{}`.
-If it fully uses one [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts), then it should be `layout.attrib`.
-It is also possible to use some parts of multiple vertex layouts by specifying selected attributes in the passed record.
+It is also possible to use some parts of multiple [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts) by specifying selected attributes in the passed record.
+The compatibility between vertex input types and vertex attribute formats is performed at the type level.
 
 ```ts
 .withVertex(mainVert, {
@@ -146,7 +148,7 @@ const renderPipeline = root['~unstable']
 
 Creating a compute pipeline is even easier -- the `withCompute` method accepts just a tgpu computeFn with no additional parameters.
 
-## Executing
+## Execution
 
 ```ts
 renderPipeline
@@ -212,6 +214,8 @@ However, that is usually not necessary, as it is done automatically when trying 
 
 ## Setting resource bindings
 
+Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers
+
 ```ts
 computePipeline
   .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
@@ -235,9 +239,9 @@ renderPipeline
   .draw(oceanFloorModel.polygonCount, 1);
 ```
 
-## Low level API
+## Low level execution API
 
-The higher-level API has several limitations, therefore another way of handling pipelines is exposed, for more demanding scenarios.
+The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios.
 
 ```ts
 root['~unstable'].beginRenderPass(
@@ -251,3 +255,6 @@ root['~unstable'].beginRenderPass(
   },
 );
 ```
+
+## WebGPU interoperability
+
