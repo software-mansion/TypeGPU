@@ -159,13 +159,12 @@ The underlying WebGPU resource is created lazily, that is just before the first 
 renderPipeline
   .withColorAttachment({
     view: context.getCurrentTexture().createView(),
-    clearValue: [0, 0, 0, 0],
     loadOp: 'clear',
     storeOp: 'store',
   })
   .draw(3);
 
-computePipeline.dispatchWorkgroups(16, 16, 1);
+computePipeline.dispatchWorkgroups(16);
 ```
 
 * **Attachments**
@@ -262,4 +261,27 @@ root['~unstable'].beginRenderPass(
 ```
 
 ## WebGPU interoperability
+
+It is possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
+That way, they can be used with a standard WebGPU API.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const pipeline = root['~unstable']
+  .withVertex(
+    tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })`...`,
+    {},
+  ).withFragment(
+    tgpu['~unstable'].fragmentFn({ out: d.vec4f })`...`,
+    { format: 'rg8unorm' },
+  )
+  .createPipeline();
+
+const rawPipeline = root.unwrap(pipeline);
+//    ^?
+```
 
