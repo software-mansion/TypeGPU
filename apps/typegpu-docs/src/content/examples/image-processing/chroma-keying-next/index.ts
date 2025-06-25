@@ -127,14 +127,10 @@ const mediaProcessor = new MediaStreamTrackProcessor({
 });
 const reader = mediaProcessor.readable.getReader();
 
-const thresholdBuffer = root
-  .createBuffer(d.f32, 0.5)
-  .$name('threshold')
-  .$usage('uniform');
+const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
 
 const colorBuffer = root
   .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
-  .$name('color')
   .$usage('uniform');
 
 const sampler = device.createSampler({

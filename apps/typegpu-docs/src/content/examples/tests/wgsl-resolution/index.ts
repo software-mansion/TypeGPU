@@ -8,21 +8,19 @@ const root = await tgpu.init();
 const TRIANGLE_SIZE = 0.03;
 
 // data structures
-const Params = d
-  .struct({
-    separationDistance: d.f32,
-    separationStrength: d.f32,
-    alignmentDistance: d.f32,
-    alignmentStrength: d.f32,
-    cohesionDistance: d.f32,
-    cohesionStrength: d.f32,
-  })
-  .$name('Params');
+const Params = d.struct({
+  separationDistance: d.f32,
+  separationStrength: d.f32,
+  alignmentDistance: d.f32,
+  alignmentStrength: d.f32,
+  cohesionDistance: d.f32,
+  cohesionStrength: d.f32,
+});
 
 const TriangleData = d.struct({
   position: d.vec2f,
   velocity: d.vec2f,
-}).$name('TriangleData');
+});
 
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 
@@ -31,15 +29,13 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
   colorPalette: { uniform: d.vec3f },
 });
 
-const computeBindGroupLayout = tgpu
-  .bindGroupLayout({
-    currentTrianglePos: { storage: TriangleDataArray },
-    nextTrianglePos: {
-      storage: TriangleDataArray,
-      access: 'mutable',
-    },
-  })
-  .$name('compute');
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentTrianglePos: { storage: TriangleDataArray },
+  nextTrianglePos: {
+    storage: TriangleDataArray,
+    access: 'mutable',
+  },
+});
 
 const { colorPalette } = renderBindGroupLayout.bound;
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;

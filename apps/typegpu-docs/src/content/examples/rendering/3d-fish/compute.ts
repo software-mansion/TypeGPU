@@ -132,5 +132,4 @@ export const computeShader = tgpu['~unstable']
     );
     fishData.position = std.add(fishData.position, translation);
     layout.$.nextFishData[fishIndex] = fishData;
-  })
-  .$name('compute shader');
+  });
