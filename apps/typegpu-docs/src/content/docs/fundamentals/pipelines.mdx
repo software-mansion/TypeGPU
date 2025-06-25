@@ -32,10 +32,6 @@ const computePipeline = root['~unstable']
   .createPipeline();
 ```
 
-:::caution
-The underlying WebGPU resource is created lazily, that is just before the first execution or as part of a `root.unwrap`, not immediately after the `createPipeline` invocation.
-:::
-
 * **withVertex**
 
 Creating a render pipeline requires calling a `withVertex` method first, which accepts a tgpu vertexFn and vertex attributes.
@@ -53,10 +49,10 @@ The compatibility between vertex input types and vertex attribute formats is val
 
 * **withFragment**
 
-The next step is calling the `withFragment` method, which accepts a tgpu fragmentFn and **targets** defining the formats and behaviors of the color targets the pipeline writes to.
+The next step is calling the `withFragment` method, which accepts a tgpu fragmentFn and a *targets* argument defining the formats and behaviors of the color targets the pipeline writes to.
 Each target is specified the same as in the WebGPU API (*GPUColorTargetState*). 
-The difference is that when there are multiple targets, they should passed in a record, not an array.
-This way each target is identified by a name and can be validated against the output of the fragment function.
+The difference is that when there are multiple targets, they should be passed in a record, not an array.
+This way each target is identified by a name and can be validated against the outputs of the fragment function.
 
 ```ts
 const fragmentFn = tgpu['~unstable'].fragmentFn({
@@ -92,11 +88,11 @@ const renderPipeline = root['~unstable']
 * **Type-level validation**
 
 Using the pipelines should ensure the compatibility of the vertex output and fragment input on the type level -- 
-`withFragment` only accepts fragment functions, which all non-builtin parameters are returned in the vertex function. 
+`withFragment` only accepts fragment functions, which all non-builtin parameters are returned in the vertex stage. 
 These parameters are identified by their names, not by the `location` index. 
-In general, when using vertex and fragment functions with TypeGPU pipelines, it is not necessary to set locations on the io struct members.
-The library automatically matches up the corresponding members (by their names) and assigns a common location to them. 
-When a custom location is provided by the user (via the `d.location` attribute function) it is respected by the automatic assignment,
+In general, when using vertex and fragment functions with TypeGPU pipelines, it is not necessary to set locations on the io struct properties.
+The library automatically matches up the corresponding members (by their names) and assigns common locations to them. 
+When a custom location is provided by the user (via the `d.location` attribute function) it is respected by the automatic assignment procedure,
 as long as there is no conflict between vertex and fragment location value.
 
 ```ts twoslash 
@@ -147,6 +143,15 @@ const renderPipeline = root['~unstable']
 * **withCompute**
 
 Creating a compute pipeline is even easier -- the `withCompute` method accepts just a tgpu computeFn with no additional parameters.
+Please note that compute pipelines are separate identities from render pipelines. You cannot combine `withVertex` and `withFragment` methods with `withCompute` in a singular pipeline.
+ 
+* **createPipeline**
+
+The creation of TypeGPU pipelines ends with calling a `createPipeline` method.
+
+:::caution
+The underlying WebGPU resource is created lazily, that is just before the first execution or as part of a `root.unwrap`, not immediately after the `createPipeline` invocation.
+:::
 
 ## Execution
 
