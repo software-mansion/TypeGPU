@@ -12,6 +12,7 @@ import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -88,6 +89,7 @@ type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
   : false;
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -177,6 +179,7 @@ type RestrictUsages<TData extends BaseData> = IsIndexCompatible<TData> extends
   : ['vertex'];
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
+  public readonly [$internal] = true;
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST |
     GPUBufferUsage.COPY_SRC;

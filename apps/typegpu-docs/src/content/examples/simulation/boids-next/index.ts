@@ -22,11 +22,9 @@ const TriangleData = d.struct({
   velocity: d.vec2f,
 });
 
-const renderBindGroupLayout = tgpu.bindGroupLayout({
+const renderLayout = tgpu.bindGroupLayout({
   colorPalette: { uniform: d.vec3f },
 });
-
-const { colorPalette } = renderBindGroupLayout.bound;
 
 const VertexOutput = {
   position: d.builtin.position,
@@ -48,9 +46,9 @@ const mainVert = tgpu['~unstable'].vertexFn({
   );
 
   const color = d.vec4f(
-    std.sin(angle + colorPalette.value.x) * 0.45 + 0.45,
-    std.sin(angle + colorPalette.value.y) * 0.45 + 0.45,
-    std.sin(angle + colorPalette.value.z) * 0.45 + 0.45,
+    std.sin(angle + renderLayout.$.colorPalette.x) * 0.45 + 0.45,
+    std.sin(angle + renderLayout.$.colorPalette.y) * 0.45 + 0.45,
+    std.sin(angle + renderLayout.$.colorPalette.z) * 0.45 + 0.45,
     1.0,
   );
 
@@ -280,7 +278,7 @@ const computePipeline = root['~unstable']
   .createPipeline();
 
 const renderBindGroups = [0, 1].map(() =>
-  root.createBindGroup(renderBindGroupLayout, {
+  root.createBindGroup(renderLayout, {
     colorPalette: colorPaletteBuffer,
   })
 );
@@ -314,7 +312,7 @@ function frame() {
       storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
-    .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
+    .with(renderLayout, renderBindGroups[even ? 1 : 0])
     .draw(3, triangleAmount);
 
   requestAnimationFrame(frame);

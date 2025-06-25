@@ -85,6 +85,7 @@ export {
   asUniform as unstable_asUniform,
   isUsableAsUniform,
 } from './core/buffer/bufferUsage.ts';
+export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 
 // types
@@ -112,6 +113,11 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
+export type {
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferShorthand.ts';
 export type {
   Eventual,
   TgpuAccessor,

@@ -49,37 +49,38 @@ We give buffer usages *camelCase* names with a suffix that corresponds to their 
 const boidsUniform = boidsBuffer.as('uniform');
 const boidsMutable = boidsBuffer.as('mutable');
 const boidsReadonly = boidsBuffer.as('readonly');
+```
 
-const cellsUniform = root['~unstable'].createUniform(Cells);
-const cellsMutable = root['~unstable'].createMutable(Cells);
-const cellsReadonly = root['~unstable'].createReadonly(Cells);
+## Buffer shorthands
+
+We give buffer shorthands *camelCase* names with no special suffix, since they represent both
+the buffer, and the single permitted usage.
+
+```ts
+const cells1 = root.createUniform(Cells);
+const cells2 = root.createMutable(Cells);
+const cells3 = root.createReadonly(Cells);
 ```
 
 ## Slots
 
-We give slots *camelCase* names, without any special prefix or suffix. Our justification is
-that if there's a name clash, meaning there's a concrete value of the same name, then there's
-no need for the slot. We can just use the value instead.
+We give slots *camelCase* names with the `Slot` suffix.
 
 ```ts
-const color = tgpu['~unstable'].slot(vec4f(1, 0, 0, 1));
+const colorSlot = tgpu['~unstable'].slot(vec4f(1, 0, 0, 1));
 ```
 
 ## Accessors
 
-We give accessors *camelCase* names, without any special prefix or suffix. Our justification is
-that if there's a name clash, meaning there's a concrete value of the same name, then there's
-no need for the accessor. We can just use the value instead.
+We give accessors *camelCase* names with the `Access` suffix.
 
 ```ts
-const color = tgpu['~unstable'].accessor(vec4f);
+const colorAccess = tgpu['~unstable'].accessor(vec4f);
 ```
 
 ## Derived
 
-We give derived values *camelCase* names, without any special prefix or suffix. Our justification is
-that if there's a name clash, meaning there's a concrete value of the same name, then there's
-no need for the derived value. We can just use the value instead.
+We give derived values *camelCase* names, without any special prefix or suffix.
 
 ```ts
 const lighterColor = tgpu['~unstable'].derived(() => add(color.value, vec4f(0.2, 0.2, 0.2, 0)));

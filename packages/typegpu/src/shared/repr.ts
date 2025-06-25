@@ -1,6 +1,4 @@
-export const $repr = Symbol(
-  'Type token for the inferred (CPU & GPU) representation of a resource',
-);
+import type { $gpuRepr, $memIdent, $repr, $reprPartial } from './symbols.ts';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -22,7 +20,7 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
  * type B = InferPartial<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
  * type C = InferPartial<WgslArray<F32>> // => { idx: number; value: number | undefined }[] | undefined
  */
-export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
+export type InferPartial<T> = T extends { readonly [$reprPartial]: infer TRepr }
   ? TRepr
   : T extends { readonly [$repr]: infer TRepr } ? TRepr | undefined
   : T;
@@ -35,7 +33,7 @@ export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
  * type B = InferGPU<WgslArray<F32>> // => number[]
  * type C = InferGPU<Atomic<U32>> // => atomicU32
  */
-export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr } ? TRepr
+export type InferGPU<T> = T extends { readonly [$gpuRepr]: infer TRepr } ? TRepr
   : Infer<T>;
 
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
@@ -55,7 +53,7 @@ export type InferGPURecord<
 };
 
 export type MemIdentity<T> = T extends {
-  readonly '~memIdent': infer TMemIdent;
+  readonly [$memIdent]: infer TMemIdent;
 } ? TMemIdent
   : T;
 
