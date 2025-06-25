@@ -7,6 +7,7 @@ import {
   CelestialBody,
   computeCollisionsBindGroupLayout as collisionsLayout,
   computeGravityBindGroupLayout as gravityLayout,
+  timeAccess,
 } from './schemas.ts';
 
 const { none, bounce, merge } = collisionBehaviors;
@@ -155,7 +156,7 @@ export const computeGravityShader = tgpu['~unstable']
         gravityLayout.$.inState[input.gid.x].ambientLightFactor,
       destroyed: gravityLayout.$.inState[input.gid.x].destroyed,
     });
-    const dt = gravityLayout.$.time.passed * gravityLayout.$.time.multiplier;
+    const dt = timeAccess.$.passed * timeAccess.$.multiplier;
 
     const updatedCurrent = current;
     if (current.destroyed === 0) {

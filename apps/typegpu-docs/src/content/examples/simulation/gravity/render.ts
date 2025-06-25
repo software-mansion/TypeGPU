@@ -3,9 +3,12 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { radiusOf } from './helpers.ts';
 import {
+  cameraAccess,
   CelestialBody,
+  filteringSamplerSlot,
+  lightSourceAccess,
   renderBindGroupLayout as renderLayout,
-  renderSkyBoxBindGroupLayout as skyBoxLayout,
+  skyBoxSlot,
   VertexOutput,
 } from './schemas.ts';
 
@@ -21,11 +24,11 @@ export const skyBoxVertex = tgpu['~unstable']
     },
   })((input) => {
     const viewPos =
-      std.mul(skyBoxLayout.$.camera.view, d.vec4f(input.position, 0)).xyz;
+      std.mul(cameraAccess.$.view, d.vec4f(input.position, 0)).xyz;
 
     return {
       pos: std.mul(
-        skyBoxLayout.$.camera.projection,
+        cameraAccess.$.projection,
         d.vec4f(viewPos, 1),
       ),
       texCoord: input.position.xyz,
@@ -41,8 +44,8 @@ export const skyBoxFragment = tgpu['~unstable']
     out: d.vec4f,
   })((input) =>
     std.textureSample(
-      skyBoxLayout.$.skyBox,
-      skyBoxLayout.$.sampler,
+      skyBoxSlot.$,
+      filteringSamplerSlot.$,
       std.normalize(input.texCoord),
     )
   )
@@ -80,7 +83,7 @@ export const mainVertex = tgpu['~unstable']
       currentBody.position,
     );
 
-    const camera = renderLayout.$.camera;
+    const camera = cameraAccess.$;
     const positionOnCanvas = std.mul(
       camera.projection,
       std.mul(camera.view, d.vec4f(worldPosition, 1)),
@@ -107,10 +110,9 @@ export const mainFragment = tgpu['~unstable']
     }
 
     const lightColor = d.vec3f(1, 0.9, 0.9);
-    const lightSource = renderLayout.$.lightSource;
     const textureColor = std.textureSample(
       renderLayout.$.celestialBodyTextures,
-      renderLayout.$.sampler,
+      filteringSamplerSlot.$,
       input.uv,
       input.sphereTextureIndex,
     ).xyz;
@@ -122,7 +124,7 @@ export const mainFragment = tgpu['~unstable']
 
     const normal = input.normals;
     const lightDirection = std.normalize(
-      std.sub(lightSource, input.worldPosition),
+      std.sub(lightSourceAccess.$, input.worldPosition),
     );
     const cosTheta = std.dot(normal, lightDirection);
     const diffuse = std.mul(

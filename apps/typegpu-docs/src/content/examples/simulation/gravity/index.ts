@@ -29,15 +29,19 @@ import {
 } from './render.ts';
 import {
   Camera,
+  cameraAccess,
   CelestialBody,
   computeCollisionsBindGroupLayout,
   computeGravityBindGroupLayout,
+  filteringSamplerSlot,
+  lightSourceAccess,
   renderBindGroupLayout,
-  renderSkyBoxBindGroupLayout,
   renderSkyBoxVertexLayout,
   renderVertexLayout,
+  skyBoxSlot,
   SkyBoxVertex,
   Time,
+  timeAccess,
 } from './schemas.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -52,7 +56,7 @@ context.configure({
 
 // static resources (created on the example load)
 
-const sampler = root.device.createSampler({
+const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -82,11 +86,6 @@ const skyBoxVertexBuffer = root
   .$name('skybox vertices');
 const skyBoxTexture = await loadSkyBox(root);
 const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
-const skyBoxBindGroup = root.createBindGroup(renderSkyBoxBindGroupLayout, {
-  camera: camera.buffer,
-  skyBox: skyBox,
-  sampler: sampler,
-});
 
 let celestialBodiesCount = 0;
 const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
@@ -96,11 +95,8 @@ const celestialBodiesCountBuffer = root
   .createBuffer(d.i32)
   .$usage('uniform')
   .$name('celestial bodies count');
-const timeBuffer = root.createBuffer(Time).$usage('uniform').$name('time');
-const lightSourceBuffer = root
-  .createBuffer(d.vec3f)
-  .$usage('uniform')
-  .$name('light source');
+const time = root.createUniform(Time).$name('time');
+const lightSource = root.createUniform(d.vec3f).$name('light source');
 
 // dynamic resources (recreated every time a preset is selected)
 
@@ -131,17 +127,24 @@ const computeCollisionsPipeline = root['~unstable']
   .$name('compute collisions');
 
 const computeGravityPipeline = root['~unstable']
+  .with(timeAccess, time)
   .withCompute(computeGravityShader)
   .createPipeline()
   .$name('compute gravity');
 
 const skyBoxPipeline = root['~unstable']
+  .with(filteringSamplerSlot, sampler)
+  .with(skyBoxSlot, skyBox)
+  .with(cameraAccess, camera)
   .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
   .createPipeline()
   .$name('render skybox');
 
 const renderPipeline = root['~unstable']
+  .with(filteringSamplerSlot, sampler)
+  .with(lightSourceAccess, lightSource)
+  .with(cameraAccess, camera)
   .withVertex(mainVertex, renderVertexLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
   .withDepthStencil({
@@ -182,7 +185,6 @@ function render() {
       storeOp: 'store',
     })
     .with(renderSkyBoxVertexLayout, skyBoxVertexBuffer)
-    .with(renderSkyBoxBindGroupLayout, skyBoxBindGroup)
     .draw(skyBoxVertices.length);
 
   renderPipeline
@@ -210,7 +212,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   if (destroyed) {
     return;
   }
-  timeBuffer.writePartial({
+  time.writePartial({
     passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
@@ -263,23 +265,19 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
     computeGravityBindGroupLayout,
     {
       celestialBodiesCount: celestialBodiesCountBuffer,
-      time: timeBuffer,
       inState: computeBufferB,
       outState: computeBufferA,
     },
   );
 
   const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
-    camera: camera.buffer,
-    sampler,
-    lightSource: lightSourceBuffer,
     celestialBodyTextures: sphereTextures,
     celestialBodies: computeBufferA,
   });
 
   celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
-  lightSourceBuffer.write(presetData.lightSource ?? d.vec3f());
+  lightSource.write(presetData.lightSource ?? d.vec3f());
   cameraPosition = presetData.initialCameraPos;
   updateCameraPosition();
 
@@ -311,7 +309,7 @@ export const controls = {
     max: 5,
     step: 1,
     onSliderChange: (newValue: number) => {
-      timeBuffer.writePartial({ multiplier: 2 ** newValue });
+      time.writePartial({ multiplier: 2 ** newValue });
     },
   },
 };

@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuSampledTexture, type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const Camera = d.struct({
@@ -71,10 +71,6 @@ export const computeGravityBindGroupLayout = tgpu
       uniform: d.i32,
       access: 'readonly',
     },
-    time: {
-      uniform: Time,
-      access: 'readonly',
-    },
     inState: {
       storage: (n: number) => d.arrayOf(CelestialBody, n),
       access: 'readonly',
@@ -86,23 +82,20 @@ export const computeGravityBindGroupLayout = tgpu
   })
   .$name('compute gravity');
 
-export const renderSkyBoxBindGroupLayout = tgpu
-  .bindGroupLayout({
-    camera: { uniform: Camera },
-    skyBox: { texture: 'float', viewDimension: 'cube' },
-    sampler: { sampler: 'filtering' },
-  })
-  .$name('render skybox');
-
 export const renderSkyBoxVertexLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(SkyBoxVertex, n))
   .$name('render skybox');
 
+export const cameraAccess = tgpu['~unstable'].accessor(Camera);
+export const filteringSamplerSlot = tgpu['~unstable'].slot<TgpuSampler>();
+export const skyBoxSlot = tgpu['~unstable'].slot<
+  TgpuSampledTexture<'cube', d.F32>
+>();
+export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
+export const timeAccess = tgpu['~unstable'].accessor(Time);
+
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
-    camera: { uniform: Camera },
-    sampler: { sampler: 'filtering' },
-    lightSource: { uniform: d.vec3f },
     celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
     celestialBodies: {
       storage: (n: number) => d.arrayOf(CelestialBody, n),
@@ -112,5 +105,5 @@ export const renderBindGroupLayout = tgpu
   .$name('render');
 
 export const renderVertexLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(d.struct(VertexInput), n))
+  .vertexLayout((n) => d.arrayOf(d.struct(VertexInput), n))
   .$name('render');
