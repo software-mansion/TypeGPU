@@ -157,15 +157,15 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   let resultColor = d.vec3f(1);
   // Color mode
-  if (displayMode.$ === 0) {
+  if (displayMode.$ === displayModes.color) {
     resultColor = d.vec3f(std.mul(color, charValue).xyz);
   }
   // Grayscale mode
-  if (displayMode.$ === 1) {
+  if (displayMode.$ === displayModes.grayscale) {
     resultColor = d.vec3f(std.mul(d.vec3f(gray), charValue));
   }
   // White mode
-  if (displayMode.$ === 2) {
+  if (displayMode.$ === displayModes.white) {
     resultColor = d.vec3f(std.mul(d.vec3f(1), charValue));
   }
   return d.vec4f(resultColor, 1.0);
