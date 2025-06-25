@@ -15,6 +15,7 @@ import {
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
+import { isBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -90,10 +91,14 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this[$gpuValueOf]();
   }
 
+  get $(): InferGPU<T> {
+    return this.value;
+  }
+
   '~resolve'(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this.slot);
 
-    if (isBufferUsage(value)) {
+    if (isBufferUsage(value) || isBufferShorthand(value)) {
       return ctx.resolve(value);
     }
 

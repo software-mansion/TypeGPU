@@ -60,6 +60,10 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
       return this[$gpuValueOf](ctx);
     },
 
+    get $(): InferGPU<T> {
+      return this.value;
+    },
+
     with<TValue>(
       slot: TgpuSlot<TValue>,
       value: Eventual<TValue>,
@@ -107,6 +111,10 @@ function createBoundDerived<T>(
       }
 
       return this[$gpuValueOf](ctx);
+    },
+
+    get $(): InferGPU<T> {
+      return this.value;
     },
 
     with<TValue>(

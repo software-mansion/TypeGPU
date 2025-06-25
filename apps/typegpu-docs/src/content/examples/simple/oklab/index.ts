@@ -101,10 +101,10 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const rgb = oklabToLinearRgb(lab);
   const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
 
-  const clipLab = oklabGamutClipSlot.value(lab);
+  const clipLab = oklabGamutClipSlot.$(lab);
   const color = oklabToRgb(lab);
 
-  const patternScaled = patternSlot.value(input.uv, clipLab) * 0.1 + 0.9;
+  const patternScaled = patternSlot.$(input.uv, clipLab) * 0.1 + 0.9;
 
   return d.vec4f(select(color, mul(patternScaled, color), outOfGamut), 1);
 });

@@ -28,11 +28,13 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 }
 
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<T>;
@@ -66,6 +68,7 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
 
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 }
 
 /**

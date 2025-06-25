@@ -14,6 +14,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
   readonly value: InferGPU<TDataType>;
+  readonly $: InferGPU<TDataType>;
 
   readonly [$internal]: {
     readonly dataType: TDataType;
@@ -83,5 +84,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     }
 
     return this[$gpuValueOf]();
+  }
+
+  get $(): InferGPU<TDataType> {
+    return this.value;
   }
 }
