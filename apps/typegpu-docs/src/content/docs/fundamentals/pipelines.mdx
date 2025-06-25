@@ -257,26 +257,30 @@ Unlike render pipelines, after running this method, the execution is not submitt
 In order to do so, `root['~unstable'].flush()` needs to be run. 
 However, that is usually not necessary, as it is done automatically when trying to read the results.
 
-## Low-level execution API
+## Low-level render pipeline execution API
 
-The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios.
+The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per render pass, or the same pipeline but with different resource bindings. It also may be missing some niche feature of the WebGPU API.
+
+`root['~unstable'].beginRenderPass` is a method that mirrors the WebGPU API, but enriches it with direct TypeGPU resource support.
 
 ```ts
 root['~unstable'].beginRenderPass(
   {
-    colorAttachments: [],
+    colorAttachments: [{
+      ...
+    }],
   },
   (pass) => {
-    pass.setPipeline(pipeline);
+    pass.setPipeline(renderPipeline);
     pass.setBindGroup(layout, group);
     pass.draw(1);
   },
 );
+
+root['~unstable'].flush();
 ```
 
-## WebGPU interoperability
-
-It is possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
+It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
 That way, they can be used with a regular WebGPU API.
 
 ```ts twoslash
