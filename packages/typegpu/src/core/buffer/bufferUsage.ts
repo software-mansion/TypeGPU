@@ -55,7 +55,6 @@ export interface TgpuBufferReadonly<TData extends BaseData>
 export interface TgpuFixedBufferUsage<TData extends BaseData>
   extends TgpuNamable {
   readonly buffer: TgpuBuffer<TData>;
-  write(data: Infer<TData>): void;
 }
 
 export interface TgpuBufferMutable<TData extends BaseData>
@@ -122,10 +121,6 @@ class TgpuFixedBufferImpl<
     );
 
     return id;
-  }
-
-  write(data: Infer<TData>) {
-    this.buffer.write(data);
   }
 
   toString(): string {

@@ -24,7 +24,7 @@ const shaderSampler = tgpu['~unstable'].sampler({
   minFilter: 'linear',
 });
 
-const colorModes = {
+const displayModes = {
   color: 0,
   grayscale: 1,
   white: 2,
@@ -294,7 +294,7 @@ export const controls = {
     initial: 'color',
     options: ['color', 'grayscale', 'white'],
     onSelectChange: (value: 'color' | 'grayscale' | 'white') => {
-      displayMode.write(colorModes[value]);
+      displayMode.write(displayModes[value]);
     },
   },
   'gamma correction': {
