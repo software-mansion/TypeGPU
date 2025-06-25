@@ -14,12 +14,12 @@ It is assumed that you are familiar with the following concepts:
 :::
 
 TypeGPU introduces a custom API to easily define and execute render and compute pipelines.
-It abstracts away the standard `device.createRenderPipeline`/`device.createComputePipeline`, `device.createCommandEncoder`, `encoder.beginRenderPass`/`encoder.beginComputePass`... APIs,
+It abstracts away the standard `device.createRenderPipeline`/`device.createComputePipeline`, `device.createCommandEncoder`, `encoder.beginRenderPass`/`encoder.beginComputePass`... procedures,
 to offer a convenient, type-safe way to run shaders on the GPU. 
 
 ## Creating pipelines
 
-Pipeline definition starts with a [root](/TypeGPU/fundamentals/roots) object and follows a builder pattern.
+A pipeline definition starts with the [root](/TypeGPU/fundamentals/roots) object and follows a builder pattern.
 
 ```ts
 const renderPipeline = root['~unstable']
@@ -35,8 +35,8 @@ const computePipeline = root['~unstable']
 ### withVertex
 
 Creating a render pipeline requires calling a `withVertex` method first, which accepts a tgpu vertexFn and vertex attributes.
-The attributes are passed in a record where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
-If the vertex shader does not use vertex attributes, then the latter argument is `{}`.
+The attributes are passed in a record, where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
+If the vertex shader does not use vertex attributes, then the latter argument should be an empty object.
 The compatibility between vertex input types and vertex attribute formats is validated at the type level.
 
 ```ts
@@ -90,7 +90,7 @@ const renderPipeline = root['~unstable']
 Using the pipelines should ensure the compatibility of the vertex output and fragment input on the type level -- 
 `withFragment` only accepts fragment functions, which all non-builtin parameters are returned in the vertex stage. 
 These parameters are identified by their names, not by the `location` index. 
-In general, when using vertex and fragment functions with TypeGPU pipelines, it is not necessary to set locations on the io struct properties.
+In general, when using vertex and fragment functions with TypeGPU pipelines, it is not necessary to set locations on the IO struct properties.
 The library automatically matches up the corresponding members (by their names) and assigns common locations to them. 
 When a custom location is provided by the user (via the `d.location` attribute function) it is respected by the automatic assignment procedure,
 as long as there is no conflict between vertex and fragment location value.
@@ -147,7 +147,7 @@ Please note that compute pipelines are separate identities from render pipelines
  
 ### createPipeline
 
-The creation of TypeGPU pipelines ends with calling a `createPipeline` method.
+The creation of TypeGPU pipelines ends with calling a `createPipeline` method on the builder.
 
 :::caution
 The underlying WebGPU resource is created lazily, that is just before the first execution or as part of a `root.unwrap`, not immediately after the `createPipeline` invocation.
@@ -169,9 +169,9 @@ computePipeline.dispatchWorkgroups(16);
 
 ### Attachments
 
-Render pipelines require specifying a color attachments for each target. 
+Render pipelines require specifying a color attachment for each target. 
 The attachment is specified in the same way as in the WebGPU API 
-(but accepting tgpu resourced, as well as vanilla WebGPU), 
+(but accepting tgpu resources, as well as the regular WebGPU), 
 however akin to the *targets* argument, multiple targets require being passed in a record, where each target is identified via a name.
 
 Similarly, when using `withDepthStencil` it is necessary to pass in a depth stencil attachment, via the `withDepthStencilAttachment` method.
@@ -259,9 +259,9 @@ However, that is usually not necessary, as it is done automatically when trying 
 
 ## Low-level render pipeline execution API
 
-The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per render pass, or the same pipeline but with different resource bindings. It also may be missing some niche feature of the WebGPU API.
+The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per one render pass. It also may be missing some more niche features of the WebGPU API.
 
-`root['~unstable'].beginRenderPass` is a method that mirrors the WebGPU API, but enriches it with direct TypeGPU resource support.
+`root['~unstable'].beginRenderPass` is a method that mirrors the WebGPU API, but enriches it with a direct TypeGPU resource support.
 
 ```ts
 root['~unstable'].beginRenderPass(
@@ -281,7 +281,7 @@ root['~unstable'].flush();
 ```
 
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
-That way, they can be used with a regular WebGPU API.
+That way, they can be used with a regular WebGPU API, but unlike the `root['~unstable'].beginRenderPass` API, it also requires unwrapping all the necessary resources and will not allow using fixed tgpu bufferUsages occupying an automatic bind group.
 
 ```ts twoslash
 import tgpu from 'typegpu';
