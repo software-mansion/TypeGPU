@@ -20,6 +20,7 @@ import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 export const tgpu = {
+  fn,
   bindGroupLayout,
   vertexLayout,
 
@@ -29,6 +30,9 @@ export const tgpu = {
   resolve,
 
   '~unstable': {
+    /**
+     * @deprecated This feature is now stable, use tgpu.fn.
+     */
     fn,
     fragmentFn,
     vertexFn,

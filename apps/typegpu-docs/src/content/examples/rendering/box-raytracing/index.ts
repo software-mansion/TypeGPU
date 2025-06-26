@@ -93,7 +93,7 @@ const uniforms = root.createUniform(Uniforms);
 
 // functions
 
-const getBoxIntersection = tgpu['~unstable'].fn(
+const getBoxIntersection = tgpu.fn(
   [AxisAlignedBounds, Ray],
   IntersectionStruct,
 ) /* wgsl */`(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
