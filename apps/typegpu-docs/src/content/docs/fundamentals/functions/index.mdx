@@ -3,43 +3,51 @@ title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
 
-:::caution[Experimental]
-Functions are an *unstable* feature. The API may be subject to change in the near future.
-:::
-
 :::note[Recommended reading]
 We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-TypeGPU allows writing shaders by composing typed functions, which are special wrappers around WGSL code. 
-These functions can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts etc. 
+WGSL (WebGPU Shading Language) lacks many quality-of-life features that help when building complex shaders, like the ability to split them into
+multiple files or import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
+- Each definition in WGSL is represented as its own TypeGPU resource (e.g., `tgpu.fn`).
+- They can be imported and exported like any other JavaScript value.
+- They can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts, etc.
 
-## Creating a function
+## Defining a function
 
-Functions are constructed by first defining their shells, which specify their inputs and outputs.
-Then the actual WGSL implementation is passed in as an argument to a shell invocation. If the code string is a template literal, you can omit the parentheses, which may result in a more compact Biome/Prettier formatting.
+Functions are constructed by first defining their shells (inputs and output).
+Then the actual WGSL implementation is passed in as an argument to a shell invocation.
 
 The following code defines a function that accepts one argument and returns one value.
 
-```ts
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)(/* wgsl */ `(ratio: f32) -> vec4f {
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-    return color;
-  }`);
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 
-// or
-
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f) /* wgsl */`(ratio: f32) -> vec4f {
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-    return color;
-  };
+// ---cut---
+const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)`(ratio) {
+  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+  return color;
+}`;
 ```
 
+:::tip
 If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// ---cut---
+const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f) /* wgsl*/`(ratio) {
+  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+  return color;
+}`;
+```
+:::
+
 
 ## External resources
 
@@ -47,18 +55,17 @@ Functions can use external resources passed inside a record via the `$uses` meth
 Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
 
 ```ts
-const getBlue = tgpu['~unstable'].fn([], d.vec4f)`() -> vec4f {
+const getBlue = tgpu.fn([], d.vec4f)`() {
   return vec4f(0.114, 0.447, 0.941, 1); 
 }`;
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)`(ratio: f32) -> vec4f {
-    let color = mix(purple, getBlue(), ratio);
-    return color;
-  }
-  `.$uses({ purple, getBlue });
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
+  let color = mix(purple, getBlue(), ratio);
+  return color;
+}
+`.$uses({ purple, getBlue });
 ```
 
 The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
