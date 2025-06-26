@@ -641,6 +641,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 }
 
+/**
+ * The results of a WGSL resolution.
+ *
+ * @param code - The resolved code.
+ * @param bindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ */
 export interface ResolutionResult {
   code: string;
   bindGroupLayouts: TgpuBindGroupLayout[];
