@@ -7,10 +7,10 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
-  containsResourceConstructorCall,
   type Context,
   defaultOptions,
   embedJSON,
+  findNameableExpression,
   gatherTgpuAliases,
   getErrorMessage,
   isShellImplementationCall,
@@ -117,15 +117,9 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
 
-              if (
-                ctx.autoNamingEnabled &&
-                node.type === 'VariableDeclarator' &&
-                node.id.type === 'Identifier' &&
-                node.init &&
-                containsResourceConstructorCall(node.init, ctx)
-              ) {
-                wrapInAutoName(magicString, node.init, node.id.name);
-              }
+              findNameableExpression(ctx, node, (node, name) => {
+                wrapInAutoName(magicString, node, name);
+              });
 
               if (node.type === 'ImportDeclaration') {
                 gatherTgpuAliases(node, ctx);

@@ -5,9 +5,9 @@ import type * as babel from '@babel/types';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  containsResourceConstructorCall,
   type Context,
   embedJSON,
+  findNameableExpression,
   gatherTgpuAliases,
   getErrorMessage,
   isShellImplementationCall,
@@ -121,16 +121,15 @@ function wrapInAutoName(
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     VariableDeclarator(path) {
-      if (
-        ctx.autoNamingEnabled &&
-        path.node.id.type === 'Identifier' &&
-        path.node.init &&
-        containsResourceConstructorCall(path.node.init, ctx)
-      ) {
-        path.get('init').replaceWith(
-          wrapInAutoName(path.node.init, path.node.id.name),
-        );
-      }
+      findNameableExpression(ctx, path.node, (node, name) => {
+        path.get('init').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    AssignmentExpression(path) {
+      findNameableExpression(ctx, path.node, (node, name) => {
+        path.get('right').replaceWith(wrapInAutoName(node, name));
+      });
     },
 
     ImportDeclaration(path) {

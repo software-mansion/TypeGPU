@@ -172,6 +172,34 @@ export function containsResourceConstructorCall(
   return false;
 }
 
+export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
+  ctx: Context,
+  node: T,
+  namingCallback: (
+    node: T extends acorn.AnyNode ? acorn.Expression : babel.Expression,
+    name: string,
+  ) => void,
+) {
+  if (!ctx.autoNamingEnabled) {
+    return;
+  }
+
+  if (
+    node.type === 'VariableDeclarator' &&
+    node.id.type === 'Identifier' &&
+    node.init &&
+    containsResourceConstructorCall(node.init, ctx)
+  ) {
+    namingCallback(node.init as any, node.id.name);
+  } else if (
+    node.type === 'AssignmentExpression' &&
+    node.left.type === 'Identifier' &&
+    containsResourceConstructorCall(node.right, ctx)
+  ) {
+    namingCallback(node.right as any, node.left.name);
+  }
+}
+
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;
 export type KernelDirective = (typeof kernelDirectives)[number];
 
