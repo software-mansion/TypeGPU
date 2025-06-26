@@ -140,6 +140,10 @@ class WithBindingImpl implements WithBinding {
       multisampleState: undefined,
     });
   }
+
+  pipe(transform: (bindable: WithBinding) => WithBinding): WithBinding {
+    return transform(this);
+  }
 }
 
 class WithComputeImpl implements WithCompute {

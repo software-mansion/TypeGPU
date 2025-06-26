@@ -133,6 +133,8 @@ export interface WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;
+
+  pipe(transform: (bindable: WithBinding) => WithBinding): WithBinding;
 }
 
 export type CreateTextureOptions<
