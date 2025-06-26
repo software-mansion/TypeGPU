@@ -94,9 +94,7 @@ describe('Inter-Stage Variables', () => {
   it('throws an error if bind groups are missing', ({ root }) => {
     const utgpu = tgpu['~unstable'];
 
-    const layout = tgpu
-      .bindGroupLayout({ alpha: { uniform: d.f32 } })
-      .$name('example-layout');
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
     const vertexFn = utgpu
       .vertexFn({ out: { pos: d.builtin.position } })(
@@ -118,7 +116,7 @@ describe('Inter-Stage Variables', () => {
     );
 
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
     );
   });
 
@@ -148,11 +146,11 @@ describe('Inter-Stage Variables', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const callback = vi.fn();
       const pipeline = root
@@ -175,11 +173,11 @@ describe('Inter-Stage Variables', () => {
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const callback = vi.fn();
       const pipeline = root
@@ -213,11 +211,11 @@ describe('Inter-Stage Variables', () => {
     it('should replace previous performance callback', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const callback1 = vi.fn();
       const callback2 = vi.fn();
@@ -246,11 +244,11 @@ describe('Inter-Stage Variables', () => {
 
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const callback = vi.fn();
 
@@ -273,11 +271,11 @@ describe('Inter-Stage Variables', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -303,11 +301,11 @@ describe('Inter-Stage Variables', () => {
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const rawQuerySet = device.createQuerySet({
         type: 'timestamp',
@@ -335,11 +333,11 @@ describe('Inter-Stage Variables', () => {
     it('should handle optional timestamp write indices', ({ root }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -395,11 +393,11 @@ describe('Inter-Stage Variables', () => {
     it('should setup timestamp writes in render pass descriptor', ({ root, commandEncoder }) => {
       const vertexFn = tgpu['~unstable'].vertexFn({
         out: { pos: d.builtin.position },
-      })('').$name('vertex');
+      })('');
 
       const fragmentFn = tgpu['~unstable'].fragmentFn({
         out: { color: d.vec4f },
-      })('').$name('fragment');
+      })('');
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -438,11 +436,11 @@ describe('Inter-Stage Variables', () => {
   it('should handle depth stencil attachments with timestamp writes', ({ root, commandEncoder }) => {
     const vertexFn = tgpu['~unstable'].vertexFn({
       out: { pos: d.builtin.position },
-    })('').$name('vertex');
+    })('');
 
     const fragmentFn = tgpu['~unstable'].fragmentFn({
       out: { color: d.vec4f },
-    })('').$name('fragment');
+    })('');
 
     const querySet = root.createQuerySet('timestamp', 2);
 
