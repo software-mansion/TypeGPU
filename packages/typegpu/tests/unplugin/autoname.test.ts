@@ -129,7 +129,7 @@ describe('autonaming', () => {
   //     return 0;
   //   };
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');
@@ -142,7 +142,7 @@ describe('autonaming', () => {
   //     return 0;
   //   };
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');
@@ -155,7 +155,7 @@ describe('autonaming', () => {
   //     return 0;
   //   }
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');

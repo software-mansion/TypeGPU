@@ -233,7 +233,7 @@ describe('tgpu resolve', () => {
       a: d.snorm8,
       b: d.snorm8x4,
       c: d.float16x2,
-    });
+    }).$name('Extra');
 
     const VertexInfo = d.unstruct({
       color: d.snorm8x4,
@@ -279,8 +279,7 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve object externals and replace their usages in template', () => {
-    const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -319,15 +318,13 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve only used object externals and ignore non-existing', () => {
-    const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
-    const getIntensity = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getIntensity = tgpu.fn([], d.vec3f)(`() -> vec3f {
         return 1;
       }`)
       .$name('get_intensity');

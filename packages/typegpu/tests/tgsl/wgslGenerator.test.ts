@@ -650,11 +650,11 @@ describe('wgslGenerator', () => {
       y: d.vec3f,
     });
 
-    const fnOne = tgpu.fn([], TestStruct).does(() => {
+    const fnOne = tgpu.fn([], TestStruct)(() => {
       return TestStruct({ x: 1, y: d.vec3f(1, 2, 3) });
     });
 
-    const fnTwo = tgpu.fn([], d.f32).does(() => {
+    const fnTwo = tgpu.fn([], d.f32)(() => {
       return fnOne().y.x;
     });
 
