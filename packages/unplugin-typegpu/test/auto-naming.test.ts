@@ -266,6 +266,23 @@ describe('[BABEL] auto naming', () => {
         }), "layout");"
       `);
   });
+
+  it(`works with properties`, () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "const mySchemas = {
+          myStruct: (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
+            a: d.vec3f
+          }), "myStruct")
+        };"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
@@ -541,6 +558,22 @@ describe('[ROLLUP] auto naming', () => {
                 .bindGroupLayout({
                   foo: { uniform: vec3f },
                 }), "layout"));
+        "
+      `);
+  });
+
+  it(`works with properties`, async () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "({
+                myStruct: ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.vec3f }), "myStruct"))
+              });
         "
       `);
   });

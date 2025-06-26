@@ -180,7 +180,7 @@ function containsResourceConstructorCall(
  *
  * `name = tgpu.bindGroupLayout({});` (AssignmentExpression)
  *
- * `property: tgpu.bindGroupLayout({})` (Property)
+ * `property: tgpu.bindGroupLayout({})` (Property/ObjectProperty)
  *
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
@@ -213,6 +213,12 @@ export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
     containsResourceConstructorCall(node.right, ctx)
   ) {
     namingCallback(node.right as any, node.left.name);
+  } else if (
+    (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier' &&
+    containsResourceConstructorCall(node.value, ctx)
+  ) {
+    namingCallback(node.value as any, node.key.name);
   }
 }
 
