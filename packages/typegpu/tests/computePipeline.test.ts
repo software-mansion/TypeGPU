@@ -11,16 +11,13 @@ import { it } from './utils/extendedIt.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
-    const entryFn = tgpu['~unstable']
-      .computeFn({ workgroupSize: [32] })(() => {
-        // do something
-      })
-      .$name('main');
+    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [32] })(() => {
+      // do something
+    });
 
     const computePipeline = root
       .withCompute(entryFn)
-      .createPipeline()
-      .$name('test_pipeline');
+      .createPipeline();
 
     expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
 
@@ -30,21 +27,17 @@ describe('TgpuComputePipeline', () => {
       compute: {
         module: device.mock.createShaderModule(),
       },
-      label: 'test_pipeline',
+      label: 'computePipeline',
       layout: device.mock.createPipelineLayout(),
     });
   });
 
   it('throws an error if bind groups are missing', ({ root }) => {
-    const layout = tgpu
-      .bindGroupLayout({ alpha: { uniform: d.f32 } })
-      .$name('example-layout');
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const entryFn = tgpu['~unstable']
-      .computeFn({ workgroupSize: [1] })(() => {
-        layout.bound.alpha; // Using an entry of the layout
-      })
-      .$name('main');
+    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+      layout.bound.alpha; // Using an entry of the layout
+    });
 
     const pipeline = root.withCompute(entryFn).createPipeline();
 
@@ -54,7 +47,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(() => pipeline.dispatchWorkgroups(1))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
       );
   });
 
@@ -72,9 +65,9 @@ describe('TgpuComputePipeline', () => {
 
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const callback = vi.fn();
       const pipeline = root
@@ -94,9 +87,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const callback = vi.fn();
       const pipeline = root
@@ -116,9 +109,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should replace previous performance callback', ({ root }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const callback1 = vi.fn();
       const callback2 = vi.fn();
@@ -144,9 +137,9 @@ describe('TgpuComputePipeline', () => {
       //@ts-ignore
       device.features = new Set();
 
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const callback = vi.fn();
 
@@ -166,9 +159,9 @@ describe('TgpuComputePipeline', () => {
 
   describe('Timestamp Writes', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -191,9 +184,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const rawQuerySet = device.createQuerySet({
         type: 'timestamp',
@@ -218,9 +211,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should handle optional timestamp write indices', ({ root }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -271,9 +264,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -314,8 +307,7 @@ describe('TgpuComputePipeline', () => {
         .computeFn({ workgroupSize: [1] })(() => {
           layout.bound.data;
         })
-        .$uses({ layout })
-        .$name('main');
+        .$uses({ layout });
 
       const querySet = root.createQuerySet('timestamp', 4);
 
@@ -363,9 +355,9 @@ describe('TgpuComputePipeline', () => {
 
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const querySet = root.createQuerySet('timestamp', 10);
       const callback = vi.fn();
@@ -407,9 +399,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable']
-        .computeFn({ workgroupSize: [1] })(() => {})
-        .$name('main');
+      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+        () => {},
+      );
 
       const querySet = root.createQuerySet('timestamp', 8);
       const callback = vi.fn();

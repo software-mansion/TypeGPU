@@ -109,8 +109,7 @@ const plums = await createImageBitmap(await response.blob(), {
 
 const backgroundTexture = root['~unstable']
   .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
-  .$usage('sampled', 'render')
-  .$name('background');
+  .$usage('sampled', 'render');
 device.queue.copyExternalImageToTexture(
   { source: plums },
   { texture: root.unwrap(backgroundTexture) },

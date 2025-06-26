@@ -48,18 +48,15 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const size = root.createUniform(d.vec2u).$name('size');
-const viscosity = root.createUniform(d.u32).$name('viscosity');
+const size = root.createUniform(d.vec2u);
+const viscosity = root.createUniform(d.u32);
 
 const currentStateBuffer = root
   .createBuffer(d.arrayOf(d.u32, 1024 ** 2))
-  .$name('currentState')
   .$usage('storage', 'vertex');
 const currentStateStorage = currentStateBuffer.as('readonly');
 
-const nextState = root
-  .createMutable(d.arrayOf(d.atomic(d.u32), 1024 ** 2))
-  .$name('nextState');
+const nextState = root.createMutable(d.arrayOf(d.atomic(d.u32), 1024 ** 2));
 
 const squareBuffer = root
   .createBuffer(d.arrayOf(d.vec2f, 4), [
@@ -68,8 +65,7 @@ const squareBuffer = root
     d.vec2f(1, 0),
     d.vec2f(1, 1),
   ])
-  .$usage('vertex')
-  .$name('square');
+  .$usage('vertex');
 
 const getIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((x, y) => {
   const h = size.$.y;
