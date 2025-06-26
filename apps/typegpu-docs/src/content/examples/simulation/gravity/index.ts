@@ -77,12 +77,11 @@ const cameraInitial = Camera({
     d.mat4x4f(),
   ),
 });
-const camera = root.createUniform(Camera, cameraInitial).$name('camera');
+const camera = root.createUniform(Camera, cameraInitial);
 
 const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
-  .$usage('vertex')
-  .$name('skybox vertices');
+  .$usage('vertex');
 const skyBoxTexture = await loadSkyBox(root);
 const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
 
@@ -92,10 +91,9 @@ const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
 const sphereTextures = await loadSphereTextures(root);
 const celestialBodiesCountBuffer = root
   .createBuffer(d.i32)
-  .$usage('uniform')
-  .$name('celestial bodies count');
-const time = root.createUniform(Time).$name('time');
-const lightSource = root.createUniform(d.vec3f).$name('light source');
+  .$usage('uniform');
+const time = root.createUniform(Time);
+const lightSource = root.createUniform(d.vec3f);
 
 // dynamic resources (recreated every time a preset is selected)
 
@@ -118,14 +116,12 @@ const dynamicResourcesBox = {
 // Pipelines
 const computeCollisionsPipeline = root['~unstable']
   .withCompute(computeCollisionsShader)
-  .createPipeline()
-  .$name('compute collisions');
+  .createPipeline();
 
 const computeGravityPipeline = root['~unstable']
   .with(timeAccess, time)
   .withCompute(computeGravityShader)
-  .createPipeline()
-  .$name('compute gravity');
+  .createPipeline();
 
 const skyBoxPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
@@ -133,8 +129,7 @@ const skyBoxPipeline = root['~unstable']
   .with(cameraAccess, camera)
   .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
-  .createPipeline()
-  .$name('render skybox');
+  .createPipeline();
 
 const renderPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
@@ -148,8 +143,7 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
-  .createPipeline()
-  .$name('render celestial bodies');
+  .createPipeline();
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -234,12 +228,10 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
       d.arrayOf(CelestialBody, celestialBodies.length),
       celestialBodies,
     )
-    .$usage('storage')
-    .$name('compute A');
+    .$usage('storage');
   const computeBufferB = root
     .createBuffer(d.arrayOf(CelestialBody, celestialBodies.length))
-    .$usage('storage')
-    .$name('compute B');
+    .$usage('storage');
 
   const computeCollisionsBindGroup = root.createBindGroup(
     computeLayout,

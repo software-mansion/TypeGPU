@@ -62,16 +62,14 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   return input.color;
 });
 
-const Params = d
-  .struct({
-    separationDistance: d.f32,
-    separationStrength: d.f32,
-    alignmentDistance: d.f32,
-    alignmentStrength: d.f32,
-    cohesionDistance: d.f32,
-    cohesionStrength: d.f32,
-  })
-  .$name('Params');
+const Params = d.struct({
+  separationDistance: d.f32,
+  separationStrength: d.f32,
+  alignmentDistance: d.f32,
+  alignmentStrength: d.f32,
+  cohesionDistance: d.f32,
+  cohesionStrength: d.f32,
+});
 
 type Params = d.Infer<typeof Params>;
 
@@ -186,15 +184,13 @@ const renderPipeline = root['~unstable']
   .createPipeline()
   .with(vertexLayout, triangleVertexBuffer);
 
-const computeBindGroupLayout = tgpu
-  .bindGroupLayout({
-    currentTrianglePos: { storage: TriangleDataArray },
-    nextTrianglePos: {
-      storage: TriangleDataArray,
-      access: 'mutable',
-    },
-  })
-  .$name('compute');
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentTrianglePos: { storage: TriangleDataArray },
+  nextTrianglePos: {
+    storage: TriangleDataArray,
+    access: 'mutable',
+  },
+});
 
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
