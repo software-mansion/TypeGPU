@@ -101,7 +101,7 @@ describe('autonaming', () => {
     expect(getName(myFunction)).toBe('ConstFunction');
   });
 
-  it('names TGPU functions', () => {
+  it('autonames TGPU functions', () => {
     const myFunction = tgpu['~unstable'].fn([])(() => 0);
     const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
       () => {},
@@ -120,6 +120,24 @@ describe('autonaming', () => {
     expect(getName(myComputeFn)).toBe('myComputeFn');
     expect(getName(myVertexFn)).toBe('myVertexFn');
     expect(getName(myFragmentFn)).toBe('myFragmentFn');
+  });
+
+  it('autonames assignment expressions', () => {
+    let layout;
+    layout = tgpu
+      .bindGroupLayout({
+        foo: { uniform: d.vec3f },
+      });
+
+    expect(getName(layout)).toBe('layout');
+  });
+
+  it(`autonames properties`, () => {
+    const mySchemas = {
+      myStruct: d.struct({ a: d.vec3f }),
+    };
+
+    expect(getName(mySchemas.myStruct)).toBe('myStruct');
   });
 
   // TODO: make it work
