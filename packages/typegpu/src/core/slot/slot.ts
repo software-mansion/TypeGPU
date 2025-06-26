@@ -1,7 +1,12 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuRepr, $gpuValueOf, $repr } from '../../shared/symbols.ts';
+import {
+  $gpuRepr,
+  $gpuValueOf,
+  $internal,
+  $repr,
+} from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type { TgpuSlot } from './slotTypes.ts';
@@ -19,6 +24,7 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 // --------------
 
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
+  public readonly [$internal] = true;
   public readonly resourceType = 'slot';
 
   // Type-tokens, not available at runtime
@@ -52,5 +58,9 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
     }
 
     return this[$gpuValueOf](ctx);
+  }
+
+  get $(): InferGPU<T> {
+    return this.value;
   }
 }

@@ -54,12 +54,12 @@ const rotateXY = tgpu['~unstable'].fn([d.f32], d.mat2x2f)((angle) => {
 
 const root = await tgpu.init();
 
-const timeUniform = root['~unstable'].createUniform(d.f32);
-
+/** Seconds passed since the start of the example, wrapped to the range [0, 1000) */
+const time = root.createUniform(d.f32);
 /** Controls the angle of rotation for the pool tile texture */
 const angle = 0.2;
 /** The bigger the number, the denser the pool tile texture is */
-const tileDensityUniform = root['~unstable'].createUniform(d.f32);
+const tileDensity = root.createUniform(d.f32);
 /** The scene fades into this color at a distance */
 const fogColor = d.vec3f(0.05, 0.2, 0.7);
 /** The ambient light color */
@@ -69,9 +69,6 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const time = timeUniform.value;
-  const tileDensity = tileDensityUniform.value;
-
   /**
    * A transformation matrix that skews the perspective a bit
    * when applied to UV coordinates
@@ -81,7 +78,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
     d.vec2f(-std.sin(angle) * 10 + uv.x * 3, std.cos(angle) * 5),
   );
   const skewedUv = std.mul(skewMat, uv);
-  const tile = tilePattern(std.mul(skewedUv, tileDensity));
+  const tile = tilePattern(std.mul(skewedUv, tileDensity.$));
   const albedo = std.mix(d.vec3f(0.1), d.vec3f(1), tile);
 
   // Transforming coordinates to simulate perspective squash
@@ -91,19 +88,19 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   );
   // Generating two layers of caustics (large scale, and small scale)
   const c1 = std.mul(
-    caustics(cuv, time * 0.2, /* profile */ d.vec3f(4, 4, 1)),
+    caustics(cuv, time.$ * 0.2, /* profile */ d.vec3f(4, 4, 1)),
     // Tinting
     d.vec3f(0.4, 0.65, 1),
   );
   const c2 = std.mul(
-    caustics(std.mul(cuv, 2), time * 0.4, /* profile */ d.vec3f(16, 1, 4)),
+    caustics(std.mul(cuv, 2), time.$ * 0.4, /* profile */ d.vec3f(16, 1, 4)),
     // Tinting
     d.vec3f(0.18, 0.3, 0.5),
   );
 
   // -- BLEND --
 
-  const blendCoord = d.vec3f(std.mul(uv, d.vec2f(5, 10)), time * 0.2 + 5);
+  const blendCoord = d.vec3f(std.mul(uv, d.vec2f(5, 10)), time.$ * 0.2 + 5);
   // A smooth blending factor, so that caustics only appear at certain spots
   const blend = clamp01(perlin3d.sample(blendCoord) + 0.3);
 
@@ -121,12 +118,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const godRayUv = std.mul(std.mul(rotateXY(-0.3), uv), d.vec2f(15, 3));
   const godRayFactor = std.pow(uv.y, 1);
   const godRay1 = std.mul(
-    std.add(perlin3d.sample(d.vec3f(godRayUv, time * 0.5)), 1),
+    std.add(perlin3d.sample(d.vec3f(godRayUv, time.$ * 0.5)), 1),
     // Tinting
     std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor),
   );
   const godRay2 = std.mul(
-    std.add(perlin3d.sample(d.vec3f(std.mul(godRayUv, 2), time * 0.3)), 1),
+    std.add(perlin3d.sample(d.vec3f(std.mul(godRayUv, 2), time.$ * 0.3)), 1),
     // Tinting
     std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor * 0.4),
   );
@@ -150,8 +147,14 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-function draw(timestamp: DOMHighResTimeStamp) {
-  timeUniform.write((timestamp * 0.001) % 1000);
+let isRunning = true;
+
+function draw(timestamp: number) {
+  if (!isRunning) {
+    return;
+  }
+
+  time.write((timestamp * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
@@ -174,12 +177,13 @@ export const controls = {
     max: 20,
     step: 1,
     onSliderChange: (density: number) => {
-      tileDensityUniform.write(density);
+      tileDensity.write(density);
     },
   },
 };
 
 export function onCleanup() {
+  isRunning = false;
   root.destroy();
 }
 

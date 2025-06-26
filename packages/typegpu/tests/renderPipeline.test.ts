@@ -647,7 +647,7 @@ describe('TgpuRenderPipeline', () => {
 
       expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith(
         expect.objectContaining({
-          label: '<unnamed>',
+          label: 'pipeline',
           timestampWrites: {
             querySet: querySet.querySet,
             beginningOfPassWriteIndex: 1,

@@ -294,7 +294,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 1,
@@ -347,7 +347,7 @@ describe('TgpuComputePipeline', () => {
       pipeline2.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 0,
@@ -356,7 +356,7 @@ describe('TgpuComputePipeline', () => {
       });
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline2',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 2,
@@ -394,7 +394,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 3,
@@ -443,7 +443,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroups(1);
 
       expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: '<unnamed>',
+        label: 'pipeline',
         timestampWrites: {
           querySet: querySet.querySet,
           beginningOfPassWriteIndex: 2,

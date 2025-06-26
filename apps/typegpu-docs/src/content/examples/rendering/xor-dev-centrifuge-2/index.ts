@@ -1,21 +1,19 @@
 /**
- * This is a port of XorDev's "Runner" example using TypeGPU. Most of the shader is
- * written in TGSL (TypeScript + Standard Library), but parts of it are implemented
- * in WGSL to showcase the flexibility of TypeGPU.
+ * This is a port of XorDev's "Centrifuge 2" example using TypeGPU.
  *
  * ## Credits
  * XorDev (xordev.com) for the idea and original implementation
  *
  * ## Original GLSL implementation
  * ```
- * vec3 q,p;for(float z,d,i,l;l++<3e1;z+=d,o+=.1*(vec4(4,2,1,0)-tanh(p.y+4.))*d/(1.+z)){p=z*normalize(FC.rgb*2.-r.xyy)-2.;p.xz-=t+3.;for(q=p,d=p.y,i=4e1;i>.01;i*=.2)d=max(d,min(min(q=i*.9-abs(mod(q,i+i)-i),q.y).x,q.z)),q.xz*=rotate2D(9.);}o=tanh(o*o);
+ * vec3 p,P;for(float z,d,i;i++<5e1;z+=d,o+=(1.2-cos(p.z/vec4(5,1e8,3,0)))/d)p=z*normalize(FC.rgb*2.-r.xyy),P=vec3(atan(p.y-=7.,p.x)/.1+t,p.z*.2-5.*t,length(p.xy)-11.),d=length(vec4(P.z,cos(P+cos(P/.2))-1.))*.5-.1;o=tanh(o/2e2);
  * ```
  */
 
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // deno-fmt-ignore: just a list of standard functions
-import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh } from 'typegpu/std';
+import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, tanh } from 'typegpu/std';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -25,30 +23,8 @@ import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh }
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
-  return select(tanh(v), sign(v), abs(v) > 10);
-});
-
-// Functions can still be written in WGSL, if that's what you prefer.
-// You can omit the argument and return types, and we'll generate them
-// for you based on the function's shell.
-/**
- * A modulo that replicates the behavior of GLSL's `mod` function.
- */
-const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
-  return fract(v / a) * a;
-}`;
-
-/**
- * Returns a transformation matrix that represents an `angle` rotation
- * in the XZ plane (around the Y axis)
- */
-const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
-  return d.mat3x3f(
-    /* right   */ d.vec3f(cos(angle), 0, sin(angle)),
-    /* up      */ d.vec3f(0, 1, 0),
-    /* forward */ d.vec3f(-sin(angle), 0, cos(angle)),
-  );
+const safeTanh3 = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((v) => {
+  return select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)));
 });
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
@@ -57,40 +33,47 @@ const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
 const time = root.createUniform(d.f32);
-const scale = root.createUniform(d.f32);
-const color = root.createUniform(d.vec3f);
-const shift = root.createUniform(d.f32);
 const aspectRatio = root.createUniform(d.f32);
+
+const cameraPos = root.createUniform(d.vec2f);
+const tunnelDepth = root.createUniform(d.i32);
+const bigStrips = root.createUniform(d.f32);
+const smallStrips = root.createUniform(d.f32);
+const dollyZoom = root.createUniform(d.f32);
+const color = root.createUniform(d.vec3f);
+
+const tunnelRadius = 11;
+const moveSpeed = 5;
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  // Increasing the color intensity
-  const icolor = mul(color.$, 4);
   const ratio = d.vec2f(aspectRatio.$, 1);
   const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
-  let acc = d.vec3f();
   let z = d.f32(0);
-  for (let l = 0; l < 30; l++) {
-    const p = sub(mul(z, dir), scale.$);
-    p.x -= time.$ + 3;
-    p.z -= time.$ + 3;
-    let q = p;
-    let prox = p.y;
-    for (let i = 40.1; i > 0.01; i *= 0.2) {
-      q = sub(i * 0.9, abs(sub(mod(q, i + i), i)));
-      const minQ = min(min(q.x, q.y), q.z);
-      prox = max(prox, minQ);
-      q = mul(q, rotateXZ(shift.$));
-    }
-    z += prox;
-    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
+  let acc = d.vec3f();
+  for (let i = 0; i < tunnelDepth.$; i++) {
+    const p = mul(z, dir);
+    p.x += cameraPos.$.x;
+    p.y += cameraPos.$.y;
+
+    const coords = d.vec3f(
+      atan2(p.y, p.x) * bigStrips.$ + time.$,
+      p.z * dollyZoom.$ - moveSpeed * time.$,
+      length(p.xy) - tunnelRadius,
+    );
+
+    const coords2 = sub(cos(add(coords, cos(mul(coords, smallStrips.$)))), 1.);
+    const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
+
+    acc = add(acc, mul(sub(1.2, cos(mul(p.z, color.$))), 1 / dd));
+    z += dd;
   }
 
   // Tone mapping
-  acc = tanh(mul(acc, acc));
+  acc = safeTanh3(mul(acc, 0.005));
 
   return d.vec4f(acc, 1);
 });
@@ -128,9 +111,7 @@ const pipeline = root['~unstable']
 let isRunning = true;
 
 function draw(timestamp: number) {
-  if (!isRunning) {
-    return;
-  }
+  if (!isRunning) return;
 
   aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
   time.write((timestamp * 0.001) % 1000);
@@ -151,26 +132,53 @@ requestAnimationFrame(draw);
 // #region Example controls and cleanup
 
 export const controls = {
-  scale: {
-    initial: 2,
-    min: -15,
-    max: 100,
-    step: 0.01,
+  'tunnel depth': {
+    initial: 50,
+    min: 10,
+    max: 200,
+    step: 1,
     onSliderChange(v: number) {
-      scale.write(v);
+      tunnelDepth.write(v);
     },
   },
-  'pattern shift': {
-    initial: 155,
-    min: 100,
-    max: 200,
-    step: 0.001,
+  'big strips': {
+    initial: 10,
+    min: 1,
+    max: 60,
+    step: 0.01,
     onSliderChange(v: number) {
-      shift.write(v / 180 * Math.PI);
+      bigStrips.write(v);
+    },
+  },
+  'small strips': {
+    initial: 5,
+    min: 1,
+    max: 10,
+    step: 0.01,
+    onSliderChange(v: number) {
+      smallStrips.write(v);
+    },
+  },
+  'dolly zoom': {
+    initial: 0.2,
+    min: 0.01,
+    max: 1,
+    step: 0.01,
+    onSliderChange(v: number) {
+      dollyZoom.write(v);
+    },
+  },
+  'camera pos': {
+    min: [-10, -10],
+    max: [10, 10],
+    initial: [0, -7],
+    step: [0.01, 0.01],
+    onVectorSliderChange(v: [number, number]) {
+      cameraPos.write(d.vec2f(...v));
     },
   },
   color: {
-    initial: [1, 0.7, 0],
+    initial: [0.2, 0, 0.3],
     onColorChange(value: readonly [number, number, number]) {
       color.write(d.vec3f(...value));
     },

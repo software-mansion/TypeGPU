@@ -10,7 +10,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -87,6 +87,7 @@ export interface TgpuVertexFn<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -162,6 +163,7 @@ function createVertexFn(
     & TgpuVertexFn<VertexInConstrained, VertexOutConstrained>
     & SelfResolvable
     & {
+      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -176,6 +178,7 @@ function createVertexFn(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);

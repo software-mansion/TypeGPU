@@ -15,7 +15,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
@@ -108,6 +108,7 @@ export interface TgpuFragmentFn<
   Varying extends FragmentInConstrained = FragmentInConstrained,
   Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuFragmentFnShellHeader<Varying, Output>;
   readonly outputType: IOLayoutToSchema<Output>;
 
@@ -177,7 +178,10 @@ function createFragmentFn(
   >,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & SelfResolvable & { [$getNameForward]: FnCore };
+  type This = TgpuFragmentFn & SelfResolvable & {
+    [$internal]: true;
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(implementation, true);
   const outputType = shell.returnType;
@@ -198,6 +202,7 @@ function createFragmentFn(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);

@@ -1,11 +1,17 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuRepr, $providing, $repr } from '../../shared/symbols.ts';
+import {
+  $gpuRepr,
+  $internal,
+  $providing,
+  $repr,
+} from '../../shared/symbols.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'slot';
 
   // Type-tokens, not available at runtime
@@ -22,11 +28,13 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 }
 
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<T>;
@@ -43,6 +51,7 @@ export interface TgpuDerived<T> {
 }
 
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
   // Type-tokens, not available at runtime
@@ -59,6 +68,7 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
 
   readonly value: InferGPU<T>;
+  readonly $: InferGPU<T>;
 }
 
 /**

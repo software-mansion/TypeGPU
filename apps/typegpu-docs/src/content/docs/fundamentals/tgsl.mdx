@@ -28,19 +28,17 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 const MAX_OBSTACLES = 4;
-const obstaclesReadonly = root
-  .createBuffer(d.arrayOf(d.struct({
+const obstacles = root
+  .createReadonly(d.arrayOf(d.struct({
     center: d.vec2i,
     size: d.vec2i,
     enabled: d.u32,
-  }), MAX_OBSTACLES))
-  .$usage('storage')
-  .as('readonly');
+  }), MAX_OBSTACLES));
 
 const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
   (x, y) => {
     for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = obstaclesReadonly.value[obsIdx];
+      const obs = obstacles.$[obsIdx];
       if (obs.enabled === 0) {
         continue;
       }
@@ -120,18 +118,17 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 
-const backgroundColorUniform = root['~unstable'].createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
+const bgColor = root.createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
 
-const fragmentTgsl = tgpu['~unstable'].fragmentFn({
-  out: d.vec4f,
-})(() => backgroundColorUniform.value);
-//                              ^?
+const fragmentTgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+  return bgColor.$;
+//               ^?
+}); 
 
-const fragmentWgsl = tgpu['~unstable'].fragmentFn({
-  out: d.vec4f,
-})`{ 
-  return backgroundColorUniform; 
-}`.$uses({ backgroundColorUniform });
+const fragmentWgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`{ 
+  return bgColor; 
+}
+`.$uses({ bgColor });
 ```
 
 * **Operators** --
