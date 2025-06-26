@@ -125,6 +125,7 @@ const resourceConstructors: string[] = [
   'createMutable',
   'createReadonly',
   'createUniform',
+  'createQuerySet',
   // root['~unstable']
   'createPipeline',
   'createTexture',
@@ -172,6 +173,8 @@ function containsResourceConstructorCall(
   return false;
 }
 
+type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
+  acorn.AnyNode ? acorn.Expression : babel.Expression;
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
  * If so, it calls the provided callback. Nodes selected for naming include:
@@ -192,7 +195,7 @@ export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
   ctx: Context,
   node: T,
   namingCallback: (
-    node: T extends acorn.AnyNode ? acorn.Expression : babel.Expression,
+    node: ExpressionFor<T>,
     name: string,
   ) => void,
 ) {
@@ -206,19 +209,19 @@ export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
     node.init &&
     containsResourceConstructorCall(node.init, ctx)
   ) {
-    namingCallback(node.init as any, node.id.name);
+    namingCallback(node.init as ExpressionFor<T>, node.id.name);
   } else if (
     node.type === 'AssignmentExpression' &&
     node.left.type === 'Identifier' &&
     containsResourceConstructorCall(node.right, ctx)
   ) {
-    namingCallback(node.right as any, node.left.name);
+    namingCallback(node.right as ExpressionFor<T>, node.left.name);
   } else if (
     (node.type === 'Property' || node.type === 'ObjectProperty') &&
     node.key.type === 'Identifier' &&
     containsResourceConstructorCall(node.value, ctx)
   ) {
-    namingCallback(node.value as any, node.key.name);
+    namingCallback(node.value as ExpressionFor<T>, node.key.name);
   }
 }
 

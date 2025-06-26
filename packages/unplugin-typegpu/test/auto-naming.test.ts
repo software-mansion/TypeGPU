@@ -247,7 +247,7 @@ describe('[BABEL] auto naming', () => {
     `);
   });
 
-  it(`works with assignment expressions`, () => {
+  it('works with assignment expressions', () => {
     const code = `\
       let layout;
       layout = tgpu
@@ -267,7 +267,7 @@ describe('[BABEL] auto naming', () => {
       `);
   });
 
-  it(`works with properties`, () => {
+  it('works with properties', () => {
     const code = `\
       const mySchemas = {
         myStruct: d.struct({ a: d.vec3f })
@@ -543,7 +543,7 @@ describe('[ROLLUP] auto naming', () => {
     `);
   });
 
-  it(`works with assignment expressions`, async () => {
+  it('works with assignment expressions', async () => {
     const code = `\
       let layout;
       layout = tgpu
@@ -562,7 +562,7 @@ describe('[ROLLUP] auto naming', () => {
       `);
   });
 
-  it(`works with properties`, async () => {
+  it('works with properties', async () => {
     const code = `\
       const mySchemas = {
         myStruct: d.struct({ a: d.vec3f })
