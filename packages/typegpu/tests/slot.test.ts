@@ -9,7 +9,7 @@ const GREEN = 'vec3f(0., 1., 0.)';
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
-    const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu['~unstable'].slot(RED); // red by default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -30,7 +30,7 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu['~unstable'].slot(RED); // red by default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -64,7 +64,7 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
+    const colorSlot = tgpu['~unstable'].slot<string>(); // no default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -119,7 +119,7 @@ describe('tgpu.slot', () => {
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
+    const colorSlot = tgpu['~unstable'].slot<string>(); // no default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -172,10 +172,8 @@ describe('tgpu.slot', () => {
   });
 
   it('reuses common nested functions', () => {
-    const sizeSlot = tgpu['~unstable'].slot<1 | 100>().$name('size');
-    const colorSlot = tgpu['~unstable']
-      .slot<typeof RED | typeof GREEN>()
-      .$name('color');
+    const sizeSlot = tgpu['~unstable'].slot<1 | 100>();
+    const colorSlot = tgpu['~unstable'].slot<typeof RED | typeof GREEN>();
 
     const getSize = tgpu['~unstable']
       .fn([], d.f32)(/* wgsl */ `() -> f32 {
@@ -301,10 +299,10 @@ describe('tgpu.slot', () => {
   });
 
   it('unwraps layers of slots', () => {
-    const slotA = tgpu['~unstable'].slot(1).$name('a');
-    const slotB = tgpu['~unstable'].slot(2).$name('b');
-    const slotC = tgpu['~unstable'].slot(3).$name('c');
-    const slotD = tgpu['~unstable'].slot(4).$name('d');
+    const slotA = tgpu['~unstable'].slot(1);
+    const slotB = tgpu['~unstable'].slot(2);
+    const slotC = tgpu['~unstable'].slot(3);
+    const slotD = tgpu['~unstable'].slot(4);
 
     const fn1 = tgpu['~unstable']
       .fn([])('() { let value = slotA; }')

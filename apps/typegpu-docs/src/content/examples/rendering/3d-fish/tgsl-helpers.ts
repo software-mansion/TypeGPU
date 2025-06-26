@@ -18,7 +18,7 @@ export const projectPointOnLine = tgpu.fn([d.vec3f, Line3], d.vec3f)(
 export const PosAndNormal = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
-}).$name('PosAndNormal');
+});
 
 export const applySinWave = tgpu.fn([d.u32, PosAndNormal, d.f32], PosAndNormal)(
   (index, vertex, time) => {

@@ -1,3 +1,4 @@
+import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import {
@@ -11,7 +12,6 @@ import {
   pow,
   sub,
 } from 'typegpu/std';
-import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 import { mat4 } from 'wgpu-matrix';
 
 // init canvas and values
@@ -87,7 +87,7 @@ const boxMatrix = root.createReadonly(
           })),
       ),
   ),
-).$name('box_array');
+);
 
 const uniforms = root.createUniform(Uniforms);
 
@@ -154,8 +154,7 @@ const getBoxIntersection = tgpu.fn(
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`
-  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct })
-  .$name('box_intersection');
+  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct });
 
 const Varying = {
   rayWorldOrigin: d.vec3f,

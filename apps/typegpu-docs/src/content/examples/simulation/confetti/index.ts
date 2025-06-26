@@ -59,7 +59,6 @@ const particleGeometryBuffer = root
         color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
       })),
   )
-  .$name('geometry')
   .$usage('vertex');
 
 const particleDataBuffer = root
@@ -74,13 +73,15 @@ const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
-  .$name('geometry');
+const geometryLayout = tgpu.vertexLayout(
+  (n: number) => d.arrayOf(ParticleGeometry, n),
+  'instance',
+);
 
-const dataLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
-  .$name('data');
+const dataLayout = tgpu.vertexLayout(
+  (n: number) => d.arrayOf(ParticleData, n),
+  'instance',
+);
 
 // functions
 
@@ -162,14 +163,12 @@ const renderPipeline = root['~unstable']
     topology: 'triangle-strip',
   })
   .createPipeline()
-  .$name('draw confetti')
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)
-  .createPipeline()
-  .$name('move particles');
+  .createPipeline();
 
 // compute and draw
 

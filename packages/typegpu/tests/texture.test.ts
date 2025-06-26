@@ -8,10 +8,10 @@ import type {
 } from '../src/core/texture/texture.ts';
 import type { Render, Sampled } from '../src/core/texture/usageExtension.ts';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data/index.ts';
-import './utils/webgpuGlobals.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
+import './utils/webgpuGlobals.ts';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -179,7 +179,6 @@ describe('TgpuTexture', () => {
         size: [512, 512, 12],
         format: 'rgba8unorm',
       })
-      .$name('texture')
       .$usage('sampled');
 
     const opts = {

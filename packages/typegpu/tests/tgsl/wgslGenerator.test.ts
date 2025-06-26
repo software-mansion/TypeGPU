@@ -1,6 +1,7 @@
 import { JitTranspiler } from 'tgpu-jit';
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
@@ -13,7 +14,6 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
-import { snip } from '../../src/data/dataTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -156,8 +156,7 @@ describe('wgslGenerator', () => {
           })
           .$name('TestStruct'),
       )
-      .$usage('storage')
-      .$name('testBuffer');
+      .$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
 
@@ -221,8 +220,7 @@ describe('wgslGenerator', () => {
   it('generates correct resources for external resource array index access', ({ root }) => {
     const testBuffer = root
       .createBuffer(d.arrayOf(d.u32, 16))
-      .$usage('uniform')
-      .$name('testBuffer');
+      .$usage('uniform');
 
     const testUsage = testBuffer.as('uniform');
 
@@ -278,8 +276,7 @@ describe('wgslGenerator', () => {
           })
           .$name('TestStruct'),
       )
-      .$usage('storage')
-      .$name('testBuffer');
+      .$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
 
