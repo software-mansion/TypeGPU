@@ -80,10 +80,9 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const getPlayerHealth = tgpu['~unstable']
-      .fn([PlayerData], d.f32)((pInfo) => {
-        return pInfo.health;
-      })
+    const getPlayerHealth = tgpu.fn([PlayerData], d.f32)((pInfo) => {
+      return pInfo.health;
+    })
       .$name('getPlayerHealthTest');
 
     const shaderLogic = `
@@ -131,15 +130,14 @@ describe('tgpu resolve', () => {
       range: d.vec2f,
     });
 
-    const random = tgpu['~unstable']
-      .fn([], d.f32)(/* wgsl */ `() -> f32 {
+    const random = tgpu.fn([], d.f32)`() {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
         r.range = vec2<f32>(0.0, 1.0);
         r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
         r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
         return clamp(r.seed.y, r.range.x, r.range.y);
-      }`)
+      }`
       .$uses({ Random });
 
     const shaderLogic = `
@@ -231,17 +229,17 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve an unstruct with a complex nested structure', () => {
+    const Extra = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+      c: d.float16x2,
+    });
+
     const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
-      extra: d
-        .unstruct({
-          a: d.snorm8,
-          b: d.snorm8x4,
-          c: d.float16x2,
-        })
-        .$name('extra'),
+      extra: Extra,
       more: d.disarrayOf(
         d.unstruct({ a: d.snorm8, b: d.snorm8x4 }).$name('more'),
         16,
@@ -256,7 +254,7 @@ describe('tgpu resolve', () => {
 
     expect(parse(resolved)).toBe(
       parse(`
-        struct extra {
+        struct Extra {
           a: f32,
           b: vec4f,
           c: vec2f,
@@ -271,7 +269,7 @@ describe('tgpu resolve', () => {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
-          extra: extra,
+          extra: Extra,
           more: array<more, 16>,
         }
 

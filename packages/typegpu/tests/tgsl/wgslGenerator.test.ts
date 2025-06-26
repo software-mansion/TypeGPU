@@ -640,7 +640,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[7,"derivedV2f","value"],[6,[7,"std","mul"],[[7,"derivedV2f","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"derivedV2f","$"],[6,[7,"std","mul"],[[7,"derivedV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 
