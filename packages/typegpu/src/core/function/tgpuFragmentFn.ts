@@ -27,7 +27,7 @@ import type {
   IOLayout,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -183,7 +183,7 @@ function createFragmentFn(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(implementation, true);
+  const core = createFnCore(implementation, '@fragment ');
   const outputType = shell.returnType;
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(
@@ -228,7 +228,6 @@ function createFragmentFn(
           ctx,
           inputWithLocation ? [inputWithLocation] : [],
           shell.returnType,
-          '@fragment ',
         );
       }
 
@@ -245,7 +244,6 @@ function createFragmentFn(
           ctx,
           inputWithLocation ? [inputWithLocation] : [],
           shell.returnType,
-          '@fragment ',
         );
       } finally {
         generationCtx.callStack.pop();

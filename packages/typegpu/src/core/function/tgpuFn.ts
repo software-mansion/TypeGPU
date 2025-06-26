@@ -9,6 +9,7 @@ import {
   $internal,
   $providing,
 } from '../../shared/symbols.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
@@ -17,6 +18,10 @@ import type {
   Wgsl,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
+import {
+  addArgTypesToExternals,
+  addReturnTypeToExternals,
+} from '../resolve/externals.ts';
 import {
   type Eventual,
   isAccessor,
@@ -34,7 +39,6 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
-import type { Prettify } from '../../shared/utilityTypes.ts';
 
 // ----------
 // Public API
@@ -171,7 +175,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(implementation as Implementation, false);
+  const core = createFnCore(implementation as Implementation, '');
 
   const fnBase: This = {
     [$internal]: {
@@ -203,6 +207,17 @@ function createFn<ImplSchema extends AnyFn>(
 
     '~resolve'(ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
+        addArgTypesToExternals(
+          implementation,
+          shell.argTypes,
+          core.applyExternals,
+        );
+        addReturnTypeToExternals(
+          implementation,
+          shell.returnType,
+          core.applyExternals,
+        );
+
         return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 

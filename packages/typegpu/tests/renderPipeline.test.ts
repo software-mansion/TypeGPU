@@ -15,23 +15,21 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('TgpuRenderPipeline', () => {
   const vert = tgpu['~unstable'].vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
-  })`{}`;
+  })`{ return Out(); }`;
   const vertWithBuiltin = tgpu['~unstable'].vertexFn({
     out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
-  })`{}`;
+  })`{ return Out(); }`;
 
   it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })(
-      '',
-    );
+    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
     const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
       in: { pos: d.builtin.frontFacing },
       out: {},
-    })('');
+    })`{}`;
     const fullFragment = tgpu['~unstable'].fragmentFn({
       in: { a: d.vec3f, b: d.vec2f },
       out: d.vec4f,
-    })('');
+    })`{ return vec4f(); }`;
 
     // Using none
     const pipeline = root
@@ -144,227 +142,238 @@ describe('TgpuRenderPipeline', () => {
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
-  it('is resolvable', ({ root }) => {
-    const pipeline = root['~unstable'].withVertex(
-      vertWithBuiltin.$name('vertex'),
-      {},
-    )
-      .withFragment(
-        tgpu['~unstable'].fragmentFn({
-          in: { a: d.builtin.position },
-          out: d.vec4f,
-        })(() => d.vec4f(1, 2, 3, 4)).$name('fragment'),
-        { format: 'r8unorm' },
-      ).createPipeline();
+  describe('resolve', () => {
+    it('allows resolving the entire shader code', ({ root }) => {
+      const pipeline = root['~unstable'].withVertex(
+        vertWithBuiltin.$name('vertex'),
+        {},
+      )
+        .withFragment(
+          tgpu['~unstable'].fragmentFn({
+            in: { a: d.builtin.position },
+            out: d.vec4f,
+          })(() => d.vec4f(1, 2, 3, 4)).$name('fragment'),
+          { format: 'r8unorm' },
+        ).createPipeline();
 
-    expect(parseResolved({ pipeline })).toEqual(parse(`
-
-      struct vertex_Output { 
-        @location(0) a: vec3f,
-        @location(1) b: vec2f,
-        @builtin(position) pos: vec4f,
-      } 
+      expect(parseResolved({ pipeline })).toEqual(parse(`
+        struct vertex_Output { 
+          @location(0) a: vec3f,
+          @location(1) b: vec2f,
+          @builtin(position) pos: vec4f,
+        } 
+          
+        @vertex fn vertex() -> vertex_Output {
+          return vertex_Output();
+        }
         
-      @vertex fn vertex() -> vertex_Output {
+        struct fragment_Input { 
+          @builtin(position) a: vec4f,
+        }
+        
+        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f { 
+          return vec4f(1, 2, 3, 4); 
+        }
+      `));
+    });
 
-      }
-      
-      struct fragment_Input { 
-        @builtin(position) a: vec4f,
-      }
-      
-      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f { 
-        return vec4f(1, 2, 3, 4); 
-      }
-    `));
-  });
+    it('resolves with correct locations when pairing up a vertex and a fragment function', ({ root }) => {
+      const vertexMain = tgpu['~unstable']
+        .vertexFn({
+          out: {
+            foo: d.vec3f,
+            bar: d.vec3f,
+            baz: d.location(0, d.vec3f),
+            baz2: d.location(5, d.f32),
+            baz3: d.u32,
+            pos: d.builtin.position,
+          },
+        })(() => ({
+          foo: d.vec3f(),
+          bar: d.vec3f(),
+          baz: d.vec3f(),
+          baz2: 0,
+          baz3: 0,
+          pos: d.vec4f(),
+        }))
+        .$name('vertexMain');
 
-  it('resolves with correct locations when pairing up a vertex and a fragment function', ({ root }) => {
-    const vertexMain = tgpu['~unstable']
-      .vertexFn({
-        out: {
-          foo: d.vec3f,
-          bar: d.vec3f,
-          baz: d.location(0, d.vec3f),
-          baz2: d.location(5, d.f32),
-          baz3: d.u32,
-        },
-      })(() => ({
-        foo: d.vec3f(),
-        bar: d.vec3f(),
-        baz: d.vec3f(),
-        baz2: 0,
-        baz3: 0,
-      }))
-      .$name('vertexMain');
+      const fragmentMain = tgpu['~unstable']
+        .fragmentFn({
+          in: {
+            baz3: d.u32,
+            bar: d.vec3f,
+            foo: d.location(2, d.vec3f),
+            baz2: d.f32,
+          },
+          out: d.vec4f,
+        })(() => d.vec4f()).$name('fragmentMain');
 
-    const fragmentMain = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          baz3: d.u32,
-          bar: d.vec3f,
-          foo: d.location(2, d.vec3f),
-          baz2: d.f32,
-        },
-        out: d.vec4f,
-      })(() => d.vec4f()).$name('fragmentMain');
+      const pipeline = root['~unstable'].withVertex(vertexMain, {})
+        .withFragment(
+          fragmentMain,
+          { format: 'r8unorm' },
+        ).createPipeline();
 
-    const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
-      fragmentMain,
-      { format: 'r8unorm' },
-    ).createPipeline();
+      expect(parseResolved({ pipeline })).toStrictEqual(parse(`
+        struct vertexMain_Output {
+          @location(2) foo: vec3f,
+          @location(1) bar: vec3f,
+          @location(0) baz: vec3f,
+          @location(5) baz2: f32,
+          @location(3) baz3: u32,
+          @builtin(position) pos: vec4f,
+        }
 
-    expect(parseResolved({ pipeline })).toStrictEqual(parse(`
-      struct vertexMain_Output {
-        @location(2) foo: vec3f,
-        @location(1) bar: vec3f,
-        @location(0) baz: vec3f,
-        @location(5) baz2: f32,
-        @location(3) baz3: u32,
-      }
+        @vertex fn vertexMain() -> vertexMain_Output {
+          return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0, 0, vec4f());
+        }
 
-      @vertex fn vertexMain() -> vertexMain_Output {
-        return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0, 0);
-      }
+        struct fragmentMain_Input {
+          @location(3) baz3: u32,
+          @location(1) bar: vec3f,
+          @location(2) foo: vec3f,
+          @location(5) baz2: f32,
+        }
 
-      struct fragmentMain_Input {
-        @location(3) baz3: u32,
-        @location(1) bar: vec3f,
-        @location(2) foo: vec3f,
-        @location(5) baz2: f32,
-      }
+        @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+          return vec4f();
+        }
+      `));
+    });
 
-      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        return vec4f();
-      }
-    `));
-  });
+    it('resolves with correct locations when pairing up a vertex and a fragment function with rawFn implementation', ({ root }) => {
+      const vertexMain = tgpu['~unstable']
+        .vertexFn({
+          out: {
+            foo: d.vec3f,
+            bar: d.vec3f,
+            position: d.builtin.position,
+            baz: d.location(0, d.vec3f),
+            baz2: d.location(5, d.f32),
+            baz3: d.u32,
+          },
+        })`{ return Out(); }`.$name('vertexMain');
 
-  it('resolves with correct locations when pairing up a vertex and a fragment function with rawFn implementation', ({ root }) => {
-    const vertexMain = tgpu['~unstable']
-      .vertexFn({
-        out: {
-          foo: d.vec3f,
-          bar: d.vec3f,
-          position: d.builtin.position,
-          baz: d.location(0, d.vec3f),
-          baz2: d.location(5, d.f32),
-          baz3: d.u32,
-        },
-      })`{}`.$name('vertexMain');
+      const fragmentMain = tgpu['~unstable']
+        .fragmentFn({
+          in: {
+            position: d.builtin.position,
+            baz3: d.u32,
+            bar: d.vec3f,
+            foo: d.location(2, d.vec3f),
+            baz2: d.f32,
+          },
+          out: d.vec4f,
+        })`{ return vec4f(); }`.$name('fragmentMain');
 
-    const fragmentMain = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          position: d.builtin.position,
-          baz3: d.u32,
-          bar: d.vec3f,
-          foo: d.location(2, d.vec3f),
-          baz2: d.f32,
-        },
-        out: d.vec4f,
-      })`{}`.$name('fragmentMain');
+      const pipeline = root['~unstable'].withVertex(vertexMain, {})
+        .withFragment(
+          fragmentMain,
+          { format: 'r8unorm' },
+        ).createPipeline();
 
-    const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
-      fragmentMain,
-      { format: 'r8unorm' },
-    ).createPipeline();
+      expect(parseResolved({ pipeline })).toStrictEqual(parse(`
+        struct vertexMain_Output {
+          @location(2) foo: vec3f,
+          @location(1) bar: vec3f,
+          @builtin(position) position: vec4f,
+          @location(0) baz: vec3f,
+          @location(5) baz2: f32,
+          @location(3) baz3: u32,
+        }
 
-    expect(parseResolved({ pipeline })).toStrictEqual(parse(`
-      struct vertexMain_Output {
-        @location(2) foo: vec3f,
-        @location(1) bar: vec3f,
-        @builtin(position) position: vec4f,
-        @location(0) baz: vec3f,
-        @location(5) baz2: f32,
-        @location(3) baz3: u32,
-      }
+        @vertex fn vertexMain() -> vertexMain_Output {
+          return vertexMain_Output();
+        }
 
-      @vertex fn vertexMain() -> vertexMain_Output {}
+        struct fragmentMain_Input {
+          @builtin(position) position: vec4f,
+          @location(3) baz3: u32,
+          @location(1) bar: vec3f,
+          @location(2) foo: vec3f,
+          @location(5) baz2: f32,
+        }
 
-      struct fragmentMain_Input {
-        @builtin(position) position: vec4f,
-        @location(3) baz3: u32,
-        @location(1) bar: vec3f,
-        @location(2) foo: vec3f,
-        @location(5) baz2: f32,
-      }
+        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0) vec4f {
+          return vec4f();
+        }
+      `));
+    });
 
-      @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0) vec4f {}
-    `));
-  });
+    it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({ root }) => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+        () => {},
+      );
 
-  it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+      const vertexMain = tgpu['~unstable']
+        .vertexFn({
+          out: {
+            foo: d.vec3f,
+            bar: d.location(0, d.vec3f),
+          },
+        })(() => ({
+          foo: d.vec3f(),
+          bar: d.vec3f(),
+        }))
+        .$name('vertexMain');
 
-    const vertexMain = tgpu['~unstable']
-      .vertexFn({
-        out: {
-          foo: d.vec3f,
-          bar: d.location(0, d.vec3f),
-        },
-      })(() => ({
-        foo: d.vec3f(),
-        bar: d.vec3f(),
-      }))
-      .$name('vertexMain');
+      const fragmentMain = tgpu['~unstable']
+        .fragmentFn({
+          in: {
+            bar: d.location(1, d.vec3f),
+          },
+          out: d.vec4f,
+        })(() => d.vec4f()).$name('fragmentMain');
 
-    const fragmentMain = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          bar: d.location(1, d.vec3f),
-        },
-        out: d.vec4f,
-      })(() => d.vec4f()).$name('fragmentMain');
+      const pipeline = root['~unstable'].withVertex(vertexMain, {})
+        .withFragment(
+          fragmentMain,
+          { format: 'r8unorm' },
+        ).createPipeline();
 
-    const pipeline = root['~unstable'].withVertex(vertexMain, {}).withFragment(
-      fragmentMain,
-      { format: 'r8unorm' },
-    ).createPipeline();
+      tgpu.resolve({ externals: { pipeline } });
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
+      );
+    });
 
-    tgpu.resolve({ externals: { pipeline } });
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Mismatched custom location for key: bar, using location set on vertex output: 0',
-    );
-  });
+    it('does not log warning when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+        () => {},
+      );
 
-  it('does not log warning when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+      const vertexMain = tgpu['~unstable']
+        .vertexFn({
+          out: {
+            foo: d.vec3f,
+            bar: d.location(0, d.vec3f),
+          },
+        })(() => ({
+          foo: d.vec3f(),
+          bar: d.vec3f(),
+        }))
+        .$name('vertexMain');
 
-    const vertexMain = tgpu['~unstable']
-      .vertexFn({
-        out: {
-          foo: d.vec3f,
-          bar: d.location(0, d.vec3f),
-        },
-      })(() => ({
-        foo: d.vec3f(),
-        bar: d.vec3f(),
-      }))
-      .$name('vertexMain');
+      const fragmentMain = tgpu['~unstable']
+        .fragmentFn({
+          in: {
+            bar: d.location(0, d.vec3f),
+          },
+          out: d.vec4f,
+        })(() => d.vec4f()).$name('fragmentMain');
 
-    const fragmentMain = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          bar: d.location(0, d.vec3f),
-        },
-        out: d.vec4f,
-      })(() => d.vec4f()).$name('fragmentMain');
+      const pipeline = root['~unstable'].withVertex(vertexMain, {})
+        .withFragment(
+          fragmentMain,
+          { format: 'r8unorm' },
+        ).createPipeline();
 
-    const pipeline = root['~unstable'].withVertex(vertexMain, {})
-      .withFragment(
-        fragmentMain,
-        { format: 'r8unorm' },
-      ).createPipeline();
-
-    tgpu.resolve({ externals: { pipeline } });
-    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
-      'Mismatched custom location for key: bar, using location set on vertex output: 0',
-    );
+      tgpu.resolve({ externals: { pipeline } });
+      expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+        'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
+      );
+    });
   });
 
   describe('Performance Callbacks', () => {
@@ -706,35 +715,50 @@ describe('TgpuRenderPipeline', () => {
 
 describe('matchUpVaryingLocations', () => {
   it('works for empty arguments', () => {
-    expect(matchUpVaryingLocations({}, {})).toStrictEqual({});
+    expect(matchUpVaryingLocations({}, {}, 'v', 'f')).toStrictEqual({});
   });
 
   it('works for empty fragment', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-    }, undefined)).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+      },
+      undefined,
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 0,
     });
   });
 
   it('works for non-empty', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-    }, {
-      a: d.u32,
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+      },
+      {
+        a: d.u32,
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 0,
     });
   });
 
   it('works with unsused vertex attributes', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.u32,
-      c: d.u32,
-    }, {
-      b: d.u32,
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.u32,
+        c: d.u32,
+      },
+      {
+        b: d.u32,
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 0,
       b: 1,
       c: 2,
@@ -742,13 +766,18 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with custom locations in vertex out', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.location(5, d.u32),
-      c: d.u32,
-    }, {
-      b: d.u32,
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.location(5, d.u32),
+        c: d.u32,
+      },
+      {
+        b: d.u32,
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 0,
       b: 5,
       c: 1,
@@ -756,14 +785,19 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with custom locations in fragment in', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.u32,
-      c: d.u32,
-    }, {
-      b: d.u32,
-      c: d.location(0, d.u32),
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.u32,
+        c: d.u32,
+      },
+      {
+        b: d.u32,
+        c: d.location(0, d.u32),
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 1,
       b: 2,
       c: 0,
@@ -771,14 +805,19 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with custom locations in both', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.location(1, d.u32),
-      c: d.u32,
-    }, {
-      b: d.u32,
-      c: d.location(0, d.u32),
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.location(1, d.u32),
+        c: d.u32,
+      },
+      {
+        b: d.u32,
+        c: d.location(0, d.u32),
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 2,
       b: 1,
       c: 0,
@@ -786,15 +825,20 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with builtins in vertex out', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.location(1, d.u32),
-      c: d.u32,
-      d: d.builtin.position,
-    }, {
-      b: d.u32,
-      c: d.location(0, d.u32),
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.location(1, d.u32),
+        c: d.u32,
+        d: d.builtin.position,
+      },
+      {
+        b: d.u32,
+        c: d.location(0, d.u32),
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 2,
       b: 1,
       c: 0,
@@ -802,15 +846,20 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with builtins in fragment in', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      b: d.location(1, d.u32),
-      c: d.u32,
-    }, {
-      b: d.u32,
-      c: d.location(0, d.u32),
-      d: d.builtin.position,
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        b: d.location(1, d.u32),
+        c: d.u32,
+      },
+      {
+        b: d.u32,
+        c: d.location(0, d.u32),
+        d: d.builtin.position,
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 2,
       b: 1,
       c: 0,
@@ -818,16 +867,21 @@ describe('matchUpVaryingLocations', () => {
   });
 
   it('works with builtins in both', () => {
-    expect(matchUpVaryingLocations({
-      a: d.u32,
-      d: d.builtin.position,
-      b: d.location(1, d.u32),
-      c: d.u32,
-    }, {
-      d: d.builtin.position,
-      b: d.u32,
-      c: d.location(0, d.u32),
-    })).toStrictEqual({
+    expect(matchUpVaryingLocations(
+      {
+        a: d.u32,
+        d: d.builtin.position,
+        b: d.location(1, d.u32),
+        c: d.u32,
+      },
+      {
+        d: d.builtin.position,
+        b: d.u32,
+        c: d.location(0, d.u32),
+      },
+      'v',
+      'f',
+    )).toStrictEqual({
       a: 2,
       b: 1,
       c: 0,

@@ -486,6 +486,8 @@ class RenderPipelineCore implements SelfResolvable {
             matchUpVaryingLocations(
               vertexFn.shell.out,
               fragmentFn.shell.in,
+              getName(vertexFn) ?? '<unnamed>',
+              getName(fragmentFn) ?? '<unnamed>',
             ),
             () =>
               ctx.withSlots(slotBindings, () => {
@@ -583,11 +585,19 @@ class RenderPipelineCore implements SelfResolvable {
 export function matchUpVaryingLocations(
   vertexOut: IORecord,
   fragmentIn: IORecord | undefined,
+  vertexFnName: string,
+  fragmentFnName: string,
 ) {
   const locations: Record<
     string,
     number
   > = {};
+  const usedLocations = new Set<number>();
+
+  function saveLocation(key: string, location: number) {
+    locations[key] = location;
+    usedLocations.add(location);
+  }
 
   // respect custom locations and pair up vertex and fragment varying with the same key
   for (const [key, value] of Object.entries(vertexOut)) {
@@ -596,7 +606,7 @@ export function matchUpVaryingLocations(
       continue;
     }
 
-    locations[key] = customLocation;
+    saveLocation(key, customLocation);
   }
 
   for (const [key, value] of Object.entries(fragmentIn ?? {})) {
@@ -605,15 +615,13 @@ export function matchUpVaryingLocations(
       continue;
     }
 
-    if (
-      locations[key] === undefined
-    ) {
-      locations[key] = customLocation;
+    if (locations[key] === undefined) {
+      saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
       console.warn(
-        `Mismatched custom location for key: ${key}, using location set on vertex output: ${
+        `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
-        }`,
+        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
       );
     }
   }
@@ -625,13 +633,11 @@ export function matchUpVaryingLocations(
       continue;
     }
 
-    while (
-      Object.values(locations).includes(nextLocation)
-    ) {
+    while (usedLocations.has(nextLocation)) {
       nextLocation++;
     }
 
-    locations[key] = nextLocation;
+    saveLocation(key, nextLocation);
   }
 
   return locations;

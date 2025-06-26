@@ -12,8 +12,6 @@ import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import {
-  addArgTypesToExternals,
-  addReturnTypeToExternals,
   applyExternals,
   type ExternalMap,
   replaceExternalsInWgsl,
@@ -27,13 +25,12 @@ export interface FnCore {
     ctx: ResolutionCtx,
     argTypes: unknown[],
     returnType: unknown,
-    fnAttribute?: string,
   ): string;
 }
 
 export function createFnCore(
   implementation: Implementation,
-  isEntry: boolean,
+  fnAttribute = '',
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
@@ -52,24 +49,8 @@ export function createFnCore(
       ctx: ResolutionCtx,
       argTypes: unknown[],
       returnType: unknown,
-      fnAttribute = '',
     ): string {
       const externalMap: ExternalMap = {};
-
-      if (typeof implementation === 'string') {
-        if (!isEntry) {
-          addArgTypesToExternals(
-            implementation,
-            argTypes,
-            (externals) => externalsToApply.push(externals),
-          );
-          addReturnTypeToExternals(
-            implementation,
-            returnType,
-            (externals) => externalsToApply.push(externals),
-          );
-        }
-      }
 
       for (const externals of externalsToApply) {
         applyExternals(externalMap, externals);
@@ -87,7 +68,7 @@ export function createFnCore(
         let header = '';
         let body = '';
 
-        if (isEntry) {
+        if (fnAttribute !== '') {
           const input = isWgslStruct(argTypes[0])
             ? `(in: ${ctx.resolve(argTypes[0])})`
             : '()';

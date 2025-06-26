@@ -20,7 +20,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -28,7 +28,7 @@ import { stripTemplate } from './templateUtils.ts';
 // ----------
 
 export type VertexInConstrained = IORecord<
-  BaseIOData | AnyVertexInputBuiltin
+  BaseIOData | Decorated<BaseIOData, Location[]> | AnyVertexInputBuiltin
 >;
 
 export type VertexOutConstrained = IORecord<
@@ -167,7 +167,7 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(implementation, true);
+  const core = createFnCore(implementation, '@vertex ');
   const inputType = shell.argTypes[0];
 
   const result: This = {
@@ -204,7 +204,6 @@ function createVertexFn(
           ctx,
           shell.argTypes,
           outputWithLocation,
-          '@vertex ',
         );
       }
 
@@ -221,7 +220,6 @@ function createVertexFn(
           ctx,
           shell.argTypes,
           outputWithLocation,
-          '@vertex ',
         );
       } finally {
         generationCtx.callStack.pop();
