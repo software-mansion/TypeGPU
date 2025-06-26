@@ -137,7 +137,7 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-export function containsResourceConstructorCall(
+function containsResourceConstructorCall(
   node: acorn.AnyNode | babel.Node,
   ctx: Context,
 ) {
@@ -172,6 +172,22 @@ export function containsResourceConstructorCall(
   return false;
 }
 
+/**
+ * Checks if `node` contains a label and a tgpu expression that could be named.
+ * If so, it calls the provided callback. Nodes selected for naming include:
+ *
+ * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
+ *
+ * `name = tgpu.bindGroupLayout({});` (AssignmentExpression)
+ *
+ * `property: tgpu.bindGroupLayout({})` (Property)
+ *
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ *
+ * @privateRemarks
+ * When adding new checks, you need to call this method in the corresponding node in Babel.
+ */
 export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
   ctx: Context,
   node: T,
