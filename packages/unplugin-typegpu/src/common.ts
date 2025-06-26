@@ -194,10 +194,7 @@ type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
 export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
   ctx: Context,
   node: T,
-  namingCallback: (
-    node: ExpressionFor<T>,
-    name: string,
-  ) => void,
+  namingCallback: (node: ExpressionFor<T>, name: string) => void,
 ) {
   if (!ctx.autoNamingEnabled) {
     return;
