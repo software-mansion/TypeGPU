@@ -246,6 +246,43 @@ describe('[BABEL] auto naming', () => {
       console.log(a, b, c);"
     `);
   });
+
+  it('works with assignment expressions', () => {
+    const code = `\
+      let layout;
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        });
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "let layout;
+        layout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({
+          foo: {
+            uniform: vec3f
+          }
+        }), "layout");"
+      `);
+  });
+
+  it('works with properties', () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "const mySchemas = {
+          myStruct: (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
+            a: d.vec3f
+          }), "myStruct")
+        };"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
@@ -504,5 +541,40 @@ describe('[ROLLUP] auto naming', () => {
             console.log(a, b, c);
       "
     `);
+  });
+
+  it('works with assignment expressions', async () => {
+    const code = `\
+      let layout;
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        });
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu
+                .bindGroupLayout({
+                  foo: { uniform: vec3f },
+                }), "layout"));
+        "
+      `);
+  });
+
+  it('works with properties', async () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "({
+                myStruct: ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.vec3f }), "myStruct"))
+              });
+        "
+      `);
   });
 });
