@@ -58,16 +58,16 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 // Configuring a dynamic (meaning it's size can change) cache
 // for perlin noise gradients.
-const PerlinCacheConfig = perlin3d.dynamicCacheConfig();
+const perlinCacheConfig = perlin3d.dynamicCacheConfig();
 
 /** Contains all resources that the perlin cache needs access to */
-const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
+const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
 const device = root.device;
 
 // Instantiating the cache with an initial size.
-const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
+const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -86,8 +86,7 @@ const renderPipelineBase = root['~unstable']
   .with(gridSizeAccess, gridSize)
   .with(timeAccess, time)
   .with(sharpnessAccess, sharpness)
-  .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
-  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.$);
+  .pipe(perlinCacheConfig.inject(dynamicLayout.$));
 
 const renderPipelines = {
   exponential: renderPipelineBase
