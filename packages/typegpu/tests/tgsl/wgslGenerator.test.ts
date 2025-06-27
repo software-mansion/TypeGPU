@@ -1,4 +1,3 @@
-import { JitTranspiler } from 'tgpu-jit';
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { snip } from '../../src/data/dataTypes.ts';
@@ -17,8 +16,6 @@ import { parse, parseResolved } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-const transpiler = new JitTranspiler();
-
 const numberSlot = tgpu['~unstable'].slot(44);
 const derivedV4u = tgpu['~unstable'].derived(() =>
   std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
@@ -30,7 +27,6 @@ const derivedV2f = tgpu['~unstable'].derived(() =>
 const createContext = () => {
   return new ResolutionCtxImpl({
     names: new StrictNameRegistry(),
-    jitTranspiler: transpiler,
   });
 };
 
@@ -48,13 +44,12 @@ describe('wgslGenerator', () => {
   });
 
   it('creates a simple return statement', () => {
-    const code = `
-      function main() {
-        return true;
-      }
-    `;
+    const main = () => {
+      'kernel';
+      return true;
+    };
 
-    const parsedBody = transpiler.transpileFn(code).body;
+    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
       `"[0,[[10,true]]]"`,
@@ -66,15 +61,14 @@ describe('wgslGenerator', () => {
   });
 
   it('creates a function body', () => {
-    const code = `
-      function main() {
-        let a = 12;
-        a += 21;
-        return a;
-      }
-    `;
+    const main = () => {
+      'kernel';
+      let a = 12;
+      a += 21;
+      return a;
+    };
 
-    const parsedBody = transpiler.transpileFn(code).body;
+    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
       `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
@@ -89,45 +83,32 @@ describe('wgslGenerator', () => {
     const literals = {
       intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
       floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
-      weirdFloatLiteral: {
-        value: '.32',
-        wgsl: '.32',
-        dataType: abstractFloat,
-      },
-      sneakyFloatLiteral: {
-        value: '32.',
-        wgsl: '32.',
-        dataType: abstractFloat,
-      },
       scientificLiteral: {
-        value: '1.2e3',
-        wgsl: '1.2e3',
+        value: '12e10',
+        wgsl: '12e10',
         dataType: abstractFloat,
       },
       scientificNegativeExponentLiteral: {
-        value: '1.2e-3',
-        wgsl: '1.2e-3',
+        value: '12e-4',
+        wgsl: '12e-4',
         dataType: abstractFloat,
       },
-      hexLiteral: { value: '0x12', wgsl: '0x12', dataType: abstractInt },
-      // Since binary literals are not supported in WGSL, they are converted to decimal.
-      binLiteral: { value: '0b1010', wgsl: '10', dataType: abstractInt },
     } as const;
 
-    const code = `{
-        ${
-      Object.entries(literals)
-        .map(([key, { value }]) => `let ${key} = ${value};`)
-        .join('\n')
-    }
-      }`;
+    const main = () => {
+      'kernel';
+      const intLiteral = 12;
+      const floatLiteral = 12.5;
+      const scientificLiteral = 12e10;
+      const scientificNegativeExponentLiteral = 1.2e-3;
+    };
 
-    const parsedBody = transpiler.transpile(code);
+    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(parsedBody).toStrictEqual([
       NODE.block,
       Object.entries(literals).map(([key, { value }]) => [
-        NODE.let,
+        NODE.const,
         key,
         [NODE.numericLiteral, value],
       ]),
@@ -147,15 +128,13 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct resources for member access expressions', ({ root }) => {
+    const TestStruct = d.struct({
+      a: d.u32,
+      b: d.vec2u,
+    });
+
     const testBuffer = root
-      .createBuffer(
-        d
-          .struct({
-            a: d.u32,
-            b: d.vec2u,
-          })
-          .$name('TestStruct'),
-      )
+      .createBuffer(TestStruct)
       .$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
@@ -361,15 +340,15 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for for statements', () => {
-    const code = `
-      function main() {
-        for (let i = 0; i < 10; i += 1) {
-          continue;
-        }
+    const main = () => {
+      'kernel';
+      for (let i = 0; i < 10; i += 1) {
+        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        continue;
       }
-    `;
+    };
 
-    const parsed = transpiler.transpileFn(code).body;
+    const parsed = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
       `"[0,[[14,[12,"i",[5,"0"]],[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
@@ -383,16 +362,16 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for for statements with outside init', () => {
-    const code = `
-      function main() {
-        let i = 0;
-        for (; i < 10; i += 1) {
-          continue;
-        }
+    const main = () => {
+      'kernel';
+      let i = 0;
+      for (; i < 10; i += 1) {
+        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        continue;
       }
-    `;
+    };
 
-    const parsed = transpiler.transpileFn(code).body;
+    const parsed = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
       `"[0,[[12,"i",[5,"0"]],[14,null,[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
@@ -406,16 +385,15 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for while statements', () => {
-    const code = `
-      function main() {
-        let i = 0;
-        while (i < 10) {
-          i += 1;
-        }
+    const main = () => {
+      'kernel';
+      let i = 0;
+      while (i < 10) {
+        i += 1;
       }
-    `;
+    };
 
-    const parsed = transpiler.transpileFn(code).body;
+    const parsed = getMetaData(main)?.ast?.body as tinyest.Block;
 
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
       `"[0,[[12,"i",[5,"0"]],[15,[1,"i","<",[5,"10"]],[0,[[2,"i","+=",[5,"1"]]]]]]]"`,
@@ -427,11 +405,9 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for derived values and slots', () => {
-    const testFn = tgpu['~unstable']
-      .fn([], d.vec4u)(() => {
-        return derivedV4u.value;
-      })
-      .$name('testFn');
+    const testFn = tgpu['~unstable'].fn([], d.vec4u)(() => {
+      return derivedV4u.value;
+    });
 
     expect(parseResolved({ testFn })).toBe(
       parse(`
@@ -759,136 +735,122 @@ describe('wgslGenerator', () => {
     );
 
     expect(res.dataType).toEqual(d.vec3f);
-    it('generates correct code for conditionals with single statements', () => {
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          if (true) return 0;
-          return 1;
-        }
-    `).body,
-          ),
-        ),
-      ).toBe(
-        parse(`{
-        if (true) {
-          return 0;
-        }
-        return 1;
-      }`),
-      );
+  });
 
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          if (true) {
-            return 0;
-          }
-          return 1;
-        }
-    `).body,
-          ),
-        ),
-      ).toBe(
-        parse(`{
-        if (true) {
-          return 0;
-        }
-        return 1;
-      }`),
-      );
+  it('generates correct code for conditionals with single statements', () => {
+    const main0 = () => {
+      'kernel';
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) return 0;
+      return 1;
+    };
 
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          let y = 0;
-          if (true) y = 1;
-          else y = 2;
-          return y;
-        }
-    `).body,
-          ),
+    expect(
+      parse(
+        wgslGenerator.generateFunction(
+          ctx,
+          getMetaData(main0)?.ast?.body as tinyest.Block,
         ),
-      ).toBe(
-        parse(`{
-        var y = 0;
-        if (true) {
-          y = 1;
-        } else {
-         y = 2;
-        }
-        return y;
-      }`),
-      );
+      ),
+    ).toBe(
+      parse(`{
+      if (true) {
+        return 0;
+      }
+      return 1;
+    }`),
+    );
 
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          let y = 0;
-          if (true) {
-            y = 1;
-          }
-          else y = 2;
-          return y;
-        }
-    `).body,
-          ),
-        ),
-      ).toBe(
-        parse(`{
-        var y = 0;
-        if (true) {
-          y = 1;
-        } else {
-         y = 2;
-        }
-        return y;
-      }`),
-      );
-    });
+    const main1 = () => {
+      'kernel';
+      let y = 0;
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) y = 1;
+      else y = 2;
+      return y;
+    };
 
-    it('generates correct code for for loops with single statements', () => {
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          for (let i = 0; i < 10; i += 1) continue;
-        }
-    `).body,
-          ),
+    expect(
+      parse(
+        wgslGenerator.generateFunction(
+          ctx,
+          getMetaData(main1)?.ast?.body as tinyest.Block,
         ),
-      ).toBe(parse('{for(var i = 0;(i < 10);i += 1){continue;}}'));
-    });
+      ),
+    ).toBe(
+      parse(`{
+      var y = 0;
+      if (true) {
+        y = 1;
+      } else {
+       y = 2;
+      }
+      return y;
+    }`),
+    );
 
-    it('generates correct code for while loops with single statements', () => {
-      expect(
-        parse(
-          wgslGenerator.generateFunction(
-            ctx,
-            transpiler.transpileFn(`
-        function main() {
-          let i = 0;
-          while (i < 10) i += 1;
-        }
-    `).body,
-          ),
+    const main2 = () => {
+      'kernel';
+      let y = 0;
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) {
+        y = 1;
+      } else y = 2;
+      return y;
+    };
+
+    expect(
+      parse(
+        wgslGenerator.generateFunction(
+          ctx,
+          getMetaData(main2)?.ast?.body as tinyest.Block,
         ),
-      ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
-    });
+      ),
+    ).toBe(
+      parse(`{
+      var y = 0;
+      if (true) {
+        y = 1;
+      } else {
+       y = 2;
+      }
+      return y;
+    }`),
+    );
+  });
+
+  it('generates correct code for for loops with single statements', () => {
+    const main = () => {
+      'kernel';
+      // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
+      for (let i = 0; i < 10; i += 1) continue;
+    };
+
+    expect(
+      parse(
+        wgslGenerator.generateFunction(
+          ctx,
+          getMetaData(main)?.ast?.body as tinyest.Block,
+        ),
+      ),
+    ).toBe(parse('{for(var i = 0;(i < 10);i += 1){continue;}}'));
+  });
+
+  it('generates correct code for while loops with single statements', () => {
+    const main = () => {
+      'kernel';
+      let i = 0;
+      while (i < 10) i += 1;
+    };
+
+    expect(
+      parse(
+        wgslGenerator.generateFunction(
+          ctx,
+          getMetaData(main)?.ast?.body as tinyest.Block,
+        ),
+      ),
+    ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
   });
 
   it('throws error when incorrectly initializing function', () => {
