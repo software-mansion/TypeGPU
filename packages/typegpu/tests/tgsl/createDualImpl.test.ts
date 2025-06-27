@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { createDualImpl } from '../../src/shared/generators.ts';
 import { getName } from '../../src/shared/meta.ts';
@@ -13,38 +13,24 @@ describe('createDualImpl', () => {
     expect(getName(dual)).toBe('myDualImpl');
   });
 
-  it('returns a clone of its argument', () => {
-    const dual = createDualImpl<(a: d.v3f) => d.v3f>(
-      (a) => a,
+  test.each([
+    [d.vec3f(1, 2, 3)],
+    [d.vec4b(true, false, false, true)],
+    [d.mat2x2f(1, 2, 3, 7)],
+    [{ prop: d.vec2f(1, 2) }],
+    [{ nested: { prop1: d.vec2f(1, 2), prop2: 21 } }],
+    [[2, 3, 4]],
+  ])('returns a deep clone of %o', (wgslObject) => {
+    const dual = createDualImpl(
+      (a: any) => a,
       (snippet) => snippet,
       'myClone',
     );
-    const vec = d.vec3f(1, 2, 3);
 
-    const clonedVec = dual(vec);
+    const clone = dual(wgslObject);
 
-    // console.dir(vec, { showHidden: true, depth: null });
-    // console.dir(clonedVec, { showHidden: true, depth: null });
-
-    expect(clonedVec).toStrictEqual(vec);
-    expect(clonedVec).not.toBe(vec);
-  });
-
-  it('returns a deep clone of its argument', () => {
-    const dual = createDualImpl<(a: { a: d.v2f }) => { a: d.v2f }>(
-      (a) => a,
-      (snippet) => snippet,
-      'myClone',
-    );
-    const item = d.struct({ a: d.vec2f })({ a: d.vec2f(1, 2) });
-
-    const clonedItem = dual(item);
-
-    // console.dir(item, { showHidden: true, depth: null });
-    // console.dir(clonedItem, { showHidden: true, depth: null });
-
-    expect(clonedItem).toStrictEqual(item);
-    expect(clonedItem).not.toBe(item);
+    expect(clone).toStrictEqual(wgslObject);
+    expect(clone).not.toBe(wgslObject);
   });
 
   it('does not modify its argument', () => {
