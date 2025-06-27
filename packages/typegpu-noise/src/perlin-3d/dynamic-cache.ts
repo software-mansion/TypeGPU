@@ -1,11 +1,11 @@
 import tgpu, {
+  type Configurable,
   type StorageFlag,
   type TgpuBuffer,
   type TgpuFn,
   type TgpuRoot,
   type TgpuSlot,
   type UniformFlag,
-  type WithBinding,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import { allEq } from 'typegpu/std';
@@ -53,7 +53,7 @@ export interface DynamicPerlin3DCacheConfig<Prefix extends string> {
 
   inject(
     layoutValue: LayoutValue<Prefix>,
-  ): (bindable: WithBinding) => WithBinding;
+  ): (cfg: Configurable) => Configurable;
 }
 
 export interface DynamicPerlin3DCache<Prefix extends string> {
@@ -252,10 +252,9 @@ export function dynamicCacheConfig<Prefix extends string>(
     getJunctionGradient,
     instance,
 
-    inject: (layoutValue) => (bindable) =>
-      bindable.with(getJunctionGradientSlot, getJunctionGradient).with(
-        valuesSlot,
-        layoutValue,
-      ),
+    inject: (layoutValue) => (cfg) =>
+      cfg
+        .with(getJunctionGradientSlot, getJunctionGradient)
+        .with(valuesSlot, layoutValue),
   };
 }

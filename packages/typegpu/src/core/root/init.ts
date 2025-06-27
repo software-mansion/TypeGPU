@@ -87,6 +87,7 @@ import {
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import type {
+  Configurable,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -141,7 +142,7 @@ class WithBindingImpl implements WithBinding {
     });
   }
 
-  pipe(transform: (bindable: WithBinding) => WithBinding): WithBinding {
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
     return transform(this);
   }
 }

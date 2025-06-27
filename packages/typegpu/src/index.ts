@@ -91,6 +91,7 @@ export { isTgpuFn } from './core/function/tgpuFn.ts';
 // types
 
 export type {
+  Configurable,
   TgpuRoot,
   WithBinding,
   WithCompute,
