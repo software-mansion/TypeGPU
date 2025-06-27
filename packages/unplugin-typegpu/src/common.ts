@@ -120,6 +120,7 @@ const resourceConstructors: string[] = [
   ...fnShellFunctionNames,
   // d
   'struct',
+  'unstruct',
   // root
   'createBuffer',
   'createMutable',
