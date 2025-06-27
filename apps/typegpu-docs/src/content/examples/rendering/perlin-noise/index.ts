@@ -30,9 +30,7 @@ const tanhSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
   (n, sharpness) => tanh(n * (1 + sharpness * 10)),
 );
 
-const sharpenFnSlot = tgpu['~unstable'].slot<
-  TgpuFn<(n: d.F32, sharpness: d.F32) => d.F32>
->(
+const sharpenFnSlot = tgpu.slot<TgpuFn<(n: d.F32, sharpness: d.F32) => d.F32>>(
   exponentialSharpen,
 );
 

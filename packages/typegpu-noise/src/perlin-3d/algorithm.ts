@@ -11,9 +11,7 @@ export const computeJunctionGradient = tgpu['~unstable'].fn([d.vec3i], d.vec3f)(
   },
 );
 
-export const getJunctionGradientSlot = tgpu['~unstable'].slot(
-  computeJunctionGradient,
-);
+export const getJunctionGradientSlot = tgpu.slot(computeJunctionGradient);
 
 const dotProdGrid = tgpu['~unstable'].fn([d.vec3f, d.vec3f], d.f32)(
   (pos, junction) => {

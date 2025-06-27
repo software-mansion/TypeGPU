@@ -131,7 +131,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 ): DynamicPerlin3DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin3DLayoutPrefix as Prefix } = options ?? {};
 
-  const valuesSlot = tgpu['~unstable'].slot<LayoutValue<Prefix>>();
+  const valuesSlot = tgpu.slot<LayoutValue<Prefix>>();
 
   const cleanValuesSlot = tgpu['~unstable'].derived(() => {
     return {

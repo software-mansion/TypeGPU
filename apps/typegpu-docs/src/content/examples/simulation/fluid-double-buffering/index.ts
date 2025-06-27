@@ -38,10 +38,10 @@ const gridSize = 256;
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
 const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
 
-const inputGridSlot = tgpu['~unstable'].slot<
+const inputGridSlot = tgpu.slot<
   TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
 >();
-const outputGridSlot = tgpu['~unstable'].slot<TgpuBufferMutable<GridData>>();
+const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
