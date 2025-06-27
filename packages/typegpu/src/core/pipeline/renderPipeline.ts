@@ -233,7 +233,7 @@ type TgpuRenderPipelinePriors = {
 type Memo = {
   pipeline: GPURenderPipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
-  catchallBindGroup: [number, TgpuBindGroup] | undefined;
+  catchall: [number, TgpuBindGroup] | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -393,9 +393,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
-      if (memo.catchallBindGroup && idx === memo.catchallBindGroup[0]) {
+      if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
-        pass.setBindGroup(idx, branch.unwrap(memo.catchallBindGroup[1]));
+        pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
         const bindGroup = internals.priors.bindGroupLayoutMap?.get(layout);
@@ -473,7 +473,7 @@ class RenderPipelineCore {
       } = this.options;
 
       // Resolving code
-      const { code, usedBindGroupLayouts, catchallBindGroup } = resolve(
+      const { code, usedBindGroupLayouts, catchall } = resolve(
         {
           '~resolve': (ctx) => {
             ctx.withSlots(slotBindings, () => {
@@ -491,8 +491,8 @@ class RenderPipelineCore {
         },
       );
 
-      if (catchallBindGroup !== undefined) {
-        usedBindGroupLayouts[catchallBindGroup[0]]?.$name(
+      if (catchall !== undefined) {
+        usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
@@ -539,7 +539,7 @@ class RenderPipelineCore {
       this._memo = {
         pipeline: device.createRenderPipeline(descriptor),
         usedBindGroupLayouts,
-        catchallBindGroup,
+        catchall,
       };
     }
 

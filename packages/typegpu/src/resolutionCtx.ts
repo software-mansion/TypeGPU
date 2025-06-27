@@ -646,12 +646,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  *
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
- * @param catchallBindGroup - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
  */
 export interface ResolutionResult {
   code: string;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
-  catchallBindGroup: [number, TgpuBindGroup] | undefined;
+  catchall: [number, TgpuBindGroup] | undefined;
 }
 
 export function resolve(
@@ -699,9 +699,7 @@ export function resolve(
 
   // Retrieving the catch-all binding index first, because it's inherently
   // the least swapped bind group (fixed and cannot be swapped).
-  const catchallBindGroup = layoutEntries.length > 0
-    ? createCatchallGroup()
-    : undefined;
+  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : undefined;
 
   for (const [layout, placeholder] of memoMap.entries()) {
     const idx = layout.index ?? automaticIds.next().value;
@@ -712,7 +710,7 @@ export function resolve(
   return {
     code,
     usedBindGroupLayouts,
-    catchallBindGroup,
+    catchall,
   };
 }
 
