@@ -205,13 +205,12 @@ describe('TgpuRenderPipeline', () => {
             baz2: d.f32,
           },
           out: d.vec4f,
-        })(() => d.vec4f()).$name('fragmentMain');
+        })(() => d.vec4f());
 
-      const pipeline = root['~unstable'].withVertex(vertexMain, {})
-        .withFragment(
-          fragmentMain,
-          { format: 'r8unorm' },
-        ).createPipeline();
+      const pipeline = root['~unstable']
+        .withVertex(vertexMain, {})
+        .withFragment(fragmentMain, { format: 'r8unorm' })
+        .createPipeline();
 
       expect(parseResolved({ pipeline })).toStrictEqual(parse(`
         struct vertexMain_Output {
@@ -251,7 +250,7 @@ describe('TgpuRenderPipeline', () => {
             baz2: d.location(5, d.f32),
             baz3: d.u32,
           },
-        })`{ return Out(); }`.$name('vertexMain');
+        })`{ return Out(); }`;
 
       const fragmentMain = tgpu['~unstable']
         .fragmentFn({
@@ -263,13 +262,12 @@ describe('TgpuRenderPipeline', () => {
             baz2: d.f32,
           },
           out: d.vec4f,
-        })`{ return vec4f(); }`.$name('fragmentMain');
+        })`{ return vec4f(); }`;
 
-      const pipeline = root['~unstable'].withVertex(vertexMain, {})
-        .withFragment(
-          fragmentMain,
-          { format: 'r8unorm' },
-        ).createPipeline();
+      const pipeline = root['~unstable']
+        .withVertex(vertexMain, {})
+        .withFragment(fragmentMain, { format: 'r8unorm' })
+        .createPipeline();
 
       expect(parseResolved({ pipeline })).toStrictEqual(parse(`
         struct vertexMain_Output {
@@ -313,8 +311,7 @@ describe('TgpuRenderPipeline', () => {
         })(() => ({
           foo: d.vec3f(),
           bar: d.vec3f(),
-        }))
-        .$name('vertexMain');
+        }));
 
       const fragmentMain = tgpu['~unstable']
         .fragmentFn({
@@ -322,13 +319,12 @@ describe('TgpuRenderPipeline', () => {
             bar: d.location(1, d.vec3f),
           },
           out: d.vec4f,
-        })(() => d.vec4f()).$name('fragmentMain');
+        })(() => d.vec4f());
 
-      const pipeline = root['~unstable'].withVertex(vertexMain, {})
-        .withFragment(
-          fragmentMain,
-          { format: 'r8unorm' },
-        ).createPipeline();
+      const pipeline = root['~unstable']
+        .withVertex(vertexMain, {})
+        .withFragment(fragmentMain, { format: 'r8unorm' })
+        .createPipeline();
 
       tgpu.resolve({ externals: { pipeline } });
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -350,8 +346,7 @@ describe('TgpuRenderPipeline', () => {
         })(() => ({
           foo: d.vec3f(),
           bar: d.vec3f(),
-        }))
-        .$name('vertexMain');
+        }));
 
       const fragmentMain = tgpu['~unstable']
         .fragmentFn({
@@ -359,13 +354,12 @@ describe('TgpuRenderPipeline', () => {
             bar: d.location(0, d.vec3f),
           },
           out: d.vec4f,
-        })(() => d.vec4f()).$name('fragmentMain');
+        })(() => d.vec4f());
 
-      const pipeline = root['~unstable'].withVertex(vertexMain, {})
-        .withFragment(
-          fragmentMain,
-          { format: 'r8unorm' },
-        ).createPipeline();
+      const pipeline = root['~unstable']
+        .withVertex(vertexMain, {})
+        .withFragment(fragmentMain, { format: 'r8unorm' })
+        .createPipeline();
 
       tgpu.resolve({ externals: { pipeline } });
       expect(consoleWarnSpy).not.toHaveBeenCalledWith(

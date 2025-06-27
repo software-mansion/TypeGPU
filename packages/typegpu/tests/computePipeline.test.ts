@@ -52,16 +52,14 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('is resolvable', ({ root }) => {
-    const entryFn = tgpu['~unstable']
+    const main = tgpu['~unstable']
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
-      })
-      .$name('main');
+      });
 
     const computePipeline = root
       .withCompute(entryFn)
-      .createPipeline()
-      .$name('test_pipeline');
+      .createPipeline();
 
     expect(parseResolved({ computePipeline })).toStrictEqual(parse(`
       @compute @workgroup_size(32) fn main() {}
