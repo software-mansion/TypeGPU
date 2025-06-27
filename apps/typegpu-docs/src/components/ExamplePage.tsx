@@ -14,7 +14,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'simulation--boids';
+const FLAGSHIP = 'rendering--caustics';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
@@ -26,9 +26,7 @@ function RedirectToFlagship() {
     }
     redirectedRef.current = true;
 
-    setCurrentExample(
-      FLAGSHIP in examplesStable ? FLAGSHIP : getRandomExampleKey(),
-    );
+    setCurrentExample(FLAGSHIP in examples ? FLAGSHIP : getRandomExampleKey());
   }, [setCurrentExample]);
 
   return null;

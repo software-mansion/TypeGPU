@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import { useId, useRef, useState } from 'react';
+import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
@@ -14,6 +14,7 @@ import ExamplePage from './ExamplePage.tsx';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
+import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
@@ -49,13 +50,11 @@ export function ExampleLayout() {
   );
 }
 
-const experimentalShowingLSKey = 'experimental-showing';
-
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [experimentalShowing, setExperimentalShowing] = useState(
-    localStorage.getItem(experimentalShowingLSKey) === 'true',
+  const [experimentalShowing, setExperimentalShowing] = useAtom(
+    experimentalExamplesShownAtom,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
@@ -82,14 +81,8 @@ function SideMenu() {
         </div>
         <div className='absolute top-5 right-5 md:hidden'>
           {menuShownMobile && (
-            <Button
-              onClick={() => setMenuShownMobile(false)}
-            >
-              <img
-                src={CrossSvg.src}
-                alt='Close menu'
-                className='h-3 w-3'
-              />
+            <Button onClick={() => setMenuShownMobile(false)}>
+              <img src={CrossSvg.src} alt='Close menu' className='h-3 w-3' />
             </Button>
           )}
         </div>
@@ -99,10 +92,7 @@ function SideMenu() {
         <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
       </div>
 
-      <div
-        className='my-5 min-h-0 flex-1 overflow-y-auto px-5'
-        ref={scrollRef}
-      >
+      <div className='my-5 min-h-0 flex-1 overflow-y-auto px-5' ref={scrollRef}>
         <section className='mb-5 space-y-2 border-tameplum-100 border-b pb-5'>
           <h1 className='font-medium text-lg'>Welcome to examples page</h1>
           <p className='text-sm'>
@@ -138,14 +128,7 @@ function SideMenu() {
         <Toggle
           id={experimentalExamplesToggleId}
           checked={experimentalShowing}
-          onChange={(e) => {
-            const checked = e.target.checked;
-            localStorage.setItem(
-              experimentalShowingLSKey,
-              checked ? 'true' : 'false',
-            );
-            setExperimentalShowing(checked);
-          }}
+          onChange={(e) => setExperimentalShowing(e.target.checked)}
         />
       </label>
 
