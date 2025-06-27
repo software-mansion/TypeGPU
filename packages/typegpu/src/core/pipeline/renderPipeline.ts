@@ -1,13 +1,16 @@
 import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
-import type { Disarray } from '../../data/dataTypes.ts';
+
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import { isBuiltin } from '../../data/attributes.ts';
+import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -16,7 +19,8 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import type { IOData, IOLayout } from '../function/fnTypes.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -38,7 +42,6 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -50,7 +53,7 @@ interface RenderPipelineInternals {
 // ----------
 
 export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
-  extends TgpuNamable, Timeable<TgpuRenderPipeline> {
+  extends TgpuNamable, SelfResolvable, Timeable<TgpuRenderPipeline> {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
 
@@ -249,6 +252,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$getNameForward] = core;
   }
 
+  '~resolve'(ctx: ResolutionCtx): string {
+    ctx.addDeclaration(ctx.resolve(this[$internal].core));
+    return '';
+  }
+
+  toString(): string {
+    return `renderPipeline:${getName(this) ?? '<unnamed>'}`;
+  }
+
   $name(label: string): this {
     setName(this[$internal].core, label);
     return this;
@@ -351,7 +363,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { branch, fragmentFn } = internals.core.options;
 
     const colorAttachments = connectAttachmentToShader(
-      fragmentFn.shell.targets,
+      fragmentFn.shell.out,
       internals.priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
@@ -438,7 +450,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 }
 
-class RenderPipelineCore {
+class RenderPipelineCore implements SelfResolvable {
   public readonly usedVertexLayouts: TgpuVertexLayout[];
 
   private _memo: Memo | undefined;
@@ -447,7 +459,7 @@ class RenderPipelineCore {
 
   constructor(public readonly options: RenderPipelineCoreOptions) {
     const connectedAttribs = connectAttributesToShader(
-      options.vertexFn.shell.attributes[0],
+      options.vertexFn.shell.in ?? {},
       options.vertexAttribs,
     );
 
@@ -455,41 +467,60 @@ class RenderPipelineCore {
     this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
 
     this._targets = connectTargetsToShader(
-      options.fragmentFn.shell.targets,
+      options.fragmentFn.shell.out,
       options.targets,
     );
+  }
+
+  '~resolve'(ctx: ResolutionCtx) {
+    const {
+      vertexFn,
+      fragmentFn,
+      slotBindings,
+    } = this.options;
+
+    return ctx.resolve(
+      {
+        '~resolve': (ctx: ResolutionCtx) => {
+          ctx.withVaryingLocations(
+            matchUpVaryingLocations(
+              vertexFn.shell.out,
+              fragmentFn.shell.in,
+              getName(vertexFn) ?? '<unnamed>',
+              getName(fragmentFn) ?? '<unnamed>',
+            ),
+            () =>
+              ctx.withSlots(slotBindings, () => {
+                ctx.resolve(vertexFn);
+                ctx.resolve(fragmentFn);
+              }),
+          );
+          return '';
+        },
+
+        toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
+      },
+    );
+  }
+
+  toString() {
+    return 'renderPipelineCore';
   }
 
   public unwrap(): Memo {
     if (this._memo === undefined) {
       const {
         branch,
-        vertexFn,
-        fragmentFn,
-        slotBindings,
         primitiveState,
         depthStencilState,
         multisampleState,
       } = this.options;
 
       // Resolving code
-      const { code, bindGroupLayouts, catchall } = resolve(
-        {
-          '~resolve': (ctx) => {
-            ctx.withSlots(slotBindings, () => {
-              ctx.resolve(vertexFn);
-              ctx.resolve(fragmentFn);
-            });
-            return '';
-          },
-
-          toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
-        },
-        {
-          names: branch.nameRegistry,
-          jitTranspiler: branch.jitTranspiler,
-        },
-      );
+      const { code, bindGroupLayouts, catchall } = resolve(this, {
+        names: branch.nameRegistry,
+        jitTranspiler: branch.jitTranspiler,
+      });
 
       if (catchall !== null) {
         bindGroupLayouts[catchall[0]]?.$name(
@@ -545,4 +576,67 @@ class RenderPipelineCore {
 
     return this._memo;
   }
+}
+
+/**
+ * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's
+ * Logs a warning, when they don't match in terms of custom locations
+ */
+export function matchUpVaryingLocations(
+  vertexOut: IORecord,
+  fragmentIn: IORecord | undefined,
+  vertexFnName: string,
+  fragmentFnName: string,
+) {
+  const locations: Record<
+    string,
+    number
+  > = {};
+  const usedLocations = new Set<number>();
+
+  function saveLocation(key: string, location: number) {
+    locations[key] = location;
+    usedLocations.add(location);
+  }
+
+  // respect custom locations and pair up vertex and fragment varying with the same key
+  for (const [key, value] of Object.entries(vertexOut)) {
+    const customLocation = getCustomLocation(value);
+    if (customLocation !== undefined) {
+      saveLocation(key, customLocation);
+    }
+  }
+
+  for (const [key, value] of Object.entries(fragmentIn ?? {})) {
+    const customLocation = getCustomLocation(value);
+    if (customLocation === undefined) {
+      continue;
+    }
+
+    if (locations[key] === undefined) {
+      saveLocation(key, customLocation);
+    } else if (locations[key] !== customLocation) {
+      console.warn(
+        `Mismatched location between vertexFn (${vertexFnName}) output (${
+          locations[key]
+        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
+      );
+    }
+  }
+
+  // automatically assign remaining locations to the rest
+  let nextLocation = 0;
+  for (const key of Object.keys(vertexOut ?? {})) {
+    if (isBuiltin(vertexOut[key]) || locations[key] !== undefined) {
+      continue;
+    }
+
+    while (usedLocations.has(nextLocation)) {
+      nextLocation++;
+    }
+
+    saveLocation(key, nextLocation);
+  }
+
+  return locations;
 }

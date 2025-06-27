@@ -159,6 +159,12 @@ export interface ResolutionCtx {
     body: Wgsl;
   };
 
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T;
+  get varyingLocations(): Record<string, number> | undefined;
+
   [$internal]: {
     itemStateStack: ItemStateStack;
   };

@@ -29,24 +29,40 @@ export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
   : never;
 
 export function withLocations<T extends IOData>(
-  members: IORecord<T>,
+  members: IORecord<T> | undefined,
+  locations: Record<string, number> = {},
 ): WithLocations<IORecord<T>> {
   let nextLocation = 0;
+  const usedCustomLocations = new Set<number>();
 
   return Object.fromEntries(
-    Object.entries(members).map(([key, member]) => {
-      if (isBuiltin(member)) {
-        // Skipping builtins
-        return [key, member];
-      }
-
+    Object.entries(members ?? {}).map(([key, member]) => {
       const customLocation = getCustomLocation(member);
+
       if (customLocation !== undefined) {
-        // This member is already marked, start counting from the next location over.
-        nextLocation = customLocation + 1;
+        if (usedCustomLocations.has(customLocation)) {
+          throw new Error('Duplicate custom location attributes found');
+        }
+        usedCustomLocations.add(customLocation);
+      }
+
+      return [key, member] as const;
+    }).map(([key, member]) => {
+      if (isBuiltin(member)) { // skipping builtins
         return [key, member];
       }
 
+      if (getCustomLocation(member) !== undefined) { // this member is already marked
+        return [key, member];
+      }
+
+      if (locations[key]) { // location has been determined by a previous procedure
+        return [key, location(locations[key], member)];
+      }
+
+      while (usedCustomLocations.has(nextLocation)) {
+        nextLocation++;
+      }
       return [key, location(nextLocation++, member)];
     }),
   );
@@ -55,14 +71,14 @@ export function withLocations<T extends IOData>(
 export function createIoSchema<
   T extends IOData,
   Layout extends IORecord<T> | IOLayout<T>,
->(returnType: Layout) {
+>(layout: Layout, locations: Record<string, number> = {}) {
   return (
-    isData(returnType)
-      ? isVoid(returnType)
-        ? returnType
-        : getCustomLocation(returnType) !== undefined
-        ? returnType
-        : location(0, returnType)
-      : struct(withLocations(returnType) as Record<string, T>)
+    isData(layout)
+      ? isVoid(layout)
+        ? layout
+        : getCustomLocation(layout) !== undefined
+        ? layout
+        : location(0, layout)
+      : struct(withLocations(layout, locations) as Record<string, T>)
   ) as IOLayoutToSchema<Layout>;
 }

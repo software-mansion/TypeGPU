@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   type IOLayoutToSchema,
   withLocations,
-} from '../src/core/function/ioOutputType.ts';
+} from '../src/core/function/ioSchema.ts';
 import * as d from '../src/data/index.ts';
 
 describe('withLocations', () => {
@@ -27,13 +27,45 @@ describe('withLocations', () => {
       }),
     ).toStrictEqual({
       a: d.location(5, d.vec4f),
-      b: d.location(6, d.vec4f),
+      b: d.location(0, d.vec4f),
       pos: d.builtin.position,
+    });
+  });
+
+  it('uses passed locations map, if no custom location specified', () => {
+    expect(
+      withLocations({
+        a: d.location(5, d.vec4f),
+        b: d.vec4f,
+        c: d.vec4f,
+        pos: d.builtin.position,
+      }, { b: 1 }),
+    ).toStrictEqual({
+      a: d.location(5, d.vec4f),
+      b: d.location(1, d.vec4f),
+      c: d.location(0, d.vec4f),
+      pos: d.builtin.position,
+    });
+  });
+
+  it('does not duplicate location indices', () => {
+    expect(
+      withLocations({
+        pos: d.builtin.position,
+        a: d.location(5, d.vec4f),
+        b: d.vec4f,
+        c: d.location(6, d.vec4f),
+      }),
+    ).toStrictEqual({
+      pos: d.builtin.position,
+      a: d.location(5, d.vec4f),
+      b: d.location(0, d.vec4f),
+      c: d.location(6, d.vec4f),
     });
   });
 });
 
-describe('IOLayoutToOutputSchema', () => {
+describe('IOLayoutToSchema', () => {
   it('decorates types in a struct with location attribute for non-builtins and no custom locations', () => {
     expectTypeOf<
       IOLayoutToSchema<{
