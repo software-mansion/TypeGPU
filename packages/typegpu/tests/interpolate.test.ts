@@ -5,13 +5,11 @@ import { resolve } from '../src/resolutionCtx.ts';
 
 describe('d.interpolate', () => {
   it('adds @interpolate (only interpolation type) attribute for struct members', () => {
-    const s1 = d
-      .struct({
-        a: d.u32,
-        b: d.interpolate('flat', d.u32),
-        c: d.u32,
-      })
-      .$name('s1');
+    const s1 = d.struct({
+      a: d.u32,
+      b: d.interpolate('flat', d.u32),
+      c: d.u32,
+    });
 
     expectTypeOf(s1).toEqualTypeOf<
       d.WgslStruct<{
@@ -29,13 +27,11 @@ describe('d.interpolate', () => {
   });
 
   it('adds @interpolate (with interpolation type and sampling method) attribute for struct members', () => {
-    const s1 = d
-      .struct({
-        a: d.u32,
-        b: d.interpolate('linear, sample', d.f32),
-        c: d.u32,
-      })
-      .$name('s1');
+    const s1 = d.struct({
+      a: d.u32,
+      b: d.interpolate('linear, sample', d.f32),
+      c: d.u32,
+    });
 
     expectTypeOf(s1).toEqualTypeOf<
       d.WgslStruct<{

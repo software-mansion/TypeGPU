@@ -65,7 +65,7 @@ ${example.htmlFile.content}
         "module": "ESNext",
         "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "skipLibCheck": true,
-        "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
+        "types": ["@webgpu/types"],
         "moduleResolution": "node",
         "allowImportingTsExtensions": true,
         "isolatedModules": true,

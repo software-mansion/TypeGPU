@@ -14,26 +14,22 @@ export const Line3 = d.struct({
   dir: d.vec3f,
 });
 
-export const Camera = d
-  .struct({
-    position: d.vec4f,
-    targetPos: d.vec4f,
-    view: d.mat4x4f,
-    projection: d.mat4x4f,
-  })
-  .$name('camera');
+export const Camera = d.struct({
+  position: d.vec4f,
+  targetPos: d.vec4f,
+  view: d.mat4x4f,
+  projection: d.mat4x4f,
+});
 
-export const ModelData = d
-  .struct({
-    position: d.vec3f,
-    direction: d.vec3f, // in case of the fish, this is also the velocity
-    scale: d.f32,
-    variant: d.f32, // (0-1)
-    applySinWave: d.u32, // bool
-    applySeaFog: d.u32, // bool
-    applySeaDesaturation: d.u32, // bool
-  })
-  .$name('model data');
+export const ModelData = d.struct({
+  position: d.vec3f,
+  direction: d.vec3f, // in case of the fish, this is also the velocity
+  scale: d.f32,
+  variant: d.f32, // (0-1)
+  applySinWave: d.u32, // bool
+  applySeaFog: d.u32, // bool
+  applySeaDesaturation: d.u32, // bool
+});
 
 export const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
 
@@ -53,53 +49,46 @@ export const ModelVertexOutput = {
   applySeaDesaturation: d.interpolate('flat', d.u32), // bool
 } as const;
 
-export const MouseRay = d
-  .struct({
-    activated: d.u32,
-    line: Line3,
-  })
-  .$name('mouse ray');
+export const MouseRay = d.struct({
+  activated: d.u32,
+  line: Line3,
+});
 
-export const FishBehaviorParams = d
-  .struct({
-    separationDist: d.f32,
-    separationStr: d.f32,
-    alignmentDist: d.f32,
-    alignmentStr: d.f32,
-    cohesionDist: d.f32,
-    cohesionStr: d.f32,
-  })
-  .$name('fish behavior params');
+export const FishBehaviorParams = d.struct({
+  separationDist: d.f32,
+  separationStr: d.f32,
+  alignmentDist: d.f32,
+  alignmentStr: d.f32,
+  cohesionDist: d.f32,
+  cohesionStr: d.f32,
+});
 
 // layouts
 
-export const modelVertexLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(d.struct(ModelVertexInput), n))
-  .$name('model vertex');
+export const modelVertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(d.struct(ModelVertexInput), n)
+);
 
-export const renderInstanceLayout = tgpu
-  .vertexLayout(ModelDataArray, 'instance')
-  .$name('render instance');
+export const renderInstanceLayout = tgpu.vertexLayout(
+  ModelDataArray,
+  'instance',
+);
 
-export const renderBindGroupLayout = tgpu
-  .bindGroupLayout({
-    modelData: { storage: ModelDataArray },
-    modelTexture: { texture: 'float' },
-    camera: { uniform: Camera },
-    sampler: { sampler: 'filtering' },
-    currentTime: { uniform: d.f32 },
-  })
-  .$name('render bind group');
+export const renderBindGroupLayout = tgpu.bindGroupLayout({
+  modelData: { storage: ModelDataArray },
+  modelTexture: { texture: 'float' },
+  camera: { uniform: Camera },
+  sampler: { sampler: 'filtering' },
+  currentTime: { uniform: d.f32 },
+});
 
-export const computeBindGroupLayout = tgpu
-  .bindGroupLayout({
-    currentFishData: { storage: ModelDataArray },
-    nextFishData: {
-      storage: ModelDataArray,
-      access: 'mutable',
-    },
-    mouseRay: { uniform: MouseRay },
-    timePassed: { uniform: d.f32 },
-    fishBehavior: { uniform: FishBehaviorParams },
-  })
-  .$name('compute bind group');
+export const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentFishData: { storage: ModelDataArray },
+  nextFishData: {
+    storage: ModelDataArray,
+    access: 'mutable',
+  },
+  mouseRay: { uniform: MouseRay },
+  timePassed: { uniform: d.f32 },
+  fishBehavior: { uniform: FishBehaviorParams },
+});

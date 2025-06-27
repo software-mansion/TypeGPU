@@ -14,6 +14,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
   readonly value: InferGPU<TDataType>;
+  readonly $: InferGPU<TDataType>;
 
   readonly [$internal]: {
     readonly dataType: TDataType;
@@ -55,8 +56,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const resolvedValue = ctx.resolveValue(this._value, this.dataType);
+    const resolvedDataType = ctx.resolve(this.dataType);
 
-    ctx.addDeclaration(`const ${id} = ${resolvedValue};`);
+    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
     return id;
   }
@@ -82,5 +84,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     }
 
     return this[$gpuValueOf]();
+  }
+
+  get $(): InferGPU<TDataType> {
+    return this.value;
   }
 }

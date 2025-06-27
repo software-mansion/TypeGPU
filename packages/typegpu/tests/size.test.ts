@@ -5,13 +5,11 @@ import { resolve } from '../src/resolutionCtx.ts';
 
 describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {
-    const s1 = d
-      .struct({
-        a: d.u32,
-        b: d.size(16, d.u32),
-        c: d.u32,
-      })
-      .$name('s1');
+    const s1 = d.struct({
+      a: d.u32,
+      b: d.size(16, d.u32),
+      c: d.u32,
+    });
 
     const opts = {
       names: new StrictNameRegistry(),

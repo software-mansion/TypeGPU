@@ -7,6 +7,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import babel from './babel.ts';
 import {
+  containsResourceConstructorCall,
   type Context,
   defaultOptions,
   embedJSON,
@@ -53,6 +54,33 @@ function removeKernelDirective(node: FunctionNode) {
   return cloned;
 }
 
+function assignMetadata(
+  magicString: MagicStringAST,
+  node: acorn.AnyNode,
+  metadata: string,
+) {
+  magicString.prependLeft(
+    node.start,
+    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
+  ).appendRight(
+    node.end,
+    `), ${metadata}) && $.f)({}))`,
+  );
+}
+
+function wrapInAutoName(
+  magicString: MagicStringAST,
+  node: acorn.Node,
+  name: string,
+) {
+  magicString
+    .prependLeft(
+      node.start,
+      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
+    )
+    .appendRight(node.end, `, "${name}"))`);
+}
+
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
   (rawOptions) => {
     const options = defu(rawOptions, defaultOptions);
@@ -70,6 +98,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
             ),
             fileId: id,
+            autoNamingEnabled: options.autoNamingEnabled,
           };
 
           const ast = this.parse(code, {
@@ -87,6 +116,16 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
+
+              if (
+                ctx.autoNamingEnabled &&
+                node.type === 'VariableDeclarator' &&
+                node.id.type === 'Identifier' &&
+                node.init &&
+                containsResourceConstructorCall(node.init, ctx)
+              ) {
+                wrapInAutoName(magicString, node.init, node.id.name);
+              }
 
               if (node.type === 'ImportDeclaration') {
                 gatherTgpuAliases(node, ctx);
@@ -166,16 +205,11 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
               externals: {${externalNames.join(', ')}},
             }`;
 
-            // Wrap the implementation in a set to `globalThis` to associate the name, AST and externals with the implementation.
-            magicString.appendLeft(
-              def.start,
-              `${isFunctionStatement && name ? `const ${name} = ` : ''}
-              (($) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
-                $.f = (`,
-            ).appendRight(
-              def.end,
-              `) , ${metadata}) && $.f))({})`,
-            );
+            assignMetadata(magicString, def, metadata);
+
+            if (isFunctionStatement && name) {
+              magicString.prependLeft(def.start, `const ${name} = `);
+            }
 
             if (removeJsImplementation) {
               magicString.overwriteNode(

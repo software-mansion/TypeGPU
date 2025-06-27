@@ -148,7 +148,7 @@ describe('TgpuBindGroupLayout', () => {
     root.unwrap(bindGroup);
 
     expect(root.device.createBindGroup).toBeCalledWith({
-      label: '<unnamed>',
+      label: 'layout',
       layout: root.unwrap(layout),
       entries: [
         {
@@ -167,7 +167,7 @@ describe('TgpuBindGroupLayout', () => {
     });
 
     expect(root.device.createBindGroupLayout).toBeCalledWith({
-      label: '<unnamed>',
+      label: 'layout',
       entries: [
         {
           binding: 0,
@@ -193,8 +193,7 @@ describe('TgpuBindGroupLayout', () => {
         a: { uniform: vec3f }, // binding 0
         _0: null, // binding 1
         c: { storage: vec3f }, // binding 2
-      })
-      .$name('example_layout');
+      });
 
     expectTypeOf(layout).toEqualTypeOf<
       TgpuBindGroupLayout<{
@@ -207,7 +206,7 @@ describe('TgpuBindGroupLayout', () => {
     root.unwrap(layout); // Creating the WebGPU resource
 
     expect(root.device.createBindGroupLayout).toBeCalledWith({
-      label: 'example_layout',
+      label: 'layout',
       entries: [
         {
           binding: 0,
@@ -688,8 +687,7 @@ describe('TgpuBindGroup', () => {
           size: [1024, 1024, 6],
           format: 'rgba8unorm',
         })
-        .$usage('sampled')
-        .$name('example_texture');
+        .$usage('sampled');
 
       const bindGroup = root.createBindGroup(layoutCube, {
         foo: texture.createView('sampled', {

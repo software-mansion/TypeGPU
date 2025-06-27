@@ -33,7 +33,7 @@ describe('TgpuDerived', () => {
   });
 
   it('memoizes functions using derived values', () => {
-    const foo = tgpu['~unstable'].slot<number>().$name('foo');
+    const foo = tgpu['~unstable'].slot<number>();
     const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
     const getDouble = tgpu['~unstable']

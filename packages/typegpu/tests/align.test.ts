@@ -5,13 +5,11 @@ import tgpu from '../src/index.ts';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
-    const s1 = d
-      .struct({
-        a: d.u32,
-        b: d.align(16, d.u32),
-        c: d.u32,
-      })
-      .$name('s1');
+    const s1 = d.struct({
+      a: d.u32,
+      b: d.align(16, d.u32),
+      c: d.u32,
+    });
 
     expect(tgpu.resolve({ externals: { s1 }, names: 'strict' })).toContain(
       '@align(16) b: u32,',

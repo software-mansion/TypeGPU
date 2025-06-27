@@ -1,10 +1,15 @@
 import type {
-  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
 } from '../shared/repr.ts';
+import type {
+  $gpuRepr,
+  $memIdent,
+  $repr,
+  $reprPartial,
+} from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes.ts';
@@ -38,17 +43,16 @@ export function arrayOf<TElement extends AnyWgslData>(
 class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly [$internal] = true;
   public readonly type = 'array';
-  /** Type-token, not available at runtime */
-  declare public readonly [$repr]: Infer<TElement>[];
-  /** Type-token, not available at runtime */
-  declare public readonly '~gpuRepr': InferGPU<TElement>[];
-  /** Type-token, not available at runtime */
-  declare public readonly '~reprPartial': {
+
+  // Type-tokens, not available at runtime
+  declare readonly [$repr]: Infer<TElement>[];
+  declare readonly [$gpuRepr]: InferGPU<TElement>[];
+  declare readonly [$reprPartial]: {
     idx: number;
     value: InferPartial<TElement>;
   }[];
-  /** Type-token, not available at runtime */
-  declare public readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
+  declare readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
+  // ---
 
   constructor(
     public readonly elementType: TElement,

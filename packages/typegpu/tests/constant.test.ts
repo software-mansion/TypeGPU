@@ -15,7 +15,7 @@ describe('tgpu.const', () => {
 
     expect(parseResolved({ fn1 })).toBe(
       parse(`
-        const x = 2;
+        const x: u32 = 2;
         fn fn1() {
           return x;
         }
@@ -56,7 +56,7 @@ describe('tgpu.const', () => {
           vel: vec3u,
         }
 
-        const boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
+        const boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
         fn func() {
           var pos = boid;

@@ -14,17 +14,17 @@ const layout = tgpu.bindGroupLayout({
   inputTexture: { texture: 'float' },
 });
 
-const charsetExtendedUniform = root['~unstable'].createUniform(d.u32);
-const displayModeUniform = root['~unstable'].createUniform(d.u32);
-const gammaCorrectionUniform = root['~unstable'].createUniform(d.f32);
-const glyphSizeUniform = root['~unstable'].createUniform(d.u32, 8);
+const charsetExtended = root.createUniform(d.u32);
+const displayMode = root.createUniform(d.u32);
+const gammaCorrection = root.createUniform(d.f32);
+const glyphSize = root.createUniform(d.u32, 8);
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const colorModes = {
+const displayModes = {
   color: 0,
   grayscale: 1,
   white: 2,
@@ -78,7 +78,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
   const pix = std.mul(input.uv, textureSize);
 
-  const cellSize = d.f32(glyphSizeUniform.value);
+  const cellSize = d.f32(glyphSize.$);
   const halfCell = std.mul(cellSize, 0.5);
 
   const blockCoord = std.div(
@@ -92,10 +92,10 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   );
 
   const rawGray = 0.3 * color.x + 0.59 * color.y + 0.11 * color.z;
-  const gray = std.pow(rawGray, gammaCorrectionUniform.value);
+  const gray = std.pow(rawGray, gammaCorrection.$);
 
   let n = d.u32(4096);
-  if (charsetExtendedUniform.value === 0) {
+  if (charsetExtended.$ === 0) {
     if (gray > 0.2) n = 65600; // :
     if (gray > 0.3) n = 163153; // *
     if (gray > 0.4) n = 15255086; // o
@@ -155,18 +155,17 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const charValue = characterFn(n, p);
 
-  const colorMode = displayModeUniform.value;
   let resultColor = d.vec3f(1);
   // Color mode
-  if (colorMode === 0) {
+  if (displayMode.$ === displayModes.color) {
     resultColor = d.vec3f(std.mul(color, charValue).xyz);
   }
   // Grayscale mode
-  if (colorMode === 1) {
+  if (displayMode.$ === displayModes.grayscale) {
     resultColor = d.vec3f(std.mul(d.vec3f(gray), charValue));
   }
   // White mode
-  if (colorMode === 2) {
+  if (displayMode.$ === displayModes.white) {
     resultColor = d.vec3f(std.mul(d.vec3f(1), charValue));
   }
   return d.vec4f(resultColor, 1.0);
@@ -286,20 +285,16 @@ video.addEventListener('resize', resizeVideo);
 
 requestAnimationFrame(run);
 
-let displayMode: 'color' | 'grayscale' | 'white' = 'color';
-
 export const controls = {
   'use extended characters': {
     initial: false,
-    onToggleChange: (value: boolean) =>
-      charsetExtendedUniform.write(value ? 1 : 0),
+    onToggleChange: (value: boolean) => charsetExtended.write(value ? 1 : 0),
   },
   'display mode': {
-    initial: displayMode,
+    initial: 'color',
     options: ['color', 'grayscale', 'white'],
     onSelectChange: (value: 'color' | 'grayscale' | 'white') => {
-      displayMode = value;
-      displayModeUniform.write(colorModes[value]);
+      displayMode.write(displayModes[value]);
     },
   },
   'gamma correction': {
@@ -307,14 +302,14 @@ export const controls = {
     min: 0.1,
     max: 10.0,
     step: 0.1,
-    onSliderChange: (value: number) => gammaCorrectionUniform.write(value),
+    onSliderChange: (value: number) => gammaCorrection.write(value),
   },
   'glyph size (px)': {
     initial: 8,
     min: 4,
     max: 32,
     step: 2,
-    onSliderChange: (value: number) => glyphSizeUniform.write(value),
+    onSliderChange: (value: number) => glyphSize.write(value),
   },
 };
 

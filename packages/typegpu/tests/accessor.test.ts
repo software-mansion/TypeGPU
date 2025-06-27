@@ -67,10 +67,8 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to resolved form of provided JS value', () => {
-    const colorAccessor = tgpu['~unstable'].accessor(d.vec3f).$name('color');
-    const multiplierAccessor = tgpu['~unstable']
-      .accessor(d.f32)
-      .$name('multiplier');
+    const colorAccessor = tgpu['~unstable'].accessor(d.vec3f);
+    const multiplierAccessor = tgpu['~unstable'].accessor(d.f32);
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -91,9 +89,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to default value if no value provided', () => {
-    const colorAccessor = tgpu['~unstable']
-      .accessor(d.vec3f, RED)
-      .$name('color'); // red by default
+    const colorAccessor = tgpu['~unstable'].accessor(d.vec3f, RED); // red by default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {
@@ -112,9 +108,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorAccessor = tgpu['~unstable']
-      .accessor(d.vec3f, RED)
-      .$name('color'); // red by default
+    const colorAccessor = tgpu['~unstable'].accessor(d.vec3f, RED); // red by default
 
     const getColor = tgpu['~unstable']
       .fn([], d.vec3f)(/* wgsl */ `() -> vec3f {

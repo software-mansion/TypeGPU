@@ -1,11 +1,16 @@
 import type {
-  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
 } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
+import type {
+  $gpuRepr,
+  $memIdent,
+  $repr,
+  $reprPartial,
+} from '../shared/symbols.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
@@ -301,7 +306,10 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   public readonly [$internal] = true;
-  declare public readonly [$repr]: Infer<TInner>;
+
+  // Type-tokens, not available at runtime
+  declare readonly [$repr]: Infer<TInner>;
+  // ---
 
   constructor(
     public readonly inner: TInner,
@@ -357,11 +365,14 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements Decorated<TInner, TAttribs> {
   public readonly [$internal] = true;
   public readonly type = 'decorated';
-  readonly '~gpuRepr': InferGPU<TInner>;
-  readonly '~reprPartial': InferPartial<TInner>;
-  public readonly '~memIdent'!: TAttribs extends Location[]
+
+  // Type-tokens, not available at runtime
+  declare readonly [$gpuRepr]: InferGPU<TInner>;
+  declare readonly [$reprPartial]: InferPartial<TInner>;
+  declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
+  // ---
 }
 
 class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>

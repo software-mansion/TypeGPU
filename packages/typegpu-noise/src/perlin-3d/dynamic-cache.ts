@@ -1,4 +1,5 @@
 import tgpu, {
+  type Configurable,
   type StorageFlag,
   type TgpuBuffer,
   type TgpuFn,
@@ -9,7 +10,10 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import { allEq } from 'typegpu/std';
 import type { PrefixKeys, Prettify } from '../utils.ts';
-import { computeJunctionGradient } from './algorithm.ts';
+import {
+  computeJunctionGradient,
+  getJunctionGradientSlot,
+} from './algorithm.ts';
 
 const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
 
@@ -40,12 +44,16 @@ type Bindings<Prefix extends string> = Prettify<
 export interface DynamicPerlin3DCacheConfig<Prefix extends string> {
   readonly layout: Layout<Prefix>;
   readonly valuesSlot: TgpuSlot<LayoutValue<Prefix>>;
-  readonly getJunctionGradient: TgpuFn<[pos: d.Vec3i], d.Vec3f>;
+  readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
 
   instance(
     root: TgpuRoot,
     initialSize: d.v3u,
   ): DynamicPerlin3DCache<Prefix>;
+
+  inject(
+    layoutValue: LayoutValue<Prefix>,
+  ): (cfg: Configurable) => Configurable;
 }
 
 export interface DynamicPerlin3DCache<Prefix extends string> {
@@ -243,5 +251,10 @@ export function dynamicCacheConfig<Prefix extends string>(
     valuesSlot,
     getJunctionGradient,
     instance,
+
+    inject: (layoutValue) => (cfg) =>
+      cfg
+        .with(getJunctionGradientSlot, getJunctionGradient)
+        .with(valuesSlot, layoutValue),
   };
 }

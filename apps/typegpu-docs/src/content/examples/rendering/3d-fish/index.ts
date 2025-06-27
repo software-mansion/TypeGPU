@@ -137,33 +137,22 @@ const camera = {
   ),
 };
 
-const cameraBuffer = root
-  .createBuffer(Camera, camera)
-  .$usage('uniform')
-  .$name('camera');
+const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
 
 const mouseRayBuffer = root
   .createBuffer(MouseRay, {
     activated: 0,
     line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
   })
-  .$usage('uniform')
-  .$name('mouse');
+  .$usage('uniform');
 
-const timePassedBuffer = root
-  .createBuffer(d.f32)
-  .$usage('uniform')
-  .$name('time passed');
+const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
 
-const currentTimeBuffer = root
-  .createBuffer(d.f32)
-  .$usage('uniform')
-  .$name('current time');
+const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
 
 const fishBehaviorBuffer = root
   .createBuffer(FishBehaviorParams, presets.default)
-  .$usage('uniform')
-  .$name('fish behavior');
+  .$usage('uniform');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -177,8 +166,7 @@ const oceanFloorDataBuffer = root
       applySeaDesaturation: 0,
     },
   ])
-  .$usage('storage', 'vertex')
-  .$name('ocean floor');
+  .$usage('storage', 'vertex');
 
 randomizeFishPositions();
 
@@ -193,8 +181,7 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline()
-  .$name('render');
+  .createPipeline();
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -204,8 +191,7 @@ let depthTexture = root.device.createTexture({
 
 const computePipeline = root['~unstable']
   .withCompute(computeShader)
-  .createPipeline()
-  .$name('compute');
+  .createPipeline();
 
 // bind groups
 

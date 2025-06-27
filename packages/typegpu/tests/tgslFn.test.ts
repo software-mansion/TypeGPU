@@ -4,6 +4,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { attest } from '@ark/attest';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -835,5 +836,21 @@ describe('TGSL tgpu.fn function', () => {
     `);
 
     expect(actual).toBe(expected);
+  });
+
+  it('maintains argument names in the type', () => {
+    const fun = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)((x, y) => {
+      return x + y;
+    });
+
+    attest(fun).type.toString.snap('TgpuFn<(x: F32, y: F32) => F32>');
+  });
+
+  it('falls back to args_N naming when not every argument is used in the implementation', () => {
+    const fun = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)((x) => {
+      return x * 2;
+    });
+
+    attest(fun).type.toString.snap('TgpuFn<(args_0: F32, args_1: F32) => F32>');
   });
 });

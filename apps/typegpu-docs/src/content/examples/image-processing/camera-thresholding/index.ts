@@ -86,10 +86,7 @@ const sampler = root.device.createSampler({
   minFilter: 'linear',
 });
 
-const thresholdBuffer = root
-  .createBuffer(d.f32)
-  .$name('threshold')
-  .$usage('uniform');
+const thresholdBuffer = root.createBuffer(d.f32).$usage('uniform');
 
 const rareBindGroup = root.createBindGroup(rareLayout, {
   sampling: sampler,

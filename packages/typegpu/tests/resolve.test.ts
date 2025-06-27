@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import { setName } from '../src/shared/meta.ts';
 import { $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
-import { setName } from '../src/shared/meta.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -161,7 +161,7 @@ describe('tgpu resolve', () => {
           range: vec2f,
         }
 
-        fn randomTest() -> f32 {
+        fn random() -> f32 {
           var r: Random;
           r.seed = vec2<f32>(3.14, 1.59);
           r.range = vec2<f32>(0.0, 1.0);
@@ -172,7 +172,7 @@ describe('tgpu resolve', () => {
 
         @compute @workgroup_size(1)
         fn main() {
-          var value = randomTest();
+          var value = random();
         }
       `),
     );
@@ -231,21 +231,23 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve an unstruct with a complex nested structure', () => {
+    const Extra = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+      c: d.float16x2,
+    });
+
+    const More = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+    });
+
     const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
-      extra: d
-        .unstruct({
-          a: d.snorm8,
-          b: d.snorm8x4,
-          c: d.float16x2,
-        })
-        .$name('extra'),
-      more: d.disarrayOf(
-        d.unstruct({ a: d.snorm8, b: d.snorm8x4 }).$name('more'),
-        16,
-      ),
+      extra: Extra,
+      more: d.disarrayOf(More, 16),
     });
 
     const resolved = tgpu.resolve({
@@ -256,13 +258,13 @@ describe('tgpu resolve', () => {
 
     expect(parse(resolved)).toBe(
       parse(`
-        struct extra {
+        struct Extra {
           a: f32,
           b: vec4f,
           c: vec2f,
         }
 
-        struct more {
+        struct More {
           a: f32,
           b: vec4f,
         }
@@ -271,8 +273,8 @@ describe('tgpu resolve', () => {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
-          extra: extra,
-          more: array<more, 16>,
+          extra: Extra,
+          more: array<More, 16>,
         }
 
         fn foo() { var v: VertexInfo; }
