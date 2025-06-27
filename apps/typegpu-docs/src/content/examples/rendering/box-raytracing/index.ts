@@ -96,7 +96,7 @@ const uniforms = root.createUniform(Uniforms);
 const getBoxIntersection = tgpu.fn(
   [AxisAlignedBounds, Ray],
   IntersectionStruct,
-) /* wgsl */`(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
+) /* wgsl */`(bounds, ray) {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -154,7 +154,7 @@ const getBoxIntersection = tgpu.fn(
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`
-  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct });
+  .$uses({ IntersectionStruct });
 
 const Varying = {
   rayWorldOrigin: d.vec3f,
