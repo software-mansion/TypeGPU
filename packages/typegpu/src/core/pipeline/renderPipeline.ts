@@ -1,13 +1,14 @@
 import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -38,7 +39,6 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
