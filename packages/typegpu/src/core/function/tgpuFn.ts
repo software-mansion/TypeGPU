@@ -1,5 +1,5 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
-import { deepCopy } from '../../data/utils.ts';
+import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -232,7 +232,7 @@ function createFn<ImplSchema extends AnyFn>(
       }
 
       const castAndCopiedArgs = [...args].map((arg, index) =>
-        deepCopy(arg, shell.argTypes[index])
+        schemaCallWrapper(arg, shell.argTypes[index])
       ) as InferArgs<Parameters<ImplSchema>>;
 
       return implementation(...castAndCopiedArgs);

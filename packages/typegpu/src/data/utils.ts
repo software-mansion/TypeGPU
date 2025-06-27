@@ -1,4 +1,8 @@
-export function deepCopy<T>(item: T, schema: unknown): T {
+/**
+ * A wrapper for `schema(item)` call.
+ * Logs a warning if the schema is not callable.
+ */
+export function schemaCallWrapper<T>(item: T, schema: unknown): T {
   let result = item;
   try {
     result = (
