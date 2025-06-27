@@ -1,14 +1,15 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
   $providing,
 } from '../../shared/symbols.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
@@ -34,7 +35,6 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
-import type { Prettify } from '../../shared/utilityTypes.ts';
 
 // ----------
 // Public API
@@ -229,6 +229,9 @@ function createFn<ImplSchema extends AnyFn>(
           'Cannot execute on the CPU functions constructed with raw WGSL',
         );
       }
+
+      // AAA Cast args before passing them to implementation(...)
+      // struct should deep copy
 
       return implementation(...args);
     },

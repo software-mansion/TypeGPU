@@ -1,10 +1,10 @@
+import { attest } from '@ark/attest';
 import { describe, expect, it } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
-import { attest } from '@ark/attest';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -852,5 +852,176 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     attest(fun).type.toString.snap('TgpuFn<(args_0: F32, args_1: F32) => F32>');
+  });
+});
+
+describe('tgpu.fn arguments', () => {
+  it('casts u32', () => {
+    const fn = tgpu['~unstable'].fn([d.u32], d.f32)((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const result = fn(3.14);
+
+    expect(result).toBe(3);
+  });
+
+  it('returns a copy of a float vector', () => {
+    const vec = d.vec3f(1, 2, 3);
+    const fn = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(vec);
+
+    expect(clone).toStrictEqual(vec);
+    expect(clone).not.toBe(vec);
+  });
+
+  it('returns a copy of a bool vector', () => {
+    const vec = d.vec4b(false, true, false, true);
+    const fn = tgpu['~unstable'].fn([d.vec4b], d.vec4b)((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(vec);
+
+    expect(clone).toStrictEqual(vec);
+    expect(clone).not.toBe(vec);
+  });
+
+  it('returns a copy of a matrix', () => {
+    const mat = d.mat2x2f(1, 2, 3, 7);
+    const fn = tgpu['~unstable'].fn([d.mat2x2f], d.mat2x2f)((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(mat);
+
+    expect(clone).toStrictEqual(mat);
+    expect(clone).not.toBe(mat);
+  });
+
+  it('returns a copy of a struct', () => {
+    const struct = { prop: d.vec2f(1, 2) };
+    const fn = tgpu['~unstable'].fn(
+      [d.struct({ prop: d.vec2f })],
+      d.struct({ prop: d.vec2f }),
+    )((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(struct);
+
+    expect(clone).toStrictEqual(struct);
+    expect(clone).not.toBe(struct);
+  });
+
+  it('returns a deep copy of a struct', () => {
+    const struct = { prop: d.vec2f(1, 2) };
+    const fn = tgpu['~unstable'].fn(
+      [d.struct({ prop: d.vec2f })],
+      d.struct({ prop: d.vec2f }),
+    )((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(struct);
+    clone.prop[0] = 3;
+
+    expect(struct).toStrictEqual({ prop: d.vec2f(1, 2) });
+    expect(clone).toStrictEqual({ prop: d.vec2f(3, 2) });
+  });
+
+  it('returns a copy of a nested struct', () => {
+    const struct = { nested: { prop1: d.vec2f(1, 2), prop2: 21 } };
+    const fn = tgpu['~unstable'].fn(
+      [d.struct({ nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }) })],
+      d.struct({ nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }) }),
+    )((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(struct);
+
+    expect(clone).toStrictEqual(struct);
+    expect(clone).not.toBe(struct);
+  });
+
+  it('returns a deep copy of a nested struct', () => {
+    const struct = { nested: { prop1: d.vec2f(1, 2), prop2: 21 } };
+    const fn = tgpu['~unstable'].fn(
+      [d.struct({ nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }) })],
+      d.struct({ nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }) }),
+    )((e) => {
+      'kernel & js';
+      return e;
+    });
+
+    const clone = fn(struct);
+    clone.nested.prop1[0] = 3;
+
+    expect(struct).toStrictEqual({
+      nested: { prop1: d.vec2f(1, 2), prop2: 21 },
+    });
+    expect(clone).toStrictEqual({
+      nested: { prop1: d.vec2f(3, 2), prop2: 21 },
+    });
+  });
+
+  it('returns a copy of an array', () => {
+    const array = [2, 1];
+    const fn = tgpu['~unstable'].fn([d.arrayOf(d.u32, 2)], d.arrayOf(d.u32, 2))(
+      (e) => {
+        'kernel & js';
+        return e;
+      },
+    );
+
+    const clone = fn(array);
+
+    expect(clone).toStrictEqual(array);
+    expect(clone).not.toBe(array);
+  });
+
+  it('returns a deep copy of an array', () => {
+    const array = [d.vec2f(), d.vec2f()];
+    const fn = tgpu['~unstable'].fn(
+      [d.arrayOf(d.vec2f, 2)],
+      d.arrayOf(d.vec2f, 2),
+    )(
+      (e) => {
+        'kernel & js';
+        return e;
+      },
+    );
+
+    const clone = fn(array);
+    clone[0]![0] = 1;
+
+    expect(array).toStrictEqual([d.vec2f(), d.vec2f()]);
+    expect(clone).toStrictEqual([d.vec2f(1, 0), d.vec2f()]);
+  });
+
+  it('does not modify its argument', () => {
+    const vec = d.vec3f();
+    const fn = tgpu['~unstable'].fn([d.vec3f])(
+      (e) => {
+        'kernel & js';
+        const copy = e; // in WGSL, this would copy the value, in JS it only copies the reference
+        copy[0] = 1;
+      },
+    );
+
+    fn(vec);
+
+    expect(vec).toStrictEqual(d.vec3f());
   });
 });
