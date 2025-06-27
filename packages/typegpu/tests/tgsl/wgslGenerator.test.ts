@@ -156,16 +156,14 @@ describe('wgslGenerator', () => {
           })
           .$name('TestStruct'),
       )
-      .$usage('storage')
-      .$name('testBuffer');
+      .$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
       .fn([], d.u32)(() => {
         return testUsage.value.a + testUsage.value.b.x;
-      })
-      .$name('testFn');
+      });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -223,8 +221,7 @@ describe('wgslGenerator', () => {
   it('generates correct resources for external resource array index access', ({ root }) => {
     const testBuffer = root
       .createBuffer(d.arrayOf(d.u32, 16))
-      .$usage('uniform')
-      .$name('testBuffer');
+      .$usage('uniform');
 
     const testUsage = testBuffer.as('uniform');
 
@@ -280,8 +277,7 @@ describe('wgslGenerator', () => {
           })
           .$name('TestStruct'),
       )
-      .$usage('storage')
-      .$name('testBuffer');
+      .$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
 
@@ -293,8 +289,7 @@ describe('wgslGenerator', () => {
         // biome-ignore lint/style/noNonNullAssertion: <no thanks>
         std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
         return vec;
-      })
-      .$name('testFn');
+      });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -478,8 +473,7 @@ describe('wgslGenerator', () => {
     const testFn = tgpu['~unstable']
       .fn([d.u32], d.f32)((idx) => {
         return derivedV2f.value[idx] as number;
-      })
-      .$name('testFn');
+      });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -722,16 +716,11 @@ describe('wgslGenerator', () => {
   });
 
   it('properly handles .value struct properties in slots', ({ root }) => {
-    const UnfortunateStruct = d
-      .struct({
-        value: d.vec3f,
-      })
-      .$name('UnfortunateStruct');
+    const UnfortunateStruct = d.struct({
+      value: d.vec3f,
+    });
 
-    const testBuffer = root
-      .createBuffer(UnfortunateStruct)
-      .$usage('storage')
-      .$name('testBuffer');
+    const testBuffer = root.createBuffer(UnfortunateStruct).$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
     const testSlot = tgpu['~unstable'].slot(testUsage);
@@ -739,8 +728,7 @@ describe('wgslGenerator', () => {
       .fn([], d.f32)(() => {
         const value = testSlot.value.value;
         return value.x + value.y + value.z;
-      })
-      .$name('testFn');
+      });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
