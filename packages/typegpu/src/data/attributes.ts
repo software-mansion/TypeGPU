@@ -85,6 +85,10 @@ export type ExtractAttributes<T> = T extends {
 export type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner
   : T;
 
+export type UndecorateRecord<T extends Record<string, unknown>> = {
+  [Key in keyof T]: Undecorate<T[Key]>;
+};
+
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.
  *

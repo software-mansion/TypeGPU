@@ -58,7 +58,7 @@ describe('TgpuComputePipeline', () => {
       });
 
     const computePipeline = root
-      .withCompute(entryFn)
+      .withCompute(main)
       .createPipeline();
 
     expect(parseResolved({ computePipeline })).toStrictEqual(parse(`

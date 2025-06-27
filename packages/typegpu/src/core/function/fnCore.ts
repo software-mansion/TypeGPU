@@ -1,8 +1,7 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { snip } from '../../data/dataTypes.ts';
+import { type AnyData, snip } from '../../data/dataTypes.ts';
 import {
-  type AnyWgslData,
   type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
@@ -23,8 +22,8 @@ export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
     ctx: ResolutionCtx,
-    argTypes: unknown[],
-    returnType: unknown,
+    argTypes: AnyData[],
+    returnType: AnyData,
   ): string;
 }
 
@@ -47,8 +46,8 @@ export function createFnCore(
 
     resolve(
       ctx: ResolutionCtx,
-      argTypes: unknown[],
-      returnType: unknown,
+      argTypes: AnyData[],
+      returnType: AnyData,
     ): string {
       const externalMap: ExternalMap = {};
 
@@ -151,7 +150,7 @@ export function createFnCore(
               ast.params[i]?.type === FuncParameterType.identifier
                 ? ast.params[i].name
                 : `_arg_${i}`,
-              arg as AnyWgslData,
+              arg,
             )
           ),
           argAliases: Object.fromEntries(
@@ -162,13 +161,13 @@ export function createFnCore(
                   snip(
                     `_arg_${i}.${name}`,
                     (argTypes[i] as AnyWgslStruct)
-                      .propTypes[name] as AnyWgslData,
+                      .propTypes[name],
                   ),
                 ])
                 : []
             ),
           ),
-          returnType: returnType as AnyWgslData,
+          returnType,
           body: ast.body,
           externalMap,
         });

@@ -1,6 +1,6 @@
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import type { Undecorate } from '../../data/attributes.ts';
+import type { UndecorateRecord } from '../../data/attributes.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import type { JitTranspiler } from '../../jitTranspiler.ts';
@@ -56,10 +56,6 @@ import type {
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
-
-type UndecorateRecord<T extends Record<string, unknown>> = {
-  [Key in keyof T]: Undecorate<T[Key]>;
-};
 
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,

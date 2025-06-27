@@ -602,11 +602,9 @@ export function matchUpVaryingLocations(
   // respect custom locations and pair up vertex and fragment varying with the same key
   for (const [key, value] of Object.entries(vertexOut)) {
     const customLocation = getCustomLocation(value);
-    if (customLocation === undefined) {
-      continue;
+    if (customLocation !== undefined) {
+      saveLocation(key, customLocation);
     }
-
-    saveLocation(key, customLocation);
   }
 
   for (const [key, value] of Object.entries(fragmentIn ?? {})) {
