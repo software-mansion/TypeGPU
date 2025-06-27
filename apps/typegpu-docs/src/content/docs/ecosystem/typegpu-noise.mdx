@@ -145,7 +145,7 @@ const main = tgpu['~unstable'].fn([])(() => {
 });
 ```
 Or in WebGPU:
-```ts
+```ts twoslash
 /// <reference types="@webgpu/types" />
 import * as d from 'typegpu/data';
 
@@ -157,7 +157,7 @@ import { perlin3d } from '@typegpu/noise';
 const root = tgpu.initFromDevice({ device });
 const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
 
-const { code, layouts, catchall } = tgpu.superResolve({
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
   template: `
     fn main() {
       let value = perlin3d.sample(vec3f(0.5, 0., 0.));
