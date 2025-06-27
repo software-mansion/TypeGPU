@@ -1003,8 +1003,8 @@ describe('tgpu.fn arguments', () => {
       },
     );
 
-    const clone = fn(array);
-    clone[0]![0] = 1;
+    const clone = fn(array) as unknown as [d.v2f, d.v2f];
+    clone[0][0] = 1;
 
     expect(array).toStrictEqual([d.vec2f(), d.vec2f()]);
     expect(clone).toStrictEqual([d.vec2f(1, 0), d.vec2f()]);

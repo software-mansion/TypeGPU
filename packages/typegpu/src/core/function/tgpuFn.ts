@@ -230,10 +230,21 @@ function createFn<ImplSchema extends AnyFn>(
         );
       }
 
-      // AAA Cast args before passing them to implementation(...)
-      // struct should deep copy
+      const castAndCopiedArgs = [...args].map((arg, index) => {
+        let result = arg;
+        const schema = shell.argTypes[index] as unknown as
+          & ((arg: typeof result) => typeof result)
+          & { type: string };
 
-      return implementation(...args);
+        try {
+          result = schema(arg);
+        } catch {
+          console.warn(`Schema of type ${schema?.type} is not callable.`);
+        }
+        return result;
+      }) as InferArgs<Parameters<ImplSchema>>;
+
+      return implementation(...castAndCopiedArgs);
     },
     (...args) =>
       snip(
