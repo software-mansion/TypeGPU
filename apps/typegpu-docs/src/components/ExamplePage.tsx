@@ -14,7 +14,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'rendering--3d-fish';
+const FLAGSHIP = 'rendering--caustics';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
