@@ -3,25 +3,24 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 
-const getNeighbors = tgpu['~unstable'].fn(
-  [d.vec2i, d.vec2i],
-  d.arrayOf(d.vec2i, 4),
-)((coords, bounds) => {
-  const adjacentOffsets = [
-    d.vec2i(-1, 0),
-    d.vec2i(0, -1),
-    d.vec2i(1, 0),
-    d.vec2i(0, 1),
-  ];
-  for (let i = 0; i < 4; i++) {
-    adjacentOffsets[i] = std.clamp(
-      std.add(coords, adjacentOffsets[i]),
-      d.vec2i(),
-      std.sub(bounds, d.vec2i(1)),
-    );
-  }
-  return adjacentOffsets;
-});
+const getNeighbors = tgpu.fn([d.vec2i, d.vec2i], d.arrayOf(d.vec2i, 4))(
+  (coords, bounds) => {
+    const adjacentOffsets = [
+      d.vec2i(-1, 0),
+      d.vec2i(0, -1),
+      d.vec2i(1, 0),
+      d.vec2i(0, 1),
+    ];
+    for (let i = 0; i < 4; i++) {
+      adjacentOffsets[i] = std.clamp(
+        std.add(coords, adjacentOffsets[i]),
+        d.vec2i(),
+        std.sub(bounds, d.vec2i(1)),
+      );
+    }
+    return adjacentOffsets;
+  },
+);
 
 export const brushLayout = tgpu.bindGroupLayout({
   brushParams: { uniform: p.BrushParams },

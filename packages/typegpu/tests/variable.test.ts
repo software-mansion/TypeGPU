@@ -10,13 +10,11 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('var', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
-    const fn1 = tgpu['~unstable']
-      .fn([])(`() {
+    const fn1 = tgpu.fn([])`() {
         let y = x;
         return x;
-      }`)
-      .$uses({ x })
-      .$name('fn1');
+      }`
+      .$uses({ x });
 
     expect(parseResolved({ fn1 })).toBe(
       parse(`
@@ -101,25 +99,21 @@ describe('var', () => {
     );
   });
 
-  it('allows accessing variables in tgsl through .value', () => {
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      })
-      .$name('Boid');
+  it('allows accessing variables in TGSL through .value', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
-    const boidVariable = tgpu['~unstable']
-      .privateVar(Boid, {
-        pos: d.vec3f(1, 2, 3),
-        vel: d.vec3u(4, 5, 6),
-      })
-      .$name('boid');
+    const boid = tgpu['~unstable'].privateVar(Boid, {
+      pos: d.vec3f(1, 2, 3),
+      vel: d.vec3u(4, 5, 6),
+    });
 
-    const func = tgpu['~unstable'].fn([])(() => {
-      const pos = boidVariable.value;
-      const vel = boidVariable.value.vel;
-      const velX = boidVariable.value.vel.x;
+    const func = tgpu.fn([])(() => {
+      const pos = boid.value;
+      const vel = boid.value.vel;
+      const velX = boid.value.vel.x;
     });
 
     const resolved = tgpu.resolve({

@@ -23,9 +23,9 @@ import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, ta
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh3 = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((v) => {
-  return select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)));
-});
+const safeTanh3 = tgpu.fn([d.vec3f], d.vec3f)((v) =>
+  select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)))
+);
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.

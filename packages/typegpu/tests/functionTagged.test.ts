@@ -6,43 +6,33 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('tagged syntax', () => {
   describe('function', () => {
     it('parses template literal without arguments', () => {
-      const constFn = tgpu['~unstable'].fn([], d.i32)`() -> i32 {
-        return 3;
-      }`.$name('const');
+      const getConst = tgpu.fn([], d.i32)`() { return 3; }`;
 
-      const actual = parseResolved({ constFn });
-
-      const expected = parse('fn const() -> i32 { return 3; }');
-
-      expect(actual).toBe(expected);
+      expect(parseResolved({ getConst })).toBe(parse(`
+        fn getConst() -> i32 {
+          return 3;
+        }
+      `));
     });
 
     it('parses template literal with arguments of different types', () => {
-      const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
+      const add = tgpu.fn([], d.f32)`() {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
-      }`.$name('add');
+      }`;
 
-      const actual = parseResolved({ addFn });
-
-      const expected = parse(
+      expect(parseResolved({ add })).toBe(parse(
         'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
-      );
-
-      expect(actual).toBe(expected);
+      ));
     });
 
     it('parses template literal with arguments of different types, object args', () => {
-      const addFn = tgpu['~unstable'].fn([], d.f32)`() -> f32 {
+      const add = tgpu.fn([], d.f32)`() {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
-      }`.$name('add');
+      }`;
 
-      const actual = parseResolved({ addFn });
-
-      const expected = parse(
+      expect(parseResolved({ add })).toBe(parse(
         'fn add() -> f32 { return f32(10) + f32(20) + f32(30.1); }',
-      );
-
-      expect(actual).toBe(expected);
+      ));
     });
   });
 

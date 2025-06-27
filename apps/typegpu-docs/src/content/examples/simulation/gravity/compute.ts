@@ -8,23 +8,21 @@ import { CelestialBody, computeLayout, timeAccess } from './schemas.ts';
 const { none, bounce, merge } = collisionBehaviors;
 
 // tiebreaker function for merges and bounces
-const isSmaller = tgpu['~unstable'].fn([d.u32, d.u32], d.bool)(
-  (currentId, otherId) => {
-    if (
-      computeLayout.$.inState[currentId].mass <
-        computeLayout.$.inState[otherId].mass
-    ) {
-      return true;
-    }
-    if (
-      computeLayout.$.inState[currentId].mass ===
-        computeLayout.$.inState[otherId].mass
-    ) {
-      return currentId < otherId;
-    }
-    return false;
-  },
-);
+const isSmaller = tgpu.fn([d.u32, d.u32], d.bool)((currentId, otherId) => {
+  if (
+    computeLayout.$.inState[currentId].mass <
+      computeLayout.$.inState[otherId].mass
+  ) {
+    return true;
+  }
+  if (
+    computeLayout.$.inState[currentId].mass ===
+      computeLayout.$.inState[otherId].mass
+  ) {
+    return currentId < otherId;
+  }
+  return false;
+});
 
 export const computeCollisionsShader = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },

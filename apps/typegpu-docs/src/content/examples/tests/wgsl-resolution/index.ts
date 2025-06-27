@@ -46,13 +46,13 @@ const paramsBuffer = root
 const params = paramsBuffer.as('uniform');
 
 // helper functions
-const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
+const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   const cos = std.cos(angle);
   const sin = std.sin(angle);
   return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
 }).$name('rotate util');
 
-const getRotationFromVelocity = tgpu['~unstable'].fn([d.vec2f], d.f32)(
+const getRotationFromVelocity = tgpu.fn([d.vec2f], d.f32)(
   (velocity) => -std.atan2(velocity.x, velocity.y),
 ).$name('get rotation from velocity util');
 

@@ -18,14 +18,13 @@ describe('translate', () => {
     const M = mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1);
     const T = vec3f(2, 2, 4);
 
-    const translateFn = tgpu['~unstable']
-      .fn([])(() => {
-        const resultExpression = translate4(M, T);
-      }).$name('translate4');
+    const translateFn = tgpu.fn([])(() => {
+      const resultExpression = translate4(M, T);
+    });
 
     expect(parseResolved({ translateFn })).toBe(
       parse(
-        `fn translate4() { 
+        `fn translateFn() { 
           var resultExpression = (
             mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, vec3f(2, 2, 4).x, vec3f(2, 2, 4).y, vec3f(2, 2, 4).z, 1) *
             mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)

@@ -42,7 +42,7 @@ describe('TgpuBufferUniform', () => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
     const uniform = buffer.as('uniform');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const x = uniform.value;
     });
 
@@ -62,17 +62,15 @@ describe('TgpuBufferUniform', () => {
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      })
-      .$name('Boid');
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = buffer.as('uniform');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const pos = uniform.value.pos;
       const velX = uniform.value.vel.x;
     });
@@ -134,7 +132,7 @@ describe('TgpuBufferMutable', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const mutable = buffer.as('mutable');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const x = mutable.value;
     });
 
@@ -164,7 +162,7 @@ describe('TgpuBufferMutable', () => {
     const buffer = root.createBuffer(Boid).$usage('storage').$name('boid');
     const mutable = buffer.as('mutable');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const pos = mutable.value.pos;
       const velX = mutable.value.vel.x;
     });
@@ -226,7 +224,7 @@ describe('TgpuBufferReadonly', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const readonly = buffer.as('readonly');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const x = readonly.value;
     });
 
@@ -256,7 +254,7 @@ describe('TgpuBufferReadonly', () => {
     const buffer = root.createBuffer(Boid).$usage('storage').$name('boid');
     const readonly = buffer.as('readonly');
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const pos = readonly.value.pos;
       const velX = readonly.value.vel.x;
     });

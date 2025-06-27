@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import { vec3f } from 'typegpu/data';
 import { add, gt, mul, pow, select, sub } from 'typegpu/std';
 
-export const linearToSrgb = tgpu['~unstable'].fn([vec3f], vec3f)((linear) => {
+export const linearToSrgb = tgpu.fn([vec3f], vec3f)((linear) => {
   'kernel & js';
   return select(
     mul(12.92, linear),
@@ -11,7 +11,7 @@ export const linearToSrgb = tgpu['~unstable'].fn([vec3f], vec3f)((linear) => {
   );
 });
 
-export const srgbToLinear = tgpu['~unstable'].fn([vec3f], vec3f)((rgb) => {
+export const srgbToLinear = tgpu.fn([vec3f], vec3f)((rgb) => {
   'kernel & js';
   return select(
     mul(1.0 / 12.92, rgb),

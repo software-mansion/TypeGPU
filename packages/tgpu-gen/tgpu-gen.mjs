@@ -21,7 +21,6 @@ const args = arg({
   '--overwrite': Boolean,
   '--keep': Boolean,
   '--watch': Boolean,
-  '--experimental-functions': Boolean,
 
   '-v': '--version',
   '-h': '--help',
@@ -57,7 +56,6 @@ Options:
 
   --overwrite               Overwrite existing files.
   --keep                    Keep existing files.
-  --experimental-functions  Generate tgpu.fn (non-entry) function definitions.
 `);
 
 const execute = async () => {
@@ -195,7 +193,6 @@ const execute = async () => {
           outputPath,
           toTs,
           moduleSyntax,
-          experimentalFunctions: args['--experimental-functions'] ?? false,
         }).catch((error) => {
           error.file = file;
           throw error;

@@ -5,31 +5,30 @@ import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
 
-export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu['~unstable']
+export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
   .fn([d.f32])((seed) => {
     randomGeneratorSlot.value.seed(seed);
   });
 
-export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = tgpu['~unstable']
+export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = tgpu
   .fn([d.vec2f])((seed) => {
     randomGeneratorSlot.value.seed2(seed);
   });
 
-export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = tgpu['~unstable']
+export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = tgpu
   .fn([d.vec3f])((seed) => {
     randomGeneratorSlot.value.seed3(seed);
   });
 
-export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu['~unstable']
+export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
   .fn([d.vec4f])((seed) => {
     randomGeneratorSlot.value.seed4(seed);
   });
 
-export const randFloat01: TgpuFn<() => d.F32> = tgpu['~unstable'].fn([], d.f32)(
-  () => randomGeneratorSlot.value.sample(),
-);
+export const randFloat01: TgpuFn<() => d.F32> = tgpu
+  .fn([], d.f32)(() => randomGeneratorSlot.value.sample());
 
-export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu['~unstable']
+export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() =>
     d.vec3f(
       randomGeneratorSlot.value.sample() * 2 - 1,
@@ -38,7 +37,7 @@ export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu['~unstable']
     )
   );
 
-export const randInUnitCircle: TgpuFn<() => d.Vec2f> = tgpu['~unstable']
+export const randInUnitCircle: TgpuFn<() => d.Vec2f> = tgpu
   .fn([], d.vec2f)(() => {
     const radius = sqrt(randomGeneratorSlot.value.sample());
     const angle = randomGeneratorSlot.value.sample() * TWO_PI;
@@ -46,13 +45,13 @@ export const randInUnitCircle: TgpuFn<() => d.Vec2f> = tgpu['~unstable']
     return d.vec2f(cos(angle) * radius, sin(angle) * radius);
   });
 
-export const randOnUnitCircle: TgpuFn<() => d.Vec2f> = tgpu['~unstable']
+export const randOnUnitCircle: TgpuFn<() => d.Vec2f> = tgpu
   .fn([], d.vec2f)(() => {
     const angle = randomGeneratorSlot.value.sample() * TWO_PI;
     return d.vec2f(cos(angle), sin(angle));
   });
 
-export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu['~unstable']
+export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() => {
     const z = 2 * randomGeneratorSlot.value.sample() - 1;
     const oneMinusZSq = sqrt(1 - z * z);
@@ -63,11 +62,10 @@ export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu['~unstable']
     return d.vec3f(x, y, z);
   });
 
-export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> =
-  tgpu['~unstable']
-    .fn([d.vec3f], d.vec3f)((normal) => {
-      const value = randOnUnitSphere();
-      const alignment = dot(normal, value);
+export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
+  .fn([d.vec3f], d.vec3f)((normal) => {
+    const value = randOnUnitSphere();
+    const alignment = dot(normal, value);
 
-      return mul(sign(alignment), value);
-    });
+    return mul(sign(alignment), value);
+  });

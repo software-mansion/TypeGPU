@@ -18,14 +18,13 @@ describe('scale', () => {
     const M = mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1);
     const T = vec3f(2, 2, 4);
 
-    const scaleFn = tgpu['~unstable']
-      .fn([])(() => {
-        const resultExpression = scale4(M, T);
-      }).$name('scale4');
+    const scaleFn = tgpu.fn([])(() => {
+      const resultExpression = scale4(M, T);
+    });
 
     expect(parseResolved({ scaleFn })).toBe(
       parse(
-        `fn scale4() { 
+        `fn scaleFn() { 
           var resultExpression = (
             mat4x4f(vec3f(2, 2, 4).x, 0, 0, 0, 0, vec3f(2, 2, 4).y, 0, 0, 0, 0, vec3f(2, 2, 4).z, 0, 0, 0, 0, 1) *
             mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1)

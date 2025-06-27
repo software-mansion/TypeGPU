@@ -93,10 +93,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampleTexture = tgpu['~unstable'].fn(
-  [d.vec2f],
-  d.vec4f,
-) /* wgsl */`(uv: vec2f) -> vec4f {
+const sampleTexture = tgpu.fn([d.vec2f], d.vec4f)`(uv) {
   return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
 }
 `.$uses({ layout });
