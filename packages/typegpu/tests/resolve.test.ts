@@ -233,17 +233,19 @@ describe('tgpu resolve', () => {
       a: d.snorm8,
       b: d.snorm8x4,
       c: d.float16x2,
-    }).$name('Extra');
+    });
+
+    const More = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+    });
 
     const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
       extra: Extra,
-      more: d.disarrayOf(
-        d.unstruct({ a: d.snorm8, b: d.snorm8x4 }).$name('more'),
-        16,
-      ),
+      more: d.disarrayOf(More, 16),
     });
 
     const resolved = tgpu.resolve({
@@ -260,7 +262,7 @@ describe('tgpu resolve', () => {
           c: vec2f,
         }
 
-        struct more {
+        struct More {
           a: f32,
           b: vec4f,
         }
@@ -270,7 +272,7 @@ describe('tgpu resolve', () => {
           colorHDR: vec4f,
           position2d: vec2f,
           extra: Extra,
-          more: array<more, 16>,
+          more: array<More, 16>,
         }
 
         fn foo() { var v: VertexInfo; }

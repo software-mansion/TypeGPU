@@ -17,9 +17,9 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 4,
-        usage: global.GPUBufferUsage.UNIFORM |
-          global.GPUBufferUsage.COPY_DST |
-          global.GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM |
+          GPUBufferUsage.COPY_DST |
+          GPUBufferUsage.COPY_SRC,
       });
     });
 
@@ -36,9 +36,9 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: true,
         size: 12,
-        usage: global.GPUBufferUsage.UNIFORM |
-          global.GPUBufferUsage.COPY_DST |
-          global.GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM |
+          GPUBufferUsage.COPY_DST |
+          GPUBufferUsage.COPY_SRC,
       });
     });
 
@@ -52,9 +52,9 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 12,
-        usage: global.GPUBufferUsage.UNIFORM |
-          global.GPUBufferUsage.COPY_DST |
-          global.GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM |
+          GPUBufferUsage.COPY_DST |
+          GPUBufferUsage.COPY_SRC,
       });
     });
   });
