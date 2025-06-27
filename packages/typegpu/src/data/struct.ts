@@ -1,5 +1,6 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
@@ -20,7 +21,14 @@ import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
-  const struct = <T>(props: T) => props;
+  // in the schema call, create and return a deep copy
+  // by wrapping all the values in corresponding schema calls
+  const struct = <T extends {}>(instanceProps: T) =>
+    Object.fromEntries(
+      Object.entries(instanceProps).map((
+        [key, value],
+      ) => [key, schemaCallWrapper(value, props[key])]),
+    );
   Object.setPrototypeOf(struct, WgslStructImpl);
   struct.propTypes = props;
 
