@@ -71,7 +71,6 @@
     "@webgpu/types": "catalog:",
     "arktype": "catalog:",
     "jiti": "^2.4.2",
-    "tgpu-jit": "workspace:*",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",

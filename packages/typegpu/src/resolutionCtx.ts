@@ -1,4 +1,3 @@
-import type { Block, FuncParameter } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
@@ -20,7 +19,6 @@ import {
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
 import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
-import type { JitTranspiler } from './jitTranspiler.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
@@ -56,7 +54,6 @@ const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
-  readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -304,7 +301,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   >();
 
   private readonly _indentController = new IndentController();
-  private readonly _jitTranspiler: JitTranspiler | undefined;
   private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
 
@@ -332,7 +328,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
-    this._jitTranspiler = opts.jitTranspiler;
   }
 
   get pre(): string {
@@ -367,20 +362,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
-  }
-
-  transpileFn(fn: string): {
-    params: FuncParameter[];
-    body: Block;
-    externalNames: string[];
-  } {
-    if (!this._jitTranspiler) {
-      throw new Error(
-        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
-      );
-    }
-
-    return this._jitTranspiler.transpileFn(fn);
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

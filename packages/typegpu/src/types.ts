@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { Block } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -149,11 +149,6 @@ export interface ResolutionCtx {
     schema: T,
   ): string;
 
-  transpileFn(fn: string): {
-    params: FuncParameter[];
-    body: Block;
-    externalNames: string[];
-  };
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;

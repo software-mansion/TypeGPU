@@ -180,7 +180,6 @@ out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
 
 - [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Plugin for your
   favorite bundler, enabling TypeGPU shader functions to be written in JS.
-- [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU.
 - [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code
   generation.
 
