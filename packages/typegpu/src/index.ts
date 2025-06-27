@@ -22,6 +22,7 @@ import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 export const tgpu = {
   bindGroupLayout,
   vertexLayout,
+  slot,
 
   init,
   initFromDevice,
@@ -38,6 +39,9 @@ export const tgpu = {
      */
     vertexLayout,
     derived,
+    /**
+     * @deprecated This feature is now stable, use tgpu.slot.
+     */
     slot,
     accessor,
     privateVar,

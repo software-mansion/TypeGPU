@@ -11,7 +11,7 @@ export const computeJunctionGradient = tgpu['~unstable'].fn([d.vec2i], d.vec2f)(
   },
 );
 
-export const getJunctionGradientSlot = tgpu['~unstable'].slot(
+export const getJunctionGradientSlot = tgpu.slot(
   computeJunctionGradient,
 );
 

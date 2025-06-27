@@ -19,7 +19,7 @@ const { NodeTypeCatalog: NODE } = tinyest;
 
 const transpiler = new JitTranspiler();
 
-const numberSlot = tgpu['~unstable'].slot(44);
+const numberSlot = tgpu.slot(44);
 const derivedV4u = tgpu['~unstable'].derived(() =>
   std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
 );
@@ -723,7 +723,7 @@ describe('wgslGenerator', () => {
     const testBuffer = root.createBuffer(UnfortunateStruct).$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
-    const testSlot = tgpu['~unstable'].slot(testUsage);
+    const testSlot = tgpu.slot(testUsage);
     const testFn = tgpu['~unstable']
       .fn([], d.f32)(() => {
         const value = testSlot.value.value;

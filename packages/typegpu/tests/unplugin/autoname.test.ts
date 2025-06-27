@@ -7,23 +7,23 @@ import { it } from '../utils/extendedIt.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
+    const mySlot = tgpu.slot<number>();
     const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } });
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
 
+    expect(getName(mySlot)).toBe('mySlot');
     expect(getName(myLayout)).toBe('myLayout');
     expect(getName(myVertexLayout)).toBe('myVertexLayout');
   });
 
   it("autonames resources created using tgpu['~unstable']", () => {
-    const mySlot = tgpu['~unstable'].slot<number>();
     const myAccessor = tgpu['~unstable'].accessor(d.f32);
     const myPrivateVar = tgpu['~unstable'].privateVar(d.vec2f);
     const myWorkgroupVar = tgpu['~unstable'].workgroupVar(d.f32);
     const myConst = tgpu['~unstable'].const(d.f32, 1);
 
-    expect(getName(mySlot)).toBe('mySlot');
     expect(getName(myAccessor)).toBe('myAccessor');
     expect(getName(myPrivateVar)).toBe('myPrivateVar');
     expect(getName(myWorkgroupVar)).toBe('myWorkgroupVar');

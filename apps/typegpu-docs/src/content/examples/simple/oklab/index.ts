@@ -87,7 +87,7 @@ const patternSolid = patternFn(() => {
   return 1;
 });
 
-const patternSlot = tgpu['~unstable'].slot(patternSolid);
+const patternSlot = tgpu.slot(patternSolid);
 
 // #endregion
 
