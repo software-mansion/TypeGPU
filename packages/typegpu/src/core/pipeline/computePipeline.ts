@@ -220,7 +220,6 @@ class ComputePipelineCore {
         },
         {
           names: this.branch.nameRegistry,
-          jitTranspiler: this.branch.jitTranspiler,
         },
       );
 
