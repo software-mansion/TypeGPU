@@ -1,4 +1,5 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
+import { deepCopy } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -230,19 +231,9 @@ function createFn<ImplSchema extends AnyFn>(
         );
       }
 
-      const castAndCopiedArgs = [...args].map((arg, index) => {
-        let result = arg;
-        const schema = shell.argTypes[index] as unknown as
-          & ((arg: typeof result) => typeof result)
-          & { type: string };
-
-        try {
-          result = schema(arg);
-        } catch {
-          console.warn(`Schema of type ${schema?.type} is not callable.`);
-        }
-        return result;
-      }) as InferArgs<Parameters<ImplSchema>>;
+      const castAndCopiedArgs = [...args].map((arg, index) =>
+        deepCopy(arg, shell.argTypes[index])
+      ) as InferArgs<Parameters<ImplSchema>>;
 
       return implementation(...castAndCopiedArgs);
     },
