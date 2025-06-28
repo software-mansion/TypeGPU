@@ -5,6 +5,10 @@
     "jsxImportSource": "react",
     "types": ["@webgpu/types"]
   },
-  "include": [".astro/types.d.ts", "**/*"],
+  "include": [
+    ".astro/types.d.ts",
+    "**/*",
+    "../../packages/typegpu-geometry/src/lines/indices.ts"
+  ],
   "exclude": ["dist"]
 }

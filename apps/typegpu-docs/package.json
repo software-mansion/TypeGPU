@@ -26,6 +26,7 @@
     "@stackblitz/sdk": "^1.11.0",
     "@tailwindcss/vite": "^4.1.13",
     "@typegpu/color": "workspace:*",
+    "@typegpu/geometry": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "@types/react": "^19.1.8",
