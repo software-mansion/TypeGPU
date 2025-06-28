@@ -25,7 +25,11 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
-  "keywords": ["webgpu", "wgpu", "wgsl"],
+  "keywords": [
+    "webgpu",
+    "wgpu",
+    "wgsl"
+  ],
   "bugs": {
     "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
@@ -41,7 +45,7 @@
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "packageManager": "pnpm@10.12.4+sha512.5ea8b0deed94ed68691c9bad4c955492705c5eeb8a87ef86bc62c74a26b037b08ff9570f108b2e4dbd1dd1a9186fea925e527f141c648e85af45631074680184",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@biomejs/biome",
