@@ -1,11 +1,11 @@
 packages:
-  - 'packages/*'
-  - 'apps/*'
+  - packages/*
+  - apps/*
 
 catalog:
   arktype: ^2.1.20
-  typescript: ^5.8.2
+  typescript: ^5.8.3
   tsup: ^8.5.0
   unbuild: ^3.5.0
-  '@webgpu/types': ^0.1.54
-  vitest: ^3.0.9
+  '@webgpu/types': ^0.1.63
+  vitest: ^3.2.4
