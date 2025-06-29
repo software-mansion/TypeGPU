@@ -1,19 +1,17 @@
-import type { TgpuComputePipeline } from './computePipeline.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
-import type { TgpuRenderPipeline } from './renderPipeline.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 
-export interface Timeable<T extends TgpuComputePipeline | TgpuRenderPipeline> {
+export interface Timeable {
   withPerformanceCallback(
     callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): T;
+  ): this;
 
   withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
-  }): T;
+  }): this;
 }
 
 export type TimestampWritesPriors = {

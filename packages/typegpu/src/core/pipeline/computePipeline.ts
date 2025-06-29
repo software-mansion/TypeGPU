@@ -29,8 +29,7 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline
-  extends TgpuNamable, Timeable<TgpuComputePipeline> {
+export interface TgpuComputePipeline extends TgpuNamable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -117,26 +116,26 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   withPerformanceCallback(
     callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): TgpuComputePipeline {
+  ): this {
     const newPriors = createWithPerformanceCallback(
       this._priors,
       callback,
       this._core.branch,
     );
-    return new TgpuComputePipelineImpl(this._core, newPriors);
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
-  }): TgpuComputePipeline {
+  }): this {
     const newPriors = createWithTimestampWrites(
       this._priors,
       options,
       this._core.branch,
     );
-    return new TgpuComputePipelineImpl(this._core, newPriors);
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   dispatchWorkgroups(
