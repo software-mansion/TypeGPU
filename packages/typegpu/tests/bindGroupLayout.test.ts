@@ -3,12 +3,14 @@ import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
+  type TgpuBuffer,
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   type TgpuMutableTexture,
   type TgpuSampledTexture,
   type TgpuWriteonlyTexture,
+  type UniformFlag,
 } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import {
@@ -1081,7 +1083,23 @@ describe('TgpuBindGroup', () => {
   describe('wide type', () => {
     it('accepts wide buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
-      const buffer = root.createBuffer(d.f32);
+      const buffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+
+      root.createBindGroup(layout, {
+        foo: buffer,
+      });
+    });
+
+    it('accepts wide uniform buffer', ({ root }) => {
+      const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
+
+      const buffer = root.createBuffer(d.f32).$usage('uniform') as
+        & TgpuBuffer<d.AnyWgslData>
+        & UniformFlag;
+
+      root.createBindGroup(layout, {
+        foo: buffer,
+      });
     });
   });
 });

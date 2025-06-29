@@ -265,44 +265,60 @@ type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
   }
   : never;
 
-export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> = T extends
-  TgpuLayoutUniform ?
-    | (
-      & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
-      & UniformFlag
-    )
-    | GPUBuffer
-  : T extends TgpuLayoutStorage ?
-      | (
-        & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
-        & StorageFlag
-      )
+export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
+  // Widest type
+  TgpuLayoutEntry | null extends T ?
+      | TgpuBuffer<AnyWgslData>
       | GPUBuffer
-  : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
-  : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
-  : T extends TgpuLayoutTexture ?
+      | TgpuSampler
+      | GPUSampler
+      | TgpuComparisonSampler
+      | GPUSampler
+      | TgpuTexture
+      | TgpuSampledTexture
+      | TgpuMutableTexture
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
       | GPUTextureView
-      | (
-        & Sampled
-        & TgpuTexture<
-          Prettify<TextureProps & GetTextureRestriction<T>>
+      | GPUExternalTexture
+    // Strict type-checking
+    : T extends TgpuLayoutUniform ?
+        | (
+          & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          & UniformFlag
+        )
+        | GPUBuffer
+    : T extends TgpuLayoutStorage ?
+        | (
+          & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+          & StorageFlag
+        )
+        | GPUBuffer
+    : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
+    : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
+    : T extends TgpuLayoutTexture ?
+        | GPUTextureView
+        | (
+          & Sampled
+          & TgpuTexture<
+            Prettify<TextureProps & GetTextureRestriction<T>>
+          >
+        )
+        | TgpuSampledTexture<
+          Default<T['viewDimension'], '2d'>,
+          ChannelFormatToSchema[T['texture']]
         >
-      )
-      | TgpuSampledTexture<
-        Default<T['viewDimension'], '2d'>,
-        ChannelFormatToSchema[T['texture']]
-      >
-  : T extends TgpuLayoutStorageTexture ?
-      | GPUTextureView
-      | (
-        & StorageFlag
-        & TgpuTexture<
-          Prettify<TextureProps & GetStorageTextureRestriction<T>>
-        >
-      )
-      | StorageTextureUsageForEntry<T>
-  : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
-  : never;
+    : T extends TgpuLayoutStorageTexture ?
+        | GPUTextureView
+        | (
+          & StorageFlag
+          & TgpuTexture<
+            Prettify<TextureProps & GetStorageTextureRestriction<T>>
+          >
+        )
+        | StorageTextureUsageForEntry<T>
+    : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
+    : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   TgpuLayoutUniform ? TgpuBufferUniform<T['uniform']>
