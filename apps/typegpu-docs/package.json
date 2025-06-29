@@ -24,6 +24,7 @@
     "@tailwindcss/vite": "^4.1.6",
     "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
+    "@typegpu/sdf": "workspace:*",
     "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
