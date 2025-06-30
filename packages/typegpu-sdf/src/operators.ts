@@ -1,12 +1,25 @@
 import tgpu from 'typegpu';
-import { f32 } from 'typegpu/data';
-import { min } from 'typegpu/std';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+/**
+ * Smooth minimum operator for combining two SDFs with a smooth transition
+ *
+ * Source: https://iquilezles.org/articles/smin/
+ *
+ * @param d1 First SDF distance
+ * @param d2 Second SDF distance
+ * @param k Smoothing factor (larger k = more smoothing)
+ */
+export const opSmoothUnion = tgpu['~unstable']
+  .fn([d.f32, d.f32, d.f32], d.f32)((d1, d2, k) => {
+    const h = std.max(k - std.abs(d1 - d2), 0) / k;
+    return std.min(d1, d2) - h * h * k * (1 / d.f32(4));
+  });
 
 /**
  * Union operator for combining two SDFs
  * Returns the minimum distance between two SDFs
  */
-// TODO: Mark this function for inlining, when that's possible
-export const opUnion = tgpu['~unstable'].fn([f32, f32], f32)((d1, d2) =>
-  min(d1, d2)
-);
+export const opUnion = tgpu['~unstable']
+  .fn([d.f32, d.f32], d.f32)((d1, d2) => std.min(d1, d2));
