@@ -60,7 +60,7 @@ import type { Infer, MemIdentity } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   Default,
-  OmitPropsExact,
+  NullableToOptional,
   Prettify,
 } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
@@ -350,9 +350,9 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
 
 export type ExtractBindGroupInputFromLayout<
   T extends Record<string, TgpuLayoutEntry | null>,
-> = {
-  [K in keyof OmitPropsExact<T, null>]: LayoutEntryToInput<T[K]>;
-};
+> = NullableToOptional<
+  { [K in keyof T]: LayoutEntryToInput<T[K]> }
+>;
 
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
@@ -637,9 +637,7 @@ export class TgpuBindGroupImpl<
 
   constructor(
     public readonly layout: TgpuBindGroupLayout<Entries>,
-    public readonly entries: {
-      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
-    },
+    public readonly entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
@@ -659,7 +657,7 @@ export class TgpuBindGroupImpl<
             return null;
           }
 
-          const value = this.entries[key];
+          const value = this.entries[key as keyof typeof this.entries];
 
           if (value === undefined) {
             throw new Error(

@@ -33,6 +33,16 @@ export type OmitPropsExact<T extends Record<string, unknown>, Prop> = Pick<
   }[keyof T]
 >;
 
+export type NullableToOptional<T> =
+  & {
+    // Props where the value extends `null` -> make them optional and remove null from the type
+    [K in keyof T as T[K] extends null ? K : never]?: T[K];
+  }
+  & {
+    // All other props remain unchanged
+    [K in keyof T as T[K] extends null ? never : K]: T[K];
+  };
+
 /**
  * The opposite of Readonly<T>
  */
