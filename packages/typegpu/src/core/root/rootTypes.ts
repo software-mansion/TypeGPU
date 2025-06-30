@@ -116,7 +116,7 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface WithBinding {
+export interface Configurable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
@@ -127,6 +127,10 @@ export interface WithBinding {
       | Infer<T>,
   ): WithBinding;
 
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable;
+}
+
+export interface WithBinding extends Configurable {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;

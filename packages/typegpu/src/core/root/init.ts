@@ -90,6 +90,7 @@ import {
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import type {
+  Configurable,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -142,6 +143,10 @@ class WithBindingImpl implements WithBinding {
       vertexAttribs: attribs as AnyVertexAttribs,
       multisampleState: undefined,
     });
+  }
+
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
+    return transform(this);
   }
 }
 
@@ -515,8 +520,8 @@ class TgpuRootImpl extends WithBindingImpl
 
       pass.setPipeline(memo.pipeline);
 
-      const missingBindGroups = new Set(memo.bindGroupLayouts);
-      memo.bindGroupLayouts.forEach((layout, idx) => {
+      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+      memo.usedBindGroupLayouts.forEach((layout, idx) => {
         if (memo.catchall && idx === memo.catchall[0]) {
           // Catch-all
           pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));

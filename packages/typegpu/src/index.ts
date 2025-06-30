@@ -9,7 +9,7 @@ import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
-import { resolve } from './core/resolve/tgpuResolve.ts';
+import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
 import { accessor } from './core/slot/accessor.ts';
@@ -27,6 +27,7 @@ export const tgpu = {
   initFromDevice,
 
   resolve,
+  resolveWithContext,
 
   '~unstable': {
     fn,
@@ -91,6 +92,7 @@ export { isTgpuFn } from './core/function/tgpuFn.ts';
 // types
 
 export type {
+  Configurable,
   TgpuRoot,
   WithBinding,
   WithCompute,

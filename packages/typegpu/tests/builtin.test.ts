@@ -6,11 +6,9 @@ import { resolve } from '../src/resolutionCtx.ts';
 
 describe('builtin', () => {
   it('adds a @builtin attribute to a struct field', () => {
-    const s1 = d
-      .struct({
-        position: d.builtin.position,
-      })
-      .$name('s1');
+    const s1 = d.struct({
+      position: d.builtin.position,
+    });
 
     const opts = {
       names: new StrictNameRegistry(),
