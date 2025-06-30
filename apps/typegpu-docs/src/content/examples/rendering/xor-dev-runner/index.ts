@@ -25,9 +25,9 @@ import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh }
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
-  return select(tanh(v), sign(v), abs(v) > 10);
-});
+const safeTanh = tgpu.fn([d.f32], d.f32)((v) =>
+  select(tanh(v), sign(v), abs(v) > 10)
+);
 
 // Functions can still be written in WGSL, if that's what you prefer.
 // You can omit the argument and return types, and we'll generate them
@@ -35,7 +35,7 @@ const safeTanh = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
 /**
  * A modulo that replicates the behavior of GLSL's `mod` function.
  */
-const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
+const mod = tgpu.fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
   return fract(v / a) * a;
 }`;
 
@@ -43,13 +43,13 @@ const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XZ plane (around the Y axis)
  */
-const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
-  return d.mat3x3f(
+const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+  d.mat3x3f(
     /* right   */ d.vec3f(cos(angle), 0, sin(angle)),
     /* up      */ d.vec3f(0, 1, 0),
     /* forward */ d.vec3f(-sin(angle), 0, cos(angle)),
-  );
-});
+  )
+);
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.
