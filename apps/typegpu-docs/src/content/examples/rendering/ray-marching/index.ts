@@ -18,18 +18,14 @@ context.configure({
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
-const MAX_STEPS = 100;
-const MAX_DIST = 100;
+const MAX_STEPS = 1000;
+const MAX_DIST = 500;
 const SURF_DIST = 0.01;
 
 const getSceneDist = tgpu['~unstable'].fn([d.vec3f], d.f32)((p) => {
   const spherePos = d.vec3f(0, 1, 6);
-  const sphereRadius = 1;
-
-  const floorY = 0;
-
-  // Animate sphere position
-  spherePos.x = std.sin(time.$ * 2) * 2;
+  const sphereRadius = d.f32(1);
+  const floorY = d.f32(0);
 
   const sphereDist = sdf.sdSphere(std.sub(p, spherePos), sphereRadius);
   const floorDist = sdf.sdPlane(p, d.vec3f(0, 1, 0), floorY);
@@ -50,6 +46,24 @@ const rayMarch = tgpu['~unstable'].fn([d.vec3f, d.vec3f], d.f32)((ro, rd) => {
   return dO;
 });
 
+const softShadow = tgpu['~unstable'].fn(
+  [d.vec3f, d.vec3f, d.f32, d.f32, d.f32],
+  d.f32,
+)((ro, rd, minT, maxT, k) => {
+  let res = d.f32(1);
+  let t = minT;
+
+  for (let i = 0; i < 16; i++) {
+    if (t >= maxT) break;
+    const h = getSceneDist(std.add(ro, std.mul(rd, t)));
+    if (h < 0.001) return 0;
+    res = std.min(res, k * h / t);
+    t += std.max(h, 0.01);
+  }
+
+  return res;
+});
+
 const getNormal = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((p) => {
   const dist = getSceneDist(p);
   const e = 0.01;
@@ -61,6 +75,19 @@ const getNormal = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((p) => {
   );
 
   return std.normalize(n);
+});
+
+const getOrbitingLightPos = tgpu['~unstable'].fn([d.f32], d.vec3f)((t) => {
+  // Light orbits around the sphere at (0, 1, 6)
+  const radius = 4; // Orbit radius
+  const height = 4; // Light height
+  const speed = 1; // Orbit speed
+
+  return d.vec3f(
+    std.cos(t * speed) * radius,
+    height,
+    6 + std.sin(t * speed) * radius,
+  );
 });
 
 const vertexMain = tgpu['~unstable'].vertexFn({
@@ -96,11 +123,25 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const p = std.add(ro, std.mul(rd, dist));
   const n = getNormal(p);
 
-  // Basic lighting
-  const l = std.normalize(d.vec3f(2, 4, -2));
+  // Lighting with orbiting light
+  const lightPos = getOrbitingLightPos(time.$);
+  const l = std.normalize(std.sub(lightPos, p));
   const diff = std.max(std.dot(n, l), 0.1);
 
-  return d.vec4f(diff, diff, diff, 1);
+  // Soft shadows
+  const shadowRo = p;
+  const shadowRd = l;
+  const shadowDist = std.length(std.sub(lightPos, p));
+  const shadow = softShadow(shadowRo, shadowRd, 0.1, shadowDist, 16);
+
+  // Combine lighting with shadows
+  const finalColor = std.mix(
+    d.vec3f(diff * 0.5), // Shadow color
+    d.vec3f(diff), // Lit color
+    shadow,
+  );
+
+  return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
 });
 
 const renderPipeline = root['~unstable']
