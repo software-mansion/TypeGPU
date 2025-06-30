@@ -232,8 +232,8 @@ type TgpuRenderPipelinePriors = {
 
 type Memo = {
   pipeline: GPURenderPipeline;
-  bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup] | null;
+  usedBindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup] | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -390,9 +390,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.setPipeline(memo.pipeline);
 
-    const missingBindGroups = new Set(memo.bindGroupLayouts);
+    const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
-    memo.bindGroupLayouts.forEach((layout, idx) => {
+    memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
@@ -473,7 +473,7 @@ class RenderPipelineCore {
       } = this.options;
 
       // Resolving code
-      const { code, bindGroupLayouts, catchall } = resolve(
+      const { code, usedBindGroupLayouts, catchall } = resolve(
         {
           '~resolve': (ctx) => {
             ctx.withSlots(slotBindings, () => {
@@ -491,8 +491,8 @@ class RenderPipelineCore {
         },
       );
 
-      if (catchall !== null) {
-        bindGroupLayouts[catchall[0]]?.$name(
+      if (catchall !== undefined) {
+        usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
@@ -507,7 +507,7 @@ class RenderPipelineCore {
       const descriptor: GPURenderPipelineDescriptor = {
         layout: device.createPipelineLayout({
           label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-          bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
+          bindGroupLayouts: usedBindGroupLayouts.map((l) => branch.unwrap(l)),
         }),
         vertex: {
           module,
@@ -538,7 +538,7 @@ class RenderPipelineCore {
 
       this._memo = {
         pipeline: device.createRenderPipeline(descriptor),
-        bindGroupLayouts,
+        usedBindGroupLayouts,
         catchall,
       };
     }
