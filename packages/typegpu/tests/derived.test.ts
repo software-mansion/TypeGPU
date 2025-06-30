@@ -202,7 +202,7 @@ describe('TgpuDerived', () => {
   it('does not allow defining derived values at resolution', () => {
     const gridSizeSlot = tgpu.slot<number>(2);
     const absGridSize = tgpu['~unstable'].derived(() =>
-      gridSizeSlot.value > 0
+      gridSizeSlot.$ > 0
         ? tgpu['~unstable'].derived(() => gridSizeSlot.$).$
         : tgpu['~unstable'].derived(() => -gridSizeSlot.$).$
     );
