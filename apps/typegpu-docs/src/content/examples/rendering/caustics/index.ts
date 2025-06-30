@@ -148,9 +148,7 @@ const pipeline = root['~unstable']
 let isRunning = true;
 
 function draw(timestamp: number) {
-  if (!isRunning) {
-    return;
-  }
+  if (!isRunning) return;
 
   time.write((timestamp * 0.001) % 1000);
 

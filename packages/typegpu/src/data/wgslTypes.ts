@@ -1380,7 +1380,8 @@ export type AnyWgslData =
   | AnyWgslStruct
   | WgslArray
   | Ptr
-  | Atomic
+  | Atomic<U32>
+  | Atomic<I32>
   | Decorated
   | AbstractInt
   | AbstractFloat
