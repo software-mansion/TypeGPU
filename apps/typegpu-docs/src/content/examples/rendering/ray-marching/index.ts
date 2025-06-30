@@ -28,6 +28,11 @@ const ShapeResult = d.struct({
   dist: d.f32,
 });
 
+const checkerBoard = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
+  const suv = std.floor(std.mul(20, uv));
+  return suv.x + suv.y - 2 * std.floor((suv.x + suv.y) * 0.5);
+});
+
 const smoothUnionColor = tgpu['~unstable']
   .fn([ShapeResult, ShapeResult, d.f32], ShapeResult)((a, b, k) => {
     const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
@@ -48,6 +53,9 @@ const getMorphingShape = tgpu['~unstable']
     // Center position
     const center = d.vec3f(0, 2, 6);
     const localP = std.sub(p, center);
+    const rotMatZ = d.mat4x4f.rotationZ(-t);
+    const rotMatX = d.mat4x4f.rotationX(-t * 0.6);
+    const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
 
     // Animate shapes
     const boxSize = d.vec3f(0.7);
@@ -74,7 +82,7 @@ const getMorphingShape = tgpu['~unstable']
       color: d.vec3f(1, 0.8, 0.2),
     });
     const box = ShapeResult({
-      dist: sdf.sdBoxFrame(localP, boxSize, 0.1),
+      dist: sdf.sdBoxFrame(rotatedP, boxSize, 0.1),
       color: d.vec3f(0.4, 0.6, 1.0),
     });
 
@@ -88,7 +96,11 @@ const getSceneDist = tgpu['~unstable']
     const shape = getMorphingShape(p, time.$);
     const floor = ShapeResult({
       dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
-      color: d.vec3f(1, 1, 1), // White floor
+      color: std.mix(
+        d.vec3f(1),
+        d.vec3f(0.2),
+        checkerBoard(std.mul(p.xz, 0.1)),
+      ), // White floor
     });
 
     // TODO: Use regular min for floor to keep it solid white
@@ -125,7 +137,7 @@ const softShadow = tgpu['~unstable'].fn(
   let res = d.f32(1);
   let t = minT;
 
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 100; i++) {
     if (t >= maxT) break;
     const h = getSceneDist(std.add(ro, std.mul(rd, t))).dist;
     if (h < 0.001) return 0;
@@ -182,7 +194,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   uv.x *= resolution.$.x / resolution.$.y;
 
   // Ray origin and direction
-  const ro = d.vec3f(0, 2, 0);
+  const ro = d.vec3f(0, 2, 3);
   const rd = std.normalize(d.vec3f(uv.x, uv.y, 1));
 
   const march = rayMarch(ro, rd);
