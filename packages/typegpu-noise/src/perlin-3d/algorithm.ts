@@ -9,9 +9,7 @@ export const computeJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
   return randOnUnitSphere();
 });
 
-export const getJunctionGradientSlot = tgpu['~unstable'].slot(
-  computeJunctionGradient,
-);
+export const getJunctionGradientSlot = tgpu.slot(computeJunctionGradient);
 
 const dotProdGrid = tgpu.fn([d.vec3f, d.vec3f], d.f32)((pos, junction) => {
   const relative = sub(pos, junction);

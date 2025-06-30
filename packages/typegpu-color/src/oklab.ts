@@ -324,7 +324,7 @@ const gamutClipAdaptiveL0cusp = tgpu.fn([vec3f], vec3f)((lab) => {
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-export const oklabGamutClipSlot = tgpu['~unstable'].slot(gamutClipAdaptiveL05);
+export const oklabGamutClipSlot = tgpu.slot(gamutClipAdaptiveL05);
 export const oklabGamutClip = {
   preserveChroma: gamutClipPreserveChroma,
   adaptiveL05: gamutClipAdaptiveL05,

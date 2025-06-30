@@ -7,7 +7,7 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
-    const foo = tgpu['~unstable'].slot<number>(1);
+    const foo = tgpu.slot<number>(1);
     const computeDouble = vi.fn(() => {
       return foo.value * 2;
     });
@@ -31,7 +31,7 @@ describe('TgpuDerived', () => {
   });
 
   it('memoizes functions using derived values', () => {
-    const foo = tgpu['~unstable'].slot<number>();
+    const foo = tgpu.slot<number>();
     const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
     const getDouble = tgpu.fn([], d.f32)(() => {
@@ -68,7 +68,7 @@ describe('TgpuDerived', () => {
   });
 
   it('can use slot values from its surrounding context', () => {
-    const gridSizeSlot = tgpu['~unstable'].slot<number>();
+    const gridSizeSlot = tgpu.slot<number>();
 
     const fill = tgpu['~unstable'].derived(() => {
       const gridSize = gridSizeSlot.value;
@@ -106,7 +106,7 @@ describe('TgpuDerived', () => {
   });
 
   it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
-    const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
+    const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
     const doubledVectorSlot = tgpu['~unstable'].derived(() => {
       const vec = vectorSlot.value;
 
@@ -200,13 +200,13 @@ describe('TgpuDerived', () => {
   });
 
   it('does not allow defining derived values at resolution', () => {
-    const gridSizeSlot = tgpu['~unstable'].slot<number>(2);
-    const derived = tgpu['~unstable'].derived(() =>
+    const gridSizeSlot = tgpu.slot<number>(2);
+    const absGridSize = tgpu['~unstable'].derived(() =>
       gridSizeSlot.$ > 0
         ? tgpu['~unstable'].derived(() => gridSizeSlot.$).$
         : tgpu['~unstable'].derived(() => -gridSizeSlot.$).$
     );
-    const fn = tgpu.fn([], d.u32)(() => derived.$);
+    const fn = tgpu.fn([], d.u32)(() => absGridSize.$);
 
     expect(() => parseResolved({ fn })).toThrow(
       'Cannot create tgpu.derived objects at the resolution stage.',
