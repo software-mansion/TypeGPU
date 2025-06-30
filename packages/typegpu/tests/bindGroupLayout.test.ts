@@ -14,6 +14,7 @@ import tgpu, {
 } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import {
+  type ExtractBindGroupInputFromLayout,
   MissingBindingError,
   type TgpuBindGroup,
   type TgpuLayoutComparisonSampler,
@@ -1100,6 +1101,38 @@ describe('TgpuBindGroup', () => {
       root.createBindGroup(layout, {
         foo: buffer,
       });
+    });
+
+    it('allows to write generic function implementations', ({ root }) => {
+      function fooLib() {
+        const fooBuffer = root.createBuffer(d.f32).$usage('uniform');
+
+        function createGroupWithFoo<T extends { foo: { uniform: d.F32 } }>(
+          layout: TgpuBindGroupLayout<T>,
+          rest: Omit<ExtractBindGroupInputFromLayout<T>, 'foo'>,
+        ) {
+          return root.createBindGroup(
+            layout,
+            { ...rest, foo: fooBuffer } as ExtractBindGroupInputFromLayout<T>,
+          );
+        }
+
+        return {
+          createGroupWithFoo,
+        };
+      }
+
+      const { createGroupWithFoo } = fooLib();
+
+      const layout = tgpu.bindGroupLayout({
+        custom: { storage: d.u32, access: 'readonly' },
+        foo: { uniform: d.f32 }, // required by the library
+      });
+
+      const customBuffer = root.createBuffer(d.u32).$usage('storage');
+
+      // the library fulfills the `foo` resource
+      const group = createGroupWithFoo(layout, { custom: customBuffer });
     });
   });
 });

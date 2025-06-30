@@ -58,7 +58,11 @@ import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
-import type { Default, Prettify } from './shared/utilityTypes.ts';
+import type {
+  Default,
+  OmitPropsExact,
+  Prettify,
+} from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 
@@ -347,7 +351,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
 export type ExtractBindGroupInputFromLayout<
   T extends Record<string, TgpuLayoutEntry | null>,
 > = {
-  [K in keyof T]: LayoutEntryToInput<T[K]>;
+  [K in keyof OmitPropsExact<T, null>]: LayoutEntryToInput<T[K]>;
 };
 
 export type TgpuBindGroup<

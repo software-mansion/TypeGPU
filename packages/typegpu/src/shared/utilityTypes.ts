@@ -24,6 +24,16 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
 >;
 
 /**
+ * Removes properties from record type that equal `Prop`
+ */
+export type OmitPropsExact<T extends Record<string, unknown>, Prop> = Pick<
+  T,
+  {
+    [Key in keyof T]: [T[Key], Prop] extends [Prop, T[Key]] ? never : Key;
+  }[keyof T]
+>;
+
+/**
  * The opposite of Readonly<T>
  */
 export type Mutable<T> = {
