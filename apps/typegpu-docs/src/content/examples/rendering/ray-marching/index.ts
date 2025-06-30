@@ -23,114 +23,110 @@ const MAX_DIST = 500;
 const SURF_DIST = 0.01;
 
 // Structure to hold both distance and color
-const ShapeResult = d.struct({
+const Shape = d.struct({
   color: d.vec3f,
   dist: d.f32,
 });
 
-const checkerBoard = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
+const checkerBoard = tgpu.fn([d.vec2f], d.f32)((uv) => {
   const suv = std.floor(std.mul(20, uv));
   return suv.x + suv.y - 2 * std.floor((suv.x + suv.y) * 0.5);
 });
 
-const smoothUnionColor = tgpu['~unstable']
-  .fn([ShapeResult, ShapeResult, d.f32], ShapeResult)((a, b, k) => {
-    const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
-    const m = h * h;
+const smoothUnionColor = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
+  const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
+  const m = h * h;
 
-    // Smooth min for distance
-    const dist = std.min(a.dist, b.dist) - m * k * (1 / d.f32(4));
+  // Smooth min for distance
+  const dist = std.min(a.dist, b.dist) - m * k * (1 / d.f32(4));
 
-    // Blend colors based on relative distances and smoothing
-    const weight = m + std.select(0, 1 - m, a.dist > b.dist);
-    const color = std.mix(a.color, b.color, weight);
+  // Blend colors based on relative distances and smoothing
+  const weight = m + std.select(0, 1 - m, a.dist > b.dist);
+  const color = std.mix(a.color, b.color, weight);
 
-    return { dist, color };
+  return { dist, color };
+});
+
+const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
+  // Center position
+  const center = d.vec3f(0, 2, 6);
+  const localP = std.sub(p, center);
+  const rotMatZ = d.mat4x4f.rotationZ(-t);
+  const rotMatX = d.mat4x4f.rotationX(-t * 0.6);
+  const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
+
+  // Animate shapes
+  const boxSize = d.vec3f(0.7);
+
+  // Create two spheres that move in a circular pattern
+  const sphere1Offset = d.vec3f(
+    std.cos(t * 2) * 0.8,
+    std.sin(t * 3) * 0.3,
+    std.sin(t * 2) * 0.8,
+  );
+  const sphere2Offset = d.vec3f(
+    std.cos(t * 2 + 3.14) * 0.8,
+    std.sin(t * 3 + 1.57) * 0.3,
+    std.sin(t * 2 + 3.14) * 0.8,
+  );
+
+  // Calculate distances and assign colors
+  const sphere1 = Shape({
+    dist: sdf.sdSphere(std.sub(localP, sphere1Offset), 0.5),
+    color: d.vec3f(0.4, 1, 0.5),
+  });
+  const sphere2 = Shape({
+    dist: sdf.sdSphere(std.sub(localP, sphere2Offset), 0.3),
+    color: d.vec3f(1, 0.8, 0.2),
+  });
+  const box = Shape({
+    dist: sdf.sdBoxFrame(rotatedP, boxSize, 0.1),
+    color: d.vec3f(0.4, 0.6, 1.0),
   });
 
-const getMorphingShape = tgpu['~unstable']
-  .fn([d.vec3f, d.f32], ShapeResult)((p, t) => {
-    // Center position
-    const center = d.vec3f(0, 2, 6);
-    const localP = std.sub(p, center);
-    const rotMatZ = d.mat4x4f.rotationZ(-t);
-    const rotMatX = d.mat4x4f.rotationX(-t * 0.6);
-    const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
+  // Smoothly blend shapes and colors
+  const spheres = smoothUnionColor(sphere1, sphere2, 0.1);
+  return smoothUnionColor(spheres, box, 0.2);
+});
 
-    // Animate shapes
-    const boxSize = d.vec3f(0.7);
-
-    // Create two spheres that move in a circular pattern
-    const sphere1Offset = d.vec3f(
-      std.cos(t * 2) * 0.8,
-      std.sin(t * 3) * 0.3,
-      std.sin(t * 2) * 0.8,
-    );
-    const sphere2Offset = d.vec3f(
-      std.cos(t * 2 + 3.14) * 0.8,
-      std.sin(t * 3 + 1.57) * 0.3,
-      std.sin(t * 2 + 3.14) * 0.8,
-    );
-
-    // Calculate distances and assign colors
-    const sphere1 = ShapeResult({
-      dist: sdf.sdSphere(std.sub(localP, sphere1Offset), 0.5),
-      color: d.vec3f(0.4, 1, 0.5),
-    });
-    const sphere2 = ShapeResult({
-      dist: sdf.sdSphere(std.sub(localP, sphere2Offset), 0.3),
-      color: d.vec3f(1, 0.8, 0.2),
-    });
-    const box = ShapeResult({
-      dist: sdf.sdBoxFrame(rotatedP, boxSize, 0.1),
-      color: d.vec3f(0.4, 0.6, 1.0),
-    });
-
-    // Smoothly blend shapes and colors
-    const spheres = smoothUnionColor(sphere1, sphere2, 0.1);
-    return smoothUnionColor(spheres, box, 0.2);
+const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
+  const shape = getMorphingShape(p, time.$);
+  const floor = Shape({
+    dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
+    color: std.mix(
+      d.vec3f(1),
+      d.vec3f(0.2),
+      checkerBoard(std.mul(p.xz, 0.1)),
+    ), // White floor
   });
 
-const getSceneDist = tgpu['~unstable']
-  .fn([d.vec3f], ShapeResult)((p) => {
-    const shape = getMorphingShape(p, time.$);
-    const floor = ShapeResult({
-      dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
-      color: std.mix(
-        d.vec3f(1),
-        d.vec3f(0.2),
-        checkerBoard(std.mul(p.xz, 0.1)),
-      ), // White floor
-    });
+  // TODO: Use regular min for floor to keep it solid white
+  return smoothUnionColor(shape, floor, 0.01);
+});
 
-    // TODO: Use regular min for floor to keep it solid white
-    return smoothUnionColor(shape, floor, 0.01);
+const rayMarch = tgpu.fn([d.vec3f, d.vec3f], Shape)((ro, rd) => {
+  let dO = d.f32(0);
+  const result = Shape({
+    dist: d.f32(MAX_DIST),
+    color: d.vec3f(0, 0, 0),
   });
 
-const rayMarch = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], ShapeResult)((ro, rd) => {
-    let dO = d.f32(0);
-    const result = ShapeResult({
-      dist: d.f32(MAX_DIST),
-      color: d.vec3f(0, 0, 0),
-    });
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const p = std.add(ro, std.mul(rd, dO));
+    const scene = getSceneDist(p);
+    dO += scene.dist;
 
-    for (let i = 0; i < MAX_STEPS; i++) {
-      const p = std.add(ro, std.mul(rd, dO));
-      const scene = getSceneDist(p);
-      dO += scene.dist;
-
-      if (dO > MAX_DIST || scene.dist < SURF_DIST) {
-        result.dist = dO;
-        result.color = scene.color;
-        break;
-      }
+    if (dO > MAX_DIST || scene.dist < SURF_DIST) {
+      result.dist = dO;
+      result.color = scene.color;
+      break;
     }
+  }
 
-    return result;
-  });
+  return result;
+});
 
-const softShadow = tgpu['~unstable'].fn(
+const softShadow = tgpu.fn(
   [d.vec3f, d.vec3f, d.f32, d.f32, d.f32],
   d.f32,
 )((ro, rd, minT, maxT, k) => {
@@ -148,7 +144,7 @@ const softShadow = tgpu['~unstable'].fn(
   return res;
 });
 
-const getNormal = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((p) => {
+const getNormal = tgpu.fn([d.vec3f], d.vec3f)((p) => {
   const dist = getSceneDist(p).dist;
   const e = 0.01;
 
@@ -176,13 +172,13 @@ const getOrbitingLightPos = tgpu['~unstable'].fn([d.f32], d.vec3f)((t) => {
 const vertexMain = tgpu['~unstable'].vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(1, 1), d.vec2f(-1, 1), d.vec2f(1, -1), d.vec2f(-1, -1)];
-  const uv = [d.vec2f(1, 1), d.vec2f(0, 1), d.vec2f(1, 0), d.vec2f(0, 0)];
+})(({ idx }) => {
+  const pos = [d.vec2f(0, 0.8), d.vec2f(-0.8, -0.8), d.vec2f(0.8, -0.8)];
+  const uv = [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)];
 
   return {
-    pos: d.vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0),
-    uv: uv[input.idx],
+    pos: d.vec4f(pos[idx], 0, 1),
+    uv: uv[idx],
   };
 });
 
