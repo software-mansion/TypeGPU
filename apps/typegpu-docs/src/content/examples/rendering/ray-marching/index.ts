@@ -91,9 +91,8 @@ const getSceneDist = tgpu['~unstable']
       color: d.vec3f(1, 1, 1), // White floor
     });
 
-    // Use regular min for floor to keep it solid white
+    // TODO: Use regular min for floor to keep it solid white
     return smoothUnionColor(shape, floor, 0.01);
-    // return std.select(shape.dist, floor.dist, shape.dist < floor.dist);
   });
 
 const rayMarch = tgpu['~unstable']
@@ -223,39 +222,28 @@ const renderPipeline = root['~unstable']
   .withPrimitive({ topology: 'triangle-strip' })
   .createPipeline();
 
-let disposed = false;
+let isRunning = true;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
+function run(timestamp: number) {
+  if (!isRunning) return;
 
-onFrame(() => {
-  time.write((Date.now()) / 1000 % 1000);
+  time.write(timestamp / 1000 % 1000);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
-  const textureView = context.getCurrentTexture().createView();
   renderPipeline
     .withColorAttachment({
-      view: textureView,
-      clearValue: [0, 0, 0, 1],
+      view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
     .draw(4);
-});
+
+  requestAnimationFrame(run);
+}
+
+requestAnimationFrame(run);
 
 export function onCleanup() {
-  disposed = true;
+  isRunning = false;
   root.destroy();
 }
