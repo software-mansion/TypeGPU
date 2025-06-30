@@ -1,9 +1,9 @@
 import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
+
 import {
-  batchType,
   dataBindGroupLayout,
   fixedArrayLength,
-  inputValueType,
   workgroupSize,
 } from './schemas.ts';
 import type { F32, WgslArray } from 'typegpu/data';
@@ -12,13 +12,18 @@ import { incrementShader } from './compute/incrementShader.ts';
 
 export function currentSum(
   root: TgpuRoot,
-  inputBuffor: TgpuBuffer<WgslArray<F32>> & StorageFlag,
+  inputBuffer: TgpuBuffer<WgslArray<F32>> & StorageFlag,
 ) {
-  const workBuffer = root.createBuffer(inputValueType).$usage('storage');
-  const sumsBuffer = root.createBuffer(batchType).$usage('storage');
+  const dynamicInputBufferLength = inputBuffer.dataType.elementCount;
+  const workBuffer = root.createBuffer(
+    d.arrayOf(d.f32, dynamicInputBufferLength),
+  ).$usage('storage');
+  const sumsBuffer = root.createBuffer(
+    d.arrayOf(d.f32, dynamicInputBufferLength / workgroupSize * 2),
+  ).$usage('storage');
 
   const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
-    inputArray: inputBuffor,
+    inputArray: inputBuffer,
     workArray: workBuffer,
     sumsArray: sumsBuffer,
   });
@@ -26,7 +31,9 @@ export function currentSum(
   const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: sumsBuffer,
     workArray: sumsBuffer,
-    sumsArray: root.createBuffer(batchType).$usage('storage'), // unused but required
+    sumsArray: root.createBuffer(
+      d.arrayOf(d.f32, dynamicInputBufferLength / workgroupSize * 2),
+    ).$usage('storage'), // unused but required
   });
 
   // Pipelines
@@ -100,5 +107,5 @@ export function currentSum(
     arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0),
   );
 
-  return inputBuffor;
+  return inputBuffer;
 }

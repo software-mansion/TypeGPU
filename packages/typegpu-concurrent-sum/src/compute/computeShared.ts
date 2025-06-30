@@ -1,12 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import {
-  dataBindGroupLayout as layout,
-  fixedArrayLength,
-  workgroupSize,
-} from '../schemas.ts';
-
+import { dataBindGroupLayout as layout, workgroupSize } from '../schemas.ts';
 const sharedMem = tgpu['~unstable'].workgroupVar(
   d.arrayOf(d.f32, workgroupSize * 2),
 );
@@ -22,6 +17,8 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
   const gId = input.gid.x;
   const length = d.u32(workgroupSize * 2);
   const log2Length = d.i32(std.log2(d.f32(length)));
+
+  const fixedArrayLength = layout.$.inputArray.length;
 
   // Copy input data to shared memory
   const idx0 = gId * 2;
