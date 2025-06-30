@@ -49,14 +49,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
         });
 
-        const b = tgpu['~unstable'].fn([])(() => {
+        const b = tgpu.fn([])(() => {
         const y = 2 + 2;
         });
 
         const cx = 2;
-        const c = tgpu['~unstable'].fn([])(() => cx);
+        const c = tgpu.fn([])(() => cx);
 
-        const d = tgpu['~unstable'].fn([])('() {}');
+        const d = tgpu.fn([])('() {}');
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
@@ -70,7 +70,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
-      const b = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const b = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
@@ -78,14 +78,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           externals: {},
         }) && $.f)({}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
           v: 1,
           ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
           externals: {cx},
         }) && $.f)({}));
-      const d = tgpu['~unstable'].fn([])('() {}');"
+      const d = tgpu.fn([])('() {}');"
     `);
   });
 
@@ -203,14 +203,14 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
         });
 
-        const b = tgpu['~unstable'].fn([])(() => {
+        const b = tgpu.fn([])(() => {
         const y = 2 + 2;
         });
 
         const cx = 2;
-        const c = tgpu['~unstable'].fn([])(() => cx);
+        const c = tgpu.fn([])(() => cx);
 
-        const d = tgpu['~unstable'].fn([])('() {}');
+        const d = tgpu.fn([])('() {}');
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
@@ -224,7 +224,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                     externals: {},
                   }) && $.f)({})));
 
-              tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }), {
                     v: 1,
@@ -233,7 +233,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }) && $.f)({})));
 
               const cx = 2;
-              tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
                       }), {
                     v: 1,
@@ -241,7 +241,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                     externals: {cx},
                   }) && $.f)({})));
 
-              tgpu['~unstable'].fn([])('() {}');
+              tgpu.fn([])('() {}');
       "
     `);
   });

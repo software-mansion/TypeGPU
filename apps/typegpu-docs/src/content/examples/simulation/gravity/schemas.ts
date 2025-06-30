@@ -62,10 +62,8 @@ export const renderSkyBoxVertexLayout = tgpu.vertexLayout((n) =>
 );
 
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);
-export const filteringSamplerSlot = tgpu['~unstable'].slot<TgpuSampler>();
-export const skyBoxSlot = tgpu['~unstable'].slot<
-  TgpuSampledTexture<'cube', d.F32>
->();
+export const filteringSamplerSlot = tgpu.slot<TgpuSampler>();
+export const skyBoxSlot = tgpu.slot<TgpuSampledTexture<'cube', d.F32>>();
 export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
 export const timeAccess = tgpu['~unstable'].accessor(Time);
 

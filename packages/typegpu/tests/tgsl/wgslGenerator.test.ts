@@ -19,7 +19,7 @@ const { NodeTypeCatalog: NODE } = tinyest;
 
 const transpiler = new JitTranspiler();
 
-const numberSlot = tgpu['~unstable'].slot(44);
+const numberSlot = tgpu.slot(44);
 const derivedV4u = tgpu['~unstable'].derived(() =>
   std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
 );
@@ -160,10 +160,9 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('mutable');
 
-    const testFn = tgpu['~unstable']
-      .fn([], d.u32)(() => {
-        return testUsage.value.a + testUsage.value.b.x;
-      });
+    const testFn = tgpu.fn([], d.u32)(() => {
+      return testUsage.value.a + testUsage.value.b.x;
+    });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -225,7 +224,7 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('uniform');
 
-    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
+    const testFn = tgpu.fn([], d.u32)(() => {
       return testUsage.value[3] as number;
     });
 
@@ -281,15 +280,14 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('mutable');
 
-    const testFn = tgpu['~unstable']
-      .fn([d.u32], d.vec4f)((idx) => {
-        // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-        const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-        const vec = std.mix(d.vec4f(), testUsage.value.a, value);
-        // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-        std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
-        return vec;
-      });
+    const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
+      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+      const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      return vec;
+    });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -427,11 +425,9 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for derived values and slots', () => {
-    const testFn = tgpu['~unstable']
-      .fn([], d.vec4u)(() => {
-        return derivedV4u.value;
-      })
-      .$name('testFn');
+    const testFn = tgpu.fn([], d.vec4u)(() => {
+      return derivedV4u.value;
+    });
 
     expect(parseResolved({ testFn })).toBe(
       parse(`
@@ -470,10 +466,9 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for indexing into a derived value', () => {
-    const testFn = tgpu['~unstable']
-      .fn([d.u32], d.f32)((idx) => {
-        return derivedV2f.value[idx] as number;
-      });
+    const testFn = tgpu.fn([d.u32], d.f32)((idx) => {
+      return derivedV2f.value[idx] as number;
+    });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -505,7 +500,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions', () => {
-    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
+    const testFn = tgpu.fn([], d.u32)(() => {
       const arr = [d.u32(1), 2, 3];
       return arr[1] as number;
     });
@@ -551,7 +546,7 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for complex array expressions', () => {
-    const testFn = tgpu['~unstable'].fn([], d.u32)(() => {
+    const testFn = tgpu.fn([], d.u32)(() => {
       const arr = [
         d.vec2u(1, 2),
         d.vec2u(3, 4),
@@ -570,15 +565,13 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions with struct elements', () => {
-    const testStruct = d
-      .struct({
-        x: d.u32,
-        y: d.f32,
-      })
-      .$name('TestStruct');
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.f32,
+    });
 
-    const testFn = tgpu['~unstable'].fn([], d.f32)(() => {
-      const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
+    const testFn = tgpu.fn([], d.f32)(() => {
+      const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
       return (arr[1] as { x: number; y: number }).y;
     });
 
@@ -604,7 +597,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[6,"testStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"testStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[6,"TestStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"TestStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
 
     ctx[$internal].itemStateStack.pushFunctionScope(
@@ -614,26 +607,21 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
+    // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
     //                        ^ this should be an array<TestStruct, 2>
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
     );
 
-    expect(res.dataType).toStrictEqual(d.arrayOf(testStruct, 2));
+    expect(res.dataType).toStrictEqual(d.arrayOf(TestStruct, 2));
   });
 
   it('generates correct code for array expressions with derived elements', () => {
-    const testFn = tgpu['~unstable']
-      .fn([], d.f32)(() => {
-        const arr = [
-          derivedV2f.value,
-          std.mul(derivedV2f.value, d.vec2f(2, 2)),
-        ];
-        return (arr[1] as { x: number; y: number }).y;
-      })
-      .$name('testFn');
+    const testFn = tgpu.fn([], d.f32)(() => {
+      const arr = [derivedV2f.$, std.mul(derivedV2f.$, d.vec2f(2, 2))];
+      return (arr[1] as { x: number; y: number }).y;
+    });
 
     expect(parseResolved({ testFn })).toBe(
       parse(`
@@ -652,7 +640,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[7,"derivedV2f","value"],[6,[7,"std","mul"],[[7,"derivedV2f","value"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"derivedV2f","$"],[6,[7,"std","mul"],[[7,"derivedV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 
@@ -662,11 +650,11 @@ describe('wgslGenerator', () => {
       y: d.vec3f,
     });
 
-    const fnOne = tgpu['~unstable'].fn([], TestStruct).does(() => {
+    const fnOne = tgpu.fn([], TestStruct)(() => {
       return TestStruct({ x: 1, y: d.vec3f(1, 2, 3) });
     });
 
-    const fnTwo = tgpu['~unstable'].fn([], d.f32).does(() => {
+    const fnTwo = tgpu.fn([], d.f32)(() => {
       return fnOne().y.x;
     });
 
@@ -723,12 +711,11 @@ describe('wgslGenerator', () => {
     const testBuffer = root.createBuffer(UnfortunateStruct).$usage('storage');
 
     const testUsage = testBuffer.as('mutable');
-    const testSlot = tgpu['~unstable'].slot(testUsage);
-    const testFn = tgpu['~unstable']
-      .fn([], d.f32)(() => {
-        const value = testSlot.value.value;
-        return value.x + value.y + value.z;
-      });
+    const testSlot = tgpu.slot(testUsage);
+    const testFn = tgpu.fn([], d.f32)(() => {
+      const value = testSlot.value.value;
+      return value.x + value.y + value.z;
+    });
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -892,18 +879,14 @@ describe('wgslGenerator', () => {
   });
 
   it('throws error when incorrectly initializing function', () => {
-    const internalTestFn = tgpu['~unstable']
-      .fn([d.vec2f], d.mat4x4f)(() => {
-        return d.mat4x4f();
-      })
-      .$name('internalTestFn');
+    const internalTestFn = tgpu.fn([d.vec2f], d.mat4x4f)(() => {
+      return d.mat4x4f();
+    });
 
-    const testFn = tgpu['~unstable']
-      .fn([])(() => {
-        // @ts-expect-error
-        return internalTestFn([1, 23, 3]);
-      })
-      .$name('testFn');
+    const testFn = tgpu.fn([])(() => {
+      // @ts-expect-error
+      return internalTestFn([1, 23, 3]);
+    });
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
@@ -916,34 +899,30 @@ describe('wgslGenerator', () => {
   });
 
   it('throws error when initializing translate4 function', () => {
-    const testFn = tgpu['~unstable']
-      .fn([], d.mat4x4f)(() => {
-        // @ts-expect-error
-        return std.translate4();
-      })
-      .$name('testTranslateError');
+    const testFn = tgpu.fn([], d.mat4x4f)(() => {
+      // @ts-expect-error
+      return std.translate4();
+    });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
 [Error: Resolution of the following tree failed: 
 - <root>
-- fn:testTranslateError
+- fn:testFn
 - translate4: Cannot read properties of undefined (reading 'value')]
 `);
   });
 
   it('throws error when initializing vec4f with an array', () => {
-    const testFn = tgpu['~unstable']
-      .fn([], d.mat4x4f)(() => {
-        // @ts-expect-error
-        const x = d.vec4f([1, 2, 3, 4]);
-        return d.mat4x4f();
-      })
-      .$name('testVec4fError');
+    const testFn = tgpu.fn([], d.mat4x4f)(() => {
+      // @ts-expect-error
+      const x = d.vec4f([1, 2, 3, 4]);
+      return d.mat4x4f();
+    });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
 [Error: Resolution of the following tree failed: 
 - <root>
-- fn:testVec4fError
+- fn:testFn
 - vec4f: Resolution of the following tree failed: 
 - vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
 `);

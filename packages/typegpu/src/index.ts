@@ -20,8 +20,10 @@ import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 export const tgpu = {
+  fn,
   bindGroupLayout,
   vertexLayout,
+  slot,
 
   init,
   initFromDevice,
@@ -30,6 +32,9 @@ export const tgpu = {
   resolveWithContext,
 
   '~unstable': {
+    /**
+     * @deprecated This feature is now stable, use tgpu.fn.
+     */
     fn,
     fragmentFn,
     vertexFn,
@@ -39,6 +44,9 @@ export const tgpu = {
      */
     vertexLayout,
     derived,
+    /**
+     * @deprecated This feature is now stable, use tgpu.slot.
+     */
     slot,
     accessor,
     privateVar,
