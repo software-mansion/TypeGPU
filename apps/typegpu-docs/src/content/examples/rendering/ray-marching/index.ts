@@ -173,11 +173,11 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
-  const pos = [d.vec2f(0, 0.8), d.vec2f(-0.8, -0.8), d.vec2f(0.8, -0.8)];
-  const uv = [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)];
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const uv = [d.vec2f(0, 0), d.vec2f(2, 0), d.vec2f(0, 2)];
 
   return {
-    pos: d.vec4f(pos[idx], 0, 1),
+    pos: d.vec4f(pos[idx], 0.0, 1.0),
     uv: uv[idx],
   };
 });
