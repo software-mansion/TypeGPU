@@ -61,7 +61,8 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => input.color);
 
-const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
 const pipeline = root['~unstable']
