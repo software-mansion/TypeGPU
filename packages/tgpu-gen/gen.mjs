@@ -23,7 +23,6 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {boolean} toTs
  * @prop {'commonjs' | 'esmodule'} moduleSyntax
  * @prop {'keep' | 'overwrite'} [existingFileStrategy]
- * @prop {boolean} experimentalFunctions
  * @prop {Set<string>} [declaredIdentifiers]
  * @prop {{tgpu?: boolean, data?: boolean }} [usedImports]
  */
@@ -109,7 +108,6 @@ export function generate(
     outputPath: '',
     toTs: true,
     moduleSyntax: 'esmodule',
-    experimentalFunctions: true,
   },
 ) {
   const reflect = new WgslReflect(wgsl);
@@ -121,9 +119,7 @@ export function generate(
     options,
   );
 
-  const functions = options.experimentalFunctions
-    ? generateFunctions(reflect.functions, wgsl, options)
-    : null;
+  const functions = generateFunctions(reflect.functions, wgsl, options);
 
   const imports = generateImports(options);
   const exports_ = generateExports(options);
@@ -534,9 +530,9 @@ function generateFunction(func, wgsl, options) {
   const body = implementation.match(/\(.*\).*{.*}/s);
 
   return body?.[0]
-    ? `tgpu['~unstable'].fn(${inputs}${
-      output ? `, ${output}` : ''
-    })(/* wgsl */ \`${body[0]}\`)`
+    ? `tgpu.fn(${inputs}${output ? `, ${output}` : ''})(/* wgsl */ \`${
+      body[0]
+    }\`)`
     : '';
 }
 

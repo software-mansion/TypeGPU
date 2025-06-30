@@ -1,4 +1,3 @@
-import type { JitTranspiler } from '../../jitTranspiler.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
@@ -22,11 +21,6 @@ export interface TgpuResolveOptions {
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
-  /**
-   * Optional JIT transpiler for resolving TGSL functions.
-   * @experimental
-   */
-  unstable_jitTranspiler?: JitTranspiler | undefined;
 }
 
 /**
@@ -71,7 +65,6 @@ export function resolveWithContext(
     externals,
     template,
     names,
-    unstable_jitTranspiler: jitTranspiler,
   } = options;
 
   const dependencies = {} as Record<string, Wgsl>;
@@ -89,7 +82,6 @@ export function resolveWithContext(
     names: names === 'strict'
       ? new StrictNameRegistry()
       : new RandomNameRegistry(),
-    jitTranspiler,
   });
 }
 
