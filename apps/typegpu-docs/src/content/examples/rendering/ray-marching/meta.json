@@ -1,5 +1,11 @@
 {
   "title": "Ray Marching",
   "category": "rendering",
-  "tags": ["experimental", "fragment shader", "shadows"]
+  "tags": [
+    "experimental",
+    "fragment shader",
+    "shadows",
+    "ray marching",
+    "sphere tracing"
+  ]
 }
