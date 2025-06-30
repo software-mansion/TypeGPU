@@ -34,7 +34,7 @@ const displayModes = {
  * Adapted from the original Shadertoy implementation by movAX13h:
  * https://www.shadertoy.com/view/lssGDj
  */
-const characterFn = tgpu['~unstable'].fn([d.u32, d.vec2f], d.f32)((n, p) => {
+const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   // Transform texture coordinates to character bitmap coordinates (5x5 grid)
   const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
 

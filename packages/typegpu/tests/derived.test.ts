@@ -15,11 +15,9 @@ describe('TgpuDerived', () => {
     const a = tgpu['~unstable'].derived(() => double.value + 1);
     const b = tgpu['~unstable'].derived(() => double.value + 2);
 
-    const main = tgpu['~unstable']
-      .fn([], d.f32)(() => {
-        return a.value + b.value;
-      })
-      .$name('main');
+    const main = tgpu.fn([], d.f32)(() => {
+      return a.value + b.value;
+    });
 
     expect(parseResolved({ main })).toBe(
       parse(`
@@ -36,23 +34,19 @@ describe('TgpuDerived', () => {
     const foo = tgpu.slot<number>();
     const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
-    const getDouble = tgpu['~unstable']
-      .fn([], d.f32)(() => {
-        return double.value;
-      })
-      .$name('getDouble');
+    const getDouble = tgpu.fn([], d.f32)(() => {
+      return double.value;
+    });
 
     const a = getDouble.with(foo, 2);
     const b = getDouble.with(foo, 2); // the same as `a`
     const c = getDouble.with(foo, 4);
 
-    const main = tgpu['~unstable']
-      .fn([])(() => {
-        a();
-        b();
-        c();
-      })
-      .$name('main');
+    const main = tgpu.fn([])(() => {
+      a();
+      b();
+      c();
+    });
 
     expect(parseResolved({ main })).toBe(
       parse(`
@@ -79,11 +73,9 @@ describe('TgpuDerived', () => {
     const fill = tgpu['~unstable'].derived(() => {
       const gridSize = gridSizeSlot.value;
 
-      return tgpu['~unstable']
-        .fn([d.arrayOf(d.f32, gridSize)])((arr) => {
-          // do something
-        })
-        .$name('fill');
+      return tgpu.fn([d.arrayOf(d.f32, gridSize)])(
+        (arr) => {/* do something */},
+      ).$name('fill');
     });
 
     const fillWith2 = fill.with(gridSizeSlot, 2);
@@ -91,12 +83,11 @@ describe('TgpuDerived', () => {
 
     const exampleArray: number[] = [1, 2, 3];
 
-    const main = tgpu['~unstable']
-      .fn([])(() => {
-        fill.value(exampleArray);
-        fillWith2.value(exampleArray);
-        fillWith3.value(exampleArray);
-      })
+    const main = tgpu.fn([])(() => {
+      fill.value(exampleArray);
+      fillWith2.value(exampleArray);
+      fillWith3.value(exampleArray);
+    })
       .with(gridSizeSlot, 1);
 
     expect(parseResolved({ main })).toBe(
@@ -122,22 +113,20 @@ describe('TgpuDerived', () => {
       return mul(2, vec);
     });
 
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      })
-      .$name('Boid');
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = buffer.as('uniform');
 
     const derivedUniformSlot = tgpu['~unstable'].derived(() => uniform);
-    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(
-      () => derivedUniformSlot,
+    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(() =>
+      derivedUniformSlot
     );
 
-    const func = tgpu['~unstable'].fn([])(() => {
+    const func = tgpu.fn([])(() => {
       const pos = doubledVectorSlot.value;
       const posX = doubledVectorSlot.value.x;
       const vel = derivedUniformSlot.value.vel;
@@ -177,26 +166,22 @@ describe('TgpuDerived', () => {
   // in context of whether the function should automatically have
   // slot values set on derived and how to achieve that
   it('allows slot bindings to pass downstream from derived (#697)', () => {
-    const utgpu = tgpu['~unstable'];
-    const valueSlot = utgpu.slot(1).$name('valueSlot');
+    const valueSlot = tgpu['~unstable'].slot(1);
 
-    const derivedFn = utgpu.derived(() => {
-      return tgpu['~unstable']
-        .fn([], d.f32)(() => valueSlot.value)
-        .with(valueSlot, valueSlot.value) // currently necessary to work :/
+    const derivedFn = tgpu['~unstable'].derived(() => {
+      return tgpu.fn([], d.f32)(() => valueSlot.$)
+        .with(valueSlot, valueSlot.$) // currently necessary to work :/
         .$name('innerFn');
     });
 
     const derivedFnWith2 = derivedFn.with(valueSlot, 2);
 
-    const mainFn = tgpu['~unstable']
-      .fn([])(() => {
-        derivedFn.value();
-        derivedFnWith2.value();
-      })
-      .$name('main');
+    const main = tgpu.fn([])(() => {
+      derivedFn.$();
+      derivedFnWith2.$();
+    });
 
-    expect(parseResolved({ mainFn })).toBe(
+    expect(parseResolved({ main })).toBe(
       parse(`
         fn innerFn() -> f32 {
           return 1;
@@ -218,12 +203,10 @@ describe('TgpuDerived', () => {
     const gridSizeSlot = tgpu.slot<number>(2);
     const absGridSize = tgpu['~unstable'].derived(() =>
       gridSizeSlot.value > 0
-        ? tgpu['~unstable'].derived(() => gridSizeSlot.value).value
-        : tgpu['~unstable'].derived(() => -gridSizeSlot.value).value
+        ? tgpu['~unstable'].derived(() => gridSizeSlot.$).$
+        : tgpu['~unstable'].derived(() => -gridSizeSlot.$).$
     );
-    const fn = tgpu['~unstable'].fn([], d.u32)(() => {
-      return absGridSize.$;
-    });
+    const fn = tgpu.fn([], d.u32)(() => absGridSize.$);
 
     expect(() => parseResolved({ fn })).toThrow(
       'Cannot create tgpu.derived objects at the resolution stage.',

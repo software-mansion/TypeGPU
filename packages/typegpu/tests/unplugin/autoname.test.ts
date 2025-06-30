@@ -79,7 +79,7 @@ describe('autonaming', () => {
       .$usage('storage')
       .$addFlags(GPUBufferUsage.STORAGE);
     const Item = d.struct({ a: d.u32 });
-    const myFn = tgpu['~unstable'].fn(
+    const myFn = tgpu.fn(
       [Item],
       Item,
     ) /* wgsl */`(item: Item) -> Item { return item; }`
@@ -95,14 +95,14 @@ describe('autonaming', () => {
 
   it('does not rename already named resources', () => {
     const myStruct = d.struct({ a: d.u32 }).$name('IntStruct');
-    const myFunction = tgpu['~unstable'].fn([])(() => 0).$name('ConstFunction');
+    const myFunction = tgpu.fn([])(() => 0).$name('ConstFunction');
 
     expect(getName(myStruct)).toBe('IntStruct');
     expect(getName(myFunction)).toBe('ConstFunction');
   });
 
   it('names TGPU functions', () => {
-    const myFunction = tgpu['~unstable'].fn([])(() => 0);
+    const myFunction = tgpu.fn([])(() => 0);
     const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
       () => {},
     );
@@ -129,7 +129,7 @@ describe('autonaming', () => {
   //     return 0;
   //   };
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');
@@ -142,7 +142,7 @@ describe('autonaming', () => {
   //     return 0;
   //   };
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');
@@ -155,7 +155,7 @@ describe('autonaming', () => {
   //     return 0;
   //   }
 
-  //   const myGpuFun = tgpu['~unstable'].fn([], d.u32)(myFun);
+  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
   //   expect(getName(myFun)).toBe('myFun');
   //   expect(getName(myGpuFun)).toBe('myGpuFun');
