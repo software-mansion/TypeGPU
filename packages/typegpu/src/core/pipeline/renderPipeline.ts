@@ -487,7 +487,6 @@ class RenderPipelineCore {
         },
         {
           names: branch.nameRegistry,
-          jitTranspiler: branch.jitTranspiler,
         },
       );
 
