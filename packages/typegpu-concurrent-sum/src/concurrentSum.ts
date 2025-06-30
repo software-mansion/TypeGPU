@@ -13,9 +13,10 @@ import { incrementShader } from './compute/incrementShader.ts';
 export function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<WgslArray<F32>> & StorageFlag,
+  outputBuffer?: TgpuBuffer<WgslArray<F32>> & StorageFlag,
 ) {
   const dynamicInputBufferLength = inputBuffer.dataType.elementCount;
-  const workBuffer = root.createBuffer(
+  const workBuffer = outputBuffer ?? root.createBuffer(
     d.arrayOf(d.f32, dynamicInputBufferLength),
   ).$usage('storage');
   const sumsBuffer = root.createBuffer(
