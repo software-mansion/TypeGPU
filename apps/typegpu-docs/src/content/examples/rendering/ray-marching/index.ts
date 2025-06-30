@@ -46,11 +46,11 @@ const smoothUnionColor = tgpu['~unstable']
 const getMorphingShape = tgpu['~unstable']
   .fn([d.vec3f, d.f32], ShapeResult)((p, t) => {
     // Center position
-    const center = d.vec3f(0, 1, 6);
+    const center = d.vec3f(0, 2, 6);
     const localP = std.sub(p, center);
 
     // Animate shapes
-    const boxSize = d.vec3f(0.5);
+    const boxSize = d.vec3f(0.7);
 
     // Create two spheres that move in a circular pattern
     const sphere1Offset = d.vec3f(
@@ -74,13 +74,13 @@ const getMorphingShape = tgpu['~unstable']
       color: d.vec3f(1, 0.8, 0.2),
     });
     const box = ShapeResult({
-      dist: sdf.sdBox3d(localP, boxSize),
+      dist: sdf.sdBoxFrame(localP, boxSize, 0.1),
       color: d.vec3f(0.4, 0.6, 1.0),
     });
 
     // Smoothly blend shapes and colors
-    const spheres = smoothUnionColor(sphere1, sphere2, 0.5);
-    return smoothUnionColor(spheres, box, 0.5);
+    const spheres = smoothUnionColor(sphere1, sphere2, 0.1);
+    return smoothUnionColor(spheres, box, 0.2);
   });
 
 const getSceneDist = tgpu['~unstable']

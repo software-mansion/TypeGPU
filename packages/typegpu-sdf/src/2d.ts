@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
 import { abs, add, length, max, min, sub } from 'typegpu/std';
 
-export const sdCircle = tgpu['~unstable']
+export const sdDisk = tgpu['~unstable']
   .fn([vec2f, f32], f32)((p, r) => {
     'kernel & js';
     return length(p) - r;
