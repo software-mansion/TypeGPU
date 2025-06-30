@@ -33,7 +33,7 @@ const checkerBoard = tgpu.fn([d.vec2f], d.f32)((uv) => {
   return suv.x + suv.y - 2 * std.floor((suv.x + suv.y) * 0.5);
 });
 
-const smoothUnionColor = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
+const smoothShapeUnion = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
   const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
   const m = h * h;
 
@@ -46,6 +46,11 @@ const smoothUnionColor = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
 
   return { dist, color };
 });
+
+const shapeUnion = tgpu.fn([Shape, Shape], Shape)((a, b) => ({
+  color: std.select(a.color, b.color, a.dist > b.dist),
+  dist: std.min(a.dist, b.dist),
+}));
 
 const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
   // Center position
@@ -85,8 +90,8 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
   });
 
   // Smoothly blend shapes and colors
-  const spheres = smoothUnionColor(sphere1, sphere2, 0.1);
-  return smoothUnionColor(spheres, box, 0.2);
+  const spheres = smoothShapeUnion(sphere1, sphere2, 0.1);
+  return smoothShapeUnion(spheres, box, 0.2);
 });
 
 const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
@@ -97,11 +102,10 @@ const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
       d.vec3f(1),
       d.vec3f(0.2),
       checkerBoard(std.mul(p.xz, 0.1)),
-    ), // White floor
+    ),
   });
 
-  // TODO: Use regular min for floor to keep it solid white
-  return smoothUnionColor(shape, floor, 0.01);
+  return shapeUnion(shape, floor);
 });
 
 const rayMarch = tgpu.fn([d.vec3f, d.vec3f], Shape)((ro, rd) => {
@@ -157,7 +161,7 @@ const getNormal = tgpu.fn([d.vec3f], d.vec3f)((p) => {
   return std.normalize(n);
 });
 
-const getOrbitingLightPos = tgpu['~unstable'].fn([d.f32], d.vec3f)((t) => {
+const getOrbitingLightPos = tgpu.fn([d.f32], d.vec3f)((t) => {
   const radius = d.f32(3);
   const height = d.f32(6);
   const speed = d.f32(1);
