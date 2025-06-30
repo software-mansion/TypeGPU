@@ -27,10 +27,10 @@ export const computeShaderShared = tgpu['~unstable'].computeFn({
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
   if (idx0 < d.u32(fixedArrayLength)) {
-    sharedMem.value[idx0] = layout.$.inputArray[idx0] as number;
+    sharedMem.value[lId * 2] = layout.$.inputArray[idx0] as number;
   }
   if (idx1 < d.u32(fixedArrayLength)) {
-    sharedMem.value[idx1] = layout.$.inputArray[idx1] as number;
+    sharedMem.value[lId * 2 + 1] = layout.$.inputArray[idx1] as number;
   }
   std.workgroupBarrier();
 
