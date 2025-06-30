@@ -10,7 +10,7 @@ import type {
   Prettify,
 } from '../../shared/utilityTypes.ts';
 import type {
-  LayoutEntryToInput,
+  ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -523,9 +523,7 @@ export interface TgpuRoot extends Unwrapper {
     >,
   >(
     layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
+    entries: ExtractBindGroupInputFromLayout<Entries>,
   ): TgpuBindGroup<Entries>;
 
   /**
