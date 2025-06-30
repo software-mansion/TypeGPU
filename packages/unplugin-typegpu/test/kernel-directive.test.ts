@@ -35,7 +35,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell((a, b) => {
         'kernel';
@@ -49,7 +49,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
@@ -67,7 +67,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function(a, b){
         'kernel';
@@ -81,7 +81,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
@@ -99,7 +99,7 @@ describe('[BABEL] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
         'kernel';
@@ -113,7 +113,7 @@ describe('[BABEL] "kernel" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         throw new Error("The function \\"addGPU\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
       }, {
@@ -202,7 +202,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell((a, b) => {
         'kernel';
@@ -217,7 +217,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
@@ -238,7 +238,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function(a, b){
         'kernel';
@@ -252,7 +252,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
@@ -273,7 +273,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
         'kernel';
@@ -288,7 +288,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                         throw new Error(\`The function "addGPU" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);

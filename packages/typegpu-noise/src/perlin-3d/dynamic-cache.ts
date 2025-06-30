@@ -146,17 +146,15 @@ export function dynamicCacheConfig<Prefix extends string>(
     };
   });
 
-  const getJunctionGradient = tgpu['~unstable'].fn([d.vec3i], d.vec3f)(
-    (pos) => {
-      const size = d.vec3i(cleanValuesSlot.value.size.xyz);
-      const x = (pos.x % size.x + size.x) % size.x;
-      const y = (pos.y % size.y + size.y) % size.y;
-      const z = (pos.z % size.z + size.z) % size.z;
+  const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
+    const size = d.vec3i(cleanValuesSlot.value.size.xyz);
+    const x = (pos.x % size.x + size.x) % size.x;
+    const y = (pos.y % size.y + size.y) % size.y;
+    const z = (pos.z % size.z + size.z) % size.z;
 
-      return cleanValuesSlot.value
-        .memory[x + y * size.x + z * size.x * size.y] as d.v3f;
-    },
-  );
+    return cleanValuesSlot.value
+      .memory[x + y * size.x + z * size.x * size.y] as d.v3f;
+  });
 
   const computeLayout = tgpu.bindGroupLayout({
     size: { uniform: d.vec4u },

@@ -1,26 +1,13 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
-const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)(
-  /* wgsl */ `(ratio: f32) -> vec4f {
-    return mix(purple, blue, ratio);
-  }`,
-).$uses({ purple, blue });
+const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
+  return mix(purple, blue, ratio);
+}
+`.$uses({ purple, blue });
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -48,6 +35,18 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return getGradientColor((in.uv[0] + in.uv[1]) / 2);
 }
 `.$uses({ getGradientColor });
+
+const root = await tgpu.init();
+
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
 
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
