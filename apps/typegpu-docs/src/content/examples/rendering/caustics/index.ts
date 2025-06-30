@@ -150,7 +150,10 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
+let isRunning = true;
 function draw(timestamp: DOMHighResTimeStamp) {
+  if (!isRunning) return;
+
   timeUniform.write((timestamp * 0.001) % 1000);
 
   pipeline
@@ -180,6 +183,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  isRunning = false;
   root.destroy();
 }
 
