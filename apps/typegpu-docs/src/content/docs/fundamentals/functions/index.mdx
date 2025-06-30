@@ -9,15 +9,15 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-WGSL (WebGPU Shading Language) lacks many quality-of-life features that help when building complex shaders, like the ability to split them into
-multiple files or import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
+WGSL (WebGPU Shading Language) lacks many quality-of-life features that help with building complex shaders, like the ability to split functionality across
+different files, or to import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
 - Each definition in WGSL is represented as its own TypeGPU resource (e.g., `tgpu.fn`).
 - They can be imported and exported like any other JavaScript value.
 - They can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts, etc.
 
 ## Defining a function
 
-Functions are constructed by first defining their shells (inputs and output).
+Functions are constructed by first defining their shells (input and output types).
 Then the actual WGSL implementation is passed in as an argument to a shell invocation.
 
 The following code defines a function that accepts one argument and returns one value.
