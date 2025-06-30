@@ -508,8 +508,8 @@ class TgpuRootImpl extends WithBindingImpl
 
       pass.setPipeline(memo.pipeline);
 
-      const missingBindGroups = new Set(memo.bindGroupLayouts);
-      memo.bindGroupLayouts.forEach((layout, idx) => {
+      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+      memo.usedBindGroupLayouts.forEach((layout, idx) => {
         if (memo.catchall && idx === memo.catchall[0]) {
           // Catch-all
           pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));

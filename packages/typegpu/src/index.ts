@@ -9,7 +9,7 @@ import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
-import { resolve } from './core/resolve/tgpuResolve.ts';
+import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
 import { accessor } from './core/slot/accessor.ts';
@@ -20,15 +20,21 @@ import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 export const tgpu = {
+  fn,
   bindGroupLayout,
   vertexLayout,
+  slot,
 
   init,
   initFromDevice,
 
   resolve,
+  resolveWithContext,
 
   '~unstable': {
+    /**
+     * @deprecated This feature is now stable, use tgpu.fn.
+     */
     fn,
     fragmentFn,
     vertexFn,
@@ -38,6 +44,9 @@ export const tgpu = {
      */
     vertexLayout,
     derived,
+    /**
+     * @deprecated This feature is now stable, use tgpu.slot.
+     */
     slot,
     accessor,
     privateVar,

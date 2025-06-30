@@ -10,7 +10,7 @@ describe('codeGen', () => {
   describe('vectors', () => {
     it('handles member access for external vectors', () => {
       const size = d.vec3f(1, 2, 3);
-      const main = tgpu['~unstable'].fn([], d.f32)(() => {
+      const main = tgpu.fn([], d.f32)(() => {
         return size.x * size.y * size.z;
       });
 
@@ -20,7 +20,7 @@ describe('codeGen', () => {
     });
 
     it('handles member access for local vectors', () => {
-      const main = tgpu['~unstable'].fn([], d.f32)(() => {
+      const main = tgpu.fn([], d.f32)(() => {
         const size = d.vec3f(1, 2, 3);
         return size.x * size.y * size.z;
       });
