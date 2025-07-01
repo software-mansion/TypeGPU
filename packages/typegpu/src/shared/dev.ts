@@ -9,6 +9,7 @@
 export const DEV = (globalThis as any).process.env.NODE_ENV === 'development';
 
 /**
- * Performance measurements are only enabled in dev for now
+ * Performance measurements are only enabled in dev & test environments for now
  */
-export const PERF = DEV;
+// biome-ignore lint/suspicious/noExplicitAny: the types are not important here
+export const PERF = DEV || (globalThis as any).process.env.NODE_ENV === 'test';

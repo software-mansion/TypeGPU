@@ -32,5 +32,10 @@ test('executes examples', async () => {
     (result as ExampleRuntime).onCleanup();
   }
 
+  console.log(performance.getEntriesByName('typegpu:resolution'));
+  console.log(
+    performance.getEntriesByName('typegpu:device.createShaderModule'),
+  );
+
   document.body.removeChild(exampleView);
 }, timeout);
