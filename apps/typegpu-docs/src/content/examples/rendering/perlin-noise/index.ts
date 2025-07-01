@@ -22,17 +22,15 @@ const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const timeAccess = tgpu['~unstable'].accessor(d.f32);
 const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
-const exponentialSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
-  (n, sharpness) => sign(n) * pow(abs(n), 1 - sharpness),
+const exponentialSharpen = tgpu.fn([d.f32, d.f32], d.f32)((n, sharpness) =>
+  sign(n) * pow(abs(n), 1 - sharpness)
 );
 
-const tanhSharpen = tgpu['~unstable'].fn([d.f32, d.f32], d.f32)(
-  (n, sharpness) => tanh(n * (1 + sharpness * 10)),
+const tanhSharpen = tgpu.fn([d.f32, d.f32], d.f32)((n, sharpness) =>
+  tanh(n * (1 + sharpness * 10))
 );
 
-const sharpenFnSlot = tgpu['~unstable'].slot<
-  TgpuFn<(n: d.F32, sharpness: d.F32) => d.F32>
->(
+const sharpenFnSlot = tgpu.slot<TgpuFn<(n: d.F32, sharpness: d.F32) => d.F32>>(
   exponentialSharpen,
 );
 
@@ -58,16 +56,16 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 // Configuring a dynamic (meaning it's size can change) cache
 // for perlin noise gradients.
-const PerlinCacheConfig = perlin3d.dynamicCacheConfig();
+const perlinCacheConfig = perlin3d.dynamicCacheConfig();
 
 /** Contains all resources that the perlin cache needs access to */
-const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
+const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
 const device = root.device;
 
 // Instantiating the cache with an initial size.
-const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
+const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -86,8 +84,7 @@ const renderPipelineBase = root['~unstable']
   .with(gridSizeAccess, gridSize)
   .with(timeAccess, time)
   .with(sharpnessAccess, sharpness)
-  .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
-  .with(PerlinCacheConfig.valuesSlot, dynamicLayout.$);
+  .pipe(perlinCacheConfig.inject(dynamicLayout.$));
 
 const renderPipelines = {
   exponential: renderPipelineBase

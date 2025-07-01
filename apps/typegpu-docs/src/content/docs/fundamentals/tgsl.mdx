@@ -13,8 +13,7 @@ which is then used to generate equivalent WGSL.
 
 You can check the current state of supported JavaScript syntax in the [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts).
 
-For the TGSL functions to work, you need to use either the dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu), 
-or the Just-In-Time transpiler -- *tgpu-jit* (WIP).
+For the TGSL functions to work, you need to use the dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu).
 
 ## Usage
 
@@ -35,24 +34,22 @@ const obstacles = root
     enabled: d.u32,
   }), MAX_OBSTACLES));
 
-const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
-  (x, y) => {
-    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = obstacles.$[obsIdx];
-      if (obs.enabled === 0) {
-        continue;
-      }
-      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
-      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
-      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
-      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-        return true;
-      }
+const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+    const obs = obstacles.$[obsIdx];
+    if (obs.enabled === 0) {
+      continue;
     }
-    return false;
-  },
-);
+    const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+    const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+    const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+    const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
+    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      return true;
+    }
+  }
+  return false;
+});
 ```
 
 ```ts

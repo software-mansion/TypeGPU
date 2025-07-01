@@ -159,7 +159,13 @@ export function createFnCore(
 
           applyExternals(externalMap, missing);
         }
-        const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
+
+        const ast = pluginData?.ast;
+        if (!ast) {
+          throw new Error(
+            "Missing metadata for tgpu.fn function body (either missing 'kernel' directive, or misconfigured `unplugin-typegpu`)",
+          );
+        }
 
         // verify all required externals are present
         const missingExternals = ast.externalNames.filter(

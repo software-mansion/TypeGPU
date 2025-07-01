@@ -790,15 +790,13 @@ describe('v3f', () => {
     it('works in TGSL', () => {
       const planarPos = d.vec2f(1, 2);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const planarPosLocal = d.vec2f(1, 2);
+      const main = tgpu.fn([])(() => {
+        const planarPosLocal = d.vec2f(1, 2);
 
-          const one = d.vec3f(planarPos, 12); // external
-          const two = d.vec3f(planarPosLocal, 12); // local variable
-          const three = d.vec3f(d.vec2f(1, 2), 12); // literal
-        })
-        .$name('main');
+        const one = d.vec3f(planarPos, 12); // external
+        const two = d.vec3f(planarPosLocal, 12); // local variable
+        const three = d.vec3f(d.vec2f(1, 2), 12); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
@@ -842,15 +840,13 @@ describe('v4f', () => {
     it('works in TGSL', () => {
       const red = d.vec3f(0.9, 0.2, 0.1);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const green = d.vec3f(0, 1, 0);
+      const main = tgpu.fn([])(() => {
+        const green = d.vec3f(0, 1, 0);
 
-          const one = d.vec4f(red, 1); // external
-          const two = d.vec4f(green, 1); // local variable
-          const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
-        })
-        .$name('main');
+        const one = d.vec4f(red, 1); // external
+        const two = d.vec4f(green, 1); // local variable
+        const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
@@ -876,15 +872,13 @@ describe('v4f', () => {
     it('works in TGSL', () => {
       const foo = d.vec3f(0.2, 0.3, 0.4);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const fooLocal = d.vec3f(0.2, 0.3, 0.4);
+      const main = tgpu.fn([])(() => {
+        const fooLocal = d.vec3f(0.2, 0.3, 0.4);
 
-          const one = d.vec4f(0.1, foo); // external
-          const two = d.vec4f(0.1, fooLocal); // local variable
-          const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
-        })
-        .$name('main');
+        const one = d.vec4f(0.1, foo); // external
+        const two = d.vec4f(0.1, fooLocal); // local variable
+        const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
@@ -919,16 +913,13 @@ describe('v4b', () => {
     it('works in TGSL', () => {
       const vecExternal = d.vec3b(true, false, true);
 
-      const main = tgpu['~unstable']
-        .fn([])
-        .does(() => {
-          const vecLocal = d.vec3b(true, true, true);
+      const main = tgpu.fn([])(() => {
+        const vecLocal = d.vec3b(true, true, true);
 
-          const one = d.vec4b(vecExternal, true); // external
-          const two = d.vec4b(vecLocal, false); // local variable
-          const three = d.vec4b(d.vec3b(false, false, true), true); // literal
-        })
-        .$name('main');
+        const one = d.vec4b(vecExternal, true); // external
+        const two = d.vec4b(vecLocal, false); // local variable
+        const three = d.vec4b(d.vec3b(false, false, true), true); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`

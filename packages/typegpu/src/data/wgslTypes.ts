@@ -766,6 +766,16 @@ export interface U32 {
 }
 
 /**
+ * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
+ */
+
+export interface U16 {
+  readonly [$internal]: true;
+  readonly type: 'u16';
+  readonly [$repr]: number;
+}
+
+/**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
 export interface Vec2f {
@@ -1285,6 +1295,7 @@ export const wgslTypeLiterals = [
   'f16',
   'i32',
   'u32',
+  'u16',
   'vec2f',
   'vec2h',
   'vec2i',
@@ -1359,6 +1370,7 @@ export type AnyWgslData =
   | F16
   | I32
   | U32
+  | U16
   | Vec2f
   | Vec2h
   | Vec2i
@@ -1380,7 +1392,8 @@ export type AnyWgslData =
   | AnyWgslStruct
   | WgslArray
   | Ptr
-  | Atomic
+  | Atomic<U32>
+  | Atomic<I32>
   | Decorated
   | AbstractInt
   | AbstractFloat

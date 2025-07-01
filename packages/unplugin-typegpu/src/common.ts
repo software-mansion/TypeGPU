@@ -41,6 +41,16 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   let tail = node;
   while (true) {
     if (tail.type === 'MemberExpression') {
+      if (
+        (tail.property.type === 'Literal' ||
+          tail.property.type === 'StringLiteral') &&
+        tail.property.value === '~unstable'
+      ) {
+        // Bypassing the '~unstable' property.
+        tail = tail.object;
+        continue;
+      }
+
       if (tail.property.type !== 'Identifier') {
         // Not handling computed expressions.
         break;
@@ -89,21 +99,11 @@ export function isShellImplementationCall(
   ctx: Context,
 ) {
   return (
-    (node.callee.type === 'CallExpression' &&
-      node.callee.callee.type === 'MemberExpression' &&
-      node.callee.callee.property.type === 'Identifier' &&
-      fnShellFunctionNames.includes(node.callee.callee.property.name) &&
-      node.arguments.length === 1 &&
-      (node.callee.callee.object.type === 'MemberExpression'
-        ? isTgpu(ctx, node.callee.callee.object.object)
-        : isTgpu(ctx, node.callee.callee.object))) || // TODO: remove along with the deprecated 'does' method
-    (node.callee.type === 'MemberExpression' &&
-      node.arguments.length === 1 &&
-      node.callee.property.type === 'Identifier' &&
-      // Assuming that every call to `.does` is related to TypeGPU
-      // because shells can be created separately from calls to `tgpu`,
-      // making it hard to detect.
-      node.callee.property.name === 'does')
+    node.callee.type === 'CallExpression' &&
+    node.callee.callee.type === 'MemberExpression' &&
+    node.callee.callee.property.type === 'Identifier' &&
+    fnShellFunctionNames.includes(node.callee.callee.property.name) &&
+    node.arguments.length === 1 && isTgpu(ctx, node.callee.callee.object)
   );
 }
 
@@ -120,6 +120,7 @@ const resourceConstructors: string[] = [
   ...fnShellFunctionNames,
   // d
   'struct',
+  'unstruct',
   // root
   'createBuffer',
   'createMutable',

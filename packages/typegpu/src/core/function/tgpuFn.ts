@@ -72,19 +72,7 @@ export type TgpuFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFn<(...args: Args) => Return>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (
-          ...args: InferArgs<Args>
-        ) => Infer<Return>,
-      ) => TgpuFn<(...args: Args) => Return>)
-      & ((implementation: string) => TgpuFn<(...args: Args) => Return>);
-  };
+  ) => TgpuFn<(...args: Args) => Return>);
 
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
@@ -140,9 +128,7 @@ export function fn<
       stripTemplate(arg, ...values),
     );
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as unknown as TgpuFnShell<Args, Return>;
+  return Object.assign(call, shell) as unknown as TgpuFnShell<Args, Return>;
 }
 
 export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
