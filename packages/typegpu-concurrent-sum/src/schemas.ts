@@ -7,7 +7,7 @@ export const fixedArrayLength = 2 ** 16;
 export const dataBindGroupLayout = tgpu.bindGroupLayout({
   inputArray: {
     storage: (n: number) => d.arrayOf(d.f32, n),
-    access: 'readonly',
+    access: 'mutable',
   },
   workArray: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'mutable' },
   sumsArray: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'mutable' },
