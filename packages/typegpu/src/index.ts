@@ -112,6 +112,7 @@ export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type {
+  IndexFlag,
   TgpuBuffer,
   Uniform,
   UniformFlag,
