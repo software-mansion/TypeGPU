@@ -59,11 +59,11 @@ export function currentSum(
         } ms)`,
       );
     })
-    .dispatchWorkgroups(fixedArrayLength / (workgroupSize * 2));
+    .dispatchWorkgroups(dynamicInputBufferLength / (workgroupSize * 2) > 1 ? dynamicInputBufferLength / (workgroupSize * 2) : 1);
 
   // 2: Sums scan
   const numSumBlocks = Math.ceil(
-    (fixedArrayLength / (workgroupSize * 2)) / (workgroupSize * 2),
+    (dynamicInputBufferLength / (workgroupSize * 2)) / (workgroupSize * 2),
   );
   if (numSumBlocks > 0) {
     scanPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
@@ -100,9 +100,7 @@ export function currentSum(
     });
 
   // COMPUTE EXPECTED
-  const arr = [...Array(fixedArrayLength).keys()];
-  // slice off the last element
-  arr.slice(0, fixedArrayLength - 1).map((v) => v + 1);
+  const arr = [...Array(dynamicInputBufferLength - 1).keys()];
   console.log(
     'Expected sum: ',
     arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0),

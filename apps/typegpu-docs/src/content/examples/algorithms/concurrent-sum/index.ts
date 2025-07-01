@@ -1,11 +1,11 @@
 import { currentSum } from '@typegpu/concurrent-sum';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { fixedArrayLength } from '../../../../../../../packages/typegpu-concurrent-sum/src/schemas.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
+export const fixedArrayLength = 2 ** 10;
 
 const root = await tgpu.init({
   adapter: {
