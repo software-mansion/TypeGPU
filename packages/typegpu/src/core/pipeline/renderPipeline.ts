@@ -659,14 +659,14 @@ class RenderPipelineCore {
       if (PERF) {
         perfId = v4();
         resolveStart = performance.mark('typegpu:resolution:start', {
-          detail: perfId,
+          detail: { perfId },
         });
         resolutionResult = resolve(resolvable, {
           names: branch.nameRegistry,
         });
         performance.measure('typegpu:resolution', {
           start: resolveStart.name,
-          detail: perfId,
+          detail: { perfId, wgslSize: resolutionResult.code.length },
         });
       } else {
         resolutionResult = resolve(resolvable, {
@@ -692,12 +692,16 @@ class RenderPipelineCore {
       if (PERF) {
         const compileStart = performance.mark(
           'typegpu:device.createShaderModule:start',
-          { detail: perfId },
+          { detail: { perfId } },
         );
         module = device.createShaderModule(moduleDescriptor);
-        performance.measure('typegpu:device.createShaderModule', {
-          detail: perfId,
-          start: compileStart.name,
+        // Treating the feedback of getting the compilation info
+        // as a time stopper for shader compilation.
+        module.getCompilationInfo().then(() => {
+          performance.measure('typegpu:device.createShaderModule', {
+            detail: { perfId, wgslSize: code.length },
+            start: compileStart.name,
+          });
         });
       } else {
         module = device.createShaderModule(moduleDescriptor);
@@ -744,8 +748,6 @@ class RenderPipelineCore {
       if (multisampleState) {
         descriptor.multisample = multisampleState;
       }
-
-      performance.dispatchEvent(new Event('typegpu:pipeline-unwrapped'));
 
       this._memo = {
         pipeline: device.createRenderPipeline(descriptor),
