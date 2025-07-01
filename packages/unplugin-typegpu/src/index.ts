@@ -10,13 +10,13 @@ import {
   type Context,
   defaultOptions,
   embedJSON,
-  findNameableExpression,
   gatherTgpuAliases,
   getErrorMessage,
   isShellImplementationCall,
   type KernelDirective,
   kernelDirectives,
   type Options,
+  performExpressionNaming,
 } from './common.ts';
 
 type FunctionNode =
@@ -117,7 +117,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
 
-              findNameableExpression(ctx, node, (node, name) => {
+              performExpressionNaming(ctx, node, (node, name) => {
                 wrapInAutoName(magicString, node, name);
               });
 

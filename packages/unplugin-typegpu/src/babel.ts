@@ -7,13 +7,13 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import {
   type Context,
   embedJSON,
-  findNameableExpression,
   gatherTgpuAliases,
   getErrorMessage,
   isShellImplementationCall,
   type KernelDirective,
   kernelDirectives,
   type Options,
+  performExpressionNaming,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -121,19 +121,19 @@ function wrapInAutoName(
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     VariableDeclarator(path) {
-      findNameableExpression(ctx, path.node, (node, name) => {
+      performExpressionNaming(ctx, path.node, (node, name) => {
         path.get('init').replaceWith(wrapInAutoName(node, name));
       });
     },
 
     AssignmentExpression(path) {
-      findNameableExpression(ctx, path.node, (node, name) => {
+      performExpressionNaming(ctx, path.node, (node, name) => {
         path.get('right').replaceWith(wrapInAutoName(node, name));
       });
     },
 
     ObjectProperty(path) {
-      findNameableExpression(ctx, path.node, (node, name) => {
+      performExpressionNaming(ctx, path.node, (node, name) => {
         path.get('value').replaceWith(wrapInAutoName(node, name));
       });
     },

@@ -191,7 +191,7 @@ type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
  * @privateRemarks
  * When adding new checks, you need to call this method in the corresponding node in Babel.
  */
-export function findNameableExpression<T extends acorn.AnyNode | babel.Node>(
+export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
   ctx: Context,
   node: T,
   namingCallback: (node: ExpressionFor<T>, name: string) => void,
