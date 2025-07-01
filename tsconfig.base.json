@@ -16,7 +16,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-    "types": ["@webgpu/types"]
+    "types": ["@webgpu/types", "@vitest/browser/matchers"]
   },
   "exclude": ["${configDir}/dist", "${configDir}/node_modules"]
 }

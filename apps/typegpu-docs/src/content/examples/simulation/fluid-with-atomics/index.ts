@@ -565,35 +565,27 @@ const createSampleScene = () => {
 // #region UI
 
 let paused = false;
-let disposed = false;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
-
-onFrame((deltaTime: number) => {
-  msSinceLastTick += deltaTime;
+let animationFrame: number;
+let lastTime = Date.now();
+function run() {
+  const now = Date.now();
+  const dt = now - lastTime;
+  lastTime = now;
+  msSinceLastTick += dt;
 
   if (msSinceLastTick >= options.timestep) {
     if (!paused) {
       for (let i = 0; i < options.stepsPerTimestep; i++) {
-        render();
+        render?.();
       }
     }
     msSinceLastTick -= options.timestep;
   }
-});
+
+  animationFrame = requestAnimationFrame(run);
+}
+animationFrame = requestAnimationFrame(run);
 
 export const controls = {
   size: {
@@ -672,7 +664,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrame);
   root.destroy();
 }
 
