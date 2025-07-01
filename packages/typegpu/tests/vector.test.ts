@@ -910,10 +910,10 @@ describe('v4f', () => {
       const main = tgpu.fn([])(() => {
         const fooLocal = d.vec3f(0.25, 0.5, 0.75);
 
-          const one = d.vec4f(0.1, foo); // external
-          const two = d.vec4f(0.1, fooLocal); // local variable
-          const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
-        })
+        const one = d.vec4f(0.1, foo); // external
+        const two = d.vec4f(0.1, fooLocal); // local variable
+        const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
+      })
         .$name('main');
 
       expect(parseResolved({ main })).toBe(
