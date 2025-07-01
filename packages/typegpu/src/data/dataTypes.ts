@@ -220,3 +220,31 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
+  readonly type: 'decorated';
+  readonly inner: infer TInner;
+} ? TInner extends wgsl.BaseData ? UnwrapDecorated<TInner>
+  : TData
+  : TData;
+
+export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
+  UnwrapDecorated<TData[0]> extends { readonly type: TType } ? true
+    : UnwrapDecorated<TData[0]> extends {
+      readonly type: 'array';
+      readonly elementType: infer TElement;
+    }
+      ? TElement extends wgsl.BaseData
+        ? UnwrapDecorated<TElement> extends { readonly type: TType } ? true
+        : HasNestedType<[TElement], TType>
+      : false
+    : UnwrapDecorated<TData[0]> extends
+      { readonly type: 'struct'; readonly propTypes: infer TProps }
+      ? TProps extends Record<string, wgsl.BaseData> ? true extends {
+          [K in keyof TProps]: UnwrapDecorated<TProps[K]> extends
+            { readonly type: TType } ? true
+            : HasNestedType<[TProps[K]], TType>;
+        }[keyof TProps] ? true
+        : false
+      : false
+    : false;

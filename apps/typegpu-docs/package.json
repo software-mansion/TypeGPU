@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/react": "^4.2.7",
-    "@astrojs/sitemap": "^3.4.0",
+    "@astrojs/react": "^4.3.0",
+    "@astrojs/sitemap": "^3.4.1",
     "@astrojs/starlight": "^0.34.3",
     "@astrojs/starlight-tailwind": "^4.0.1",
     "@astrojs/tailwind": "^6.0.2",
@@ -66,6 +66,6 @@
     "tailwindcss": "^4.1.7",
     "tailwindcss-motion": "^1.0.1",
     "vite-imagetools": "^7.1.0",
-    "yaml": "^2.7.0"
+    "yaml": "^2.8.0"
   }
 }
