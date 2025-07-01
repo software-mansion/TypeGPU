@@ -2,7 +2,7 @@
  * A wrapper for `schema(item)` call.
  * Logs a warning if the schema is not callable.
  */
-export function schemaCallWrapper<T>(item: T, schema: unknown): T {
+export function schemaCallWrapper<T>(schema: unknown, item: T): T {
   let result = item;
   try {
     result = (

@@ -27,7 +27,7 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
     Object.fromEntries(
       Object.entries(instanceProps).map((
         [key, value],
-      ) => [key, schemaCallWrapper(value, props[key])]),
+      ) => [key, schemaCallWrapper(props[key], value)]),
     );
   Object.setPrototypeOf(struct, WgslStructImpl);
   struct.propTypes = props;

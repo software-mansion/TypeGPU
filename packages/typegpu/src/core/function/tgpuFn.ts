@@ -231,8 +231,8 @@ function createFn<ImplSchema extends AnyFn>(
         );
       }
 
-      const castAndCopiedArgs = [...args].map((arg, index) =>
-        schemaCallWrapper(arg, shell.argTypes[index])
+      const castAndCopiedArgs = args.map((arg, index) =>
+        schemaCallWrapper(shell.argTypes[index], arg)
       ) as InferArgs<Parameters<ImplSchema>>;
 
       return implementation(...castAndCopiedArgs);

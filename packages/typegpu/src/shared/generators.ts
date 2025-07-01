@@ -1,8 +1,8 @@
 import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
 import { inGPUMode } from '../gpuMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
-import { setName } from './meta.ts';
 import { $internal } from './symbols.ts';
+import { setName } from './meta.ts';
 
 /**
  * Yields values in the sequence 0,1,2..∞ except for the ones in the `excluded` set.
