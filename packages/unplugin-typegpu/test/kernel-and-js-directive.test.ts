@@ -37,7 +37,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell((a, b) => {
         'kernel & js';
@@ -51,7 +51,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'kernel & js';
 
@@ -71,7 +71,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      tgpu['~unstable'].fn([])((a, b) => {
+      tgpu.fn([])((a, b) => {
         'kernel & js';
         return a + b;
       })
@@ -79,7 +79,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
+      tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'kernel & js';
 
         return a + b;
@@ -95,7 +95,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function(a, b){
         'kernel & js';
@@ -109,7 +109,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
         'kernel & js';
 
@@ -129,7 +129,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
         'kernel & js';
@@ -143,7 +143,7 @@ describe('[BABEL] "kernel & js" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'kernel & js';
 
@@ -284,7 +284,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell((a, b) => {
         'kernel & js';
@@ -299,7 +299,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'kernel & js';
@@ -321,7 +321,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      tgpu['~unstable'].fn([])((a, b) => {
+      tgpu.fn([])((a, b) => {
         'kernel & js';
         return a + b;
       })
@@ -330,7 +330,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+      tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'kernel & js';
               return a + b;
             }), {
@@ -346,7 +346,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function(a, b){
         'kernel & js';
@@ -360,7 +360,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
               'kernel & js';
@@ -382,7 +382,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     const code = `\
       import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
         'kernel & js';
@@ -397,7 +397,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const shell = tgpu['~unstable'].fn([]);
+      const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
               'kernel & js';

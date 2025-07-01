@@ -29,8 +29,7 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline
-  extends TgpuNamable, Timeable<TgpuComputePipeline> {
+export interface TgpuComputePipeline extends TgpuNamable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -74,8 +73,8 @@ type TgpuComputePipelinePriors = {
 
 type Memo = {
   pipeline: GPUComputePipeline;
-  bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup] | null;
+  usedBindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup] | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -117,26 +116,26 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   withPerformanceCallback(
     callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): TgpuComputePipeline {
+  ): this {
     const newPriors = createWithPerformanceCallback(
       this._priors,
       callback,
       this._core.branch,
     );
-    return new TgpuComputePipelineImpl(this._core, newPriors);
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
-  }): TgpuComputePipeline {
+  }): this {
     const newPriors = createWithTimestampWrites(
       this._priors,
       options,
       this._core.branch,
     );
-    return new TgpuComputePipelineImpl(this._core, newPriors);
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   dispatchWorkgroups(
@@ -156,9 +155,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.setPipeline(memo.pipeline);
 
-    const missingBindGroups = new Set(memo.bindGroupLayouts);
+    const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
-    memo.bindGroupLayouts.forEach((layout, idx) => {
+    memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
@@ -207,7 +206,7 @@ class ComputePipelineCore {
       const device = this.branch.device;
 
       // Resolving code
-      const { code, bindGroupLayouts, catchall } = resolve(
+      const { code, usedBindGroupLayouts, catchall } = resolve(
         {
           '~resolve': (ctx) => {
             ctx.withSlots(this._slotBindings, () => {
@@ -220,12 +219,11 @@ class ComputePipelineCore {
         },
         {
           names: this.branch.nameRegistry,
-          jitTranspiler: this.branch.jitTranspiler,
         },
       );
 
-      if (catchall !== null) {
-        bindGroupLayouts[catchall[0]]?.$name(
+      if (catchall !== undefined) {
+        usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
@@ -235,7 +233,7 @@ class ComputePipelineCore {
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: bindGroupLayouts.map((l) =>
+            bindGroupLayouts: usedBindGroupLayouts.map((l) =>
               this.branch.unwrap(l)
             ),
           }),
@@ -246,7 +244,7 @@ class ComputePipelineCore {
             }),
           },
         }),
-        bindGroupLayouts,
+        usedBindGroupLayouts,
         catchall,
       };
     }

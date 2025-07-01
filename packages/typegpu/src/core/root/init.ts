@@ -5,13 +5,18 @@ import {
 } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import type {
+  AnyWgslData,
+  BaseData,
+  U16,
+  U32,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import {
   invariant,
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import type { JitTranspiler } from '../../jitTranspiler.ts';
 import { WeakMemo } from '../../memo.ts';
 import {
   type NameRegistry,
@@ -42,10 +47,7 @@ import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
-import type {
-  FragmentOutConstrained,
-  TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
@@ -87,6 +89,7 @@ import {
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import type {
+  Configurable,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -140,6 +143,10 @@ class WithBindingImpl implements WithBinding {
       multisampleState: undefined,
     });
   }
+
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
+    return transform(this);
+  }
 }
 
 class WithComputeImpl implements WithCompute {
@@ -185,7 +192,14 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   constructor(private readonly _options: RenderPipelineCoreOptions) {}
 
-  withPrimitive(primitiveState: GPUPrimitiveState | undefined): WithFragment {
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
   }
 
@@ -197,7 +211,7 @@ class WithFragmentImpl implements WithFragment {
 
   withMultisample(
     multisampleState: GPUMultisampleState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithFragmentImpl({ ...this._options, multisampleState });
   }
 
@@ -232,7 +246,6 @@ class TgpuRootImpl extends WithBindingImpl
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
-    public readonly jitTranspiler: JitTranspiler | undefined,
     private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
@@ -505,8 +518,8 @@ class TgpuRootImpl extends WithBindingImpl
 
       pass.setPipeline(memo.pipeline);
 
-      const missingBindGroups = new Set(memo.bindGroupLayouts);
-      memo.bindGroupLayouts.forEach((layout, idx) => {
+      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+      memo.usedBindGroupLayouts.forEach((layout, idx) => {
         if (memo.catchall && idx === memo.catchall[0]) {
           // Catch-all
           pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
@@ -645,7 +658,6 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
-  unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -655,7 +667,6 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
-  unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -681,7 +692,6 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'random',
-    unstable_jitTranspiler: jitTranspiler,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -719,7 +729,6 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
       requiredFeatures: availableFeatures,
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    jitTranspiler,
     true,
   );
 }
@@ -737,13 +746,11 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',
-    unstable_jitTranspiler: jitTranspiler,
   } = options ?? {};
 
   return new TgpuRootImpl(
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    jitTranspiler,
     false,
   );
 }

@@ -1,8 +1,9 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
+import { attest } from '@ark/attest';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -453,5 +454,84 @@ describe('TgpuBuffer', () => {
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawDecoratedBuffer, 0, expectedData.buffer, 0, 32],
     ]);
+  });
+
+  it('should throw an error on the type level when using a schema containing boolean', ({ root }) => {
+    const boolSchema = d.struct({
+      a: d.u32,
+      b: d.bool,
+    });
+
+    // @ts-expect-error: boolean is not allowed in buffer schemas
+    attest(root.createBuffer(boolSchema)).type.errors.snap(
+      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+    );
+
+    const nestedBoolSchema = d.struct({
+      a: d.u32,
+      b: d.struct({
+        c: d.f32,
+        d: d.struct({
+          e: d.bool,
+        }),
+      }),
+    });
+
+    // @ts-expect-error: boolean is not allowed in buffer schemas
+    attest(root.createBuffer(nestedBoolSchema)).type.errors.snap(
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+    );
+  });
+
+  it('should throw an error on the type level when using a u16 schema outside of an array', ({ root }) => {
+    const fine = d.arrayOf(d.u16, 32);
+    root.createBuffer(fine);
+
+    const notFine = d.struct({
+      a: d.u16,
+      b: d.u32,
+    });
+
+    // @ts-expect-error
+    attest(root.createBuffer(notFine)).type.errors.snap(
+      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+    );
+
+    const alsoNotFine = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.u16, 32),
+      c: d.f32,
+    });
+
+    // @ts-expect-error
+    attest(root.createBuffer(alsoNotFine)).type.errors.snap(
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+    );
+  });
+
+  it('should only allow index usage for valid u16 schemas', ({ root }) => {
+    const validSchema = d.arrayOf(d.u16, 32);
+    const buffer = root.createBuffer(validSchema);
+
+    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<['index']>();
+  });
+
+  it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({ root }) => {
+    const validSchema = d.arrayOf(d.u32, 32);
+    const buffer = root.createBuffer(validSchema);
+
+    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
+      ('index' | 'storage' | 'uniform' | 'vertex')[]
+    >();
+  });
+
+  it('should ignore decorated types when determining validity usage', ({ root }) => {
+    const validSchema = d.size(1024, d.arrayOf(d.align(16, d.u32), 32));
+
+    const buffer = root.createBuffer(validSchema);
+
+    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
+      ('index' | 'storage' | 'uniform' | 'vertex')[]
+    >();
   });
 });
