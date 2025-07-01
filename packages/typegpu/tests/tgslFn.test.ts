@@ -975,11 +975,3 @@ describe('tgpu.fn arguments', () => {
     expect(vec).toStrictEqual(d.vec3f());
   });
 });
-
-// AAA info w docach structów ze kopiują
-// AAA info w docach o róznicach tgsl/wgsl
-// AAA co z unstructami itp
-
-// AAA konstruktor arraya
-// AAA testy tgpufn dla arraya
-// AAA testy dla arraya
