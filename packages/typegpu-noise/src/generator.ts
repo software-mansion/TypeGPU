@@ -3,16 +3,14 @@ import * as d from 'typegpu/data';
 import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
-  seed: TgpuFn<[d.F32], d.Void>;
-  seed2: TgpuFn<[d.Vec2f], d.Void>;
-  seed3: TgpuFn<[d.Vec3f], d.Void>;
-  seed4: TgpuFn<[d.Vec4f], d.Void>;
-  sample: TgpuFn<[], d.F32>;
+  seed: TgpuFn<(seed: d.F32) => d.Void>;
+  seed2: TgpuFn<(seed: d.Vec2f) => d.Void>;
+  seed3: TgpuFn<(seed: d.Vec3f) => d.Void>;
+  seed4: TgpuFn<(seed: d.Vec4f) => d.Void>;
+  sample: TgpuFn<() => d.F32>;
 }
 
-export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu[
-  '~unstable'
-].fn([], d.f32);
+export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
 
 /**
  * Incorporated from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
@@ -22,19 +20,19 @@ export const BPETER: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(d.vec2f);
 
   return {
-    seed: tgpu['~unstable'].fn([d.f32])((value) => {
+    seed: tgpu.fn([d.f32])((value) => {
       seed.value = d.vec2f(value, 0);
     }),
 
-    seed2: tgpu['~unstable'].fn([d.vec2f])((value) => {
+    seed2: tgpu.fn([d.vec2f])((value) => {
       seed.value = value;
     }),
 
-    seed3: tgpu['~unstable'].fn([d.vec3f])((value) => {
+    seed3: tgpu.fn([d.vec3f])((value) => {
       seed.value = add(value.xy, d.vec2f(value.z));
     }),
 
-    seed4: tgpu['~unstable'].fn([d.vec4f])((value) => {
+    seed4: tgpu.fn([d.vec4f])((value) => {
       seed.value = add(value.xy, value.zw);
     }),
 
@@ -52,5 +50,6 @@ export const BPETER: StatefulGenerator = (() => {
 // The default (Can change between releases to improve uniformity).
 export const DefaultGenerator: StatefulGenerator = BPETER;
 
-export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> =
-  tgpu['~unstable'].slot(DefaultGenerator);
+export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
+  DefaultGenerator,
+);

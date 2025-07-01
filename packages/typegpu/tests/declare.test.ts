@@ -9,14 +9,12 @@ describe('tgpu.declare', () => {
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const fn = tgpu['~unstable']
-      .fn([])(`() {
+    const empty = tgpu.fn([])(`() {
         // do nothing
       }`)
-      .$uses({ declaration })
-      .$name('empty');
+      .$uses({ declaration });
 
-    expect(parseResolved({ fn })).toBe(
+    expect(parseResolved({ empty })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -30,15 +28,14 @@ describe('tgpu.declare', () => {
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const fn = tgpu['~unstable']
+    const empty = tgpu
       .fn([])(`() {
         declaration
         // do nothing
       }`)
-      .$uses({ declaration })
-      .$name('empty');
+      .$uses({ declaration });
 
-    expect(parseResolved({ fn })).toBe(
+    expect(parseResolved({ empty })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -48,22 +45,20 @@ describe('tgpu.declare', () => {
   });
 
   it('should inject all provided declarations', () => {
-    const fn = tgpu['~unstable']
-      .fn([])(`() {
+    const decl1 = tgpu['~unstable'].declare(
+      '@group(0) @binding(0) var<uniform> val: f32;',
+    );
+    const decl2 = tgpu['~unstable'].declare(`
+      struct Output {
+        x: u32,
+      }`);
+
+    const empty = tgpu.fn([])(`() {
         // do nothing
       }`)
-      .$uses({
-        extraDeclaration1: tgpu['~unstable'].declare(
-          '@group(0) @binding(0) var<uniform> val: f32;',
-        ),
-        extraDeclaration2: tgpu['~unstable'].declare(`
-          struct Output {
-            x: u32,
-          }`),
-      })
-      .$name('empty');
+      .$uses({ decl1, decl2 });
 
-    expect(parseResolved({ fn })).toBe(
+    expect(parseResolved({ empty })).toBe(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -80,21 +75,19 @@ describe('tgpu.declare', () => {
     const declaration = tgpu['~unstable']
       .declare('@group(0) @binding(0) var<uniform> val: f32;')
       .$uses({
-        nestedDeclaration: tgpu['~unstable'].declare(
+        nested: tgpu['~unstable'].declare(
           `struct Output {
               x: u32,
             }`,
         ),
       });
 
-    const fn = tgpu['~unstable']
-      .fn([])(`() {
+    const empty = tgpu.fn([])(`() {
         // do nothing
       }`)
-      .$uses({ declaration })
-      .$name('empty');
+      .$uses({ declaration });
 
-    expect(parseResolved({ fn })).toBe(
+    expect(parseResolved({ empty })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -116,14 +109,12 @@ describe('tgpu.declare', () => {
       .declare('@group(0) @binding(0) var<uniform> val: Output;')
       .$uses({ Output });
 
-    const fn = tgpu['~unstable']
-      .fn([])(`() {
+    const empty = tgpu.fn([])(`() {
         // do nothing
       }`)
-      .$uses({ declaration })
-      .$name('empty');
+      .$uses({ declaration });
 
-    expect(parseResolved({ fn })).toBe(
+    expect(parseResolved({ empty })).toBe(
       parse(`
         struct Output {
           x: u32,
@@ -136,17 +127,15 @@ describe('tgpu.declare', () => {
     );
   });
 
-  it('works with tgsl functions', () => {
+  it('works with TGSL functions', () => {
     const declaration = tgpu['~unstable'].declare(
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const main = tgpu['~unstable']
-      .fn([], d.f32)(() => {
-        declaration;
-        return 2;
-      })
-      .$name('main');
+    const main = tgpu.fn([], d.f32)(() => {
+      declaration;
+      return 2;
+    });
 
     expect(parseResolved({ main })).toBe(
       parse(`

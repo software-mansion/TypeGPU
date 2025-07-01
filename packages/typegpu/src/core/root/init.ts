@@ -1,12 +1,22 @@
+import {
+  INTERNAL_createQuerySet,
+  isQuerySet,
+  type TgpuQuerySet,
+} from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import type {
+  AnyWgslData,
+  BaseData,
+  U16,
+  U32,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import {
   invariant,
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import type { JitTranspiler } from '../../jitTranspiler.ts';
 import { WeakMemo } from '../../memo.ts';
 import {
   type NameRegistry,
@@ -33,20 +43,11 @@ import {
   type TgpuBuffer,
   type VertexFlag,
 } from '../buffer/buffer.ts';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-  TgpuBufferUsage,
-  TgpuFixedBufferUsage,
-} from '../buffer/bufferUsage.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
-import type {
-  FragmentOutConstrained,
-  TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
@@ -88,6 +89,7 @@ import {
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import type {
+  Configurable,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -98,6 +100,12 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -107,7 +115,7 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
@@ -134,6 +142,10 @@ class WithBindingImpl implements WithBinding {
       vertexAttribs: attribs as AnyVertexAttribs,
       multisampleState: undefined,
     });
+  }
+
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
+    return transform(this);
   }
 }
 
@@ -180,7 +192,14 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   constructor(private readonly _options: RenderPipelineCoreOptions) {}
 
-  withPrimitive(primitiveState: GPUPrimitiveState | undefined): WithFragment {
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
   }
 
@@ -192,7 +211,7 @@ class WithFragmentImpl implements WithFragment {
 
   withMultisample(
     multisampleState: GPUMultisampleState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithFragmentImpl({ ...this._options, multisampleState });
   }
 
@@ -227,7 +246,6 @@ class TgpuRootImpl extends WithBindingImpl
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
-    public readonly jitTranspiler: JitTranspiler | undefined,
     private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
@@ -243,6 +261,10 @@ class TgpuRootImpl extends WithBindingImpl
     return this._commandEncoder;
   }
 
+  get enabledFeatures() {
+    return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
@@ -255,30 +277,45 @@ class TgpuRootImpl extends WithBindingImpl
   createUniform<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
-    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
-      .$usage('uniform')
-      .as('uniform') as TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  ): TgpuUniform<TData> {
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
+      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      .$usage('uniform' as any);
+    this._disposables.push(buffer);
+
+    return new TgpuBufferShorthandImpl('uniform', buffer);
   }
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
-    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
-      .$usage('storage')
-      .as('mutable') as TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  ): TgpuMutable<TData> {
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
+      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      .$usage('storage' as any);
+    this._disposables.push(buffer);
+
+    return new TgpuBufferShorthandImpl('mutable', buffer);
   }
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
-    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
-      .$usage('storage')
-      .as('readonly') as
-        & TgpuBufferReadonly<TData>
-        & TgpuFixedBufferUsage<TData>;
+  ): TgpuReadonly<TData> {
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
+      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      .$usage('storage' as any);
+    this._disposables.push(buffer);
+
+    return new TgpuBufferShorthandImpl('readonly', buffer);
+  }
+
+  createQuerySet<T extends GPUQueryType>(
+    type: T,
+    count: number,
+    rawQuerySet?: GPUQuerySet,
+  ): TgpuQuerySet<T> {
+    return INTERNAL_createQuerySet(this, type, count, rawQuerySet);
   }
 
   createBindGroup<
@@ -357,6 +394,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
+  unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -371,7 +409,8 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuSampledTexture
       | TgpuVertexLayout
       | TgpuSampler
-      | TgpuComparisonSampler,
+      | TgpuComparisonSampler
+      | TgpuQuerySet<GPUQueryType>,
   ):
     | GPUComputePipeline
     | GPURenderPipeline
@@ -381,7 +420,8 @@ class TgpuRootImpl extends WithBindingImpl
     | GPUTexture
     | GPUTextureView
     | GPUVertexBufferLayout
-    | GPUSampler {
+    | GPUSampler
+    | GPUQuerySet {
     if (isComputePipeline(resource)) {
       return resource[$internal].rawPipeline;
     }
@@ -438,6 +478,10 @@ class TgpuRootImpl extends WithBindingImpl
       throw new Error('Cannot unwrap laid-out comparison sampler.');
     }
 
+    if (isQuerySet(resource)) {
+      return resource.querySet;
+    }
+
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
@@ -474,8 +518,8 @@ class TgpuRootImpl extends WithBindingImpl
 
       pass.setPipeline(memo.pipeline);
 
-      const missingBindGroups = new Set(memo.bindGroupLayouts);
-      memo.bindGroupLayouts.forEach((layout, idx) => {
+      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+      memo.usedBindGroupLayouts.forEach((layout, idx) => {
         if (memo.catchall && idx === memo.catchall[0]) {
           // Catch-all
           pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
@@ -609,10 +653,11 @@ class TgpuRootImpl extends WithBindingImpl
  */
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
-  device?: GPUDeviceDescriptor | undefined;
+  device?:
+    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
+    | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
-  unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -622,7 +667,6 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
-  unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -648,7 +692,6 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'random',
-    unstable_jitTranspiler: jitTranspiler,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -661,10 +704,31 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     throw new Error('Could not find a compatible GPU');
   }
 
+  const availableFeatures: GPUFeatureName[] = [];
+  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+    if (!adapter.features.has(feature)) {
+      throw new Error(
+        `Requested feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+    availableFeatures.push(feature);
+  }
+  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+    if (adapter.features.has(feature)) {
+      availableFeatures.push(feature);
+    } else {
+      console.warn(
+        `Optional feature "${feature}" is not supported by the adapter.`,
+      );
+    }
+  }
+
   return new TgpuRootImpl(
-    await adapter.requestDevice(deviceOpt),
+    await adapter.requestDevice({
+      ...deviceOpt,
+      requiredFeatures: availableFeatures,
+    }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    jitTranspiler,
     true,
   );
 }
@@ -682,13 +746,11 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',
-    unstable_jitTranspiler: jitTranspiler,
   } = options ?? {};
 
   return new TgpuRootImpl(
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    jitTranspiler,
     false,
   );
 }

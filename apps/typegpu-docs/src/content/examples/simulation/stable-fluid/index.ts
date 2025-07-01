@@ -109,8 +109,7 @@ const plums = await createImageBitmap(await response.blob(), {
 
 const backgroundTexture = root['~unstable']
   .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
-  .$usage('sampled', 'render')
-  .$name('background');
+  .$usage('sampled', 'render');
 device.queue.copyExternalImageToTexture(
   { source: plums },
   { texture: root.unwrap(backgroundTexture) },
@@ -147,7 +146,7 @@ function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
   return root['~unstable']
-    .withVertex(renderFn, renderFn.shell.attributes)
+    .withVertex(renderFn, {})
     .withFragment(fragmentFn, { format })
     .withPrimitive({
       topology: 'triangle-strip',

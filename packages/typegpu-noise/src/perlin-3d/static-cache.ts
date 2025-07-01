@@ -5,7 +5,7 @@ import { computeJunctionGradient } from './algorithm.ts';
 const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
 
 export interface StaticPerlin3DCache {
-  readonly getJunctionGradient: TgpuFn<[pos: d.Vec3i], d.Vec3f>;
+  readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
   readonly size: d.v3u;
   destroy(): void;
 }
@@ -79,17 +79,15 @@ export function staticCache(options: {
 
   computePipeline.dispatchWorkgroups(size.x, size.y, size.z);
 
-  const getJunctionGradient = tgpu['~unstable'].fn([d.vec3i], d.vec3f)(
-    (pos) => {
-      const size_i = d.vec3i(size);
-      const x = (pos.x % size_i.x + size_i.x) % size_i.x;
-      const y = (pos.y % size_i.y + size_i.y) % size_i.y;
-      const z = (pos.z % size_i.z + size_i.z) % size_i.z;
+  const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
+    const size_i = d.vec3i(size);
+    const x = (pos.x % size_i.x + size_i.x) % size_i.x;
+    const y = (pos.y % size_i.y + size_i.y) % size_i.y;
+    const z = (pos.z % size_i.z + size_i.z) % size_i.z;
 
-      return memoryReadonly
-        .value[x + y * size_i.x + z * size_i.x * size_i.y] as d.v3f;
-    },
-  );
+    return memoryReadonly
+      .value[x + y * size_i.x + z * size_i.x * size_i.y] as d.v3f;
+  });
 
   return {
     getJunctionGradient,

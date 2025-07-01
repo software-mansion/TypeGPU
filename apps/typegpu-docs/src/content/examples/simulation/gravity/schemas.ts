@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuSampledTexture, type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const Camera = d.struct({
@@ -7,18 +7,16 @@ export const Camera = d.struct({
   projection: d.mat4x4f,
 });
 
-export const CelestialBody = d
-  .struct({
-    destroyed: d.u32, // boolean
-    position: d.vec3f,
-    velocity: d.vec3f,
-    mass: d.f32,
-    radiusMultiplier: d.f32, // radius is calculated from the mass, and then multiplied by this
-    collisionBehavior: d.u32, // value of the collisionBehaviors enum
-    textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
-    ambientLightFactor: d.f32,
-  })
-  .$name('CelestialBody');
+export const CelestialBody = d.struct({
+  destroyed: d.u32, // boolean
+  position: d.vec3f,
+  velocity: d.vec3f,
+  mass: d.f32,
+  radiusMultiplier: d.f32, // radius is calculated from the mass, and then multiplied by this
+  collisionBehavior: d.u32, // value of the collisionBehaviors enum
+  textureIndex: d.u32, // index of the global 2d-array texture for celestial bodies
+  ambientLightFactor: d.f32,
+});
 
 export const VertexInput = {
   position: d.vec3f,
@@ -36,81 +34,47 @@ export const VertexOutput = {
   ambientLightFactor: d.f32,
 };
 
-export const SkyBoxVertex = d
-  .struct({
-    position: d.vec3f,
-    uv: d.vec2f,
-  })
-  .$name('SkyBoxVertex');
+export const SkyBoxVertex = d.struct({
+  position: d.vec3f,
+  uv: d.vec2f,
+});
 
-export const Time = d
-  .struct({ passed: d.f32, multiplier: d.f32 })
-  .$name('Time');
+export const Time = d.struct({ passed: d.f32, multiplier: d.f32 });
 
 // layouts
-export const computeCollisionsBindGroupLayout = tgpu
-  .bindGroupLayout({
-    celestialBodiesCount: {
-      uniform: d.i32,
-      access: 'readonly',
-    },
-    inState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'readonly',
-    },
-    outState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'mutable',
-    },
-  })
-  .$name('compute collisions');
+export const computeLayout = tgpu.bindGroupLayout({
+  celestialBodiesCount: {
+    uniform: d.i32,
+    access: 'readonly',
+  },
+  inState: {
+    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    access: 'readonly',
+  },
+  outState: {
+    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    access: 'mutable',
+  },
+});
 
-export const computeGravityBindGroupLayout = tgpu
-  .bindGroupLayout({
-    celestialBodiesCount: {
-      uniform: d.i32,
-      access: 'readonly',
-    },
-    time: {
-      uniform: Time,
-      access: 'readonly',
-    },
-    inState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'readonly',
-    },
-    outState: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
-      access: 'mutable',
-    },
-  })
-  .$name('compute gravity');
+export const renderSkyBoxVertexLayout = tgpu.vertexLayout((n) =>
+  d.arrayOf(SkyBoxVertex, n)
+);
 
-export const renderSkyBoxBindGroupLayout = tgpu
-  .bindGroupLayout({
-    camera: { uniform: Camera },
-    skyBox: { texture: 'float', viewDimension: 'cube' },
-    sampler: { sampler: 'filtering' },
-  })
-  .$name('render skybox');
-
-export const renderSkyBoxVertexLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(SkyBoxVertex, n))
-  .$name('render skybox');
+export const cameraAccess = tgpu['~unstable'].accessor(Camera);
+export const filteringSamplerSlot = tgpu.slot<TgpuSampler>();
+export const skyBoxSlot = tgpu.slot<TgpuSampledTexture<'cube', d.F32>>();
+export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
+export const timeAccess = tgpu['~unstable'].accessor(Time);
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
-    camera: { uniform: Camera },
-    sampler: { sampler: 'filtering' },
-    lightSource: { uniform: d.vec3f },
     celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
     celestialBodies: {
       storage: (n: number) => d.arrayOf(CelestialBody, n),
       access: 'readonly',
     },
-  })
-  .$name('render');
+  });
 
 export const renderVertexLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(d.struct(VertexInput), n))
-  .$name('render');
+  .vertexLayout((n) => d.arrayOf(d.struct(VertexInput), n));

@@ -25,9 +25,9 @@ import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh }
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
-  return select(tanh(v), sign(v), abs(v) > 10);
-});
+const safeTanh = tgpu.fn([d.f32], d.f32)((v) =>
+  select(tanh(v), sign(v), abs(v) > 10)
+);
 
 // Functions can still be written in WGSL, if that's what you prefer.
 // You can omit the argument and return types, and we'll generate them
@@ -35,7 +35,7 @@ const safeTanh = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
 /**
  * A modulo that replicates the behavior of GLSL's `mod` function.
  */
-const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
+const mod = tgpu.fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
   return fract(v / a) * a;
 }`;
 
@@ -43,58 +43,56 @@ const mod = tgpu['~unstable'].fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XZ plane (around the Y axis)
  */
-const rotateXZ = tgpu['~unstable'].fn([d.f32], d.mat3x3f)((angle) => {
-  return d.mat3x3f(
+const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+  d.mat3x3f(
     /* right   */ d.vec3f(cos(angle), 0, sin(angle)),
     /* up      */ d.vec3f(0, 1, 0),
     /* forward */ d.vec3f(-sin(angle), 0, cos(angle)),
-  );
-});
+  )
+);
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.
 const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
-const timeUniform = root['~unstable'].createUniform(d.f32);
-const scaleUniform = root['~unstable'].createUniform(d.f32);
-const colorUniform = root['~unstable'].createUniform(d.vec3f);
-const shiftUniform = root['~unstable'].createUniform(d.f32);
-const aspectRatioUniform = root['~unstable'].createUniform(d.f32);
+const time = root.createUniform(d.f32);
+const scale = root.createUniform(d.f32);
+const color = root.createUniform(d.vec3f);
+const shift = root.createUniform(d.f32);
+const aspectRatio = root.createUniform(d.f32);
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const t = timeUniform.value;
-  const shift = shiftUniform.value;
   // Increasing the color intensity
-  const color = mul(colorUniform.value, 4);
-  const ratio = d.vec2f(aspectRatioUniform.value, 1);
+  const icolor = mul(color.$, 4);
+  const ratio = d.vec2f(aspectRatio.$, 1);
   const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = sub(mul(z, dir), scaleUniform.value);
-    p.x -= t + 3;
-    p.z -= t + 3;
+    const p = sub(mul(z, dir), scale.$);
+    p.x -= time.$ + 3;
+    p.z -= time.$ + 3;
     let q = p;
     let prox = p.y;
     for (let i = 40.1; i > 0.01; i *= 0.2) {
       q = sub(i * 0.9, abs(sub(mod(q, i + i), i)));
       const minQ = min(min(q.x, q.y), q.z);
       prox = max(prox, minQ);
-      q = mul(q, rotateXZ(shift));
+      q = mul(q, rotateXZ(shift.$));
     }
     z += prox;
-    acc = add(acc, mul(sub(color, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
+    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
   }
 
   // Tone mapping
   acc = tanh(mul(acc, acc));
 
-  return d.vec4f(acc.xyz, 1);
+  return d.vec4f(acc, 1);
 });
 
 /**
@@ -127,14 +125,19 @@ const pipeline = root['~unstable']
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
-function draw() {
-  aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
-  timeUniform.write((performance.now() * 0.001) % 1000);
+let isRunning = true;
+
+function draw(timestamp: number) {
+  if (!isRunning) {
+    return;
+  }
+
+  aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
+  time.write((timestamp * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -143,7 +146,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
@@ -154,7 +157,7 @@ export const controls = {
     max: 100,
     step: 0.01,
     onSliderChange(v: number) {
-      scaleUniform.write(v);
+      scale.write(v);
     },
   },
   'pattern shift': {
@@ -163,18 +166,19 @@ export const controls = {
     max: 200,
     step: 0.001,
     onSliderChange(v: number) {
-      shiftUniform.write(v / 180 * Math.PI);
+      shift.write(v / 180 * Math.PI);
     },
   },
   color: {
-    onColorChange(value: readonly [number, number, number]) {
-      colorUniform.write(d.vec3f(...value));
-    },
     initial: [1, 0.7, 0],
+    onColorChange(value: readonly [number, number, number]) {
+      color.write(d.vec3f(...value));
+    },
   },
 };
 
 export function onCleanup() {
+  isRunning = false;
   root.destroy();
 }
 
