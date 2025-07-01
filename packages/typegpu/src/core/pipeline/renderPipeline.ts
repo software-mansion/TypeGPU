@@ -17,7 +17,7 @@ import {
 } from '../../errors.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { resolve } from '../../resolutionCtx.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -40,7 +40,7 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
-import { isGPUBuffer } from '../../types.ts';
+import { isGPUBuffer, type ResolutionCtx } from '../../types.ts';
 import { sizeOf } from '../../data/index.ts';
 import {
   createWithPerformanceCallback,
@@ -51,6 +51,8 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import { v4 } from '../../shared/uuid.ts';
+import { PERF } from '../../shared/dev.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -638,22 +640,41 @@ class RenderPipelineCore {
       } = this.options;
 
       // Resolving code
-      const { code, usedBindGroupLayouts, catchall } = resolve(
-        {
-          '~resolve': (ctx) => {
-            ctx.withSlots(slotBindings, () => {
-              ctx.resolve(vertexFn);
-              ctx.resolve(fragmentFn);
-            });
-            return '';
-          },
+      const resolvable = {
+        '~resolve': (ctx: ResolutionCtx) => {
+          ctx.withSlots(slotBindings, () => {
+            ctx.resolve(vertexFn);
+            ctx.resolve(fragmentFn);
+          });
+          return '';
+        },
 
-          toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
-        },
-        {
+        toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
+      };
+
+      let resolutionResult: ResolutionResult;
+
+      let perfId: string | undefined;
+      let resolveStart: PerformanceMark | undefined;
+      if (PERF) {
+        perfId = v4();
+        resolveStart = performance.mark('typegpu:resolution:start', {
+          detail: perfId,
+        });
+        resolutionResult = resolve(resolvable, {
           names: branch.nameRegistry,
-        },
-      );
+        });
+        performance.measure('typegpu:resolution', {
+          start: resolveStart.name,
+          detail: perfId,
+        });
+      } else {
+        resolutionResult = resolve(resolvable, {
+          names: branch.nameRegistry,
+        });
+      }
+
+      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -663,10 +684,24 @@ class RenderPipelineCore {
 
       const device = branch.device;
 
-      const module = device.createShaderModule({
+      const moduleDescriptor = {
         label: `${getName(this) ?? '<unnamed>'} - Shader`,
         code,
-      });
+      };
+      let module: GPUShaderModule;
+      if (PERF) {
+        const compileStart = performance.mark(
+          'typegpu:device.createShaderModule:start',
+          { detail: perfId },
+        );
+        module = device.createShaderModule(moduleDescriptor);
+        performance.measure('typegpu:device.createShaderModule', {
+          detail: perfId,
+          start: compileStart.name,
+        });
+      } else {
+        module = device.createShaderModule(moduleDescriptor);
+      }
 
       const descriptor: GPURenderPipelineDescriptor = {
         layout: device.createPipelineLayout({
@@ -709,6 +744,8 @@ class RenderPipelineCore {
       if (multisampleState) {
         descriptor.multisample = multisampleState;
       }
+
+      performance.dispatchEvent(new Event('typegpu:pipeline-unwrapped'));
 
       this._memo = {
         pipeline: device.createRenderPipeline(descriptor),

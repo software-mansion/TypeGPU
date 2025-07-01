@@ -7,3 +7,8 @@
  */
 // biome-ignore lint/suspicious/noExplicitAny: the types are not important here
 export const DEV = (globalThis as any).process.env.NODE_ENV === 'development';
+
+/**
+ * Performance measurements are only enabled in dev for now
+ */
+export const PERF = DEV;
