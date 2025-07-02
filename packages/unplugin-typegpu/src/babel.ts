@@ -42,12 +42,7 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  containsDirective: boolean, // AAA optimize this
-): babel.CallExpression | null {
-  if (!containsDirective) {
-    return null;
-  }
-
+): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
 
   const metadata = `{
@@ -123,23 +118,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     ArrowFunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        containsKernelDirective(path.node),
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
 
     FunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        containsKernelDirective(path.node),
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
@@ -151,11 +138,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.params,
         node.body,
       );
-      const transpiled = functionToTranspiled(
-        expression,
-        containsKernelDirective(path.node),
-      );
-      if (transpiled && node.id) {
+
+      if (containsKernelDirective(path.node) && node.id) {
+        const transpiled = functionToTranspiled(expression);
         path.replaceWith(
           types.variableDeclaration('const', [
             types.variableDeclarator(node.id, transpiled),
@@ -178,7 +163,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
-            true,
           ) as babel.CallExpression;
 
           path.replaceWith(
