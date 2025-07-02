@@ -1,34 +1,38 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { dataBindGroupLayout as layout, workgroupSize } from '../schemas.ts';
+import {
+  dataBindGroupLayout as layout,
+  itemsPerThread,
+  workgroupSize,
+} from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize * 2),
+  d.arrayOf(d.f32, workgroupSize * itemsPerThread),
 );
 
 export const computeUpPass = tgpu['~unstable'].computeFn({
   in: {
-    lid: d.builtin.localInvocationIndex,
+    lid: d.builtin.localInvocationId,
     gid: d.builtin.globalInvocationId,
+    wid: d.builtin.workgroupId,
   },
-  workgroupSize: [workgroupSize],
-})((input) => {
-  const lId = input.lid;
-  const gId = input.gid.x;
-  const length = d.u32(workgroupSize * 2);
-  const log2Length = std.ceil(std.log2(d.f32(length))); //TODO error?
+  workgroupSize: [workgroupSize, 1, 1],
+})(({ lid, gid, wid }) => {
+  const gId = gid.x;
+  const segmentLength = d.u32(workgroupSize * 2);
+  const log2Length = std.ceil(std.log2(d.f32(segmentLength)));
 
-  const fixedArrayLength = layout.$.inputArray.length;
+  const totalInputLength = layout.$.inputArray.length;
 
   // Copy input data to shared memory
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
-  if (idx0 < d.u32(fixedArrayLength)) {
-    sharedMem.value[lId * 2] = layout.$.inputArray[idx0] as number;
+  if (idx0 < totalInputLength) {
+    sharedMem.value[lid.x * 2] = layout.$.inputArray[idx0] as number;
   }
-  if (idx1 < d.u32(fixedArrayLength)) {
-    sharedMem.value[lId * 2 + 1] = layout.$.inputArray[idx1] as number;
+  if (idx1 < totalInputLength) {
+    sharedMem.value[lid.x * 2 + 1] = layout.$.inputArray[idx1] as number;
   }
   std.workgroupBarrier();
 
@@ -37,8 +41,8 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
     const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
 
-    if (lId < (length / (windowSize / 2))) { //workgroup length
-      const i = lId * windowSize;
+    if (lid.x < (segmentLength / (windowSize / 2))) { //workgroup length
+      const i = lid.x * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
@@ -48,18 +52,18 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
 
     std.workgroupBarrier();
   }
-    // save to sums
-    if (lId === 0) {
-      layout.$.sumsArray[gId] = sharedMem.value[length - 1] as number;
-      // sharedMem.value[length - 1] = 0;
-    }
-    std.workgroupBarrier();
+  // save to sums
+  // if (lid.x === 0) {
+  //   layout.$.sumsArray[wid.x] = sharedMem.value[segmentLength - 1] as number;
+  //   // sharedMem.value[segmentLength - 1] = 0;
+  // }
+  std.workgroupBarrier();
 
-    // copy back to work array
-    if (idx0 < d.u32(fixedArrayLength)) {
-      layout.$.workArray[idx0] = sharedMem.value[lId * 2] as number;
-    }
-    if (idx1 < d.u32(fixedArrayLength)) {
-      layout.$.workArray[idx1] = sharedMem.value[lId * 2 + 1] as number;
-    }
+  // copy back to work array
+  if (idx0 < d.u32(totalInputLength)) {
+    layout.$.workArray[idx0] = sharedMem.value[lid.x * 2] as number;
+  }
+  if (idx1 < d.u32(totalInputLength)) {
+    layout.$.workArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
+  }
 });

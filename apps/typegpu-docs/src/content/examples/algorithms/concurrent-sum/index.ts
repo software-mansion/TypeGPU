@@ -5,7 +5,8 @@ import * as d from 'typegpu/data';
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-export const fixedArrayLength = 2 ** 10;
+const fixedArrayLength = 512;
+// export const fixedArrayLength = 2 ** 10;
 
 const root = await tgpu.init({
   adapter: {
@@ -31,7 +32,22 @@ const buffer = root
   )
   .$usage('storage');
 
-currentSum(root, buffer);
+const values = new Set();
+for (let i = 0; i < 100; i++) {
+  const work = await (await currentSum(root, buffer)).read();
+  values.add(work[work.length - 1]);
+}
+console.log(values);
+
+// COMPUTE EXPECTED
+const arr = [...Array(fixedArrayLength - 1).keys()];
+console.log(
+  'Expected sum: ',
+  arr.reduce(
+    (accumulator, currentValue) => accumulator + currentValue,
+    0,
+  ),
+);
 
 export function onCleanup() {
   root.destroy();

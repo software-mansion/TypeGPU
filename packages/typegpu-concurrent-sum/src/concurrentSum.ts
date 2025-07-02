@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 
 import {
   dataBindGroupLayout,
-  fixedArrayLength,
+  itemsPerThread,
   workgroupSize,
 } from './schemas.ts';
 import type { F32, WgslArray } from 'typegpu/data';
@@ -14,35 +14,27 @@ import { computeDownPass } from './compute/computeDownPass.ts';
 export async function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<WgslArray<F32>> & StorageFlag,
-  outputBuffer?: TgpuBuffer<WgslArray<F32>> & StorageFlag,
+  outputBufferOpt?: TgpuBuffer<WgslArray<F32>> & StorageFlag,
 ) {
-  const dynamicInputBufferLength = inputBuffer.dataType.elementCount;
-  
-  const workBuffer = outputBuffer ?? root.createBuffer(
-    d.arrayOf(d.f32, dynamicInputBufferLength),
-  ).$usage('storage')
-    .$name('workBuffer');
-  const sumsBuffer = root.createBuffer(
-    d.arrayOf(d.f32, dynamicInputBufferLength / workgroupSize * 2),
-  ).$usage('storage')
-    .$name('sumsBuffer');
-  const resultBuffer = root.createBuffer(
-    d.arrayOf(d.f32, dynamicInputBufferLength / workgroupSize * 2),
-  ).$usage('storage')
-    .$name('sumsBuffer');
+  const inputLength = inputBuffer.dataType.elementCount;
+
+  const workBuffer = root
+    .createBuffer(d.arrayOf(d.f32, inputLength))
+    .$usage('storage');
+
+  const sumsBuffer = root
+    .createBuffer(
+      d.arrayOf(
+        d.f32,
+        Math.ceil(inputLength / (workgroupSize * itemsPerThread)),
+      ),
+    )
+    .$usage('storage');
 
   const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: inputBuffer,
     workArray: workBuffer,
     sumsArray: sumsBuffer,
-  });
-
-  const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
-    inputArray: sumsBuffer,
-    workArray: resultBuffer,
-    sumsArray: root.createBuffer(
-      d.arrayOf(d.f32, dynamicInputBufferLength / workgroupSize * 2),
-    ).$usage('storage'), // unused but required
   });
 
   // Pipelines
@@ -69,20 +61,9 @@ export async function currentSum(
   // 1: Bieloch's Block Scan
   upPassPipeline
     .with(dataBindGroupLayout, mainArrayBindGroup)
-    .withPerformanceCallback((start, end) => {
-      const durationNs = Number(end - start);
-      console.log(
-        `Block Scan execution time: ${durationNs} ns (${
-          durationNs / 1000000
-        } ms)`,
-      );
-    })
-    .dispatchWorkgroups(
-      dynamicInputBufferLength / (workgroupSize * 2) > 1
-        ? dynamicInputBufferLength / (workgroupSize * 2)
-        : 1,
-    );
+    .dispatchWorkgroups(1);
 
+  root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
 
   // downPassPipeline
@@ -95,54 +76,45 @@ export async function currentSum(
   //     } ms)`,
   //   );
   // })
-  // .dispatchWorkgroups(dynamicInputBufferLength / (workgroupSize * 2) > 1 ? dynamicInputBufferLength / (workgroupSize * 2) : 1);
+  // .dispatchWorkgroups(inputLength / (workgroupSize * 2) > 1 ? inputLength / (workgroupSize * 2) : 1);
 
   //buffer.copyFrom //device.queue.copyBufferToBuffer
   // 2: Sums scan
   const numSumBlocks = Math.ceil(
-    (dynamicInputBufferLength / (workgroupSize * 2)) / (workgroupSize * 2),
+    (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
   );
-  if (numSumBlocks > 0) {
-    upPassPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
-      .withPerformanceCallback((start, end) => {
-        const durationNs = Number(end - start);
-        console.log(
-          `Scan Sums execution time: ${durationNs} ns (${
-            durationNs / 1000000
-          } ms)`,
-        );
-      })
-      .dispatchWorkgroups(numSumBlocks || 1);
-  }
+  // if (numSumBlocks > 0) {
+  //   const resultBuffer = root
+  //     .createBuffer(d.arrayOf(d.f32, inputLength))
+  //     .$usage('storage');
+
+  //   const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  //     inputArray: sumsBuffer,
+  //     workArray: resultBuffer,
+  //     sumsArray: root.createBuffer(
+  //       d.arrayOf(d.f32, inputLength / workgroupSize * 2),
+  //     ).$usage('storage'), // unused but required
+  //   });
+
+  //   upPassPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
+  //     .dispatchWorkgroups(numSumBlocks || 1);
+  // }
+  root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
 
   // 3: Apply sums to each block
-  applySumsPipeline.with(dataBindGroupLayout, mainArrayBindGroup)
-    .withPerformanceCallback((start, end) => {
-      const durationNs = Number(end - start);
-      console.log(
-        `Apply Sums execution time: ${durationNs} ns (${
-          durationNs / 1000000
-        } ms)`,
-      );
-    })
-    .dispatchWorkgroups(Math.ceil(fixedArrayLength / workgroupSize));
+  // applySumsPipeline
+  //   .with(dataBindGroupLayout, mainArrayBindGroup)
+  //   .dispatchWorkgroups(Math.ceil(inputLength / workgroupSize));
 
-  resultBuffer
-    .read()
-    .then((result) => {
-      console.log('Result:', result);
-    })
-    .catch((error) => {
-      console.error('Error reading buffer:', error);
-    });
+  // resultBuffer
+  //   .read()
+  //   .then((result) => {
+  //     console.log('Result:', result);
+  //   })
+  //   .catch((error) => {
+  //     console.error('Error reading buffer:', error);
+  //   });
 
-  // COMPUTE EXPECTED
-  const arr = [...Array(dynamicInputBufferLength - 1).keys()];
-  console.log(
-    'Expected sum: ',
-    arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0),
-  );
-
-  return inputBuffer;
+  return workBuffer;
 }
