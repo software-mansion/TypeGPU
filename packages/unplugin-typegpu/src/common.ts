@@ -223,6 +223,7 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
   }
 }
 
+export const kernelDirective = 'kernel';
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;
 export type KernelDirective = (typeof kernelDirectives)[number];
 

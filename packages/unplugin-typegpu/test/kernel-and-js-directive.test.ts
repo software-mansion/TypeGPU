@@ -228,7 +228,7 @@ describe('[BABEL] "kernel & js" directive', () => {
   });
 });
 
-describe('[ROLLUP] "kernel & js" directive', () => {
+describe('[ROLLUP] "kernel" directive', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -244,7 +244,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-        'kernel & js';
+        'kernel';
         return a + b;
       };
 
@@ -261,7 +261,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       "import 'typegpu';
 
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
@@ -280,14 +280,14 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     `);
   });
 
-  it('makes plugin transpile marked arrow functions passed to shells', async () => {
+  it('makes plugin transpile marked arrow functions passed to shells and keeps JS impl', async () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const shell = tgpu.fn([]);
 
       shell((a, b) => {
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -302,7 +302,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
@@ -317,31 +317,6 @@ describe('[ROLLUP] "kernel & js" directive', () => {
     `);
   });
 
-  it('makes plugin keep JS implementation when transpiling marked arrow functions passed to inline-defined shells', async () => {
-    const code = `\
-      import tgpu from 'typegpu';
-
-      tgpu.fn([])((a, b) => {
-        'kernel & js';
-        return a + b;
-      })
-    `;
-
-    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-
-      tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
-              'kernel & js';
-              return a + b;
-            }), {
-                    v: 1,
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
-                  }) && $.f)({})));
-      "
-    `);
-  });
-
   it('makes plugin transpile marked non-arrow functions passed to shells', async () => {
     const code = `\
       import tgpu from 'typegpu';
@@ -349,7 +324,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function(a, b){
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -363,7 +338,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
@@ -385,7 +360,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -400,7 +375,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
@@ -420,7 +395,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel & js';
+        'kernel';
         return a + b;
       }
 
@@ -437,7 +412,7 @@ describe('[ROLLUP] "kernel & js" directive', () => {
       "import 'typegpu';
 
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
@@ -458,32 +433,30 @@ describe('[ROLLUP] "kernel & js" directive', () => {
 
   it('throws when hoisting was meant to be used', async () => {
     const code = `\
-      import tgpu from 'typegpu';
-
       const sum = add(1, 2);
       function add(a, b) {
-        'kernel & js';
+        'kernel';
         return a + b;
       };
     `;
 
     await rollupTransform(code);
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `File  virtual:code: function "add", containing kernel & js directive, might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+      `File  virtual:code: function "add" might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
     );
   });
 
   it('parses when no typegpu import', async () => {
     const code = `\
       function add(a, b) {
-        'kernel & js';
+        'kernel';
         return a + b;
       };
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
-              'kernel & js';
+              'kernel';
               return a + b;
             }), {
                     v: 1,
