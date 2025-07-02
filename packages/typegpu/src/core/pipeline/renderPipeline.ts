@@ -638,6 +638,7 @@ class RenderPipelineCore {
         depthStencilState,
         multisampleState,
       } = this.options;
+      const device = branch.device;
 
       // Resolving code
       const resolvable = {
@@ -656,7 +657,7 @@ class RenderPipelineCore {
 
       let perfId: string | undefined;
       let resolveStart: PerformanceMark | undefined;
-      if (PERF) {
+      if (PERF?.value) {
         perfId = v4();
         resolveStart = performance.mark('typegpu:resolution:start', {
           detail: { perfId },
@@ -682,31 +683,25 @@ class RenderPipelineCore {
         );
       }
 
-      const device = branch.device;
-
-      const moduleDescriptor = {
+      const module = device.createShaderModule({
         label: `${getName(this) ?? '<unnamed>'} - Shader`,
         code,
-      };
-      const module = device.createShaderModule(moduleDescriptor);
-      if (PERF?.value) {
-        (async () => {
-          // Compiling the shader again... just to take better measurements
-          const compileStart = performance.mark(
-            'typegpu:device.createShaderModule:start',
-            { detail: { perfId } },
-          );
-          const perfModel = device.createShaderModule(moduleDescriptor);
+      });
 
-          // Treating the feedback of getting the compilation info
-          // as a time stopper for shader compilation.
-          const info = await perfModel.getCompilationInfo();
-          console.log(info);
+      if (PERF?.value) {
+        const compileStart = performance.mark(
+          'typegpu:device.createShaderModule:start',
+          { detail: { perfId } },
+        );
+
+        // Treating the feedback of getting the compilation info
+        // as a time stopper for shader compilation.
+        module.getCompilationInfo().then(() => {
           performance.measure('typegpu:device.createShaderModule', {
             detail: { perfId, wgslSize: code.length },
             start: compileStart.name,
           });
-        })();
+        });
       }
 
       const descriptor: GPURenderPipelineDescriptor = {

@@ -1,7 +1,7 @@
 import { MissingBindGroupsError } from '../../errors.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { resolve } from '../../resolutionCtx.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
@@ -19,6 +19,9 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
+import type { ResolutionCtx } from '../../types.ts';
+import { PERF } from '../../shared/env.ts';
+import { v4 } from '../../shared/uuid.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -206,26 +209,67 @@ class ComputePipelineCore {
       const device = this.branch.device;
 
       // Resolving code
-      const { code, usedBindGroupLayouts, catchall } = resolve(
-        {
-          '~resolve': (ctx) => {
-            ctx.withSlots(this._slotBindings, () => {
-              ctx.resolve(this._entryFn);
-            });
-            return '';
-          },
+      const resolvable = {
+        '~resolve': (ctx: ResolutionCtx) => {
+          ctx.withSlots(this._slotBindings, () => {
+            ctx.resolve(this._entryFn);
+          });
+          return '';
+        },
 
-          toString: () => `computePipeline:${getName(this) ?? '<unnamed>'}`,
-        },
-        {
+        toString: () => `computePipeline:${getName(this) ?? '<unnamed>'}`,
+      };
+
+      let resolutionResult: ResolutionResult;
+
+      let perfId: string | undefined;
+      let resolveStart: PerformanceMark | undefined;
+      if (PERF?.value) {
+        perfId = v4();
+        resolveStart = performance.mark('typegpu:resolution:start', {
+          detail: { perfId },
+        });
+        resolutionResult = resolve(resolvable, {
           names: this.branch.nameRegistry,
-        },
-      );
+        });
+        performance.measure('typegpu:resolution', {
+          start: resolveStart.name,
+          detail: { perfId, wgslSize: resolutionResult.code.length },
+        });
+      } else {
+        resolutionResult = resolve(resolvable, {
+          names: this.branch.nameRegistry,
+        });
+      }
+
+      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
+      }
+
+      const module = device.createShaderModule({
+        label: `${getName(this) ?? '<unnamed>'} - Shader`,
+        code,
+      });
+
+      if (PERF?.value) {
+        const compileStart = performance.mark(
+          'typegpu:device.createShaderModule:start',
+          { detail: { perfId } },
+        );
+
+        // The compilation of the shader happens on a different thread.
+        // Treating the feedback of getting the compilation info
+        // as a time stopper for shader compilation.
+        module.getCompilationInfo().then(() => {
+          performance.measure('typegpu:device.createShaderModule', {
+            detail: { perfId, wgslSize: code.length },
+            start: compileStart.name,
+          });
+        });
       }
 
       this._memo = {
@@ -237,12 +281,7 @@ class ComputePipelineCore {
               this.branch.unwrap(l)
             ),
           }),
-          compute: {
-            module: device.createShaderModule({
-              label: `${getName(this) ?? '<unnamed>'} - Shader`,
-              code,
-            }),
-          },
+          compute: { module },
         }),
         usedBindGroupLayouts,
         catchall,
