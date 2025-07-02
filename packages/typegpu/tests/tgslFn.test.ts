@@ -808,4 +808,24 @@ describe('TGSL tgpu.fn function', () => {
 
     attest(fun).type.toString.snap('TgpuFn<(args_0: F32, args_1: F32) => F32>');
   });
-});
+
+  it('tests division operator resolution', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      'kernel & js';
+      return d.u32(1) / d.u32(2);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({div})).toBe(parse(`
+      fn divide1_0 () -> f32 { return f32(1)) / f32(2));}`));
+  });
+  });
+
+  it('tests division operator resolution', () => {
+    const divide1 = tgpu.fn([], d.f32)(() => {
+      'kernel & js';
+      return d.f32(1.0) / d.f32(2.0);
+    });
+    expect(divide1()).toBe(0.5);
+    expect(parseResolved({divide1})).toBe(parse(`
+      fn divide1_0 () -> f32 { return f32(1)) / f32(2));}`));
+  });

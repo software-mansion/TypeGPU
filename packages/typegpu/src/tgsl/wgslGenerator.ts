@@ -148,6 +148,16 @@ export function generateExpression(
     const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
+    if (
+      op === '/' && !['f32', 'f16'].includes(convLhs.dataType.type) &&
+      !['f32', 'f16'].includes(convRhs.dataType.type)
+    ) {
+      return snip(
+        `f32(${lhsStr}) / f32(${rhsStr})`,
+        type,
+      );
+    }
+
     return snip(
       parenthesizedOps.includes(op)
         ? `(${lhsStr} ${op} ${rhsStr})`
