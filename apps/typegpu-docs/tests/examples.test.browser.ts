@@ -3,6 +3,9 @@ import { examples as exampleRecord } from '../src/utils/examples/exampleContent.
 
 const examples = Object.values(exampleRecord);
 
+// biome-ignore lint/suspicious/noExplicitAny: it exists, I swear
+(globalThis as any).__TYPEGPU_MEASURE_PERF__ = true;
+
 interface ExampleRuntime {
   onCleanup(): void;
 }

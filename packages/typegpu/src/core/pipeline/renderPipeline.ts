@@ -52,7 +52,7 @@ import {
 } from './timeable.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { v4 } from '../../shared/uuid.ts';
-import { PERF } from '../../shared/dev.ts';
+import { PERF } from '../../shared/env.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -688,23 +688,25 @@ class RenderPipelineCore {
         label: `${getName(this) ?? '<unnamed>'} - Shader`,
         code,
       };
-      let module: GPUShaderModule;
-      if (PERF) {
-        const compileStart = performance.mark(
-          'typegpu:device.createShaderModule:start',
-          { detail: { perfId } },
-        );
-        module = device.createShaderModule(moduleDescriptor);
-        // Treating the feedback of getting the compilation info
-        // as a time stopper for shader compilation.
-        module.getCompilationInfo().then(() => {
+      const module = device.createShaderModule(moduleDescriptor);
+      if (PERF?.value) {
+        (async () => {
+          // Compiling the shader again... just to take better measurements
+          const compileStart = performance.mark(
+            'typegpu:device.createShaderModule:start',
+            { detail: { perfId } },
+          );
+          const perfModel = device.createShaderModule(moduleDescriptor);
+
+          // Treating the feedback of getting the compilation info
+          // as a time stopper for shader compilation.
+          const info = await perfModel.getCompilationInfo();
+          console.log(info);
           performance.measure('typegpu:device.createShaderModule', {
             detail: { perfId, wgslSize: code.length },
             start: compileStart.name,
           });
-        });
-      } else {
-        module = device.createShaderModule(moduleDescriptor);
+        })();
       }
 
       const descriptor: GPURenderPipelineDescriptor = {
