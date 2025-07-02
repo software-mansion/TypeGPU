@@ -24,11 +24,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const buffer = root.createBuffer(
-  d.arrayOf(d.f32, fixedArrayLength),
-  Array.from({ length: fixedArrayLength }, (_, k) => k),
-).$usage('storage')
-  .$name('inputBuffer');
+const buffer = root
+  .createBuffer(
+    d.arrayOf(d.f32, fixedArrayLength),
+    Array.from({ length: fixedArrayLength }, (_, k) => k),
+  )
+  .$usage('storage');
 
 currentSum(root, buffer);
 
