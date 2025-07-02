@@ -8,7 +8,7 @@ import {
 } from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize * itemsPerThread),
+  d.arrayOf(d.u32, workgroupSize * itemsPerThread),
 );
 
 export const computeUpPass = tgpu['~unstable'].computeFn({
@@ -21,7 +21,7 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
 })(({ lid, gid, wid }) => {
   const gId = gid.x;
   const segmentLength = d.u32(workgroupSize * 2);
-  const log2Length = std.ceil(std.log2(d.f32(segmentLength)));
+  const log2Length = d.u32(std.ceil(std.log2(d.f32(segmentLength))));
 
   const totalInputLength = layout.$.inputArray.length;
 
@@ -37,11 +37,11 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   std.workgroupBarrier();
 
   // Up-sweep phase (reduce)
-  for (let dLevel = 0; dLevel < log2Length; dLevel++) {
-    const windowSize = d.u32(std.exp2(d.f32(dLevel + 1))); // window size == step
-    const offset = d.u32(std.exp2(d.f32(dLevel))); // offset for the window
+  for (let dLevel = d.u32(0); dLevel < log2Length; dLevel++) {
+    const windowSize = d.u32(1 << (dLevel + 1)); // window size == step
+    const offset = d.u32(1 << dLevel); // offset for the window
 
-    if (lid.x < (segmentLength / (windowSize / 2))) { //workgroup length
+    if (lid.x < (segmentLength / windowSize)) { //workgroup length
       const i = lid.x * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
@@ -60,10 +60,10 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   std.workgroupBarrier();
 
   // copy back to work array
-  if (idx0 < d.u32(totalInputLength)) {
+  if (idx0 < totalInputLength) {
     layout.$.workArray[idx0] = sharedMem.value[lid.x * 2] as number;
   }
-  if (idx1 < d.u32(totalInputLength)) {
+  if (idx1 < totalInputLength) {
     layout.$.workArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
   }
 });

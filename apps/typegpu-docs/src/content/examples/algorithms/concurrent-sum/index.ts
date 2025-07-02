@@ -27,7 +27,7 @@ context.configure({
 
 const buffer = root
   .createBuffer(
-    d.arrayOf(d.f32, fixedArrayLength),
+    d.arrayOf(d.u32, fixedArrayLength),
     Array.from({ length: fixedArrayLength }, (_, k) => k),
   )
   .$usage('storage');
@@ -40,7 +40,7 @@ for (let i = 0; i < 100; i++) {
 console.log(values);
 
 // COMPUTE EXPECTED
-const arr = [...Array(fixedArrayLength - 1).keys()];
+const arr = [...Array(fixedArrayLength).keys()];
 console.log(
   'Expected sum: ',
   arr.reduce(

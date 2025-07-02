@@ -6,26 +6,25 @@ import {
   itemsPerThread,
   workgroupSize,
 } from './schemas.ts';
-import type { F32, WgslArray } from 'typegpu/data';
 import { incrementShader } from './compute/incrementShader.ts';
 import { computeUpPass } from './compute/computeUpPass.ts';
 import { computeDownPass } from './compute/computeDownPass.ts';
 
 export async function currentSum(
   root: TgpuRoot,
-  inputBuffer: TgpuBuffer<WgslArray<F32>> & StorageFlag,
-  outputBufferOpt?: TgpuBuffer<WgslArray<F32>> & StorageFlag,
+  inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
+  outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
 ) {
   const inputLength = inputBuffer.dataType.elementCount;
 
   const workBuffer = root
-    .createBuffer(d.arrayOf(d.f32, inputLength))
+    .createBuffer(d.arrayOf(d.u32, inputLength))
     .$usage('storage');
 
   const sumsBuffer = root
     .createBuffer(
       d.arrayOf(
-        d.f32,
+        d.u32,
         Math.ceil(inputLength / (workgroupSize * itemsPerThread)),
       ),
     )
