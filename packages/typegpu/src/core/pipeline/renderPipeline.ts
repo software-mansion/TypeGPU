@@ -51,8 +51,7 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import { v4 } from '../../shared/uuid.ts';
-import { PERF } from '../../shared/env.ts';
+import { PERF } from '../../shared/meta.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -655,19 +654,14 @@ class RenderPipelineCore {
 
       let resolutionResult: ResolutionResult;
 
-      let perfId: string | undefined;
-      let resolveStart: PerformanceMark | undefined;
-      if (PERF?.value) {
-        perfId = v4();
-        resolveStart = performance.mark('typegpu:resolution:start', {
-          detail: { perfId },
-        });
+      let resolveMeasure: PerformanceMeasure | undefined;
+      if (PERF?.enabled) {
+        const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(resolvable, {
           names: branch.nameRegistry,
         });
-        performance.measure('typegpu:resolution', {
+        resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
-          detail: { perfId, wgslSize: resolutionResult.code.length },
         });
       } else {
         resolutionResult = resolve(resolvable, {
@@ -687,22 +681,6 @@ class RenderPipelineCore {
         label: `${getName(this) ?? '<unnamed>'} - Shader`,
         code,
       });
-
-      if (PERF?.value) {
-        const compileStart = performance.mark(
-          'typegpu:device.createShaderModule:start',
-          { detail: { perfId } },
-        );
-
-        // Treating the feedback of getting the compilation info
-        // as a time stopper for shader compilation.
-        module.getCompilationInfo().then(() => {
-          performance.measure('typegpu:device.createShaderModule', {
-            detail: { perfId, wgslSize: code.length },
-            start: compileStart.name,
-          });
-        });
-      }
 
       const descriptor: GPURenderPipelineDescriptor = {
         layout: device.createPipelineLayout({
@@ -751,6 +729,22 @@ class RenderPipelineCore {
         usedBindGroupLayouts,
         catchall,
       };
+
+      if (PERF?.enabled) {
+        (async () => {
+          const start = performance.mark('typegpu:compile-start');
+          await device.queue.onSubmittedWorkDone();
+          const compileMeasure = performance.measure('typegpu:compiled', {
+            start: start.name,
+          });
+
+          PERF?.record('resolution', {
+            resolveDuration: resolveMeasure?.duration,
+            compileDuration: compileMeasure.duration,
+            wgslSize: code.length,
+          });
+        })();
+      }
     }
 
     return this._memo;

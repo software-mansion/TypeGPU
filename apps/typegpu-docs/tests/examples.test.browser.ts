@@ -2,14 +2,19 @@ import { expect, test } from 'vitest';
 import { examples as exampleRecord } from '../src/utils/examples/exampleContent.ts';
 import { server } from '@vitest/browser/context';
 import * as Plot from '@observablehq/plot';
-import { map, pipe } from 'remeda';
+import type { INTERNAL_GlobalExt } from 'typegpu';
+import { pipe } from 'remeda';
 
+const globalExt = globalThis as unknown as
+  & typeof globalThis
+  & INTERNAL_GlobalExt;
+
+const testArtifactsDirectory = './tests/artifacts';
 const { writeFile } = server.commands;
 
 const examples = Object.values(exampleRecord);
 
-// biome-ignore lint/suspicious/noExplicitAny: it exists, I swear
-(globalThis as any).__TYPEGPU_MEASURE_PERF__ = true;
+globalExt.__TYPEGPU_MEASURE_PERF__ = true;
 
 interface ExampleRuntime {
   onCleanup(): void;
@@ -43,34 +48,42 @@ test('executes examples', async () => {
   document.body.removeChild(exampleView);
 
   const resolutionMetrics = pipe(
-    performance.getEntriesByName('typegpu:resolution'),
-    map((e) => ({ duration: e.duration, json: e.toJSON() })),
-  );
-  const compilationMetrics = performance.getEntriesByName(
-    'typegpu:device.createShaderModule',
+    globalExt.__TYPEGPU_PERF_RECORDS__?.get('resolution') ?? [],
   );
 
   writeFile(
-    './example-benchmark.json',
+    `${testArtifactsDirectory}/example-benchmark.json`,
     JSON.stringify(
       {
         resolutionMetrics,
-        compilationMetrics,
       },
     ),
   );
 
-  const svg = Plot.plot({
+  const resolveFigure = Plot.plot({
+    title: 'Resolve duration / Code size',
     marks: [
-      Plot.dot(resolutionMetrics.values(), {
+      Plot.frame(),
+      Plot.dot(resolutionMetrics, {
         x: 'wgslSize',
-        y: 'duration',
+        y: 'resolveDuration',
+      }),
+    ],
+  }).outerHTML;
+
+  const compileFigure = Plot.plot({
+    title: 'Compile duration / Code size',
+    marks: [
+      Plot.frame(),
+      Plot.dot(resolutionMetrics, {
+        x: 'wgslSize',
+        y: 'compileDuration',
       }),
     ],
   }).outerHTML;
 
   writeFile(
-    './example-benchmark.html',
-    `<html><body><style>body { color: black; }</style>${svg}</body></html>`,
+    `${testArtifactsDirectory}/example-benchmark.html`,
+    `<html><body><style>body { color: black; }</style>${resolveFigure}${compileFigure}</body></html>`,
   );
 }, timeout);

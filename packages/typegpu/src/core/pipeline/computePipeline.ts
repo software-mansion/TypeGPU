@@ -20,8 +20,7 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import type { ResolutionCtx } from '../../types.ts';
-import { PERF } from '../../shared/env.ts';
-import { v4 } from '../../shared/uuid.ts';
+import { PERF } from '../../shared/meta.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -222,19 +221,14 @@ class ComputePipelineCore {
 
       let resolutionResult: ResolutionResult;
 
-      let perfId: string | undefined;
-      let resolveStart: PerformanceMark | undefined;
-      if (PERF?.value) {
-        perfId = v4();
-        resolveStart = performance.mark('typegpu:resolution:start', {
-          detail: { perfId },
-        });
+      let resolveMeasure: PerformanceMeasure | undefined;
+      if (PERF?.enabled) {
+        const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(resolvable, {
           names: this.branch.nameRegistry,
         });
-        performance.measure('typegpu:resolution', {
+        resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
-          detail: { perfId, wgslSize: resolutionResult.code.length },
         });
       } else {
         resolutionResult = resolve(resolvable, {
@@ -255,23 +249,6 @@ class ComputePipelineCore {
         code,
       });
 
-      if (PERF?.value) {
-        const compileStart = performance.mark(
-          'typegpu:device.createShaderModule:start',
-          { detail: { perfId } },
-        );
-
-        // The compilation of the shader happens on a different thread.
-        // Treating the feedback of getting the compilation info
-        // as a time stopper for shader compilation.
-        module.getCompilationInfo().then(() => {
-          performance.measure('typegpu:device.createShaderModule', {
-            detail: { perfId, wgslSize: code.length },
-            start: compileStart.name,
-          });
-        });
-      }
-
       this._memo = {
         pipeline: device.createComputePipeline({
           label: getName(this) ?? '<unnamed>',
@@ -286,6 +263,22 @@ class ComputePipelineCore {
         usedBindGroupLayouts,
         catchall,
       };
+
+      if (PERF?.enabled) {
+        (async () => {
+          const start = performance.mark('typegpu:compile-start');
+          await device.queue.onSubmittedWorkDone();
+          const compileMeasure = performance.measure('typegpu:compiled', {
+            start: start.name,
+          });
+
+          PERF?.record('resolution', {
+            resolveDuration: resolveMeasure?.duration,
+            compileDuration: compileMeasure.duration,
+            wgslSize: code.length,
+          });
+        })();
+      }
     }
 
     return this._memo;
