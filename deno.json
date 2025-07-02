@@ -1,6 +1,6 @@
 {
   "fmt": {
     "singleQuote": true,
-    "exclude": ["pnpm-lock.yaml"]
+    "exclude": ["pnpm-lock.yaml", "**/*.svg"]
   }
 }
