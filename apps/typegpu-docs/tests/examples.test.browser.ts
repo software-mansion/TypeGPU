@@ -1,5 +1,10 @@
 import { expect, test } from 'vitest';
 import { examples as exampleRecord } from '../src/utils/examples/exampleContent.ts';
+import { server } from '@vitest/browser/context';
+import * as Plot from '@observablehq/plot';
+import { map, pipe } from 'remeda';
+
+const { writeFile } = server.commands;
 
 const examples = Object.values(exampleRecord);
 
@@ -35,10 +40,37 @@ test('executes examples', async () => {
     (result as ExampleRuntime).onCleanup();
   }
 
-  console.log(performance.getEntriesByName('typegpu:resolution'));
-  console.log(
-    performance.getEntriesByName('typegpu:device.createShaderModule'),
+  document.body.removeChild(exampleView);
+
+  const resolutionMetrics = pipe(
+    performance.getEntriesByName('typegpu:resolution'),
+    map((e) => ({ duration: e.duration, json: e.toJSON() })),
+  );
+  const compilationMetrics = performance.getEntriesByName(
+    'typegpu:device.createShaderModule',
   );
 
-  document.body.removeChild(exampleView);
+  writeFile(
+    './example-benchmark.json',
+    JSON.stringify(
+      {
+        resolutionMetrics,
+        compilationMetrics,
+      },
+    ),
+  );
+
+  const svg = Plot.plot({
+    marks: [
+      Plot.dot(resolutionMetrics.values(), {
+        x: 'wgslSize',
+        y: 'duration',
+      }),
+    ],
+  }).outerHTML;
+
+  writeFile(
+    './example-benchmark.html',
+    `<html><body><style>body { color: black; }</style>${svg}</body></html>`,
+  );
 }, timeout);
