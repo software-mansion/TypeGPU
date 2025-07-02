@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
-describe('[BABEL] "kernel & js" directive', () => {
+describe('[BABEL] "kernel" directive', () => {
   it('makes plugin transpile marked arrow functions', () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-        'kernel & js';
+        'kernel';
         return a + b;
       };
 
@@ -19,7 +19,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {
@@ -33,14 +33,14 @@ describe('[BABEL] "kernel & js" directive', () => {
     `);
   });
 
-  it('makes plugin transpile marked arrow functions passed to shells', () => {
+  it('makes plugin transpile marked arrow functions passed to shells and keeps JS impl', () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const shell = tgpu.fn([]);
 
       shell((a, b) => {
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -53,7 +53,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {
@@ -67,30 +67,6 @@ describe('[BABEL] "kernel & js" directive', () => {
     `);
   });
 
-  it('makes plugin keep JS implementation when transpiling marked arrow functions passed to inline-defined shells', () => {
-    const code = `\
-      import tgpu from 'typegpu';
-
-      tgpu.fn([])((a, b) => {
-        'kernel & js';
-        return a + b;
-      })
-    `;
-
-    expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel & js';
-
-        return a + b;
-      }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));"
-    `);
-  });
-
   it('makes plugin transpile marked non-arrow functions passed to shells', () => {
     const code = `\
       import tgpu from 'typegpu';
@@ -98,7 +74,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function(a, b){
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -111,7 +87,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {
@@ -132,7 +108,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
-        'kernel & js';
+        'kernel';
         return a + b;
       })
 
@@ -145,7 +121,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {
@@ -164,7 +140,7 @@ describe('[BABEL] "kernel & js" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel & js';
+        'kernel';
         return a + b;
       }
 
@@ -176,7 +152,7 @@ describe('[BABEL] "kernel & js" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {
@@ -193,14 +169,14 @@ describe('[BABEL] "kernel & js" directive', () => {
   it('parses when no typegpu import', () => {
     const code = `\
       function add(a, b) {
-        'kernel & js';
+        'kernel';
         return a + b;
       };
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
-        'kernel & js';
+        'kernel';
 
         return a + b;
       }, {

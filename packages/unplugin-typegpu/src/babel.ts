@@ -8,10 +8,8 @@ import {
   type Context,
   embedJSON,
   gatherTgpuAliases,
-  getErrorMessage,
   isShellImplementationCall,
-  type KernelDirective,
-  kernelDirectives,
+  kernelDirective,
   type Options,
   performExpressionNaming,
 } from './common.ts';
@@ -25,21 +23,17 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function getKernelDirective(
+function containsKernelDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
     | babel.ArrowFunctionExpression,
-): KernelDirective | undefined {
-  const directives = (
+): boolean {
+  return ((
     'directives' in node.body ? (node.body?.directives ?? []) : []
-  ).map((directive) => directive.value.value);
-
-  for (const directive of kernelDirectives) {
-    if (directives.includes(directive)) {
-      return directive;
-    }
-  }
+  )
+    .map((directive) => directive.value.value))
+    .includes(kernelDirective);
 }
 
 function i(identifier: string): babel.Identifier {
@@ -48,10 +42,9 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  directive: KernelDirective | undefined,
-  name?: string | undefined,
+  containsDirective: boolean, // AAA optimize this
 ): babel.CallExpression | null {
-  if (!directive) {
+  if (!containsDirective) {
     return null;
   }
 
@@ -62,19 +55,6 @@ function functionToTranspiled(
     ast: ${embedJSON({ params, body, externalNames })},
     externals: {${externalNames.join(', ')}},
   }`;
-
-  const jsImpl = directive === 'kernel & js'
-    ? node
-    : types.arrowFunctionExpression(
-      [],
-      types.blockStatement(
-        [types.throwStatement(
-          types.newExpression(i('Error'), [
-            types.stringLiteral(getErrorMessage(name)),
-          ]),
-        )],
-      ),
-    );
 
   return types.callExpression(
     types.arrowFunctionExpression(
@@ -94,7 +74,7 @@ function functionToTranspiled(
             types.assignmentExpression(
               '=',
               types.memberExpression(i('$'), i('f')),
-              jsImpl,
+              node,
             ),
             template.expression`${metadata}`(),
           ],
@@ -145,12 +125,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     ArrowFunctionExpression(path) {
       const transpiled = functionToTranspiled(
         path.node,
-        getKernelDirective(path.node),
-        path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
+        containsKernelDirective(path.node),
       );
       if (transpiled) {
         path.replaceWith(transpiled);
@@ -161,14 +136,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionExpression(path) {
       const transpiled = functionToTranspiled(
         path.node,
-        getKernelDirective(path.node),
-        path.node.id?.name
-          ? path.node.id.name
-          : path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
+        containsKernelDirective(path.node),
       );
       if (transpiled) {
         path.replaceWith(transpiled);
@@ -185,8 +153,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
       );
       const transpiled = functionToTranspiled(
         expression,
-        getKernelDirective(path.node),
-        node.id?.name,
+        containsKernelDirective(path.node),
       );
       if (transpiled && node.id) {
         path.replaceWith(
@@ -211,7 +178,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
-            getKernelDirective(implementation) ?? 'kernel',
+            true,
           ) as babel.CallExpression;
 
           path.replaceWith(
