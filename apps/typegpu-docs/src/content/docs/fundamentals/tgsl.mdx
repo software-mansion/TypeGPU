@@ -89,7 +89,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 Sometimes, we are unable to recognize functions that are supposed to be TGSL. For that case, we have a *"kernel"* directive.
 
 ```ts
-const patternFn = tgpu.fn([d.vec2f, d.vec3f], d.f32);
+const patternFn = tgpu.fn([d.vec2f], d.f32);
 
 const patternCheckers = patternFn((uv) => {
   'kernel';
@@ -154,5 +154,5 @@ It allows defining utils only once and using them both as a kernel and host func
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer UX.
 However, it sometimes might be better to choose WGSL for certain functions. 
 Since JavaScript doesn't support operator overloading, functions including complex matrix operations can be more readable in WGSL.
-Also writing WGSL becomes a necessity whenever TGSL does not support some feature or standard library function quite yet.
+Writing WGSL becomes a necessity whenever TGSL does not support some feature or standard library function quite yet.
 Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.
