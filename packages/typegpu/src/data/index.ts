@@ -2,7 +2,7 @@
  * @module typegpu/data
  */
 
-export { bool, f16, f32, i32, u32 } from './numeric.ts';
+export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
   isAtomic,
@@ -41,6 +41,7 @@ export type {
   Mat4x4f,
   Ptr,
   Size,
+  U16,
   U32,
   v2b,
   v2f,

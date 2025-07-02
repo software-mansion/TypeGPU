@@ -8,6 +8,7 @@ import type {
   F16,
   F32,
   I32,
+  U16,
   U32,
 } from './wgslTypes.ts';
 import { snip } from './dataTypes.ts';
@@ -89,6 +90,11 @@ const i32Cast = createDualImpl(
   },
   'i32Cast',
 );
+
+export const u16: U16 = {
+  [$internal]: true,
+  type: 'u16',
+} as U16;
 
 /**
  * A schema that represents a signed 32-bit integer value. (equivalent to `i32` in WGSL)
