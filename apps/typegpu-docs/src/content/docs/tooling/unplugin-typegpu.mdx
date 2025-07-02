@@ -47,18 +47,6 @@ The package includes the following functionalities:
   const add = tgpu.fn([d.u32, d.u32], d.u32)(addImpl);
   ```
 
-  After transpiling the function, the JS implementation is removed from the bundle in order to save space.
-  To be able to invoke the function both on GPU and CPU, it needs to be marked with `"kernel & js"` directive;
-
-  ```ts
-  const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => {
-    'kernel & js';
-    return a + b;
-  });
-
-  add(2, 2);
-  ```
-
   Besides transpiling JS into AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method anymore.
 
 - **Automatic naming of tgpu objects**
