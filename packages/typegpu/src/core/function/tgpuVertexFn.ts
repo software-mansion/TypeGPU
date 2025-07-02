@@ -10,7 +10,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
@@ -90,6 +90,7 @@ export interface TgpuVertexFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
   VertexOut extends VertexOutConstrained = any,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
   readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
@@ -167,6 +168,7 @@ function createVertexFn(
     & TgpuVertexFn<VertexInConstrained, VertexOutConstrained>
     & SelfResolvable
     & {
+      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -191,6 +193,7 @@ function createVertexFn(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);

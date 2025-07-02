@@ -23,16 +23,14 @@ The package includes the following functionalities:
   import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
-  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(
-    (a, b) => a + b,
-  );
+  const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => a + b);
   ```
 
   However, if the implementation function, or the shell, is referenced via a variable, the plugin will not recognize it as TGSL,
   thus to make it work, the function needs to be marked with a `"kernel"` directive.
 
   ```ts
-  const addFn = tgpu['~unstable'].fn([d.u32, d.u32], d.u32);
+  const addFn = tgpu.fn([d.u32, d.u32], d.u32);
 
   const add = addFn((a, b) => {
     'kernel';
@@ -46,14 +44,14 @@ The package includes the following functionalities:
     return a + b;
   };
 
-  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)(addImpl);
+  const add = tgpu.fn([d.u32, d.u32], d.u32)(addImpl);
   ```
 
   After transpiling the function, the JS implementation is removed from the bundle in order to save space.
   To be able to invoke the function both on GPU and CPU, it needs to be marked with `"kernel & js"` directive;
 
   ```ts
-  const add = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((a, b) => {
+  const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => {
     'kernel & js';
     return a + b;
   });
@@ -62,17 +60,11 @@ The package includes the following functionalities:
   ```
 
   Besides transpiling JS into AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method anymore.
-  This is not possible when using a JIT transpiler.
 
-- **[WIP] Automatic naming of tgpu objects**
+- **Automatic naming of tgpu objects**
 
-  Naming gpu objects via the `$name` method is very helpful for debugging. Soon it will not be necessary to do that explicitly.
-  Instead, the plugin will be able to name the objects based on the variable names that they are assigned to.
-
-:::caution
-In order for the plugin to work, the file that is to be transformed needs to import _typegpu_.
-Note that unused imports may be automatically removed by bundlers, so make sure this does not happen.
-:::
+  Naming TypeGPU resources via the `$name` method is very helpful for debugging, but it's can get very repetitive.
+  Instead, the plugin is able to automatically name each resource based on the variable names that they are assigned to.
 
 ## Installation
 

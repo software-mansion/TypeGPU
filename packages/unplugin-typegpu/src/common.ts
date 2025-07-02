@@ -9,6 +9,7 @@ export type Context = {
    */
   tgpuAliases: Set<string>;
   fileId?: string | undefined;
+  autoNamingEnabled: boolean;
 };
 
 export interface Options {
@@ -16,10 +17,12 @@ export interface Options {
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
   forceTgpuAlias?: string;
+  autoNamingEnabled?: boolean;
 }
 
 export const defaultOptions = {
   include: [/\.m?[jt]sx?$/],
+  autoNamingEnabled: true,
 };
 
 export function embedJSON(jsValue: unknown) {
@@ -38,6 +41,16 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   let tail = node;
   while (true) {
     if (tail.type === 'MemberExpression') {
+      if (
+        (tail.property.type === 'Literal' ||
+          tail.property.type === 'StringLiteral') &&
+        tail.property.value === '~unstable'
+      ) {
+        // Bypassing the '~unstable' property.
+        tail = tail.object;
+        continue;
+      }
+
       if (tail.property.type !== 'Identifier') {
         // Not handling computed expressions.
         break;
@@ -86,22 +99,78 @@ export function isShellImplementationCall(
   ctx: Context,
 ) {
   return (
-    (node.callee.type === 'CallExpression' &&
-      node.callee.callee.type === 'MemberExpression' &&
-      node.callee.callee.property.type === 'Identifier' &&
-      fnShellFunctionNames.includes(node.callee.callee.property.name) &&
-      node.arguments.length === 1 &&
-      (node.callee.callee.object.type === 'MemberExpression'
-        ? isTgpu(ctx, node.callee.callee.object.object)
-        : isTgpu(ctx, node.callee.callee.object))) || // TODO: remove along with the deprecated 'does' method
-    (node.callee.type === 'MemberExpression' &&
-      node.arguments.length === 1 &&
-      node.callee.property.type === 'Identifier' &&
-      // Assuming that every call to `.does` is related to TypeGPU
-      // because shells can be created separately from calls to `tgpu`,
-      // making it hard to detect.
-      node.callee.property.name === 'does')
+    node.callee.type === 'CallExpression' &&
+    node.callee.callee.type === 'MemberExpression' &&
+    node.callee.callee.property.type === 'Identifier' &&
+    fnShellFunctionNames.includes(node.callee.callee.property.name) &&
+    node.arguments.length === 1 && isTgpu(ctx, node.callee.callee.object)
   );
+}
+
+const resourceConstructors: string[] = [
+  // tgpu
+  'bindGroupLayout',
+  'vertexLayout',
+  // tgpu['~unstable']
+  'slot',
+  'accessor',
+  'privateVar',
+  'workgroupVar',
+  'const',
+  ...fnShellFunctionNames,
+  // d
+  'struct',
+  'unstruct',
+  // root
+  'createBuffer',
+  'createMutable',
+  'createReadonly',
+  'createUniform',
+  // root['~unstable']
+  'createPipeline',
+  'createTexture',
+  'sampler',
+  'comparisonSampler',
+];
+
+/**
+ * Checks if `node` should be wrapped in an autoname function.
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ */
+export function containsResourceConstructorCall(
+  node: acorn.AnyNode | babel.Node,
+  ctx: Context,
+) {
+  if (node.type === 'CallExpression') {
+    if (isShellImplementationCall(node, ctx)) {
+      return true;
+    }
+    // struct({...})
+    if (
+      node.callee.type === 'Identifier' &&
+      resourceConstructors.includes(node.callee.name)
+    ) {
+      return true;
+    }
+    if (node.callee.type === 'MemberExpression') {
+      if (node.callee.property.type === 'Identifier') {
+        // root.createBuffer({...})
+        if (resourceConstructors.includes(node.callee.property.name)) {
+          return true;
+        }
+        if (node.callee.property.name === '$name') {
+          return false;
+        }
+      }
+      // root.createBuffer(d.f32).$usage('storage')
+      return containsResourceConstructorCall(node.callee.object, ctx);
+    }
+  }
+  if (node.type === 'TaggedTemplateExpression') {
+    return containsResourceConstructorCall(node.tag, ctx);
+  }
+  return false;
 }
 
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;

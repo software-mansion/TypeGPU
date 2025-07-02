@@ -57,7 +57,12 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
-import type { Default, Prettify } from './shared/utilityTypes.ts';
+import { $internal } from './shared/symbols.ts';
+import type {
+  Default,
+  NullableToOptional,
+  Prettify,
+} from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 
@@ -158,6 +163,7 @@ export interface TgpuBindGroupLayout<
     TgpuLayoutEntry | null
   >,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   readonly bound: {
@@ -263,44 +269,60 @@ type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
   }
   : never;
 
-export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> = T extends
-  TgpuLayoutUniform ?
-    | (
-      & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
-      & UniformFlag
-    )
-    | GPUBuffer
-  : T extends TgpuLayoutStorage ?
-      | (
-        & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
-        & StorageFlag
-      )
+export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
+  // Widest type
+  TgpuLayoutEntry | null extends T ?
+      | TgpuBuffer<AnyWgslData>
       | GPUBuffer
-  : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
-  : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
-  : T extends TgpuLayoutTexture ?
+      | TgpuSampler
+      | GPUSampler
+      | TgpuComparisonSampler
+      | GPUSampler
+      | TgpuTexture
+      | TgpuSampledTexture
+      | TgpuMutableTexture
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
       | GPUTextureView
-      | (
-        & Sampled
-        & TgpuTexture<
-          Prettify<TextureProps & GetTextureRestriction<T>>
+      | GPUExternalTexture
+    // Strict type-checking
+    : T extends TgpuLayoutUniform ?
+        | (
+          & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          & UniformFlag
+        )
+        | GPUBuffer
+    : T extends TgpuLayoutStorage ?
+        | (
+          & TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+          & StorageFlag
+        )
+        | GPUBuffer
+    : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
+    : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
+    : T extends TgpuLayoutTexture ?
+        | GPUTextureView
+        | (
+          & Sampled
+          & TgpuTexture<
+            Prettify<TextureProps & GetTextureRestriction<T>>
+          >
+        )
+        | TgpuSampledTexture<
+          Default<T['viewDimension'], '2d'>,
+          ChannelFormatToSchema[T['texture']]
         >
-      )
-      | TgpuSampledTexture<
-        Default<T['viewDimension'], '2d'>,
-        ChannelFormatToSchema[T['texture']]
-      >
-  : T extends TgpuLayoutStorageTexture ?
-      | GPUTextureView
-      | (
-        & StorageFlag
-        & TgpuTexture<
-          Prettify<TextureProps & GetStorageTextureRestriction<T>>
-        >
-      )
-      | StorageTextureUsageForEntry<T>
-  : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
-  : never;
+    : T extends TgpuLayoutStorageTexture ?
+        | GPUTextureView
+        | (
+          & StorageFlag
+          & TgpuTexture<
+            Prettify<TextureProps & GetStorageTextureRestriction<T>>
+          >
+        )
+        | StorageTextureUsageForEntry<T>
+    : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
+    : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   TgpuLayoutUniform ? TgpuBufferUniform<T['uniform']>
@@ -328,9 +350,9 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
 
 export type ExtractBindGroupInputFromLayout<
   T extends Record<string, TgpuLayoutEntry | null>,
-> = {
-  [K in keyof T]: LayoutEntryToInput<T[K]>;
-};
+> = NullableToOptional<
+  { [K in keyof T]: LayoutEntryToInput<T[K]> }
+>;
 
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
@@ -391,6 +413,7 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
+  public readonly [$internal] = true;
   private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
@@ -614,9 +637,7 @@ export class TgpuBindGroupImpl<
 
   constructor(
     public readonly layout: TgpuBindGroupLayout<Entries>,
-    public readonly entries: {
-      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
-    },
+    public readonly entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
@@ -636,7 +657,7 @@ export class TgpuBindGroupImpl<
             return null;
           }
 
-          const value = this.entries[key];
+          const value = this.entries[key as keyof typeof this.entries];
 
           if (value === undefined) {
             throw new Error(

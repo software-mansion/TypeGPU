@@ -1,8 +1,7 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
-import type { JitTranspiler } from '../../jitTranspiler.ts';
+import type { AnyData, Disarray, HasNestedType } from '../../data/dataTypes.ts';
+import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
 import type {
@@ -11,20 +10,14 @@ import type {
   Prettify,
 } from '../../shared/utilityTypes.ts';
 import type {
-  LayoutEntryToInput,
+  ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-  TgpuBufferUsage,
-  TgpuFixedBufferUsage,
-} from '../buffer/bufferUsage.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
@@ -47,6 +40,12 @@ import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
+import type {
+  TgpuBufferShorthand,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -97,7 +96,12 @@ export interface WithFragment<
   Output extends FragmentOutConstrained = FragmentOutConstrained,
 > {
   withPrimitive(
-    primitiveState: GPUPrimitiveState | undefined,
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
   ): WithFragment<Output>;
 
   withDepthStencil(
@@ -111,13 +115,21 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface WithBinding {
+export interface Configurable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    value:
+      | TgpuFn<() => T>
+      | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
+      | Infer<T>,
   ): WithBinding;
 
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable;
+}
+
+export interface WithBinding extends Configurable {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -357,6 +369,17 @@ export interface RenderPass {
   ): undefined;
 }
 
+type ValidateSchema<TData extends AnyData> = HasNestedType<
+  [TData],
+  'bool'
+> extends true ? 'Error: Bool is not host-shareable, use U32 or I32 instead'
+  : HasNestedType<[TData], 'u16'> extends true ? TData extends {
+      type: 'array';
+      elementType: { type: 'u16' };
+    } ? TData
+    : 'Error: U16 is only usable inside arrays for index buffers'
+  : TData;
+
 export interface TgpuRoot extends Unwrapper {
   /**
    * The GPU device associated with this root.
@@ -373,7 +396,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: TData,
+    typeSchema: ValidateSchema<TData>,
     initial?: Infer<TData> | undefined,
   ): TgpuBuffer<TData>;
 
@@ -387,9 +410,87 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: TData,
+    typeSchema: ValidateSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Read-only on the GPU, optimized for small data. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param initial The initial value of the buffer. (optional)
+   */
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initial?: Infer<TData>,
+  ): TgpuUniform<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Read-only on the GPU, optimized for small data. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param gpuBuffer A vanilla WebGPU buffer.
+   */
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: TData,
+    gpuBuffer: GPUBuffer,
+  ): TgpuUniform<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Can be mutated in-place on the GPU. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param initial The initial value of the buffer. (optional)
+   */
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initial?: Infer<TData>,
+  ): TgpuMutable<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Can be mutated in-place on the GPU. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param gpuBuffer A vanilla WebGPU buffer.
+   */
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: TData,
+    gpuBuffer: GPUBuffer,
+  ): TgpuMutable<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Read-only on the GPU, optimized for large data. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param initial The initial value of the buffer. (optional)
+   */
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initial?: Infer<TData>,
+  ): TgpuReadonly<TData>;
+
+  /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   * Read-only on the GPU, optimized for large data. For a general-purpose buffer,
+   * use {@link TgpuRoot.createBuffer}.
+   *
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param gpuBuffer A vanilla WebGPU buffer.
+   */
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: TData,
+    gpuBuffer: GPUBuffer,
+  ): TgpuReadonly<TData>;
 
   /**
    * Creates a query set for collecting timestamps or occlusion queries.
@@ -438,9 +539,7 @@ export interface TgpuRoot extends Unwrapper {
     >,
   >(
     layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
+    entries: ExtractBindGroupInputFromLayout<Entries>,
   ): TgpuBindGroup<Entries>;
 
   /**
@@ -460,28 +559,12 @@ export interface TgpuRoot extends Unwrapper {
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly jitTranspiler?: JitTranspiler | undefined;
   readonly nameRegistry: NameRegistry;
   /**
    * The current command encoder. This property will
    * hold the same value until `flush()` is called.
    */
   readonly commandEncoder: GPUCommandEncoder;
-
-  createUniform<TData extends AnyWgslData>(
-    typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
-
-  createMutable<TData extends AnyWgslData>(
-    typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
-
-  createReadonly<TData extends AnyWgslData>(
-    typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 
   createTexture<
     TWidth extends number,
