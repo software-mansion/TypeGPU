@@ -224,11 +224,3 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
 }
 
 export const kernelDirective = 'kernel';
-export const kernelDirectives = ['kernel', 'kernel & js'] as const;
-export type KernelDirective = (typeof kernelDirectives)[number];
-
-export function getErrorMessage(name: string | undefined) {
-  return `The function "${
-    name ?? '<unnamed>'
-  }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`;
-}
