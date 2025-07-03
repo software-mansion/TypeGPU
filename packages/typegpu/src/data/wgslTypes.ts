@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../name.ts';
+import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,
   InferGPU,
@@ -9,8 +9,13 @@ import type {
   MemIdentity,
   MemIdentityRecord,
 } from '../shared/repr.ts';
-import { $repr } from '../shared/repr.ts';
 import { $internal, $wgslDataType } from '../shared/symbols.ts';
+import type {
+  $gpuRepr,
+  $memIdent,
+  $repr,
+  $reprPartial,
+} from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
@@ -61,11 +66,10 @@ export interface Void {
   // biome-ignore lint/suspicious/noConfusingVoidType: <void is void>
   readonly [$repr]: void;
 }
-export const Void: Void = {
+export const Void = {
   [$internal]: true,
   type: 'void',
-  [$repr]: undefined,
-};
+} as Void;
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -697,7 +701,10 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
 export interface Bool {
   readonly [$internal]: true;
   readonly type: 'bool';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: boolean;
+  // ---
 }
 
 /**
@@ -706,7 +713,10 @@ export interface Bool {
 export interface F32 {
   readonly [$internal]: true;
   readonly type: 'f32';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: number;
+  // ---
 
   (v: number | boolean): number;
 }
@@ -717,7 +727,10 @@ export interface F32 {
 export interface F16 {
   readonly [$internal]: true;
   readonly type: 'f16';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: number;
+  // ---
 
   (v: number | boolean): number;
 }
@@ -728,8 +741,11 @@ export interface F16 {
 export interface I32 {
   readonly [$internal]: true;
   readonly type: 'i32';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: number;
-  readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
+  readonly [$memIdent]: I32 | Atomic<I32> | DecoratedLocation<I32>;
+  // ---
 
   (v: number | boolean): number;
 }
@@ -740,10 +756,23 @@ export interface I32 {
 export interface U32 {
   readonly [$internal]: true;
   readonly type: 'u32';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: number;
-  readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
+  readonly [$memIdent]: U32 | Atomic<U32> | DecoratedLocation<U32>;
+  // ---
 
   (v: number | boolean): number;
+}
+
+/**
+ * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
+ */
+
+export interface U16 {
+  readonly [$internal]: true;
+  readonly type: 'u16';
+  readonly [$repr]: number;
 }
 
 /**
@@ -752,7 +781,10 @@ export interface U32 {
 export interface Vec2f {
   readonly [$internal]: true;
   readonly type: 'vec2f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
+  // ---
 
   (x: number, y: number): v2f;
   (xy: number): v2f;
@@ -766,7 +798,10 @@ export interface Vec2f {
 export interface Vec2h {
   readonly [$internal]: true;
   readonly type: 'vec2h';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
+  // ---
 
   (x: number, y: number): v2h;
   (xy: number): v2h;
@@ -780,7 +815,10 @@ export interface Vec2h {
 export interface Vec2i {
   readonly [$internal]: true;
   readonly type: 'vec2i';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
+  // ---
 
   (x: number, y: number): v2i;
   (xy: number): v2i;
@@ -794,7 +832,10 @@ export interface Vec2i {
 export interface Vec2u {
   readonly [$internal]: true;
   readonly type: 'vec2u';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
+  // ---
 
   (x: number, y: number): v2u;
   (xy: number): v2u;
@@ -809,7 +850,10 @@ export interface Vec2u {
 export interface Vec2b {
   readonly [$internal]: true;
   readonly type: 'vec2<bool>';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v2b;
+  // ---
 
   (x: boolean, y: boolean): v2b;
   (xy: boolean): v2b;
@@ -823,7 +867,10 @@ export interface Vec2b {
 export interface Vec3f {
   readonly [$internal]: true;
   readonly type: 'vec3f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
+  // ---
 
   (x: number, y: number, z: number): v3f;
   (xyz: number): v3f;
@@ -839,7 +886,10 @@ export interface Vec3f {
 export interface Vec3h {
   readonly [$internal]: true;
   readonly type: 'vec3h';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
+  // ---
 
   (x: number, y: number, z: number): v3h;
   (xyz: number): v3h;
@@ -855,7 +905,10 @@ export interface Vec3h {
 export interface Vec3i {
   readonly [$internal]: true;
   readonly type: 'vec3i';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
+  // ---
 
   (x: number, y: number, z: number): v3i;
   (xyz: number): v3i;
@@ -871,7 +924,10 @@ export interface Vec3i {
 export interface Vec3u {
   readonly [$internal]: true;
   readonly type: 'vec3u';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
+  // ---
 
   (x: number, y: number, z: number): v3u;
   (xyz: number): v3u;
@@ -888,7 +944,10 @@ export interface Vec3u {
 export interface Vec3b {
   readonly [$internal]: true;
   readonly type: 'vec3<bool>';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v3b;
+  // ---
 
   (x: boolean, y: boolean, z: boolean): v3b;
   (xyz: boolean): v3b;
@@ -904,7 +963,10 @@ export interface Vec3b {
 export interface Vec4f {
   readonly [$internal]: true;
   readonly type: 'vec4f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
+  // ---
 
   (x: number, y: number, z: number, w: number): v4f;
   (xyzw: number): v4f;
@@ -924,7 +986,10 @@ export interface Vec4f {
 export interface Vec4h {
   readonly [$internal]: true;
   readonly type: 'vec4h';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
+  // ---
 
   (x: number, y: number, z: number, w: number): v4h;
   (xyzw: number): v4h;
@@ -944,7 +1009,10 @@ export interface Vec4h {
 export interface Vec4i {
   readonly [$internal]: true;
   readonly type: 'vec4i';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
+  // ---
 
   (x: number, y: number, z: number, w: number): v4i;
   (xyzw: number): v4i;
@@ -964,7 +1032,10 @@ export interface Vec4i {
 export interface Vec4u {
   readonly [$internal]: true;
   readonly type: 'vec4u';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
+  // ---
 
   (x: number, y: number, z: number, w: number): v4u;
   (xyzw: number): v4u;
@@ -985,7 +1056,10 @@ export interface Vec4u {
 export interface Vec4b {
   readonly [$internal]: true;
   readonly type: 'vec4<bool>';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: v4b;
+  // ---
 
   (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
   (xyzw: boolean): v4b;
@@ -1005,11 +1079,15 @@ export interface Vec4b {
 export interface Mat2x2f {
   readonly [$internal]: true;
   readonly type: 'mat2x2f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
+  // ---
 
   (...elements: [number, number, number, number]): m2x2f;
   (...columns: [v2f, v2f]): m2x2f;
   (): m2x2f;
+  identity(): m2x2f;
 }
 
 /**
@@ -1018,12 +1096,16 @@ export interface Mat2x2f {
 export interface Mat3x3f {
   readonly [$internal]: true;
   readonly type: 'mat3x3f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
+  // ---
 
   // deno-fmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
   (): m3x3f;
+  identity(): m3x3f;
 }
 
 /**
@@ -1032,12 +1114,21 @@ export interface Mat3x3f {
 export interface Mat4x4f {
   readonly [$internal]: true;
   readonly type: 'mat4x4f';
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
+  // ---
 
   // deno-fmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
   (): m4x4f;
+  identity(): m4x4f;
+  translation(vec: v3f): m4x4f;
+  scaling(vec: v3f): m4x4f;
+  rotationX(angle: number): m4x4f;
+  rotationY(angle: number): m4x4f;
+  rotationZ(angle: number): m4x4f;
 }
 
 /**
@@ -1052,12 +1143,15 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly '~gpuRepr': InferGPU<TElement>[];
-  readonly '~reprPartial':
+  readonly [$gpuRepr]: InferGPU<TElement>[];
+  readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
-  readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
+  readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
+  // ---
 }
 
 /**
@@ -1075,15 +1169,14 @@ export interface WgslStruct<
   readonly type: 'struct';
   readonly propTypes: TProps;
 
+  // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
-  /** Type-token, not available at runtime */
-  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
-  /** Type-token, not available at runtime */
-  readonly '~memIdent': WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
-  /** Type-token, not available at runtime */
-  readonly '~reprPartial':
+  readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
+  readonly [$memIdent]: WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
+  readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
+  // ---
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
@@ -1108,7 +1201,10 @@ export interface Ptr<
   readonly inner: TInner;
   readonly addressSpace: TAddr;
   readonly access: TAccess;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  // ---
 }
 
 /**
@@ -1118,9 +1214,12 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly [$internal]: true;
   readonly type: 'atomic';
   readonly inner: TInner;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
-  readonly '~memIdent': MemIdentity<TInner>;
+  readonly [$gpuRepr]: TInner extends U32 ? atomicU32 : atomicI32;
+  readonly [$memIdent]: MemIdentity<TInner>;
+  // ---
 }
 
 export interface atomicU32 {
@@ -1179,12 +1278,15 @@ export interface Decorated<
   readonly type: 'decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly '~gpuRepr': InferGPU<TInner>;
-  readonly '~reprPartial': InferPartial<TInner>;
-  readonly '~memIdent': TAttribs extends Location[]
+  readonly [$gpuRepr]: InferGPU<TInner>;
+  readonly [$reprPartial]: InferPartial<TInner>;
+  readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
+  // ---
 }
 
 export const wgslTypeLiterals = [
@@ -1193,6 +1295,7 @@ export const wgslTypeLiterals = [
   'f16',
   'i32',
   'u32',
+  'u16',
   'vec2f',
   'vec2h',
   'vec2i',
@@ -1267,6 +1370,7 @@ export type AnyWgslData =
   | F16
   | I32
   | U32
+  | U16
   | Vec2f
   | Vec2h
   | Vec2i
@@ -1288,7 +1392,8 @@ export type AnyWgslData =
   | AnyWgslStruct
   | WgslArray
   | Ptr
-  | Atomic
+  | Atomic<U32>
+  | Atomic<I32>
   | Decorated
   | AbstractInt
   | AbstractFloat

@@ -16,9 +16,4 @@ export default defineConfig({
   minify: !inDevMode,
   clean: true,
   dts: true,
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(
-      inDevMode ? 'development' : 'production',
-    ),
-  },
 });

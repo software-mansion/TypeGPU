@@ -15,6 +15,7 @@ export const workgroupBarrier = createDualImpl(
   () => console.warn('workgroupBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
   () => snip('workgroupBarrier()', Void),
+  'workgroupBarrier',
 );
 
 export const storageBarrier = createDualImpl(
@@ -22,6 +23,7 @@ export const storageBarrier = createDualImpl(
   () => console.warn('storageBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
   () => snip('storageBarrier()', Void),
+  'storageBarrier',
 );
 
 export const textureBarrier = createDualImpl(
@@ -29,6 +31,7 @@ export const textureBarrier = createDualImpl(
   () => console.warn('textureBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
   () => snip('textureBarrier()', Void),
+  'textureBarrier',
 );
 
 export const atomicLoad = createDualImpl(
@@ -45,6 +48,7 @@ export const atomicLoad = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicLoad',
 );
 
 export const atomicStore = createDualImpl(
@@ -61,6 +65,7 @@ export const atomicStore = createDualImpl(
     }
     return snip(`atomicStore(&${a.value}, ${value.value})`, Void);
   },
+  'atomicStore',
 );
 
 const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
@@ -84,6 +89,7 @@ export const atomicAdd = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicAdd',
   atomicTypeFn,
 );
 
@@ -101,6 +107,7 @@ export const atomicSub = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicSub',
   atomicTypeFn,
 );
 
@@ -118,6 +125,7 @@ export const atomicMax = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicMax',
   atomicTypeFn,
 );
 
@@ -135,6 +143,7 @@ export const atomicMin = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicMin',
   atomicTypeFn,
 );
 
@@ -152,6 +161,7 @@ export const atomicAnd = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicAnd',
   atomicTypeFn,
 );
 
@@ -169,6 +179,7 @@ export const atomicOr = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicOr',
   atomicTypeFn,
 );
 
@@ -186,5 +197,6 @@ export const atomicXor = createDualImpl(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
     );
   },
+  'atomicXor',
   atomicTypeFn,
 );

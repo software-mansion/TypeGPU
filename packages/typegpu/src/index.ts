@@ -4,12 +4,11 @@
 
 import { constant } from './core/constant/tgpuConstant.ts';
 import { declare } from './core/declare/tgpuDeclare.ts';
-import { assignAst, removedJsImpl } from './core/function/astUtils.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
-import { resolve } from './core/resolve/tgpuResolve.ts';
+import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
 import { accessor } from './core/slot/accessor.ts';
@@ -20,15 +19,21 @@ import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 export const tgpu = {
+  fn,
   bindGroupLayout,
   vertexLayout,
+  slot,
 
   init,
   initFromDevice,
 
   resolve,
+  resolveWithContext,
 
   '~unstable': {
+    /**
+     * @deprecated This feature is now stable, use tgpu.fn.
+     */
     fn,
     fragmentFn,
     vertexFn,
@@ -38,6 +43,9 @@ export const tgpu = {
      */
     vertexLayout,
     derived,
+    /**
+     * @deprecated This feature is now stable, use tgpu.slot.
+     */
     slot,
     accessor,
     privateVar,
@@ -49,12 +57,6 @@ export const tgpu = {
   },
 };
 export default tgpu;
-
-// Hidden API, used only by tooling (e.g., rollup plugin).
-Object.assign(tgpu, {
-  __assignAst: assignAst,
-  __removedJsImpl: removedJsImpl,
-});
 
 export {
   MissingBindGroupsError,
@@ -84,11 +86,13 @@ export {
   asUniform as unstable_asUniform,
   isUsableAsUniform,
 } from './core/buffer/bufferUsage.ts';
+export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 
 // types
 
 export type {
+  Configurable,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -100,6 +104,7 @@ export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type {
+  IndexFlag,
   TgpuBuffer,
   Uniform,
   UniformFlag,
@@ -111,6 +116,11 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
+export type {
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferShorthand.ts';
 export type {
   Eventual,
   TgpuAccessor,

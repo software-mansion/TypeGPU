@@ -4,8 +4,8 @@ import {
   extractGpuValueGetter,
   type GpuValueGetter,
 } from '../extractGpuValueGetter.ts';
-import { getName } from '../name.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
+import { getName } from '../shared/meta.ts';
+import { $providing, $wgslDataType } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 
@@ -18,7 +18,7 @@ export const valueProxyHandler: ProxyHandler<
       return Reflect.get(target, prop);
     }
 
-    if (prop === '~providing') {
+    if (prop === $providing) {
       return undefined;
     }
 

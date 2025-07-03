@@ -3,7 +3,12 @@ import * as d from 'typegpu/data';
 
 const SIZE = 28;
 
-const root = await tgpu.init();
+const root = await tgpu.init({
+  device: {
+    optionalFeatures: ['timestamp-query'],
+  },
+});
+const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const device = root.device;
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
@@ -90,6 +95,10 @@ interface Network {
   inference(data: number[]): Promise<number[]>;
 }
 
+const querySet = hasTimestampQuery
+  ? root.createQuerySet('timestamp', 2)
+  : undefined;
+
 /**
  * Creates a network from a list of pairs of weights and biases
  *
@@ -145,16 +154,37 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
 
     // Run the network
     const encoder = device.createCommandEncoder();
+
     for (let i = 0; i < buffers.length; i++) {
-      const pass = encoder.beginComputePass();
+      const isFirstLayer = i === 0;
+      const isLastLayer = i === buffers.length - 1;
+
+      const timestampWrites = querySet && isFirstLayer
+        ? { querySet: root.unwrap(querySet), beginningOfPassWriteIndex: 0 }
+        : querySet && isLastLayer
+        ? { querySet: root.unwrap(querySet), endOfPassWriteIndex: 1 }
+        : undefined;
+
+      const passDescriptor = timestampWrites ? { timestampWrites } : undefined;
+      const pass = encoder.beginComputePass(passDescriptor);
+
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
       pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
       pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
       pass.end();
     }
+
     device.queue.submit([encoder.finish()]);
     await device.queue.onSubmittedWorkDone();
+
+    if (querySet?.available) {
+      querySet.resolve();
+      const results = await querySet.read();
+      console.log(
+        `Inference took ${Number(results[1] - results[0]) / 1_000_000} ms`,
+      );
+    }
 
     // Read the output
     return await output.read();
