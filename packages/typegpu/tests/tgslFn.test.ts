@@ -1,10 +1,10 @@
+import { attest } from '@ark/attest';
 import { describe, expect, it } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
-import { attest } from '@ark/attest';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -574,85 +574,34 @@ describe('TGSL tgpu.fn function', () => {
     );
   });
 
-  describe('(when using plugin) can be invoked on CPU only when marked with "kernel & js" directive', () => {
-    it('cannot be invoked for a constant with "kernel" directive', () => {
-      const addKernel = (x: number, y: number) => {
-        'kernel';
-        return x + y;
-      };
+  it('(when using plugin) can be invoked for a constant with "kernel" directive', () => {
+    const addKernelJs = (x: number, y: number) => {
+      'kernel';
+      return x + y;
+    };
 
-      const add = tgpu.fn([d.u32, d.u32])(addKernel);
+    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
 
-      expect(() => addKernel(2, 3)).toThrow(
-        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
-      );
-      expect(() => add(2, 3)).toThrow(
-        'The function "addKernel" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.',
-      );
-      expect(parseResolved({ add })).toBe(
-        parse(`fn add(x: u32, y: u32){
+    expect(addKernelJs(2, 3)).toBe(5);
+    expect(add(2, 3)).toBe(5);
+    expect(parseResolved({ add })).toBe(
+      parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
-      );
-    });
+    );
+  });
 
-    it('can be invoked for a constant with "kernel & js" directive', () => {
-      const addKernelJs = (x: number, y: number) => {
-        'kernel & js';
-        return x + y;
-      };
+  it('(when using plugin) can be invoked for inline function with no directive', () => {
+    const add = tgpu.fn([d.u32, d.u32])(
+      (x, y) => x + y,
+    );
 
-      const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
-
-      expect(addKernelJs(2, 3)).toBe(5);
-      expect(add(2, 3)).toBe(5);
-      expect(parseResolved({ add })).toBe(
-        parse(`fn add(x: u32, y: u32){
+    expect(add(2, 3)).toBe(5);
+    expect(parseResolved({ add })).toBe(
+      parse(`fn add(x: u32, y: u32){
           return (x + y);
         }`),
-      );
-    });
-
-    it('cannot be invoked for inline function with "kernel" directive', () => {
-      const add = tgpu.fn([d.u32, d.u32])((x, y) => {
-        'kernel';
-        return x + y;
-      });
-
-      expect(() => add(2, 3)).toThrow();
-      expect(parseResolved({ add })).toBe(
-        parse(`fn add(x: u32, y: u32){
-          return (x + y);
-        }`),
-      );
-    });
-
-    it('cannot be invoked for inline function with no directive', () => {
-      const add = tgpu.fn([d.u32, d.u32])(
-        (x, y) => x + y,
-      );
-
-      expect(() => add(2, 3)).toThrow();
-      expect(parseResolved({ add })).toBe(
-        parse(`fn add(x: u32, y: u32){
-          return (x + y);
-        }`),
-      );
-    });
-
-    it('can be invoked for inline function with "kernel & js" directive', () => {
-      const add = tgpu.fn([d.u32, d.u32])((x, y) => {
-        'kernel & js';
-        return x + y;
-      });
-
-      expect(add(2, 3)).toBe(5);
-      expect(parseResolved({ add })).toBe(
-        parse(`fn add(x: u32, y: u32){
-          return (x + y);
-        }`),
-      );
-    });
+    );
   });
 
   it('resolves a function with a pointer parameter', () => {

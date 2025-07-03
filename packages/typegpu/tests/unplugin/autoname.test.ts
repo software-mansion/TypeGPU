@@ -40,8 +40,16 @@ describe('autonaming', () => {
 
   it('autonames resources created using root', ({ root }) => {
     const myBuffer = root.createBuffer(d.u32, 2);
+    const myMutable = root.createMutable(d.u32);
+    const myReadonly = root.createReadonly(d.u32);
+    const myUniform = root.createUniform(d.u32);
+    const myQuerySet = root.createQuerySet('timestamp', 2);
 
     expect(getName(myBuffer)).toBe('myBuffer');
+    expect(getName(myMutable)).toBe('myMutable');
+    expect(getName(myReadonly)).toBe('myReadonly');
+    expect(getName(myUniform)).toBe('myUniform');
+    expect(getName(myQuerySet)).toBe('myQuerySet');
   });
 
   it("autonames resources created using root['~unstable']", ({ root }) => {
@@ -50,9 +58,6 @@ describe('autonaming', () => {
         tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
       )
       .createPipeline();
-    const myMutable = root.createMutable(d.u32);
-    const myReadonly = root.createReadonly(d.u32);
-    const myUniform = root.createUniform(d.u32);
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -66,9 +71,6 @@ describe('autonaming', () => {
     });
 
     expect(getName(myPipeline)).toBe('myPipeline');
-    expect(getName(myMutable)).toBe('myMutable');
-    expect(getName(myReadonly)).toBe('myReadonly');
-    expect(getName(myUniform)).toBe('myUniform');
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');
@@ -122,10 +124,28 @@ describe('autonaming', () => {
     expect(getName(myFragmentFn)).toBe('myFragmentFn');
   });
 
+  it('autonames assignment expressions', () => {
+    let layout = undefined;
+    layout = tgpu
+      .bindGroupLayout({
+        foo: { uniform: d.vec3f },
+      });
+
+    expect(getName(layout)).toBe('layout');
+  });
+
+  it('autonames properties', () => {
+    const mySchemas = {
+      myStruct: d.struct({ a: d.vec3f }),
+    };
+
+    expect(getName(mySchemas.myStruct)).toBe('myStruct');
+  });
+
   // TODO: make it work
   // it('names arrow functions', () => {
   //   const myFun = () => {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   };
 
@@ -138,7 +158,7 @@ describe('autonaming', () => {
   // TODO: make it work
   // it('names function expression', () => {
   //   const myFun = function () {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   };
 
@@ -151,7 +171,7 @@ describe('autonaming', () => {
   // TODO: make it work
   // it('names function definition', () => {
   //   function myFun() {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   }
 
