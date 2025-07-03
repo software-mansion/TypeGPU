@@ -231,14 +231,10 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 const renderPipeline = root['~unstable']
   .withVertex(vertexMain, {})
   .withFragment(fragmentMain, { format: presentationFormat })
-  .withPrimitive({ topology: 'triangle-strip' })
   .createPipeline();
 
-let isRunning = true;
-
+let animationFrame: number;
 function run(timestamp: number) {
-  if (!isRunning) return;
-
   time.write(timestamp / 1000 % 1000);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
@@ -248,14 +244,14 @@ function run(timestamp: number) {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .draw(4);
+    .draw(3);
 
-  requestAnimationFrame(run);
+  animationFrame = requestAnimationFrame(run);
 }
 
-requestAnimationFrame(run);
+animationFrame = requestAnimationFrame(run);
 
 export function onCleanup() {
-  isRunning = false;
+  cancelAnimationFrame(animationFrame);
   root.destroy();
 }
