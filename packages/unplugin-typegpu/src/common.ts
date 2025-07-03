@@ -176,6 +176,7 @@ function containsResourceConstructorCall(
 
 type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
   acorn.AnyNode ? acorn.Expression : babel.Expression;
+
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
  * If so, it calls the provided callback. Nodes selected for naming include:
