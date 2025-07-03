@@ -18,7 +18,7 @@ resource management in a type-safe, declarative way.
 
 [![npm version](https://img.shields.io/npm/v/typegpu?color=plum)](https://npmjs.com/package/typegpu)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/typegpu?color=plum)](https://bundlephobia.com/package/typegpu)
-[![license](https://img.shields.io/github/license/software-mansion/TypeGPU?color=plum)](https://github.com/software-mansion/TypeGPU/blob/main/LICENSE.md)
+[![license](https://img.shields.io/github/license/software-mansion/TypeGPU?color=plum)](https://github.com/software-mansion/TypeGPU/blob/main/LICENSE)
 
 <!-- /automd -->
 
@@ -213,8 +213,7 @@ can help you build your next dream product –
 
 <!-- automd:contributors author="software-mansion" -->
 
-Made by [@software-mansion](https://github.com/software-mansion) and
-[community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
+Made by [@software-mansion](https://github.com/software-mansion) and [community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
 <br><br>
 <a href="https://github.com/software-mansion/TypeGPU/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=software-mansion/TypeGPU" />
