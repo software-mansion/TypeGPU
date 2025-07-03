@@ -253,8 +253,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    ctx.addDeclaration(ctx.resolve(this[$internal].core));
-    return '';
+    return ctx.resolve(this[$internal].core);
   }
 
   toString(): string {
