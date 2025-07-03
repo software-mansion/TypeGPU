@@ -126,6 +126,7 @@ const resourceConstructors: string[] = [
   'createMutable',
   'createReadonly',
   'createUniform',
+  'createQuerySet',
   // root['~unstable']
   'createPipeline',
   'createTexture',
@@ -138,7 +139,7 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-export function containsResourceConstructorCall(
+function containsResourceConstructorCall(
   node: acorn.AnyNode | babel.Node,
   ctx: Context,
 ) {
@@ -171,6 +172,56 @@ export function containsResourceConstructorCall(
     return containsResourceConstructorCall(node.tag, ctx);
   }
   return false;
+}
+
+type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
+  acorn.AnyNode ? acorn.Expression : babel.Expression;
+
+/**
+ * Checks if `node` contains a label and a tgpu expression that could be named.
+ * If so, it calls the provided callback. Nodes selected for naming include:
+ *
+ * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
+ *
+ * `name = tgpu.bindGroupLayout({});` (AssignmentExpression)
+ *
+ * `property: tgpu.bindGroupLayout({})` (Property/ObjectProperty)
+ *
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ *
+ * @privateRemarks
+ * When adding new checks, you need to call this method in the corresponding node in Babel.
+ */
+export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
+  ctx: Context,
+  node: T,
+  namingCallback: (node: ExpressionFor<T>, name: string) => void,
+) {
+  if (!ctx.autoNamingEnabled) {
+    return;
+  }
+
+  if (
+    node.type === 'VariableDeclarator' &&
+    node.id.type === 'Identifier' &&
+    node.init &&
+    containsResourceConstructorCall(node.init, ctx)
+  ) {
+    namingCallback(node.init as ExpressionFor<T>, node.id.name);
+  } else if (
+    node.type === 'AssignmentExpression' &&
+    node.left.type === 'Identifier' &&
+    containsResourceConstructorCall(node.right, ctx)
+  ) {
+    namingCallback(node.right as ExpressionFor<T>, node.left.name);
+  } else if (
+    (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier' &&
+    containsResourceConstructorCall(node.value, ctx)
+  ) {
+    namingCallback(node.value as ExpressionFor<T>, node.key.name);
+  }
 }
 
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;
