@@ -18,7 +18,7 @@ resource management in a type-safe, declarative way.
 
 [![npm version](https://img.shields.io/npm/v/typegpu?color=plum)](https://npmjs.com/package/typegpu)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/typegpu?color=plum)](https://bundlephobia.com/package/typegpu)
-[![license](https://img.shields.io/github/license/software-mansion/TypeGPU?color=plum)](https://github.com/software-mansion/TypeGPU/blob/main/LICENSE)
+[![license](https://img.shields.io/github/license/software-mansion/TypeGPU?color=plum)](https://github.com/software-mansion/TypeGPU/blob/main/LICENSE.md)
 
 <!-- /automd -->
 
