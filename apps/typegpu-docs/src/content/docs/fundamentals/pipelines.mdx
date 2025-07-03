@@ -14,17 +14,41 @@ It is assumed that you are familiar with the following concepts:
 :::
 
 TypeGPU introduces a custom API to easily define and execute render and compute pipelines.
-It abstracts away the standard `device.createRenderPipeline`/`device.createComputePipeline`, `device.createCommandEncoder`, `encoder.beginRenderPass`/`encoder.beginComputePass`... procedures,
-to offer a convenient, type-safe way to run shaders on the GPU. 
+It abstracts away the standard WebGPU procedures to offer a convenient, type-safe way to run shaders on the GPU. 
 
 ## Creating pipelines
 
 A pipeline definition starts with the [root](/TypeGPU/fundamentals/roots) object and follows a builder pattern.
 
-```ts
+```ts twoslash
+/// <reference types="@webgpu/types" />
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const presentationFormat = 'rgba8unorm';
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+  };
+});
+
+const mainFragment = tgpu['~unstable']
+  .fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
+
+const mainCompute = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {});
+
+// ---cut---
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: navigator.gpu.getPreferredCanvasFormat() })
+  .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
 const computePipeline = root['~unstable']
@@ -34,13 +58,33 @@ const computePipeline = root['~unstable']
 
 ### *withVertex*
 
-Creating a render pipeline requires calling a `withVertex` method first, which accepts a `TgpuVertexFn` and vertex attributes.
-The attributes are passed in a record, where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
+Creating a render pipeline requires calling the `withVertex` method first, which accepts `TgpuVertexFn` and matching vertex attributes.
+The attributes are passed in a record, where the keys match the vertex function input parameters, and the values are attributes retrieved
+from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
 If the vertex shader does not use vertex attributes, then the latter argument should be an empty object.
 The compatibility between vertex input types and vertex attribute formats is validated at the type level.
 
-```ts
-const vertexStruct = d.struct({
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex, v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+  };
+});
+
+const mainFragment = tgpu['~unstable']
+  .fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
+// ---cut---
+const VertexStruct = d.struct({
   position: d.vec2f,
   velocity: d.vec2f,
 });
@@ -49,35 +93,54 @@ const vertexLayout = tgpu.vertexLayout(
   'vertex',
 );
 const instanceLayout = tgpu.vertexLayout(
-  (n) => d.arrayOf(vertexStruct, n),
+  (n) => d.arrayOf(VertexStruct, n),
   'instance',
 );
 
 root['~unstable']
-  .withVertex(mainVert, {
+  .withVertex(mainVertex, {
     v: vertexLayout.attrib,
     center: instanceLayout.attrib.position,
     velocity: instanceLayout.attrib.velocity,
-  });
+  })
+  // ...
+```
 
 ### *withFragment*
 
-The next step is calling the `withFragment` method, which accepts a `TgpuFragmentFn` and a *targets* argument defining the formats and behaviors of the color targets the pipeline writes to.
+The next step is calling the `withFragment` method, which accepts `TgpuFragmentFn` and a *targets* argument defining the
+formats and behaviors of the color targets the pipeline writes to.
 Each target is specified the same as in the WebGPU API (*GPUColorTargetState*). 
 The difference is that when there are multiple targets, they should be passed in a record, not an array.
 This way each target is identified by a name and can be validated against the outputs of the fragment function.
 
-```ts
-const fragmentFn = tgpu['~unstable'].fragmentFn({
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+  };
+});
+
+const root = await tgpu.init();
+// ---cut---
+const mainFragment = tgpu['~unstable'].fragmentFn({
   out: {
     color: d.vec4f,
     shadow: d.vec4f,
   },
-})`(...)`;
+})`{ ... }`;
 
 const renderPipeline = root['~unstable']
-  .withVertex(vertexFn, {})
-  .withFragment(fragmentFn, {
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment, {
     color: {
       format: 'rg8unorm',
       blend: {
@@ -102,7 +165,7 @@ const renderPipeline = root['~unstable']
 
 Using the pipelines should ensure the compatibility of the vertex output and fragment input on the type level -- 
 `withFragment` only accepts fragment functions, which all non-builtin parameters are returned in the vertex stage. 
-These parameters are identified by their names, not by the `location` index. 
+These parameters are identified by their names, not by their numeric *location* index. 
 In general, when using vertex and fragment functions with TypeGPU pipelines, it is not necessary to set locations on the IO struct properties.
 The library automatically matches up the corresponding members (by their names) and assigns common locations to them. 
 When a custom location is provided by the user (via the `d.location` attribute function) it is respected by the automatic assignment procedure,
@@ -228,9 +291,7 @@ const vertexBuffer = root
 
 // bind group layout
 const bindGroupLayout = tgpu.bindGroupLayout({
-  size: {
-    uniform: d.vec2u,
-  },
+  size: { uniform: d.vec2u },
 });
 
 const sizeBuffer = root
@@ -255,7 +316,7 @@ computePipeline
 ### Timing performance
 
 Pipelines also expose the `withPerformanceCallback` and `withTimestampWrites` methods for timing the execution time on the GPU.
-For more info about them, refer to the [Timinging Your Pipelines guide](/TypeGPU/fundamentals/timestamp-queries/).
+For more info about them, refer to the [Timing Your Pipelines guide](/TypeGPU/fundamentals/timestamp-queries/).
 
 ### *draw*, *dispatchWorkgroups*
 
@@ -266,7 +327,7 @@ After calling the method, the shader is set for execution immediately.
 Compute pipelines are executed using the `dispatchWorkgroups` method, which accepts the number of workgroups in each dimension.
 Unlike render pipelines, after running this method, the execution is not submitted to the GPU immediately.
 In order to do so, `root['~unstable'].flush()` needs to be run. 
-However, that is usually not necessary, as it is done automatically when trying to read the results.
+However, that is usually not necessary, as it is done automatically when trying to read the result of computation.
 
 ## Low-level render pipeline execution API
 
@@ -284,15 +345,16 @@ root['~unstable'].beginRenderPass(
   (pass) => {
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(layout, group);
-    pass.draw(1);
+    pass.draw(3);
   },
 );
 
 root['~unstable'].flush();
 ```
 
-It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap` and passing the tgpu pipelines as arguments.
-That way, they can be used with a regular WebGPU API, but unlike the `root['~unstable'].beginRenderPass` API, it also requires unwrapping all the necessary resources and will not allow using fixed tgpu bufferUsages occupying an automatic bind group.
+It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.
+That way, they can be used with a regular WebGPU API, but unlike the `root['~unstable'].beginRenderPass` API, it also requires unwrapping all the necessary
+resources.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -300,14 +362,13 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 
+const mainVertex = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })`...`;
+const mainFragment = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`...`;
+
+// ---cut---
 const pipeline = root['~unstable']
-  .withVertex(
-    tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })`...`,
-    {},
-  ).withFragment(
-    tgpu['~unstable'].fragmentFn({ out: d.vec4f })`...`,
-    { format: 'rg8unorm' },
-  )
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment, { format: 'rg8unorm' })
   .createPipeline();
 
 const rawPipeline = root.unwrap(pipeline);
