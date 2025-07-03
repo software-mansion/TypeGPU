@@ -8,6 +8,7 @@ import type {
   F16,
   F32,
   I32,
+  U16,
   U32,
 } from './wgslTypes.ts';
 import { snip } from './dataTypes.ts';
@@ -47,6 +48,7 @@ const u32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => snip(`u32(${v.value})`, u32),
+  'u32Cast',
 );
 
 /**
@@ -86,7 +88,13 @@ const i32Cast = createDualImpl(
   (v) => {
     return snip(`i32(${v.value})`, i32);
   },
+  'i32Cast',
 );
+
+export const u16: U16 = {
+  [$internal]: true,
+  type: 'u16',
+} as U16;
 
 /**
  * A schema that represents a signed 32-bit integer value. (equivalent to `i32` in WGSL)
@@ -116,6 +124,7 @@ const f32Cast = createDualImpl(
   },
   // GPU implementation
   (v) => snip(`f32(${v.value})`, f32),
+  'f32Cast',
 );
 
 /**
@@ -143,6 +152,7 @@ const f16Cast = createDualImpl(
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => snip(`f16(${v.value})`, f16),
+  'f16Cast',
 );
 
 /**

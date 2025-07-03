@@ -12,7 +12,7 @@ const springTransition = {
   type: 'spring',
   stiffness: 500,
   damping: 30,
-};
+} as const;
 
 const DeleteIcon = () => {
   const controls = useAnimation();

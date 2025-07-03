@@ -2,16 +2,16 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
+import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  codeFilterRegexes,
   type Context,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
-  type KernelDirective,
-  kernelDirectives,
+  kernelDirective,
   type Options,
+  performExpressionNaming,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -23,97 +23,110 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function getKernelDirective(
+function containsKernelDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
     | babel.ArrowFunctionExpression,
-): KernelDirective | undefined {
-  const directives = (
+): boolean {
+  return ((
     'directives' in node.body ? (node.body?.directives ?? []) : []
-  ).map((directive) => directive.value.value);
+  )
+    .map((directive) => directive.value.value))
+    .includes(kernelDirective);
+}
 
-  for (const directive of kernelDirectives) {
-    if (directives.includes(directive)) {
-      return directive;
-    }
-  }
+function i(identifier: string): babel.Identifier {
+  return types.identifier(identifier);
 }
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  ctx: Context,
-  name?: string | undefined,
-): babel.CallExpression | null {
-  const directive = getKernelDirective(node);
-  if (!directive) {
-    return null;
-  }
-
+): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
-  const tgpuAlias = ctx.tgpuAliases.values().next().value;
-  if (tgpuAlias === undefined) {
-    throw new Error(
-      `No tgpu import found, cannot assign ast to function in file: ${
-        ctx.fileId ?? ''
-      }`,
-    );
-  }
+
+  const metadata = `{
+    v: ${FORMAT_VERSION},
+    ast: ${embedJSON({ params, body, externalNames })},
+    externals: {${externalNames.join(', ')}},
+  }`;
 
   return types.callExpression(
-    template.expression(`${tgpuAlias}.__assignAst`)(),
-    [
-      directive === 'kernel & js'
-        ? node
-        : template.expression`${tgpuAlias}.__removedJsImpl(${
-          name ? `"${name}"` : ''
-        })`(),
-      template.expression`${embedJSON({ params, body, externalNames })}`(),
-      types.objectExpression(
-        externalNames.map((name) =>
-          types.objectProperty(types.identifier(name), types.identifier(name))
+    types.arrowFunctionExpression(
+      [i('$')],
+      types.logicalExpression(
+        '&&',
+        types.callExpression(
+          types.memberExpression(
+            types.assignmentExpression(
+              '??=',
+              types.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
+              types.newExpression(i('WeakMap'), []),
+            ),
+            i('set'),
+          ),
+          [
+            types.assignmentExpression(
+              '=',
+              types.memberExpression(i('$'), i('f')),
+              node,
+            ),
+            template.expression`${metadata}`(),
+          ],
         ),
+        types.memberExpression(i('$'), i('f')),
       ),
-    ],
+    ),
+    [types.objectExpression([])],
+  );
+}
+
+function wrapInAutoName(
+  node: babel.Expression,
+  name: string,
+) {
+  return types.callExpression(
+    template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
+      placeholderPattern: false,
+    })(),
+    [node, types.stringLiteral(name)],
   );
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
+    VariableDeclarator(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('init').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    AssignmentExpression(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('right').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    ObjectProperty(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('value').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
     },
 
     ArrowFunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        ctx,
-        path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
 
     FunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        ctx,
-        path.node.id?.name
-          ? path.node.id.name
-          : path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
@@ -125,8 +138,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.params,
         node.body,
       );
-      const transpiled = functionToTranspiled(expression, ctx, node.id?.name);
-      if (transpiled && node.id) {
+
+      if (containsKernelDirective(path.node) && node.id) {
+        const transpiled = functionToTranspiled(expression);
         path.replaceWith(
           types.variableDeclaration('const', [
             types.variableDeclarator(node.id, transpiled),
@@ -147,39 +161,13 @@ function functionVisitor(ctx: Context): TraverseOptions {
           (implementation.type === 'FunctionExpression' ||
             implementation.type === 'ArrowFunctionExpression')
         ) {
-          const { params, body, externalNames } = transpileFn(implementation);
-          const tgpuAlias = ctx.tgpuAliases.values().next().value;
-          if (tgpuAlias === undefined) {
-            throw new Error(
-              `No tgpu import found, cannot assign ast to function in file: ${
-                ctx.fileId ?? ''
-              }`,
-            );
-          }
-
-          const directive = getKernelDirective(implementation);
+          const transpiled = functionToTranspiled(
+            implementation,
+          ) as babel.CallExpression;
 
           path.replaceWith(
             types.callExpression(node.callee, [
-              types.callExpression(
-                template.expression(`${tgpuAlias}.__assignAst`)(),
-                [
-                  directive !== 'kernel & js'
-                    ? template.expression`${tgpuAlias}.__removedJsImpl()`()
-                    : implementation,
-                  template.expression`${
-                    embedJSON({ params, body, externalNames })
-                  }`(),
-                  types.objectExpression(
-                    externalNames.map((name) =>
-                      types.objectProperty(
-                        types.identifier(name),
-                        types.identifier(name),
-                      )
-                    ),
-                  ),
-                ],
-              ),
+              transpiled,
             ]),
           );
 
@@ -206,19 +194,12 @@ export default function () {
           return;
         }
 
-        if (
-          !options?.forceTgpuAlias &&
-          code &&
-          !codeFilterRegexes.some((reg) => reg.test(code))
-        ) {
-          return;
-        }
-
         const ctx: Context = {
           tgpuAliases: new Set<string>(
             options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
           ),
           fileId: id,
+          autoNamingEnabled: options?.autoNamingEnabled ?? true,
         };
 
         path.traverse(functionVisitor(ctx));

@@ -1,6 +1,5 @@
-import type { TgpuNamable } from '../name.ts';
+import type { TgpuNamable } from '../shared/meta.ts';
 import type {
-  $repr,
   Infer,
   InferGPURecord,
   InferPartial,
@@ -9,6 +8,12 @@ import type {
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
+import type {
+  $gpuRepr,
+  $memIdent,
+  $repr,
+  $reprPartial,
+} from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
@@ -37,10 +42,13 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly '~reprPartial':
+  readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
+  // ---
 }
 
 /**
@@ -58,12 +66,15 @@ export interface Unstruct<
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
-  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
-  readonly '~memIdent': Unstruct<Prettify<MemIdentityRecord<TProps>>>;
-  readonly '~reprPartial':
+  readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
+  readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
+  readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
+  // ---
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
@@ -77,7 +88,10 @@ export interface LooseDecorated<
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  // ---
 }
 
 const looseTypeLiterals = [
@@ -206,3 +220,31 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
+  readonly type: 'decorated';
+  readonly inner: infer TInner;
+} ? TInner extends wgsl.BaseData ? UnwrapDecorated<TInner>
+  : TData
+  : TData;
+
+export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
+  UnwrapDecorated<TData[0]> extends { readonly type: TType } ? true
+    : UnwrapDecorated<TData[0]> extends {
+      readonly type: 'array';
+      readonly elementType: infer TElement;
+    }
+      ? TElement extends wgsl.BaseData
+        ? UnwrapDecorated<TElement> extends { readonly type: TType } ? true
+        : HasNestedType<[TElement], TType>
+      : false
+    : UnwrapDecorated<TData[0]> extends
+      { readonly type: 'struct'; readonly propTypes: infer TProps }
+      ? TProps extends Record<string, wgsl.BaseData> ? true extends {
+          [K in keyof TProps]: UnwrapDecorated<TProps[K]> extends
+            { readonly type: TType } ? true
+            : HasNestedType<[TProps[K]], TType>;
+        }[keyof TProps] ? true
+        : false
+      : false
+    : false;

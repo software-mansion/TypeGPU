@@ -4,15 +4,15 @@ import {
   getCompiledWriterForSchema,
 } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
 import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -25,6 +25,7 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
+import type { AnyData, UnwrapDecorated } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -43,16 +44,21 @@ export interface VertexFlag {
   usableAsVertex: true;
 }
 
+export interface IndexFlag {
+  usableAsIndex: true;
+}
+
 /**
  * @deprecated Use VertexFlag instead.
  */
 export type Vertex = VertexFlag;
 
-type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> = T extends
-  'uniform' ? UniformFlag
-  : T extends 'storage' ? StorageFlag
-  : T extends 'vertex' ? VertexFlag
-  : never;
+type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex' | 'index'> =
+  T extends 'uniform' ? UniformFlag
+    : T extends 'storage' ? StorageFlag
+    : T extends 'vertex' ? VertexFlag
+    : T extends 'index' ? IndexFlag
+    : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
@@ -71,7 +77,19 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
+type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
+  {
+    readonly type: 'array';
+    readonly elementType: infer TElement;
+  }
+  ? TElement extends BaseData
+    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' | 'u16' } ? true
+    : false
+  : false
+  : false;
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -82,8 +100,9 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   usableAsUniform: boolean;
   usableAsStorage: boolean;
   usableAsVertex: boolean;
+  usableAsIndex: boolean;
 
-  $usage<T extends RestrictVertexUsages<TData>>(
+  $usage<T extends RestrictUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
@@ -109,6 +128,7 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
       'uniform',
     ]);
   }
+
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
@@ -124,17 +144,43 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
   return !!(buffer as unknown as VertexFlag).usableAsVertex;
 }
 
+export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
+  buffer: T,
+): buffer is T & IndexFlag {
+  return !!(buffer as unknown as IndexFlag).usableAsIndex;
+}
+
 // --------------
 // Implementation
 // --------------
 const endianness = getSystemEndianness();
 
-type RestrictVertexUsages<TData extends BaseData> = TData extends {
+type IsArrayOfU32<TData extends BaseData> = UnwrapDecorated<TData> extends {
+  readonly type: 'array';
+  readonly elementType: infer TElement;
+}
+  ? TElement extends BaseData
+    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' } ? true
+    : false
+  : false
+  : false;
+
+type IsWgslLiteral<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
-} ? ('uniform' | 'storage' | 'vertex')[]
-  : 'vertex'[];
+} ? true
+  : false;
+
+type RestrictUsages<TData extends BaseData> = string extends TData['type']
+  ? ('uniform' | 'storage' | 'vertex' | 'index')[]
+  : IsIndexCompatible<TData> extends true
+    ? IsArrayOfU32<TData> extends true
+      ? ('uniform' | 'storage' | 'vertex' | 'index')[]
+    : ['index']
+  : IsWgslLiteral<TData> extends true ? ('uniform' | 'storage' | 'vertex')[]
+  : ['vertex'];
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
+  public readonly [$internal] = true;
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST |
     GPUBufferUsage.COPY_SRC;
@@ -148,12 +194,14 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   usableAsUniform = false;
   usableAsStorage = false;
   usableAsVertex = false;
+  usableAsIndex = false;
 
   constructor(
     private readonly _group: ExperimentalTgpuRoot,
     public readonly dataType: TData,
     public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
-    private readonly _disallowedUsages?: ('uniform' | 'storage' | 'vertex')[],
+    private readonly _disallowedUsages?:
+      ('uniform' | 'storage' | 'vertex' | 'index')[],
   ) {
     if (isGPUBuffer(initialOrBuffer)) {
       this._ownBuffer = false;
@@ -201,7 +249,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends RestrictVertexUsages<TData>>(
+  $usage<T extends ('uniform' | 'storage' | 'vertex' | 'index')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
@@ -210,12 +258,15 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
           `Buffer of type ${this.dataType.type} cannot be used as ${usage}`,
         );
       }
+
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
       this.flags |= usage === 'storage' ? GPUBufferUsage.STORAGE : 0;
       this.flags |= usage === 'vertex' ? GPUBufferUsage.VERTEX : 0;
+      this.flags |= usage === 'index' ? GPUBufferUsage.INDEX : 0;
       this.usableAsUniform = this.usableAsUniform || usage === 'uniform';
       this.usableAsStorage = this.usableAsStorage || usage === 'storage';
       this.usableAsVertex = this.usableAsVertex || usage === 'vertex';
+      this.usableAsIndex = this.usableAsIndex || usage === 'index';
     }
     return this as this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   }

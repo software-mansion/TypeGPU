@@ -4,8 +4,13 @@ import type {
   OmitBuiltins,
 } from '../../builtin.ts';
 import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
-import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import {
+  getName,
+  isNamable,
+  setName,
+  type TgpuNamable,
+} from '../../shared/meta.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
@@ -41,7 +46,7 @@ type TgpuVertexFnShellHeader<
   VertexOut extends VertexOutConstrained,
 > = {
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut> | undefined;
+  readonly returnType: IOLayoutToSchema<VertexOut>;
   readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
@@ -85,10 +90,10 @@ export interface TgpuVertexFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
   VertexOut extends VertexOutConstrained = any,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn>;
-
+  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -127,12 +132,14 @@ export function vertexFn<
   in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
+  if (Object.keys(options.out).length === 0) {
+    throw new Error(
+      `A vertexFn output cannot be empty since it must include the 'position' builtin.`,
+    );
+  }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     attributes: [options.in ?? ({} as VertexIn)],
-    returnType:
-      (Object.keys(options.out).length !== 0
-        ? createIoSchema(options.out)
-        : undefined),
+    returnType: createIoSchema(options.out),
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -161,6 +168,7 @@ function createVertexFn(
     & TgpuVertexFn<VertexInConstrained, VertexOutConstrained>
     & SelfResolvable
     & {
+      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -175,7 +183,7 @@ function createVertexFn(
     );
   }
 
-  return {
+  const result: This = {
     shell,
     outputType,
     inputType,
@@ -185,6 +193,7 @@ function createVertexFn(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
@@ -220,5 +229,6 @@ function createVertexFn(
     toString() {
       return `vertexFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }

@@ -31,11 +31,10 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.5.8"
+    "typegpu": "^0.5.9"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@types/node": "^22.13.14",
     "@webgpu/types": "catalog:",
     "typegpu": "workspace:*",
     "typescript": "catalog:",

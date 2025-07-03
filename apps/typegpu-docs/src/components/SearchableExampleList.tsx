@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
 import Fuse from 'fuse.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { examples } from '../utils/examples/exampleContent.ts';
 import { type Example, exampleCategories } from '../utils/examples/types.ts';
 import { ExampleCard } from './ExampleCard.tsx';
@@ -69,6 +69,19 @@ export function SearchableExampleList(
     [examplesByCategories],
   );
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        inputRef.current?.focus();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', listener);
+
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
+
   return (
     <div className='flex w-full flex-col'>
       <div
@@ -78,6 +91,7 @@ export function SearchableExampleList(
         }}
       >
         <input
+          ref={inputRef}
           type='text'
           placeholder='Search examples by name or tag...'
           value={query}

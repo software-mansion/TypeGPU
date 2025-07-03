@@ -1,6 +1,6 @@
 import { MissingBindGroupsError } from '../../errors.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { getName, setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
@@ -10,16 +10,26 @@ import type {
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import {
+  createWithPerformanceCallback,
+  createWithTimestampWrites,
+  setupTimestampWrites,
+  type Timeable,
+  type TimestampWritesPriors,
+  triggerPerformanceCallback,
+} from './timeable.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
+  readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
 }
 
 // ----------
 // Public API
 // ----------
 
-export interface TgpuComputePipeline extends TgpuNamable {
+export interface TgpuComputePipeline extends TgpuNamable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -59,12 +69,12 @@ export function isComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
-};
+} & TimestampWritesPriors;
 
 type Memo = {
   pipeline: GPUComputePipeline;
-  bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup] | null;
+  usedBindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup] | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -80,6 +90,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       get rawPipeline() {
         return _core.unwrap().pipeline;
       },
+      get priors() {
+        return _priors;
+      },
     };
     this[$getNameForward] = _core;
   }
@@ -93,11 +106,36 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup: TgpuBindGroup,
   ): TgpuComputePipeline {
     return new TgpuComputePipelineImpl(this._core, {
+      ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
         [bindGroupLayout, bindGroup],
       ]),
     });
+  }
+
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): this {
+    const newPriors = createWithPerformanceCallback(
+      this._priors,
+      callback,
+      this._core.branch,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
+  }
+
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): this {
+    const newPriors = createWithTimestampWrites(
+      this._priors,
+      options,
+      this._core.branch,
+    );
+    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   dispatchWorkgroups(
@@ -108,15 +146,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const memo = this._core.unwrap();
     const { branch } = this._core;
 
-    const pass = branch.commandEncoder.beginComputePass({
+    const passDescriptor: GPUComputePassDescriptor = {
       label: getName(this._core) ?? '<unnamed>',
-    });
+      ...setupTimestampWrites(this._priors, branch),
+    };
+
+    const pass = branch.commandEncoder.beginComputePass(passDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
-    const missingBindGroups = new Set(memo.bindGroupLayouts);
+    const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
-    memo.bindGroupLayouts.forEach((layout, idx) => {
+    memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
@@ -136,6 +177,13 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+
+    if (this._priors.performanceCallback) {
+      triggerPerformanceCallback({
+        root: branch,
+        priors: this._priors,
+      });
+    }
   }
 
   $name(label: string): this {
@@ -158,7 +206,7 @@ class ComputePipelineCore {
       const device = this.branch.device;
 
       // Resolving code
-      const { code, bindGroupLayouts, catchall } = resolve(
+      const { code, usedBindGroupLayouts, catchall } = resolve(
         {
           '~resolve': (ctx) => {
             ctx.withSlots(this._slotBindings, () => {
@@ -171,12 +219,11 @@ class ComputePipelineCore {
         },
         {
           names: this.branch.nameRegistry,
-          jitTranspiler: this.branch.jitTranspiler,
         },
       );
 
-      if (catchall !== null) {
-        bindGroupLayouts[catchall[0]]?.$name(
+      if (catchall !== undefined) {
+        usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
@@ -186,7 +233,7 @@ class ComputePipelineCore {
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: bindGroupLayouts.map((l) =>
+            bindGroupLayouts: usedBindGroupLayouts.map((l) =>
               this.branch.unwrap(l)
             ),
           }),
@@ -197,7 +244,7 @@ class ComputePipelineCore {
             }),
           },
         }),
-        bindGroupLayouts,
+        usedBindGroupLayouts,
         catchall,
       };
     }

@@ -9,8 +9,9 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { setName } from '../../shared/meta.ts';
+import { $internal } from '../../shared/symbols.ts';
 import {
   kindToDefaultFormatMap,
   type TgpuVertexAttrib,
@@ -29,6 +30,7 @@ import type {
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
@@ -157,6 +159,7 @@ function dataToContainedAttribs<
 
 class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
   implements TgpuVertexLayout<TData> {
+  public readonly [$internal] = true;
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;

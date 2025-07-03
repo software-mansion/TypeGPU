@@ -60,14 +60,13 @@ const layout = tgpu.bindGroupLayout({
   uniforms: { uniform: Uniforms },
 });
 
-const scaleView = tgpu['~unstable'].fn([d.vec2f], d.vec2f)((pos) => {
-  'kernel & js';
+const scaleView = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
   return d.vec2f(0.3 * pos.x, (pos.y * 1.2 + 1) * 0.5);
 });
 
 // #region Patterns
 
-const patternFn = tgpu['~unstable'].fn([d.vec2f, d.vec3f], d.f32);
+const patternFn = tgpu.fn([d.vec2f, d.vec3f], d.f32);
 
 const patternCheckers = patternFn((uv) => {
   'kernel';
@@ -87,7 +86,7 @@ const patternSolid = patternFn(() => {
   return 1;
 });
 
-const patternSlot = tgpu['~unstable'].slot(patternSolid);
+const patternSlot = tgpu.slot(patternSolid);
 
 // #endregion
 
@@ -101,17 +100,15 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const rgb = oklabToLinearRgb(lab);
   const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
 
-  const clipLab = oklabGamutClipSlot.value(lab);
+  const clipLab = oklabGamutClipSlot.$(lab);
   const color = oklabToRgb(lab);
 
-  const patternScaled = patternSlot.value(input.uv, clipLab) * 0.1 + 0.9;
+  const patternScaled = patternSlot.$(input.uv, clipLab) * 0.1 + 0.9;
 
   return d.vec4f(select(color, mul(patternScaled, color), outOfGamut), 1);
 });
 
-const alphaFromUniforms = tgpu['~unstable'].fn([], d.f32)(
-  () => layout.$.uniforms.alpha,
-);
+const alphaFromUniforms = tgpu.fn([], d.f32)(() => layout.$.uniforms.alpha);
 
 const root = await tgpu.init();
 

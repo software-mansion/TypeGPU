@@ -1,7 +1,12 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName } from '../../name.ts';
-import { $repr, type Infer, type InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf } from '../../shared/symbols.ts';
+import { getName } from '../../shared/meta.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
+import {
+  $gpuRepr,
+  $gpuValueOf,
+  $providing,
+  $repr,
+} from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type {
@@ -38,7 +43,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
     resourceType: 'derived' as const,
     '~compute': compute,
     [$repr]: undefined as Infer<T>,
-    '~gpuRepr': undefined as InferGPU<T>,
+    [$gpuRepr]: undefined as InferGPU<T>,
 
     [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T> {
       return getGpuValueRecursively(ctx, ctx.unwrap(this));
@@ -53,6 +58,10 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
       }
 
       return this[$gpuValueOf](ctx);
+    },
+
+    get $(): InferGPU<T> {
+      return this.value;
     },
 
     with<TValue>(
@@ -77,14 +86,14 @@ function createBoundDerived<T>(
   const result = {
     resourceType: 'derived' as const,
     [$repr]: undefined as Infer<T>,
-    '~gpuRepr': undefined as InferGPU<T>,
+    [$gpuRepr]: undefined as InferGPU<T>,
 
     '~compute'() {
       throw new Error(
         `'~compute' should never be read on bound derived items.`,
       );
     },
-    '~providing': {
+    [$providing]: {
       inner: innerDerived,
       pairs,
     },
@@ -102,6 +111,10 @@ function createBoundDerived<T>(
       }
 
       return this[$gpuValueOf](ctx);
+    },
+
+    get $(): InferGPU<T> {
+      return this.value;
     },
 
     with<TValue>(
