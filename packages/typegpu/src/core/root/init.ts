@@ -1,9 +1,9 @@
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
   type TgpuQuerySet,
 } from '../../core/querySet/querySet.ts';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import {
@@ -20,6 +20,7 @@ import {
 } from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -135,7 +136,7 @@ class WithBindingImpl implements WithBinding {
       depthStencilState: undefined,
       slotBindings: this._slotBindings,
       vertexFn,
-      vertexAttribs: attribs,
+      vertexAttribs: attribs as AnyVertexAttribs,
       multisampleState: undefined,
     });
   }
