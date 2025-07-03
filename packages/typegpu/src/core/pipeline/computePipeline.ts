@@ -212,11 +212,10 @@ class ComputePipelineCore implements SelfResolvable {
   ) {}
 
   '~resolve'(ctx: ResolutionCtx) {
-    ctx.withSlots(this._slotBindings, () => {
+    return ctx.withSlots(this._slotBindings, () => {
       ctx.resolve(this._entryFn);
+      return '';
     });
-
-    return '';
   }
 
   toString() {

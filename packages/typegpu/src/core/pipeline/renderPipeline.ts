@@ -643,27 +643,21 @@ class RenderPipelineCore implements SelfResolvable {
       slotBindings,
     } = this.options;
 
-    return ctx.resolve(
-      {
-        '~resolve': (ctx: ResolutionCtx) => {
-          ctx.withVaryingLocations(
-            matchUpVaryingLocations(
-              vertexFn.shell.out,
-              fragmentFn.shell.in,
-              getName(vertexFn) ?? '<unnamed>',
-              getName(fragmentFn) ?? '<unnamed>',
-            ),
-            () =>
-              ctx.withSlots(slotBindings, () => {
-                ctx.resolve(vertexFn);
-                ctx.resolve(fragmentFn);
-              }),
-          );
-          return '';
-        },
+    const locations = matchUpVaryingLocations(
+      vertexFn.shell.out,
+      fragmentFn.shell.in,
+      getName(vertexFn) ?? '<unnamed>',
+      getName(fragmentFn) ?? '<unnamed>',
+    );
 
-        toString: () => `renderPipeline:${getName(this) ?? '<unnamed>'}`,
-      },
+    return ctx.withVaryingLocations(
+      locations,
+      () =>
+        ctx.withSlots(slotBindings, () => {
+          ctx.resolve(vertexFn);
+          ctx.resolve(fragmentFn);
+          return '';
+        }),
     );
   }
 
