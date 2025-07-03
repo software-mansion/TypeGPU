@@ -1,3 +1,4 @@
+import { smoothstep } from '../std/numeric.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
   vec2b,
@@ -444,6 +445,57 @@ export const VectorOps = {
   } as Record<
     VecKind | MatKind,
     <T extends vBase | mBase>(lhs: T, rhs: T) => T
+  >,
+
+  smoothstep: {
+    vec2f: (edge0: wgsl.v2f, edge1: wgsl.v2f, x: wgsl.v2f) =>
+      vec2f(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+      ),
+    vec2h: (edge0: wgsl.v2h, edge1: wgsl.v2h, x: wgsl.v2h) =>
+      vec2h(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+      ),
+
+    vec3f: (edge0: wgsl.v3f, edge1: wgsl.v3f, x: wgsl.v3f) =>
+      vec3f(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+        smoothstep(edge0.z, edge1.z, x.z),
+      ),
+    vec3h: (edge0: wgsl.v3h, edge1: wgsl.v3h, x: wgsl.v3h) =>
+      vec3h(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+        smoothstep(edge0.z, edge1.z, x.z),
+      ),
+
+    vec4f: (edge0: wgsl.v4f, edge1: wgsl.v4f, x: wgsl.v4f) =>
+      vec4f(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+        smoothstep(edge0.z, edge1.z, x.z),
+        smoothstep(edge0.w, edge1.w, x.w),
+      ),
+    vec4h: (edge0: wgsl.v4h, edge1: wgsl.v4h, x: wgsl.v4h) =>
+      vec4h(
+        smoothstep(edge0.x, edge1.x, x.x),
+        smoothstep(edge0.y, edge1.y, x.y),
+        smoothstep(edge0.z, edge1.z, x.z),
+        smoothstep(edge0.w, edge1.w, x.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends vBase>(
+      edge0: T,
+      edge1: T,
+      x: T,
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2f
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3f
+      : T extends wgsl.AnyVec4Instance ? wgsl.v4f
+      : wgsl.AnyVecInstance
   >,
 
   addMixed: {

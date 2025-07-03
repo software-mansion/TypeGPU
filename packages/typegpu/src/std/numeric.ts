@@ -719,3 +719,28 @@ export const tanh = createDualImpl(
   (value) => snip(`tanh(${value.value})`, value.dataType),
   'tanh',
 );
+
+export const smoothstep = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T => {
+    if (typeof x === 'number') {
+      const e0 = edge0 as number;
+      const e1 = edge1 as number;
+
+      if (x <= e0) return 0 as T;
+      if (x >= e1) return 1 as T;
+
+      const t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
+      return (t * t * (3 - 2 * t)) as T;
+    }
+    return VectorOps.smoothstep[x.kind](
+      edge0 as AnyFloatVecInstance,
+      edge1 as AnyFloatVecInstance,
+      x as AnyFloatVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (edge0, edge1, x) =>
+    snip(`smoothstep(${edge0.value}, ${edge1.value}, ${x.value})`, x.dataType),
+  'smoothstep',
+);
