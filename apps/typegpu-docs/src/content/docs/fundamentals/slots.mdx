@@ -4,33 +4,101 @@ description: Slots can be used to inject arbitrary values into shader code at a 
 draft: true
 ---
 
-You can think of slots as holes in the shader that can be filled in from the outside.
+Slots are a powerful dependency injection mechanism in TypeGPU that allow you to
+write shader logic without having to tightly couple to specific resources.
+They're similar to bind group layouts in this regard, but instead function at
+compile time.
 
-```ts
-const filterColorSlot = tgpu.slot<vec3f>(); // => TgpuSlot<vec3f>
+Main uses for slots include:
 
-const filter = tgpu.fn([vec3f])((color) => {
-  const filterColor = filterColorSlot.$; // => vec3f
+- Generics
+- Conditional compilation
+- Passing callbacks to high-level libraries
+
+With slots, libraries can expose customization points for their users. They
+enable behavioral changes to internal library functionality while maintaining
+type safety and performance. You can think of slots as holes in the shader that
+can be filled **in** from the outside.
+
+## Basic usage
+
+A slot is created using the `slot()` function and can optionally take a default
+value:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const mySlot = tgpu.slot(42); // With default value
+const filterColorSlot = tgpu.slot<d.v3f>(); // Slot for a 3D vector
+
+interface Config {
+  fogEnabled: boolean;
+  tint: d.v3f;
+}
+
+const configSlot = tgpu.slot<Config>();
+```
+
+Slots are resolved during the TypeGPU resolution phase. You can access a slot's
+value using either:
+
+- `.value` property
+- `.$` shorthand property
+
+```typescript
+const value = mySlot.value; // or mySlot.$
+```
+
+:::caution
+Slot values can only be accessed during resolution (e.g., in tgpu functions).
+Attempting to access them outside will throw an error.
+:::
+
+## Examples
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { mul } from 'typegpu/std';
+// ---cut---
+const filterColorSlot = tgpu.slot<d.v3f>();
+
+const filter = tgpu.fn([d.vec3f])((color) => {
+  const filterColor = filterColorSlot.$;
 
   return mul(color, filterColor);
 });
 
 // Bind the filter function with a red color.
 const filterWithRed = filter
-  .with(filterColorSlot, vec3f(1, 0, 0));
+  .with(filterColorSlot, d.vec3f(1, 0, 0));
 
 // Bind the filter function with a green color.
 const filterWithGreen = filter
-  .with(filterColorSlot, vec3f(0, 1, 0));
+  .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
 
 ### Conditional compilation
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { max } from 'typegpu/std';
+
+const root = await tgpu.init();
+
+const Obj = d.struct({
+  pos: d.vec3f,
+});
+
+const objects = root.createReadonly(d.arrayOf(Obj, 256));
+
+// ---cut---
 const safeLoopSlot = tgpu.slot(false);
 
-const processObjects = tgpu.fn([f32], f32)(() => {
-  let len = objects.length;
+const processObjects = tgpu.fn([])(() => {
+  let len = objects.$.length;
 
   if (safeLoopSlot.$) { // <- evaluated at compile time
     // This will be included in the shader code only if
@@ -46,13 +114,29 @@ const processObjects = tgpu.fn([f32], f32)(() => {
 
 ### Inversion of control
 
-```ts
+```ts twoslash
 // physics.ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { add, mul } from 'typegpu/std';
 
-const defaultGravity = tgpu.fn([vec2f], vec2f)(() => vec2f(0, 9.8));
+const root = await tgpu.init();
+
+const Obj = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+});
+
+const objects = root.createReadonly(d.arrayOf(Obj, 256));
+const deltaTime = root.createUniform(d.f32);
+
+// ---cut---
+const defaultGravity = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
+  return d.vec2f(0, 9.8);
+});
 
 export const getGravitySlot = tgpu.slot(defaultGravity);
-//           ^ TgpuSlot<TgpuFn<[Vec2f], Vec2f>>
+//           ^?
 
 export const stepPhysics = tgpu.fn([])(() => {
   for (const obj of objects.$) {
@@ -67,10 +151,11 @@ export const stepPhysics = tgpu.fn([])(() => {
 ```ts
 // main.ts
 
-import { stepPhysics, getGravitySlot } from './physics';
+import { stepPhysics, getGravitySlot } from './physics.ts';
 
-const getGravityTowardsCenter = tgpu
-  .fn([vec2f], vec2f)((position) => mul(normalize(position), -1));
+const getGravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
+  return mul(normalize(pos), -1);
+});
 
 const stepPhysicsAltered = stepPhysics
   .with(getGravitySlot, getGravityTowardsCenter);
