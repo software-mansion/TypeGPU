@@ -1,9 +1,8 @@
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { UndecorateRecord } from '../../data/attributes.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
-import type { JitTranspiler } from '../../jitTranspiler.ts';
+import type { AnyData, Disarray, HasNestedType } from '../../data/dataTypes.ts';
+import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
 import type {
@@ -12,7 +11,7 @@ import type {
   Prettify,
 } from '../../shared/utilityTypes.ts';
 import type {
-  LayoutEntryToInput,
+  ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -101,7 +100,12 @@ export interface WithFragment<
   Output extends FragmentOutConstrained = FragmentOutConstrained,
 > {
   withPrimitive(
-    primitiveState: GPUPrimitiveState | undefined,
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
   ): WithFragment<Output>;
 
   withDepthStencil(
@@ -115,7 +119,7 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface WithBinding {
+export interface Configurable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
@@ -126,6 +130,10 @@ export interface WithBinding {
       | Infer<T>,
   ): WithBinding;
 
+  pipe(transform: (cfg: Configurable) => Configurable): Configurable;
+}
+
+export interface WithBinding extends Configurable {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -365,6 +373,17 @@ export interface RenderPass {
   ): undefined;
 }
 
+type ValidateSchema<TData extends AnyData> = HasNestedType<
+  [TData],
+  'bool'
+> extends true ? 'Error: Bool is not host-shareable, use U32 or I32 instead'
+  : HasNestedType<[TData], 'u16'> extends true ? TData extends {
+      type: 'array';
+      elementType: { type: 'u16' };
+    } ? TData
+    : 'Error: U16 is only usable inside arrays for index buffers'
+  : TData;
+
 export interface TgpuRoot extends Unwrapper {
   /**
    * The GPU device associated with this root.
@@ -381,7 +400,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: TData,
+    typeSchema: ValidateSchema<TData>,
     initial?: Infer<TData> | undefined,
   ): TgpuBuffer<TData>;
 
@@ -395,7 +414,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: TData,
+    typeSchema: ValidateSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
@@ -524,9 +543,7 @@ export interface TgpuRoot extends Unwrapper {
     >,
   >(
     layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
+    entries: ExtractBindGroupInputFromLayout<Entries>,
   ): TgpuBindGroup<Entries>;
 
   /**
@@ -546,7 +563,6 @@ export interface TgpuRoot extends Unwrapper {
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly jitTranspiler?: JitTranspiler | undefined;
   readonly nameRegistry: NameRegistry;
   /**
    * The current command encoder. This property will

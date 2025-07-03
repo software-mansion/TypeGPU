@@ -3,18 +3,6 @@ import tgpu, { type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
 const MAX_GRID_SIZE = 1024;
 
 type GridData = typeof GridData;
@@ -35,53 +23,43 @@ const BoxObstacle = d.struct({
 
 const gridSize = 256;
 
-const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
-const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
-
-const inputGridSlot = tgpu['~unstable'].slot<
+const inputGridSlot = tgpu.slot<
   TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
 >();
-const outputGridSlot = tgpu['~unstable'].slot<TgpuBufferMutable<GridData>>();
+const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
 
-const prevObstacles = root.createReadonly(BoxObstacleArray);
-const obstacles = root.createReadonly(BoxObstacleArray);
-
-const isValidCoord = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)((x, y) =>
+const isValidCoord = tgpu.fn([d.i32, d.i32], d.bool)((x, y) =>
   x < gridSize && x >= 0 && y < gridSize && y >= 0
 );
 
-const coordsToIndex = tgpu['~unstable'].fn([d.i32, d.i32], d.i32)((x, y) =>
+const coordsToIndex = tgpu.fn([d.i32, d.i32], d.i32)((x, y) =>
   x + y * gridSize
 );
 
-const getCell = tgpu['~unstable'].fn([d.i32, d.i32], d.vec4f)((x, y) =>
+const getCell = tgpu.fn([d.i32, d.i32], d.vec4f)((x, y) =>
   inputGridSlot.$[coordsToIndex(x, y)]
 );
 
-const setCell = tgpu['~unstable'].fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
+const setCell = tgpu.fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index] = value;
 });
 
-const setVelocity = tgpu['~unstable'].fn([d.i32, d.i32, d.vec2f])(
-  (x, y, velocity) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.$[index].x = velocity.x;
-    outputGridSlot.$[index].y = velocity.y;
-  },
-);
+const setVelocity = tgpu.fn([d.i32, d.i32, d.vec2f])((x, y, velocity) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.$[index].x = velocity.x;
+  outputGridSlot.$[index].y = velocity.y;
+});
 
-const addDensity = tgpu['~unstable'].fn([d.i32, d.i32, d.f32])(
-  (x, y, density) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
-  },
-);
+const addDensity = tgpu.fn([d.i32, d.i32, d.f32])((x, y, density) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
+});
 
-const flowFromCell = tgpu['~unstable'].fn([d.i32, d.i32, d.i32, d.i32], d.f32)(
+const flowFromCell = tgpu.fn([d.i32, d.i32, d.i32, d.i32], d.f32)(
   (myX, myY, x, y) => {
     if (!isValidCoord(x, y)) {
       return 0;
@@ -110,32 +88,36 @@ const flowFromCell = tgpu['~unstable'].fn([d.i32, d.i32, d.i32, d.i32], d.f32)(
   },
 );
 
+const root = await tgpu.init();
+
+const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
+const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
+const prevObstacles = root.createReadonly(BoxObstacleArray);
+const obstacles = root.createReadonly(BoxObstacleArray);
 const time = root.createUniform(d.f32);
 
-const isInsideObstacle = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)(
-  (x, y) => {
-    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = obstacles.$[obsIdx];
+const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+    const obs = obstacles.$[obsIdx];
 
-      if (obs.enabled === 0) {
-        continue;
-      }
-
-      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
-      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
-      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
-      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
-
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-        return true;
-      }
+    if (obs.enabled === 0) {
+      continue;
     }
 
-    return false;
-  },
-);
+    const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+    const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+    const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+    const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
-const isValidFlowOut = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)((x, y) => {
+    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      return true;
+    }
+  }
+
+  return false;
+});
+
+const isValidFlowOut = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
   if (!isValidCoord(x, y)) {
     return false;
   }
@@ -147,52 +129,50 @@ const isValidFlowOut = tgpu['~unstable'].fn([d.i32, d.i32], d.bool)((x, y) => {
   return true;
 });
 
-const computeVelocity = tgpu['~unstable'].fn([d.i32, d.i32], d.vec2f)(
-  (x, y) => {
-    const gravityCost = 0.5;
+const computeVelocity = tgpu.fn([d.i32, d.i32], d.vec2f)((x, y) => {
+  const gravityCost = 0.5;
 
-    const neighborOffsets = [
-      d.vec2i(0, 1),
-      d.vec2i(0, -1),
-      d.vec2i(1, 0),
-      d.vec2i(-1, 0),
-    ];
+  const neighborOffsets = [
+    d.vec2i(0, 1),
+    d.vec2i(0, -1),
+    d.vec2i(1, 0),
+    d.vec2i(-1, 0),
+  ];
 
-    const cell = getCell(x, y);
-    let leastCost = cell.z;
+  const cell = getCell(x, y);
+  let leastCost = cell.z;
 
-    const dirChoices = [
-      d.vec2f(0, 0),
-      d.vec2f(0, 0),
-      d.vec2f(0, 0),
-      d.vec2f(0, 0),
-    ];
-    let dirChoiceCount = 1;
+  const dirChoices = [
+    d.vec2f(0, 0),
+    d.vec2f(0, 0),
+    d.vec2f(0, 0),
+    d.vec2f(0, 0),
+  ];
+  let dirChoiceCount = 1;
 
-    for (let i = 0; i < 4; i++) {
-      const offset = neighborOffsets[i];
-      const neighborDensity = getCell(x + offset.x, y + offset.y);
-      const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
+  for (let i = 0; i < 4; i++) {
+    const offset = neighborOffsets[i];
+    const neighborDensity = getCell(x + offset.x, y + offset.y);
+    const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-      if (!isValidFlowOut(x + offset.x, y + offset.y)) {
-        continue;
-      }
-
-      if (cost === leastCost) {
-        dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-        dirChoiceCount++;
-      } else if (cost < leastCost) {
-        leastCost = cost;
-        dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-        dirChoiceCount = 1;
-      }
+    if (!isValidFlowOut(x + offset.x, y + offset.y)) {
+      continue;
     }
 
-    const leastCostDir =
-      dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
-    return leastCostDir;
-  },
-);
+    if (cost === leastCost) {
+      dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+      dirChoiceCount++;
+    } else if (cost < leastCost) {
+      leastCost = cost;
+      dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+      dirChoiceCount = 1;
+    }
+  }
+
+  const leastCostDir =
+    dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
+  return leastCostDir;
+});
 
 const mainInitWorld = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
@@ -336,7 +316,7 @@ const sourceParams = root.createUniform(d.struct({
   intensity: d.f32,
 }));
 
-const getMinimumInFlow = tgpu['~unstable'].fn([d.i32, d.i32], d.f32)((x, y) => {
+const getMinimumInFlow = tgpu.fn([d.i32, d.i32], d.f32)((x, y) => {
   const gridSizeF = d.f32(gridSize);
   const sourceRadius = std.max(1, sourceParams.$.radius * gridSizeF);
   const sourcePos = d.vec2f(
@@ -474,6 +454,16 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     thirdColor,
     std.min((density - secondThreshold) / thirdThreshold, 1),
   );
+});
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
 });
 
 function makePipelines(

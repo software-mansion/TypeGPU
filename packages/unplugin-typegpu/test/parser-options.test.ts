@@ -6,18 +6,17 @@ describe('[BABEL] parser options', () => {
     const codeWithImport = `\
       import tgpu from 'typegpu';
       
-      const increment = tgpu['~unstable']
-        .fn([])(() => {
-          const x = 2+2;
-        });
+      const increment = tgpu.fn([])(() => {
+        const x = 2+2;
+      });
     `;
 
     expect(
       babelTransform(codeWithImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const increment = tgpu['~unstable'].fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      const increment = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        const x = 2 + 2;
       }, {
           v: 1,
           ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
@@ -26,16 +25,15 @@ describe('[BABEL] parser options', () => {
     `);
 
     const codeWithoutImport = `\
-      const increment = tgpu['~unstable']
-        .fn([])(() => {
-          const x = 2+2;
-        });
+      const increment = tgpu.fn([])(() => {
+        const x = 2+2;
+      });
     `;
 
     expect(
       babelTransform(codeWithoutImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
-      "const increment = tgpu['~unstable'].fn([])(() => {
+      "const increment = tgpu.fn([])(() => {
         const x = 2 + 2;
       });"
     `);
@@ -47,10 +45,8 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     const codeWithImport = `\
       import tgpu from 'typegpu';
       
-      const increment = tgpu['~unstable']
-        .fn([])(() => {
-          const x = 2+2;
-        });
+      const increment = tgpu.fn([])(() => {
+      });
 
       console.log(increment);
   `;
@@ -60,12 +56,10 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     ).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const increment = tgpu['~unstable']
-              .fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+      const increment = tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+            }), {
                     v: 1,
-                    ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     externals: {},
                   }) && $.f)({})));
 
@@ -74,10 +68,9 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     `);
 
     const codeWithoutImport = `\
-      const increment = tgpu['~unstable']
-        .fn([])(() => {
-          const x = 2+2;
-        });
+      const increment = tgpu.fn([])(() => {
+        const x = 2+2;
+      });
 
       console.log(increment);
     `;
@@ -85,9 +78,8 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     expect(
       await rollupTransform(codeWithoutImport, { include: [/virtual:/] }),
     ).toMatchInlineSnapshot(`
-      "const increment = tgpu['~unstable']
-              .fn([])(() => {
-              });
+      "const increment = tgpu.fn([])(() => {
+            });
 
             console.log(increment);
       "
