@@ -152,9 +152,12 @@ export function generateExpression(
       op === '/' && !['f32', 'f16'].includes(convLhs.dataType.type) &&
       !['f32', 'f16'].includes(convRhs.dataType.type)
     ) {
+      console.warn(
+        'In division we cast both sides to the f32. This may not be expected behaviour. Consider using explicit conversions instead.',
+      );
       return snip(
         `f32(${lhsStr}) / f32(${rhsStr})`,
-        type,
+        d.f32,
       );
     }
 
