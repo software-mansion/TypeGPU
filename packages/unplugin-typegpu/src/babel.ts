@@ -5,7 +5,6 @@ import type * as babel from '@babel/types';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  containsResourceConstructorCall,
   type Context,
   embedJSON,
   gatherTgpuAliases,
@@ -14,6 +13,7 @@ import {
   type KernelDirective,
   kernelDirectives,
   type Options,
+  performExpressionNaming,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -121,16 +121,21 @@ function wrapInAutoName(
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     VariableDeclarator(path) {
-      if (
-        ctx.autoNamingEnabled &&
-        path.node.id.type === 'Identifier' &&
-        path.node.init &&
-        containsResourceConstructorCall(path.node.init, ctx)
-      ) {
-        path.get('init').replaceWith(
-          wrapInAutoName(path.node.init, path.node.id.name),
-        );
-      }
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('init').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    AssignmentExpression(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('right').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    ObjectProperty(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('value').replaceWith(wrapInAutoName(node, name));
+      });
     },
 
     ImportDeclaration(path) {
