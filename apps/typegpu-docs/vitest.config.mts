@@ -30,7 +30,6 @@ export default defineConfig({
       '**/*.{test,spec}.browser.ts',
     ],
     browser: {
-      enabled: true,
       provider: 'preview',
       instances: [{ browser: 'chromium' }],
     },
