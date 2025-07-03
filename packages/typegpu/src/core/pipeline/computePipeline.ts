@@ -1,16 +1,17 @@
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -19,7 +20,6 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import type { ResolutionCtx } from '../../types.ts';
 import { PERF } from '../../shared/meta.ts';
 
 interface ComputePipelineInternals {
@@ -31,7 +31,8 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline extends TgpuNamable, Timeable {
+export interface TgpuComputePipeline
+  extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -97,6 +98,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       },
     };
     this[$getNameForward] = _core;
+  }
+
+  '~resolve'(ctx: ResolutionCtx): string {
+    return ctx.resolve(this._core);
+  }
+
+  toString(): string {
+    return `computePipeline:${getName(this) ?? '<unnamed>'}`;
   }
 
   get rawPipeline(): GPUComputePipeline {
@@ -194,7 +203,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 }
 
-class ComputePipelineCore {
+class ComputePipelineCore implements SelfResolvable {
   private _memo: Memo | undefined;
 
   constructor(
@@ -203,35 +212,35 @@ class ComputePipelineCore {
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
+  '~resolve'(ctx: ResolutionCtx) {
+    return ctx.withSlots(this._slotBindings, () => {
+      ctx.resolve(this._entryFn);
+      return '';
+    });
+  }
+
+  toString() {
+    return 'computePipelineCore';
+  }
+
   public unwrap(): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
 
       // Resolving code
-      const resolvable = {
-        '~resolve': (ctx: ResolutionCtx) => {
-          ctx.withSlots(this._slotBindings, () => {
-            ctx.resolve(this._entryFn);
-          });
-          return '';
-        },
-
-        toString: () => `computePipeline:${getName(this) ?? '<unnamed>'}`,
-      };
-
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(resolvable, {
+        resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(resolvable, {
+        resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
         });
       }
