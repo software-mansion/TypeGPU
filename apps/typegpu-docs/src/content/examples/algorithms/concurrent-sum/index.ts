@@ -5,8 +5,8 @@ import * as d from 'typegpu/data';
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const fixedArrayLength = 512;
-// export const fixedArrayLength = 2 ** 10;
+// const fixedArrayLength = 512;
+const fixedArrayLength = 2 ** 16;
 
 const root = await tgpu.init({
   adapter: {
@@ -32,12 +32,9 @@ const buffer = root
   )
   .$usage('storage');
 
-const values = new Set();
-for (let i = 0; i < 100; i++) {
-  const work = await (await currentSum(root, buffer)).read();
-  values.add(work[work.length - 1]);
-}
-console.log(values);
+currentSum(root, buffer);
+// const work = await (await currentSum(root, buffer)).read();
+// console.log('Result:', work);
 
 // COMPUTE EXPECTED
 const arr = [...Array(fixedArrayLength).keys()];

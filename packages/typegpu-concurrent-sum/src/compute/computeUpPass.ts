@@ -41,7 +41,7 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
     const windowSize = d.u32(1 << (dLevel + 1)); // window size == step
     const offset = d.u32(1 << dLevel); // offset for the window
 
-    if (lid.x < (segmentLength / windowSize)) { //workgroup length
+    if (lid.x < (segmentLength / windowSize)) { // workgroup length
       const i = lid.x * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
@@ -53,10 +53,10 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
     std.workgroupBarrier();
   }
   // save to sums
-  // if (lid.x === 0) {
-  //   layout.$.sumsArray[wid.x] = sharedMem.value[segmentLength - 1] as number;
-  //   // sharedMem.value[segmentLength - 1] = 0;
-  // }
+  if (lid.x === 0) {
+    layout.$.sumsArray[wid.x] = sharedMem.value[segmentLength - 1] as number;
+    sharedMem.value[segmentLength - 1] = 0;
+  }
   std.workgroupBarrier();
 
   // copy back to work array
