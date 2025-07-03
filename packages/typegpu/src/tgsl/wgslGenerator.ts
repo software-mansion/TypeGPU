@@ -149,8 +149,11 @@ export function generateExpression(
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
     if (
-      op === '/' && !['f32', 'f16'].includes(convLhs.dataType.type) &&
-      !['f32', 'f16'].includes(convRhs.dataType.type)
+      op === '/' &&
+      convLhs.dataType.type !== 'f32' &&
+      convLhs.dataType.type !== 'f16' &&
+      convRhs.dataType.type !== 'f32' &&
+      convRhs.dataType.type !== 'f16'
     ) {
       console.warn(
         'In division we cast both sides to the f32. This may not be expected behaviour. Consider using explicit conversions instead.',
