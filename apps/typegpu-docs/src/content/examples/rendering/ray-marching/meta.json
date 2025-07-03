@@ -5,6 +5,7 @@
     "experimental",
     "fragment shader",
     "shadows",
+    "sdf",
     "ray marching",
     "sphere tracing"
   ]

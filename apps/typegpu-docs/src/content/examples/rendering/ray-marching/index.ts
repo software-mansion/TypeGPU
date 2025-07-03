@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as sdf from '@typegpu/sdf';
+import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -20,7 +20,7 @@ const resolution = root.createUniform(d.vec2f);
 
 const MAX_STEPS = 1000;
 const MAX_DIST = 500;
-const SURF_DIST = 0.01;
+const SURF_DIST = 0.001;
 
 // Structure to hold both distance and color
 const Shape = d.struct({
@@ -77,15 +77,15 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
 
   // Calculate distances and assign colors
   const sphere1 = Shape({
-    dist: sdf.sdSphere(std.sub(localP, sphere1Offset), 0.5),
+    dist: sdSphere(std.sub(localP, sphere1Offset), 0.5),
     color: d.vec3f(0.4, 1, 0.5),
   });
   const sphere2 = Shape({
-    dist: sdf.sdSphere(std.sub(localP, sphere2Offset), 0.3),
+    dist: sdSphere(std.sub(localP, sphere2Offset), 0.3),
     color: d.vec3f(1, 0.8, 0.2),
   });
   const box = Shape({
-    dist: sdf.sdBoxFrame(rotatedP, boxSize, 0.1),
+    dist: sdBoxFrame3d(rotatedP, boxSize, 0.1),
     color: d.vec3f(0.4, 0.6, 1.0),
   });
 
@@ -97,7 +97,7 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
 const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
   const shape = getMorphingShape(p, time.$);
   const floor = Shape({
-    dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
+    dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
     color: std.mix(
       d.vec3f(1),
       d.vec3f(0.2),
