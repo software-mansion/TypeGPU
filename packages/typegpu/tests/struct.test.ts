@@ -268,4 +268,13 @@ describe('struct', () => {
     expect(clone.nested).not.toBe(instance.nested);
     expect(clone.nested.prop1).not.toBe(instance.nested.prop1);
   });
+
+  it('can be called to strip extra properties of a struct', () => {
+    const schema = struct({ prop1: vec2f, prop2: u32 });
+    const instance = { prop1: vec2f(1, 2), prop2: 21, prop3: 'extra' };
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual({ prop1: vec2f(1, 2), prop2: 21 });
+  });
 });

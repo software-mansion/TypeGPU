@@ -23,16 +23,16 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
 ): WgslStruct<TProps> {
   // in the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls
-  const struct = <T extends {}>(instanceProps: T) =>
+  const structSchema = <T extends TProps>(instanceProps: T) =>
     Object.fromEntries(
-      Object.entries(instanceProps).map((
-        [key, value],
-      ) => [key, schemaCallWrapper(props[key], value)]),
+      Object.entries(props).map((
+        [key, schema],
+      ) => [key, schemaCallWrapper(schema, instanceProps[key])]),
     );
-  Object.setPrototypeOf(struct, WgslStructImpl);
-  struct.propTypes = props;
+  Object.setPrototypeOf(structSchema, WgslStructImpl);
+  structSchema.propTypes = props;
 
-  return struct as WgslStruct<TProps>;
+  return structSchema as WgslStruct<TProps>;
 }
 
 // --------------
