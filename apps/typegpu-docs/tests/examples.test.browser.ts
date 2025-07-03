@@ -24,25 +24,29 @@ interface ExampleRuntime {
  * The amount of time after Vitest decides that the test
  * has gone rogue. Adjust as necessary.
  */
-const timeout = 60 * 1000;
+const timeout = 120 * 1000;
+
+const iterations = 10;
 
 test('executes examples', async () => {
   const exampleView = document.createElement('div');
   document.body.appendChild(exampleView);
 
   for (const example of examples) {
-    // Creating the appropriate markup for the example
-    exampleView.innerHTML = example.htmlFile.content;
+    for (let i = 0; i < iterations; ++i) {
+      // Creating the appropriate markup for the example
+      exampleView.innerHTML = example.htmlFile.content;
 
-    // Executing the example
-    const result = await example.tsImport();
-    expect(result).toHaveProperty('onCleanup');
+      // Executing the example
+      const result = await example.tsImport();
+      expect(result).toHaveProperty('onCleanup');
 
-    // Waiting for the example to run a few frames
-    await new Promise((r) => setTimeout(r, 500));
+      // Waiting for the example to run a few frames
+      await new Promise((r) => setTimeout(r, 200));
 
-    // Cleaning up the example
-    (result as ExampleRuntime).onCleanup();
+      // Cleaning up the example
+      (result as ExampleRuntime).onCleanup();
+    }
   }
 
   document.body.removeChild(exampleView);
