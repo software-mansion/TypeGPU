@@ -550,8 +550,6 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }`)
       .$name('get_color');
 
-    console.log(parseResolved({ getColor }));
-
     expect(parseResolved({ getColor })).toBe(parse(`
       struct myStruct { a: i32, }
       fn get_color(a: myStruct) {

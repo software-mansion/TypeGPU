@@ -8,4 +8,4 @@ catalog:
   tsup: ^8.5.0
   unbuild: ^3.5.0
   '@webgpu/types': ^0.1.63
-  vitest: ^3.0.9
+  vitest: ^3.2.4

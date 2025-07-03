@@ -3,11 +3,11 @@ import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   MissingBindGroupsError,
-  type TgpuComputeFnShell,
   type TgpuComputePipeline,
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -51,16 +51,19 @@ describe('TgpuComputePipeline', () => {
       );
   });
 
-  it('allows to omit input in entry function shell', () => {
-    expectTypeOf(
-      tgpu['~unstable'].computeFn({ in: {}, workgroupSize: [1] }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuComputeFnShell<{}>>();
+  it('is resolvable', ({ root }) => {
+    const main = tgpu['~unstable']
+      .computeFn({ workgroupSize: [32] })(() => {
+        // do something
+      });
 
-    expectTypeOf(
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
-    ).toEqualTypeOf<TgpuComputeFnShell<{}>>();
+    const computePipeline = root
+      .withCompute(main)
+      .createPipeline();
+
+    expect(parseResolved({ computePipeline })).toStrictEqual(parse(`
+      @compute @workgroup_size(32) fn main() {}
+    `));
   });
 
   describe('Performance Callbacks', () => {
