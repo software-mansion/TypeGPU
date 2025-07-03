@@ -100,8 +100,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    ctx.addDeclaration(ctx.resolve(this._core));
-    return '';
+    return ctx.resolve(this._core);
   }
 
   toString(): string {
