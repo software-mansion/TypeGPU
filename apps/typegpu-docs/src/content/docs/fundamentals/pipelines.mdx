@@ -34,39 +34,35 @@ const computePipeline = root['~unstable']
 
 ### *withVertex*
 
-Creating a render pipeline requires calling a `withVertex` method first, which accepts a tgpu vertexFn and vertex attributes.
+Creating a render pipeline requires calling a `withVertex` method first, which accepts a `TgpuVertexFn` and vertex attributes.
 The attributes are passed in a record, where the keys match the vertex function input parameters, and the values are attributes retrieved from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
 If the vertex shader does not use vertex attributes, then the latter argument should be an empty object.
 The compatibility between vertex input types and vertex attribute formats is validated at the type level.
 
 ```ts
+const vertexStruct = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+});
 const vertexLayout = tgpu.vertexLayout(
   (n) => d.arrayOf(d.vec2f, n),
   'vertex',
 );
 const instanceLayout = tgpu.vertexLayout(
-  (n) =>
-    d.arrayOf(
-      d.struct({
-        position: d.vec2f,
-        velocity: d.vec2f,
-      }),
-      n,
-    ),
+  (n) => d.arrayOf(vertexStruct, n),
   'instance',
 );
 
-root['unstable']
+root['~unstable']
   .withVertex(mainVert, {
     v: vertexLayout.attrib,
     center: instanceLayout.attrib.position,
     velocity: instanceLayout.attrib.velocity,
-  })
-```
+  });
 
 ### *withFragment*
 
-The next step is calling the `withFragment` method, which accepts a tgpu fragmentFn and a *targets* argument defining the formats and behaviors of the color targets the pipeline writes to.
+The next step is calling the `withFragment` method, which accepts a `TgpuFragmentFn` and a *targets* argument defining the formats and behaviors of the color targets the pipeline writes to.
 Each target is specified the same as in the WebGPU API (*GPUColorTargetState*). 
 The difference is that when there are multiple targets, they should be passed in a record, not an array.
 This way each target is identified by a name and can be validated against the outputs of the fragment function.
@@ -159,7 +155,7 @@ const renderPipeline = root['~unstable']
 
 ### *withCompute*
 
-Creating a compute pipeline is even easier -- the `withCompute` method accepts just a tgpu computeFn with no additional parameters.
+Creating a compute pipeline is even easier -- the `withCompute` method accepts just a `TgpuComputeFn` with no additional parameters.
 Please note that compute pipelines are separate identities from render pipelines. You cannot combine `withVertex` and `withFragment` methods with `withCompute` in a singular pipeline.
  
 ### *createPipeline*
@@ -187,9 +183,7 @@ computePipeline.dispatchWorkgroups(16);
 ### Attachments
 
 Render pipelines require specifying a color attachment for each target. 
-The attachment is specified in the same way as in the WebGPU API 
-(but accepting tgpu resources, as well as the regular WebGPU), 
-however akin to the *targets* argument, multiple targets require being passed in a record, where each target is identified via a name.
+The attachments are specified in the same way as in the WebGPU API (but accept both TypeGPU resources and regular WebGPU ones). However, similar to the *targets* argument, multiple targets need to be passed in as a record, with each target identified by name.
 
 Similarly, when using `withDepthStencil` it is necessary to pass in a depth stencil attachment, via the `withDepthStencilAttachment` method.
 
