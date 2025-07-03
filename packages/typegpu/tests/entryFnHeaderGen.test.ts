@@ -14,12 +14,12 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
     expect(parseResolved({ mainFragment })).toBe(
       parse(`
-      struct mainFragment_Input { 
+      struct mainFragment_Input {
         @location(0) uv : vec2f,
       }
 
-      @fragment fn mainFragment(in: mainFragment_Input) -> @location(0) vec4f { 
-        return vec4f(in.uv[0]); 
+      @fragment fn mainFragment(in: mainFragment_Input) -> @location(0) vec4f {
+        return vec4f(in.uv[0]);
       }`),
     );
   });
@@ -34,12 +34,12 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
     expect(parseResolved({ mainFragment })).toBe(
       parse(`
-      struct mainFragment_Input { 
+      struct mainFragment_Input {
         @location(0) uv : vec2f,
       }
 
-      @fragment fn mainFragment(in: mainFragment_Input) -> @location(1) vec4f { 
-        return vec4f(in.uv[0]); 
+      @fragment fn mainFragment(in: mainFragment_Input) -> @location(1) vec4f {
+        return vec4f(in.uv[0]);
       }`),
     );
   });
@@ -80,11 +80,11 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
     expect(parseResolved({ mainCompute })).toBe(
       parse(`
-      struct mainCompute_Input { 
+      struct mainCompute_Input {
         @builtin(global_invocation_id) index : vec3u,
       }
 
-      @compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input) { 
+      @compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input) {
         let x = in.index;
       }`),
     );
@@ -112,16 +112,16 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
     expect(parseResolved({ mainVertex })).toBe(
       parse(`
-      struct mainVertex_Input { 
+      struct mainVertex_Input {
         @builtin(vertex_index) vertexIndex : u32,
       }
 
-      struct mainVertex_Output { 
+      struct mainVertex_Output {
         @builtin(position) outPos : vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn mainVertex(in: mainVertex_Input) -> mainVertex_Output { 
+      @vertex fn mainVertex(in: mainVertex_Input) -> mainVertex_Output {
         var pos = array<vec2f, 3>(
           vec2(0.0, 0.5),
           vec2(-0.5, -0.5),
