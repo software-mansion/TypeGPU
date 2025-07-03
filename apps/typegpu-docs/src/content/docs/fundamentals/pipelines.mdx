@@ -59,7 +59,7 @@ const computePipeline = root['~unstable']
 ### *withVertex*
 
 Creating a render pipeline requires calling the `withVertex` method first, which accepts `TgpuVertexFn` and matching vertex attributes.
-The attributes are passed in a record, where the keys match the vertex function input parameters, and the values are attributes retrieved
+The attributes are passed in a record, where the keys match the vertex function's (non-builtin) input parameters, and the values are attributes retrieved
 from a specific [tgpu.vertexLayout](/TypeGPU/fundamentals/vertex-layouts).
 If the vertex shader does not use vertex attributes, then the latter argument should be an empty object.
 The compatibility between vertex input types and vertex attribute formats is validated at the type level.
