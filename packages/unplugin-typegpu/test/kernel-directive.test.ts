@@ -12,7 +12,7 @@ describe('[BABEL] "kernel" directive', () => {
       };
 
       const addCPU = (a, b) => {
-          return a + b;
+        return a + b;
       };
     `;
 
