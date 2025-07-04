@@ -97,8 +97,6 @@ describe('mul', () => {
   });
 
   it('computes product of a vec4 and vec4', () => {
-    expect(vec2f(1, 2)).toEqual(vec2u(1, 2));
-
     expect(mul(vec4f(1, 2, 3, 4), vec4f(3, 4, 5, 6))).toEqual(
       vec4f(3, 8, 15, 24),
     );
