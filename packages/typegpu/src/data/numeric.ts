@@ -41,6 +41,8 @@ const boolCast = createDualImpl(
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  *
+ * Can also be called to cast a value to a bool in accordance with WGSL casting rules.
+ *
  * @example
  * const value = bool(); // false
  * @example
@@ -72,6 +74,8 @@ const u32Cast = createDualImpl(
 
 /**
  * A schema that represents an unsigned 32-bit integer value. (equivalent to `u32` in WGSL)
+ *
+ * Can also be called to cast a value to an u32 in accordance with WGSL casting rules.
  *
  * @example
  * const value = u32(); // 0
@@ -112,6 +116,8 @@ export const u16: U16 = {
 /**
  * A schema that represents a signed 32-bit integer value. (equivalent to `i32` in WGSL)
  *
+ * Can also be called to cast a value to an i32 in accordance with WGSL casting rules.
+ *
  * @example
  * const value = i32(); // 0
  * @example
@@ -143,6 +149,8 @@ const f32Cast = createDualImpl(
 
 /**
  * A schema that represents a 32-bit float value. (equivalent to `f32` in WGSL)
+ *
+ * Can also be called to cast a value to an f32.
  *
  * @example
  * const value = f32(); // 0
@@ -265,6 +273,8 @@ const f16Cast = createDualImpl(
 /**
  * A schema that represents a 16-bit float value. (equivalent to `f16` in WGSL)
  *
+ * Can also be called to cast a value to an f16.
+ *
  * @example
  * const value = f16(); // 0
  * @example
@@ -272,7 +282,7 @@ const f16Cast = createDualImpl(
  * @example
  * const value = f16(true); // 1
  * @example
- * const value = f16(21877.5); // 21877.5
+ * const value = f16(21877.5); // 21872
  */
 export const f16: F16 = Object.assign(f16Cast, {
   type: 'f16',
