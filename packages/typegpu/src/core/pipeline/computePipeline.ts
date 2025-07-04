@@ -1,6 +1,6 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
-import { resolve } from '../../resolutionCtx.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
@@ -20,6 +20,7 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
+import { PERF } from '../../shared/meta.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -227,18 +228,35 @@ class ComputePipelineCore implements SelfResolvable {
       const device = this.branch.device;
 
       // Resolving code
-      const { code, usedBindGroupLayouts, catchall } = resolve(
-        this,
-        {
+      let resolutionResult: ResolutionResult;
+
+      let resolveMeasure: PerformanceMeasure | undefined;
+      if (PERF?.enabled) {
+        const resolveStart = performance.mark('typegpu:resolution:start');
+        resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
-        },
-      );
+        });
+        resolveMeasure = performance.measure('typegpu:resolution', {
+          start: resolveStart.name,
+        });
+      } else {
+        resolutionResult = resolve(this, {
+          names: this.branch.nameRegistry,
+        });
+      }
+
+      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
+
+      const module = device.createShaderModule({
+        label: `${getName(this) ?? '<unnamed>'} - Shader`,
+        code,
+      });
 
       this._memo = {
         pipeline: device.createComputePipeline({
@@ -249,16 +267,27 @@ class ComputePipelineCore implements SelfResolvable {
               this.branch.unwrap(l)
             ),
           }),
-          compute: {
-            module: device.createShaderModule({
-              label: `${getName(this) ?? '<unnamed>'} - Shader`,
-              code,
-            }),
-          },
+          compute: { module },
         }),
         usedBindGroupLayouts,
         catchall,
       };
+
+      if (PERF?.enabled) {
+        (async () => {
+          const start = performance.mark('typegpu:compile-start');
+          await device.queue.onSubmittedWorkDone();
+          const compileMeasure = performance.measure('typegpu:compiled', {
+            start: start.name,
+          });
+
+          PERF?.record('resolution', {
+            resolveDuration: resolveMeasure?.duration,
+            compileDuration: compileMeasure.duration,
+            wgslSize: code.length,
+          });
+        })();
+      }
     }
 
     return this._memo;

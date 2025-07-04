@@ -87,6 +87,7 @@ function enqueuePresetChanges() {
   fishBehaviorBuffer.write(presets.init);
 
   setTimeout(() => {
+    if (disposed) return;
     fishBehaviorBuffer.write(presets.default);
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
