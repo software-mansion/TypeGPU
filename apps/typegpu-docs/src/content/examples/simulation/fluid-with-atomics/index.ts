@@ -568,10 +568,9 @@ let paused = false;
 
 let animationFrame: number;
 let lastTime = Date.now();
-function run() {
-  const now = Date.now();
-  const dt = now - lastTime;
-  lastTime = now;
+function run(timestamp: number) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
   msSinceLastTick += dt;
 
   if (msSinceLastTick >= options.timestep) {
