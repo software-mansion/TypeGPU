@@ -31,8 +31,8 @@ const Shape = d.struct({
 });
 
 const checkerBoard = tgpu.fn([d.vec2f], d.f32)((uv) => {
-  const suv = std.floor(std.mul(20, uv));
-  return suv.x + suv.y - 2 * std.floor((suv.x + suv.y) * 0.5);
+  const fuv = std.floor(uv);
+  return std.abs(fuv.x + fuv.y) % 2;
 });
 
 const smoothShapeUnion = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
@@ -103,7 +103,7 @@ const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
     color: std.mix(
       d.vec3f(1),
       d.vec3f(0.2),
-      checkerBoard(std.mul(p.xz, 0.1)),
+      checkerBoard(std.mul(p.xz, 2)),
     ),
   });
 
