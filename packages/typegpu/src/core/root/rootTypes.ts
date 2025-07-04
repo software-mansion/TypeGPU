@@ -1,5 +1,6 @@
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { UndecorateRecord } from '../../data/attributes.ts';
 import type { AnyData, Disarray, HasNestedType } from '../../data/dataTypes.ts';
 import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
@@ -56,10 +57,11 @@ export interface WithCompute {
 }
 
 export type ValidateFragmentIn<
-  VertexOut extends IORecord,
+  VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> = FragmentIn extends Partial<VertexOut> ? VertexOut extends FragmentIn ? [
+> = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
       entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
       targets: FragmentOutToTargets<FragmentOut>,
     ]
@@ -83,7 +85,9 @@ export type ValidateFragmentIn<
     },
   ];
 
-export interface WithVertex<VertexOut extends IORecord = IORecord> {
+export interface WithVertex<
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+> {
   withFragment<
     FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
