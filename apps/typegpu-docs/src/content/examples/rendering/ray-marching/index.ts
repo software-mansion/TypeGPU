@@ -19,8 +19,10 @@ const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
 const MAX_STEPS = 1000;
-const MAX_DIST = 500;
+const MAX_DIST = 30;
 const SURF_DIST = 0.001;
+
+const skyColor = d.vec4f(0.7, 0.8, 0.9, 1);
 
 // Structure to hold both distance and color
 const Shape = d.struct({
@@ -78,7 +80,7 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
   // Calculate distances and assign colors
   const sphere1 = Shape({
     dist: sdSphere(std.sub(localP, sphere1Offset), 0.5),
-    color: d.vec3f(0.4, 1, 0.5),
+    color: d.vec3f(0.4, 0.5, 1),
   });
   const sphere2 = Shape({
     dist: sdSphere(std.sub(localP, sphere2Offset), 0.3),
@@ -86,7 +88,7 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
   });
   const box = Shape({
     dist: sdBoxFrame3d(rotatedP, boxSize, 0.1),
-    color: d.vec3f(0.4, 0.6, 1.0),
+    color: d.vec3f(1.0, 0.3, 0.3),
   });
 
   // Smoothly blend shapes and colors
@@ -199,9 +201,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
   const march = rayMarch(ro, rd);
 
-  if (march.dist > MAX_DIST) {
-    return d.vec4f(0.7, 0.8, 0.9, 1); // Sky color
-  }
+  const fog = std.pow(std.min(march.dist / MAX_DIST, 1), 0.7);
 
   const p = std.add(ro, std.mul(rd, march.dist));
   const n = getNormal(p);
@@ -225,7 +225,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     shadow,
   );
 
-  return d.vec4f(finalColor, 1);
+  return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
 const renderPipeline = root['~unstable']
