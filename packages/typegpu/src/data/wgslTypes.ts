@@ -769,17 +769,6 @@ export interface U32 {
 /**
  * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
  */
-
-export interface U16 {
-  readonly [$internal]: true;
-  readonly type: 'u16';
-  readonly [$repr]: number;
-}
-
-/**
- * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
- */
-
 export interface U16 {
   readonly [$internal]: true;
   readonly type: 'u16';
