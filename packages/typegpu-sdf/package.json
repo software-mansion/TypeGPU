@@ -31,7 +31,7 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.5.9"
+    "typegpu": "^0.6.0"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
