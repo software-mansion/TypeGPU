@@ -4,7 +4,7 @@ import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
 import { getName } from './shared/meta.ts';
-import { DEV } from './shared/dev.ts';
+import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
