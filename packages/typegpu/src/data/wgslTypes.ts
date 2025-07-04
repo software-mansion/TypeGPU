@@ -704,6 +704,7 @@ export interface Bool {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: boolean;
+  // ---
 
   (v?: number | boolean): boolean;
 }

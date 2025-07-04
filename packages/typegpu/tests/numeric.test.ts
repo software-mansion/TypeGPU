@@ -61,15 +61,14 @@ it('has correct default values', () => {
 
 describe('TGSL', () => {
   it('works for default constructors', () => {
-    const main = tgpu['~unstable']
+    const main = tgpu
       .fn([])(() => {
         const f = d.f32();
         const h = d.f16();
         const i = d.i32();
         const u = d.u32();
         const b = d.bool();
-      })
-      .$name('main');
+      });
 
     expect(parseResolved({ main })).toBe(
       parse(`
