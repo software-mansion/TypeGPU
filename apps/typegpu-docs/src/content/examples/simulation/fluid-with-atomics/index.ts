@@ -567,7 +567,7 @@ const createSampleScene = () => {
 let paused = false;
 
 let animationFrame: number;
-let lastTime = Date.now();
+let lastTime = performance.now();
 function run(timestamp: number) {
   const dt = timestamp - lastTime;
   lastTime = timestamp;
