@@ -20,6 +20,10 @@ import type {
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
+  addArgTypesToExternals,
+  addReturnTypeToExternals,
+} from '../resolve/externals.ts';
+import {
   type Eventual,
   isAccessor,
   type Providing,
@@ -158,7 +162,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation as Implementation);
+  const core = createFnCore(implementation as Implementation, '');
 
   const fnBase: This = {
     [$internal]: {
@@ -190,7 +194,18 @@ function createFn<ImplSchema extends AnyFn>(
 
     '~resolve'(ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
-        return core.resolve(ctx);
+        addArgTypesToExternals(
+          implementation,
+          shell.argTypes,
+          core.applyExternals,
+        );
+        addReturnTypeToExternals(
+          implementation,
+          shell.returnType,
+          core.applyExternals,
+        );
+
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -202,7 +217,7 @@ function createFn<ImplSchema extends AnyFn>(
 
       try {
         generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx);
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
         generationCtx.callStack.pop();
       }

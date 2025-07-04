@@ -31,8 +31,11 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const tmp = counter.value.x;
+        counter.value.x = counter.value.y;
+        counter.value.y += tmp;
+        counter.value.z += d.f32(input.num.x);
       }, {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
@@ -63,24 +66,22 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const x = true;
       }, {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       const b = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+        const y = 2 + 2;
       }, {
           v: 1,
           ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
           externals: {},
         }) && $.f)({}));
       const cx = 2;
-      const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+      const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
           v: 1,
           ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
           externals: {cx},
@@ -125,8 +126,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
       const fun = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const x = true;
       }, {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
@@ -134,8 +135,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         }) && $.f)({}));
       const funcWithAs = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const x = true as boolean;
       }, {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
@@ -143,8 +144,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         }) && $.f)({}));
       const funcWithSatisfies = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const x = true satisfies boolean;
       }, {
           v: 1,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
@@ -184,9 +185,12 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const counter = counterBuffer.as('mutable');
               
               tgpu
-                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
+                  const tmp = counter.value.x;
+                  counter.value.x = counter.value.y;
+                  counter.value.y += tmp;
+                  counter.value.z += d.f32(input.num.x);
+                  }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
                     externals: {counter, d},
@@ -216,26 +220,22 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
+              }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
                     externals: {},
                   }) && $.f)({})));
 
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+              }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     externals: {},
                   }) && $.f)({})));
 
               const cx = 2;
-              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
                     v: 1,
                     ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
                     externals: {cx},

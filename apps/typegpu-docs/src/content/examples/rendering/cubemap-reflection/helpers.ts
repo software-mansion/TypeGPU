@@ -16,7 +16,6 @@ export const packVec2u = tgpu.fn([d.vec4f], d.vec2u)((toPack) => {
 
 export const getAverageNormal = tgpu.fn([d.vec4f, d.vec4f, d.vec4f], d.vec4f)(
   (v1, v2, v3) => {
-    'kernel & js';
     const edge1 = std.sub(v2.xyz, v1.xyz);
     const edge2 = std.sub(v3.xyz, v1.xyz);
     return std.normalize(d.vec4f(std.cross(edge1, edge2), 0));

@@ -86,9 +86,24 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 ```
 
-TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures.
-However, the plugin removes the JS implementation from the bundle by default to save space.
-So for the TGSL functions to be callable on the CPU, they should be marked with the *"kernel & js"* directive.
+Sometimes, we are unable to recognize functions that are supposed to be TGSL. For that case, we have a *"kernel"* directive.
+
+```ts
+const patternFn = tgpu.fn([d.vec2f], d.f32);
+
+const patternCheckers = patternFn((uv) => {
+  'kernel';
+  const suv = floor(mul(20, uv));
+  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
+});
+
+const patternSolid = patternFn(() => {
+  'kernel';
+  return 1;
+});
+```
+
+TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures (regardless of whether they are marked as *"kernel"* or not).
 
 ## What to keep in mind
 
@@ -141,5 +156,5 @@ It allows defining utils only once and using them both as a kernel and host func
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer UX.
 However, it sometimes might be better to choose WGSL for certain functions. 
 Since JavaScript doesn't support operator overloading, functions including complex matrix operations can be more readable in WGSL.
-Also writing WGSL become a necessity whenever TGSL does not support some feature or standard library function quite yet.
-Luckily, you don't have to choose on or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.
+Writing WGSL becomes a necessity whenever TGSL does not support some feature or standard library function quite yet.
+Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.

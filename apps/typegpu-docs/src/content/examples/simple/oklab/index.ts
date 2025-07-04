@@ -61,7 +61,6 @@ const layout = tgpu.bindGroupLayout({
 });
 
 const scaleView = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
-  'kernel & js';
   return d.vec2f(0.3 * pos.x, (pos.y * 1.2 + 1) * 0.5);
 });
 
