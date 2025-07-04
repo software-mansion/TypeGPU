@@ -303,6 +303,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
+  private _varyingLocations: Record<string, number> | undefined;
+
+  get varyingLocations() {
+    return this._varyingLocations;
+  }
 
   readonly [$internal] = {
     itemStateStack: this._itemStateStack,
@@ -429,6 +434,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     } finally {
       this._itemStateStack.popSlotBindings();
+    }
+  }
+
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T {
+    this._varyingLocations = locations;
+
+    try {
+      return callback();
+    } finally {
+      this._varyingLocations = undefined;
     }
   }
 
