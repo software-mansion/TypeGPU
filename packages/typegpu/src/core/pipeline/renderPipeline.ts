@@ -18,9 +18,9 @@ import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -54,6 +54,7 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
+import { PERF } from '../../shared/meta.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -673,19 +674,33 @@ class RenderPipelineCore implements SelfResolvable {
         depthStencilState,
         multisampleState,
       } = this.options;
+      const device = branch.device;
 
       // Resolving code
-      const { code, usedBindGroupLayouts, catchall } = resolve(this, {
-        names: branch.nameRegistry,
-      });
+      let resolutionResult: ResolutionResult;
+
+      let resolveMeasure: PerformanceMeasure | undefined;
+      if (PERF?.enabled) {
+        const resolveStart = performance.mark('typegpu:resolution:start');
+        resolutionResult = resolve(this, {
+          names: branch.nameRegistry,
+        });
+        resolveMeasure = performance.measure('typegpu:resolution', {
+          start: resolveStart.name,
+        });
+      } else {
+        resolutionResult = resolve(this, {
+          names: branch.nameRegistry,
+        });
+      }
+
+      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
           `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
         );
       }
-
-      const device = branch.device;
 
       const module = device.createShaderModule({
         label: `${getName(this) ?? '<unnamed>'} - Shader`,
@@ -739,6 +754,22 @@ class RenderPipelineCore implements SelfResolvable {
         usedBindGroupLayouts,
         catchall,
       };
+
+      if (PERF?.enabled) {
+        (async () => {
+          const start = performance.mark('typegpu:compile-start');
+          await device.queue.onSubmittedWorkDone();
+          const compileMeasure = performance.measure('typegpu:compiled', {
+            start: start.name,
+          });
+
+          PERF?.record('resolution', {
+            resolveDuration: resolveMeasure?.duration,
+            compileDuration: compileMeasure.duration,
+            wgslSize: code.length,
+          });
+        })();
+      }
     }
 
     return this._memo;
