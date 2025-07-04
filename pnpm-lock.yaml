@@ -481,16 +481,16 @@ importers:
         specifier: workspace:*
         version: link:../tgpu-dev-cli
       '@webgpu/types':
-        specifier: 'catalog:'
+        specifier: catalog:types
         version: 0.1.63
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: 'catalog:'
+        specifier: catalog:types
         version: 5.8.3
       unbuild:
-        specifier: 'catalog:'
+        specifier: catalog:build
         version: 3.5.0(typescript@5.8.3)
       unplugin-typegpu:
         specifier: workspace:*
