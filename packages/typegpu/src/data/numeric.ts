@@ -134,7 +134,7 @@ const f32Cast = createDualImpl(
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
-    return v;
+    return Math.fround(v);
   },
   // GPU implementation
   (v) => snip(`f32(${v?.value ?? ''})`, f32),
@@ -155,6 +155,65 @@ export const f32: F32 = Object.assign(f32Cast, {
   type: 'f32',
 }) as unknown as F32;
 
+// --- f16 helpers for CPU cast ---
+const buf32 = new ArrayBuffer(4);
+const f32arr = new Float32Array(buf32);
+const u32arr = new Uint32Array(buf32);
+
+function toHalfBits(x: number): number {
+  f32arr[0] = x;
+  const bits = u32arr[0] as number;
+
+  const sign = (bits >>> 31) & 1;
+  let exp = (bits >>> 23) & 0xff;
+  let mant = bits & 0x7fffff;
+
+  // NaN or ±∞ keep their payload/sign
+  if (exp === 0xff) return (sign << 15) | 0x7c00 | (mant ? 0x200 : 0);
+
+  exp = exp - 127 + 15;
+
+  // underflow to zero / subnormals
+  if (exp <= 0) {
+    if (exp < -10) return sign << 15;
+    mant = (mant | 0x800000) >> (1 - exp);
+    mant = (mant + 0x1000) >> 13;
+    return (sign << 15) | mant;
+  }
+
+  // overflow to ±∞
+  if (exp >= 0x1f) return (sign << 15) | 0x7c00;
+
+  // normal number –- round mantissa and pack
+  mant = mant + 0x1000;
+  if (mant & 0x800000) {
+    mant = 0;
+    ++exp;
+    if (exp >= 0x1f) return (sign << 15) | 0x7c00;
+  }
+  return (sign << 15) | (exp << 10) | (mant >> 13);
+}
+
+function fromHalfBits(h: number): number {
+  const sign = (h & 0x8000) ? -1 : 1;
+  const exp = (h >> 10) & 0x1f;
+  const mant = h & 0x3ff;
+
+  if (exp === 0) return mant ? sign * mant * 2 ** -24 : sign * 0;
+  if (exp === 0x1f) {
+    return mant
+      ? Number.NaN
+      : sign === 1
+      ? Number.POSITIVE_INFINITY
+      : Number.NEGATIVE_INFINITY;
+  }
+  return sign * (1 + mant / 1024) * 2 ** (exp - 15);
+}
+
+function roundToF16(x: number): number {
+  return fromHalfBits(toHalfBits(x));
+}
+
 const f16Cast = createDualImpl(
   // CPU implementation
   (v?: number | boolean) => {
@@ -164,7 +223,7 @@ const f16Cast = createDualImpl(
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
-    return v;
+    return roundToF16(v);
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
