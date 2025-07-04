@@ -48,12 +48,51 @@ describe('f32', () => {
 });
 
 describe('f16', () => {
-  it('casts a number to f16', () => {
+  it('casts typical finite numbers', () => {
     expect(f16(10)).toBe(10);
     expect(f16(10.5)).toBe(10.5);
     expect(f16(-10)).toBe(-10);
     expect(f16(-10.5)).toBe(-10.5);
+  });
+
+  it('handles the finite extrema and overflow', () => {
+    // Largest finite magnitude representable is ±65504
     expect(f16(65504)).toBe(65504);
+    expect(f16(-65504)).toBe(-65504);
+
+    expect(f16(65536)).toBe(Number.POSITIVE_INFINITY);
+    expect(f16(65535)).toBe(Number.POSITIVE_INFINITY);
+    expect(f16(-65536)).toBe(Number.NEGATIVE_INFINITY);
+
+    // Values just above the max finite round down to the max finite (ties‑to‑even).
+    expect(f16(65505)).toBe(65504);
+    expect(f16(-65505)).toBe(-65504);
+  });
+
+  it('preserves special values and signed zeros', () => {
+    expect(f16(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+    expect(f16(Number.NEGATIVE_INFINITY)).toBe(Number.NEGATIVE_INFINITY);
+    expect(Number.isNaN(f16(Number.NaN))).toBe(true);
+
+    expect(Object.is(f16(0), 0)).toBe(true);
+    expect(Object.is(f16(-0), -0)).toBe(true);
+  });
+
+  it('handles sub‑normals and underflow', () => {
+    // Smallest positive normal is 2^-14 ≈ 6.10352e‑5
+    expect(f16(6.10352e-5)).toBeCloseTo(6.10352e-5, 10);
+
+    // Smallest positive sub‑normal is 2^-24 ≈ 5.960464e‑8
+    const smallestSub = 2 ** -24;
+    expect(f16(smallestSub)).toBe(smallestSub);
+
+    // Anything smaller underflows to +0.
+    expect(f16(1e-8)).toBe(0);
+  });
+
+  it('rounds arbitrary fractions correctly', () => {
+    // 1/3 cannot be represented exactly; half precision rounds it to ≈ 0.333251953125.
+    expect(f16(1 / 3)).toBeCloseTo(0.333251953125, 12);
   });
 
   it('casts a boolean to f16', () => {
