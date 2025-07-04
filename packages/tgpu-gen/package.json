@@ -20,7 +20,7 @@
   "peerDependencies": {
     "typegpu": "workspace:^0.5.9"
   },
-  "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
+  "files": ["README.md", "LICENSE", "package.json", "**/*.mjs"],
   "devDependencies": {
     "vitest": "catalog:test"
   },
