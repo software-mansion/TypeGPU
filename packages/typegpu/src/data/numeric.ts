@@ -160,55 +160,84 @@ const buf32 = new ArrayBuffer(4);
 const f32arr = new Float32Array(buf32);
 const u32arr = new Uint32Array(buf32);
 
-function toHalfBits(x: number): number {
-  f32arr[0] = x;
-  const bits = u32arr[0] as number;
+/**
+ * Convert a JavaScript number (treated as float32) to **binary16** bit pattern.
+ * @param x 32-bit floating-point value
+ * @returns 16-bit half-precision encoding (stored in a JS number)
+ */
+export function toHalfBits(x: number): number {
+  f32arr[0] = x; // Write value; shared buffer now contains raw bits.
+  const bits = u32arr[0] as number; // Read those bits as unsigned int.
 
-  const sign = (bits >>> 31) & 1;
-  let exp = (bits >>> 23) & 0xff;
-  let mant = bits & 0x7fffff;
+  // 1. Extract sign, exponent, and mantissa from the 32‑bit layout.
+  const sign = (bits >>> 31) & 0x1; // Bit 31 is the sign.
+  let exp = (bits >>> 23) & 0xff; // Bits 30‑23 form the biased exponent.
+  let mant = bits & 0x7fffff; // Bits 22‑0 are the significand.
 
-  // NaN or ±∞ keep their payload/sign
+  // 2. Handle special values (NaN, ±∞) before re‑biasing.
   if (exp === 0xff) {
-    return (sign << 15) | 0x7c00 | (mant ? 0x200 : 0);
+    // Preserve the quiet‑NaN bit if mant≠0; otherwise this is ±∞.
+    return (sign << 15) | 0x7c00 | (mant ? 0x0200 : 0);
   }
 
+  // 3. Re‑bias the exponent from 127 → 15 (binary32 → binary16).
   exp = exp - 127 + 15;
 
-  // underflow to zero / subnormals
+  // 4. Underflow: exponent ≤ 0 yields sub‑normals or signed zero.
   if (exp <= 0) {
-    if (exp < -10) return sign << 15;
+    // If we need to shift more than 10 places, the value rounds to ±0.
+    if (exp < -10) {
+      return sign << 15;
+    }
+
+    // Produce a sub‑normal: prepend the hidden 1, right‑shift, then round.
     mant = (mant | 0x800000) >> (1 - exp);
-    mant = (mant + 0x1000) >> 13;
+    mant = (mant + 0x1000) >> 13; // Round‑to‑nearest‑even at bit 10.
     return (sign << 15) | mant;
   }
 
-  // overflow to ±∞
-  if (exp >= 0x1f) return (sign << 15) | 0x7c00;
-
-  // normal number - round mantissa and pack
-  mant = mant + 0x1000;
-  if (mant & 0x800000) {
-    mant = 0;
-    ++exp;
-    if (exp >= 0x1f) return (sign << 15) | 0x7c00;
+  // 5. Overflow: if the biased exponent is 31 (0x1f) or higher, the number
+  //    cannot be represented in half precision, so we return ±∞.
+  if (exp >= 0x1f) {
+    return (sign << 15) | 0x7c00; // ±∞
   }
+
+  // 6. Normalised number: round mantissa and pack sign|exp|mant.
+  mant = mant + 0x1000; // Add rounding bias at bit 12.
+  if (mant & 0x800000) { // The carry propagated out of the top bit; mantissa overflowed.
+    mant = 0; // Rounded up to 1.0 × 2^(exp+1).
+    ++exp; // Increment exponent (may overflow to ±∞).
+    if (exp >= 0x1f) {
+      return (sign << 15) | 0x7c00;
+    }
+  }
+
   return (sign << 15) | (exp << 10) | (mant >> 13);
 }
 
-function fromHalfBits(h: number): number {
-  const sign = (h & 0x8000) ? -1 : 1;
-  const exp = (h >> 10) & 0x1f;
-  const mant = h & 0x3ff;
+/**
+ * Convert a **binary16** encoded bit pattern back to JavaScript number.
+ * @param h 16-bit half-precision bits
+ * @returns JavaScript number (64-bit float) with same numerical value
+ */
+export function fromHalfBits(h: number): number {
+  const sign = (h & 0x8000) ? -1 : 1; // Sign multiplier (preserves −0).
+  const exp = (h >> 10) & 0x1f; // 5‑bit exponent.
+  const mant = h & 0x03ff; // 10‑bit significand.
 
-  if (exp === 0) return mant ? sign * mant * 2 ** -24 : sign * 0;
+  // 1. Zero and sub‑normals.
+  if (exp === 0) {
+    return mant ? sign * mant * 2 ** -24 : sign * 0;
+  }
+
+  // 2. Special cases (exp == 31).
   if (exp === 0x1f) {
     return mant
       ? Number.NaN
-      : sign === 1
-      ? Number.POSITIVE_INFINITY
-      : Number.NEGATIVE_INFINITY;
+      : (sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
   }
+
+  // 3. Normalised numbers.
   return sign * (1 + mant / 1024) * 2 ** (exp - 15);
 }
 
