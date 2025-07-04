@@ -382,7 +382,7 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   e0: S;
   e1: S;
 
-  constructor(x?: S, y?: S, z?: S) {
+  constructor(x?: S, y?: S) {
     super(2);
     this.e0 = this.getElementSchema()(x);
     this.e1 = this.getElementSchema()(y ?? x);
