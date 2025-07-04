@@ -13,6 +13,7 @@ catalogs:
   types:
     typescript: ^5.8.2
     '@webgpu/types': ^0.1.63
+    '@types/three': '>0.126.0'
   test:
     vitest: ^3.2.4
   frontend:
