@@ -155,7 +155,7 @@ export const f32: F32 = Object.assign(f32Cast, {
   type: 'f32',
 }) as unknown as F32;
 
-// --- f16 helpers for CPU cast ---
+// helpers for floating point conversion
 const buf32 = new ArrayBuffer(4);
 const f32arr = new Float32Array(buf32);
 const u32arr = new Uint32Array(buf32);
@@ -169,7 +169,9 @@ function toHalfBits(x: number): number {
   let mant = bits & 0x7fffff;
 
   // NaN or ±∞ keep their payload/sign
-  if (exp === 0xff) return (sign << 15) | 0x7c00 | (mant ? 0x200 : 0);
+  if (exp === 0xff) {
+    return (sign << 15) | 0x7c00 | (mant ? 0x200 : 0);
+  }
 
   exp = exp - 127 + 15;
 
@@ -184,7 +186,7 @@ function toHalfBits(x: number): number {
   // overflow to ±∞
   if (exp >= 0x1f) return (sign << 15) | 0x7c00;
 
-  // normal number –- round mantissa and pack
+  // normal number - round mantissa and pack
   mant = mant + 0x1000;
   if (mant & 0x800000) {
     mant = 0;
