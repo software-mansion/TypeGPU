@@ -69,8 +69,8 @@ test('executes examples', async () => {
     marks: [
       Plot.frame(),
       Plot.dot(resolutionMetrics, {
-        x: 'wgslSize',
-        y: 'resolveDuration',
+        x: { value: 'wgslSize', label: 'Resolved WGSL size (no. chars)' },
+        y: { value: 'resolveDuration', label: 'Resolve duration (ms)' },
       }),
     ],
   }).outerHTML;
@@ -80,8 +80,8 @@ test('executes examples', async () => {
     marks: [
       Plot.frame(),
       Plot.dot(resolutionMetrics, {
-        x: 'wgslSize',
-        y: 'compileDuration',
+        x: { value: 'wgslSize', label: 'Resolved WGSL size (no. chars)' },
+        y: { value: 'compileDuration', label: 'Compile duration (ms)' },
       }),
     ],
   }).outerHTML;
