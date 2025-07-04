@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, floor, mix, mul, sub } from 'typegpu/std';
 import { randOnUnitCircle, randSeed2 } from './random.ts';
-import { smootherStep } from './utils.ts';
+import { quinticInterpolation2 } from './utils.ts';
 
 export const computeJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
   randSeed2(mul(0.001, d.vec2f(pos)));
@@ -28,7 +28,8 @@ export const sample = tgpu.fn([d.vec2f], d.f32)((pos) => {
   const bottomRight = dotProdGrid(pos, add(topLeftJunction, d.vec2i(1, 1)));
 
   const partial = sub(pos, floor(pos));
-  const top = mix(topLeft, topRight, smootherStep(partial.x));
-  const bottom = mix(bottomLeft, bottomRight, smootherStep(partial.x));
-  return mix(top, bottom, smootherStep(partial.y));
+  const smoothPartial = quinticInterpolation2(partial);
+  const top = mix(topLeft, topRight, smoothPartial.x);
+  const bottom = mix(bottomLeft, bottomRight, smoothPartial.x);
+  return mix(top, bottom, smoothPartial.y);
 });
