@@ -29,15 +29,15 @@ resource management in a type-safe, declarative way.
 
 **Table of contents:**
 
-- [⚙️ TypeGPU as a foundation](#⚙️-typegpu-as-a-foundation)
-- [🧩 TypeGPU as a piece of the puzzle](#🧩-typegpu-as-a-piece-of-the-puzzle)
-- [📚 TypeGPU for libraries](#📚-typegpu-for-libraries)
+- [:gear: TypeGPU as a foundation](#gear-typegpu-as-a-foundation)
+- [:jigsaw: TypeGPU as a piece of the puzzle](#jigsaw-typegpu-as-a-piece-of-the-puzzle)
+- [:book: TypeGPU for libraries](#book-typegpu-for-libraries)
 - [Documentation](#documentation)
 - [What's next?](#whats-next)
 - [Projects using TypeGPU](#projects-using-typegpu)
 - [Repository structure](#repository-structure)
 
-## ⚙️ TypeGPU as a foundation
+## :gear: TypeGPU as a foundation
 
 We provide an abstraction that solves the most common WebGPU hurdles, yet does
 not restrict you in capability. You can granularly eject into vanilla WebGPU at
@@ -50,7 +50,7 @@ itself, with fewer frustrations.
 
 [The Getting Started and Fundamentals guides are a great starting point for new projects!](https://docs.swmansion.com/TypeGPU/getting-started/)
 
-## 🧩 TypeGPU as a piece of the puzzle
+## :jigsaw: TypeGPU as a piece of the puzzle
 
 Our type-safe APIs can be used together, or in isolation. This makes partial
 application into existing apps just a few lines of code away, no matter the
@@ -61,7 +61,7 @@ complexity of your app!
 Pick and choose which parts of TypeGPU you'd like to incorporate into your
 existing app!
 
-## 📚 TypeGPU for libraries
+## :book: TypeGPU for libraries
 
 When creating a type-safe WebGPU library, one can expect to encounter at least
 one of the following problems:
