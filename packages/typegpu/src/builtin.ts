@@ -1,11 +1,12 @@
 import { arrayOf } from './data/array.ts';
 import { attribute } from './data/attributes.ts';
 import type { LooseDecorated } from './data/dataTypes.ts';
-import { f32, u32 } from './data/numeric.ts';
+import { bool, f32, u32 } from './data/numeric.ts';
 import { vec3u, vec4f } from './data/vector.ts';
 import type {
   AnyWgslData,
   BaseData,
+  Bool,
   Builtin,
   Decorated,
   F32,
@@ -27,7 +28,7 @@ export type BuiltinClipDistances = Decorated<
   WgslArray<U32>,
   [Builtin<'clip_distances'>]
 >;
-export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
+export type BuiltinFrontFacing = Decorated<Bool, [Builtin<'front_facing'>]>;
 export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
 export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]>;
 export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
@@ -74,7 +75,7 @@ export const builtin = {
     arrayOf(u32, 8),
     'clip_distances',
   ),
-  frontFacing: defineBuiltin<BuiltinFrontFacing>(f32, 'front_facing'),
+  frontFacing: defineBuiltin<BuiltinFrontFacing>(bool, 'front_facing'),
   fragDepth: defineBuiltin<BuiltinFragDepth>(f32, 'frag_depth'),
   sampleIndex: defineBuiltin<BuiltinSampleIndex>(u32, 'sample_index'),
   sampleMask: defineBuiltin<BuiltinSampleMask>(u32, 'sample_mask'),
