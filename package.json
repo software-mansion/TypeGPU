@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
     "fix": "biome lint --write . && deno fmt",
-    "test": "pnpm run test:circular-deps && pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest",
+    "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
     "test:types": "pnpm run -r --parallel test:types",
     "test:style": "biome lint . && deno fmt --check",
