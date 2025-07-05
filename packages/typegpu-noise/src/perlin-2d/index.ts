@@ -2,6 +2,7 @@ export {
   computeJunctionGradient,
   getJunctionGradientSlot,
   sample,
+  sampleWithGradient,
 } from './algorithm.ts';
 export {
   dynamicCacheConfig,
