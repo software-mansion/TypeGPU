@@ -139,9 +139,12 @@ async function main() {
   consola.start('Preparing the package for publishing');
   console.log('');
 
-  const args = arg({ '--skip-publish-tag-check': Boolean });
+  const args = arg({
+    '--skip-publish-tag-check': Boolean,
+    '--skip-all-checks': Boolean,
+  });
 
-  if (!args['--skip-publish-tag-check']) {
+  if (!args['--skip-publish-tag-check'] && !args['--skip-all-checks']) {
     verifyPublishTag();
   }
 
@@ -205,12 +208,12 @@ async function main() {
         withStatusUpdate('build', $`pnpm build`),
       ]),
       // Then the rest
-      ...await Promise.allSettled([
+      ...(args['--skip-all-checks'] ? [] : await Promise.allSettled([
         withStatusUpdate('style', $`pnpm -w test:style`),
         withStatusUpdate('unit', $`pnpm -w test:unit`),
         withStatusUpdate('types', $`pnpm -w test:types`),
         withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`),
-      ]),
+      ])),
     ];
 
     update(

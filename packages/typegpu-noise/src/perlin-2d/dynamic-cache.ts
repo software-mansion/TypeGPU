@@ -15,11 +15,11 @@ import {
   getJunctionGradientSlot,
 } from './algorithm.ts';
 
-const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
+const MemorySchema = (n: number) => d.arrayOf(d.vec2f, n);
 
 type Layout<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    readonly size: { uniform: d.Vec4u };
+    readonly size: { uniform: d.Vec2u };
     readonly memory: {
       storage: typeof MemorySchema;
       access: 'readonly';
@@ -29,53 +29,53 @@ type Layout<Prefix extends string> = Prettify<
 
 type LayoutValue<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    readonly size: d.v4u;
-    readonly memory: d.v3f[];
+    readonly size: d.v2u;
+    readonly memory: d.v2f[];
   }>
 >;
 
 type Bindings<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    size: TgpuBuffer<d.Vec4u> & UniformFlag;
-    memory: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
+    size: TgpuBuffer<d.Vec2u> & UniformFlag;
+    memory: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   }>
 >;
 
-export interface DynamicPerlin3DCacheConfig<Prefix extends string> {
+export interface DynamicPerlin2DCacheConfig<Prefix extends string> {
   readonly layout: Layout<Prefix>;
   readonly valuesSlot: TgpuSlot<LayoutValue<Prefix>>;
-  readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
+  readonly getJunctionGradient: TgpuFn<(pos: d.Vec2i) => d.Vec2f>;
 
   instance(
     root: TgpuRoot,
-    initialSize: d.v3u,
-  ): DynamicPerlin3DCache<Prefix>;
+    initialSize: d.v2u,
+  ): DynamicPerlin2DCache<Prefix>;
 
   inject(
     layoutValue: LayoutValue<Prefix>,
   ): (cfg: Configurable) => Configurable;
 }
 
-export interface DynamicPerlin3DCache<Prefix extends string> {
-  size: d.v3u;
+export interface DynamicPerlin2DCache<Prefix extends string> {
+  size: d.v2u;
   readonly bindings: Bindings<Prefix>;
 
   destroy(): void;
 }
 
-const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
+const DefaultPerlin2DLayoutPrefix = 'perlin2dCache__' as const;
 
 /**
  * Used to instantiate caches for perlin noise generation, which reduce the amount of redundant calculations
  * if sampling is done more than once. Their domain can be changed at runtime, which makes this cache
- * *dynamic* (as opposed to `perlin3d.staticCache`, which is simpler at the cost of rigidity).
+ * *dynamic* (as opposed to `perlin2d.staticCache`, which is simpler at the cost of rigidity).
  *
  * @param options A set of general options for instances of this cache configuration.
  *
  * ### Basic usage
  * @example
  * ```ts
- * const perlinCacheConfig = perlin3d.dynamicCacheConfig();
+ * const perlinCacheConfig = perlin2d.dynamicCacheConfig();
  * // Contains all resources that the perlin cache needs access to
  * const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
  *
@@ -83,11 +83,11 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *
  * const root = await tgpu.init();
  * // Instantiating the cache with an initial size.
- * const perlinCache = perlinCacheConfig.instance(root, d.vec3u(10, 10, 1));
+ * const perlinCache = perlinCacheConfig.instance(root, d.vec2u(10, 10));
  *
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin3d.getJunctionGradientSlot, perlinCacheConfig.getJunctionGradient)
+ *   .with(perlin2d.getJunctionGradientSlot, perlinCacheConfig.getJunctionGradient)
  *   .with(perlinCacheConfig.valuesSlot, dynamicLayout.value)
  *   // ...
  *   .withFragment(mainFragment)
@@ -109,27 +109,27 @@ export function dynamicCacheConfig(
     /**
      * A string of characters that gets prepended to every
      * resource this cache operates on
-     * @default 'perlin3dCache__'
+     * @default 'perlin2dCache__'
      */
     prefix?: undefined;
   },
-): DynamicPerlin3DCacheConfig<typeof DefaultPerlin3DLayoutPrefix>;
+): DynamicPerlin2DCacheConfig<typeof DefaultPerlin2DLayoutPrefix>;
 
 export function dynamicCacheConfig<Prefix extends string>(
   options?: {
     /**
      * A string of characters that gets prepended to every
      * resource this cache operates on
-     * @default 'perlin3dCache__'
+     * @default 'perlin2dCache__'
      */
     prefix: Prefix;
   },
-): DynamicPerlin3DCacheConfig<Prefix>;
+): DynamicPerlin2DCacheConfig<Prefix>;
 
 export function dynamicCacheConfig<Prefix extends string>(
   options?: { prefix?: Prefix | undefined },
-): DynamicPerlin3DCacheConfig<Prefix> {
-  const { prefix = DefaultPerlin3DLayoutPrefix as Prefix } = options ?? {};
+): DynamicPerlin2DCacheConfig<Prefix> {
+  const { prefix = DefaultPerlin2DLayoutPrefix as Prefix } = options ?? {};
 
   const valuesSlot = tgpu.slot<LayoutValue<Prefix>>();
 
@@ -137,27 +137,25 @@ export function dynamicCacheConfig<Prefix extends string>(
     return {
       get size() {
         // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}size`] as d.v4u;
+        return (valuesSlot.value as any)[`${prefix}size`] as d.v2u;
       },
       get memory() {
         // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}memory`] as d.v3f[];
+        return (valuesSlot.value as any)[`${prefix}memory`] as d.v2f[];
       },
     };
   });
 
-  const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
-    const size = d.vec3i(cleanValuesSlot.value.size.xyz);
+  const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
+    const size = d.vec2i(cleanValuesSlot.value.size);
     const x = (pos.x % size.x + size.x) % size.x;
     const y = (pos.y % size.y + size.y) % size.y;
-    const z = (pos.z % size.z + size.z) % size.z;
 
-    return cleanValuesSlot.value
-      .memory[x + y * size.x + z * size.x * size.y] as d.v3f;
+    return cleanValuesSlot.value.memory[x + y * size.x] as d.v2f;
   });
 
   const computeLayout = tgpu.bindGroupLayout({
-    size: { uniform: d.vec4u },
+    size: { uniform: d.vec2u },
     memory: { storage: MemorySchema, access: 'mutable' },
   });
 
@@ -166,24 +164,22 @@ export function dynamicCacheConfig<Prefix extends string>(
     in: { gid: d.builtin.globalInvocationId },
   })((input) => {
     const size = computeLayout.$.size;
-    const idx = input.gid.x +
-      input.gid.y * size.x +
-      input.gid.z * size.x * size.y;
+    const idx = input.gid.x + input.gid.y * size.x;
 
     computeLayout.$.memory[idx] = computeJunctionGradient(
-      d.vec3i(input.gid.xyz),
+      d.vec2i(input.gid.xy),
     );
   });
 
   const instance = (
     root: TgpuRoot,
-    initialSize: d.v3u,
-  ): DynamicPerlin3DCache<Prefix> => {
+    initialSize: d.v2u,
+  ): DynamicPerlin2DCache<Prefix> => {
     let dirty = false;
-    let size = d.vec4u(initialSize, 0);
+    let size = initialSize;
 
     const sizeBuffer = root
-      .createBuffer(d.vec4u, size)
+      .createBuffer(d.vec2u, size)
       .$usage('uniform');
 
     const computePipeline = root['~unstable']
@@ -192,7 +188,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
     const createMemory = () => {
       const memory = root
-        .createBuffer(d.arrayOf(d.vec3f, size.x * size.y * size.z))
+        .createBuffer(d.arrayOf(d.vec2f, size.x * size.y))
         .$usage('storage');
 
       const computeBindGroup = root.createBindGroup(computeLayout, {
@@ -202,7 +198,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
       computePipeline
         .with(computeLayout, computeBindGroup)
-        .dispatchWorkgroups(size.x, size.y, size.z);
+        .dispatchWorkgroups(size.x, size.y);
 
       return memory;
     };
@@ -211,7 +207,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
     return {
       get size() {
-        return size.xyz;
+        return size;
       },
       get bindings() {
         if (dirty) {
@@ -224,8 +220,7 @@ export function dynamicCacheConfig<Prefix extends string>(
           [`${prefix}memory` as const]: memoryBuffer,
         } as Bindings<Prefix>;
       },
-      set size(_value: d.v3u) {
-        const value = d.vec4u(_value, 0); // temporary workaround because of vec3u uniform breaking on Safari
+      set size(value: d.v2u) {
         if (allEq(size, value)) {
           // Nothing to update
           return;
@@ -243,7 +238,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
   return {
     layout: {
-      [`${prefix}size`]: { uniform: d.vec4u },
+      [`${prefix}size`]: { uniform: d.vec2u },
       [`${prefix}memory`]: { storage: MemorySchema, access: 'readonly' },
     } as Layout<Prefix>,
     valuesSlot,
