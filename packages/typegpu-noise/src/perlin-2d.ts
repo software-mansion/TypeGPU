@@ -67,11 +67,14 @@ export const sampleWithGradient = tgpu.fn([d.vec2f], d.vec3f)((pos) => {
     u.x * u.y * (va - vb - vc + vd);
 
   const grad = add(
+    ga,
     add(
-      mul(add(add(ga, mul(u.x, sub(gb, ga))), u.y), sub(gc, ga)),
-      mul(u.x, mul(u.y, add(sub(sub(ga, gb), gc), gd))),
+      add(
+        add(mul(u.x, sub(gb, ga)), mul(u.y, sub(gc, ga))),
+        mul(u.x, mul(u.y, add(sub(sub(ga, gb), gc), gd))),
+      ),
+      mul(du, sub(add(mul(u.yx, va - vb - vc + vd), d.vec2f(vb, vc)), va)),
     ),
-    mul(du, sub(add(mul(u.yx, va - vb - vc + vd), d.vec2f(vb, vc)), va)),
   );
 
   return d.vec3f(noise, grad);
