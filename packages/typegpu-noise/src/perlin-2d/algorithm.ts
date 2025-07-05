@@ -1,17 +1,15 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, floor, fract, mul, sub } from 'typegpu/std';
-import { randOnUnitCircle, randSeed2 } from './random.ts';
-import { quinticDerivative2, quinticInterpolation2 } from './utils.ts';
+import { randOnUnitCircle, randSeed2 } from '../random.ts';
+import { quinticDerivative2, quinticInterpolation2 } from '../utils.ts';
 
 export const computeJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
   randSeed2(mul(0.001, d.vec2f(pos)));
   return randOnUnitCircle();
 });
 
-export const getJunctionGradientSlot = tgpu.slot(
-  computeJunctionGradient,
-);
+export const getJunctionGradientSlot = tgpu.slot(computeJunctionGradient);
 
 /**
  * Returns value of Perlin Noise at point `pos`
