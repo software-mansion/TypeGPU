@@ -34,9 +34,10 @@ export const quinticInterpolation2 = tgpu
 export const quinticInterpolation3 = tgpu
   .fn([d.vec3f], d.vec3f)(quinticInterpolationImpl);
 
+// 30 * t * t * (t * (t - (2, 2)) + (1, 1))
 const quinticDerivativeImpl = <T extends d.v2f | d.v3f>(t: T): T => {
   'kernel';
-  return mul(mul(30, mul(t, t)), mul(t, add(sub(t, 2), 1)));
+  return mul(mul(mul(30, t), t), add(mul(t, sub(t, 2)), 1));
 };
 
 /**
