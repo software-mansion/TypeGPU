@@ -75,27 +75,26 @@ const DefaultPerlin2DLayoutPrefix = 'perlin2dCache__' as const;
  * ### Basic usage
  * @example
  * ```ts
- * const perlinCacheConfig = perlin2d.dynamicCacheConfig();
+ * const cacheConfig = perlin2d.dynamicCacheConfig();
  * // Contains all resources that the perlin cache needs access to
- * const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
+ * const dynamicLayout = tgpu.bindGroupLayout({ ...cacheConfig.layout });
  *
  * // ...
  *
  * const root = await tgpu.init();
  * // Instantiating the cache with an initial size.
- * const perlinCache = perlinCacheConfig.instance(root, d.vec2u(10, 10));
+ * const cache = cacheConfig.instance(root, d.vec2u(10, 10));
  *
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin2d.getJunctionGradientSlot, perlinCacheConfig.getJunctionGradient)
- *   .with(perlinCacheConfig.valuesSlot, dynamicLayout.value)
+ *   .pipe(cacheConfig.inject(dynamicLayout.$))
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
- *   const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
+ *   const group = root.createBindGroup(dynamicLayout, { ...cache.bindings });
  *
  *   pipeline
  *     .with(dynamicLayout, group)

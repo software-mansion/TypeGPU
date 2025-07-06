@@ -29,7 +29,7 @@ export interface StaticPerlin3DCache {
  * const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin3d.getJunctionGradientSlot, cache.getJunctionGradient)
+ *   .pipe(cache.inject())
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();

@@ -29,7 +29,7 @@ export interface StaticPerlin2DCache {
  * const cache = perlin2d.staticCache({ root, size: d.vec2u(10, 10) });
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin2d.getJunctionGradientSlot, cache.getJunctionGradient)
+ *   .pipe(cache.inject())
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();

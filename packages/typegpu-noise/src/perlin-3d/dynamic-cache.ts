@@ -87,15 +87,14 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin3d.getJunctionGradientSlot, perlinCacheConfig.getJunctionGradient)
- *   .with(perlinCacheConfig.valuesSlot, dynamicLayout.value)
+ *   .pipe(perlinCacheConfig.inject(dynamicLayout.$))
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
- *   const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
+ *   const group = root.createBindGroup(dynamicLayout, { ...perlinCache.bindings });
  *
  *   pipeline
  *     .with(dynamicLayout, group)
