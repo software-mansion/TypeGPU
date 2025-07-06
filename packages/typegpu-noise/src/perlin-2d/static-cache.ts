@@ -1,6 +1,9 @@
-import tgpu, { type TgpuFn, type TgpuRoot } from 'typegpu';
+import tgpu, { type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { computeJunctionGradient } from './algorithm.ts';
+import {
+  computeJunctionGradient,
+  getJunctionGradientSlot,
+} from './algorithm.ts';
 
 const MemorySchema = (n: number) => d.arrayOf(d.vec2f, n);
 
@@ -8,6 +11,7 @@ export interface StaticPerlin2DCache {
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec2i) => d.Vec2f>;
   readonly size: d.v2u;
   destroy(): void;
+  inject(): (cfg: Configurable) => Configurable;
 }
 
 /**
@@ -88,8 +92,12 @@ export function staticCache(options: {
     get size() {
       return size;
     },
+
     destroy() {
       memoryBuffer.destroy();
     },
+
+    inject: () => (cfg) =>
+      cfg.with(getJunctionGradientSlot, getJunctionGradient),
   };
 }
