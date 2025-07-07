@@ -2,7 +2,6 @@
 title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
-// AAA linki do innych dokumentacji
 
 :::note[Recommended reading]
 We assume that you are familiar with the following concepts:
@@ -20,7 +19,7 @@ different files, or to import a shader utility function from a library. TypeGPU 
 ## Defining a function
 
 In order to construct a tgpu function, you need to start with defining its shell -- an object holding only the input and output types of a tgpu function.
-The shell constructor `tgpu.fn` makes use of TypeGPU schemas -- objects representing different WGSL data types, that help us with generating WGSL at runtime.
+The shell constructor `tgpu.fn` makes use of [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas) -- objects representing different WGSL data types, that help us with generating WGSL at runtime.
 It accepts two arguments:
 
 - An array of schemas representing argument types,
@@ -64,7 +63,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
 
 ## External resources
 
-Functions can use external resources passed via the `$uses` method during the function creation process. 
+Functions can use external resources passed via the `$uses` method during the function creation process.
 Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, functions, buffer usages, textures, samplers, slots, accessors etc.).
 
 ```ts twoslash
@@ -85,7 +84,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
 `.$uses({ purple, getBlue: getBlueFunction });
 ```
 
-You can check yourself what `getGradientColor` resolves to by calling `tgpu.resolve`, all relevant definitions will be automatically included:
+You can check yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
 // AAA update
