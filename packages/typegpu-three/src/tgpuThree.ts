@@ -96,7 +96,10 @@ class FragmentNode extends THREE.CodeNode {
 export class TypeGPUMaterial extends THREE.NodeMaterial {
   constructor(
     fragmentFn: TgpuFn,
-    threeRequirements?: THREE.TSL.ShaderNodeObject<THREE.Node>[] | undefined,
+    threeRequirements?: THREE.TSL.ShaderNodeObject<
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      THREE.Node | THREE.UniformNode<any>
+    >[] | undefined,
   ) {
     super();
 
