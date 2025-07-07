@@ -39,10 +39,33 @@ import { Code } from '@astrojs/starlight/components';
 
 Apart from the listed constructors, all vectors can be created from any mix of other vectors and numbers, like this:
 
-<Code code="
+```ts
 import { vec2f, vec3f, vec4f } from 'typegpu/data';
 
 const a = vec2f(1, 2);  // 1, 2
 const b = vec3f(0, a);  // 0, 1, 2
 const c = vec4f(b.xz, a.xx);  // 0, 2, 1, 1 
-" lang="js" />
+```
+
+## Constructor conventions
+
+Scalar, vector and matrix schemas can be called with no arguments to get a default value of the type represented by the schema.
+
+```ts
+import { f32, bool, vec3f } from 'typegpu/data';
+
+const f32Default = f32(); // 0.0
+const boolDefault = bool(); // false
+const vecDefault = vec3f(); // vec3f(0.0, 0.0, 0,0)
+```
+
+Scalar, vector, matrix and struct schemas can be called with an instance of the type represented by the schema to create a deep copy of the argument.
+
+```ts
+import { vec2f, struct } from 'typegpu/data';
+
+const StructSchema = struct({ prop: vec2f });
+const myStruct = StructSchema({ prop: vec2f(1, 2) });
+const myClone = StructSchema(myStruct); // a deep copy of myStruct
+```
+

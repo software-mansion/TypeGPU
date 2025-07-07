@@ -145,7 +145,7 @@ describe('autonaming', () => {
   // TODO: make it work
   // it('names arrow functions', () => {
   //   const myFun = () => {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   };
 
@@ -158,7 +158,7 @@ describe('autonaming', () => {
   // TODO: make it work
   // it('names function expression', () => {
   //   const myFun = function () {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   };
 
@@ -171,7 +171,7 @@ describe('autonaming', () => {
   // TODO: make it work
   // it('names function definition', () => {
   //   function myFun() {
-  //     'kernel & js';
+  //     'kernel';
   //     return 0;
   //   }
 

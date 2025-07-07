@@ -11,7 +11,7 @@ The package includes the following functionalities:
 
   TypeGPU allows running a subset of JavaScript (which we call TGSL) on the GPU. It is achieved by transpiling JS functions into WGSL.
   This can be done via a Just-In-Time compiler or at build time, using the plugin.
-  Transpiling at build time reduces the performance overhead at runtime
+  Transpiling at build time reduces the performance overhead at runtime,
   and it is also the only possible approach on React Native, as the function code string is not available during runtime there.
 
   _unplugin-typegpu_ scans the project files looking for the tgpu function shell implementations.
@@ -47,23 +47,11 @@ The package includes the following functionalities:
   const add = tgpu.fn([d.u32, d.u32], d.u32)(addImpl);
   ```
 
-  After transpiling the function, the JS implementation is removed from the bundle in order to save space.
-  To be able to invoke the function both on GPU and CPU, it needs to be marked with `"kernel & js"` directive;
-
-  ```ts
-  const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => {
-    'kernel & js';
-    return a + b;
-  });
-
-  add(2, 2);
-  ```
-
   Besides transpiling JS into AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method anymore.
 
 - **Automatic naming of tgpu objects**
 
-  Naming TypeGPU resources via the `$name` method is very helpful for debugging, but it's can get very repetitive.
+  Naming TypeGPU resources via the `$name` method is very helpful for debugging, but it can get very repetitive.
   Instead, the plugin is able to automatically name each resource based on the variable names that they are assigned to.
 
 ## Installation
@@ -93,7 +81,7 @@ After installing the package, the exported plugin needs to be included in the li
 ## Supported bundlers
 
 The plugin was built using [unplugin](https://unplugin.unjs.io/), which allows it to be used with a variety of bundlers.
-Currently the package exports plugins for the following ones: _esbuild_, _farm_, _rolldown_, _rollup_, _rspack_, _vite_, _webpack_.
+Currently, the package exports plugins for the following ones: _esbuild_, _farm_, _rolldown_, _rollup_, _rspack_, _vite_, _webpack_.
 Apart from the tools supported by _unplugin_, a _babel_ plugin was also created.
 
 :::caution

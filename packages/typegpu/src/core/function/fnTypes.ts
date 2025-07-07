@@ -2,6 +2,7 @@ import type * as tinyest from 'tinyest';
 import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
+  Bool,
   Decorated,
   F16,
   F32,
@@ -73,6 +74,7 @@ export type Implementation<ImplSchema extends AnyFn = AnyFn> =
   | InferImplSchema<ImplSchema>;
 
 export type BaseIOData =
+  | Bool
   | F32
   | F16
   | I32

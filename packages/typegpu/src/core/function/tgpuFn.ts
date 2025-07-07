@@ -1,14 +1,16 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
+import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
   $providing,
 } from '../../shared/symbols.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
@@ -17,6 +19,10 @@ import type {
   Wgsl,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
+import {
+  addArgTypesToExternals,
+  addReturnTypeToExternals,
+} from '../resolve/externals.ts';
 import {
   type Eventual,
   isAccessor,
@@ -34,7 +40,6 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
-import type { Prettify } from '../../shared/utilityTypes.ts';
 
 // ----------
 // Public API
@@ -157,7 +162,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation as Implementation);
+  const core = createFnCore(implementation as Implementation, '');
 
   const fnBase: This = {
     [$internal]: {
@@ -189,7 +194,18 @@ function createFn<ImplSchema extends AnyFn>(
 
     '~resolve'(ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
-        return core.resolve(ctx);
+        addArgTypesToExternals(
+          implementation,
+          shell.argTypes,
+          core.applyExternals,
+        );
+        addReturnTypeToExternals(
+          implementation,
+          shell.returnType,
+          core.applyExternals,
+        );
+
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -201,7 +217,7 @@ function createFn<ImplSchema extends AnyFn>(
 
       try {
         generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx);
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
         generationCtx.callStack.pop();
       }
@@ -216,7 +232,11 @@ function createFn<ImplSchema extends AnyFn>(
         );
       }
 
-      return implementation(...args);
+      const castAndCopiedArgs = args.map((arg, index) =>
+        schemaCallWrapper(shell.argTypes[index], arg)
+      ) as InferArgs<Parameters<ImplSchema>>;
+
+      return implementation(...castAndCopiedArgs);
     },
     (...args) =>
       snip(

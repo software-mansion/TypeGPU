@@ -35,10 +35,10 @@
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@webgpu/types": "catalog:",
+    "@webgpu/types": "catalog:types",
     "typegpu": "workspace:*",
-    "typescript": "catalog:",
-    "unbuild": "catalog:",
+    "typescript": "catalog:types",
+    "unbuild": "catalog:build",
     "unplugin-typegpu": "workspace:*"
   }
 }
