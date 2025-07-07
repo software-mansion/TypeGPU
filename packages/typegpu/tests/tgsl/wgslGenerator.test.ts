@@ -874,7 +874,7 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
+[Error: Resolution of the following tree failed: 
 - <root>
 - fn:testFn
 - internalTestFn: Resolution of the following tree failed:
