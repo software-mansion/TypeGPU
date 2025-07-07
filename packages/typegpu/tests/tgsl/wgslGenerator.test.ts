@@ -542,6 +542,26 @@ describe('wgslGenerator', () => {
     );
   });
 
+  it('does not autocast lhs of an assignment', () => {
+    const testFn = tgpu.fn([], d.u32)(() => {
+      let a = d.u32(12);
+      const b = d.f32(2.5);
+      a = b;
+
+      return a;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+      fn testFn() -> u32 {
+        var a = u32(12);
+        var b = f32(2.5);
+        a = u32(b);
+        return a;
+      }`),
+    );
+  });
+
   it('generates correct code for array expressions with struct elements', () => {
     const TestStruct = d.struct({
       x: d.u32,
@@ -854,10 +874,10 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- internalTestFn: Resolution of the following tree failed: 
+- internalTestFn: Resolution of the following tree failed:
 - internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
 `);
   });
@@ -869,7 +889,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
 - translate4: Cannot read properties of undefined (reading 'value')]
@@ -884,10 +904,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- vec4f: Resolution of the following tree failed: 
+- vec4f: Resolution of the following tree failed:
 - vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
 `);
   });

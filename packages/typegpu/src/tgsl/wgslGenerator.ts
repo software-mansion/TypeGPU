@@ -139,7 +139,13 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
-    const converted = convertToCommonType(ctx, [lhsExpr, rhsExpr]) as
+    const converted = convertToCommonType(
+      ctx,
+      [lhsExpr, rhsExpr],
+      expression[0] === NODE.assignmentExpr
+        ? [lhsExpr.dataType as AnyData]
+        : [],
+    ) as
       | [Snippet, Snippet]
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
