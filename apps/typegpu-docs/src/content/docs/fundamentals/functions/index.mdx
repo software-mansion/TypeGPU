@@ -12,41 +12,49 @@ We assume that you are familiar with the following concepts:
 WGSL (WebGPU Shading Language) lacks many quality-of-life features that help with building complex shaders, like the ability to split functionality across
 different files, or to import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
 - Each definition in WGSL is represented as its own TypeGPU resource (e.g., `tgpu.fn`).
-- They can be imported and exported like any other JavaScript value.
-- They can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts, etc.
+- Resources can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts, etc.
+- Resources can be imported and exported like any other JavaScript value.
 
 ## Defining a function
 
-Functions are constructed by first defining their shells (input and output types).
-Then the actual WGSL implementation is passed in as an argument to a shell invocation.
+In order to construct a tgpu function, you need to start with defining its shell -- an object holding only the input and output types of a tgpu function.
+The shell constructor `tgpu.fn` makes use of TypeGPU schemas -- objects representing different WGSL data types, that help us with generating WGSL at runtime. 
+It accepts two arguments:
+- an array of schemas representing argument types,
+- (optionally) a schema representing the return type.
 
-The following code defines a function that accepts one argument and returns one value.
+Then the actual WGSL implementation is passed in to a shell invocation using the tagged function syntax (no parentheses).
+
+The following code defines a function that accepts one argument of type `f32` and returns a `vec4f`.
 
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
-// ---cut---
-const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f)`(ratio) {
-  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-  return color;
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio: f32) -> vec4f {
+  var purple = vec4f(0.769, 0.392, 1.0, 1);
+  var blue = vec4f(0.114, 0.447, 0.941, 1);
+  return mix(purple, blue, ratio);
 }`;
 ```
 
 :::tip
-If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+If you're using Visual Studio Code, you can use [this extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+:::
+
+Since the information about types is already present in the shell, we allow for the WGSL header to be simplified to just include the argument names.
 
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // ---cut---
-const getGradientColor = tgpu['~unstable'].fn([d.f32], d.vec4f) /* wgsl*/`(ratio) {
-  let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-  return color;
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio) {
+  var purple = vec4f(0.769, 0.392, 1.0, 1);
+  var blue = vec4f(0.114, 0.447, 0.941, 1);
+  return mix(purple, blue, ratio);
 }`;
 ```
-:::
 
 
 ## External resources
