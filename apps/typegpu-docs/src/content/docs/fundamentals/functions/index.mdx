@@ -2,7 +2,7 @@
 title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
-// AAA odpal markdown checkera
+// AAA twoslash
 // AAA sprawdź czy wszystko się kompiluje
 // AAA sformatuj kod
 // AAA linki do innych dokumentacji
@@ -15,6 +15,7 @@ We assume that you are familiar with the following concepts:
 
 WGSL (WebGPU Shading Language) lacks many quality-of-life features that help with building complex shaders, like the ability to split functionality across
 different files, or to import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
+
 - Each definition in WGSL is represented as its own TypeGPU resource (e.g., `tgpu.fn`).
 - Resources can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts, etc.
 - Resources can be imported and exported like any other JavaScript value.
@@ -22,10 +23,11 @@ different files, or to import a shader utility function from a library. TypeGPU 
 ## Defining a function
 
 In order to construct a tgpu function, you need to start with defining its shell -- an object holding only the input and output types of a tgpu function.
-The shell constructor `tgpu.fn` makes use of TypeGPU schemas -- objects representing different WGSL data types, that help us with generating WGSL at runtime. 
+The shell constructor `tgpu.fn` makes use of TypeGPU schemas -- objects representing different WGSL data types, that help us with generating WGSL at runtime.
 It accepts two arguments:
-- an array of schemas representing argument types,
-- (optionally) a schema representing the return type.
+
+- An array of schemas representing argument types,
+- (Optionally) a schema representing the return type.
 
 Then the actual WGSL implementation is passed in to a shell invocation using the tagged function syntax (no parentheses).
 
@@ -59,7 +61,6 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio) {
   return mix(purple, blue, ratio);
 }`;
 ```
-
 
 ## External resources
 
@@ -103,6 +104,7 @@ Entry functions are an *unstable* feature. The API may be subject to change in t
 
 Entry point functions can be passed to root-defined pipelines so that TypeGPU creates shader modules with them under the hood.
 Defining entry functions is similar to regular ones, but is done through dedicated shell constructors:
+
 - `tgpu['~unstable'].vertexFn`
 - `tgpu['~unstable'].fragmentFn`
 - `tgpu['~unstable'].computeFn`
@@ -123,8 +125,8 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
-When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. 
+When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs.
+TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
 Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
 ```ts
@@ -183,5 +185,3 @@ The rendering result looks like this:
 ![rendering result - gradient triangle](./triangle-result.png)
 
 You can check out the full example on [our examples page](/TypeGPU/examples#example=simple--triangle).
-
-
