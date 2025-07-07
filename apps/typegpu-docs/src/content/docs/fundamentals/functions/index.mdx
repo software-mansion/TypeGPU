@@ -139,9 +139,9 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
-When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs.
+In the case of entry functions, you should not include the WGSL function header in the code string. Instead, the WGSL implementations need to access these arguments as passed in via structs.
 TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
-Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
+Input values are accessible through the struct named `in`, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
 ```ts twoslash
 import tgpu from 'typegpu';
