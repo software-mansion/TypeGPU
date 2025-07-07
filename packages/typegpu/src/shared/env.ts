@@ -7,3 +7,6 @@
  */
 // biome-ignore lint/suspicious/noExplicitAny: the types are not important here
 export const DEV = (globalThis as any).process.env.NODE_ENV === 'development';
+
+// biome-ignore lint/suspicious/noExplicitAny: the types are not important here
+export const TEST = (globalThis as any).process.env.NODE_ENV === 'test';

@@ -1,8 +1,7 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { snip } from '../../data/dataTypes.ts';
+import { type AnyData, snip } from '../../data/dataTypes.ts';
 import {
-  type AnyWgslData,
   type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
@@ -12,8 +11,6 @@ import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import {
-  addArgTypesToExternals,
-  addReturnTypeToExternals,
   applyExternals,
   type ExternalMap,
   replaceExternalsInWgsl,
@@ -21,20 +18,18 @@ import {
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
-export interface TgpuFnShellBase<Args extends unknown[], Return> {
-  readonly argTypes: Args;
-  readonly returnType: Return;
-  readonly isEntry: boolean;
-}
-
 export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
-  resolve(ctx: ResolutionCtx, fnAttribute?: string): string;
+  resolve(
+    ctx: ResolutionCtx,
+    argTypes: AnyData[],
+    returnType: AnyData,
+  ): string;
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation,
+  fnAttribute = '',
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
@@ -44,35 +39,16 @@ export function createFnCore(
    */
   const externalsToApply: ExternalMap[] = [];
 
-  if (typeof implementation === 'string') {
-    if (!shell.isEntry) {
-      addArgTypesToExternals(
-        implementation,
-        shell.argTypes,
-        (externals) => externalsToApply.push(externals),
-      );
-      addReturnTypeToExternals(
-        implementation,
-        shell.returnType,
-        (externals) => externalsToApply.push(externals),
-      );
-    } else {
-      if (isWgslStruct(shell.argTypes[0])) {
-        externalsToApply.push({ In: shell.argTypes[0] });
-      }
-
-      if (isWgslStruct(shell.returnType)) {
-        externalsToApply.push({ Out: shell.returnType });
-      }
-    }
-  }
-
   const core = {
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
 
-    resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
+    resolve(
+      ctx: ResolutionCtx,
+      argTypes: AnyData[],
+      returnType: AnyData,
+    ): string {
       const externalMap: ExternalMap = {};
 
       for (const externals of externalsToApply) {
@@ -91,19 +67,19 @@ export function createFnCore(
         let header = '';
         let body = '';
 
-        if (shell.isEntry) {
-          const input = isWgslStruct(shell.argTypes[0])
-            ? `(in: ${ctx.resolve(shell.argTypes[0])})`
+        if (fnAttribute !== '') {
+          const input = isWgslStruct(argTypes[0])
+            ? `(in: ${ctx.resolve(argTypes[0])})`
             : '()';
 
-          const attributes = isWgslData(shell.returnType)
-            ? getAttributesString(shell.returnType)
+          const attributes = isWgslData(returnType)
+            ? getAttributesString(returnType)
             : '';
-          const output = shell.returnType !== Void
-            ? isWgslStruct(shell.returnType)
-              ? `-> ${ctx.resolve(shell.returnType)}`
+          const output = returnType !== Void
+            ? isWgslStruct(returnType)
+              ? `-> ${ctx.resolve(returnType)}`
               : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
-                ctx.resolve(shell.returnType)
+                ctx.resolve(returnType)
               }`
             : '';
 
@@ -112,9 +88,9 @@ export function createFnCore(
         } else {
           const providedArgs = extractArgs(replacedImpl);
 
-          if (providedArgs.args.length !== shell.argTypes.length) {
+          if (providedArgs.args.length !== argTypes.length) {
             throw new Error(
-              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${shell.argTypes.length} arguments.`,
+              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${argTypes.length} arguments.`,
             );
           }
 
@@ -124,21 +100,19 @@ export function createFnCore(
                 ctx,
                 `parameter ${argInfo.identifier}`,
                 argInfo.type,
-                shell.argTypes[i],
+                argTypes[i],
               )
             }`
           ).join(', ');
 
-          const output = shell.returnType === Void
-            ? ''
-            : `-> ${
-              checkAndReturnType(
-                ctx,
-                'return type',
-                providedArgs.ret?.type,
-                shell.returnType,
-              )
-            }`;
+          const output = returnType === Void ? '' : `-> ${
+            checkAndReturnType(
+              ctx,
+              'return type',
+              providedArgs.ret?.type,
+              returnType,
+            )
+          }`;
 
           header = `(${input}) ${output}`;
 
@@ -177,12 +151,12 @@ export function createFnCore(
 
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
-          args: shell.argTypes.map((arg, i) =>
+          args: argTypes.map((arg, i) =>
             snip(
               ast.params[i]?.type === FuncParameterType.identifier
                 ? ast.params[i].name
                 : `_arg_${i}`,
-              arg as AnyWgslData,
+              arg,
             )
           ),
           argAliases: Object.fromEntries(
@@ -192,14 +166,14 @@ export function createFnCore(
                   alias,
                   snip(
                     `_arg_${i}.${name}`,
-                    (shell.argTypes[i] as AnyWgslStruct)
-                      .propTypes[name] as AnyWgslData,
+                    (argTypes[i] as AnyWgslStruct)
+                      .propTypes[name],
                   ),
                 ])
                 : []
             ),
           ),
-          returnType: shell.returnType as AnyWgslData,
+          returnType,
           body: ast.body,
           externalMap,
         });

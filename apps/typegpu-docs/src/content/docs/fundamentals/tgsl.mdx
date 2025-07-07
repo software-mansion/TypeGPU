@@ -86,9 +86,24 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 ```
 
-TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures.
-However, the plugin removes the JS implementation from the bundle by default to save space.
-So for the TGSL functions to be callable on the CPU, they should be marked with the *"kernel & js"* directive.
+Sometimes, we are unable to recognize functions that are supposed to be TGSL. For that case, we have a *"kernel"* directive.
+
+```ts
+const patternFn = tgpu.fn([d.vec2f], d.f32);
+
+const patternCheckers = patternFn((uv) => {
+  'kernel';
+  const suv = floor(mul(20, uv));
+  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
+});
+
+const patternSolid = patternFn(() => {
+  'kernel';
+  return 1;
+});
+```
+
+TGSL-implemented functions can also be invoked on the CPU, as along as they do not use any GPU-exclusive functionalities, like buffers or textures (regardless of whether they are marked as *"kernel"* or not).
 
 ## What to keep in mind
 
@@ -99,10 +114,12 @@ This means that, for example, `console.log()` calls will not work on the GPU.
 * **Differences between JS on the CPU and GPU** --
 TGSL is developed to work on the GPU the same as on the CPU as much as possible, 
 however because of the fundamental differences between the JavaScript and WGSL languages, it is not guaranteed to always be the case.
-Currently the biggest known difference is that vectors (and matrices) are treated as reference types in JavaScript and value types in WGSL.
-That is two vectors in JavaScript are never equal to each other, even when they store the same values. 
-Also when passing them to functions, they are able to be modified there, unless the user specifically clones the passed argument
-(in WGSL vectors are copied by default). When using TGSL on the GPU, the behavior is that of WGSL, not JS, as one would expect.
+
+    Currently the biggest known difference is that vectors, matrices and structs are treated as reference types in JavaScript and value types in WGSL.
+That is, on the WGSL side, the assignment operator copies the value instead of the reference, and two different vectors can be equal to each other if only they store the same values, unlike in JS, where they need to point to the same reference. 
+To somehow alleviate this issue, when passing arguments to tgpu functions on JS side, we perform a deep copy of them (note that in WGSL arguments are immutable by default). 
+
+    When using TGSL on the GPU, the behavior is that of WGSL, not JS, as one would expect.
 Therefore some WGSL knowledge is still required, even when opting out for TGSL.
 
 * **.value** --
@@ -139,5 +156,5 @@ It allows defining utils only once and using them both as a kernel and host func
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer UX.
 However, it sometimes might be better to choose WGSL for certain functions. 
 Since JavaScript doesn't support operator overloading, functions including complex matrix operations can be more readable in WGSL.
-Also writing WGSL become a necessity whenever TGSL does not support some feature or standard library function quite yet.
-Luckily, you don't have to choose on or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.
+Writing WGSL becomes a necessity whenever TGSL does not support some feature or standard library function quite yet.
+Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and TGSL at every step of the way.
