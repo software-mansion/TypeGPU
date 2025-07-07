@@ -9,13 +9,13 @@ import type {
   MemIdentity,
   MemIdentityRecord,
 } from '../shared/repr.ts';
-import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
   $memIdent,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
+import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
@@ -705,6 +705,8 @@ export interface Bool {
   // Type-tokens, not available at runtime
   readonly [$repr]: boolean;
   // ---
+
+  (v?: number | boolean): boolean;
 }
 
 /**
@@ -718,7 +720,7 @@ export interface F32 {
   readonly [$repr]: number;
   // ---
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -732,7 +734,7 @@ export interface F16 {
   readonly [$repr]: number;
   // ---
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -747,7 +749,7 @@ export interface I32 {
   readonly [$memIdent]: I32 | Atomic<I32> | DecoratedLocation<I32>;
   // ---
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
@@ -762,13 +764,12 @@ export interface U32 {
   readonly [$memIdent]: U32 | Atomic<U32> | DecoratedLocation<U32>;
   // ---
 
-  (v: number | boolean): number;
+  (v?: number | boolean): number;
 }
 
 /**
  * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
  */
-
 export interface U16 {
   readonly [$internal]: true;
   readonly type: 'u16';
