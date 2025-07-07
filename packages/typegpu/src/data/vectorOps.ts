@@ -1,5 +1,5 @@
-// import { smoothstep } from '../std/numeric.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { clamp, smoothstepScalar } from './numberOps.ts';
 import {
   vec2b,
   vec2f,
@@ -28,49 +28,6 @@ type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
 
 type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 
-const smoothstepScalar = (edge0: number, edge1: number, x: number): number => {
-  if (x <= edge0) return 0;
-  if (x >= edge1) return 1;
-  const t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-  return t * t * (3 - 2 * t);
-};
-
-type TernaryOp = (a: number, b: number, c: number) => number;
-
-const ternaryComponentWise2f =
-  (op: TernaryOp) => (a: wgsl.v2f, b: wgsl.v2f, c: wgsl.v2f) =>
-    vec2f(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
-
-const ternaryComponentWise2h =
-  (op: TernaryOp) => (a: wgsl.v2h, b: wgsl.v2h, c: wgsl.v2h) =>
-    vec2h(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
-
-const ternaryComponentWise3f =
-  (op: TernaryOp) => (a: wgsl.v3f, b: wgsl.v3f, c: wgsl.v3f) =>
-    vec3f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
-
-const ternaryComponentWise3h =
-  (op: TernaryOp) => (a: wgsl.v3h, b: wgsl.v3h, c: wgsl.v3h) =>
-    vec3h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
-
-const ternaryComponentWise4f =
-  (op: TernaryOp) => (a: wgsl.v4f, b: wgsl.v4f, c: wgsl.v4f) =>
-    vec4f(
-      op(a.x, b.x, c.x),
-      op(a.y, b.y, c.y),
-      op(a.z, b.z, c.z),
-      op(a.w, b.w, c.w),
-    );
-
-const ternaryComponentWise4h =
-  (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: wgsl.v4h) =>
-    vec4h(
-      op(a.x, b.x, c.x),
-      op(a.y, b.y, c.y),
-      op(a.z, b.z, c.z),
-      op(a.w, b.w, c.w),
-    );
-
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
 const lengthVec4 = (v: v4) =>
@@ -81,9 +38,6 @@ const dotVec3 = (lhs: v3, rhs: v3) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 const dotVec4 = (lhs: v4, rhs: v4) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
-
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(Math.max(low, value), high);
 
 type UnaryOp = (a: number) => number;
 type BinaryOp = (a: number, b: number) => number;
@@ -205,6 +159,42 @@ const binaryComponentWise4x4f =
       binaryComponentWise4f(op)(a_[3], b_[3]),
     );
   };
+
+type TernaryOp = (a: number, b: number, c: number) => number;
+
+const ternaryComponentWise2f =
+  (op: TernaryOp) => (a: wgsl.v2f, b: wgsl.v2f, c: wgsl.v2f) =>
+    vec2f(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise2h =
+  (op: TernaryOp) => (a: wgsl.v2h, b: wgsl.v2h, c: wgsl.v2h) =>
+    vec2h(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise3f =
+  (op: TernaryOp) => (a: wgsl.v3f, b: wgsl.v3f, c: wgsl.v3f) =>
+    vec3f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise3h =
+  (op: TernaryOp) => (a: wgsl.v3h, b: wgsl.v3h, c: wgsl.v3h) =>
+    vec3h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise4f =
+  (op: TernaryOp) => (a: wgsl.v4f, b: wgsl.v4f, c: wgsl.v4f) =>
+    vec4f(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
+    );
+
+const ternaryComponentWise4h =
+  (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: wgsl.v4h) =>
+    vec4h(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
+    );
 
 export const NumberOps = {
   divInteger: (lhs: number, rhs: number) => {

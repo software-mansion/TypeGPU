@@ -1,4 +1,5 @@
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
+import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -724,14 +725,11 @@ export const smoothstep = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T => {
     if (typeof x === 'number') {
-      const e0 = edge0 as number;
-      const e1 = edge1 as number;
-
-      if (x <= e0) return 0 as T;
-      if (x >= e1) return 1 as T;
-
-      const t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
-      return (t * t * (3 - 2 * t)) as T;
+      return smoothstepScalar(
+        edge0 as number,
+        edge1 as number,
+        x as number,
+      ) as T;
     }
     return VectorOps.smoothstep[x.kind](
       edge0 as AnyFloatVecInstance,

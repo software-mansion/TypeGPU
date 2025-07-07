@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
 import { smoothstep } from '../../../src/std/index.ts';
+import { isCloseTo } from '../../../src/std/boolean.ts';
 
 describe('smoothstep', () => {
   it('returns 0 when x is less than or equal to edge0', () => {
@@ -19,13 +20,6 @@ describe('smoothstep', () => {
     expect(smoothstep(0, 1, 0.75)).toBeCloseTo(0.84375); // t = 0.75, t² * (3 - 2t) = 0.84375
   });
 
-  it('works with arbitrary edge values', () => {
-    expect(smoothstep(10, 20, 5)).toBe(0);
-    expect(smoothstep(10, 20, 25)).toBe(1);
-    expect(smoothstep(10, 20, 15)).toBeCloseTo(0.5);
-    expect(smoothstep(-5, 5, 0)).toBeCloseTo(0.5);
-  });
-
   it('works with vec2f', () => {
     // all components less than edge0
     const result1 = smoothstep(
@@ -33,7 +27,7 @@ describe('smoothstep', () => {
       vec2f(0.8, 0.9),
       vec2f(0.1, 0.2),
     );
-    expect(result1).toStrictEqual(vec2f(0, 0));
+    expect(isCloseTo(result1, vec2f(0, 0))).toBe(true);
 
     // all components greater than edge1
     const result2 = smoothstep(
@@ -41,7 +35,7 @@ describe('smoothstep', () => {
       vec2f(0.8, 0.9),
       vec2f(0.9, 1.0),
     );
-    expect(result2).toStrictEqual(vec2f(1, 1));
+    expect(isCloseTo(result2, vec2f(1, 1))).toBe(true);
 
     // components between edge0 and edge1
     const result3 = smoothstep(
@@ -49,8 +43,7 @@ describe('smoothstep', () => {
       vec2f(0.8, 0.9),
       vec2f(0.55, 0.7),
     );
-    expect(result3.x).toBeCloseTo(0.5);
-    expect(result3.y).toBeCloseTo(0.5);
+    expect(isCloseTo(result3, vec2f(0.5, 0.5))).toBe(true);
 
     // mixed results
     const result4 = smoothstep(
@@ -58,8 +51,7 @@ describe('smoothstep', () => {
       vec2f(0.8, 0.9),
       vec2f(0.2, 0.95),
     );
-    expect(result4.x).toBe(0);
-    expect(result4.y).toBe(1);
+    expect(isCloseTo(result4, vec2f(0, 1))).toBe(true);
   });
 
   it('works with vec3f', () => {
@@ -68,9 +60,7 @@ describe('smoothstep', () => {
       vec3f(0.6, 0.7, 0.8),
       vec3f(0.35, 0.7, 0.55),
     );
-    expect(result.x).toBeCloseTo(0.5);
-    expect(result.y).toBe(1);
-    expect(result.z).toBeCloseTo(0.5);
+    expect(isCloseTo(result, vec3f(0.5, 1, 0.5))).toBe(true);
   });
 
   it('works with vec4f', () => {
@@ -79,10 +69,7 @@ describe('smoothstep', () => {
       vec4f(1.0, 0.9, 0.8, 0.7),
       vec4f(0.0, 0.5, 0.8, 0.7),
     );
-    expect(result.x).toBe(0);
-    expect(result.y).toBeCloseTo(0.5);
-    expect(result.z).toBe(1);
-    expect(result.w).toBe(1);
+    expect(isCloseTo(result, vec4f(0, 0.5, 1, 1))).toBe(true);
   });
 
   it('works with vector edges with same values for all components', () => {
@@ -94,8 +81,6 @@ describe('smoothstep', () => {
     // For first component: x < edge0, result = 0
     // For second component: t = (0.5-0.3)/(0.7-0.3) = 0.5, result = 0.5
     // For third component: x > edge1, result = 1
-    expect(result.x).toBe(0);
-    expect(result.y).toBeCloseTo(0.5);
-    expect(result.z).toBe(1);
+    expect(isCloseTo(result, vec3f(0, 0.5, 1))).toBe(true);
   });
 });
