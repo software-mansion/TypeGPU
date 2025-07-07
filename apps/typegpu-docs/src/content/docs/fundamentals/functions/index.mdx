@@ -87,15 +87,13 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
 You can check yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
-// AAA update
 // results of calling tgpu.resolve({ externals: { getGradientColor } })
-fn getBlue_1() -> vec4f { 
+fn getBlueFunction_1() -> vec4f{
   return vec4f(0.114, 0.447, 0.941, 1); 
 }
 
-fn getGradientColor_0(ratio: f32) -> vec4f {
-  let color = mix(vec4f(0.769, 0.392, 1, 1), getBlue_1(), ratio);
-  return color;
+fn getGradientColor_0(ratio: f32) -> vec4f{
+  return mix(vec4f(0.769, 0.392, 1, 1), getBlueFunction_1(), ratio);;
 }
 ```
 
