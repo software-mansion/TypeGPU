@@ -2,9 +2,6 @@
 title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
-// AAA twoslash
-// AAA sprawdź czy wszystko się kompiluje
-// AAA sformatuj kod
 // AAA linki do innych dokumentacji
 
 :::note[Recommended reading]
@@ -37,7 +34,10 @@ The following code defines a function that accepts one argument of type `f32` an
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
-const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio: f32) -> vec4f {
+const getGradientColor = tgpu.fn(
+  [d.f32], 
+  d.vec4f
+) /* wgsl */`(ratio: f32) -> vec4f {
   var purple = vec4f(0.769, 0.392, 1.0, 1);
   var blue = vec4f(0.114, 0.447, 0.941, 1);
   return mix(purple, blue, ratio);
@@ -55,7 +55,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // ---cut---
-const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio) {
+const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
   var purple = vec4f(0.769, 0.392, 1.0, 1);
   var blue = vec4f(0.114, 0.447, 0.941, 1);
   return mix(purple, blue, ratio);
@@ -67,12 +67,16 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio) {
 Functions can use external resources passed via the `$uses` method during the function creation process. 
 Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, functions, buffer usages, textures, samplers, slots, accessors etc.).
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// ---cut---
 const getBlueFunction = tgpu.fn([], d.vec4f)`() {
   return vec4f(0.114, 0.447, 0.941, 1); 
 }`;
 
-// calling a schema creates a value on JS side
+// calling a schema to create a value on the JS side
 const purple = d.vec4f(0.769, 0.392, 1.0, 1); 
 
 const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
@@ -111,7 +115,20 @@ Defining entry functions is similar to regular ones, but is done through dedicat
 
 Shell constructors accept objects with special values like builtins (`d.builtin`) and decorated data (`d.location`). 
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const particleDataBuffer = root
+  .createBuffer(d.arrayOf(d.u32, 100))
+  .$usage('storage', 'uniform', 'vertex');
+
+const deltaTime = root.createUniform(d.f32);
+const time = root.createMutable(d.f32);
+const particleDataStorage = particleDataBuffer.as('mutable');
+// ---cut---
 const mainCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
@@ -129,7 +146,12 @@ When entry function inputs or outputs are specified as objects containing builti
 TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
 Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)``;
+// ---cut---
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
@@ -165,7 +187,26 @@ Pipelines are an *unstable* feature. The API may be subject to change in the nea
 
 Typed functions are crucial for simplified pipeline creation offered by TypeGPU. You can define and run pipelines as follows:
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const context = undefined as any;
+const presentationFormat = "rgba8unorm";
+const root = await tgpu.init();
+
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */``;
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position, uv: d.vec2f },
+})``;
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})``;
+// ---cut---
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
   .withFragment(mainFragment, { format: presentationFormat })
