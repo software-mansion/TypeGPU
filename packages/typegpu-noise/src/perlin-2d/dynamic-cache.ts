@@ -135,12 +135,14 @@ export function dynamicCacheConfig<Prefix extends string>(
   const cleanValuesSlot = tgpu['~unstable'].derived(() => {
     return {
       get size() {
-        // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}size`] as d.v2u;
+        return (valuesSlot.$ as Record<`${Prefix}size`, d.v2u>)[
+          `${prefix}size`
+        ] as d.v2u;
       },
       get memory() {
-        // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}memory`] as d.v2f[];
+        return (valuesSlot.$ as Record<`${Prefix}memory`, d.v2f[]>)[
+          `${prefix}memory`
+        ] as d.v2f[];
       },
     };
   });
