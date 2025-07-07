@@ -64,6 +64,7 @@ export const sampleWithGradient = tgpu.fn([d.vec2f], d.vec3f)((pos) => {
   const noise = va + u.x * (vb - va) + u.y * (vc - va) +
     u.x * u.y * (va - vb - vc + vd);
 
+  // ga + u.x*(gb-ga) + u.y*(gc-ga) + u.x*u.y*(ga-gb-gc+gd) + du * (u.yx*(va-vb-vc+vd) + vec2(vb,vc) - va))
   const grad = add(
     ga,
     add(
