@@ -120,7 +120,9 @@ export interface WithFragment<
 }
 
 export interface Configurable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
+
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -128,12 +130,12 @@ export interface Configurable {
       | TgpuBufferUsage<T>
       | TgpuBufferShorthand<T>
       | Infer<T>,
-  ): WithBinding;
+  ): Configurable;
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding extends Configurable {
+export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -145,6 +147,18 @@ export interface WithBinding extends Configurable {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;
+
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends AnyWgslData>(
+    accessor: TgpuAccessor<T>,
+    value:
+      | TgpuFn<() => T>
+      | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
+      | Infer<T>,
+  ): WithBinding;
+
+  pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
 
 export type CreateTextureOptions<

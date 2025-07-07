@@ -22,12 +22,12 @@ export interface MetaData {
  *
  * @internal
  */
-export interface INTERNAL_GlobalExt {
+export type INTERNAL_GlobalExt = typeof globalThis & {
   __TYPEGPU_META__: WeakMap<object, MetaData>;
   __TYPEGPU_AUTONAME__: <T>(exp: T, label: string) => T;
   __TYPEGPU_MEASURE_PERF__?: boolean | undefined;
   __TYPEGPU_PERF_RECORDS__?: Map<string, unknown[]> | undefined;
-}
+};
 
 Object.assign(globalThis, {
   '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T =>
@@ -37,16 +37,12 @@ Object.assign(globalThis, {
       : exp,
 });
 
-const globalWithMeta = globalThis as unknown as
-  & typeof globalThis
-  & INTERNAL_GlobalExt;
+const globalWithMeta = globalThis as INTERNAL_GlobalExt;
 
 /**
  * Performance measurements are only enabled in dev & test environments for now
  */
-export const PERF = (DEV || TEST)
-  ? (() => {
-    return {
+export const PERF = (DEV || TEST) && ({
       get enabled() {
         return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
       },
@@ -60,9 +56,7 @@ export const PERF = (DEV || TEST)
         }
         entries.push(data);
       },
-    };
-  })()
-  : undefined;
+    }) || undefined;
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
   return !!(value as { [$getNameForward]?: unknown })?.[$getNameForward];
