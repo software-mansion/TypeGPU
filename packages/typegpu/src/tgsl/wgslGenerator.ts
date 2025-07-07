@@ -139,12 +139,14 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
+    const forcedType = expression[0] === NODE.assignmentExpr
+      ? [lhsExpr.dataType as AnyData]
+      : [];
+
     const converted = convertToCommonType(
       ctx,
       [lhsExpr, rhsExpr],
-      expression[0] === NODE.assignmentExpr
-        ? [lhsExpr.dataType as AnyData]
-        : [],
+      forcedType,
     ) as
       | [Snippet, Snippet]
       | undefined;
