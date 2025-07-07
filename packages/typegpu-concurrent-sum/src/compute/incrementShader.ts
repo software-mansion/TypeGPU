@@ -1,10 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import {
-  dataBindGroupLayout as layout,
-  fixedArrayLength,
-  workgroupSize,
-} from '../schemas.ts';
+import { dataBindGroupLayout as layout, workgroupSize } from '../schemas.ts';
 
 export const incrementShader = tgpu['~unstable'].computeFn({
   in: {
@@ -13,8 +9,9 @@ export const incrementShader = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
 })((input) => {
   const gId = input.gid.x;
+  const totalInputLength = layout.$.workArray.length;
 
-  if (gId < d.u32(fixedArrayLength)) {
+  if (gId < d.u32(totalInputLength)) {
     const blockId = d.u32(gId / (workgroupSize * 2));
 
     if (blockId > 0) {

@@ -55,7 +55,6 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   // save to sums
   if (lid.x === 0) {
     layout.$.sumsArray[wid.x] = sharedMem.value[segmentLength - 1] as number;
-    sharedMem.value[segmentLength - 1] = 0;
   }
   std.workgroupBarrier();
 

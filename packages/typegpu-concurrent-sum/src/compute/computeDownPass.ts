@@ -4,7 +4,7 @@ import * as std from 'typegpu/std';
 import { dataBindGroupLayout as layout, workgroupSize } from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize * 2),
+  d.arrayOf(d.u32, workgroupSize * 2),
 );
 
 export const computeDownPass = tgpu['~unstable'].computeFn({
@@ -32,8 +32,15 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
   }
   std.workgroupBarrier();
 
-  // Down-sweep phase
-  for (let k = 0; k < log2Length; k++) {
+  // // Down-sweep phase
+  // Set the last element to 0 (identity element for the scan)
+  if (lid.x === 0) {
+    sharedMem.value[segmentLength - 1] = 0;
+  }
+  std.workgroupBarrier();
+
+  // Down-sweep phase (distribution)
+  for (let k = d.u32(0); k < log2Length; k++) {
     const dLevel = log2Length - 1 - k;
     const windowSize = d.u32(1 << (dLevel + 1)); // window size == step
     const offset = d.u32(1 << dLevel); // offset for the window
