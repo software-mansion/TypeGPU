@@ -2,6 +2,10 @@
 title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
+// AAA odpal markdown checkera
+// AAA sprawdź czy wszystko się kompiluje
+// AAA sformatuj kod
+// AAA linki do innych dokumentacji
 
 :::note[Recommended reading]
 We assume that you are familiar with the following concepts:
@@ -59,26 +63,28 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */`(ratio) {
 
 ## External resources
 
-Functions can use external resources passed inside a record via the `$uses` method. 
-Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
+Functions can use external resources passed via the `$uses` method during the function creation process. 
+Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, functions, buffer usages, textures, samplers, slots, accessors etc.).
 
 ```ts
-const getBlue = tgpu.fn([], d.vec4f)`() {
+const getBlueFunction = tgpu.fn([], d.vec4f)`() {
   return vec4f(0.114, 0.447, 0.941, 1); 
 }`;
 
-const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+// calling a schema creates a value on JS side
+const purple = d.vec4f(0.769, 0.392, 1.0, 1); 
 
 const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
-  let color = mix(purple, getBlue(), ratio);
-  return color;
+  return mix(purple, getBlue(), ratio);;
 }
-`.$uses({ purple, getBlue });
+`.$uses({ purple, getBlue: getBlueFunction });
 ```
 
-The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
+You can check yourself what `getGradientColor` resolves to by calling `tgpu.resolve`, all relevant definitions will be automatically included:
 
 ```wgsl
+// AAA update
+// results of calling tgpu.resolve({ externals: { getGradientColor } })
 fn getBlue_1() -> vec4f { 
   return vec4f(0.114, 0.447, 0.941, 1); 
 }
@@ -91,12 +97,35 @@ fn getGradientColor_0(ratio: f32) -> vec4f {
 
 ## Entry functions
 
-Defining entry functions is similar to regular ones, but is done through dedicated constructors:
+:::caution[Experimental]
+Entry functions are an *unstable* feature. The API may be subject to change in the near future.
+:::
+
+Entry point functions can be passed to root-defined pipelines so that TypeGPU creates shader modules with them under the hood.
+Defining entry functions is similar to regular ones, but is done through dedicated shell constructors:
 - `tgpu['~unstable'].vertexFn`
 - `tgpu['~unstable'].fragmentFn`
 - `tgpu['~unstable'].computeFn`
 
-They can be passed to root-defined pipelines and they accept special arguments like builtins (`d.builtin`) and decorated data (`d.location`).
+Shell constructors accept objects with special values like builtins (`d.builtin`) and decorated data (`d.location`). 
+
+```ts
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+}) /* wgsl */`{
+  let index = in.gid.x;
+  if index == 0 {
+    time += deltaTime;
+  }
+  let phase = (time / 300) + particleData[index].seed;
+  particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+}`.$uses({ particleData: particleDataStorage, deltaTime, time });
+```
+
+When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
+TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. 
+Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
 ```ts
 const mainVertex = tgpu['~unstable'].vertexFn({
@@ -126,11 +155,11 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   }`.$uses({ getGradientColor });
 ```
 
-When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. 
-Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
-
 ## Usage in pipelines
+
+:::caution[Experimental]
+Pipelines are an *unstable* feature. The API may be subject to change in the near future.
+:::
 
 Typed functions are crucial for simplified pipeline creation offered by TypeGPU. You can define and run pipelines as follows:
 
