@@ -103,14 +103,17 @@ fn getGradientColor_0(ratio: f32) -> vec4f{
 Entry functions are an *unstable* feature. The API may be subject to change in the near future.
 :::
 
-Entry point functions can be passed to root-defined pipelines so that TypeGPU creates shader modules with them under the hood.
-Defining entry functions is similar to regular ones, but is done through dedicated shell constructors:
+TypeGPU has split the wgsl attribute syntax into different places to provide type safety and to simplify the shader creation and dispatching process.
+For example, all groups and bindings are assigned automatically.
+On the other hand, defining entry functions is not done by annotating `TgpuFn` with attributes, but is achieved through dedicated shell constructors instead:
 
-- `tgpu['~unstable'].vertexFn`
-- `tgpu['~unstable'].fragmentFn`
-- `tgpu['~unstable'].computeFn`
+- `tgpu['~unstable'].vertexFn`,
+- `tgpu['~unstable'].fragmentFn`,
+- `tgpu['~unstable'].computeFn`.
 
-Shell constructors accept objects with special values like builtins (`d.builtin`) and decorated data (`d.location`). 
+Shell constructors of entry functions accept an object that describes the IO as well as other relevant parameters, such as workgroup size.
+
+Builtin attributes are available on the `d.builtin` object. 
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -139,9 +142,13 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
-In the case of entry functions, you should not include the WGSL function header in the code string. Instead, the WGSL implementations need to access these arguments as passed in via structs.
+In the case of entry functions, you should not include the WGSL function header in the code string. 
+Instead, the WGSL implementations can access these arguments as if they were passed in via structs.
 TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
 Input values are accessible through the struct named `in`, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
+
+If you wish to, you can wrap any schema in the IO struct in a `d.location` decorator, however TypeGPU tries to assign locations automatically. 
+Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes. 
 
 ```ts twoslash
 import tgpu from 'typegpu';
