@@ -2,8 +2,6 @@
 title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
 ---
-// AAA markdown check
-
 Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
 Similarly to bind group layouts, you can think of slots as of typed "holes" in tgpu shaders, that can be filled in later on from the outside.
 The main differences between slots and bound resources include the following:
@@ -15,11 +13,11 @@ Main use cases for slots include:
 
 - Generics -- instead of rewriting a function for each generic parameter, it suffices to fill a slot with a different value.
 - Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
-{/* - Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`. */}
+{/*- Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.*/}
 
 ## Basic usage
 
-A slot is created using the `slot()` function and can optionally take a default value:
+A slot is created using the `tgpu.slot()` function and can optionally take a default value:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -46,12 +44,12 @@ const value = mySlot.value; // or mySlot.$
 ```
 
 :::caution
-Slot values can only be accessed inside of tgpu functions.
+Slot values can only be accessed inside tgpu functions.
 Attempting to access them outside will throw an error.
 :::
 
 Slots are resolved during the TypeGPU resolution phase.
-The slot object itself does not hold any value. 
+The slot object itself does not hold any value.
 Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
@@ -132,12 +130,10 @@ Static code analysis does not incorporate whether all slots were filled or not.
 If you forget about filling one of the slots, you will instead get a descriptive runtime error.
 :::
 
-
 ## Inversion of control
 
-With slots, libraries can expose customization points for their users. 
+With slots, libraries can expose customization points for their users.
 They enable behavioral changes to internal library functionality while maintaining type safety and performance.
-
 
 ```ts twoslash
 // physics.ts
@@ -191,11 +187,12 @@ const main = tgpu['~unstable'].computeFn()(() => {
 ```
 
 {/*
-TODO: readd and rewrite this section back when we actually prune branches.
+TODO: re-add and rewrite this section back when we actually prune branches.
+
 ## Conditional compilation
 
 Slots can be used for conditional compilation of segments of shaders.
-When the slot holding a boolean value is filled with `false`, all `if` statements depending on the value of that slot will be pruned by our tree-shaking mechanism. 
+When the slot holding a boolean value is filled with `false`, all `if` statements depending on the value of that slot will be pruned by our tree-shaking mechanism.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -252,4 +249,3 @@ fn getColor() -> vec3f {
   return vec3f(1., 0., 0.);
 }
 ```
-
