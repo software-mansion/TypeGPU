@@ -4,6 +4,7 @@
 
 - **ExecutionCtx**: A unified context object that provides access to slots and manages dependency injection during code execution across all modes
 - **ResolutionCtx**: The existing CODEGEN mode execution context used for GPU shader generation (implements ExecutionCtx)
+- **SimulationCtx**: A new execution context for SIMULATE mode that handles slot bindings and variable storage
 - **Slot**: A dependency injection mechanism that works across all modes (CODEGEN, COMPTIME, SIMULATE)
 - **Variable**: An execution construct that only works in CODEGEN and SIMULATE modes, not in COMPTIME
 - **Derived Value**: A computed value that runs in COMPTIME mode and can access slots for dependency injection
@@ -49,13 +50,21 @@ interface ExecutionCtx {
 }
 
 // ResolutionCtx already implements these methods for CODEGEN mode
-// We'll add a simple implementation for COMPTIME mode
+// We'll add implementations for COMPTIME and SIMULATE modes
 class ComptimeExecutionCtx implements ExecutionCtx {
   private slotValues = new WeakMap<TgpuSlot<any>, any>();
   
   // Simple implementations that mirror ResolutionCtx slot logic
   // This runs during shader preprocessing for dependency injection
   // NO variable support - variables only work in CODEGEN and SIMULATE modes
+}
+
+class SimulationCtx implements ExecutionCtx {
+  private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
+  
+  // Slot management for dependency injection in CPU simulation
+  // Variable support for JavaScript execution
+  // Full ExecutionCtx implementation for SIMULATE mode
 }
 ```
 
@@ -71,8 +80,9 @@ export const RuntimeMode = {
   SIMULATE: 'SIMULATE' as const,          // Runtime JavaScript (was JS)
 } as const;
 
-// Add COMPTIME execution context alongside existing ResolutionCtx
+// Add execution contexts for COMPTIME and SIMULATE modes alongside existing ResolutionCtx
 let comptimeExecutionCtx: ExecutionCtx | null = null;
+let simulationCtx: ExecutionCtx | null = null;
 
 export function getExecutionCtx(): ExecutionCtx | null {
   const currentMode = getCurrentMode();
@@ -80,8 +90,10 @@ export function getExecutionCtx(): ExecutionCtx | null {
     return getResolutionCtx(); // ResolutionCtx implements ExecutionCtx
   } else if (currentMode === 'COMPTIME') {
     return comptimeExecutionCtx; // ComptimeExecutionCtx implements ExecutionCtx
+  } else if (currentMode === 'SIMULATE') {
+    return simulationCtx; // SimulationCtx implements ExecutionCtx
   }
-  return null; // All modes that need ExecutionCtx are handled above
+  return null;
 }
 
 export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
@@ -91,6 +103,16 @@ export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
     return callback();
   } finally {
     comptimeExecutionCtx = prev;
+  }
+}
+
+export function provideSimulationCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
+  const prev = simulationCtx;
+  simulationCtx = ctx;
+  try {
+    return callback();
+  } finally {
+    simulationCtx = prev;
   }
 }
 
@@ -352,7 +374,48 @@ interface ResolutionCtx extends ExecutionCtx {
 }
 ```
 
-### 3. Mode-Specific Capabilities
+### 3. SimulationCtx Implementation
+
+```typescript
+class SimulationCtx implements ExecutionCtx {
+  private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
+
+  readSlot<T>(slot: TgpuSlot<T>): T | undefined {
+    // Search slot stack from top to bottom
+    for (let i = this.slotStack.length - 1; i >= 0; i--) {
+      if (this.slotStack[i].has(slot)) {
+        return this.slotStack[i].get(slot);
+      }
+    }
+    return slot.defaultValue;
+  }
+
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    const newLayer = new WeakMap(pairs);
+    this.slotStack.push(newLayer);
+    try {
+      return callback();
+    } finally {
+      this.slotStack.pop();
+    }
+  }
+
+  unwrap<T>(eventual: Eventual<T>): T {
+    // Unwrapping logic for SIMULATE mode
+    if (isSlot(eventual)) {
+      return this.readSlot(eventual);
+    }
+    if (isDerived(eventual)) {
+      return eventual['~compute'](); // Recursive derived computation
+    }
+    return eventual;
+  }
+
+  // Supports both slots and variables for full CPU simulation
+}
+```
+
+### 4. Mode-Specific Capabilities
 
 Each execution mode has different capabilities:
 
