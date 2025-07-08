@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { dataBindGroupLayout as layout, workgroupSize } from '../schemas.ts';
+import { downSweepLayout as layout, workgroupSize } from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
   d.arrayOf(d.u32, workgroupSize * 2),
@@ -60,9 +60,9 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
 
   // copy back to work array
   if (idx0 < d.u32(totalInputLength)) {
-    layout.$.workArray[idx0] = sharedMem.value[lid.x * 2] as number;
+    layout.$.outputArray[idx0] = sharedMem.value[lid.x * 2] as number;
   }
   if (idx1 < d.u32(totalInputLength)) {
-    layout.$.workArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
+    layout.$.outputArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
   }
 });

@@ -2,8 +2,9 @@ import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import {
-  dataBindGroupLayout,
+  downSweepLayout,
   itemsPerThread,
+  upSweepLayout,
   workgroupSize,
 } from './schemas.ts';
 import { incrementShader } from './compute/incrementShader.ts';
@@ -52,14 +53,14 @@ export async function currentSum(
 
   /* ----------------------- 1: Bieloch's Block Scan ----------------------- */
   // -- Multiple UpPass - small trees (input, work, sums)
-  const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  const mainArrayBindGroup = root.createBindGroup(upSweepLayout, {
     inputArray: inputBuffer,
-    workArray: workBuffer,
+    outputArray: workBuffer,
     sumsArray: sumsBuffer,
   });
 
   upPassPipeline
-    .with(dataBindGroupLayout, mainArrayBindGroup)
+    .with(upSweepLayout, mainArrayBindGroup)
     .dispatchWorkgroups(
       inputLength / (workgroupSize * 2) > 1
         ? inputLength / (workgroupSize * 2)
@@ -73,30 +74,30 @@ export async function currentSum(
     .createBuffer(d.arrayOf(d.u32, inputLength))
     .$usage('storage');
 
-  const mainDownArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  const mainDownArrayBindGroup = root.createBindGroup(downSweepLayout, {
     inputArray: workBuffer,
-    workArray: workBuffer2,
-    sumsArray: sumsBuffer,
+    outputArray: workBuffer2,
   });
 
   downPassPipeline
-    .with(dataBindGroupLayout, mainDownArrayBindGroup)
+    .with(downSweepLayout, mainDownArrayBindGroup)
     .dispatchWorkgroups(Math.max(
       inputLength / (workgroupSize * 2),
       1,
     ));
   root['~unstable'].flush();
+  await root.device.queue.onSubmittedWorkDone();
 
   // -- Sum of sums UpPass - (sums, sumOfSums, -)
-  const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  const sumsArrayBindGroup = root.createBindGroup(upSweepLayout, {
     inputArray: sumsBuffer,
-    workArray: sumsOfSumsBuffer,
+    outputArray: sumsOfSumsBuffer,
     sumsArray: root.createBuffer(
       d.arrayOf(d.u32, Math.max(1, inputLength / workgroupSize * 2)),
     ).$usage('storage'), // unused but required
   });
 
-  upPassPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
+  upPassPipeline.with(upSweepLayout, sumsArrayBindGroup)
     .dispatchWorkgroups(
       Math.max(
         (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
@@ -111,15 +112,12 @@ export async function currentSum(
     .createBuffer(d.arrayOf(d.u32, inputLength))
     .$usage('storage');
 
-  const downPassArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  const downPassArrayBindGroup = root.createBindGroup(downSweepLayout, {
     inputArray: sumsOfSumsBuffer,
-    workArray: sumsOfSumsBuffer2,
-    sumsArray: root.createBuffer(
-      d.arrayOf(d.u32, inputLength),
-    ).$usage('storage'), // unused but required
+    outputArray: sumsOfSumsBuffer2,
   });
   downPassPipeline
-    .with(dataBindGroupLayout, downPassArrayBindGroup)
+    .with(downSweepLayout, downPassArrayBindGroup)
     .dispatchWorkgroups(Math.max(
       (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
       1,
@@ -130,15 +128,14 @@ export async function currentSum(
   // Apply big sums to each block (-, work, sumOfSums)
   const finalOutputBuffer = root.createBuffer(d.arrayOf(d.u32, inputLength))
     .$usage('storage');
-  const prefixSumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+  const prefixSumsArrayBindGroup = root.createBindGroup(upSweepLayout, {
     inputArray: workBuffer2,
-    workArray: finalOutputBuffer,
+    outputArray: finalOutputBuffer,
     sumsArray: sumsOfSumsBuffer2,
   });
   applySumsPipeline
-    .with(dataBindGroupLayout, prefixSumsArrayBindGroup)
+    .with(upSweepLayout, prefixSumsArrayBindGroup)
     .dispatchWorkgroups(Math.ceil(inputLength / workgroupSize));
-
   root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
 

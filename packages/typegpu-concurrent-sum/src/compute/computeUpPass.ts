@@ -2,8 +2,8 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
-  dataBindGroupLayout as layout,
   itemsPerThread,
+  upSweepLayout as layout,
   workgroupSize,
 } from '../schemas.ts';
 
@@ -60,9 +60,9 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
 
   // copy back to work array
   if (idx0 < totalInputLength) {
-    layout.$.workArray[idx0] = sharedMem.value[lid.x * 2] as number;
+    layout.$.outputArray[idx0] = sharedMem.value[lid.x * 2] as number;
   }
   if (idx1 < totalInputLength) {
-    layout.$.workArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
+    layout.$.outputArray[idx1] = sharedMem.value[lid.x * 2 + 1] as number;
   }
 });

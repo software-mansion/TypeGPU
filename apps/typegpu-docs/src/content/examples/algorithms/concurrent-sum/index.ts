@@ -28,12 +28,11 @@ const buffer = root
   )
   .$usage('storage');
 
-  
-  const button = document.querySelector('#runButton') as HTMLButtonElement;
-  
-  button.addEventListener('click', async () => {
+const button = document.querySelector('#runButton') as HTMLButtonElement;
+
+button.addEventListener('click', async () => {
   button.disabled = true;
-    
+
   const jsArray = Array.from({ length: fixedArrayLength }, (_, k) => k);
   const jsResult = concurrentSumOnJS(jsArray);
   console.log('JS Result:', jsResult);
@@ -53,8 +52,7 @@ function concurrentSumOnJS(arr: number[]) {
       arr[index] = arr[index - 1] + currentValue;
     }
     return arr[index];
-  }
-  , 0);
+  }, 0);
   return arr;
 }
 
@@ -63,7 +61,7 @@ function compareArrayWithBuffer(arr1: number[], arr2: number[]): boolean {
     return false;
   }
   for (let i = 0; i < arr1.length - 1; i++) {
-    if (arr1[i] !== arr2[i+1]) {
+    if (arr1[i] !== arr2[i + 1]) {
       console.log(`Mismatch at index ${i}: ${arr1[i]} !== ${arr2[i]}`);
       return false;
     }
