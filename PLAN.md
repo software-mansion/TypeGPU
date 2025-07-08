@@ -4,7 +4,7 @@
 
 - **ExecutionCtx**: A unified context object that provides access to slots and manages dependency injection during code execution across all modes
 - **ResolutionCtx**: The existing CODEGEN mode execution context used for GPU shader generation (implements ExecutionCtx)
-- **Slot**: A dependency injection mechanism that works across CODEGEN and COMPTIME modes
+- **Slot**: A dependency injection mechanism that works across all modes (CODEGEN, COMPTIME, SIMULATE)
 - **Variable**: An execution construct that only works in CODEGEN and SIMULATE modes, not in COMPTIME
 - **Derived Value**: A computed value that runs in COMPTIME mode and can access slots for dependency injection
 - **Dual Implementation**: Functions that have both JavaScript and WGSL implementations, working in SIMULATE and CODEGEN modes respectively
@@ -23,11 +23,11 @@ This document outlines a plan to enable CPU simulation of GPU shaders by impleme
 **The Execution Model**: TypeGPU has three execution modes with different capabilities:
 - **CODEGEN Mode**: Code generation for GPU shaders (current ResolutionCtx) - has slots + variables
 - **COMPTIME Mode**: Resolution-time computation for derived values - has slots only (dependency injection)
-- **SIMULATE Mode**: Runtime JavaScript execution for dual implementations - has variables only
+- **SIMULATE Mode**: Runtime JavaScript execution for dual implementations - has slots + variables
 
 **The Solution**: Create a unified ExecutionCtx system that enables:
 1. **CPU Shader Simulation**: Variables work in SIMULATE mode for JavaScript execution
-2. **Dependency Injection**: Slots work in COMPTIME mode for derived value computations  
+2. **Universal Dependency Injection**: Slots work in all modes (CODEGEN, COMPTIME, SIMULATE)
 3. **Unified Interface**: Single ExecutionCtx interface across all execution modes
 4. **Clear Separation**: Each mode has distinct capabilities while sharing the same interface
 
@@ -81,7 +81,7 @@ export function getExecutionCtx(): ExecutionCtx | null {
   } else if (currentMode === 'COMPTIME') {
     return comptimeExecutionCtx; // ComptimeExecutionCtx implements ExecutionCtx
   }
-  return null; // SIMULATE mode doesn't need execution context
+  return null; // All modes that need ExecutionCtx are handled above
 }
 
 export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
@@ -178,7 +178,7 @@ get value(): InferGPU<T> {
 }
 ```
 
-**Note**: Slots work in both CODEGEN and COMPTIME modes for dependency injection, but derived values only compute in COMPTIME mode.
+**Note**: Slots work in all modes for dependency injection, but derived values only compute in COMPTIME mode.
 
 ### Day 5: Function Integration & Testing
 
@@ -365,9 +365,9 @@ Each execution mode has different capabilities:
 // - Slots: For dependency injection in derived computations
 // - NO Variables: Variables are execution constructs, not comptime constructs
 
-// SIMULATE Mode: Variables only
+// SIMULATE Mode: Slots + Variables
+// - Slots: For dependency injection in CPU simulation
 // - Variables: For dual implementation runtime state
-// - NO Slots: Slots are resolved at comptime, not runtime
 
 class SimulateModeVariableStorage {
   private static variables = new WeakMap<TgpuVar<any, any>, any>();
@@ -391,7 +391,7 @@ class SimulateModeVariableStorage {
 1. **Unified Interface**: Single ExecutionCtx interface across all execution modes
    - CODEGEN: Slots + Variables (shader generation) via ResolutionCtx
    - COMPTIME: Slots only (dependency injection) via ComptimeExecutionCtx
-   - SIMULATE: Variables only (runtime state)
+   - SIMULATE: Slots + Variables (CPU simulation) via SimulateExecutionCtx
 2. **Minimal Changes**: Only adds COMPTIME slot support, no variable complexity
 3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
 4. **Simple Implementation**: Leverages existing slot logic for COMPTIME mode
