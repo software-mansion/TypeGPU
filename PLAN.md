@@ -6,9 +6,14 @@ This document outlines a focused plan to enable slots, derived values, and priva
 
 ## Current State
 
-**The Problem**: Variables and some slot operations throw errors in CPU mode because they expect a ResolutionCtx (GPU mode only).
+**The Problem**: Variables and some slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (WGSL mode only).
 
-**The Solution**: Create a simple ExecutionCtx that tracks slot values and variable state for CPU execution, while keeping ResolutionCtx unchanged for GPU mode.
+**The Execution Model**: TypeGPU actually has three execution modes:
+- **WGSL Mode**: Code generation for GPU shaders (current ResolutionCtx)
+- **COMPTIME Mode**: Resolution-time computation for derived values and preprocessing
+- **JS Mode**: Runtime JavaScript execution for dual implementations
+
+**The Solution**: Extend the execution model to properly support COMPTIME mode with variable access, while keeping ResolutionCtx unchanged for WGSL mode.
 
 ## Implementation Plan (1 Week)
 
@@ -23,44 +28,65 @@ interface ExecutionCtx {
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
   unwrap<T>(eventual: Eventual<T>): T;
   
-  // Variable support for CPU mode
+  // Variable support for COMPTIME mode
   readVariable<T>(variable: TgpuVar<any, T>): T;
   writeVariable<T>(variable: TgpuVar<any, T>, value: T): void;
 }
 
-class CpuExecutionCtx implements ExecutionCtx {
+class ComptimeExecutionCtx implements ExecutionCtx {
   private slotValues = new WeakMap<TgpuSlot<any>, any>();
   private variables = new WeakMap<TgpuVar<any, any>, any>();
   
   // Simple implementations that mirror ResolutionCtx slot logic
+  // This runs during shader preprocessing, not GPU simulation
 }
 ```
 
-#### Update Global Context Management
+#### Extend Runtime Mode System
 **File**: `src/gpuMode.ts`
 
 ```typescript
-// Add CPU execution context alongside existing ResolutionCtx
-let cpuExecutionCtx: ExecutionCtx | null = null;
+const WGSLMode = Symbol('WGSL');
+const ComptimeMode = Symbol('COMPTIME'); 
+const JSMode = Symbol('JS');
+
+export const RuntimeMode = {
+  WGSL: WGSLMode,      // GPU shader generation (was GPU)
+  COMPTIME: ComptimeMode, // Resolution-time computation (new)
+  JS: JSMode,          // Runtime JavaScript (was CPU)
+} as const;
+
+// Add COMPTIME execution context alongside existing ResolutionCtx
+let comptimeExecutionCtx: ExecutionCtx | null = null;
 
 export function getExecutionCtx(): ExecutionCtx | null {
-  return inGPUMode() ? getResolutionCtx() : cpuExecutionCtx;
+  const currentMode = getCurrentMode();
+  if (currentMode === RuntimeMode.WGSL) {
+    return getResolutionCtx();
+  } else if (currentMode === RuntimeMode.COMPTIME) {
+    return comptimeExecutionCtx;
+  }
+  return null; // JS mode doesn't need execution context
 }
 
-export function provideCpuCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
-  const prev = cpuExecutionCtx;
-  cpuExecutionCtx = ctx;
+export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
+  const prev = comptimeExecutionCtx;
+  comptimeExecutionCtx = ctx;
   try {
     return callback();
   } finally {
-    cpuExecutionCtx = prev;
+    comptimeExecutionCtx = prev;
   }
 }
+
+export const inWGSLMode = () => getCurrentMode() === RuntimeMode.WGSL;
+export const inComptimeMode = () => getCurrentMode() === RuntimeMode.COMPTIME;
+export const inJSMode = () => getCurrentMode() === RuntimeMode.JS;
 ```
 
 ### Day 3: Variable System Updates
 
-#### Remove CPU Mode Restrictions
+#### Remove COMPTIME Mode Restrictions
 **File**: `src/core/variable/tgpuVariable.ts`
 
 ```typescript
@@ -79,10 +105,12 @@ get value(): Infer<TDataType> {
     throw new Error('Cannot access variable outside execution context');
   }
   
-  if (inGPUMode()) {
+  if (inWGSLMode()) {
     return this[$gpuValueOf]();
-  } else {
+  } else if (inComptimeMode()) {
     return ctx.readVariable(this);
+  } else {
+    throw new Error('Variables not accessible in JS mode');
   }
 }
 ```
@@ -95,10 +123,12 @@ set value(newValue: Infer<TDataType>) {
     throw new Error('Cannot assign variable outside execution context');
   }
   
-  if (inGPUMode()) {
-    throw new Error('Cannot assign to variables in GPU mode');
-  } else {
+  if (inWGSLMode()) {
+    throw new Error('Cannot assign to variables in WGSL mode');
+  } else if (inComptimeMode()) {
     ctx.writeVariable(this, newValue);
+  } else {
+    throw new Error('Variables not accessible in JS mode');
   }
 }
 ```
@@ -139,53 +169,106 @@ get value(): InferGPU<T> {
 
 ### Day 5: Function Integration & Testing
 
-#### Update Function Execution
-**File**: `src/core/function/tgpuFn.ts`
+#### Update Derived Value Computation
+**File**: `src/resolutionCtx.ts`
 
-Enable CPU execution of functions with proper context:
+Update derived computation to run in COMPTIME mode:
 
 ```typescript
-// When executing functions in CPU mode, provide ExecutionCtx
-const executeCpuFunction = (fn: Function, args: any[]) => {
-  const ctx = new CpuExecutionCtx();
-  return provideCpuCtx(ctx, () => fn(...args));
-};
+_getOrCompute<T>(derived: TgpuDerived<T>): T {
+  // ... existing memoization logic ...
+  
+  // Derived computations run in COMPTIME mode, not JS mode
+  pushMode(RuntimeMode.COMPTIME);
+  const ctx = new ComptimeExecutionCtx();
+  
+  let result: T;
+  try {
+    result = provideComptimeCtx(ctx, () => derived['~compute']());
+  } finally {
+    popMode(RuntimeMode.COMPTIME);
+  }
+  
+  // ... rest of existing logic ...
+}
+```
+
+#### Update createDualImpl
+**File**: `src/shared/generators.ts`
+
+Clarify that dual implementations work in WGSL and JS modes only:
+
+```typescript
+export function createDualImpl<T extends (...args: never[]) => unknown>(
+  jsImpl: T,
+  wgslImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
+  name: string,
+  argTypes?: FnArgsConversionHint,
+): TgpuDualFn<T> {
+  const impl = ((...args: Parameters<T>) => {
+    if (inWGSLMode()) {
+      return wgslImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
+    } else if (inJSMode()) {
+      return jsImpl(...args);
+    } else {
+      throw new Error(`Dual implementation not available in COMPTIME mode`);
+    }
+  }) as T;
+  
+  // ... rest unchanged
+}
 ```
 
 #### Add Tests
-**File**: `tests/cpuExecution.test.ts`
+**File**: `tests/comptimeExecution.test.ts`
 
 ```typescript
-describe('CPU Execution', () => {
-  it('should allow variable access in CPU mode', () => {
+describe('COMPTIME Execution', () => {
+  it('should allow variable access in derived computations', () => {
     const x = tgpu.privateVar(d.f32, 1.0);
     
     const compute = tgpu.derived(() => {
-      return x.value * 2;
+      return x.value * 2; // This runs at resolution-time, not GPU runtime
     });
     
     expect(compute.value).toBe(2.0);
   });
   
-  it('should allow variable assignment in CPU mode', () => {
+  it('should allow variable assignment in derived computations', () => {
     const x = tgpu.privateVar(d.f32, 1.0);
     
     const compute = tgpu.derived(() => {
-      x.value = 5.0;
+      x.value = 5.0; // Modifies the variable during preprocessing
       return x.value;
     });
     
     expect(compute.value).toBe(5.0);
+  });
+  
+  it('should isolate variable state between derived computations', () => {
+    const x = tgpu.privateVar(d.f32, 1.0);
+    
+    const compute1 = tgpu.derived(() => {
+      x.value = 10.0;
+      return x.value;
+    });
+    
+    const compute2 = tgpu.derived(() => {
+      return x.value; // Should see original value, not modified
+    });
+    
+    expect(compute1.value).toBe(10.0);
+    expect(compute2.value).toBe(1.0); // Isolated execution
   });
 });
 ```
 
 ## Key Implementation Details
 
-### 1. Minimal ExecutionCtx for CPU
+### 1. Minimal ExecutionCtx for COMPTIME
 
 ```typescript
-class CpuExecutionCtx implements ExecutionCtx {
+class ComptimeExecutionCtx implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
   private variables = new WeakMap<TgpuVar<any, any>, any>();
 
@@ -210,19 +293,19 @@ class CpuExecutionCtx implements ExecutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
-    // Simple unwrapping logic for CPU mode
+    // Simple unwrapping logic for COMPTIME mode
     if (isSlot(eventual)) {
       return this.readSlot(eventual);
     }
     if (isDerived(eventual)) {
-      return eventual['~compute']();
+      return eventual['~compute'](); // Recursive derived computation
     }
     return eventual;
   }
 
   readVariable<T>(variable: TgpuVar<any, T>): T {
     if (!this.variables.has(variable)) {
-      // Initialize with default value
+      // Initialize with default value for the data type
       const defaultValue = getDefaultValue(variable.dataType);
       this.variables.set(variable, defaultValue);
     }
@@ -253,13 +336,13 @@ interface ResolutionCtx extends ExecutionCtx {
 
 ### 3. Variable Scope Handling
 
-For CPU mode, we use simple WeakMap storage. Variable scoping is handled by function call boundaries:
+For COMPTIME mode, we use simple WeakMap storage. Variable scoping is handled by derived computation boundaries:
 
 ```typescript
-// privateVar: isolated per function call
-// workgroupVar: shared across the execution context
+// privateVar: isolated per derived computation
+// workgroupVar: shared across the execution context (but still COMPTIME)
 
-class CpuExecutionCtx {
+class ComptimeExecutionCtx {
   private privateVars = new WeakMap<TgpuVar<'private', any>, any>();
   private workgroupVars = new WeakMap<TgpuVar<'workgroup', any>, any>();
   
@@ -272,19 +355,21 @@ class CpuExecutionCtx {
 
 ## Benefits of This Approach
 
-1. **Minimal Changes**: Only touches the specific files that need CPU support
-2. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
-3. **Simple Implementation**: Leverages existing slot logic, just adds CPU storage
-4. **Fast Timeline**: Can be implemented in 1 week with proper testing
-5. **Future-Proof**: Provides foundation for more advanced CPU/GPU interop
+1. **Correct Execution Model**: Properly separates WGSL, COMPTIME, and JS modes
+2. **Minimal Changes**: Only touches the specific files that need COMPTIME support  
+3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
+4. **Simple Implementation**: Leverages existing slot logic, just adds COMPTIME storage
+5. **Fast Timeline**: Can be implemented in 1 week with proper testing
+6. **Future-Proof**: Provides foundation for more advanced preprocessing capabilities
 
 ## Success Criteria
 
-1. Variables (privateVar, workgroupVar) work in CPU mode
-2. Derived values can access and modify variables
-3. Slot system works identically in both CPU and GPU modes
-4. All existing tests pass
-5. New tests validate CPU execution functionality
-6. Zero performance impact on existing GPU code paths
+1. Variables (privateVar, workgroupVar) work in COMPTIME mode (derived computations)
+2. Derived values can access and modify variables during resolution
+3. Slot system works identically in both WGSL and COMPTIME modes
+4. createDualImpl correctly throws errors in COMPTIME mode
+5. All existing tests pass
+6. New tests validate COMPTIME execution functionality
+7. Zero performance impact on existing WGSL and JS code paths
 
-This focused approach delivers the core functionality needed while keeping the implementation simple and maintainable.
+This focused approach delivers the core functionality needed while maintaining the correct execution model and keeping the implementation simple and maintainable.
