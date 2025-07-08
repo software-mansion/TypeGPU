@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode, inSimulateMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -59,6 +59,21 @@ export function isVariable<T extends TgpuVar>(
 // Implementation
 // --------------
 
+// Add simple SIMULATE mode variable storage for dual implementations
+const simulateVariables = new WeakMap<TgpuVarImpl<any, any>, any>();
+
+function getDefaultValue<T extends AnyData>(dataType: T): Infer<T> {
+  // Simple default value generation - in a real implementation this would be more sophisticated
+  if (dataType.type === 'f32' || dataType.type === 'i32' || dataType.type === 'u32') {
+    return 0 as Infer<T>;
+  }
+  if (dataType.type === 'bool') {
+    return false as Infer<T>;
+  }
+  // Add more default values as needed
+  return undefined as Infer<T>;
+}
+
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   declare readonly [$internal]: {
@@ -111,11 +126,30 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     ) as Infer<TDataType>;
   }
 
-  get value(): Infer<TDataType> {
-    if (!inGPUMode()) {
-      throw new Error('`tgpu.var` values are only accessible on the GPU');
+  private getSimulateValue(): Infer<TDataType> {
+    if (!simulateVariables.has(this)) {
+      const defaultValue = this._initialValue ?? getDefaultValue(this._dataType);
+      simulateVariables.set(this, defaultValue);
     }
+    return simulateVariables.get(this);
+  }
 
-    return this[$gpuValueOf]();
+  get value(): Infer<TDataType> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf](); // CODEGEN code generation
+    } else if (inSimulateMode()) {
+      // Enable SIMULATE mode access for dual implementations
+      return this.getSimulateValue();
+    } else {
+      throw new Error('Variables only accessible in CODEGEN and SIMULATE modes, not COMPTIME');
+    }
+  }
+
+  set value(newValue: Infer<TDataType>) {
+    if (inSimulateMode()) {
+      simulateVariables.set(this, newValue);
+    } else {
+      throw new Error('Variable assignment only allowed in SIMULATE mode');
+    }
   }
 }
