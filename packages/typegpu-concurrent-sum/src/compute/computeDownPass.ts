@@ -19,16 +19,16 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
   const segmentLength = d.u32(workgroupSize * 2);
   const log2Length = d.u32(std.ceil(std.log2(d.f32(segmentLength))));
 
-  const totalInputLength = layout.$.workArray.length;
+  const totalInputLength = layout.$.inputArray.length;
 
   // Copy input data to shared memory
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
   if (idx0 < totalInputLength) {
-    sharedMem.value[lid.x * 2] = layout.$.workArray[idx0] as number;
+    sharedMem.value[lid.x * 2] = layout.$.inputArray[idx0] as number;
   }
   if (idx1 < totalInputLength) {
-    sharedMem.value[lid.x * 2 + 1] = layout.$.workArray[idx1] as number;
+    sharedMem.value[lid.x * 2 + 1] = layout.$.inputArray[idx1] as number;
   }
   std.workgroupBarrier();
 

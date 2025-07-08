@@ -14,9 +14,7 @@ export const incrementShader = tgpu['~unstable'].computeFn({
   if (gId < d.u32(totalInputLength)) {
     const blockId = d.u32(gId / (workgroupSize * 2));
 
-    if (blockId > 0) {
-      (layout.$.workArray[gId] as number) += layout.$
-        .sumsArray[blockId - 1] as number;
-    }
+    (layout.$.workArray[gId] as number) = layout.$
+      .sumsArray[blockId] as number + (layout.$.inputArray[gId] as number);
   }
 });

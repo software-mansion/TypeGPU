@@ -16,7 +16,7 @@ export async function currentSum(
   outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
 ) {
   const inputLength = inputBuffer.dataType.elementCount;
-  const resultBuffer = outputBufferOpt ?? root
+  const sumsOfSumsBuffer = outputBufferOpt ?? root
     .createBuffer(d.arrayOf(d.u32, inputLength))
     .$usage('storage');
 
@@ -32,12 +32,6 @@ export async function currentSum(
       ),
     )
     .$usage('storage');
-
-  const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
-    inputArray: inputBuffer,
-    workArray: workBuffer,
-    sumsArray: sumsBuffer,
-  });
 
   // Pipelines
 
@@ -56,7 +50,14 @@ export async function currentSum(
     .createPipeline()
     .$name('applySums');
 
-  // 1: Bieloch's Block Scan
+  /* ----------------------- 1: Bieloch's Block Scan ----------------------- */
+  // -- Multiple UpPass - small trees (input, work, sums)
+  const mainArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+    inputArray: inputBuffer,
+    workArray: workBuffer,
+    sumsArray: sumsBuffer,
+  });
+
   upPassPipeline
     .with(dataBindGroupLayout, mainArrayBindGroup)
     .dispatchWorkgroups(
@@ -67,53 +68,111 @@ export async function currentSum(
 
   root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
+  // -- Multiple DownPass - small trees (-, work, -)
+  const workBuffer2 = root
+    .createBuffer(d.arrayOf(d.u32, inputLength))
+    .$usage('storage');
+
+  const mainDownArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+    inputArray: workBuffer,
+    workArray: workBuffer2,
+    sumsArray: sumsBuffer,
+  });
 
   downPassPipeline
-    .with(dataBindGroupLayout, mainArrayBindGroup)
-    .dispatchWorkgroups(
-      inputLength / (workgroupSize * 2) > 1
-        ? inputLength / (workgroupSize * 2)
-        : 1,
-    );
-  // buffer.copyFrom //device.queue.copyBufferToBuffer
+    .with(dataBindGroupLayout, mainDownArrayBindGroup)
+    .dispatchWorkgroups(Math.max(
+      inputLength / (workgroupSize * 2),
+      1,
+    ));
   root['~unstable'].flush();
 
-  // 2: Sums scan
+  // -- Sum of sums UpPass - (sums, sumOfSums, -)
   const sumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
     inputArray: sumsBuffer,
-    workArray: resultBuffer,
+    workArray: sumsOfSumsBuffer,
     sumsArray: root.createBuffer(
-      d.arrayOf(d.u32, inputLength / workgroupSize * 2),
+      d.arrayOf(d.u32, Math.max(1, inputLength / workgroupSize * 2)),
     ).$usage('storage'), // unused but required
   });
 
   upPassPipeline.with(dataBindGroupLayout, sumsArrayBindGroup)
     .dispatchWorkgroups(
-      Math.ceil(
+      Math.max(
         (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
-      ) || 1,
+        1,
+      ),
     );
   root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
 
-  // 3: Apply sums to each block
+  // Sum of sums DownPass - (-, sumOfSums, -)
+  const sumsOfSumsBuffer2 = outputBufferOpt ?? root
+    .createBuffer(d.arrayOf(d.u32, inputLength))
+    .$usage('storage');
+
+  const downPassArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+    inputArray: sumsOfSumsBuffer,
+    workArray: sumsOfSumsBuffer2,
+    sumsArray: root.createBuffer(
+      d.arrayOf(d.u32, inputLength),
+    ).$usage('storage'), // unused but required
+  });
+  downPassPipeline
+    .with(dataBindGroupLayout, downPassArrayBindGroup)
+    .dispatchWorkgroups(Math.max(
+      (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
+      1,
+    ));
+  root['~unstable'].flush();
+  await root.device.queue.onSubmittedWorkDone();
+
+  // Apply big sums to each block (-, work, sumOfSums)
+  const finalOutputBuffer = root.createBuffer(d.arrayOf(d.u32, inputLength))
+    .$usage('storage');
+  const prefixSumsArrayBindGroup = root.createBindGroup(dataBindGroupLayout, {
+    inputArray: workBuffer2,
+    workArray: finalOutputBuffer,
+    sumsArray: sumsOfSumsBuffer2,
+  });
   applySumsPipeline
-    .with(dataBindGroupLayout, mainArrayBindGroup)
+    .with(dataBindGroupLayout, prefixSumsArrayBindGroup)
     .dispatchWorkgroups(Math.ceil(inputLength / workgroupSize));
 
-  resultBuffer
+  root['~unstable'].flush();
+  await root.device.queue.onSubmittedWorkDone();
+
+  sumsBuffer
     .read()
     .then((result) => {
-      console.log('Result:', result);
+      console.log('Sum:', result);
     })
     .catch((error) => {
       console.error('Error reading buffer:', error);
     });
 
-  workBuffer
+  sumsOfSumsBuffer2
+    .read()
+    .then((result) => {
+      console.log('sums of sums:', result);
+    })
+    .catch((error) => {
+      console.error('Error reading buffer:', error);
+    });
+
+  workBuffer2
     .read()
     .then((result) => {
       console.log('Work:', result);
+    })
+    .catch((error) => {
+      console.error('Error reading buffer:', error);
+    });
+
+  finalOutputBuffer
+    .read()
+    .then((result) => {
+      console.log('Final Output:', result);
     })
     .catch((error) => {
       console.error('Error reading buffer:', error);

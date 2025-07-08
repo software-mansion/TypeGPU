@@ -9,9 +9,6 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const fixedArrayLength = 2 ** 16;
 
 const root = await tgpu.init({
-  adapter: {
-    powerPreference: 'high-performance',
-  },
   device: {
     requiredFeatures: [
       'timestamp-query',
@@ -41,6 +38,14 @@ const arr = [...Array(fixedArrayLength).keys()];
 console.log(
   'Expected sum: ',
   arr.reduce(
+    (accumulator, currentValue) => accumulator + currentValue,
+    0,
+  ),
+);
+const arr1 = [...Array(fixedArrayLength - 1).keys()];
+console.log(
+  'Expected sum n-1: ',
+  arr1.reduce(
     (accumulator, currentValue) => accumulator + currentValue,
     0,
   ),
