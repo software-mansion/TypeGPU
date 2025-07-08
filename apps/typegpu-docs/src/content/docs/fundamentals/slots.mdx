@@ -18,7 +18,7 @@ Main use cases for slots include:
 
 - Generics -- instead of rewriting a function for each generic parameter, it suffices to fill a slot with a different value.
 - Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
-- Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.
+{/* - Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`. */}
 
 ## Basic usage
 
@@ -130,42 +130,11 @@ The pipeline above resolves to the following wgsl:
 }
 ```
 
-## Other examples
+## Inversion of control
 
-### Conditional compilation
+With slots, libraries can expose customization points for their users. 
+They enable behavioral changes to internal library functionality while maintaining type safety and performance.
 
-```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { max } from 'typegpu/std';
-
-const root = await tgpu.init();
-
-const Obj = d.struct({
-  pos: d.vec3f,
-});
-
-const objects = root.createReadonly(d.arrayOf(Obj, 256));
-
-// ---cut---
-const safeLoopSlot = tgpu.slot(false);
-
-const processObjects = tgpu.fn([])(() => {
-  let len = objects.$.length;
-
-  if (safeLoopSlot.$) { // <- evaluated at compile time
-    // This will be included in the shader code only if
-    // `safeLoopSlot` is bound to true in the caller's scope.
-    len = max(len, 9999);
-  }
-
-  for (let i = 0; i < len; ++i) {
-    // ...
-  }
-});
-```
-
-### Inversion of control
 
 ```ts twoslash
 // physics.ts
@@ -219,6 +188,39 @@ const main = tgpu
   });
 ```
 
+{/*
+TODO: add this section back when we actually prune branches.
+## Conditional compilation
 
-With slots, libraries can expose customization points for their users. 
-They enable behavioral changes to internal library functionality while maintaining type safety and performance.
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { max } from 'typegpu/std';
+
+const root = await tgpu.init();
+
+const Obj = d.struct({
+  pos: d.vec3f,
+});
+
+const objects = root.createReadonly(d.arrayOf(Obj, 256));
+
+// ---cut---
+const safeLoopSlot = tgpu.slot(false);
+
+const processObjects = tgpu.fn([])(() => {
+  let len = objects.$.length;
+
+  if (safeLoopSlot.$) { // <- evaluated at compile time
+    // This will be included in the shader code only if
+    // `safeLoopSlot` is bound to true in the caller's scope.
+    len = max(len, 9999);
+  }
+
+  for (let i = 0; i < len; ++i) {
+    // ...
+  }
+});
+```
+*/}
+
