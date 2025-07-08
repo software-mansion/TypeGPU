@@ -11,18 +11,25 @@
 
 ## Overview
 
-This document outlines a focused plan to enable slot access in COMPTIME mode for derived value computations. The key insight is that slots are a comptime mechanism for dependency injection, while variables should only be accessible in CODEGEN and SIMULATE modes.
+This document outlines a plan to enable CPU simulation of GPU shaders by implementing a unified ExecutionCtx system. The main goal is to allow users to run their shader code on the CPU for testing, debugging, and development purposes. This requires supporting variables in SIMULATE mode and slots in COMPTIME mode for dependency injection.
 
 ## Current State
 
-**The Problem**: Slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (CODEGEN mode only).
+**The Problem**: Users cannot simulate shader execution on the CPU because:
+1. Variables don't work in SIMULATE mode (needed for CPU execution)
+2. Slot operations throw errors in COMPTIME mode (needed for dependency injection)
+3. No unified execution context system across the three modes
 
 **The Execution Model**: TypeGPU has three execution modes with different capabilities:
 - **CODEGEN Mode**: Code generation for GPU shaders (current ResolutionCtx) - has slots + variables
 - **COMPTIME Mode**: Resolution-time computation for derived values - has slots only (dependency injection)
 - **SIMULATE Mode**: Runtime JavaScript execution for dual implementations - has variables only
 
-**The Solution**: Extend COMPTIME mode to support slot access for dependency injection in derived computations, while keeping variables restricted to CODEGEN and SIMULATE modes only.
+**The Solution**: Create a unified ExecutionCtx system that enables:
+1. **CPU Shader Simulation**: Variables work in SIMULATE mode for JavaScript execution
+2. **Dependency Injection**: Slots work in COMPTIME mode for derived value computations  
+3. **Unified Interface**: Single ExecutionCtx interface across all execution modes
+4. **Clear Separation**: Each mode has distinct capabilities while sharing the same interface
 
 ## Implementation Plan (1 Week)
 
