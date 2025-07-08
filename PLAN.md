@@ -2,18 +2,18 @@
 
 ## Overview
 
-This document outlines a focused plan to enable slots, derived values, and privateVars to work on the CPU by creating a lightweight ExecutionCtx abstraction. The key insight is that ResolutionCtx is an implementation detail - we just need to track slot values in CPU mode.
+This document outlines a focused plan to enable slot access in COMPTIME mode for derived value computations. The key insight is that slots are a comptime mechanism for dependency injection, while variables should only be accessible in WGSL and JS modes.
 
 ## Current State
 
-**The Problem**: Variables and some slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (WGSL mode only).
+**The Problem**: Slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (WGSL mode only).
 
-**The Execution Model**: TypeGPU actually has three execution modes:
-- **WGSL Mode**: Code generation for GPU shaders (current ResolutionCtx)
-- **COMPTIME Mode**: Resolution-time computation for derived values and preprocessing
-- **JS Mode**: Runtime JavaScript execution for dual implementations
+**The Execution Model**: TypeGPU has three execution modes with different capabilities:
+- **WGSL Mode**: Code generation for GPU shaders (current ResolutionCtx) - has slots + variables
+- **COMPTIME Mode**: Resolution-time computation for derived values - has slots only (dependency injection)
+- **JS Mode**: Runtime JavaScript execution for dual implementations - has variables only
 
-**The Solution**: Extend the execution model to properly support COMPTIME mode with variable access, while keeping ResolutionCtx unchanged for WGSL mode.
+**The Solution**: Extend COMPTIME mode to support slot access for dependency injection in derived computations, while keeping variables restricted to WGSL and JS modes only.
 
 ## Implementation Plan (1 Week)
 
@@ -27,18 +27,14 @@ interface ExecutionCtx {
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
   unwrap<T>(eventual: Eventual<T>): T;
-  
-  // Variable support for COMPTIME mode
-  readVariable<T>(variable: TgpuVar<any, T>): T;
-  writeVariable<T>(variable: TgpuVar<any, T>, value: T): void;
 }
 
 class ComptimeExecutionCtx implements ExecutionCtx {
   private slotValues = new WeakMap<TgpuSlot<any>, any>();
-  private variables = new WeakMap<TgpuVar<any, any>, any>();
   
   // Simple implementations that mirror ResolutionCtx slot logic
-  // This runs during shader preprocessing, not GPU simulation
+  // This runs during shader preprocessing for dependency injection
+  // NO variable support - variables only work in WGSL and JS modes
 }
 ```
 
@@ -84,51 +80,47 @@ export const inComptimeMode = () => getCurrentMode() === RuntimeMode.COMPTIME;
 export const inJSMode = () => getCurrentMode() === RuntimeMode.JS;
 ```
 
-### Day 3: Variable System Updates
+### Day 3: Variable System Clarification
 
-#### Remove COMPTIME Mode Restrictions
+#### Keep Variable Restrictions for COMPTIME Mode
 **File**: `src/core/variable/tgpuVariable.ts`
 
+Variables should remain restricted to WGSL and JS modes only:
+
 ```typescript
-// Change this:
+// Keep existing behavior - variables NOT accessible in COMPTIME mode
 get value(): Infer<TDataType> {
-  if (!inGPUMode()) {
-    throw new Error('`tgpu.var` values are only accessible on the GPU');
+  if (inWGSLMode()) {
+    return this[$gpuValueOf](); // WGSL code generation
+  } else if (inJSMode()) {
+    // Enable JS mode access for dual implementations
+    return this.getJSValue();
+  } else {
+    throw new Error('Variables only accessible in WGSL and JS modes, not COMPTIME');
   }
-  return this[$gpuValueOf]();
 }
 
-// To this:
-get value(): Infer<TDataType> {
-  const ctx = getExecutionCtx();
-  if (!ctx) {
-    throw new Error('Cannot access variable outside execution context');
-  }
-  
-  if (inWGSLMode()) {
-    return this[$gpuValueOf]();
-  } else if (inComptimeMode()) {
-    return ctx.readVariable(this);
-  } else {
-    throw new Error('Variables not accessible in JS mode');
-  }
-}
+// Variables are for actual execution contexts, not dependency injection
 ```
 
-#### Add Variable Assignment Support
+#### Add JS Mode Variable Support
 ```typescript
-set value(newValue: Infer<TDataType>) {
-  const ctx = getExecutionCtx();
-  if (!ctx) {
-    throw new Error('Cannot assign variable outside execution context');
+// Add simple JS mode variable storage for dual implementations
+private static jsVariables = new WeakMap<TgpuVar<any, any>, any>();
+
+private getJSValue(): Infer<TDataType> {
+  if (!TgpuVarImpl.jsVariables.has(this)) {
+    const defaultValue = getDefaultValue(this._dataType);
+    TgpuVarImpl.jsVariables.set(this, defaultValue);
   }
-  
-  if (inWGSLMode()) {
-    throw new Error('Cannot assign to variables in WGSL mode');
-  } else if (inComptimeMode()) {
-    ctx.writeVariable(this, newValue);
+  return TgpuVarImpl.jsVariables.get(this);
+}
+
+set value(newValue: Infer<TDataType>) {
+  if (inJSMode()) {
+    TgpuVarImpl.jsVariables.set(this, newValue);
   } else {
-    throw new Error('Variables not accessible in JS mode');
+    throw new Error('Variable assignment only allowed in JS mode');
   }
 }
 ```
@@ -166,6 +158,8 @@ get value(): InferGPU<T> {
   return this[$gpuValueOf](ctx);
 }
 ```
+
+**Note**: Slots work in both WGSL and COMPTIME modes for dependency injection, but derived values only compute in COMPTIME mode.
 
 ### Day 5: Function Integration & Testing
 
@@ -224,41 +218,55 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
 
 ```typescript
 describe('COMPTIME Execution', () => {
-  it('should allow variable access in derived computations', () => {
+  it('should allow slot access in derived computations', () => {
+    const multiplier = tgpu.slot(2.0);
+    
+    const compute = tgpu.derived(() => {
+      return multiplier.value * 5; // Slots work in COMPTIME for dependency injection
+    });
+    
+    expect(compute.value).toBe(10.0);
+  });
+  
+  it('should NOT allow variable access in derived computations', () => {
     const x = tgpu.privateVar(d.f32, 1.0);
     
     const compute = tgpu.derived(() => {
-      return x.value * 2; // This runs at resolution-time, not GPU runtime
+      return x.value * 2; // This should throw - variables not in COMPTIME
     });
     
-    expect(compute.value).toBe(2.0);
+    expect(() => compute.value).toThrow('Variables only accessible in WGSL and JS modes');
   });
   
-  it('should allow variable assignment in derived computations', () => {
-    const x = tgpu.privateVar(d.f32, 1.0);
+  it('should allow slot dependency injection in derived computations', () => {
+    const base = tgpu.slot(5.0);
+    const multiplier = tgpu.slot(3.0);
     
     const compute = tgpu.derived(() => {
-      x.value = 5.0; // Modifies the variable during preprocessing
-      return x.value;
+      return base.value * multiplier.value; // Pure dependency injection
     });
     
-    expect(compute.value).toBe(5.0);
+    const withDifferentValues = compute.with(base, 10.0).with(multiplier, 2.0);
+    
+    expect(compute.value).toBe(15.0);
+    expect(withDifferentValues.value).toBe(20.0);
   });
-  
-  it('should isolate variable state between derived computations', () => {
+});
+
+describe('JS Mode Variable Access', () => {
+  it('should allow variable access in JS mode', () => {
+    // Test that variables work in JS mode for dual implementations
     const x = tgpu.privateVar(d.f32, 1.0);
     
-    const compute1 = tgpu.derived(() => {
-      x.value = 10.0;
-      return x.value;
-    });
-    
-    const compute2 = tgpu.derived(() => {
-      return x.value; // Should see original value, not modified
-    });
-    
-    expect(compute1.value).toBe(10.0);
-    expect(compute2.value).toBe(1.0); // Isolated execution
+    // Simulate JS mode execution
+    pushMode(RuntimeMode.JS);
+    try {
+      expect(x.value).toBe(1.0);
+      x.value = 5.0;
+      expect(x.value).toBe(5.0);
+    } finally {
+      popMode(RuntimeMode.JS);
+    }
   });
 });
 ```
@@ -270,7 +278,6 @@ describe('COMPTIME Execution', () => {
 ```typescript
 class ComptimeExecutionCtx implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
-  private variables = new WeakMap<TgpuVar<any, any>, any>();
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
     // Search slot stack from top to bottom
@@ -303,18 +310,8 @@ class ComptimeExecutionCtx implements ExecutionCtx {
     return eventual;
   }
 
-  readVariable<T>(variable: TgpuVar<any, T>): T {
-    if (!this.variables.has(variable)) {
-      // Initialize with default value for the data type
-      const defaultValue = getDefaultValue(variable.dataType);
-      this.variables.set(variable, defaultValue);
-    }
-    return this.variables.get(variable);
-  }
-
-  writeVariable<T>(variable: TgpuVar<any, T>, value: T): void {
-    this.variables.set(variable, value);
-  }
+  // NO variable support - variables only work in WGSL and JS modes
+  // COMPTIME is purely for slot-based dependency injection
 }
 ```
 
@@ -334,42 +331,61 @@ interface ResolutionCtx extends ExecutionCtx {
 }
 ```
 
-### 3. Variable Scope Handling
+### 3. Mode-Specific Capabilities
 
-For COMPTIME mode, we use simple WeakMap storage. Variable scoping is handled by derived computation boundaries:
+Each execution mode has different capabilities:
 
 ```typescript
-// privateVar: isolated per derived computation
-// workgroupVar: shared across the execution context (but still COMPTIME)
+// WGSL Mode (ResolutionCtx): Slots + Variables
+// - Slots: For dependency injection in shader generation
+// - Variables: For WGSL variable declarations
 
-class ComptimeExecutionCtx {
-  private privateVars = new WeakMap<TgpuVar<'private', any>, any>();
-  private workgroupVars = new WeakMap<TgpuVar<'workgroup', any>, any>();
+// COMPTIME Mode (ComptimeExecutionCtx): Slots only  
+// - Slots: For dependency injection in derived computations
+// - NO Variables: Variables are execution constructs, not comptime constructs
+
+// JS Mode: Variables only
+// - Variables: For dual implementation runtime state
+// - NO Slots: Slots are resolved at comptime, not runtime
+
+class JSModeVariableStorage {
+  private static variables = new WeakMap<TgpuVar<any, any>, any>();
   
-  readVariable<T>(variable: TgpuVar<any, T>): T {
-    const storage = variable.scope === 'private' ? this.privateVars : this.workgroupVars;
-    // ... rest of implementation
+  static read<T>(variable: TgpuVar<any, T>): T {
+    if (!this.variables.has(variable)) {
+      const defaultValue = getDefaultValue(variable.dataType);
+      this.variables.set(variable, defaultValue);
+    }
+    return this.variables.get(variable);
+  }
+  
+  static write<T>(variable: TgpuVar<any, T>, value: T): void {
+    this.variables.set(variable, value);
   }
 }
 ```
 
 ## Benefits of This Approach
 
-1. **Correct Execution Model**: Properly separates WGSL, COMPTIME, and JS modes
-2. **Minimal Changes**: Only touches the specific files that need COMPTIME support  
+1. **Correct Execution Model**: Properly separates capabilities by mode
+   - WGSL: Slots + Variables (shader generation)
+   - COMPTIME: Slots only (dependency injection)  
+   - JS: Variables only (runtime state)
+2. **Minimal Changes**: Only adds COMPTIME slot support, no variable complexity
 3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
-4. **Simple Implementation**: Leverages existing slot logic, just adds COMPTIME storage
+4. **Simple Implementation**: Leverages existing slot logic for COMPTIME mode
 5. **Fast Timeline**: Can be implemented in 1 week with proper testing
-6. **Future-Proof**: Provides foundation for more advanced preprocessing capabilities
+6. **Clear Separation**: Each mode has distinct, well-defined capabilities
 
 ## Success Criteria
 
-1. Variables (privateVar, workgroupVar) work in COMPTIME mode (derived computations)
-2. Derived values can access and modify variables during resolution
-3. Slot system works identically in both WGSL and COMPTIME modes
-4. createDualImpl correctly throws errors in COMPTIME mode
-5. All existing tests pass
-6. New tests validate COMPTIME execution functionality
-7. Zero performance impact on existing WGSL and JS code paths
+1. Slots work in COMPTIME mode for derived value dependency injection
+2. Variables remain restricted to WGSL and JS modes (no COMPTIME access)
+3. Derived values can access slots but NOT variables during resolution
+4. createDualImpl correctly throws errors in COMPTIME mode  
+5. Variables work in JS mode for dual implementation runtime state
+6. All existing tests pass
+7. New tests validate COMPTIME slot access and variable restrictions
+8. Zero performance impact on existing WGSL and JS code paths
 
-This focused approach delivers the core functionality needed while maintaining the correct execution model and keeping the implementation simple and maintainable.
+This focused approach delivers slot-based dependency injection for derived values while maintaining clear separation of concerns between execution modes.
