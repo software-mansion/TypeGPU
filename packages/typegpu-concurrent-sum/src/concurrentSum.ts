@@ -177,5 +177,5 @@ export async function currentSum(
     .catch((error) => {
       console.error('Error reading buffer:', error);
     });
-  return sumsBuffer;
+  return finalOutputBuffer;
 }

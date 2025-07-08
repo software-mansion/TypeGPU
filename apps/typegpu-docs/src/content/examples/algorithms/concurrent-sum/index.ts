@@ -5,7 +5,6 @@ import * as d from 'typegpu/data';
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-// const fixedArrayLength = 512;
 const fixedArrayLength = 2 ** 16;
 
 const root = await tgpu.init({
@@ -29,27 +28,48 @@ const buffer = root
   )
   .$usage('storage');
 
-currentSum(root, buffer);
-// const work = await (await currentSum(root, buffer)).read();
-// console.log('Result:', work);
+  
+  const button = document.querySelector('#runButton') as HTMLButtonElement;
+  
+  button.addEventListener('click', async () => {
+  button.disabled = true;
+    
+  const jsArray = Array.from({ length: fixedArrayLength }, (_, k) => k);
+  const jsResult = concurrentSumOnJS(jsArray);
+  console.log('JS Result:', jsResult);
 
-// COMPUTE EXPECTED
-const arr = [...Array(fixedArrayLength).keys()];
-console.log(
-  'Expected sum: ',
-  arr.reduce(
-    (accumulator, currentValue) => accumulator + currentValue,
-    0,
-  ),
-);
-const arr1 = [...Array(fixedArrayLength - 1).keys()];
-console.log(
-  'Expected sum n-1: ',
-  arr1.reduce(
-    (accumulator, currentValue) => accumulator + currentValue,
-    0,
-  ),
-);
+  const gpuResult = await (await currentSum(root, buffer)).read();
+  console.log('GPU Result:', gpuResult);
+
+  const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
+  console.log('Are results equal?', isEqual);
+
+  button.disabled = false;
+});
+
+function concurrentSumOnJS(arr: number[]) {
+  arr.reduce((accumulator, currentValue, index) => {
+    if (index > 0) {
+      arr[index] = arr[index - 1] + currentValue;
+    }
+    return arr[index];
+  }
+  , 0);
+  return arr;
+}
+
+function compareArrayWithBuffer(arr1: number[], arr2: number[]): boolean {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+  for (let i = 0; i < arr1.length - 1; i++) {
+    if (arr1[i] !== arr2[i+1]) {
+      console.log(`Mismatch at index ${i}: ${arr1[i]} !== ${arr2[i]}`);
+      return false;
+    }
+  }
+  return true;
+}
 
 export function onCleanup() {
   root.destroy();
