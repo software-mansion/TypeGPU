@@ -1,24 +1,20 @@
 ---
 title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
-draft: true
 ---
 
-Slots are a powerful dependency injection mechanism in TypeGPU that allow you to
-write shader logic without having to tightly couple to specific resources.
-They're similar to bind group layouts in this regard, but instead function at
-compile time.
+Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
+Similarly to bind group layouts, you can think of slots as of typed "holes" in TGSL shaders, that can be filled in later on from the outside.
+The main differences between slots and bound resources include the following:
 
-Main uses for slots include:
+- Slots are filled in during or before the shader module compile time, instead of just before the shader execution starts. 
+- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even `TgpuFn`s. 
 
-- Generics
-- Conditional compilation
-- Passing callbacks to high-level libraries
+Main use cases for slots include:
 
-With slots, libraries can expose customization points for their users. They
-enable behavioral changes to internal library functionality while maintaining
-type safety and performance. You can think of slots as holes in the shader that
-can be filled **in** from the outside.
+- Generics -- instead of rewriting a function for each generic parameter, it suffices to fill a slot with a different value.
+- Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
+- Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.
 
 ## Basic usage
 
@@ -165,3 +161,7 @@ const main = tgpu
     stepPhysicsAltered(); // <- Will use altered gravity.
   });
 ```
+
+
+With slots, libraries can expose customization points for their users. 
+They enable behavioral changes to internal library functionality while maintaining type safety and performance.
