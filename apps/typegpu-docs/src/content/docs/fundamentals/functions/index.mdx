@@ -9,11 +9,11 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-WGSL (WebGPU Shading Language) lacks many quality-of-life features that help with building complex shaders, like the ability to split functionality across
-different files, or to import a shader utility function from a library. TypeGPU offers a more composable and familiar approach:
+TypeGPU offers many quality-of-life features that help with building complex WGSL shaders, like the ability to split functionality across
+different files, or to import a shader utility function from a library. The approach that TypeGPU takes aims for composability:
 
 - Each definition in WGSL is represented as its own TypeGPU resource -- a typed wrapper representing some kind of WGSL resource (e.g., `TgpuFn`, `TgpuBuffer`, `TgpuVar`).
-- Resources can reference outside resources, like other user-defined functions, buffers, bind group layouts, etc.
+- Resources can reference outside resources, like buffers, bind group layouts, or user-defined tgpu functions.
 - Resources can be imported and exported like any other JavaScript value.
 
 ## Defining a function
