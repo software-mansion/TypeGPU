@@ -2,34 +2,33 @@
 
 ## Terminology
 
-- **ExecutionCtx**: A context object that provides access to slots and manages dependency injection during code execution
-- **ResolutionCtx**: The existing WGSL mode execution context used for GPU shader generation
-- **ComptimeExecutionCtx**: A new execution context for resolution-time computations in derived values
-- **Slot**: A dependency injection mechanism that works across WGSL and COMPTIME modes
-- **Variable**: An execution construct that only works in WGSL and JS modes, not in COMPTIME
+- **ExecutionCtx**: A unified context object that provides access to slots and manages dependency injection during code execution across all modes
+- **ResolutionCtx**: The existing CODEGEN mode execution context used for GPU shader generation (implements ExecutionCtx)
+- **Slot**: A dependency injection mechanism that works across CODEGEN and COMPTIME modes
+- **Variable**: An execution construct that only works in CODEGEN and SIMULATE modes, not in COMPTIME
 - **Derived Value**: A computed value that runs in COMPTIME mode and can access slots for dependency injection
-- **Dual Implementation**: Functions that have both JavaScript and WGSL implementations, working in JS and WGSL modes respectively
+- **Dual Implementation**: Functions that have both JavaScript and WGSL implementations, working in SIMULATE and CODEGEN modes respectively
 
 ## Overview
 
-This document outlines a focused plan to enable slot access in COMPTIME mode for derived value computations. The key insight is that slots are a comptime mechanism for dependency injection, while variables should only be accessible in WGSL and JS modes.
+This document outlines a focused plan to enable slot access in COMPTIME mode for derived value computations. The key insight is that slots are a comptime mechanism for dependency injection, while variables should only be accessible in CODEGEN and SIMULATE modes.
 
 ## Current State
 
-**The Problem**: Slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (WGSL mode only).
+**The Problem**: Slot operations throw errors in COMPTIME mode because they expect a ResolutionCtx (CODEGEN mode only).
 
 **The Execution Model**: TypeGPU has three execution modes with different capabilities:
-- **WGSL Mode**: Code generation for GPU shaders (current ResolutionCtx) - has slots + variables
+- **CODEGEN Mode**: Code generation for GPU shaders (current ResolutionCtx) - has slots + variables
 - **COMPTIME Mode**: Resolution-time computation for derived values - has slots only (dependency injection)
-- **JS Mode**: Runtime JavaScript execution for dual implementations - has variables only
+- **SIMULATE Mode**: Runtime JavaScript execution for dual implementations - has variables only
 
-**The Solution**: Extend COMPTIME mode to support slot access for dependency injection in derived computations, while keeping variables restricted to WGSL and JS modes only.
+**The Solution**: Extend COMPTIME mode to support slot access for dependency injection in derived computations, while keeping variables restricted to CODEGEN and SIMULATE modes only.
 
 ## Implementation Plan (1 Week)
 
 ### Day 1-2: Core ExecutionCtx Infrastructure
 
-#### Create ExecutionCtx Interface
+#### Create Unified ExecutionCtx Interface
 **File**: `src/executionCtx.ts`
 
 ```typescript
@@ -37,14 +36,19 @@ interface ExecutionCtx {
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
   unwrap<T>(eventual: Eventual<T>): T;
+  
+  // Mode-specific capabilities are handled internally
+  // All execution contexts implement this same interface
 }
 
+// ResolutionCtx already implements these methods for CODEGEN mode
+// We'll add a simple implementation for COMPTIME mode
 class ComptimeExecutionCtx implements ExecutionCtx {
   private slotValues = new WeakMap<TgpuSlot<any>, any>();
   
   // Simple implementations that mirror ResolutionCtx slot logic
   // This runs during shader preprocessing for dependency injection
-  // NO variable support - variables only work in WGSL and JS modes
+  // NO variable support - variables only work in CODEGEN and SIMULATE modes
 }
 ```
 
@@ -52,12 +56,12 @@ class ComptimeExecutionCtx implements ExecutionCtx {
 **File**: `src/gpuMode.ts`
 
 ```typescript
-type ExecutionMode = 'WGSL' | 'COMPTIME' | 'JS';
+type ExecutionMode = 'CODEGEN' | 'COMPTIME' | 'SIMULATE';
 
 export const RuntimeMode = {
-  WGSL: 'WGSL' as const,      // GPU shader generation (was GPU)
+  CODEGEN: 'CODEGEN' as const,      // GPU shader generation (was WGSL)
   COMPTIME: 'COMPTIME' as const, // Resolution-time computation (new)
-  JS: 'JS' as const,          // Runtime JavaScript (was CPU)
+  SIMULATE: 'SIMULATE' as const,          // Runtime JavaScript (was JS)
 } as const;
 
 // Add COMPTIME execution context alongside existing ResolutionCtx
@@ -65,12 +69,12 @@ let comptimeExecutionCtx: ExecutionCtx | null = null;
 
 export function getExecutionCtx(): ExecutionCtx | null {
   const currentMode = getCurrentMode();
-  if (currentMode === 'WGSL') {
-    return getResolutionCtx();
+  if (currentMode === 'CODEGEN') {
+    return getResolutionCtx(); // ResolutionCtx implements ExecutionCtx
   } else if (currentMode === 'COMPTIME') {
-    return comptimeExecutionCtx;
+    return comptimeExecutionCtx; // ComptimeExecutionCtx implements ExecutionCtx
   }
-  return null; // JS mode doesn't need execution context
+  return null; // SIMULATE mode doesn't need execution context
 }
 
 export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
@@ -83,9 +87,9 @@ export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
   }
 }
 
-export const inWGSLMode = () => getCurrentMode() === 'WGSL';
+export const inCodegenMode = () => getCurrentMode() === 'CODEGEN';
 export const inComptimeMode = () => getCurrentMode() === 'COMPTIME';
-export const inJSMode = () => getCurrentMode() === 'JS';
+export const inSimulateMode = () => getCurrentMode() === 'SIMULATE';
 ```
 
 ### Day 3: Variable System Clarification
@@ -93,42 +97,42 @@ export const inJSMode = () => getCurrentMode() === 'JS';
 #### Keep Variable Restrictions for COMPTIME Mode
 **File**: `src/core/variable/tgpuVariable.ts`
 
-Variables should remain restricted to WGSL and JS modes only:
+Variables should remain restricted to CODEGEN and SIMULATE modes only:
 
 ```typescript
 // Keep existing behavior - variables NOT accessible in COMPTIME mode
 get value(): Infer<TDataType> {
-  if (inWGSLMode()) {
-    return this[$gpuValueOf](); // WGSL code generation
-  } else if (inJSMode()) {
-    // Enable JS mode access for dual implementations
-    return this.getJSValue();
+  if (inCodegenMode()) {
+    return this[$gpuValueOf](); // CODEGEN code generation
+  } else if (inSimulateMode()) {
+    // Enable SIMULATE mode access for dual implementations
+    return this.getSimulateValue();
   } else {
-    throw new Error('Variables only accessible in WGSL and JS modes, not COMPTIME');
+    throw new Error('Variables only accessible in CODEGEN and SIMULATE modes, not COMPTIME');
   }
 }
 
 // Variables are for actual execution contexts, not dependency injection
 ```
 
-#### Add JS Mode Variable Support
+#### Add SIMULATE Mode Variable Support
 ```typescript
-// Add simple JS mode variable storage for dual implementations
-private static jsVariables = new WeakMap<TgpuVar<any, any>, any>();
+// Add simple SIMULATE mode variable storage for dual implementations
+private static simulateVariables = new WeakMap<TgpuVar<any, any>, any>();
 
-private getJSValue(): Infer<TDataType> {
-  if (!TgpuVarImpl.jsVariables.has(this)) {
+private getSimulateValue(): Infer<TDataType> {
+  if (!TgpuVarImpl.simulateVariables.has(this)) {
     const defaultValue = getDefaultValue(this._dataType);
-    TgpuVarImpl.jsVariables.set(this, defaultValue);
+    TgpuVarImpl.simulateVariables.set(this, defaultValue);
   }
-  return TgpuVarImpl.jsVariables.get(this);
+  return TgpuVarImpl.simulateVariables.get(this);
 }
 
 set value(newValue: Infer<TDataType>) {
-  if (inJSMode()) {
-    TgpuVarImpl.jsVariables.set(this, newValue);
+  if (inSimulateMode()) {
+    TgpuVarImpl.simulateVariables.set(this, newValue);
   } else {
-    throw new Error('Variable assignment only allowed in JS mode');
+    throw new Error('Variable assignment only allowed in SIMULATE mode');
   }
 }
 ```
@@ -139,7 +143,7 @@ set value(newValue: Infer<TDataType>) {
 **File**: `src/core/slot/slot.ts`
 
 ```typescript
-[$gpuValueOf](ctx: ResolutionCtx | ExecutionCtx): InferGPU<T> {
+[$gpuValueOf](ctx: ExecutionCtx): InferGPU<T> {
   return getGpuValueRecursively(ctx, ctx.unwrap(this));
 }
 
@@ -167,7 +171,7 @@ get value(): InferGPU<T> {
 }
 ```
 
-**Note**: Slots work in both WGSL and COMPTIME modes for dependency injection, but derived values only compute in COMPTIME mode.
+**Note**: Slots work in both CODEGEN and COMPTIME modes for dependency injection, but derived values only compute in COMPTIME mode.
 
 ### Day 5: Function Integration & Testing
 
@@ -180,7 +184,7 @@ Update derived computation to run in COMPTIME mode:
 _getOrCompute<T>(derived: TgpuDerived<T>): T {
   // ... existing memoization logic ...
   
-  // Derived computations run in COMPTIME mode, not JS mode
+  // Derived computations run in COMPTIME mode, not SIMULATE mode
   pushMode(RuntimeMode.COMPTIME);
   const ctx = new ComptimeExecutionCtx();
   
@@ -198,7 +202,7 @@ _getOrCompute<T>(derived: TgpuDerived<T>): T {
 #### Update createDualImpl
 **File**: `src/shared/generators.ts`
 
-Clarify that dual implementations work in WGSL and JS modes only:
+Clarify that dual implementations work in CODEGEN and SIMULATE modes only:
 
 ```typescript
 export function createDualImpl<T extends (...args: never[]) => unknown>(
@@ -208,9 +212,9 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
   argTypes?: FnArgsConversionHint,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
-    if (inWGSLMode()) {
+    if (inCodegenMode()) {
       return wgslImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
-    } else if (inJSMode()) {
+    } else if (inSimulateMode()) {
       return jsImpl(...args);
     } else {
       throw new Error(`Dual implementation not available in COMPTIME mode`);
@@ -243,7 +247,7 @@ describe('COMPTIME Execution', () => {
       return x.value * 2; // This should throw - variables not in COMPTIME
     });
     
-    expect(() => compute.value).toThrow('Variables only accessible in WGSL and JS modes');
+    expect(() => compute.value).toThrow('Variables only accessible in CODEGEN and SIMULATE modes');
   });
   
   it('should allow slot dependency injection in derived computations', () => {
@@ -261,19 +265,19 @@ describe('COMPTIME Execution', () => {
   });
 });
 
-describe('JS Mode Variable Access', () => {
-  it('should allow variable access in JS mode', () => {
-    // Test that variables work in JS mode for dual implementations
+describe('SIMULATE Mode Variable Access', () => {
+  it('should allow variable access in SIMULATE mode', () => {
+    // Test that variables work in SIMULATE mode for dual implementations
     const x = tgpu.privateVar(d.f32, 1.0);
     
-    // Simulate JS mode execution
-    pushMode(RuntimeMode.JS);
+    // Simulate SIMULATE mode execution
+    pushMode(RuntimeMode.SIMULATE);
     try {
       expect(x.value).toBe(1.0);
       x.value = 5.0;
       expect(x.value).toBe(5.0);
     } finally {
-      popMode(RuntimeMode.JS);
+      popMode(RuntimeMode.SIMULATE);
     }
   });
 });
@@ -281,7 +285,7 @@ describe('JS Mode Variable Access', () => {
 
 ## Key Implementation Details
 
-### 1. Minimal ExecutionCtx for COMPTIME
+### 1. Unified ExecutionCtx Implementation for COMPTIME
 
 ```typescript
 class ComptimeExecutionCtx implements ExecutionCtx {
@@ -318,14 +322,15 @@ class ComptimeExecutionCtx implements ExecutionCtx {
     return eventual;
   }
 
-  // NO variable support - variables only work in WGSL and JS modes
+  // NO variable support - variables only work in CODEGEN and SIMULATE modes
   // COMPTIME is purely for slot-based dependency injection
+  // But all contexts implement the same ExecutionCtx interface
 }
 ```
 
 ### 2. Backward Compatibility
 
-ResolutionCtx remains unchanged - it already implements the needed slot operations. We just extend the interface:
+ResolutionCtx remains unchanged - it already implements the needed slot operations. We just make it implement the unified ExecutionCtx interface:
 
 ```typescript
 // ResolutionCtx already has these methods:
@@ -336,6 +341,7 @@ ResolutionCtx remains unchanged - it already implements the needed slot operatio
 // So we can make it implement ExecutionCtx with minimal changes
 interface ResolutionCtx extends ExecutionCtx {
   // ... existing ResolutionCtx methods
+  // All execution contexts use the same interface
 }
 ```
 
@@ -344,19 +350,19 @@ interface ResolutionCtx extends ExecutionCtx {
 Each execution mode has different capabilities:
 
 ```typescript
-// WGSL Mode (ResolutionCtx): Slots + Variables
+// CODEGEN Mode (ResolutionCtx): Slots + Variables
 // - Slots: For dependency injection in shader generation
-// - Variables: For WGSL variable declarations
+// - Variables: For CODEGEN variable declarations
 
 // COMPTIME Mode (ComptimeExecutionCtx): Slots only  
 // - Slots: For dependency injection in derived computations
 // - NO Variables: Variables are execution constructs, not comptime constructs
 
-// JS Mode: Variables only
+// SIMULATE Mode: Variables only
 // - Variables: For dual implementation runtime state
 // - NO Slots: Slots are resolved at comptime, not runtime
 
-class JSModeVariableStorage {
+class SimulateModeVariableStorage {
   private static variables = new WeakMap<TgpuVar<any, any>, any>();
   
   static read<T>(variable: TgpuVar<any, T>): T {
@@ -375,25 +381,25 @@ class JSModeVariableStorage {
 
 ## Benefits of This Approach
 
-1. **Correct Execution Model**: Properly separates capabilities by mode
-   - WGSL: Slots + Variables (shader generation)
-   - COMPTIME: Slots only (dependency injection)  
-   - JS: Variables only (runtime state)
+1. **Unified Interface**: Single ExecutionCtx interface across all execution modes
+   - CODEGEN: Slots + Variables (shader generation) via ResolutionCtx
+   - COMPTIME: Slots only (dependency injection) via ComptimeExecutionCtx
+   - SIMULATE: Variables only (runtime state)
 2. **Minimal Changes**: Only adds COMPTIME slot support, no variable complexity
 3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
 4. **Simple Implementation**: Leverages existing slot logic for COMPTIME mode
 5. **Fast Timeline**: Can be implemented in 1 week with proper testing
-6. **Clear Separation**: Each mode has distinct, well-defined capabilities
+6. **Clear Separation**: Each mode has distinct, well-defined capabilities but unified interface
 
 ## Success Criteria
 
 1. Slots work in COMPTIME mode for derived value dependency injection
-2. Variables remain restricted to WGSL and JS modes (no COMPTIME access)
+2. Variables remain restricted to CODEGEN and SIMULATE modes (no COMPTIME access)
 3. Derived values can access slots but NOT variables during resolution
 4. createDualImpl correctly throws errors in COMPTIME mode  
-5. Variables work in JS mode for dual implementation runtime state
+5. Variables work in SIMULATE mode for dual implementation runtime state
 6. All existing tests pass
 7. New tests validate COMPTIME slot access and variable restrictions
-8. Zero performance impact on existing WGSL and JS code paths
+8. Zero performance impact on existing CODEGEN and SIMULATE code paths
 
 This focused approach delivers slot-based dependency injection for derived values while maintaining clear separation of concerns between execution modes.
