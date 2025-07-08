@@ -154,16 +154,16 @@ const deltaTime = root.createUniform(d.f32);
 
 // ---cut---
 const defaultGravity = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
-  return d.vec2f(0, 9.8);
+  return d.vec2f(0, -9.8);
 });
 
-export const getGravitySlot = tgpu.slot(defaultGravity);
+export const gravitySlot = tgpu.slot(defaultGravity);
 //           ^?
 
 export const stepPhysics = tgpu.fn([])(() => {
   for (const obj of objects.$) {
     // Calling whatever implementation was provided.
-    const gravity = getGravitySlot.$(obj.position);
+    const gravity = gravitySlot.$(obj.position);
 
     obj.velocity = add(obj.velocity, mul(gravity, deltaTime.$));
   }
@@ -173,19 +173,18 @@ export const stepPhysics = tgpu.fn([])(() => {
 ```ts
 // main.ts
 
-import { stepPhysics, getGravitySlot } from './physics.ts';
+import { stepPhysics, gravitySlot } from './physics.ts';
 
-const getGravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
+const gravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
   return mul(normalize(pos), -1);
 });
 
-const stepPhysicsAltered = stepPhysics
-  .with(getGravitySlot, getGravityTowardsCenter);
+const stepPhysicsCustomized = stepPhysics
+  .with(gravitySlot, gravityTowardsCenter);
 
-const main = tgpu
-  .computeFn()(() => {
-    stepPhysicsAltered(); // <- Will use altered gravity.
-  });
+const main = tgpu['~unstable'].computeFn()(() => {
+  stepPhysicsCustomized(); // <- Will use altered gravity.
+});
 ```
 
 {/*
