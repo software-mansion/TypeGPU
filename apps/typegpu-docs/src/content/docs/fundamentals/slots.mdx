@@ -2,9 +2,13 @@
 title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
 ---
+// AAA sekcja o raw wgsl
+// AAA slots are not checked statically...
+// AAA markdown check
+// AAA notka o tym ze jeszcze nie jest prunowane
 
 Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
-Similarly to bind group layouts, you can think of slots as of typed "holes" in TGSL shaders, that can be filled in later on from the outside.
+Similarly to bind group layouts, you can think of slots as of typed "holes" in tgpu shaders, that can be filled in later on from the outside.
 The main differences between slots and bound resources include the following:
 
 - Slots are filled in during or before the shader module compile time, instead of just before the shader execution starts. 
@@ -16,10 +20,9 @@ Main use cases for slots include:
 - Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
 - Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.
 
-## Basic usage
+## Defining and accessing a slot
 
-A slot is created using the `slot()` function and can optionally take a default
-value:
+A slot is created using the `slot()` function and can optionally take a default value:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -36,22 +39,29 @@ interface Config {
 const configSlot = tgpu.slot<Config>();
 ```
 
-Slots are resolved during the TypeGPU resolution phase. You can access a slot's
-value using either:
+You can access a slot's value using either:
 
-- `.value` property
-- `.$` shorthand property
+- `.value` property,
+- `.$` shorthand property.
 
 ```typescript
 const value = mySlot.value; // or mySlot.$
 ```
 
 :::caution
-Slot values can only be accessed during resolution (e.g., in tgpu functions).
+Slot values can only be accessed inside of tgpu functions.
 Attempting to access them outside will throw an error.
 :::
 
-## Examples
+## Filling a slot
+
+Slots are resolved during the TypeGPU resolution phase.
+The slot object itself does not hold any value. 
+Instead, you can bind it in one of two ways.
+
+### After defining a function
+
+The first way is to call the `with` method on the `TgpuFn` instance:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -60,9 +70,8 @@ import { mul } from 'typegpu/std';
 // ---cut---
 const filterColorSlot = tgpu.slot<d.v3f>();
 
-const filter = tgpu.fn([d.vec3f])((color) => {
+const filter = tgpu.fn([d.vec3f], d.vec3f)((color) => {
   const filterColor = filterColorSlot.$;
-
   return mul(color, filterColor);
 });
 
@@ -74,6 +83,56 @@ const filterWithRed = filter
 const filterWithGreen = filter
   .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
+
+In the example above, after resolution we are left with two different wgsl functions:
+
+```wgsl
+fn filter_0(color: vec3f) ->  vec3f{
+  var filterColor = vec3f(1, 0, 0);
+  return (color * filterColor);
+}
+
+fn filter_1(color: vec3f) ->  vec3f{
+  var filterColor = vec3f(0, 1, 0);
+  return (color * filterColor);
+}
+```
+
+### During pipeline creation
+
+The other way to fill in a slot is to call the `with` method during the creation of a `TgpuComputePipeline` or `TgpuRenderPipeline`:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const resultBuffer = root.createMutable(d.i32, 0);
+const multiplierSlot = tgpu.slot<number>();
+
+const computeMultiply = tgpu['~unstable']
+  .computeFn({ workgroupSize: [1] })(() => {
+    resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
+  });
+
+const pipeline = root['~unstable']
+  .with(multiplierSlot, 3)
+  .withCompute(computeMultiply)
+  .createPipeline();
+```
+
+The pipeline above resolves to the following wgsl:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> resultBuffer_1: i32;
+
+@compute @workgroup_size(1) fn computeMultiply_0(){
+  resultBuffer_1 = (resultBuffer_1 * 3);
+}
+```
+
+## Other examples
 
 ### Conditional compilation
 
