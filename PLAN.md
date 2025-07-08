@@ -1,5 +1,15 @@
 # TypeGPU ExecutionCtx Implementation Plan
 
+## Terminology
+
+- **ExecutionCtx**: A context object that provides access to slots and manages dependency injection during code execution
+- **ResolutionCtx**: The existing WGSL mode execution context used for GPU shader generation
+- **ComptimeExecutionCtx**: A new execution context for resolution-time computations in derived values
+- **Slot**: A dependency injection mechanism that works across WGSL and COMPTIME modes
+- **Variable**: An execution construct that only works in WGSL and JS modes, not in COMPTIME
+- **Derived Value**: A computed value that runs in COMPTIME mode and can access slots for dependency injection
+- **Dual Implementation**: Functions that have both JavaScript and WGSL implementations, working in JS and WGSL modes respectively
+
 ## Overview
 
 This document outlines a focused plan to enable slot access in COMPTIME mode for derived value computations. The key insight is that slots are a comptime mechanism for dependency injection, while variables should only be accessible in WGSL and JS modes.
@@ -42,14 +52,12 @@ class ComptimeExecutionCtx implements ExecutionCtx {
 **File**: `src/gpuMode.ts`
 
 ```typescript
-const WGSLMode = Symbol('WGSL');
-const ComptimeMode = Symbol('COMPTIME'); 
-const JSMode = Symbol('JS');
+type ExecutionMode = 'WGSL' | 'COMPTIME' | 'JS';
 
 export const RuntimeMode = {
-  WGSL: WGSLMode,      // GPU shader generation (was GPU)
-  COMPTIME: ComptimeMode, // Resolution-time computation (new)
-  JS: JSMode,          // Runtime JavaScript (was CPU)
+  WGSL: 'WGSL' as const,      // GPU shader generation (was GPU)
+  COMPTIME: 'COMPTIME' as const, // Resolution-time computation (new)
+  JS: 'JS' as const,          // Runtime JavaScript (was CPU)
 } as const;
 
 // Add COMPTIME execution context alongside existing ResolutionCtx
@@ -57,9 +65,9 @@ let comptimeExecutionCtx: ExecutionCtx | null = null;
 
 export function getExecutionCtx(): ExecutionCtx | null {
   const currentMode = getCurrentMode();
-  if (currentMode === RuntimeMode.WGSL) {
+  if (currentMode === 'WGSL') {
     return getResolutionCtx();
-  } else if (currentMode === RuntimeMode.COMPTIME) {
+  } else if (currentMode === 'COMPTIME') {
     return comptimeExecutionCtx;
   }
   return null; // JS mode doesn't need execution context
@@ -75,9 +83,9 @@ export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
   }
 }
 
-export const inWGSLMode = () => getCurrentMode() === RuntimeMode.WGSL;
-export const inComptimeMode = () => getCurrentMode() === RuntimeMode.COMPTIME;
-export const inJSMode = () => getCurrentMode() === RuntimeMode.JS;
+export const inWGSLMode = () => getCurrentMode() === 'WGSL';
+export const inComptimeMode = () => getCurrentMode() === 'COMPTIME';
+export const inJSMode = () => getCurrentMode() === 'JS';
 ```
 
 ### Day 3: Variable System Clarification
