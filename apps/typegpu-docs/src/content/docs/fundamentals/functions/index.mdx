@@ -142,13 +142,13 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
-In the case of entry functions, you should not include the WGSL function header in the code string. 
+In the case of entry functions, you should not include the WGSL function header in the code string.
 Instead, the WGSL implementations can access these arguments as if they were passed in via structs.
 TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
 Input values are accessible through the struct named `in`, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
-If you wish to, you can wrap any schema in the IO struct in a `d.location` decorator, however TypeGPU tries to assign locations automatically. 
-Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes. 
+If you wish to, you can wrap any schema in an IO struct in a `d.location` decorator, however TypeGPU tries to assign locations automatically.
+Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -181,6 +181,47 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 }) /* wgsl */`{
     return getGradientColor((in.uv[0] + in.uv[1]) / 2);
   }`.$uses({ getGradientColor });
+```
+
+Resolved wgsl for the pipeline including the two entry point functions above is equivalent (with respect to some cleanup) to the following:
+
+```wgsl
+struct mainVertex_Input {
+  @builtin(vertex_index) vertexIndex: u32,
+}
+
+struct mainVertex_Output {
+  @builtin(position) outPos: vec4f,
+  @location(0) uv: vec2f,
+}
+
+@vertex fn mainVertex(in: mainVertex_Input) -> mainVertex_Output {
+  var pos = array<vec2f, 3>(
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+
+  var uv = array<vec2f, 3>(
+    vec2(0.5, 1.0),
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+  );
+
+  return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
+}
+
+fn getGradientColor(ratio: f32) -> vec4f{
+  return mix(vec4f(0.769, 0.392, 1, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+}
+
+struct mainFragment_Input {
+  @location(0) uv: vec2f,
+}
+
+@fragment fn mainFragment(in: mainFragment_Input) -> @location(0) vec4f {
+  return getGradientColor((in.uv[0] + in.uv[1]) / 2);
+}
 ```
 
 ## Usage in pipelines
