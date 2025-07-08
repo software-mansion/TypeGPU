@@ -542,6 +542,26 @@ describe('wgslGenerator', () => {
     );
   });
 
+  it('does not autocast lhs of an assignment', () => {
+    const testFn = tgpu.fn([], d.u32)(() => {
+      let a = d.u32(12);
+      const b = d.f32(2.5);
+      a = b;
+
+      return a;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+      fn testFn() -> u32 {
+        var a = u32(12);
+        var b = f32(2.5);
+        a = u32(b);
+        return a;
+      }`),
+    );
+  });
+
   it('generates correct code for array expressions with struct elements', () => {
     const TestStruct = d.struct({
       x: d.u32,
