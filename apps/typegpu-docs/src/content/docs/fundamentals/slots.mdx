@@ -5,7 +5,6 @@ description: Slots can be used to inject arbitrary values into shader code at a 
 // AAA sekcja o raw wgsl
 // AAA slots are not checked statically...
 // AAA markdown check
-// AAA notka o tym ze jeszcze nie jest prunowane
 
 Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
 Similarly to bind group layouts, you can think of slots as of typed "holes" in tgpu shaders, that can be filled in later on from the outside.
@@ -188,8 +187,11 @@ const main = tgpu['~unstable'].computeFn()(() => {
 ```
 
 {/*
-TODO: add this section back when we actually prune branches.
+TODO: readd and rewrite this section back when we actually prune branches.
 ## Conditional compilation
+
+Slots can be used for conditional compilation of segments of shaders.
+When the slot holding a boolean value is filled with `false`, all `if` statements depending on the value of that slot will be pruned by our tree-shaking mechanism. 
 
 ```ts twoslash
 import tgpu from 'typegpu';
