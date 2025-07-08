@@ -6,7 +6,7 @@ Slots are a powerful dependency injection mechanism in TypeGPU that allows you t
 Similarly to bind group layouts, you can think of slots as of typed "holes" in tgpu shaders, that can be filled in later on from the outside.
 The main differences between slots and bound resources include the following:
 
-- Slots are filled in during or before the shader module compile time, instead of just before the shader execution starts. 
+- Slots are filled in before the shader module compile time, instead of just before the shader execution starts. 
 - Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even `TgpuFn`s. 
 
 Main use cases for slots include:
@@ -23,8 +23,8 @@ A slot is created using the `tgpu.slot()` function and can optionally take a def
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // ---cut---
-const mySlot = tgpu.slot(42); // With default value
-const filterColorSlot = tgpu.slot<d.v3f>(); // Slot for a 3D vector
+const filterColorSlot = tgpu.slot<d.v3f>(); // Slot for a 3D vector.
+const mySlot = tgpu.slot<number>(42); // Slot with a default value.
 
 interface Config {
   fogEnabled: boolean;
@@ -54,7 +54,7 @@ Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
 
-The first way is to call the `with` method on the `TgpuFn` instance:
+The first way to bind a value to a slot is to call the `with` method on the `TgpuFn` instance:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -224,12 +224,12 @@ const processObjects = tgpu.fn([])(() => {
   }
 });
 ```
+
 */}
 
 ## Slots in raw wgsl
 
-It is possible to use slots even in tgpu functions that are implemented in wgsl.
-In this case, the most common way to do so is with `string` slots:
+It is possible to use slots even in tgpu functions that are implemented in wgsl:
 
 ```ts twoslash
 import tgpu from 'typegpu';
