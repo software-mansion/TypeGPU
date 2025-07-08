@@ -20,7 +20,7 @@ Main use cases for slots include:
 - Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
 - Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.
 
-## Defining and accessing a slot
+## Basic usage
 
 A slot is created using the `slot()` function and can optionally take a default value:
 
@@ -53,13 +53,11 @@ Slot values can only be accessed inside of tgpu functions.
 Attempting to access them outside will throw an error.
 :::
 
-## Filling a slot
-
 Slots are resolved during the TypeGPU resolution phase.
 The slot object itself does not hold any value. 
 Instead, you can bind it in one of two ways.
 
-### After defining a function
+### Binding after defining a function
 
 The first way is to call the `with` method on the `TgpuFn` instance:
 
@@ -98,7 +96,7 @@ fn filter_1(color: vec3f) ->  vec3f{
 }
 ```
 
-### During pipeline creation
+### Binding during pipeline creation
 
 The other way to fill in a slot is to call the `with` method during the creation of a `TgpuComputePipeline` or `TgpuRenderPipeline`:
 
