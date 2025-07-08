@@ -2,8 +2,8 @@
 title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
 ---
+// AAA new 
 // AAA sekcja o raw wgsl
-// AAA slots are not checked statically...
 // AAA markdown check
 
 Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
@@ -128,6 +128,12 @@ The pipeline above resolves to the following wgsl:
   resultBuffer_1 = (resultBuffer_1 * 3);
 }
 ```
+
+:::note
+Static code analysis does not incorporate whether all slots were filled or not.
+If you forget about filling one of the slots, you will instead get a descriptive runtime error.
+:::
+
 
 ## Inversion of control
 
