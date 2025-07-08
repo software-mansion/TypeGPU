@@ -3,7 +3,6 @@ title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
 ---
 // AAA new 
-// AAA sekcja o raw wgsl
 // AAA markdown check
 
 Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
@@ -230,4 +229,28 @@ const processObjects = tgpu.fn([])(() => {
 });
 ```
 */}
+
+## Slots in raw wgsl
+
+It is possible to use slots even in tgpu functions that are implemented in wgsl.
+In this case, the most common way to do so is with `string` slots:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const colorSlot = tgpu.slot<string>('vec3f(1., 0., 0.)');
+
+const getColor = tgpu.fn([], d.vec3f)`() {
+  return colorSlot;
+}`.$uses({ colorSlot });
+```
+
+The code above resolves to the following wgsl:
+
+```wgsl
+fn getColor() -> vec3f {
+  return vec3f(1., 0., 0.);
+}
+```
 
