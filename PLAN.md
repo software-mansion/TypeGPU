@@ -3,8 +3,9 @@
 ## Terminology
 
 - **ExecutionCtx**: A unified context object that provides access to slots and manages dependency injection during code execution across all modes
-- **ResolutionCtx**: The existing CODEGEN mode execution context used for GPU shader generation (implements ExecutionCtx)
-- **SimulationCtx**: A new execution context for SIMULATE mode that handles slot bindings and variable storage
+- **ResolutionCtx**: The existing CODEGEN mode execution context used for GPU shader generation (supertype of ExecutionCtx)
+- **ResolutionCtxImpl**: The existing implementation of ResolutionCtx
+- **ExecutionCtxImpl**: A new implementation of ExecutionCtx for SIMULATE and COMPTIME modes
 - **Slot**: A dependency injection mechanism that works across all modes (CODEGEN, COMPTIME, SIMULATE)
 - **Variable**: An execution construct that only works in CODEGEN and SIMULATE modes, not in COMPTIME
 - **Derived Value**: A computed value that runs in COMPTIME mode and can access slots for dependency injection
@@ -49,22 +50,13 @@ interface ExecutionCtx {
   // All execution contexts implement this same interface
 }
 
-// ResolutionCtx already implements these methods for CODEGEN mode
-// We'll add implementations for COMPTIME and SIMULATE modes
-class ComptimeExecutionCtx implements ExecutionCtx {
-  private slotValues = new WeakMap<TgpuSlot<any>, any>();
-  
-  // Simple implementations that mirror ResolutionCtx slot logic
-  // This runs during shader preprocessing for dependency injection
-  // NO variable support - variables only work in CODEGEN and SIMULATE modes
-}
-
-class SimulationCtx implements ExecutionCtx {
+// ResolutionCtxImpl already implements these methods for CODEGEN mode
+// We'll add ExecutionCtxImpl for COMPTIME and SIMULATE modes
+class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
   
-  // Slot management for dependency injection in CPU simulation
-  // Variable support for JavaScript execution
-  // Full ExecutionCtx implementation for SIMULATE mode
+  // Can share implementation with ResolutionCtxImpl since ResolutionCtx is a supertype of ExecutionCtx
+  // Used for both COMPTIME (slots only) and SIMULATE (slots + variables) modes
 }
 ```
 
@@ -82,16 +74,16 @@ export const RuntimeMode = {
 
 // Add execution contexts for COMPTIME and SIMULATE modes alongside existing ResolutionCtx
 let comptimeExecutionCtx: ExecutionCtx | null = null;
-let simulationCtx: ExecutionCtx | null = null;
+let simulateExecutionCtx: ExecutionCtx | null = null;
 
 export function getExecutionCtx(): ExecutionCtx | null {
   const currentMode = getCurrentMode();
   if (currentMode === 'CODEGEN') {
-    return getResolutionCtx(); // ResolutionCtx implements ExecutionCtx
+    return getResolutionCtx(); // ResolutionCtxImpl implements ExecutionCtx (via ResolutionCtx)
   } else if (currentMode === 'COMPTIME') {
-    return comptimeExecutionCtx; // ComptimeExecutionCtx implements ExecutionCtx
+    return comptimeExecutionCtx; // ExecutionCtxImpl
   } else if (currentMode === 'SIMULATE') {
-    return simulationCtx; // SimulationCtx implements ExecutionCtx
+    return simulateExecutionCtx; // ExecutionCtxImpl
   }
   return null;
 }
@@ -106,13 +98,13 @@ export function provideComptimeCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
   }
 }
 
-export function provideSimulationCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
-  const prev = simulationCtx;
-  simulationCtx = ctx;
+export function provideSimulateCtx<T>(ctx: ExecutionCtx, callback: () => T): T {
+  const prev = simulateExecutionCtx;
+  simulateExecutionCtx = ctx;
   try {
     return callback();
   } finally {
-    simulationCtx = prev;
+    simulateExecutionCtx = prev;
   }
 }
 
@@ -314,14 +306,14 @@ describe('SIMULATE Mode Variable Access', () => {
 
 ## Key Implementation Details
 
-### 1. Unified ExecutionCtx Implementation for COMPTIME
+### 1. Unified ExecutionCtxImpl for COMPTIME and SIMULATE
 
 ```typescript
-class ComptimeExecutionCtx implements ExecutionCtx {
+class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
-    // Search slot stack from top to bottom
+    // Shared implementation with ResolutionCtxImpl
     for (let i = this.slotStack.length - 1; i >= 0; i--) {
       if (this.slotStack[i].has(slot)) {
         return this.slotStack[i].get(slot);
@@ -331,6 +323,7 @@ class ComptimeExecutionCtx implements ExecutionCtx {
   }
 
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    // Shared implementation with ResolutionCtxImpl
     const newLayer = new WeakMap(pairs);
     this.slotStack.push(newLayer);
     try {
@@ -341,47 +334,47 @@ class ComptimeExecutionCtx implements ExecutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
-    // Simple unwrapping logic for COMPTIME mode
+    // Shared implementation with ResolutionCtxImpl
     if (isSlot(eventual)) {
       return this.readSlot(eventual);
     }
     if (isDerived(eventual)) {
-      return eventual['~compute'](); // Recursive derived computation
+      return eventual['~compute']();
     }
     return eventual;
   }
 
-  // NO variable support - variables only work in CODEGEN and SIMULATE modes
-  // COMPTIME is purely for slot-based dependency injection
-  // But all contexts implement the same ExecutionCtx interface
+  // Used for both COMPTIME (slots only) and SIMULATE (slots + variables) modes
+  // Can share slot implementation with ResolutionCtxImpl since ResolutionCtx extends ExecutionCtx
 }
 ```
 
 ### 2. Backward Compatibility
 
-ResolutionCtx remains unchanged - it already implements the needed slot operations. We just make it implement the unified ExecutionCtx interface:
+ResolutionCtx remains unchanged - it's a supertype of ExecutionCtx. ResolutionCtxImpl already implements the needed slot operations:
 
 ```typescript
-// ResolutionCtx already has these methods:
+// ResolutionCtx is a supertype of ExecutionCtx with additional methods:
 // - readSlot<T>(slot: TgpuSlot<T>): T
 // - withSlots<T>(pairs: SlotValuePair[], callback: () => T): T  
 // - unwrap<T>(eventual: Eventual<T>): T
+// + additional ResolutionCtx-specific methods
 
-// So we can make it implement ExecutionCtx with minimal changes
 interface ResolutionCtx extends ExecutionCtx {
   // ... existing ResolutionCtx methods
-  // All execution contexts use the same interface
 }
+
+// ResolutionCtxImpl can be used as-is for CODEGEN mode
 ```
 
-### 3. SimulationCtx Implementation
+### 3. ExecutionCtxImpl Implementation
 
 ```typescript
-class SimulationCtx implements ExecutionCtx {
+class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
-    // Search slot stack from top to bottom
+    // Can share implementation with ResolutionCtxImpl
     for (let i = this.slotStack.length - 1; i >= 0; i--) {
       if (this.slotStack[i].has(slot)) {
         return this.slotStack[i].get(slot);
@@ -391,6 +384,7 @@ class SimulationCtx implements ExecutionCtx {
   }
 
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    // Can share implementation with ResolutionCtxImpl
     const newLayer = new WeakMap(pairs);
     this.slotStack.push(newLayer);
     try {
@@ -401,17 +395,18 @@ class SimulationCtx implements ExecutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
-    // Unwrapping logic for SIMULATE mode
+    // Can share implementation with ResolutionCtxImpl
     if (isSlot(eventual)) {
       return this.readSlot(eventual);
     }
     if (isDerived(eventual)) {
-      return eventual['~compute'](); // Recursive derived computation
+      return eventual['~compute']();
     }
     return eventual;
   }
 
-  // Supports both slots and variables for full CPU simulation
+  // Used for both COMPTIME and SIMULATE modes
+  // Can share slot logic with ResolutionCtxImpl since ResolutionCtx extends ExecutionCtx
 }
 ```
 
@@ -452,9 +447,9 @@ class SimulateModeVariableStorage {
 ## Benefits of This Approach
 
 1. **Unified Interface**: Single ExecutionCtx interface across all execution modes
-   - CODEGEN: Slots + Variables (shader generation) via ResolutionCtx
-   - COMPTIME: Slots only (dependency injection) via ComptimeExecutionCtx
-   - SIMULATE: Slots + Variables (CPU simulation) via SimulateExecutionCtx
+   - CODEGEN: Slots + Variables (shader generation) via ResolutionCtxImpl
+   - COMPTIME: Slots only (dependency injection) via ExecutionCtxImpl
+   - SIMULATE: Slots + Variables (CPU simulation) via ExecutionCtxImpl
 2. **Minimal Changes**: Only adds COMPTIME slot support, no variable complexity
 3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
 4. **Simple Implementation**: Leverages existing slot logic for COMPTIME mode
