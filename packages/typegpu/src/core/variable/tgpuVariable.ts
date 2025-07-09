@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { inGPUMode } from '../../execMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -112,7 +112,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   get value(): Infer<TDataType> {
-    if (!inGPUMode()) {
+    if (!inCodegenMode()) {
       throw new Error('`tgpu.var` values are only accessible on the GPU');
     }
 

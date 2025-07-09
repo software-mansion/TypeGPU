@@ -39,6 +39,10 @@ export function popMode(expected?: typeof CPUMode | typeof GPUMode) {
   }
 }
 
-export const inGPUMode = () =>
+export const inCodegenMode = () =>
   resolutionModeStack.length > 0 &&
   resolutionModeStack[resolutionModeStack.length - 1] === ExecMode.CODEGEN;
+
+export const inComptimeMode = () =>
+  resolutionModeStack.length > 0 &&
+  resolutionModeStack[resolutionModeStack.length - 1] === ExecMode.COMPTIME;

@@ -1,5 +1,5 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../execMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
@@ -84,7 +84,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   get value(): InferGPU<T> {
-    if (!inGPUMode()) {
+    if (!inCodegenMode()) {
       throw new Error('`tgpu.accessor` values are only accessible on the GPU');
     }
 

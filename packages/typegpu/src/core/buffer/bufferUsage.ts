@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
-import { inGPUMode } from '../../execMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -139,7 +139,7 @@ class TgpuFixedBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
+    if (!inCodegenMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
 
@@ -199,7 +199,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
+    if (!inCodegenMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
 
