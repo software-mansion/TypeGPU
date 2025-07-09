@@ -3,12 +3,7 @@ import type { ResolutionCtx } from './types.ts';
 
 let resolutionCtx: ResolutionCtx | null = null;
 
-export const ExecMode = {
-  COMPTIME: 0,
-  CODEGEN: 1,
-} as const;
-
-export type ExecMode = (typeof ExecMode)[keyof typeof ExecMode];
+export type ExecMode = 'comptime' | 'codegen';
 
 const resolutionModeStack: ExecMode[] = [];
 
@@ -40,8 +35,8 @@ export function popMode(expected?: ExecMode) {
 
 export const inCodegenMode = () =>
   resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === ExecMode.CODEGEN;
+  resolutionModeStack[resolutionModeStack.length - 1] === 'codegen';
 
 export const inComptimeMode = () =>
   resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === ExecMode.COMPTIME;
+  resolutionModeStack[resolutionModeStack.length - 1] === 'comptime';

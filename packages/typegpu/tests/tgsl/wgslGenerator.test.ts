@@ -34,13 +34,13 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    exec.pushMode(exec.ExecMode.CODEGEN);
+    exec.pushMode('codegen');
     ctx = createContext();
     vi.spyOn(exec, 'getResolutionCtx').mockReturnValue(ctx);
   });
 
   afterEach(() => {
-    exec.popMode(exec.ExecMode.CODEGEN);
+    exec.popMode('codegen');
   });
 
   it('creates a simple return statement', () => {
