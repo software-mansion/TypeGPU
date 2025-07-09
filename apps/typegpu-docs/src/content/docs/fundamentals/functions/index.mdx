@@ -25,7 +25,7 @@ It accepts two arguments:
 - An array of schemas representing argument types,
 - (Optionally) a schema representing the return type.
 
-Then the actual WGSL implementation is passed in to a shell invocation using the tagged function syntax (no parentheses).
+Then the actual WGSL implementation is passed in to a shell invocation using the tagged template literal.
 
 The following code defines a function that accepts one argument of type `f32` and returns a `vec4f`.
 
@@ -63,8 +63,8 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
 
 ## External resources
 
-Functions can use external resources passed via the `$uses` method during the function creation process.
-Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, functions, buffer usages, textures, samplers, slots, accessors etc.).
+Functions can use external resources passed via the `$uses` method.
+Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer usages, textures, samplers, slots, accessors etc.).
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -113,7 +113,7 @@ On the other hand, defining entry functions is not done by annotating `TgpuFn` w
 
 Shell constructors of entry functions accept an object that describes the IO as well as other relevant parameters, such as workgroup size.
 
-Builtin attributes are available on the `d.builtin` object. 
+Builtin inter-stage inputs and outputs are available on the `d.builtin` object. 
 
 ```ts twoslash
 import tgpu from 'typegpu';
