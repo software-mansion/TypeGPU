@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 
 import {
   downSweepLayout,
-  itemsPerThread,
+  // itemsPerThread,
   upSweepLayout,
   workgroupSize,
 } from './schemas.ts';
@@ -17,25 +17,8 @@ export async function currentSum(
   outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
 ) {
   const inputLength = inputBuffer.dataType.elementCount;
-  const sumsOfSumsBuffer = outputBufferOpt ?? root
-    .createBuffer(d.arrayOf(d.u32, inputLength))
-    .$usage('storage');
-
-  const workBuffer = root
-    .createBuffer(d.arrayOf(d.u32, inputLength))
-    .$usage('storage');
-
-  const sumsBuffer = root
-    .createBuffer(
-      d.arrayOf(
-        d.u32,
-        Math.ceil(inputLength / (workgroupSize * itemsPerThread)),
-      ),
-    )
-    .$usage('storage');
 
   // Pipelines
-
   const upPassPipeline = root['~unstable']
     .withCompute(computeUpPass)
     .createPipeline()
@@ -44,135 +27,90 @@ export async function currentSum(
   const downPassPipeline = root['~unstable']
     .withCompute(computeDownPass)
     .createPipeline()
-    .$name('UpScan');
+    .$name('DownScan');
 
   const applySumsPipeline = root['~unstable']
     .withCompute(incrementShader)
     .createPipeline()
     .$name('applySums');
 
-  /* ----------------------- 1: Bieloch's Block Scan ----------------------- */
-  // -- Multiple UpPass - small trees (input, work, sums)
-  const mainArrayBindGroup = root.createBindGroup(upSweepLayout, {
-    inputArray: inputBuffer,
-    outputArray: workBuffer,
-    sumsArray: sumsBuffer,
-  });
+  function recursiveScan(
+    inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
+  ): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
+    const n = inputBuffer.dataType.elementCount;
+    const itemsPerWorkgroup = workgroupSize * 2;
 
-  upPassPipeline
-    .with(upSweepLayout, mainArrayBindGroup)
-    .dispatchWorkgroups(
-      inputLength / (workgroupSize * 2) > 1
-        ? inputLength / (workgroupSize * 2)
-        : 1,
-    );
+    // Create output buffer for this level of recursion
+    const outputBuffer = root
+      .createBuffer(d.arrayOf(d.u32, n))
+      .$usage('storage');
 
-  root['~unstable'].flush();
-  await root.device.queue.onSubmittedWorkDone();
-  // -- Multiple DownPass - small trees (-, work, -)
-  const workBuffer2 = root
-    .createBuffer(d.arrayOf(d.u32, inputLength))
-    .$usage('storage');
+    // Up-sweep (reduce) phase
+    const upPassSumsBuffer = root
+      .createBuffer(d.arrayOf(d.u32, Math.ceil(n / itemsPerWorkgroup)))
+      .$usage('storage');
 
-  const mainDownArrayBindGroup = root.createBindGroup(downSweepLayout, {
-    inputArray: workBuffer,
-    outputArray: workBuffer2,
-  });
-
-  downPassPipeline
-    .with(downSweepLayout, mainDownArrayBindGroup)
-    .dispatchWorkgroups(Math.max(
-      inputLength / (workgroupSize * 2),
-      1,
-    ));
-  root['~unstable'].flush();
-  await root.device.queue.onSubmittedWorkDone();
-
-  // -- Sum of sums UpPass - (sums, sumOfSums, -)
-  const sumsArrayBindGroup = root.createBindGroup(upSweepLayout, {
-    inputArray: sumsBuffer,
-    outputArray: sumsOfSumsBuffer,
-    sumsArray: root.createBuffer(
-      d.arrayOf(d.u32, Math.max(1, inputLength / workgroupSize * 2)),
-    ).$usage('storage'), // unused but required
-  });
-
-  upPassPipeline.with(upSweepLayout, sumsArrayBindGroup)
-    .dispatchWorkgroups(
-      Math.max(
-        (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
-        1,
-      ),
-    );
-  root['~unstable'].flush();
-  await root.device.queue.onSubmittedWorkDone();
-
-  // Sum of sums DownPass - (-, sumOfSums, -)
-  const sumsOfSumsBuffer2 = outputBufferOpt ?? root
-    .createBuffer(d.arrayOf(d.u32, inputLength))
-    .$usage('storage');
-
-  const downPassArrayBindGroup = root.createBindGroup(downSweepLayout, {
-    inputArray: sumsOfSumsBuffer,
-    outputArray: sumsOfSumsBuffer2,
-  });
-  downPassPipeline
-    .with(downSweepLayout, downPassArrayBindGroup)
-    .dispatchWorkgroups(Math.max(
-      (inputLength / (workgroupSize * 2)) / (workgroupSize * 2),
-      1,
-    ));
-  root['~unstable'].flush();
-  await root.device.queue.onSubmittedWorkDone();
-
-  // Apply big sums to each block (-, work, sumOfSums)
-  const finalOutputBuffer = root.createBuffer(d.arrayOf(d.u32, inputLength))
-    .$usage('storage');
-  const prefixSumsArrayBindGroup = root.createBindGroup(upSweepLayout, {
-    inputArray: workBuffer2,
-    outputArray: finalOutputBuffer,
-    sumsArray: sumsOfSumsBuffer2,
-  });
-  applySumsPipeline
-    .with(upSweepLayout, prefixSumsArrayBindGroup)
-    .dispatchWorkgroups(Math.ceil(inputLength / workgroupSize));
-  root['~unstable'].flush();
-  await root.device.queue.onSubmittedWorkDone();
-
-  sumsBuffer
-    .read()
-    .then((result) => {
-      console.log('Sum:', result);
-    })
-    .catch((error) => {
-      console.error('Error reading buffer:', error);
+    const upPassBindGroup = root.createBindGroup(upSweepLayout, {
+      inputArray: inputBuffer,
+      outputArray: outputBuffer,
+      sumsArray: upPassSumsBuffer,
     });
 
-  sumsOfSumsBuffer2
-    .read()
-    .then((result) => {
-      console.log('sums of sums:', result);
-    })
-    .catch((error) => {
-      console.error('Error reading buffer:', error);
+    upPassPipeline
+      .with(upSweepLayout, upPassBindGroup)
+      .dispatchWorkgroups(Math.ceil(n / itemsPerWorkgroup));
+
+    root['~unstable'].flush();
+
+    let sumsScannedBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
+
+    if (n <= itemsPerWorkgroup) {
+      sumsScannedBuffer = upPassSumsBuffer; // Not strictly needed but maintains type consistency.
+    } else {
+      // Recursive step: scan the array of sums.
+      sumsScannedBuffer = recursiveScan(upPassSumsBuffer);
+    }
+
+    // Down-sweep (scan) phase
+    const downSweepOutputBuffer = root
+      .createBuffer(d.arrayOf(d.u32, n))
+      .$usage('storage');
+    const downPassBindGroup = root.createBindGroup(downSweepLayout, {
+      inputArray: outputBuffer, // output from up-sweep is input for down-sweep
+      outputArray: downSweepOutputBuffer,
     });
 
-  workBuffer2
-    .read()
-    .then((result) => {
-      console.log('Work:', result);
-    })
-    .catch((error) => {
-      console.error('Error reading buffer:', error);
+    downPassPipeline
+      .with(downSweepLayout, downPassBindGroup)
+      .dispatchWorkgroups(Math.ceil(n / itemsPerWorkgroup));
+
+    root['~unstable'].flush();
+
+    if (n <= itemsPerWorkgroup) {
+      // if n is small enough, return the outputBuffer as the final result
+      return downSweepOutputBuffer;
+    }
+
+    const finalOutputBuffer = root.createBuffer(
+      d.arrayOf(d.u32, n),
+    ).$usage('storage');
+
+    const applySumsBindGroup = root.createBindGroup(upSweepLayout, {
+      inputArray: downSweepOutputBuffer,
+      outputArray: finalOutputBuffer, // This is where we apply the sums to the original input
+      sumsArray: sumsScannedBuffer,
     });
 
-  finalOutputBuffer
-    .read()
-    .then((result) => {
-      console.log('Final Output:', result);
-    })
-    .catch((error) => {
-      console.error('Error reading buffer:', error);
-    });
-  return finalOutputBuffer;
+    applySumsPipeline
+      .with(upSweepLayout, applySumsBindGroup)
+      .dispatchWorkgroups(Math.ceil(n / workgroupSize));
+    root['~unstable'].flush();
+    
+
+    return finalOutputBuffer;
+  }
+
+  const scannedBuffer = recursiveScan(inputBuffer);
+  console.log('Final Buffer:', await scannedBuffer.read());
+  return scannedBuffer;
 }

@@ -25,3 +25,22 @@ l:  _       _
 r:      _       _
   0 1 2 6 4 9 6 22
 ```
+
+```
+function recurence(arr){
+  if (log2length < workgruppSize * 2){ // jak wystarczajaco mała to process directly
+    up pipeline
+    down pipeline
+
+    return workArray // to jest ten ostatni, workArray zawiera sumy
+  }
+
+
+  up pipeline
+  down pipeline
+  arrayOfIncrements = recurrence(sums);
+  incrementShader(arrayOfIncrements)
+
+  return workArray
+}
+```

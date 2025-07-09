@@ -20,10 +20,11 @@ export const upSweepLayout = tgpu.bindGroupLayout({
 export const downSweepLayout = tgpu.bindGroupLayout({
   inputArray: {
     storage: (n: number) => d.arrayOf(d.u32, n),
-    access: 'mutable',
+    access: 'readonly',
   },
   outputArray: {
     storage: (n: number) => d.arrayOf(d.u32, n),
     access: 'mutable',
   },
+
 });

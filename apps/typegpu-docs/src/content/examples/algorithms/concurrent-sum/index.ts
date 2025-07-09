@@ -14,34 +14,67 @@ const root = await tgpu.init({
     ],
   },
 });
-
 context.configure({
   device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const buffer = root
-  .createBuffer(
-    d.arrayOf(d.u32, fixedArrayLength),
-    Array.from({ length: fixedArrayLength }, (_, k) => k),
-  )
-  .$usage('storage');
-
 const button = document.querySelector('#runButton') as HTMLButtonElement;
 
 button.addEventListener('click', async () => {
   button.disabled = true;
 
-  const jsArray = Array.from({ length: fixedArrayLength }, (_, k) => k);
-  const jsResult = concurrentSumOnJS(jsArray);
-  console.log('JS Result:', jsResult);
+  const arraySizes = [2 ** 12, 2 ** 16];
+  const results = document.createElement('div');
+  results.style.marginTop = '1em';
+  button.insertAdjacentElement('afterend', results);
 
-  const gpuResult = await (await currentSum(root, buffer)).read();
-  console.log('GPU Result:', gpuResult);
+  for (const size of arraySizes) {
+    const sizeBuffer = root
+      .createBuffer(
+        d.arrayOf(d.u32, size),
+        Array.from({ length: size }, (_, k) => k),
+      )
+      .$usage('storage');
 
-  const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
-  console.log('Are results equal?', isEqual);
+    // JS Version
+    const jsStartTime = performance.now();
+    const jsArray = Array.from({ length: size }, (_, k) => k);
+    const jsResult = concurrentSumOnJS(jsArray);
+    const jsEndTime = performance.now();
+    const jsTime = jsEndTime - jsStartTime;
+
+    // GPU Version
+    const gpuStartTime = performance.now();
+    const sumResult = await currentSum(root, sizeBuffer);
+    if (!sumResult) {
+      console.error(`Failed to execute currentSum for array size ${size}`);
+      results.innerHTML +=
+        `<strong>Error:</strong> Failed to execute currentSum for array size ${size}.<br>`;
+      continue;
+    }
+    const gpuResult = await sumResult.read();
+    const gpuEndTime = performance.now();
+    const gpuTime = gpuEndTime - gpuStartTime;
+
+    const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
+    if (!isEqual) {
+      console.error(`Mismatch detected for array size ${size}`);
+      results.innerHTML +=
+        `<strong>Error:</strong> Mismatch detected for array size ${size}. Expected final sum: ${jsResult[jsResult.length-1]}. Check console for details.<br>`;
+      continue;
+    }
+
+    const resultElement = document.createElement('div');
+    resultElement.innerHTML = `
+      <strong>Array size: ${size.toLocaleString()}</strong><br>
+      JS time: ${jsTime.toFixed(2)}ms<br>
+      GPU time: ${gpuTime.toFixed(2)}ms<br>
+      Speedup: ${(jsTime / gpuTime).toFixed(2)}x<br>
+    `;
+    results.appendChild(resultElement);
+  }
 
   button.disabled = false;
 });
