@@ -37,7 +37,9 @@ export const textureBarrier = createDualImpl(
 export const atomicLoad = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a) => {
@@ -54,7 +56,9 @@ export const atomicLoad = createDualImpl(
 export const atomicStore = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): void => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -78,7 +82,9 @@ const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
 export const atomicAdd = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -96,7 +102,9 @@ export const atomicAdd = createDualImpl(
 export const atomicSub = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -114,7 +122,9 @@ export const atomicSub = createDualImpl(
 export const atomicMax = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -132,7 +142,9 @@ export const atomicMax = createDualImpl(
 export const atomicMin = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -150,7 +162,9 @@ export const atomicMin = createDualImpl(
 export const atomicAnd = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -168,7 +182,9 @@ export const atomicAnd = createDualImpl(
 export const atomicOr = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {
@@ -186,7 +202,9 @@ export const atomicOr = createDualImpl(
 export const atomicXor = createDualImpl(
   // JS Implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error('Atomic operations are not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Atomic operations are not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (a, value) => {

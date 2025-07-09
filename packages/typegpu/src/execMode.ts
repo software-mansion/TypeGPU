@@ -8,7 +8,8 @@ export const ExecMode = {
   CODEGEN: 1,
 } as const;
 
-const resolutionModeStack: (typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN)[] = [];
+const resolutionModeStack:
+  (typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN)[] = [];
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
   invariant(resolutionCtx === null, 'Cannot nest context providers');
@@ -25,11 +26,15 @@ export function getResolutionCtx(): ResolutionCtx | null {
   return resolutionCtx;
 }
 
-export function pushMode(mode: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN) {
+export function pushMode(
+  mode: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN,
+) {
   resolutionModeStack.push(mode);
 }
 
-export function popMode(expected?: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN) {
+export function popMode(
+  expected?: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN,
+) {
   const mode = resolutionModeStack.pop();
   if (expected !== undefined) {
     invariant(mode === expected, 'Unexpected mode');

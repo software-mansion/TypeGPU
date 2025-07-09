@@ -115,7 +115,9 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     _offsetOrArrayIndex?: v2i | v3i | number,
     _maybeOffset?: v2i | v3i,
   ) => {
-    throw new Error('Texture sampling is not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Texture sampling is not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (texture, sampler, coords, offsetOrArrayIndex, maybeOffset) => {
@@ -175,7 +177,9 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     _level: number,
     _offsetOrArrayIndex?: v2i | v3i | number,
   ) => {
-    throw new Error('Texture sampling is not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Texture sampling is not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (texture, sampler, coords, level, offsetOrArrayIndex) => {
@@ -261,7 +265,9 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     _coords: number | v2i | v2u | v3i | v3u,
     _levelOrArrayIndex?: number,
   ) => {
-    throw new Error('Texture loading is not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Texture loading is not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (texture, coords, levelOrArrayIndex) => {
@@ -317,7 +323,9 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     _arrayIndexOrValue?: number | TexelData,
     _maybeValue?: TexelData,
   ) => {
-    throw new Error('Texture storing is not supported outside of CODEGEN mode.');
+    throw new Error(
+      'Texture storing is not supported outside of CODEGEN mode.',
+    );
   },
   // CODEGEN implementation
   (texture, coords, arrayIndexOrValue, maybeValue) =>
