@@ -316,7 +316,8 @@ export function generateExpression(
       // There are two ways a struct can be called that we support:
       // - with an objectExpr `Struct({ x: 1, y: 2 })`,
       // - with another struct `Struct(otherStruct)`.
-      // In the second case, we want to just copy the value of the `otherStruct`.
+      // In the second case, we assume the `otherStruct` is defined on TGSL side
+      // and we just strip the constructor to let the assignment operator clone it.
       const resolvedId = args.length === 1 &&
           Array.isArray(args[0]) &&
           args[0].length > 0 &&
