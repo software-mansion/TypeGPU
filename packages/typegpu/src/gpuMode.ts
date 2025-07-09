@@ -3,12 +3,12 @@ import type { ResolutionCtx } from './types.ts';
 
 let resolutionCtx: ResolutionCtx | null = null;
 
-const CPUMode = Symbol('CPU');
-const GPUMode = Symbol('GPU');
+const CPUMode = Symbol('COMPTIME');
+const GPUMode = Symbol('CODEGEN');
 
 export const RuntimeMode = {
-  CPU: CPUMode,
-  GPU: GPUMode,
+  COMPTIME: CPUMode,
+  CODEGEN: GPUMode,
 } as const;
 
 const resolutionModeStack: (typeof CPUMode | typeof GPUMode)[] = [];
@@ -41,4 +41,4 @@ export function popMode(expected?: typeof CPUMode | typeof GPUMode) {
 
 export const inGPUMode = () =>
   resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === RuntimeMode.GPU;
+  resolutionModeStack[resolutionModeStack.length - 1] === RuntimeMode.CODEGEN;

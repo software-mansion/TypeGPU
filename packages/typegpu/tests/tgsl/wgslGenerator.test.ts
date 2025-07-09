@@ -34,13 +34,13 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    gpu.pushMode(gpu.RuntimeMode.GPU);
+    gpu.pushMode(gpu.RuntimeMode.CODEGEN);
     ctx = createContext();
     vi.spyOn(gpu, 'getResolutionCtx').mockReturnValue(ctx);
   });
 
   afterEach(() => {
-    gpu.popMode(gpu.RuntimeMode.GPU);
+    gpu.popMode(gpu.RuntimeMode.CODEGEN);
   });
 
   it('creates a simple return statement', () => {
