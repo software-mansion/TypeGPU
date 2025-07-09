@@ -1,4 +1,4 @@
-import { getResolutionCtx } from '../../gpuMode.ts';
+import { getExecutionCtx } from '../../gpuMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
@@ -7,6 +7,7 @@ import {
   $providing,
   $repr,
 } from '../../shared/symbols.ts';
+import type { ExecutionCtx } from '../../executionCtx.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type {
@@ -33,9 +34,9 @@ function stringifyPair([slot, value]: SlotValuePair): string {
 }
 
 function createDerived<T>(compute: () => T): TgpuDerived<T> {
-  if (getResolutionCtx()) {
+  if (getExecutionCtx()) {
     throw new Error(
-      'Cannot create tgpu.derived objects at the resolution stage.',
+      'Cannot create tgpu.derived objects during execution.',
     );
   }
 
@@ -45,15 +46,20 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
     [$repr]: undefined as Infer<T>,
     [$gpuRepr]: undefined as InferGPU<T>,
 
-    [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T> {
-      return getGpuValueRecursively(ctx, ctx.unwrap(this));
+    [$gpuValueOf](ctx: ExecutionCtx | ResolutionCtx): InferGPU<T> {
+      // For ResolutionCtx, use getGpuValueRecursively
+      if ('resolve' in ctx) {
+        return getGpuValueRecursively(ctx as ResolutionCtx, ctx.unwrap(this));
+      }
+      // For ExecutionCtx, just unwrap
+      return ctx.unwrap(this) as InferGPU<T>;
     },
 
     get value(): InferGPU<T> {
-      const ctx = getResolutionCtx();
+      const ctx = getExecutionCtx();
       if (!ctx) {
         throw new Error(
-          `Cannot access tgpu.derived's value outside of resolution.`,
+          `Cannot access tgpu.derived's value outside of execution context.`,
         );
       }
 
@@ -98,15 +104,20 @@ function createBoundDerived<T>(
       pairs,
     },
 
-    [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T> {
-      return getGpuValueRecursively(ctx, ctx.unwrap(this));
+    [$gpuValueOf](ctx: ExecutionCtx | ResolutionCtx): InferGPU<T> {
+      // For ResolutionCtx, use getGpuValueRecursively
+      if ('resolve' in ctx) {
+        return getGpuValueRecursively(ctx as ResolutionCtx, ctx.unwrap(this));
+      }
+      // For ExecutionCtx, just unwrap
+      return ctx.unwrap(this) as InferGPU<T>;
     },
 
     get value(): InferGPU<T> {
-      const ctx = getResolutionCtx();
+      const ctx = getExecutionCtx();
       if (!ctx) {
         throw new Error(
-          `Cannot access tgpu.derived's value outside of resolution.`,
+          `Cannot access tgpu.derived's value outside of execution context.`,
         );
       }
 

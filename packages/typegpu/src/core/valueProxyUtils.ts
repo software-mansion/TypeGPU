@@ -1,5 +1,6 @@
 import type { AnyData } from '../data/dataTypes.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
+import type { ExecutionCtx } from '../executionCtx.ts';
 import {
   extractGpuValueGetter,
   type GpuValueGetter,

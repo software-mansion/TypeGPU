@@ -1,4 +1,4 @@
-import { getResolutionCtx } from '../../gpuMode.ts';
+import { getExecutionCtx } from '../../gpuMode.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
@@ -7,7 +7,7 @@ import {
   $internal,
   $repr,
 } from '../../shared/symbols.ts';
-import type { ResolutionCtx } from '../../types.ts';
+import type { ExecutionCtx } from '../../executionCtx.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type { TgpuSlot } from './slotTypes.ts';
 
@@ -47,14 +47,19 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
     return `slot:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T> {
-    return getGpuValueRecursively(ctx, ctx.unwrap(this));
+  [$gpuValueOf](ctx: ExecutionCtx): InferGPU<T> {
+    // For ResolutionCtx, use getGpuValueRecursively
+    if ('resolve' in ctx) {
+      return getGpuValueRecursively(ctx as any, ctx.unwrap(this));
+    }
+    // For ExecutionCtx, just unwrap
+    return ctx.unwrap(this) as InferGPU<T>;
   }
 
   get value(): InferGPU<T> {
-    const ctx = getResolutionCtx();
+    const ctx = getExecutionCtx();
     if (!ctx) {
-      throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
+      throw new Error(`Cannot access tgpu.slot's value outside of execution context.`);
     }
 
     return this[$gpuValueOf](ctx);

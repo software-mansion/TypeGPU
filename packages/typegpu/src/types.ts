@@ -37,6 +37,7 @@ import {
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
+import type { ExecutionCtx } from './executionCtx.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
@@ -111,8 +112,10 @@ export interface ItemStateStack {
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
  * and up the tree.
+ * 
+ * ResolutionCtx extends ExecutionCtx since it's a supertype with additional methods.
  */
-export interface ResolutionCtx {
+export interface ResolutionCtx extends ExecutionCtx {
   readonly names: NameRegistry;
 
   addDeclaration(declaration: string): void;
@@ -135,12 +138,9 @@ export interface ResolutionCtx {
     binding: number;
   };
 
+  // ExecutionCtx methods (inherited)
+  readSlot<T>(slot: TgpuSlot<T>): T;
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
-
-  /**
-   * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
-   * @throws {MissingSlotValueError}
-   */
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: unknown): string;
