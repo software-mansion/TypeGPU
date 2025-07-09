@@ -4,7 +4,7 @@ import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
-import * as gpu from '../../src/gpuMode.ts';
+import * as gpu from '../../src/execMode.ts';
 import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
@@ -34,13 +34,13 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    gpu.pushMode(gpu.RuntimeMode.CODEGEN);
+    gpu.pushMode(gpu.ExecMode.CODEGEN);
     ctx = createContext();
     vi.spyOn(gpu, 'getResolutionCtx').mockReturnValue(ctx);
   });
 
   afterEach(() => {
-    gpu.popMode(gpu.RuntimeMode.CODEGEN);
+    gpu.popMode(gpu.ExecMode.CODEGEN);
   });
 
   it('creates a simple return statement', () => {

@@ -1,5 +1,5 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inGPUMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {

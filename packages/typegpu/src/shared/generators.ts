@@ -1,5 +1,5 @@
 import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
-import { inGPUMode } from '../gpuMode.ts';
+import { inGPUMode } from '../execMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import { $internal } from './symbols.ts';
 import { setName } from './meta.ts';

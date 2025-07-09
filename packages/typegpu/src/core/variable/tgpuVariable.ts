@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inGPUMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
