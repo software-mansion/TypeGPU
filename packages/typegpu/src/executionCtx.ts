@@ -13,11 +13,16 @@ import { $providing } from './shared/symbols.ts';
 /**
  * Unified execution context interface for all execution modes.
  * Provides access to slots and manages dependency injection during code execution.
+ * Also manages variable storage for SIMULATE mode.
  */
 export interface ExecutionCtx {
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
   unwrap<T>(eventual: Eventual<T>): T;
+  
+  // Variable storage methods for SIMULATE mode
+  readVariable<T>(variable: any): T | undefined;
+  writeVariable<T>(variable: any, value: T): void;
 }
 
 /**
@@ -26,6 +31,7 @@ export interface ExecutionCtx {
  */
 export class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
+  private variableStorage = new WeakMap<any, any>();
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
     // Shared implementation with ResolutionCtxImpl
@@ -83,5 +89,13 @@ export class ExecutionCtxImpl implements ExecutionCtx {
     // Simple computation for ExecutionCtxImpl
     // In a real implementation, this might need memoization like ResolutionCtxImpl
     return derived['~compute']();
+  }
+
+  readVariable<T>(variable: any): T | undefined {
+    return this.variableStorage.get(variable);
+  }
+
+  writeVariable<T>(variable: any, value: T): void {
+    this.variableStorage.set(variable, value);
   }
 }

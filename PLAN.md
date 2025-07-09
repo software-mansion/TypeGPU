@@ -46,14 +46,16 @@ interface ExecutionCtx {
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
   unwrap<T>(eventual: Eventual<T>): T;
   
-  // Mode-specific capabilities are handled internally
-  // All execution contexts implement this same interface
+  // Variable storage methods for SIMULATE mode
+  readVariable<T>(variable: any): T | undefined;
+  writeVariable<T>(variable: any, value: T): void;
 }
 
 // ResolutionCtxImpl already implements these methods for CODEGEN mode
 // We'll add ExecutionCtxImpl for COMPTIME and SIMULATE modes
 class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
+  private variableStorage = new WeakMap<any, any>();
   
   // Can share implementation with ResolutionCtxImpl since ResolutionCtx is a supertype of ExecutionCtx
   // Used for both COMPTIME (slots only) and SIMULATE (slots + variables) modes
@@ -138,20 +140,29 @@ get value(): Infer<TDataType> {
 
 #### Add SIMULATE Mode Variable Support
 ```typescript
-// Add simple SIMULATE mode variable storage for dual implementations
-private static simulateVariables = new WeakMap<TgpuVar<any, any>, any>();
-
+// Variables now use execution context storage instead of global storage
 private getSimulateValue(): Infer<TDataType> {
-  if (!TgpuVarImpl.simulateVariables.has(this)) {
-    const defaultValue = getDefaultValue(this._dataType);
-    TgpuVarImpl.simulateVariables.set(this, defaultValue);
+  const ctx = getExecutionCtx();
+  if (!ctx) {
+    throw new Error('Cannot access variable value outside of execution context in SIMULATE mode');
   }
-  return TgpuVarImpl.simulateVariables.get(this);
+  
+  let value = ctx.readVariable<Infer<TDataType>>(this);
+  if (value === undefined) {
+    const defaultValue = this._initialValue ?? getDefaultValue(this._dataType);
+    ctx.writeVariable(this, defaultValue);
+    value = defaultValue;
+  }
+  return value;
 }
 
 set value(newValue: Infer<TDataType>) {
   if (inSimulateMode()) {
-    TgpuVarImpl.simulateVariables.set(this, newValue);
+    const ctx = getExecutionCtx();
+    if (!ctx) {
+      throw new Error('Cannot assign variable value outside of execution context in SIMULATE mode');
+    }
+    ctx.writeVariable(this, newValue);
   } else {
     throw new Error('Variable assignment only allowed in SIMULATE mode');
   }
@@ -372,6 +383,7 @@ interface ResolutionCtx extends ExecutionCtx {
 ```typescript
 class ExecutionCtxImpl implements ExecutionCtx {
   private slotStack: WeakMap<TgpuSlot<any>, any>[] = [new WeakMap()];
+  private variableStorage = new WeakMap<any, any>();
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
     // Can share implementation with ResolutionCtxImpl
@@ -405,6 +417,14 @@ class ExecutionCtxImpl implements ExecutionCtx {
     return eventual;
   }
 
+  readVariable<T>(variable: any): T | undefined {
+    return this.variableStorage.get(variable);
+  }
+
+  writeVariable<T>(variable: any, value: T): void {
+    this.variableStorage.set(variable, value);
+  }
+
   // Used for both COMPTIME and SIMULATE modes
   // Can share slot logic with ResolutionCtxImpl since ResolutionCtx extends ExecutionCtx
 }
@@ -427,21 +447,9 @@ Each execution mode has different capabilities:
 // - Slots: For dependency injection in CPU simulation
 // - Variables: For dual implementation runtime state
 
-class SimulateModeVariableStorage {
-  private static variables = new WeakMap<TgpuVar<any, any>, any>();
-  
-  static read<T>(variable: TgpuVar<any, T>): T {
-    if (!this.variables.has(variable)) {
-      const defaultValue = getDefaultValue(variable.dataType);
-      this.variables.set(variable, defaultValue);
-    }
-    return this.variables.get(variable);
-  }
-  
-  static write<T>(variable: TgpuVar<any, T>, value: T): void {
-    this.variables.set(variable, value);
-  }
-}
+// Variable storage is now handled by ExecutionCtx instances
+// Each execution context maintains its own variable storage via WeakMap
+// This ensures proper isolation between different execution contexts
 ```
 
 ## Benefits of This Approach
@@ -450,7 +458,10 @@ class SimulateModeVariableStorage {
    - CODEGEN: Slots + Variables (shader generation) via ResolutionCtxImpl
    - COMPTIME: Slots only (dependency injection) via ExecutionCtxImpl
    - SIMULATE: Slots + Variables (CPU simulation) via ExecutionCtxImpl
-2. **Minimal Changes**: Only adds COMPTIME slot support, no variable complexity
+2. **Context-Scoped Variables**: Variables are now stored in execution context instead of globally
+   - Better isolation between different execution contexts
+   - Proper cleanup when execution contexts are destroyed
+   - More predictable behavior in concurrent scenarios
 3. **No Breaking Changes**: ResolutionCtx remains unchanged, existing code works
 4. **Simple Implementation**: Leverages existing slot logic for COMPTIME mode
 5. **Fast Timeline**: Can be implemented in 1 week with proper testing

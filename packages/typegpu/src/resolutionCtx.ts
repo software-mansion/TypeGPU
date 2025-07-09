@@ -475,6 +475,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeEventual;
   }
 
+  // Variable storage methods for SIMULATE mode - not used in CODEGEN mode
+  // but required by ExecutionCtx interface
+  private variableStorage = new WeakMap<any, any>();
+
+  readVariable<T>(variable: any): T | undefined {
+    return this.variableStorage.get(variable);
+  }
+
+  writeVariable<T>(variable: any, value: T): void {
+    this.variableStorage.set(variable, value);
+  }
+
   _getOrCompute<T>(derived: TgpuDerived<T>): T {
     // All memoized versions of `derived`
     const instances = this._memoizedDerived.get(derived) ?? [];

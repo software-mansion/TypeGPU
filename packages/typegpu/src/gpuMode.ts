@@ -12,6 +12,8 @@ export const RuntimeMode = {
   CODEGEN: CodegenMode,
   COMPTIME: ComptimeMode,
   SIMULATE: SimulateMode,
+  // Legacy compatibility
+  GPU: CodegenMode,
 } as const;
 
 type ExecutionMode = typeof CodegenMode | typeof ComptimeMode | typeof SimulateMode;

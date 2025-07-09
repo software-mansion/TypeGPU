@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { inCodegenMode, inSimulateMode } from '../../gpuMode.ts';
+import { getExecutionCtx, inCodegenMode, inSimulateMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -58,9 +58,6 @@ export function isVariable<T extends TgpuVar>(
 // --------------
 // Implementation
 // --------------
-
-// Add simple SIMULATE mode variable storage for dual implementations
-const simulateVariables = new WeakMap<TgpuVarImpl<any, any>, any>();
 
 function getDefaultValue<T extends AnyData>(dataType: T): Infer<T> {
   // Simple default value generation - in a real implementation this would be more sophisticated
@@ -127,11 +124,18 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   private getSimulateValue(): Infer<TDataType> {
-    if (!simulateVariables.has(this)) {
-      const defaultValue = this._initialValue ?? getDefaultValue(this._dataType);
-      simulateVariables.set(this, defaultValue);
+    const ctx = getExecutionCtx();
+    if (!ctx) {
+      throw new Error('Cannot access variable value outside of execution context in SIMULATE mode');
     }
-    return simulateVariables.get(this);
+    
+    let value = ctx.readVariable<Infer<TDataType>>(this);
+    if (value === undefined) {
+      const defaultValue = this._initialValue ?? getDefaultValue(this._dataType);
+      ctx.writeVariable(this, defaultValue);
+      value = defaultValue;
+    }
+    return value;
   }
 
   get value(): Infer<TDataType> {
@@ -147,7 +151,11 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   set value(newValue: Infer<TDataType>) {
     if (inSimulateMode()) {
-      simulateVariables.set(this, newValue);
+      const ctx = getExecutionCtx();
+      if (!ctx) {
+        throw new Error('Cannot assign variable value outside of execution context in SIMULATE mode');
+      }
+      ctx.writeVariable(this, newValue);
     } else {
       throw new Error('Variable assignment only allowed in SIMULATE mode');
     }
