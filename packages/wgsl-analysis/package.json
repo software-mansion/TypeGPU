@@ -1,0 +1,13 @@
+{
+  "name": "wgsl-tool",
+  "version": "0.0.0",
+  "description": "WGSL shader compiler and analysis tool",
+  "main": "pkg-bundler/wgsl_tool.js",
+  "scripts": {
+    "build": "./scripts/build-wasm.sh",
+    "serve": "python3 scripts/serve.py",
+    "test": "node examples/nodejs-example.js"
+  },
+  "keywords": ["wgsl", "shader", "webgpu", "compiler", "webassembly"],
+  "license": "MIT"
+}

@@ -5,7 +5,7 @@
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "scripts": {
-    "dev": "DEV=true pnpm --parallel -r dev",
+    "dev": "pnpm --filter ./packages/wgsl-analysis exec ./scripts/ensure-wasm-built.sh && DEV=true pnpm --parallel -r dev",
     "fix": "biome lint --write . && deno fmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",

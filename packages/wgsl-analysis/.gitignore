@@ -1,0 +1,17 @@
+/target/
+/pkg/
+/pkg-bundler/
+/pkg-nodejs/
+*.glsl
+*.hlsl
+*.metal
+*.spv
+*.wgsl
+*.spvasm
+!examples/**/*.glsl
+!examples/**/*.hlsl
+!examples/**/*.metal
+!examples/**/*.spv
+!examples/**/*.wgsl
+!examples/**/*.spvasm
+.ropeproject/

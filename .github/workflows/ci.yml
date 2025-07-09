@@ -60,6 +60,15 @@ jobs:
         with:
           deno-version: v2.x # Run with latest stable Deno.
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
