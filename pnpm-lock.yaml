@@ -230,8 +230,8 @@ importers:
         specifier: catalog:example
         version: 3.4.0
       wgsl-tool:
-        specifier: link:/Users/konradreczko/WGSLTool/wgsl_analysis/pkg-bundler
-        version: link:../../../../WGSLTool/wgsl_analysis/pkg-bundler
+        specifier: workspace:*
+        version: link:../../packages/wgsl-analysis
     devDependencies:
       '@observablehq/plot':
         specifier: ^0.6.17
@@ -570,6 +570,8 @@ importers:
         specifier: catalog:types
         version: 5.8.3
     publishDirectory: dist
+
+  packages/wgsl-analysis: {}
 
 packages:
 
