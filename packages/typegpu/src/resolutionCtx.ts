@@ -18,7 +18,7 @@ import {
 } from './data/dataTypes.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { ExecMode, popMode, provideCtx, pushMode } from './execMode.ts';
+import { popMode, provideCtx, pushMode } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
