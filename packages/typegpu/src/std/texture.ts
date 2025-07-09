@@ -107,7 +107,7 @@ type TextureSampleOverload = {
 };
 
 export const textureSample: TextureSampleOverload = createDualImpl(
-  // JS Implementation
+  // CPU Implementation
   (
     _texture: TgpuSampledTexture,
     _sampler: TgpuSampler,
@@ -169,7 +169,7 @@ type TextureSampleLevelOverload = {
 };
 
 export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
-  // JS Implementation
+  // CPU Implementation
   (
     _texture: TgpuSampledTexture,
     _sampler: TgpuSampler,
@@ -259,7 +259,7 @@ type TextureLoadOverload = {
 };
 
 export const textureLoad: TextureLoadOverload = createDualImpl(
-  // JS Implementation
+  // CPU Implementation
   (
     _texture: TgpuStorageTexture | TgpuSampledTexture,
     _coords: number | v2i | v2u | v3i | v3u,
@@ -316,7 +316,7 @@ type TextureStoreOverload = {
 };
 
 export const textureStore: TextureStoreOverload = createDualImpl(
-  // JS Implementation
+  // CPU Implementation
   (
     _texture: TgpuStorageTexture,
     _coords: number | v2i | v2u | v3i | v3u,
@@ -375,7 +375,7 @@ type TextureDimensionsOverload = {
 };
 
 export const textureDimensions: TextureDimensionsOverload = createDualImpl(
-  // JS Implementation
+  // CPU Implementation
   (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
     throw new Error(
       'Texture dimensions are not supported outside of CODEGEN mode.',
