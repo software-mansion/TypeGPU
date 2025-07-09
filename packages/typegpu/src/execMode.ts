@@ -3,15 +3,12 @@ import type { ResolutionCtx } from './types.ts';
 
 let resolutionCtx: ResolutionCtx | null = null;
 
-const CPUMode = 0;
-const GPUMode = 1;
-
 export const ExecMode = {
-  COMPTIME: CPUMode,
-  CODEGEN: GPUMode,
+  COMPTIME: 0,
+  CODEGEN: 1,
 } as const;
 
-const resolutionModeStack: (typeof CPUMode | typeof GPUMode)[] = [];
+const resolutionModeStack: (typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN)[] = [];
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
   invariant(resolutionCtx === null, 'Cannot nest context providers');
@@ -28,11 +25,11 @@ export function getResolutionCtx(): ResolutionCtx | null {
   return resolutionCtx;
 }
 
-export function pushMode(mode: typeof CPUMode | typeof GPUMode) {
+export function pushMode(mode: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN) {
   resolutionModeStack.push(mode);
 }
 
-export function popMode(expected?: typeof CPUMode | typeof GPUMode) {
+export function popMode(expected?: typeof ExecMode.COMPTIME | typeof ExecMode.CODEGEN) {
   const mode = resolutionModeStack.pop();
   if (expected !== undefined) {
     invariant(mode === expected, 'Unexpected mode');
