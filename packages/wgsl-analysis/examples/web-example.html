@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WGSL Analysis Tool - Web Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        select, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WGSL Analysis Tool</h1>
+
+    <div>
+        <label>WGSL Shader:</label>
+        <textarea id="wgsl-input" placeholder="Enter WGSL shader code...">@fragment
+fn main() -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+}</textarea>
+    </div>
+
+    <div>
+        <label>Output Format:</label>
+        <select id="format">
+            <option value="glsl">GLSL</option>
+            <option value="hlsl">HLSL</option>
+            <option value="metal">Metal</option>
+            <option value="wgsl">WGSL</option>
+            <option value="spirv">SPIR-V</option>
+        </select>
+        <button onclick="compileShader()">Compile</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div>
+        <label>Output:</label>
+        <textarea id="output" readonly></textarea>
+    </div>
+
+    <script type="module">
+        import init, { compileShader, getSupportedFormats } from '../pkg/wgsl_tool.js';
+
+        let ready = false;
+
+        async function initWasm() {
+            try {
+                await init();
+                ready = true;
+                document.getElementById('status').innerHTML = '<div class="success">Ready to compile!</div>';
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<div class="error">Failed to load: ${error.message}</div>`;
+            }
+        }
+
+        window.compileShader = function() {
+            if (!ready) {
+                document.getElementById('status').innerHTML = '<div class="error">WebAssembly module not ready</div>';
+                return;
+            }
+
+            const wgslCode = document.getElementById('wgsl-input').value;
+            const format = document.getElementById('format').value;
+            const output = document.getElementById('output');
+            const status = document.getElementById('status');
+
+            try {
+                const result = compileShader(wgslCode, format);
+                output.value = result;
+                status.innerHTML = '<div class="success">Compilation successful!</div>';
+            } catch (error) {
+                output.value = '';
+                status.innerHTML = `<div class="error">Compilation failed: ${error.message}</div>`;
+            }
+        };
+
+        initWasm();
+    </script>
+</body>
+</html>
