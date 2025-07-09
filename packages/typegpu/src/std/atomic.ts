@@ -11,7 +11,7 @@ import { createDualImpl } from '../shared/generators.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   () => console.warn('workgroupBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
   () => snip('workgroupBarrier()', Void),
@@ -19,7 +19,7 @@ export const workgroupBarrier = createDualImpl(
 );
 
 export const storageBarrier = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   () => console.warn('storageBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
   () => snip('storageBarrier()', Void),
@@ -27,7 +27,7 @@ export const storageBarrier = createDualImpl(
 );
 
 export const textureBarrier = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   () => console.warn('textureBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
   () => snip('textureBarrier()', Void),
@@ -35,7 +35,7 @@ export const textureBarrier = createDualImpl(
 );
 
 export const atomicLoad = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -54,7 +54,7 @@ export const atomicLoad = createDualImpl(
 );
 
 export const atomicStore = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): void => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -80,7 +80,7 @@ const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
 };
 
 export const atomicAdd = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -100,7 +100,7 @@ export const atomicAdd = createDualImpl(
 );
 
 export const atomicSub = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -120,7 +120,7 @@ export const atomicSub = createDualImpl(
 );
 
 export const atomicMax = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -140,7 +140,7 @@ export const atomicMax = createDualImpl(
 );
 
 export const atomicMin = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -160,7 +160,7 @@ export const atomicMin = createDualImpl(
 );
 
 export const atomicAnd = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -180,7 +180,7 @@ export const atomicAnd = createDualImpl(
 );
 
 export const atomicOr = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
@@ -200,7 +200,7 @@ export const atomicOr = createDualImpl(
 );
 
 export const atomicXor = createDualImpl(
-  // CPU Implementation
+  // CPU implementation
   <T extends AnyAtomic>(a: T, value: number): number => {
     throw new Error(
       'Atomic operations are not supported outside of CODEGEN mode.',
