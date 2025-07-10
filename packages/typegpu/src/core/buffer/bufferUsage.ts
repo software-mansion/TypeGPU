@@ -143,7 +143,7 @@ class TgpuFixedBufferImpl<
       return this[$gpuValueOf]();
     }
 
-    throw new Error(`Cannot access buffer's value directly in JS.`);
+    throw new Error(`Buffer values rely on GPU resources and cannot be executed outside of a compute dispatch or draw call`);
   }
 
   get $(): InferGPU<TData> {
@@ -203,7 +203,7 @@ export class TgpuLaidOutBufferImpl<
       return this[$gpuValueOf]();
     }
 
-    throw new Error(`Cannot access buffer's value directly in JS.`);
+    throw new Error(`Buffer values rely on GPU resources and cannot be executed outside of a compute dispatch or draw call`);
   }
 
   get $(): InferGPU<TData> {
