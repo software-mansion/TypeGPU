@@ -80,6 +80,23 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 }
 ```
 
+:::tip
+If you wish to resolve just a single TGSL function and its dependencies, you can call resolve with that function in the externals and with no template.
+
+```ts
+const multiply = tgpu.fn([d.u32], d.u32)((n) => 2 * n);
+
+const resolved = tgpu.resolve({ externals: { multiply } });
+
+console.log(resolved);
+// fn multiply_0(n: u32) ->  u32{
+//   return (2 * n);
+// }
+```
+
+You can also resolve TypeGPU schemas or even entire pipelines the same way.
+:::
+
 ## Template
 
 This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions. 
@@ -113,6 +130,10 @@ To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fu
 ```
 
 :::
+
+## *resolveWithContext*
+
+a
 
 ## Naming scheme
 
