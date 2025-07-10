@@ -107,13 +107,42 @@ TypeGPU has split the wgsl attribute syntax into different places to provide typ
 For example, all groups and bindings are assigned automatically.
 On the other hand, defining entry functions is not done by annotating `TgpuFn` with attributes, but is achieved through dedicated shell constructors instead:
 
+- `tgpu['~unstable'].computeFn`,
 - `tgpu['~unstable'].vertexFn`,
-- `tgpu['~unstable'].fragmentFn`,
-- `tgpu['~unstable'].computeFn`.
+- `tgpu['~unstable'].fragmentFn`.
 
-Shell constructors of entry functions accept an object that describes the IO as well as other relevant parameters, such as workgroup size.
+### Entry point function I/O
 
-Builtin inter-stage inputs and outputs are available on the `d.builtin` object. 
+For describing the I/O of an entry point function, we use `IORecord`s --
+JS objects, where keys represent the names of the arguments,
+and values represent the types of the arguments.
+
+```ts
+const vertexInput = { 
+  idx: d.builtin.vertexIndex,
+  position: d.vec4f, 
+  color: d.vec4f
+}
+```
+
+As you may note, builtin inter-stage inputs and outputs are available on the `d.builtin` object,
+and require no further type clarification.
+
+Another thing to note is that there is no need to specify locations of the arguments,
+as TypeGPU tries to assign locations automatically.
+However, if you wish to, you can still wrap any schema in a `d.location` decorator.
+Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes.
+
+During wgsl generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
+In WGSL implementation, input and output structs of the given function shall be referenced as `In` and `Out` respectively.
+Headers in WGSL implementations should be omitted, all input values are accessible through the struct named `in`.
+
+### Compute
+
+`TgpuComputeFn` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `workgroupSize` -- a JS array of 1-3 numbers that corresponds to the `@workgroup_size` attribute.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -142,13 +171,17 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
-In the case of entry functions, you should not include the WGSL function header in the code string.
-Instead, the WGSL implementations can access these arguments as if they were passed in via structs.
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions.
-Input values are accessible through the struct named `in`, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
+### Vertex and fragment
 
-If you wish to, you can wrap any schema in an IO struct in a `d.location` decorator, however TypeGPU tries to assign locations automatically.
-Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes.
+`TgpuVertexFn` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `out` -- an `IORecord` describing the output of the function.
+
+`TgpuFragment` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `out` -- `d.vec4f`, or an `IORecord` describing the output of the function.
 
 ```ts twoslash
 import tgpu from 'typegpu';
