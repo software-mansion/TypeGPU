@@ -13,12 +13,12 @@ TypeGPU offers many quality-of-life features that help with building complex WGS
 different files, or to import a shader utility function from a library. The approach that TypeGPU takes aims for composability:
 
 - Each definition in WGSL is represented as its own TypeGPU resource -- a typed wrapper representing some kind of WGSL resource (e.g., `TgpuFn`, `TgpuBuffer`, `TgpuVar`).
-- Resources can reference outside resources, like buffers, bind group layouts, or user-defined tgpu functions.
+- Resources can reference outside resources, like buffers, bind group layouts, or user-defined TypeGPU functions.
 - Resources can be imported and exported like any other JavaScript value.
 
 ## Defining a function
 
-In order to construct a tgpu function, you need to start with defining its shell -- an object holding only the input and output types of a tgpu function.
+In order to construct a TypeGPU function, you need to start with defining its shell -- an object holding only the input and output types of a TypeGPU function.
 The shell constructor `tgpu.fn` makes use of [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas) -- objects representing different WGSL data types, that help us with generating WGSL at runtime.
 It accepts two arguments:
 
@@ -103,7 +103,7 @@ fn getGradientColor_0(ratio: f32) -> vec4f{
 Entry functions are an *unstable* feature. The API may be subject to change in the near future.
 :::
 
-TypeGPU has split the wgsl attribute syntax into different places to provide type safety and to simplify the shader creation and dispatching process.
+TypeGPU has split the WGSL attribute syntax into different places to provide type safety and to simplify the shader creation and dispatching process.
 For example, all groups and bindings are assigned automatically.
 On the other hand, defining entry functions is not done by annotating `TgpuFn` with attributes, but is achieved through dedicated shell constructors instead:
 
@@ -131,9 +131,9 @@ and require no further type clarification.
 Another thing to note is that there is no need to specify locations of the arguments,
 as TypeGPU tries to assign locations automatically.
 However, if you wish to, you can still wrap any schema in a `d.location` decorator.
-Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` wgsl attributes.
+Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` WGSL attributes.
 
-During wgsl generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
+During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
 In WGSL implementation, input and output structs of the given function shall be referenced as `In` and `Out` respectively.
 Headers in WGSL implementations should be omitted, all input values are accessible through the struct named `in`.
 
@@ -216,7 +216,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   }`.$uses({ getGradientColor });
 ```
 
-Resolved wgsl for the pipeline including the two entry point functions above is equivalent (with respect to some cleanup) to the following:
+Resolved WGSL for the pipeline including the two entry point functions above is equivalent (with respect to some cleanup) to the following:
 
 ```wgsl
 struct mainVertex_Input {
