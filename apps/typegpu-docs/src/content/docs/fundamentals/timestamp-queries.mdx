@@ -1,0 +1,153 @@
+---
+title: Timing Your Pipelines
+description: How to use timestamp queries to measure the performance of your pipelines.
+---
+
+:::caution[Experimental]
+This feature is under heavy development and is yet to reach stability.
+:::
+
+To measure kernel execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
+
+:::tip
+To use performance callbacks and timestamp queries, you must enable the `timestamp-query` feature on your GPU device. See [Enabling Features](/TypeGPU/fundamentals/enabling-features) for details.
+:::
+
+TypeGPU offers two ways to employ timestamp queries:
+
+1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method  
+2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
+
+## Performance callbacks
+
+Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceCallback()` onto a compute or render pipeline:
+
+```ts
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withPerformanceCallback((start, end) => {
+    const durationNs = Number(end - start);
+    console.log(`Pipeline execution time: ${durationNs} ns`);
+  });
+````
+
+* **Callback signature**
+
+  ```ts
+  (start: bigint, end: bigint) => void | Promise<void>
+  ```
+
+  Both `start` and `end` are timestamps in nanoseconds.
+
+* **Multiple callbacks**
+  If you call `.withPerformanceCallback()` more than once, only the *last* callback is used. If your timing logic doesn’t change, attach it a single time *after* creating the pipeline rather than on every dispatch.
+
+* **Automatic query set**
+  If you haven’t provided a `TgpuQuerySet` before calling `.withPerformanceCallback()`, TypeGPU will allocate one for you along with the necessary resolve buffers.
+
+## Using `TgpuQuerySet`
+
+For finer control, create and manage your own `TgpuQuerySet`. You can attach it either to a TypeGPU pipeline or directly to a raw WebGPU encoder.
+
+### Creating and attaching to a pipeline
+
+```ts
+// Create a query set with two timestamp slots
+const querySet = root.createQuerySet('timestamp', 2);
+
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withTimestampWrites({
+    querySet: querySet,
+    beginningOfPassWriteIndex: 0,  // Write start time at index 0
+    endOfPassWriteIndex: 1,        // Write end time at index 1
+  });
+```
+
+Omit `beginningOfPassWriteIndex` or `endOfPassWriteIndex` to skip writing at the start or end of the pass, respectively.
+
+### Attaching to a raw WebGPU command encoder
+
+You can also attach timestamp queries directly to a raw WebGPU command encoder by specifying `timestampWrites` in the pass descriptor:
+
+```ts
+const querySet = root.createQuerySet('timestamp', 2);
+const encoder = device.createCommandEncoder();
+
+const timestampWrites = {
+  querySet: root.unwrap(querySet),
+  beginningOfPassWriteIndex: 0,  // Write start time at index 0
+  endOfPassWriteIndex: 1,        // Write end time at index 1
+};
+
+const pass = encoder.beginComputePass({ timestampWrites });
+// …dispatch calls…
+pass.end();
+
+device.queue.submit([encoder.finish()]);
+await device.queue.onSubmittedWorkDone();
+```
+
+### Reading Timestamps
+
+To read timestamp results, you must first resolve the query set, then read the data:
+
+```ts
+querySet.resolve();
+const timestamps: bigint[] = await querySet.read();
+// timestamps[0] is start, timestamps[1] is end
+```
+
+:::caution
+If you don't resolve the query set, the read operation will throw an error or return stale data (if the query set was previously resolved).
+:::
+
+### Continuous timestamp queries
+
+Reading timestamp queries involves several steps on both the GPU and CPU. While the query set can be written to and resolved every frame, mapping the read buffer on the CPU often takes longer than the GPU pipeline execution. If you attempt to resolve or read the query results while a previous read is still in progress, you risk conflicting operations.
+
+To prevent such issues, TgpuQuerySet enforces a safety check: an error will be thrown if you call resolve() or read() while the query set is busy. Use the TgpuQuerySet.available property to check if the data is ready before accessing it.
+
+When profiling inside a render loop, structure your logic like this:
+
+```ts
+async function renderLoop() {
+  // …your rendering logic…
+
+  if (querySet.available) {
+    querySet.resolve();
+    const timestamps: bigint[] = await querySet.read();
+    console.log(`Start: ${timestamps[0]}, End: ${timestamps[1]}`);
+  } else {
+    console.warn('Query set not available yet');
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+```
+
+The `querySet.available` property returns `true` once the last resolve has completed.
+
+## Combining `TgpuQuerySet` with performance callbacks
+
+You can use a custom query set and still attach a performance callback. TypeGPU will write to the indices you specify, then resolve and read the full set for the callback:
+
+```ts
+const querySet = root.createQuerySet('timestamp', 36);
+
+const pipeline = root['~unstable']
+  .withCompute(computeShader)
+  .createPipeline()
+  .withTimestampWrites({
+    querySet: querySet,
+    beginningOfPassWriteIndex: 3,   // start at slot 3
+    endOfPassWriteIndex: 21,        // end at slot 21
+  })
+  .withPerformanceCallback((start, end) => {
+    console.log(`Pipeline execution time: ${Number(end - start)} ns`);
+  });
+```
+
+The callback respects your chosen indices but still resolves and reads the entire query set under the hood.

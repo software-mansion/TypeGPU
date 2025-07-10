@@ -117,6 +117,16 @@ export default defineConfig({
               slug: 'fundamentals/vertex-layouts',
             },
             {
+              label: 'Enabling Features',
+              slug: 'fundamentals/enabling-features',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Timing Your Pipelines',
+              slug: 'fundamentals/timestamp-queries',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Slots',
               slug: 'fundamentals/slots',
               badge: { text: 'new' },

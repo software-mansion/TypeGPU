@@ -5,6 +5,7 @@ import arg from 'arg';
 import color from './colors.mjs';
 import { Frog } from './log.mjs';
 import prepack from './prepack.mjs';
+import changes from './changes.mjs';
 
 if (!process.env.npm_config_user_agent.startsWith('pnpm')) {
   console.error(
@@ -19,6 +20,9 @@ const COMMANDS = {
   prepack: {
     execute: prepack,
   },
+  changes: {
+    execute: changes,
+  },
 };
 
 function printHelp() {
@@ -32,6 +36,7 @@ ${color.Reset}
 
 ${color.Bold}Commands:${color.Reset}
   tgpu-dev-cli prepack   Builds and prepares a package for publishing.
+  tgpu-dev-cli changes   Prints files (and packages) changed between 'release' and 'main'.
 `);
 }
 

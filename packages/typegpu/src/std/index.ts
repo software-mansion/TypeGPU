@@ -10,18 +10,23 @@ export {
   // builtin functions
   abs,
   acos,
+  acosh,
   asin,
   atan2,
   ceil,
   clamp,
   cos,
+  cosh,
   cross,
   distance,
   dot,
   exp,
+  exp2,
   floor,
   fract,
   length,
+  log,
+  log2,
   max,
   min,
   mix,
@@ -32,7 +37,23 @@ export {
   sign,
   sin,
   sqrt,
+  tanh
 } from './numeric.ts';
+
+// deno-fmt-ingore
+export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';
+
+// deno-fmt-ingore
+export {
+  identity2,
+  identity3,
+  identity4,
+  rotationX4,
+  rotationY4,
+  rotationZ4,
+  scaling4,
+  translation4,
+} from '../data/matrix.ts';
 
 // deno-fmt-ignore
 export {

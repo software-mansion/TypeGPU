@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { getName } from '../src/name.ts';
+import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
@@ -210,6 +210,38 @@ describe('TGSL tgpu.fn function', () => {
     `);
 
     expect(actual).toBe(expected);
+  });
+
+  it('resolves vertexFn with empty in', () => {
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })(() => ({ pos: d.vec4f() }));
+
+    const actual = parseResolved({ vertexFn });
+
+    const expected = parse(`
+      struct vertexFn_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vertexFn() -> vertexFn_Output{
+        return vertexFn_Output(vec4f());
+      }
+    `);
+
+    expect(actual).toBe(expected);
+  });
+
+  it('throws when vertexFn with empty out', () => {
+    expect(() =>
+      tgpu['~unstable']
+        .vertexFn({
+          in: { vi: builtin.vertexIndex },
+          out: {},
+        })
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: A vertexFn output cannot be empty since it must include the 'position' builtin.]`,
+    );
   });
 
   it('allows destructuring the input argument in vertexFn', () => {

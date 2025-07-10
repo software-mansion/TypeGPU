@@ -35,7 +35,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { getName } from '../../name.ts';
+import { getName } from '../../shared/meta.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { isAttribute } from '../vertexLayout/connectAttributesToShader.ts';

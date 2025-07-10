@@ -1,5 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode.ts';
-import { getName, setName } from '../../name.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
