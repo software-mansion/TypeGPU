@@ -2,7 +2,6 @@
 title: Resolve
 description: Resolve API can be used to extend shader code with WGSL definitions of TypeGPU-defined objects.
 ---
-// AAA twoslash
 
 Defining shader schemas and objects in JS/TS has lots of benefits, but having to keep them in sync with the corresponding WGSL code is hard to maintain.
 The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you want to use in the shader, and generates a ready-to-use WGSL bundle.
@@ -13,7 +12,7 @@ The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you wa
 
 Here's an example:
 
-```ts
+```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -85,7 +84,10 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 :::tip
 If you wish to resolve just a single TGSL function and its dependencies, you can call resolve with that function in the externals and with no template.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
 const multiply = tgpu.fn([d.u32], d.u32)((n) => 2 * n);
 
 const resolved = tgpu.resolve({ externals: { multiply } });
@@ -177,7 +179,12 @@ For these cases, you can use `tgpu.resolveWithContext`, which has the same input
 
 An example, where the "catchall" bind group is created:
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
 const myFixedBuffer = root.createMutable(d.u32);
 
 let { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
@@ -197,7 +204,12 @@ console.log(catchall?.[1]); // the catchall bind group
 
 An example, where a bind group layout is automatically included via a TGSL function:
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
 const myLayout = tgpu.bindGroupLayout({ myBuffer: { uniform: d.u32 } });
 
 const exampleFn = tgpu.fn([])(() => {
