@@ -19,7 +19,12 @@ import type { Example } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
-  catalog: { typescript: 'string', '@webgpu/types': 'string' },
+  catalogs: {
+    types: {
+      typescript: 'string',
+      '@webgpu/types': 'string',
+    },
+  },
 })(parse(pnpmWorkspace));
 
 if (pnpmWorkspaceYaml instanceof type.errors) {
@@ -65,7 +70,7 @@ ${example.htmlFile.content}
         "module": "ESNext",
         "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "skipLibCheck": true,
-        "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
+        "types": ["@webgpu/types"],
         "moduleResolution": "node",
         "allowImportingTsExtensions": true,
         "isolatedModules": true,
@@ -88,9 +93,9 @@ ${example.htmlFile.content}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "${pnpmWorkspaceYaml.catalog.typescript}",
+      "typescript": "${pnpmWorkspaceYaml.catalogs.types.typescript}",
       "vite": "^6.1.1",
-      "@webgpu/types": "${pnpmWorkspaceYaml.catalog['@webgpu/types']}"
+      "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}"
     },
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",

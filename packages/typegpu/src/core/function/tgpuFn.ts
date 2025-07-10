@@ -1,10 +1,16 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
+import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { createDualImpl } from '../../shared/generators.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import {
+  $getNameForward,
+  $internal,
+  $providing,
+} from '../../shared/symbols.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
@@ -14,6 +20,10 @@ import type {
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
+  addArgTypesToExternals,
+  addReturnTypeToExternals,
+} from '../resolve/externals.ts';
+import {
   type Eventual,
   isAccessor,
   type Providing,
@@ -22,7 +32,13 @@ import {
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { Implementation, InferArgs, JsImplementation } from './fnTypes.ts';
+import type {
+  AnyFn,
+  Implementation,
+  InferArgs,
+  InferImplSchema,
+  InheritArgNames,
+} from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -38,7 +54,7 @@ type TgpuFnShellHeader<
 > = {
   readonly [$internal]: true;
   readonly argTypes: Args;
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
   readonly isEntry: false;
 };
 
@@ -52,53 +68,41 @@ export type TgpuFnShell<
   Return extends AnyData,
 > =
   & TgpuFnShellHeader<Args, Return>
-  & ((
-    implementation: (...args: InferArgs<Args>) => Infer<Return>,
-  ) => TgpuFn<Args, Return>)
-  & ((implementation: string) => TgpuFn<Args, Return>)
+  & (<T extends (...args: InferArgs<Args>) => Infer<Return>>(
+    implementation: T,
+  ) => TgpuFn<
+    Prettify<InheritArgNames<(...args: Args) => Return, T>>['result']
+  >)
+  & ((implementation: string) => TgpuFn<(...args: Args) => Return>)
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFn<Args, Return>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (
-          ...args: InferArgs<Args>
-        ) => Infer<Return>,
-      ) => TgpuFn<Args, Return>)
-      & ((implementation: string) => TgpuFn<Args, Return>);
-  };
+  ) => TgpuFn<(...args: Args) => Return>);
 
-interface TgpuFnBase<
-  Args extends AnyData[],
-  Return extends AnyData,
-> extends TgpuNamable {
+interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
-    implementation: Implementation<Args, Return>;
+    implementation: Implementation<ImplSchema>;
     argTypes: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
-  readonly shell: TgpuFnShellHeader<Args, Return>;
-  readonly '~providing'?: Providing | undefined;
+  readonly shell: TgpuFnShellHeader<
+    Parameters<ImplSchema>,
+    Extract<ReturnType<ImplSchema>, AnyData>
+  >;
+  readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
-  ): TgpuFn<Args, Return>;
+    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+  ): TgpuFn<ImplSchema>;
 }
 
-export type TgpuFn<
-  Args extends AnyData[] = AnyData[],
-  Return extends AnyData = AnyData,
-> =
-  & TgpuFnBase<Args, Return>
-  & ((...args: InferArgs<Args>) => Infer<Return>);
+// biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
+export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
+  & TgpuFnBase<ImplSchema>
+  & InferImplSchema<ImplSchema>;
 
 export function fn<
   Args extends AnyData[] | [],
@@ -123,18 +127,20 @@ export function fn<
   const call = (
     arg: Implementation | TemplateStringsArray,
     ...values: unknown[]
-  ) => createFn(shell, stripTemplate(arg, ...values));
+  ) =>
+    createFn(
+      shell as unknown as TgpuFnShellHeader<never[], never>,
+      stripTemplate(arg, ...values),
+    );
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuFnShell<Args, Return>;
+  return Object.assign(call, shell) as unknown as TgpuFnShell<Args, Return>;
 }
 
 export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
-  value: unknown | TgpuFn<Args, Return>,
-): value is TgpuFn<Args, Return> {
-  return !!(value as TgpuFn<Args, Return>)?.[$internal] &&
-    (value as TgpuFn<Args, Return>)?.resourceType === 'function';
+  value: unknown | TgpuFn<(...args: Args) => Return>,
+): value is TgpuFn<(...args: Args) => Return> {
+  return !!(value as TgpuFn<(...args: Args) => Return>)?.[$internal] &&
+    (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
 }
 
 // --------------
@@ -145,15 +151,18 @@ function stringifyPair([slot, value]: SlotValuePair): string {
   return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
-function createFn<Args extends AnyData[], Return extends AnyData>(
-  shell: TgpuFnShellHeader<Args, Return>,
-  implementation: Implementation<Args, Return>,
-): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & SelfResolvable & {
+function createFn<ImplSchema extends AnyFn>(
+  shell: TgpuFnShellHeader<
+    Parameters<ImplSchema>,
+    Extract<ReturnType<ImplSchema>, AnyData>
+  >,
+  implementation: Implementation<ImplSchema>,
+): TgpuFn<ImplSchema> {
+  type This = TgpuFnBase<ImplSchema> & SelfResolvable & {
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation as Implementation);
+  const core = createFnCore(implementation as Implementation, '');
 
   const fnBase: This = {
     [$internal]: {
@@ -177,7 +186,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
     with(
       slot: TgpuSlot<unknown> | TgpuAccessor,
       value: unknown,
-    ): TgpuFn<Args, Return> {
+    ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
         [isAccessor(slot) ? slot.slot : slot, value],
       ]);
@@ -185,7 +194,18 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
     '~resolve'(ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
-        return core.resolve(ctx);
+        addArgTypesToExternals(
+          implementation,
+          shell.argTypes,
+          core.applyExternals,
+        );
+        addReturnTypeToExternals(
+          implementation,
+          shell.returnType,
+          core.applyExternals,
+        );
+
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
       const generationCtx = ctx as GenerationCtx;
@@ -197,14 +217,14 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
 
       try {
         generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx);
+        return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
         generationCtx.callStack.pop();
       }
     },
   };
 
-  const call = createDualImpl<JsImplementation<Args, Return>>(
+  const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) => {
       if (typeof implementation === 'string') {
         throw new Error(
@@ -212,7 +232,11 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
         );
       }
 
-      return implementation(...args);
+      const castAndCopiedArgs = args.map((arg, index) =>
+        schemaCallWrapper(shell.argTypes[index], arg)
+      ) as InferArgs<Parameters<ImplSchema>>;
+
+      return implementation(...castAndCopiedArgs);
     },
     (...args) =>
       snip(
@@ -226,8 +250,7 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
   call[$internal].implementation = implementation;
 
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
-    Args,
-    Return
+    ImplSchema
   >;
 
   Object.defineProperty(fn, 'toString', {
@@ -239,12 +262,12 @@ function createFn<Args extends AnyData[], Return extends AnyData>(
   return fn;
 }
 
-function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
-  innerFn: TgpuFn<Args, Return>,
+function createBoundFunction<ImplSchema extends AnyFn>(
+  innerFn: TgpuFn<ImplSchema>,
   pairs: SlotValuePair[],
-): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & {
-    [$getNameForward]: TgpuFn<Args, Return>;
+): TgpuFn<ImplSchema> {
+  type This = TgpuFnBase<ImplSchema> & {
+    [$getNameForward]: TgpuFn<ImplSchema>;
   };
 
   const fnBase: This = {
@@ -254,7 +277,7 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
     },
     resourceType: 'function',
     shell: innerFn.shell,
-    '~providing': {
+    [$providing]: {
       inner: innerFn,
       pairs,
     },
@@ -273,7 +296,7 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
     with(
       slot: TgpuSlot<unknown> | TgpuAccessor,
       value: unknown,
-    ): TgpuFn<Args, Return> {
+    ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
         ...pairs,
         [isAccessor(slot) ? slot.slot : slot, value],
@@ -281,18 +304,18 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
     },
   };
 
-  const call = createDualImpl(
-    (...args: InferArgs<Args>): unknown => innerFn(...args),
+  const call = createDualImpl<InferImplSchema<ImplSchema>>(
+    (...args) => innerFn(...args),
     (...args) =>
       snip(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
         innerFn.shell.returnType ?? UnknownData,
       ),
     'tgpuFnCall',
-    innerFn.shell.argTypes,
+    innerFn.shell.argTypes as AnyData[],
   );
 
-  const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
+  const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
 
   Object.defineProperty(fn, 'toString', {
     value() {
@@ -307,12 +330,11 @@ function createBoundFunction<Args extends AnyData[], Return extends AnyData>(
   return fn;
 }
 
-class FnCall<Args extends AnyData[], Return extends AnyData>
-  implements SelfResolvable {
-  readonly [$getNameForward]: TgpuFnBase<Args, Return>;
+class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
+  readonly [$getNameForward]: TgpuFnBase<ImplSchema>;
 
   constructor(
-    private readonly _fn: TgpuFnBase<Args, Return>,
+    private readonly _fn: TgpuFnBase<ImplSchema>,
     private readonly _params: Wgsl[],
   ) {
     this[$getNameForward] = _fn;

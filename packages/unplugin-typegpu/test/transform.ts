@@ -7,18 +7,22 @@ import rollupPlugin from '../src/rollup.ts';
 
 const defaultOptions: Options = {
   include: [/\.m?[jt]sx?$/, /virtual:/],
+  autoNamingEnabled: false,
 };
 
-export const babelTransform = (code: string, options = defaultOptions) =>
+export const babelTransform = (code: string, options?: Options) =>
   Babel.transform(code, {
-    plugins: [[babelPlugin, options]],
+    plugins: [[babelPlugin, { ...defaultOptions, ...options }]],
     parserOpts: { plugins: ['typescript'] },
   }).code;
 
-export const rollupTransform = (code: string, options = defaultOptions) =>
+export const rollupTransform = (code: string, options?: Options) =>
   rollup({
     input: 'code',
-    plugins: [virtual({ code }), rollupPlugin(options)],
+    plugins: [
+      virtual({ code }),
+      rollupPlugin({ ...defaultOptions, ...options }),
+    ],
     external: ['typegpu', /^typegpu\/.*$/],
   })
     .then((build) => build.generate({}))

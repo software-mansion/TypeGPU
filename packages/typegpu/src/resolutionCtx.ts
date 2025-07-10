@@ -1,4 +1,3 @@
-import type { Block, FuncParameter } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData.ts';
 import {
   type Eventual,
@@ -20,11 +19,10 @@ import {
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
 import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
-import type { JitTranspiler } from './jitTranspiler.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $internal, $providing } from './shared/symbols.ts';
 import {
   bindGroupLayout,
   type TgpuBindGroup,
@@ -56,7 +54,6 @@ const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
-  readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -304,9 +301,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   >();
 
   private readonly _indentController = new IndentController();
-  private readonly _jitTranspiler: JitTranspiler | undefined;
   private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
+  private _varyingLocations: Record<string, number> | undefined;
+
+  get varyingLocations() {
+    return this._varyingLocations;
+  }
 
   readonly [$internal] = {
     itemStateStack: this._itemStateStack,
@@ -332,7 +333,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
-    this._jitTranspiler = opts.jitTranspiler;
   }
 
   get pre(): string {
@@ -367,20 +367,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
-  }
-
-  transpileFn(fn: string): {
-    params: FuncParameter[];
-    body: Block;
-    externalNames: string[];
-  } {
-    if (!this._jitTranspiler) {
-      throw new Error(
-        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
-      );
-    }
-
-    return this._jitTranspiler.transpileFn(fn);
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
@@ -451,11 +437,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T {
+    this._varyingLocations = locations;
+
+    try {
+      return callback();
+    } finally {
+      this._varyingLocations = undefined;
+    }
+  }
+
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
       return this.withSlots(
-        eventual['~providing'].pairs,
-        () => this.unwrap(eventual['~providing'].inner) as T,
+        eventual[$providing].pairs,
+        () => this.unwrap(eventual[$providing].inner) as T,
       );
     }
 
@@ -583,8 +582,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   resolve(item: unknown): string {
     if (isProviding(item)) {
       return this.withSlots(
-        item['~providing'].pairs,
-        () => this.resolve(item['~providing'].inner),
+        item[$providing].pairs,
+        () => this.resolve(item[$providing].inner),
       );
     }
 
@@ -641,10 +640,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 }
 
+/**
+ * The results of a WGSL resolution.
+ *
+ * @param code - The resolved code.
+ * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ */
 export interface ResolutionResult {
   code: string;
-  bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup] | null;
+  usedBindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup] | undefined;
 }
 
 export function resolve(
@@ -655,7 +661,7 @@ export function resolve(
   let code = ctx.resolve(item);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
-  const bindGroupLayouts: TgpuBindGroupLayout[] = [];
+  const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
   const takenIndices = new Set<number>(
     [...memoMap.keys()]
       .map((layout) => layout.index)
@@ -672,7 +678,7 @@ export function resolve(
   const createCatchallGroup = () => {
     const catchallIdx = automaticIds.next().value;
     const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
-    bindGroupLayouts[catchallIdx] = catchallLayout;
+    usedBindGroupLayouts[catchallIdx] = catchallLayout;
     code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
 
     return [
@@ -692,17 +698,17 @@ export function resolve(
 
   // Retrieving the catch-all binding index first, because it's inherently
   // the least swapped bind group (fixed and cannot be swapped).
-  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : null;
+  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : undefined;
 
   for (const [layout, placeholder] of memoMap.entries()) {
     const idx = layout.index ?? automaticIds.next().value;
-    bindGroupLayouts[idx] = layout;
+    usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
   }
 
   return {
     code,
-    bindGroupLayouts,
+    usedBindGroupLayouts,
     catchall,
   };
 }
