@@ -100,7 +100,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([])(() => {
+    const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
       for (let i = d.u32(0); i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
@@ -131,7 +131,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([])(() => {
+    const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
       for (let i = 0; i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
@@ -164,10 +164,7 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu['~unstable'].fn(
-        [],
-        d.i32,
-      )(() => {
+      const testFn = tgpu.fn([], d.i32)(() => {
         return arrayLength(layout.$.values);
       });
 
@@ -191,10 +188,7 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu['~unstable'].fn(
-        [],
-        d.u32,
-      )(() => {
+      const testFn = tgpu.fn([], d.u32)(() => {
         return arrayLength(layout.bound.values.value);
       });
 

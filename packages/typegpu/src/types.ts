@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { Block } from 'tinyest';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -65,8 +65,7 @@ export type ResolvableObject =
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
-  // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
-  | TgpuFn<any, any>;
+  | TgpuFn;
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
@@ -150,15 +149,16 @@ export interface ResolutionCtx {
     schema: T,
   ): string;
 
-  transpileFn(fn: string): {
-    params: FuncParameter[];
-    body: Block;
-    externalNames: string[];
-  };
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
   };
+
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T;
+  get varyingLocations(): Record<string, number> | undefined;
 
   [$internal]: {
     itemStateStack: ItemStateStack;

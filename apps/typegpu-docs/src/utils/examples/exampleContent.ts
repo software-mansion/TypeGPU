@@ -7,6 +7,35 @@ import type {
   ThumbnailPair,
 } from './types.ts';
 
+function extractUrlFromViteImport(
+  importFn: () => void,
+): [URL | undefined, boolean] {
+  const filePath = String(importFn);
+  const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
+
+  if (match?.[1]) {
+    const isRelative = match[1].startsWith('./');
+    return [new URL(match[1], window.location.origin), isRelative];
+  }
+
+  return [undefined, false];
+}
+
+function noCacheImport<T>(
+  importFn: () => Promise<T>,
+): Promise<T> {
+  const [url, isRelative] = extractUrlFromViteImport(importFn);
+
+  if (!url) {
+    throw new Error(`Could not no-cache-import using ${importFn}`);
+  }
+
+  url.searchParams.append('update', Date.now().toString());
+  return import(
+    /* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`
+  );
+}
+
 const contentExamplesPath = '../../content/examples/';
 
 function pathToExampleKey(path: string): string {
@@ -106,7 +135,7 @@ export const examples = R.pipe(
         key,
         metadata: value,
         tsFiles: readonlyTsFiles[key] ?? [],
-        tsImport: tsFilesImportFunctions[key],
+        tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
         htmlFile: htmlFiles[key]?.[0] ?? '',
         thumbnails: thumbnailFiles[key],
       }) satisfies Example,
