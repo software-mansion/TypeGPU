@@ -11,6 +11,7 @@ import {
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
@@ -23,7 +24,7 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import { getName } from '../name.ts';
+import { ResolutionError } from '../errors.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -315,8 +316,8 @@ export function generateExpression(
 
     if (!isMarkedInternal(id.value)) {
       throw new Error(
-        `Function ${
-          String(id.value)
+        `Function ${String(id.value)} ${
+          getName(id.value)
         } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
@@ -325,43 +326,54 @@ export function generateExpression(
       | FnArgsConversionHint
       | undefined;
     let convertedResources: Snippet[];
+    try {
+      if (!argTypes || argTypes === 'keep') {
+        convertedResources = resolvedSnippets;
+      } else if (argTypes === 'coerce') {
+        convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
+          resolvedSnippets;
+      } else {
+        const pairs =
+          (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
+            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
 
-    if (!argTypes || argTypes === 'keep') {
-      convertedResources = resolvedSnippets;
-    } else if (argTypes === 'coerce') {
-      convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
-        resolvedSnippets;
-    } else {
-      const pairs =
-        (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
-          .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
+        convertedResources = pairs.map(([type, sn]) => {
+          if (sn.dataType.type === 'unknown') {
+            console.warn(
+              `Internal error: unknown type when generating expression: ${expression}`,
+            );
+            return sn;
+          }
 
-      convertedResources = pairs.map(([type, sn]) => {
-        if (sn.dataType.type === 'unknown') {
-          console.warn(
-            `Internal error: unknown type when generating expression: ${expression}`,
-          );
-          return sn;
-        }
+          const conv = convertToCommonType(ctx, [sn], [type])?.[0];
+          if (!conv) {
+            throw new ResolutionError(
+              `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}' for function ${
+                getName(id.value)
+              }`,
+              [{
+                function: id.value,
+                callStack: ctx.callStack,
+                error:
+                  `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
+                toString: () => getName(id.value),
+              }],
+            );
+          }
+          return conv;
+        });
+      }
 
-        const conv = convertToCommonType(ctx, [sn], [type])?.[0];
-        if (!conv) {
-          throw new Error(
-            `Cannot convert ${ctx.resolve(sn.dataType)} to ${
-              ctx.resolve(type)
-            }`,
-          );
-        }
-        return conv;
-      });
+      // Assuming that `id` is callable
+      const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
+        ...convertedResources,
+      ) as Snippet;
+      return snip(ctx.resolve(fnRes.value), fnRes.dataType);
+    } catch (error) {
+      throw new ResolutionError(error, [{
+        toString: () => getName(id.value),
+      }]);
     }
-
-    // Assuming that `id` is callable
-    const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
-      ...convertedResources,
-    ) as Snippet;
-
-    return snip(ctx.resolve(fnRes.value), fnRes.dataType);
   }
 
   if (expression[0] === NODE.objectExpr) {

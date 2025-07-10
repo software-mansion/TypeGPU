@@ -9,8 +9,8 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
-import type { TgpuNamable } from '../../name.ts';
-import { setName } from '../../name.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { setName } from '../../shared/meta.ts';
 import {
   kindToDefaultFormatMap,
   type TgpuVertexAttrib,

@@ -1,6 +1,6 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
-import { getName } from '../../name.ts';
+import { getName } from '../../shared/meta.ts';
 import type { $repr, Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,

@@ -1,0 +1,5 @@
+{
+  "title": "Caustics",
+  "category": "rendering",
+  "tags": ["experimental", "fragment shader"]
+}

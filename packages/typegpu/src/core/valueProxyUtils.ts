@@ -4,7 +4,7 @@ import {
   extractGpuValueGetter,
   type GpuValueGetter,
 } from '../extractGpuValueGetter.ts';
-import { getName } from '../name.ts';
+import { getName } from '../shared/meta.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';

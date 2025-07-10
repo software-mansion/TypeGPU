@@ -1,6 +1,11 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { getName, isNamable, setName, type TgpuNamable } from '../../name.ts';
+import {
+  getName,
+  isNamable,
+  setName,
+  type TgpuNamable,
+} from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -149,7 +154,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   const core = createFnCore(shell, implementation);
   const inputType = shell.argTypes[0];
 
-  return {
+  const result: This = {
     shell,
 
     $uses(newExternals) {
@@ -176,5 +181,6 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     toString() {
       return `computeFn:${getName(core) ?? '<unnamed>'}`;
     },
-  } as This;
+  };
+  return result;
 }

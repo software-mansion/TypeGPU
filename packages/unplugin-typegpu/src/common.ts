@@ -56,21 +56,6 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   return ctx.tgpuAliases.has(path);
 }
 
-const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
-const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
-const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
-
-/**
- * Regexes used to efficiently determine if a file is
- * meant to be processed by our plugin. We assume every file
- * that should be processed imports `typegpu` in some way.
- */
-export const codeFilterRegexes = [
-  typegpuImportRegex,
-  typegpuDynamicImportRegex,
-  typegpuRequireRegex,
-];
-
 export function gatherTgpuAliases(
   node: acorn.ImportDeclaration | babel.ImportDeclaration,
   ctx: Context,
@@ -121,3 +106,9 @@ export function isShellImplementationCall(
 
 export const kernelDirectives = ['kernel', 'kernel & js'] as const;
 export type KernelDirective = (typeof kernelDirectives)[number];
+
+export function getErrorMessage(name: string | undefined) {
+  return `The function "${
+    name ?? '<unnamed>'
+  }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`;
+}

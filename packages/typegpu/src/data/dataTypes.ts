@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../name.ts';
+import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   $repr,
   Infer,
