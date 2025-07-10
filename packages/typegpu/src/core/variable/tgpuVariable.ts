@@ -116,6 +116,8 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       return this[$gpuValueOf]();
     }
 
-    throw new Error('`tgpu.var` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call');
+    throw new Error(
+      '`tgpu.var` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
   }
 }

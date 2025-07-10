@@ -88,7 +88,9 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return this[$gpuValueOf]();
     }
 
-    throw new Error('`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call');
+    throw new Error(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
   }
 
   get $(): InferGPU<T> {

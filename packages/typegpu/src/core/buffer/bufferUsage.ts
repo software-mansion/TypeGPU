@@ -143,7 +143,9 @@ class TgpuFixedBufferImpl<
       return this[$gpuValueOf]();
     }
 
-    throw new Error('Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead');
+    throw new Error(
+      'Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
   }
 
   get $(): InferGPU<TData> {
@@ -203,7 +205,9 @@ export class TgpuLaidOutBufferImpl<
       return this[$gpuValueOf]();
     }
 
-    throw new Error('Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead');
+    throw new Error(
+      'Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
   }
 
   get $(): InferGPU<TData> {
