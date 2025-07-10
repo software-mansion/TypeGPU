@@ -20,9 +20,24 @@ import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
   catalogs: {
+    build: {
+      tsup: 'string',
+      unbuild: 'string',
+      jiti: 'string',
+    },
     types: {
       typescript: 'string',
       '@webgpu/types': 'string',
+    },
+    test: {
+      vitest: 'string',
+    },
+    frontend: {
+      'vite-imagetools': 'string',
+      'fuse.js': 'string',
+    },
+    example: {
+      'wgpu-matrix': 'string',
     },
   },
 })(parse(pnpmWorkspace));
@@ -100,7 +115,7 @@ ${example.htmlFile.content}
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
-      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
+      "wgpu-matrix": "${pnpmWorkspaceYaml.catalogs.example['wgpu-matrix']}",
       "@loaders.gl/core": "${
           typegpuDocsPackageJson.dependencies['@loaders.gl/core']
         }",
