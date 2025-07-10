@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, floor, mix, mul, sub } from 'typegpu/std';
 import { randOnUnitSphere, randSeed3 } from '../random.ts';
-import { smootherStep } from '../utils.ts';
+import { quinticInterpolation3 } from '../utils.ts';
 
 export const computeJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
   randSeed3(mul(0.001, d.vec3f(pos)));
@@ -30,16 +30,17 @@ export const sample = tgpu.fn([d.vec3f], d.f32)((pos) => {
   const XYZ = dotProdGrid(pos, add(minJunction, d.vec3f(1, 1, 1)));
 
   const partial = sub(pos, minJunction);
+  const smoothPartial = quinticInterpolation3(partial);
 
   // Resolving the z-axis into a xy-slice
-  const xy = mix(xyz, xyZ, smootherStep(partial.z));
-  const xY = mix(xYz, xYZ, smootherStep(partial.z));
-  const Xy = mix(Xyz, XyZ, smootherStep(partial.z));
-  const XY = mix(XYz, XYZ, smootherStep(partial.z));
+  const xy = mix(xyz, xyZ, smoothPartial.z);
+  const xY = mix(xYz, xYZ, smoothPartial.z);
+  const Xy = mix(Xyz, XyZ, smoothPartial.z);
+  const XY = mix(XYz, XYZ, smoothPartial.z);
 
   // Merging the y-axis
-  const x = mix(xy, xY, smootherStep(partial.y));
-  const X = mix(Xy, XY, smootherStep(partial.y));
+  const x = mix(xy, xY, smoothPartial.y);
+  const X = mix(Xy, XY, smoothPartial.y);
 
-  return mix(x, X, smootherStep(partial.x));
+  return mix(x, X, smoothPartial.x);
 });
