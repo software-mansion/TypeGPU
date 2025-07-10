@@ -115,7 +115,6 @@ export { atomic } from './atomic.ts';
 export {
   align,
   type AnyAttribute,
-  attribute,
   type HasCustomLocation,
   interpolate,
   invariant,
