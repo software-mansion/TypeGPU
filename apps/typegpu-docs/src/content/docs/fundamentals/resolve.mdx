@@ -2,10 +2,7 @@
 title: Resolve
 description: Resolve API can be used to extend shader code with WGSL definitions of TypeGPU-defined objects.
 ---
-// AAA tgpu
-// AAA wgsl
 // AAA twoslash
-// AAA markdown check
 
 Defining shader schemas and objects in JS/TS has lots of benefits, but having to keep them in sync with the corresponding WGSL code is hard to maintain.
 The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you want to use in the shader, and generates a ready-to-use WGSL bundle.
@@ -15,6 +12,7 @@ The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you wa
 :::
 
 Here's an example:
+
 ```ts
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -108,10 +106,10 @@ It can contain references to objects passed in the `externals` record.
 
 ## Externals
 
-This is a record with TypeGPU objects that are to be included in the final resolved shader code. 
+This is a record with TypeGPU objects that are to be included in the final resolved shader code.
 The values in the mapping are the objects themselves, while the keys are the names by which they are referenced in the template code.
 Each object is resolved to its WGSL declaration, which is included in the final shader code.
-Moreover each reference to the object in the template is replaced with the name used in its newly generated declaration.
+Moreover, each reference to the object in the template is replaced with the name used in its newly generated declaration.
 
 If an object is being referenced only by another TypeGPU object in *externals*, it doesn't have to be included in the record.
 Any passed-in object's dependencies are automatically resolved and included in the final result.
@@ -139,7 +137,7 @@ To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fu
 
 When externals are being resolved, they are given new names based on the specified naming scheme (`names` parameter).
 
-The default naming scheme is `"random"`. 
+The default naming scheme is `"random"`.
 It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
 In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other.
 
@@ -171,7 +169,7 @@ This may occur especially when using:
 - Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
 - TypeGPU functions implemented in TGSL, which generate their externals automatically.
 
-For these cases, you can use `tgpu.resolveWithContext`, which has the same API as `tgpu.resolve`, but it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
+For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
 
 - `code` - the resolved code,
 - `usedBindGroupLayouts` - a list of used `tgpu.bindGroupLayout`s,
