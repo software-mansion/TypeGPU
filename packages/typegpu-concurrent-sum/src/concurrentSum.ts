@@ -45,12 +45,12 @@ export async function currentSum(
 
     depthCount++;
     console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`);
-    // Create output buffer for this level of recursion
-    const outputBuffer = root
+    
+    const outputBuffer = root // output buffer for this level of recursion
       .createBuffer(d.arrayOf(d.u32, n))
       .$usage('storage');
 
-    // Up-sweep (reduce) phase
+    // Up-sweep phase
     const upPassSumsBuffer = root
       .createBuffer(d.arrayOf(d.u32, Math.ceil(n / itemsPerWorkgroup)))
       .$usage('storage');
@@ -66,21 +66,19 @@ export async function currentSum(
     const zGroups = Math.ceil(Math.ceil(n / itemsPerWorkgroup) / (maxDispatchSize * maxDispatchSize));
     upPassPipeline
       .with(upSweepLayout, upPassBindGroup)
-      // .dispatchWorkgroups(Math.ceil(n / itemsPerWorkgroup));
       .dispatchWorkgroups(xGroups, yGroups, zGroups);
 
     root['~unstable'].flush();
 
+    // Recursive phase
     let sumsScannedBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
-
     if (n <= itemsPerWorkgroup) {
-      sumsScannedBuffer = upPassSumsBuffer; // Not strictly needed but maintains type consistency.
+      sumsScannedBuffer = upPassSumsBuffer;
     } else {
-      // Recursive step: scan the array of sums.
       sumsScannedBuffer = recursiveScan(upPassSumsBuffer);
     }
 
-    // Down-sweep (scan) phase
+    // Down-sweep phase
     const downSweepOutputBuffer = root
       .createBuffer(d.arrayOf(d.u32, n))
       .$usage('storage');
@@ -91,14 +89,13 @@ export async function currentSum(
 
     downPassPipeline
       .with(downSweepLayout, downPassBindGroup)
-      // .dispatchWorkgroups(Math.ceil(n / itemsPerWorkgroup));
       .dispatchWorkgroups(xGroups, yGroups, zGroups);
 
 
     root['~unstable'].flush();
 
     if (n <= itemsPerWorkgroup) {
-      // if n is small enough, return the outputBuffer as the final result
+      // the final tree level does not need to apply the sums
       return downSweepOutputBuffer;
     }
 
@@ -108,7 +105,7 @@ export async function currentSum(
 
     const applySumsBindGroup = root.createBindGroup(upSweepLayout, {
       inputArray: downSweepOutputBuffer,
-      outputArray: finalOutputBuffer, // This is where we apply the sums to the original input
+      outputArray: finalOutputBuffer,
       sumsArray: sumsScannedBuffer,
     });
 
@@ -118,7 +115,6 @@ export async function currentSum(
     console.log(`Applying sums with groups: ${applyXGroups}, ${applyYGroups}, ${applyZGroups}`);
     applySumsPipeline
       .with(upSweepLayout, applySumsBindGroup)
-      // .dispatchWorkgroups(Math.ceil(n / workgroupSize));
       .dispatchWorkgroups(applyXGroups, applyYGroups, applyZGroups);
     root['~unstable'].flush();
     
@@ -126,13 +122,15 @@ export async function currentSum(
     return finalOutputBuffer;
   }
 
-  const scannedBuffer = recursiveScan(inputBuffer);
+  
   // const arr = await scannedBuffer.read();
   // if (arr.length > 16776950) {
   //   console.log('Final Buffer (truncated):', arr.slice(16776950, 16776970));
   // } else {
   //   console.log('Final Buffer:', arr);
   // }
-  console.log('Final Buffer:', await scannedBuffer.read());
-  return scannedBuffer;
+  // console.log('Final Buffer:', await scannedBuffer.read());
+  // return scannedBuffer;
+  const scannedBuffer = recursiveScan(inputBuffer);
+  return outputBufferOpt ? outputBufferOpt?.copyFrom(scannedBuffer) : scannedBuffer;
 }
