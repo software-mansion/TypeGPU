@@ -116,7 +116,6 @@ export {
   align,
   type AnyAttribute,
   attribute,
-  getAttributesString,
   type HasCustomLocation,
   interpolate,
   invariant,
