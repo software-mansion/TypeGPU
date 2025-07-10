@@ -266,7 +266,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     _levelOrArrayIndex?: number,
   ) => {
     throw new Error(
-      'Texture loading is not supported outside of CODEGEN mode.',
+      '`textureLoad` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
     );
   },
   // CODEGEN implementation
@@ -324,7 +324,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     _maybeValue?: TexelData,
   ) => {
     throw new Error(
-      'Texture storing is not supported outside of CODEGEN mode.',
+      '`textureStore` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
     );
   },
   // CODEGEN implementation
@@ -378,7 +378,7 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   // CPU implementation
   (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
     throw new Error(
-      'Texture dimensions are not supported outside of CODEGEN mode.',
+      '`textureDimensions` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
     );
   },
   // CODEGEN implementation
