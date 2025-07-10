@@ -18,8 +18,8 @@ different files, or to import a shader utility function from a library. The appr
 
 ## Defining a function
 
-In order to construct a TypeGPU function, you need to start with defining its shell -- an object holding only the input and output types of a TypeGPU function.
-The shell constructor `tgpu.fn` makes use of [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas) -- objects representing different WGSL data types, that help us with generating WGSL at runtime.
+In order to construct a TypeGPU function, you need to start by defining its shell, an object holding only the input and output types.
+The shell constructor `tgpu.fn` relies on [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas), objects that represent WGSL data types and assist in generating shader code at runtime.
 It accepts two arguments:
 
 - An array of schemas representing argument types,
@@ -47,7 +47,7 @@ const getGradientColor = tgpu.fn(
 If you're using Visual Studio Code, you can use [this extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
 :::
 
-Since the information about types is already present in the shell, we allow for the WGSL header to be simplified to just include the argument names.
+Since type information is already present in the shell, the WGSL header can be simplified to include only the argument names.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -103,9 +103,7 @@ fn getGradientColor_0(ratio: f32) -> vec4f{
 Entry functions are an *unstable* feature. The API may be subject to change in the near future.
 :::
 
-TypeGPU has split the WGSL attribute syntax into different places to provide type safety and to simplify the shader creation and dispatching process.
-For example, all groups and bindings are assigned automatically.
-On the other hand, defining entry functions is not done by annotating `TgpuFn` with attributes, but is achieved through dedicated shell constructors instead:
+Instead of annotating a `TgpuFn` with attributes, entry functions are defined using dedicated shell constructors:
 
 - `tgpu['~unstable'].computeFn`,
 - `tgpu['~unstable'].vertexFn`,
@@ -113,9 +111,7 @@ On the other hand, defining entry functions is not done by annotating `TgpuFn` w
 
 ### Entry point function I/O
 
-For describing the I/O of an entry point function, we use `IORecord`s --
-JS objects, where keys represent the names of the arguments,
-and values represent the types of the arguments.
+To describe the input and output of an entry point function, we use `IORecord`s, JavaScript objects that map argument names to their types.
 
 ```ts
 const vertexInput = { 
@@ -134,7 +130,7 @@ However, if you wish to, you can still wrap any schema in a `d.location` decorat
 Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` WGSL attributes.
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
-In WGSL implementation, input and output structs of the given function shall be referenced as `In` and `Out` respectively.
+In WGSL implementation, input and output structs of the given function can be referenced as `In` and `Out` respectively.
 Headers in WGSL implementations should be omitted, all input values are accessible through the struct named `in`.
 
 ### Compute
