@@ -288,7 +288,7 @@ export function interpolate<
 
 /**
  * Marks a position built-in output value as invariant in vertex shaders.
- * If the data and control flow match for two position outputs in different 
+ * If the data and control flow match for two position outputs in different
  * entry points, then the result values are guaranteed to be the same.
  *
  * Must only be applied to the position built-in value.
