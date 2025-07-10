@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import tgpu from '../src/index.ts';
 
 describe('invariant', () => {
   it('adds @invariant attribute to position builtin', () => {
@@ -9,11 +8,12 @@ describe('invariant', () => {
       position: d.invariant(d.builtin.position),
     });
 
-    const opts = {
-      names: new StrictNameRegistry(),
-    };
+    const resolved = tgpu.resolve({
+      externals: { s1 },
+      names: 'strict',
+    });
 
-    expect(resolve(s1, opts).code).toContain(
+    expect(resolved).toContain(
       '@invariant @builtin(position) position: vec4f',
     );
   });
@@ -40,12 +40,12 @@ describe('invariant', () => {
       color: d.vec4f,
     });
 
-    const opts = {
-      names: new StrictNameRegistry(),
-    };
+    const resolved = tgpu.resolve({
+      externals: { VertexOutput },
+      names: 'strict',
+    });
 
-    const resolved = resolve(VertexOutput, opts);
-    expect(resolved.code).toContain('@invariant @builtin(position) pos: vec4f');
-    expect(resolved.code).toContain('color: vec4f');
+    expect(resolved).toContain('@invariant @builtin(position) pos: vec4f');
+    expect(resolved).toContain('color: vec4f');
   });
 });
