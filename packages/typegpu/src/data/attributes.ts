@@ -170,7 +170,7 @@ export function align<TAlign extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@align',
-    value: alignment,
+    params: [alignment],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -194,7 +194,7 @@ export function size<TSize extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@size',
-    value: size,
+    params: [size],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -219,7 +219,7 @@ export function location<TLocation extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@location',
-    value: location,
+    params: [location],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -282,7 +282,7 @@ export function interpolate<
   return attribute(data, {
     [$internal]: true,
     type: '@interpolate',
-    value: interpolationType,
+    params: [interpolationType],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -316,7 +316,7 @@ export function invariant<TData extends AnyData>(
     ? data.attribs.find(isBuiltinAttrib)
     : undefined;
   
-  if (!builtinAttrib || builtinAttrib.value !== 'position') {
+  if (!builtinAttrib || builtinAttrib.params[0] !== 'position') {
     throw new Error(
       'The @invariant attribute must only be applied to the position built-in value.'
     );
@@ -325,6 +325,7 @@ export function invariant<TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@invariant',
+    params: [],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -350,8 +351,8 @@ export function getAttributesString<T extends BaseData>(field: T): string {
       if (attrib.type === '@invariant') {
         return '@invariant ';
       }
-      // All other attributes have a value property
-      return `${attrib.type}(${(attrib as { value: unknown }).value}) `;
+      // All other attributes have params
+      return `${attrib.type}(${attrib.params.join(', ')}) `;
     })
     .join('');
 }
@@ -371,8 +372,8 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
     public readonly inner: TInner,
     public readonly attribs: TAttribs,
   ) {
-    const alignAttrib = attribs.find(isAlignAttrib)?.value;
-    const sizeAttrib = attribs.find(isSizeAttrib)?.value;
+    const alignAttrib = attribs.find(isAlignAttrib)?.params[0];
+    const sizeAttrib = attribs.find(isSizeAttrib)?.params[0];
 
     if (alignAttrib !== undefined) {
       if (alignAttrib <= 0) {
