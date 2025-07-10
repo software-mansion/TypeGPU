@@ -116,7 +116,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     _maybeOffset?: v2i | v3i,
   ) => {
     throw new Error(
-      'Texture sampling is not supported outside of CODEGEN mode.',
+      'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
@@ -178,7 +178,7 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     _offsetOrArrayIndex?: v2i | v3i | number,
   ) => {
     throw new Error(
-      'Texture sampling is not supported outside of CODEGEN mode.',
+      'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
@@ -266,7 +266,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     _levelOrArrayIndex?: number,
   ) => {
     throw new Error(
-      '`textureLoad` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
+      '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
@@ -324,7 +324,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     _maybeValue?: TexelData,
   ) => {
     throw new Error(
-      '`textureStore` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
+      '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
@@ -378,7 +378,7 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   // CPU implementation
   (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
     throw new Error(
-      '`textureDimensions` relies on GPU resources and cannot be executed outside of a compute dispatch or draw call',
+      '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
