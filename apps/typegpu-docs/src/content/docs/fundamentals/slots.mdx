@@ -2,12 +2,12 @@
 title: Slots
 description: Slots can be used to inject arbitrary values into shader code at a granular level.
 ---
-Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources. 
-Similarly to bind group layouts, you can think of slots as of typed "holes" in tgpu shaders, that can be filled in later on from the outside.
+Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources.
+Similarly to bind group layouts, you can think of slots as of typed "holes" in TypeGPU shaders, that can be filled in later on from the outside.
 The main differences between slots and bound resources include the following:
 
-- Slots are filled in before the shader module compile time, instead of just before the shader execution starts. 
-- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even `TgpuFn`s. 
+- Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
+- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even `TgpuFn`s.
 
 Main use cases for slots include:
 
@@ -44,7 +44,7 @@ const value = mySlot.value; // or mySlot.$
 ```
 
 :::caution
-Slot values can only be accessed inside tgpu functions.
+Slot values can only be accessed inside TypeGPU functions.
 Attempting to access them outside will throw an error.
 :::
 
@@ -54,7 +54,7 @@ Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
 
-The first way to bind a value to a slot is to call the `with` method on the `TgpuFn` instance:
+The first way to bind a value to a slot is to call the `with` method on a `TgpuFn` instance:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -77,7 +77,7 @@ const filterWithGreen = filter
   .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
 
-In the example above, after resolution we are left with two different wgsl functions:
+In the example above, after resolution we are left with two different WGSL functions:
 
 ```wgsl
 fn filter_0(color: vec3f) ->  vec3f{
@@ -115,7 +115,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 ```
 
-The pipeline above resolves to the following wgsl:
+The pipeline above resolves to the following WGSL:
 
 ```wgsl
 @group(0) @binding(0) var<storage, read_write> resultBuffer_1: i32;
@@ -227,9 +227,9 @@ const processObjects = tgpu.fn([])(() => {
 
 */}
 
-## Slots in raw wgsl
+## Slots in raw WGSL
 
-It is possible to use slots even in tgpu functions that are implemented in wgsl:
+It is possible to use slots even in TypeGPU functions that are implemented in WGSL:
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -242,7 +242,7 @@ const getColor = tgpu.fn([], d.vec3f)`() {
 }`.$uses({ colorSlot });
 ```
 
-The code above resolves to the following wgsl:
+The code above resolves to the following WGSL:
 
 ```wgsl
 fn getColor() -> vec3f {
