@@ -35,7 +35,6 @@ import {
   isAlignAttrib,
   isBuiltinAttrib,
   isDecorated,
-  isInvariantAttrib,
   isSizeAttrib,
   isWgslData,
   type Location,
@@ -289,16 +288,16 @@ export function interpolate<
 
 /**
  * Marks a position built-in output value as invariant in vertex shaders.
- * When applied, the computation of the result is invariant across different 
+ * When applied, the computation of the result is invariant across different
  * programs and different invocations of the same entry point.
- * 
+ *
  * Must only be applied to the position built-in value.
- * 
+ *
  * @example
  * const VertexOutput = {
  *   pos: d.invariant(d.builtin.position),
  * };
- * 
+ *
  * @param data The position built-in data-type to mark as invariant.
  */
 export function invariant<TData extends AnyData>(
@@ -307,18 +306,18 @@ export function invariant<TData extends AnyData>(
   // Validate that invariant is only applied to position built-in
   if (!isBuiltin(data)) {
     throw new Error(
-      'The @invariant attribute must only be applied to the position built-in value.'
+      'The @invariant attribute must only be applied to the position built-in value.',
     );
   }
 
   // Find the builtin attribute to check if it's position
-  const builtinAttrib = (isDecorated(data) || isLooseDecorated(data)) 
+  const builtinAttrib = (isDecorated(data) || isLooseDecorated(data))
     ? data.attribs.find(isBuiltinAttrib)
     : undefined;
-  
+
   if (!builtinAttrib || builtinAttrib.params[0] !== 'position') {
     throw new Error(
-      'The @invariant attribute must only be applied to the position built-in value.'
+      'The @invariant attribute must only be applied to the position built-in value.',
     );
   }
 

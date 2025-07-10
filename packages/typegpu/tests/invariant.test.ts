@@ -21,13 +21,17 @@ describe('invariant', () => {
   it('throws error when applied to non-position builtin', () => {
     expect(() => {
       d.invariant(d.builtin.vertexIndex);
-    }).toThrow('The @invariant attribute must only be applied to the position built-in value.');
+    }).toThrow(
+      'The @invariant attribute must only be applied to the position built-in value.',
+    );
   });
 
   it('throws error when applied to non-builtin data', () => {
     expect(() => {
       d.invariant(d.f32);
-    }).toThrow('The @invariant attribute must only be applied to the position built-in value.');
+    }).toThrow(
+      'The @invariant attribute must only be applied to the position built-in value.',
+    );
   });
 
   it('can be used in vertex shader output', () => {
