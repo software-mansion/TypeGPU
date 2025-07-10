@@ -25,7 +25,7 @@ const button = document.querySelector('#runButton') as HTMLButtonElement;
 button.addEventListener('click', async () => {
   button.disabled = true;
 
-  const arraySizes = [2 ** 12, 2 ** 16];
+  const arraySizes = [2 ** 12, 2 ** 16, 2 ** 24];
   const results = document.createElement('div');
   results.style.marginTop = '1em';
   button.insertAdjacentElement('afterend', results);
@@ -34,13 +34,13 @@ button.addEventListener('click', async () => {
     const sizeBuffer = root
       .createBuffer(
         d.arrayOf(d.u32, size),
-        Array.from({ length: size }, (_, k) => k),
+        Array.from({ length: size }, () => 1),
       )
       .$usage('storage');
 
     // JS Version
     const jsStartTime = performance.now();
-    const jsArray = Array.from({ length: size }, (_, k) => k);
+    const jsArray = Array.from({ length: size }, () => 1);
     const jsResult = concurrentSumOnJS(jsArray);
     const jsEndTime = performance.now();
     const jsTime = jsEndTime - jsStartTime;
