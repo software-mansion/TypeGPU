@@ -139,11 +139,11 @@ class TgpuFixedBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inCodegenMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(`Cannot access buffer's value directly in JS.`);
   }
 
   get $(): InferGPU<TData> {
@@ -199,11 +199,11 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inCodegenMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(`Cannot access buffer's value directly in JS.`);
   }
 
   get $(): InferGPU<TData> {

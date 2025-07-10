@@ -112,10 +112,10 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   get value(): Infer<TDataType> {
-    if (!inCodegenMode()) {
-      throw new Error('`tgpu.var` values are only accessible on the GPU');
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error('`tgpu.var` values are only accessible on the GPU');
   }
 }

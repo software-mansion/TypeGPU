@@ -84,11 +84,11 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   get value(): InferGPU<T> {
-    if (!inCodegenMode()) {
-      throw new Error('`tgpu.accessor` values are only accessible on the GPU');
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error('`tgpu.accessor` values are only accessible on the GPU');
   }
 
   get $(): InferGPU<T> {

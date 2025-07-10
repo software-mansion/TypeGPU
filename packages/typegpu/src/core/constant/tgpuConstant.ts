@@ -79,11 +79,11 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   }
 
   get value(): InferGPU<TDataType> {
-    if (!inCodegenMode()) {
-      return this._value;
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    return this._value;
   }
 
   get $(): InferGPU<TDataType> {
