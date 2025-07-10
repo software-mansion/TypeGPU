@@ -347,10 +347,9 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
   return (field.attribs as AnyAttribute[])
     .map((attrib) => {
-      if (attrib.type === '@invariant') {
-        return '@invariant ';
+      if (attrib.params.length === 0) {
+        return `${attrib.type} `;
       }
-      // All other attributes have params
       return `${attrib.type}(${attrib.params.join(', ')}) `;
     })
     .join('');
