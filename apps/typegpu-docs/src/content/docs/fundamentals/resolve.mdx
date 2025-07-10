@@ -171,7 +171,7 @@ This may occur especially when using:
 - Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
 - TypeGPU functions implemented in TGSL, which generate their externals automatically.
 
-For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
+For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to the resolved code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
 
 - `code` - the resolved code,
 - `usedBindGroupLayouts` - a list of used `tgpu.bindGroupLayout`s,
