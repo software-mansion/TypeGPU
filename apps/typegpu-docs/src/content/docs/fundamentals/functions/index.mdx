@@ -171,6 +171,27 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }`.$uses({ particleData: particleDataStorage, deltaTime, time });
 ```
 
+Resolved WGSL for the compute function above is equivalent (with respect to some cleanup) to the following:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> particleData: array<u32, 100>;
+@group(0) @binding(1) var<uniform> deltaTime: f32;
+@group(0) @binding(2) var<storage, read_write> time: f32;
+
+struct mainCompute_Input {
+  @builtin(global_invocation_id) gid: vec3u,
+}
+
+@compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input)  {
+  let index = in.gid.x;
+  if index == 0 {
+    time += deltaTime;
+  }
+  let phase = (time / 300) + particleData[index].seed;
+  particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+}
+```
+
 ### Vertex and fragment
 
 `TgpuVertexFn` accepts an object with two properties:
