@@ -1271,6 +1271,11 @@ export interface Builtin<T extends string> {
   readonly value: T;
 }
 
+export interface Invariant {
+  readonly [$internal]: true;
+  readonly type: '@invariant';
+}
+
 export interface Decorated<
   TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
@@ -1582,6 +1587,12 @@ export function isBuiltinAttrib<T extends Builtin<string>>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.[$internal] && (value as T)?.type === '@builtin';
+}
+
+export function isInvariantAttrib<T extends Invariant>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.[$internal] && (value as T)?.type === '@invariant';
 }
 
 export function isDecorated<T extends Decorated>(

@@ -31,9 +31,11 @@ import {
   type FlatInterpolationType,
   type Interpolate,
   type InterpolationType,
+  type Invariant,
   isAlignAttrib,
   isBuiltinAttrib,
   isDecorated,
+  isInvariantAttrib,
   isSizeAttrib,
   isWgslData,
   type Location,
@@ -75,6 +77,7 @@ export type AnyAttribute<
   | Size<number>
   | Location<number>
   | Interpolate<InterpolationType>
+  | Invariant
   | AllowedBuiltins;
 
 export type ExtractAttributes<T> = T extends {
@@ -284,6 +287,48 @@ export function interpolate<
   }) as any;
 }
 
+/**
+ * Marks a position built-in output value as invariant in vertex shaders.
+ * When applied, the computation of the result is invariant across different 
+ * programs and different invocations of the same entry point.
+ * 
+ * Must only be applied to the position built-in value.
+ * 
+ * @example
+ * const VertexOutput = {
+ *   pos: d.invariant(d.builtin.position),
+ * };
+ * 
+ * @param data The position built-in data-type to mark as invariant.
+ */
+export function invariant<TData extends AnyData>(
+  data: TData,
+): Decorate<TData, Invariant> {
+  // Validate that invariant is only applied to position built-in
+  if (!isBuiltin(data)) {
+    throw new Error(
+      'The @invariant attribute must only be applied to the position built-in value.'
+    );
+  }
+
+  // Find the builtin attribute to check if it's position
+  const builtinAttrib = (isDecorated(data) || isLooseDecorated(data)) 
+    ? data.attribs.find(isBuiltinAttrib)
+    : undefined;
+  
+  if (!builtinAttrib || builtinAttrib.value !== 'position') {
+    throw new Error(
+      'The @invariant attribute must only be applied to the position built-in value.'
+    );
+  }
+
+  return attribute(data, {
+    [$internal]: true,
+    type: '@invariant',
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
+}
+
 export function isBuiltin<
   T extends
     | Decorated<AnyWgslData, AnyAttribute[]>
@@ -301,7 +346,13 @@ export function getAttributesString<T extends BaseData>(field: T): string {
   }
 
   return (field.attribs as AnyAttribute[])
-    .map((attrib) => `${attrib.type}(${attrib.value}) `)
+    .map((attrib) => {
+      if (attrib.type === '@invariant') {
+        return '@invariant ';
+      }
+      // All other attributes have a value property
+      return `${attrib.type}(${(attrib as { value: unknown }).value}) `;
+    })
     .join('');
 }
 
