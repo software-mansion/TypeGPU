@@ -111,17 +111,33 @@ To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fu
     ...layout.bound,
   }
 ```
+
 :::
 
 ## Naming scheme
 
 When externals are being resolved, they are given new names based on the specified naming scheme (`names` parameter).
 
-The default naming scheme is `"random"`. It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record. 
-In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
+The default naming scheme is `"random"`. 
+It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
+In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other.
 
-Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS,
-unless there is a name conflict, in which case a suffix is added.
-If there is no explicit *.$name* call, an object is named based on its associated key in *externals*. 
-This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
+Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, unless there is a name conflict, in which case a suffix is added.
+If there is no `.$name` call, an object is named based on its associated key in *externals*.
+This approach makes all the generated identifiers predictable, but demands that all labels are valid identifiers
 and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
+
+:::note
+If you are using the [TypeGPU Build Plugin](/TypeGPU/tooling/unplugin-typegpu), then most TypeGPU resources will be auto-named for you.
+
+```ts
+// before unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f });
+
+// after unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f }).$name("myStruct");
+```
+
+This does not work for all resources.
+For example, a resource created in a function return statement will not be auto-named.
+:::
