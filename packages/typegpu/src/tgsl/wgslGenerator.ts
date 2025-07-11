@@ -159,7 +159,7 @@ export function generateExpression(
     if (
       op === '/' &&
       convLhs.dataType.type !== 'f32' &&
-      convLhs.dataType.type !== 'f16' &&
+      convLhs.dataType.type !== 'f16' ||
       convRhs.dataType.type !== 'f32' &&
       convRhs.dataType.type !== 'f16'
     ) {
