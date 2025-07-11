@@ -7,7 +7,7 @@ Similarly to bind group layouts, you can think of slots as of typed "holes" in T
 The main differences between slots and bound resources include the following:
 
 - Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
-- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even `TgpuFn`s.
+- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even TypeGPU functions.
 
 Main use cases for slots include:
 
@@ -126,14 +126,14 @@ The pipeline above resolves to the following WGSL:
 ```
 
 :::note
-Static code analysis does not incorporate whether all slots were filled or not.
-If you forget about filling one of the slots, you will instead get a descriptive runtime error.
+Static code analysis does not verify whether all slots have been filled.
+If you forget to assign a value to a slot, a runtime error will be thrown instead.
 :::
 
 ## Inversion of control
 
-With slots, libraries can expose customization points for their users.
-They enable behavioral changes to internal library functionality while maintaining type safety and performance.
+Slots allow libraries to expose customization points to their users.
+They enable internal behavior to be modified without sacrificing type safety or performance.
 
 ```ts twoslash
 // physics.ts
@@ -235,7 +235,7 @@ It is possible to use slots even in TypeGPU functions that are implemented in WG
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // ---cut---
-const colorSlot = tgpu.slot<string>('vec3f(1., 0., 0.)');
+const colorSlot = tgpu.slot(d.vec3f(1, 0, 0));
 
 const getColor = tgpu.fn([], d.vec3f)`() {
   return colorSlot;
@@ -246,6 +246,6 @@ The code above resolves to the following WGSL:
 
 ```wgsl
 fn getColor() -> vec3f {
-  return vec3f(1., 0., 0.);
+  return vec3f(1, 0, 0);
 }
 ```
