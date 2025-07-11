@@ -185,15 +185,15 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // ---cut---
-const myFixedBuffer = root.createMutable(d.u32);
+const countMutable = root.createMutable(d.u32);
 
-let { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
   template: `
     fn exampleFn() {
-      myFixedBuffer += 1;
+      countMutable += 1;
     }
   `,
-  externals: { myFixedBuffer },
+  externals: { countMutable },
 });
 
 console.log(code); // same as tgpu.resolve(...)
@@ -210,13 +210,13 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // ---cut---
-const myLayout = tgpu.bindGroupLayout({ myBuffer: { uniform: d.u32 } });
+const myLayout = tgpu.bindGroupLayout({ count: { uniform: d.u32 } });
 
 const exampleFn = tgpu.fn([])(() => {
-  myLayout.$.myBuffer += 1;
+  myLayout.$.count += 1;
 });
 
-let { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
   externals: { exampleFn },
 });
 
