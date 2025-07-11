@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -139,11 +139,13 @@ class TgpuFixedBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(
+      'Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
   }
 
   get $(): InferGPU<TData> {
@@ -199,11 +201,13 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(
+      'Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
   }
 
   get $(): InferGPU<TData> {
