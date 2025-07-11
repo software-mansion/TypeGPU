@@ -164,7 +164,7 @@ export function generateExpression(
       convRhs.dataType.type !== 'f16'
     ) {
       console.warn(
-        'In division we cast both sides to the f32. This may not be expected behaviour. Consider using explicit conversions instead.',
+        'In division we cast both sides to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
       );
       return snip(
         `f32(${lhsStr}) / f32(${rhsStr})`,
