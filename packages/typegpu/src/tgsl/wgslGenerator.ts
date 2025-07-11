@@ -158,10 +158,10 @@ export function generateExpression(
 
     if (
       op === '/' &&
-      convLhs.dataType.type !== 'f32' &&
-      convLhs.dataType.type !== 'f16' ||
-      convRhs.dataType.type !== 'f32' &&
-      convRhs.dataType.type !== 'f16'
+      (convLhs.dataType.type !== 'f32' &&
+        convLhs.dataType.type !== 'f16') ||
+      (convRhs.dataType.type !== 'f32' &&
+        convRhs.dataType.type !== 'f16')
     ) {
       console.warn(
         'In division we cast both sides to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
