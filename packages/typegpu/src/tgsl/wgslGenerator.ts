@@ -156,14 +156,13 @@ export function generateExpression(
     const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
-    if (
-      op === '/' &&
-        (convLhs.dataType.type !== 'f32' &&
-          convLhs.dataType.type !== 'f16') ||
-      (convRhs.dataType.type !== 'f32' &&
-        convRhs.dataType.type !== 'f16')
-    ) {
-      console.warn(
+    if (op === '/') {
+      if (convLhs.dataType.type !== 'f32' && 
+
+          convLhs.dataType.type !== 'f16' &&
+          convRhs.dataType.type !== 'f32' &&
+          convRhs.dataType.type !== 'f16') {
+              console.warn(
         'In division we cast both sides to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
       );
       return snip(
@@ -171,6 +170,29 @@ export function generateExpression(
         d.f32,
       );
     }
+      if (convLhs.dataType.type !== 'f32' &&
+          convLhs.dataType.type !== 'f16')
+          {      console.warn(
+        'In division we cast left side to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
+      );
+      return snip(
+        `f32(${lhsStr}) / ${rhsStr}`,
+        d.f32,
+      );}
+      if (convRhs.dataType.type !== 'f32' &&
+        convRhs.dataType.type !== 'f16')
+        {      console.warn(
+        'In division we cast right side to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
+      );
+      return snip(
+        `${lhsStr} / f32(${rhsStr})`,
+        d.f32,
+      );}
+    
+    
+    
+    
+  }
 
     return snip(
       parenthesizedOps.includes(op)

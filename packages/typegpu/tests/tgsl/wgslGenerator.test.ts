@@ -1004,7 +1004,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( 1 ) / f32 ( i32 ( 2 ) ) ) ; }"`,
+      `"fn div ( ) -> f32 { return f32 ( 1 ) / f32 ( i32 ( 2 ) ) ; }"`,
     );
   });
 
@@ -1044,7 +1044,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.6);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ; }"`,
     );
   });
 });
