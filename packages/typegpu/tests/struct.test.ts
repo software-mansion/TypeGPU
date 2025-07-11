@@ -18,7 +18,9 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -254,7 +256,7 @@ describe('struct', () => {
     });
 
     // @ts-expect-error
-    TestStruct({ x: 1, z: 2 });
+    (() => TestStruct({ x: 1, z: 2 }));
   });
 
   it('can be called to create a deep copy of other struct', () => {
@@ -276,5 +278,49 @@ describe('struct', () => {
     const clone = schema(instance);
 
     expect(clone).toStrictEqual({ prop1: vec2f(1, 2), prop2: 21 });
+  });
+
+  it('can be called to create a default value', () => {
+    const schema = struct({ nested: struct({ prop1: vec2f, prop2: u32 }) });
+
+    const defaultStruct = schema();
+
+    expect(defaultStruct).toStrictEqual({
+      nested: { prop1: vec2f(), prop2: u32() },
+    });
+  });
+
+  // TODO: uncomment this once this starts working
+  // it('can be called to create a default value with nested array', () => {
+  //   const schema = struct({ arr: arrayOf(u32, 1) });
+
+  //   const defaultStruct = schema();
+
+  //   expect(defaultStruct).toStrictEqual({ arr: [1] });
+  // });
+
+  it('resolves to correct wgsl', () => {
+    const schema = struct({
+      nested: struct({ prop1: vec2f, prop2: u32 }).$name('nestedStruct'),
+    }).$name('outerStruct');
+
+    const fn = tgpu.fn([])(() => {
+      const defaultValue = schema();
+    }).$name('testFunction');
+
+    expect(parseResolved({ fn })).toBe(parse(`
+        struct nestedStruct {
+          prop1: vec2f,
+          prop2: u32,
+        }
+
+        struct outerStruct {
+          nested: nestedStruct,
+        }
+
+        fn testFunction() {
+          var defaultValue = outerStruct();
+        }
+      `));
   });
 });
