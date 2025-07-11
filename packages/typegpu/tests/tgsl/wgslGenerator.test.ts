@@ -970,7 +970,6 @@ describe('wgslGenerator', () => {
 describe('wgslGenerator division operator', () => {
   it('tests division operator resolution - u32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.u32(1) / d.u32(2);
     });
     expect(div()).toBe(0.5);
@@ -981,7 +980,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - i32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.i32(1.0) / d.i32(2.0);
     });
     expect(div()).toBe(0.5);
@@ -992,7 +990,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - f32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.f32(1.0) / d.f32(2.0);
     });
     expect(div()).toBe(0.5);
@@ -1003,7 +1000,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - f32 & i32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.f32(1.0) / d.i32(2.0);
     });
     expect(div()).toBe(0.5);
@@ -1014,7 +1010,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - u32 & i32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.u32(1) / d.i32(2);
     });
     expect(div()).toBe(0.5);
@@ -1025,7 +1020,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - f16 & f32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.f16(1.0) / d.f32(2.0);
     });
     expect(div()).toBe(0.5);
@@ -1036,7 +1030,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - decimal & f32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return d.f16(1 / 2) / d.f32(5.0);
     });
     expect(div()).toBe(0.1);
@@ -1047,7 +1040,6 @@ describe('wgslGenerator division operator', () => {
 
   it('tests division operator resolution - internal sum & f32', () => {
     const div = tgpu.fn([], d.f32)(() => {
-      'kernel & js';
       return (d.u32(1 + 2) / d.f32(5.0));
     });
     expect(div()).toBe(0.6);
