@@ -124,15 +124,16 @@ As you may note, builtin inter-stage inputs and outputs are available on the `d.
 and require no further type clarification.
 
 Another thing to note is that there is no need to specify locations of the arguments,
-as TypeGPU tries to assign locations automatically.
+as TypeGPU tries to assign locations automatically. 
+If you wish to, you can assign the locations manually with the `d.location` decorator.
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
 In WGSL implementation, input and output structs of the given function can be referenced as `In` and `Out` respectively.
 Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.
 
 :::note
-Schemas used in `d.struct` can be wrapped in `d.location`, `d.size` and `d.align` decorators, 
-corresponding to `@location`, `@size` and `@align` WGSL attributes.
+Schemas used in `d.struct` can be wrapped in `d.size` and `d.align` decorators, 
+corresponding to `@size` and `@align` WGSL attributes.
 
 Since TypeGPU wraps `IORecord`s into automatically generated structs, you can also use those decorators in `IOStruct`s.
 :::
