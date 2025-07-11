@@ -126,9 +126,10 @@ export default defineConfig({
               slug: 'fundamentals/timestamp-queries',
               badge: { text: 'new' },
             },
-            DEV && {
+            {
               label: 'Slots',
               slug: 'fundamentals/slots',
+              badge: { text: 'new' },
             },
             // {
             //   label: 'Basic Principles',
