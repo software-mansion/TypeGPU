@@ -1,4 +1,4 @@
-import { getResolutionCtx } from '../../gpuMode.ts';
+import { getResolutionCtx } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
