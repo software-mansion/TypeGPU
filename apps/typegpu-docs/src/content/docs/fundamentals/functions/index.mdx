@@ -9,12 +9,11 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-TypeGPU offers many quality-of-life features that help with building complex WGSL shaders, like the ability to split functionality across
-different files, or to import a shader utility function from a library. The approach that TypeGPU takes aims for composability:
-
-- Each definition in WGSL is represented as its own TypeGPU resource -- a typed wrapper representing some kind of WGSL resource (e.g., `TgpuFn`, `TgpuBuffer`, `TgpuVar`).
-- Resources can reference outside resources, like buffers, bind group layouts, or user-defined TypeGPU functions.
-- Resources can be imported and exported like any other JavaScript value.
+TypeGPU functions let you define shader logic in a modular and type-safe way.
+Their signatures are fully visible to TypeScript, enabling tooling and static checks.
+Dependencies, including GPU resources or other functions, are resolved automatically, with no duplication or name clashes.
+This also supports distributing shader logic across multiple modules or packages.
+Imported functions from external sources are automatically resolved and embedded into the final shader when referenced.
 
 ## Defining a function
 
@@ -126,12 +125,17 @@ and require no further type clarification.
 
 Another thing to note is that there is no need to specify locations of the arguments,
 as TypeGPU tries to assign locations automatically.
-However, if you wish to, you can still wrap any schema in a `d.location` decorator.
-Other potentially useful decorators include `d.size` and `d.align`, corresponding to `@size` and `@align` WGSL attributes.
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
 In WGSL implementation, input and output structs of the given function can be referenced as `In` and `Out` respectively.
-Headers in WGSL implementations should be omitted, all input values are accessible through the struct named `in`.
+Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.
+
+:::note
+Schemas used in `d.struct` can be wrapped in `d.location`, `d.size` and `d.align` decorators, 
+corresponding to `@location`, `@size` and `@align` WGSL attributes.
+
+Since TypeGPU wraps `IORecord`s into automatically generated structs, you can also use those decorators in `IOStruct`s.
+:::
 
 ### Compute
 
