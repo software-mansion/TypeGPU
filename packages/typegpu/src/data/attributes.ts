@@ -31,6 +31,7 @@ import {
   type FlatInterpolationType,
   type Interpolate,
   type InterpolationType,
+  type Invariant,
   isAlignAttrib,
   isBuiltinAttrib,
   isDecorated,
@@ -75,6 +76,7 @@ export type AnyAttribute<
   | Size<number>
   | Location<number>
   | Interpolate<InterpolationType>
+  | Invariant
   | AllowedBuiltins;
 
 export type ExtractAttributes<T> = T extends {
@@ -167,7 +169,7 @@ export function align<TAlign extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@align',
-    value: alignment,
+    params: [alignment],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -191,7 +193,7 @@ export function size<TSize extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@size',
-    value: size,
+    params: [size],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -216,7 +218,7 @@ export function location<TLocation extends number, TData extends AnyData>(
   return attribute(data, {
     [$internal]: true,
     type: '@location',
-    value: location,
+    params: [location],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -279,7 +281,50 @@ export function interpolate<
   return attribute(data, {
     [$internal]: true,
     type: '@interpolate',
-    value: interpolationType,
+    params: [interpolationType],
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
+}
+
+/**
+ * Marks a position built-in output value as invariant in vertex shaders.
+ * If the data and control flow match for two position outputs in different
+ * entry points, then the result values are guaranteed to be the same.
+ *
+ * Must only be applied to the position built-in value.
+ *
+ * @example
+ * const VertexOutput = {
+ *   pos: d.invariant(d.builtin.position),
+ * };
+ *
+ * @param data The position built-in data-type to mark as invariant.
+ */
+export function invariant<TData extends AnyData>(
+  data: TData,
+): Decorate<TData, Invariant> {
+  // Validate that invariant is only applied to position built-in
+  if (!isBuiltin(data)) {
+    throw new Error(
+      'The @invariant attribute must only be applied to the position built-in value.',
+    );
+  }
+
+  // Find the builtin attribute to check if it's position
+  const builtinAttrib = (isDecorated(data) || isLooseDecorated(data))
+    ? data.attribs.find(isBuiltinAttrib)
+    : undefined;
+
+  if (!builtinAttrib || builtinAttrib.params[0] !== 'position') {
+    throw new Error(
+      'The @invariant attribute must only be applied to the position built-in value.',
+    );
+  }
+
+  return attribute(data, {
+    [$internal]: true,
+    type: '@invariant',
+    params: [],
     // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   }) as any;
 }
@@ -301,7 +346,12 @@ export function getAttributesString<T extends BaseData>(field: T): string {
   }
 
   return (field.attribs as AnyAttribute[])
-    .map((attrib) => `${attrib.type}(${attrib.value}) `)
+    .map((attrib) => {
+      if (attrib.params.length === 0) {
+        return `${attrib.type} `;
+      }
+      return `${attrib.type}(${attrib.params.join(', ')}) `;
+    })
     .join('');
 }
 
@@ -320,8 +370,8 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
     public readonly inner: TInner,
     public readonly attribs: TAttribs,
   ) {
-    const alignAttrib = attribs.find(isAlignAttrib)?.value;
-    const sizeAttrib = attribs.find(isSizeAttrib)?.value;
+    const alignAttrib = attribs.find(isAlignAttrib)?.params[0];
+    const sizeAttrib = attribs.find(isSizeAttrib)?.params[0];
 
     if (alignAttrib !== undefined) {
       if (alignAttrib <= 0) {
