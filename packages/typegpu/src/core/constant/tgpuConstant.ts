@@ -1,5 +1,5 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
@@ -79,11 +79,11 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   }
 
   get value(): InferGPU<TDataType> {
-    if (!inGPUMode()) {
-      return this._value;
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    return this._value;
   }
 
   get $(): InferGPU<TDataType> {
