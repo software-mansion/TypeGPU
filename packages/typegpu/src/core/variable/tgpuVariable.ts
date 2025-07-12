@@ -2,7 +2,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { inGPUMode } from '../../gpuMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -17,7 +17,8 @@ export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
   TDataType extends AnyData = AnyData,
 > extends TgpuNamable {
-  value: Infer<TDataType>;
+  value: InferGPU<TDataType>;
+  $: InferGPU<TDataType>;
 
   readonly [$internal]: {
     readonly scope: TScope;
@@ -100,7 +101,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     return `var:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](): Infer<TDataType> {
+  [$gpuValueOf](): InferGPU<TDataType> {
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
@@ -108,10 +109,18 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
         [$wgslDataType]: this._dataType,
       },
       valueProxyHandler,
-    ) as Infer<TDataType>;
+    ) as InferGPU<TDataType>;
   }
 
-  get value(): Infer<TDataType> {
+  get value(): InferGPU<TDataType> {
+    if (!inGPUMode()) {
+      throw new Error('`tgpu.var` values are only accessible on the GPU');
+    }
+
+    return this[$gpuValueOf]();
+  }
+
+  get $(): InferGPU<TDataType> {
     if (!inGPUMode()) {
       throw new Error('`tgpu.var` values are only accessible on the GPU');
     }
