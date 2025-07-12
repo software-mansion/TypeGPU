@@ -3,15 +3,9 @@ import type { ResolutionCtx } from './types.ts';
 
 let resolutionCtx: ResolutionCtx | null = null;
 
-const CPUMode = Symbol('CPU');
-const GPUMode = Symbol('GPU');
+export type ExecMode = 'comptime' | 'codegen';
 
-export const RuntimeMode = {
-  CPU: CPUMode,
-  GPU: GPUMode,
-} as const;
-
-const resolutionModeStack: (typeof CPUMode | typeof GPUMode)[] = [];
+const resolutionModeStack: ExecMode[] = [];
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
   invariant(resolutionCtx === null, 'Cannot nest context providers');
@@ -28,17 +22,21 @@ export function getResolutionCtx(): ResolutionCtx | null {
   return resolutionCtx;
 }
 
-export function pushMode(mode: typeof CPUMode | typeof GPUMode) {
+export function pushMode(mode: ExecMode) {
   resolutionModeStack.push(mode);
 }
 
-export function popMode(expected?: typeof CPUMode | typeof GPUMode) {
+export function popMode(expected?: ExecMode) {
   const mode = resolutionModeStack.pop();
   if (expected !== undefined) {
     invariant(mode === expected, 'Unexpected mode');
   }
 }
 
-export const inGPUMode = () =>
+export const inCodegenMode = () =>
   resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === RuntimeMode.GPU;
+  resolutionModeStack[resolutionModeStack.length - 1] === 'codegen';
+
+export const inComptimeMode = () =>
+  resolutionModeStack.length > 0 &&
+  resolutionModeStack[resolutionModeStack.length - 1] === 'comptime';

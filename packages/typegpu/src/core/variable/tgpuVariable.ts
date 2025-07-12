@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -111,20 +111,24 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       valueProxyHandler,
     ) as InferGPU<TDataType>;
   }
-
-  get value(): InferGPU<TDataType> {
-    if (!inGPUMode()) {
-      throw new Error('`tgpu.var` values are only accessible on the GPU');
-    }
-
-    return this[$gpuValueOf]();
-  }
-
+    
   get $(): InferGPU<TDataType> {
-    if (!inGPUMode()) {
-      throw new Error('`tgpu.var` values are only accessible on the GPU');
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(
+      '`tgpu.var` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
+  }
+    
+  get value(): InferGPU<TDataType> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      '`tgpu.var` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
   }
 }
