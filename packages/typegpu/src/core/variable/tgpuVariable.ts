@@ -111,7 +111,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       valueProxyHandler,
     ) as InferGPU<TDataType>;
   }
-    
+
   get $(): InferGPU<TDataType> {
     if (inCodegenMode()) {
       return this[$gpuValueOf]();
@@ -121,7 +121,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       '`tgpu.var` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
     );
   }
-    
+
   get value(): InferGPU<TDataType> {
     if (inCodegenMode()) {
       return this[$gpuValueOf]();
