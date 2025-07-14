@@ -339,15 +339,9 @@ const vertex = tgpu['~unstable'].vertexFn({
     pos: d.builtin.position,
   },
 })(({ idx, color }) => {
-  const vertices = [
-    d.vec2f(-1, -1),
-    d.vec2f(1, -1),
-    d.vec2f(1, 1),
-    d.vec2f(-1, 1),
-  ];
   return {
     color,
-    pos: d.vec4f(vertices[idx], 0, 1),
+    pos: d.vec4f(d.vec2f(1, 1), 1, 1),
   };
 });
 
