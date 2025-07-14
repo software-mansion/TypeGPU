@@ -315,3 +315,58 @@ import ListItem from '../../../components/ListItem.astro';
   data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
 </ListItem>
 :::
+
+## Index Buffers
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` indices, which indicate the order in which vertices from a vertex buffer ought to be processed. This might be particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+When using an index buffer, instead of explicitly listing every vertex for every triangle, you provide a list of unique vertices in a vertex buffer and then use the index buffer to define how these vertices form triangles (or other primitives).
+
+To leverage indexed rendering with TypeGPU, you'll create a buffer with a schema for integer types (like d.u32 for unsigned 32-bit integers, which are commonly used for indices) and declare its usage as an index buffer.
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+const presentationFormat = "rgba8unorm";
+
+
+const vertex = tgpu['~unstable'].vertexFn({
+  in: {
+    idx: d.builtin.vertexIndex,
+    color: d.vec4f,
+  },
+  out: {
+    color: d.vec4f,
+    pos: d.builtin.position,
+  },
+})(({ idx, color }) => {
+  const vertices = [
+    d.vec2f(-1, -1),
+    d.vec2f(1, -1),
+    d.vec2f(1, 1),
+    d.vec2f(-1, 1),
+  ];
+  return {
+    color,
+    pos: d.vec4f(vertices[idx], 0, 1),
+  };
+});
+
+const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec4f, n));
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: {
+    color: d.vec4f,
+  },
+  out: d.vec4f,
+})((input) => input.color);
+// ---cut---
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+
+const pipeline = root['~unstable']
+  .withVertex(vertex, { color: vertexLayout.attrib })
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline()
+  .withIndexBuffer(indexBuffer);
+
+```
