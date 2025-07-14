@@ -163,9 +163,6 @@ export function generateExpression(
         convRhs.dataType.type === 'f16';
 
       if (!lhsIsFloat && !rhsIsFloat) {
-        console.warn(
-          'In division we cast both sides to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
-        );
         return snip(
           `f32(${lhsStr}) / f32(${rhsStr})`,
           d.f32,
@@ -173,12 +170,6 @@ export function generateExpression(
       }
 
       if (!lhsIsFloat || !rhsIsFloat) {
-        console.warn(
-          !lhsIsFloat
-            ? 'In division we cast left side to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.'
-            : 'In division we cast right side to the f32. This may not be the expected behaviour. Consider using explicit conversions instead.',
-        );
-
         return snip(
           !lhsIsFloat
             ? `f32(${lhsStr}) / ${rhsStr}`
