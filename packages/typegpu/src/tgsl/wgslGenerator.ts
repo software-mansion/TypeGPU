@@ -163,6 +163,15 @@ export function generateExpression(
         convRhs.dataType.type === 'f16';
 
       if (!lhsIsFloat && !rhsIsFloat) {
+        if (
+          convLhs.dataType.type === 'u32' || convLhs.dataType.type === 'i32' &&
+            convRhs.dataType.type === 'u32' ||
+          convRhs.dataType.type === 'i32'
+        ) {
+          console.warn(
+            'In the division, both sides were automatically cast to f32. This might not be the expected behavior. Consider using explicit conversions instead.',
+          );
+        }
         return snip(
           `f32(${lhsStr}) / f32(${rhsStr})`,
           d.f32,
