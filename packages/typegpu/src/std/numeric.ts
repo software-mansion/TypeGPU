@@ -13,6 +13,7 @@ import {
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
+  mBaseForVec,
   type U32,
   type v2f,
   type v2h,
@@ -137,8 +138,8 @@ function cpuMul<
   Lhs extends number | NumVec | Mat,
   Rhs extends (
     Lhs extends number ? number | NumVec | Mat
-      : Lhs extends NumVec ? number | Lhs
-      : Lhs extends Mat ? vBaseForMat<Lhs> | Lhs
+      : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
+      : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
       : never
   ),
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;

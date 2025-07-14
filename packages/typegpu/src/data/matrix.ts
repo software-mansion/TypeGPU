@@ -1,6 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
-import { $internal } from '../shared/symbols.ts';
 import type { $repr } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { snip } from './dataTypes.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
@@ -32,11 +32,11 @@ type vBase = {
   [n: number]: number;
 };
 
-interface MatSchemaOptions<TType extends string, ValueType> {
+interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
   rows: 2 | 3 | 4;
   columns: 2 | 3 | 4;
-  makeFromElements(...elements: number[]): ValueType;
+  makeFromElements: new (...args: number[]) => matBase<ColumnType>;
 }
 
 type MatConstructor<
@@ -49,7 +49,7 @@ function createMatSchema<
   ValueType extends matBase<ColumnType>,
   ColumnType extends vBase,
 >(
-  options: MatSchemaOptions<TType, ValueType>,
+  options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
   const MatSchema = {
     [$internal]: true,
@@ -90,7 +90,7 @@ function createMatSchema<
         elements.push(0);
       }
 
-      return options.makeFromElements(...elements);
+      return new options.makeFromElements(...elements) as ValueType;
     },
     // GPU implementation
     (...args) =>
@@ -171,7 +171,8 @@ abstract class mat2x2Impl<TColumn extends v2f>
     })`;
   }
 }
-class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
+
+class mat2x2fImpl extends mat2x2Impl<v2f> {
   public readonly kind = 'mat2x2f';
 
   makeColumn(e0: number, e1: number): v2f {
@@ -312,7 +313,7 @@ abstract class mat3x3Impl<TColumn extends v3f>
   }
 }
 
-class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
+class mat3x3fImpl extends mat3x3Impl<v3f> {
   public readonly kind = 'mat3x3f';
   makeColumn(x: number, y: number, z: number): v3f {
     return vec3f(x, y, z);
@@ -502,7 +503,7 @@ abstract class mat4x4Impl<TColumn extends v4f>
   }
 }
 
-class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
+class mat4x4fImpl extends mat4x4Impl<v4f> {
   public readonly kind = 'mat4x4f';
 
   makeColumn(x: number, y: number, z: number, w: number): v4f {
@@ -749,7 +750,7 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
   type: 'mat2x2f',
   rows: 2,
   columns: 2,
-  makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
+  makeFromElements: mat2x2fImpl,
 }) as Mat2x2f;
 
 /**
@@ -779,7 +780,7 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
   type: 'mat3x3f',
   rows: 3,
   columns: 3,
-  makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
+  makeFromElements: mat3x3fImpl,
 }) as Mat3x3f;
 
 /**
@@ -811,7 +812,7 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   type: 'mat4x4f',
   rows: 4,
   columns: 4,
-  makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
+  makeFromElements: mat4x4fImpl,
 }) as Mat4x4f;
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {

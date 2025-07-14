@@ -33,24 +33,24 @@ export interface BaseData {
 }
 
 export interface vecDotNotation<T extends AnyNumericVecInstance> {
-  add(other: number): T;
-  add(other: T): T;
+  // add(other: number): T;
+  // add(other: T): T;
 
-  sub(other: number): T;
-  sub(other: T): T;
+  // sub(other: number): T;
+  // sub(other: T): T;
 
   mul(other: number): T;
   mul(other: T): T;
   mul(other: mBaseForVec<T>): T;
 
-  div(other: number): T;
-  div(other: T): T;
+  // div(other: number): T;
+  // div(other: T): T;
 }
 
 export interface matDotNotation<T extends AnyMatInstance> {
-  add(other: T): T;
+  // add(other: T): T;
 
-  sub(other: T): T;
+  // sub(other: T): T;
 
   mul(other: number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
@@ -649,9 +649,13 @@ export type AnyVecInstance =
 
 export type VecKind = AnyVecInstance['kind'];
 
-export interface matBase<TColumn> extends NumberArrayView {
-  readonly [$internal]: true;
-  readonly columns: readonly TColumn[];
+export abstract class matBase<TColumn> implements NumberArrayView {
+  abstract readonly [$internal]: true;
+  abstract readonly columns: readonly TColumn[];
+
+  abstract readonly length: number;
+  abstract [Symbol.iterator](): Iterator<number>;
+  [n: number]: number;
 }
 
 /**

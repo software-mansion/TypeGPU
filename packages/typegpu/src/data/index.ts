@@ -2,6 +2,13 @@
  * @module typegpu/data
  */
 
+import { VecBase } from './vectorImpl.ts';
+import * as std from '../std/index.ts';
+// @ts-ignore
+VecBase.prototype.mul = function (this: any, other: any) {
+  return std.mul(this, other);
+};
+
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
