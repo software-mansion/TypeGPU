@@ -300,26 +300,27 @@ describe('struct', () => {
   // });
 
   it('resolves to correct wgsl', () => {
-    const schema = struct({
-      nested: struct({ prop1: vec2f, prop2: u32 }).$name('nestedStruct'),
-    }).$name('outerStruct');
+    const Nested = struct({ prop1: vec2f, prop2: u32 });
+    const Outer = struct({
+      nested: Nested,
+    });
 
-    const fn = tgpu.fn([])(() => {
-      const defaultValue = schema();
-    }).$name('testFunction');
+    const testFunction = tgpu.fn([])(() => {
+      const defaultValue = Outer();
+    });
 
-    expect(parseResolved({ fn })).toBe(parse(`
-        struct nestedStruct {
+    expect(parseResolved({ testFunction })).toBe(parse(`
+        struct Nested {
           prop1: vec2f,
           prop2: u32,
         }
 
-        struct outerStruct {
-          nested: nestedStruct,
+        struct Outer {
+          nested: Nested,
         }
 
         fn testFunction() {
-          var defaultValue = outerStruct();
+          var defaultValue = Outer();
         }
       `));
   });
