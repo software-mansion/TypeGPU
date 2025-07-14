@@ -41,6 +41,7 @@ import {
   type PerspectiveOrLinearInterpolatableData,
   type PerspectiveOrLinearInterpolationType,
   type Size,
+  type Vec4f,
   type WgslTypeLiteral,
 } from './wgslTypes.ts';
 
@@ -300,9 +301,9 @@ export function interpolate<
  *
  * @param data The position built-in data-type to mark as invariant.
  */
-export function invariant<TData extends AnyData>(
-  data: TData,
-): Decorate<TData, Invariant> {
+export function invariant(
+  data: Decorated<Vec4f, [Builtin<'position'>]>,
+): Decorated<Vec4f, [Builtin<'position'>, Invariant]> {
   // Validate that invariant is only applied to position built-in
   if (!isBuiltin(data)) {
     throw new Error(

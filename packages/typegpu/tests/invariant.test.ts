@@ -20,6 +20,7 @@ describe('invariant', () => {
 
   it('throws error when applied to non-position builtin', () => {
     expect(() => {
+      // @ts-expect-error - Testing error case with invalid builtin
       d.invariant(d.builtin.vertexIndex);
     }).toThrow(
       'The @invariant attribute must only be applied to the position built-in value.',
@@ -28,6 +29,7 @@ describe('invariant', () => {
 
   it('throws error when applied to non-builtin data', () => {
     expect(() => {
+      // @ts-expect-error - Testing error case with non-builtin data
       d.invariant(d.f32);
     }).toThrow(
       'The @invariant attribute must only be applied to the position built-in value.',
