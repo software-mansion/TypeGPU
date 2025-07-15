@@ -20,37 +20,36 @@ import type { Prettify } from '../shared/utilityTypes.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
+export interface BaseData {
+  readonly [$internal]: true;
+  readonly type: string;
+  readonly [$repr]: unknown;
+}
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
   [Symbol.iterator]: () => Iterator<number>;
 }
 
-export interface BaseData {
-  readonly [$internal]: true;
-  readonly type: string;
-  readonly [$repr]: unknown;
-}
-
 export interface vecDotNotation<T extends AnyNumericVecInstance> {
-  // add(other: number): T;
-  // add(other: T): T;
+  add(other: number): T;
+  add(other: T): T;
 
-  // sub(other: number): T;
-  // sub(other: T): T;
+  sub(other: number): T;
+  sub(other: T): T;
 
   mul(other: number): T;
   mul(other: T): T;
   mul(other: mBaseForVec<T>): T;
 
-  // div(other: number): T;
-  // div(other: T): T;
+  div(other: number): T;
+  div(other: T): T;
 }
 
 export interface matDotNotation<T extends AnyMatInstance> {
-  // add(other: T): T;
+  add(other: T): T;
 
-  // sub(other: T): T;
+  sub(other: T): T;
 
   mul(other: number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
@@ -649,20 +648,12 @@ export type AnyVecInstance =
 
 export type VecKind = AnyVecInstance['kind'];
 
-export abstract class matBase<TColumn> implements NumberArrayView {
-  abstract readonly [$internal]: true;
-  abstract readonly columns: readonly TColumn[];
-
-  abstract readonly length: number;
-  abstract [Symbol.iterator](): Iterator<number>;
-  [n: number]: number;
-}
-
 /**
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
  */
-export interface mat2x2<TColumn> extends matBase<TColumn> {
+export interface mat2x2<TColumn> extends NumberArrayView {
+  readonly [$internal]: true;
   readonly length: 4;
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn];
@@ -681,7 +672,8 @@ export interface m2x2f extends mat2x2<v2f>, matDotNotation<m2x2f> {
  * Interface representing its WGSL matrix type counterpart: mat3x3
  * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
  */
-export interface mat3x3<TColumn> extends matBase<TColumn> {
+export interface mat3x3<TColumn> extends NumberArrayView {
+  readonly [$internal]: true;
   readonly length: 12;
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
@@ -700,7 +692,8 @@ export interface m3x3f extends mat3x3<v3f>, matDotNotation<m3x3f> {
  * Interface representing its WGSL matrix type counterpart: mat4x4
  * A matrix with 4 rows and 4 columns, with elements of type `TColumn`
  */
-export interface mat4x4<TColumn> extends matBase<TColumn> {
+export interface mat4x4<TColumn> extends NumberArrayView {
+  readonly [$internal]: true;
   readonly length: 16;
   readonly kind: string;
   /* override */ readonly columns: readonly [

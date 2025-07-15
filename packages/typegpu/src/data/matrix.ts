@@ -15,7 +15,7 @@ import type {
   Mat3x3f,
   mat4x4,
   Mat4x4f,
-  matBase,
+  NumberArrayView,
   v2f,
   v3f,
   v4f,
@@ -31,6 +31,15 @@ type vBase = {
   length: number;
   [n: number]: number;
 };
+
+export abstract class matBase<TColumn> implements NumberArrayView {
+  abstract readonly [$internal]: true;
+  abstract readonly columns: readonly TColumn[];
+
+  abstract readonly length: number;
+  abstract [Symbol.iterator](): Iterator<number>;
+  [n: number]: number;
+}
 
 interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
@@ -107,7 +116,7 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f>
+abstract class mat2x2Impl<TColumn extends v2f> extends matBase<TColumn>
   implements mat2x2<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
@@ -116,6 +125,7 @@ abstract class mat2x2Impl<TColumn extends v2f>
   [n: number]: number;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(elements[0] as number, elements[1] as number),
       this.makeColumn(elements[2] as number, elements[3] as number),
@@ -180,7 +190,7 @@ class mat2x2fImpl extends mat2x2Impl<v2f> {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f>
+abstract class mat3x3Impl<TColumn extends v3f> extends matBase<TColumn>
   implements mat3x3<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
@@ -189,6 +199,7 @@ abstract class mat3x3Impl<TColumn extends v3f>
   [n: number]: number;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(
         elements[0] as number,
@@ -320,13 +331,14 @@ class mat3x3fImpl extends mat3x3Impl<v3f> {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f>
+abstract class mat4x4Impl<TColumn extends v4f> extends matBase<TColumn>
   implements mat4x4<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(
         elements[0] as number,

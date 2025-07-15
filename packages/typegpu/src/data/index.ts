@@ -3,8 +3,8 @@
  */
 
 import { VecBase } from './vectorImpl.ts';
+import { matBase } from './matrix.ts';
 import * as std from '../std/index.ts';
-import { matBase } from './wgslTypes.ts';
 // @ts-ignore
 // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
 VecBase.prototype.add = function (this: any, other: any) {
