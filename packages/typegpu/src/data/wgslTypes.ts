@@ -31,6 +31,13 @@ export interface NumberArrayView {
   [Symbol.iterator]: () => Iterator<number>;
 }
 
+/**
+ * Vector infix notation.
+ *
+ * @privateRemarks
+ * These functions are not defined on vectors,
+ * but are instead assigned to `VecBase` after both `data` and `std` are initialized.
+ */
 export interface vecDotNotation<T extends AnyNumericVecInstance> {
   add(other: number): T;
   add(other: T): T;
@@ -46,6 +53,13 @@ export interface vecDotNotation<T extends AnyNumericVecInstance> {
   div(other: T): T;
 }
 
+/**
+ * Matrix infix notation.
+ *
+ * @privateRemarks
+ * These functions are not defined on matrices,
+ * but are instead assigned to `matBase` after both `data` and `std` are initialized.
+ */
 export interface matDotNotation<T extends AnyMatInstance> {
   add(other: T): T;
 
