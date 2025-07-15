@@ -2,6 +2,7 @@ import * as tinyest from 'tinyest';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
+  InfixDispatch,
   isData,
   isLooseData,
   snip,
@@ -12,7 +13,6 @@ import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
-import { createDualImpl } from '../shared/generators.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import * as std from '../std/index.ts';
@@ -206,14 +206,9 @@ export function generateExpression(
       // TODO: sub
       if (property === 'mul') {
         return {
-          value: createDualImpl(
-            (other) => {
-              throw new Error('Unreachable code!');
-            },
-            (other: Snippet) =>
-              // @ts-ignore
-              std.mul[$internal].gpuImplementation(target, other),
-            'infix mul',
+          value: new InfixDispatch(
+            target,
+            std[property][$internal].gpuImplementation,
           ),
           dataType: UnknownData,
         };
@@ -353,6 +348,13 @@ export function generateExpression(
         // Unintuitive, but the type of the return value is the struct itself
         id.value,
       );
+    }
+
+    if (id.value instanceof InfixDispatch) {
+      if (!argSnippets[0]) {
+        throw new Error('An infix operator was called without any arguments!');
+      }
+      return id.value.applyWith(argSnippets[0]);
     }
 
     if (!isMarkedInternal(id.value)) {

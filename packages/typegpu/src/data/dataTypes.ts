@@ -196,6 +196,17 @@ export const UnknownData = {
   },
 } as UnknownData;
 
+export class InfixDispatch {
+  constructor(
+    private lhs: Snippet,
+    private operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+  ) {}
+
+  applyWith(rhs: Snippet): Snippet {
+    return this.operator(this.lhs, rhs);
+  }
+}
+
 export interface Snippet {
   readonly value: unknown;
   readonly dataType: AnyData | UnknownData;
