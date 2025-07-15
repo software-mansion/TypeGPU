@@ -34,4 +34,4 @@ export const commonEditorOptions = {
   lineNumbers: 'on' as const,
   folding: true,
   bracketPairColorization: { enabled: true },
-};
+} as const;
