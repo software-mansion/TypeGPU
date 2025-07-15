@@ -32,7 +32,11 @@ export default defineConfig({
       typegpu({ include: [/\.m?[jt]sx?/] }),
       /** @type {any} */ imagetools(),
     ],
-    assetsInclude: ['**/*.wasm'],
+    ssr: {
+      noExternal: [
+        'wgsl-wasm-transpiler-bundler',
+      ],
+    },
   },
   integrations: [
     starlight({
