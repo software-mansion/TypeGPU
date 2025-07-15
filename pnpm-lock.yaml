@@ -229,6 +229,9 @@ importers:
       wgpu-matrix:
         specifier: catalog:example
         version: 3.4.0
+      wgsl-wasm-transpiler-bundler:
+        specifier: ^0.0.1
+        version: 0.0.1
     devDependencies:
       '@observablehq/plot':
         specifier: ^0.6.17
@@ -263,6 +266,9 @@ importers:
       vite-imagetools:
         specifier: catalog:frontend
         version: 7.1.0(rollup@4.34.8)
+      vite-plugin-wasm:
+        specifier: ^3.4.1
+        version: 3.4.1(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.19.3)(yaml@2.8.0))
       yaml:
         specifier: ^2.8.0
         version: 2.8.0
@@ -5809,6 +5815,11 @@ packages:
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
 
+  vite-plugin-wasm@3.4.1:
+    resolution: {integrity: sha512-ja3nSo2UCkVeitltJGkS3pfQHAanHv/DqGatdI39ja6McgABlpsZ5hVgl6wuR8Qx5etY3T5qgDQhOWzc5RReZA==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4 || ^5 || ^6
+
   vite@6.3.5:
     resolution: {integrity: sha512-cZn6NDFE7wdTpINgs++ZJ4N49W2vRp8LCKrn3Ob1kYNtOo21vfDoaV5GzBfLU4MovSAB8uNRm4jgzVQZ+mBzPQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -6011,6 +6022,9 @@ packages:
 
   wgpu-matrix@3.4.0:
     resolution: {integrity: sha512-kXHrbAPKEn9A32Wf4wVldyx9MmnzwhuB5p8GCqoJP3ItU5+iDT4J3aTQwPZWkfb153hwGtqZtUwR2M+ipJKadg==}
+
+  wgsl-wasm-transpiler-bundler@0.0.1:
+    resolution: {integrity: sha512-xYys/sgYuqk1CmIGfsIBCI9gG9Or48qk5TFtlGby5qx+hn+FvCMC8SBC0EkQ/wCDxjTORDb8d/6B27U/BX7qMQ==}
 
   wgsl_reflect@https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63:
     resolution: {tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
@@ -11927,6 +11941,10 @@ snapshots:
       - tsx
       - yaml
 
+  vite-plugin-wasm@3.4.1(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.19.3)(yaml@2.8.0)):
+    dependencies:
+      vite: 6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.19.3)(yaml@2.8.0)
+
   vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.19.3)(yaml@2.8.0):
     dependencies:
       esbuild: 0.25.6
@@ -12117,6 +12135,8 @@ snapshots:
       mini-parse: 0.6.7
 
   wgpu-matrix@3.4.0: {}
+
+  wgsl-wasm-transpiler-bundler@0.0.1: {}
 
   wgsl_reflect@https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63: {}
 
