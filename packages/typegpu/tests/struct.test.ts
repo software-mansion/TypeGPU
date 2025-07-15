@@ -296,7 +296,7 @@ describe('struct', () => {
 
   //   const defaultStruct = schema();
 
-  //   expect(defaultStruct).toStrictEqual({ arr: [1] });
+  //   expect(defaultStruct).toStrictEqual({ arr: [0] });
   // });
 
   it('resolves to correct wgsl', () => {
