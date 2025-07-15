@@ -4,8 +4,16 @@
 
 import { VecBase } from './vectorImpl.ts';
 import * as std from '../std/index.ts';
+import { matBase } from './wgslTypes.ts';
 // @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
 VecBase.prototype.mul = function (this: any, other: any) {
+  return std.mul(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+matBase.prototype.mul = function (this: any, other: any) {
   return std.mul(this, other);
 };
 

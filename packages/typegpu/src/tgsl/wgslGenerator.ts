@@ -11,8 +11,11 @@ import {
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { ResolutionError } from '../errors.ts';
+import { createDualImpl } from '../shared/generators.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import * as std from '../std/index.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
@@ -24,7 +27,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import { ResolutionError } from '../errors.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -50,6 +52,24 @@ const parenthesizedOps = [
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
+
+const fluentOperatorKind = [
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+];
 
 type Operator =
   | tinyest.BinaryOperator
@@ -179,6 +199,27 @@ export function generateExpression(
     // Member Access
     const [_, targetNode, property] = expression;
     const target = generateExpression(ctx, targetNode);
+
+    // TODO: replace this temporary check once more fitting wgslGenerator infrastructure is implemented
+    if (fluentOperatorKind.includes(target.dataType.type)) {
+      // TODO: add
+      // TODO: sub
+      if (property === 'mul') {
+        return {
+          value: createDualImpl(
+            (other) => {
+              throw new Error('Unreachable code!');
+            },
+            (other: Snippet) =>
+              // @ts-ignore
+              std.mul[$internal].gpuImplementation(target, other),
+            'infix mul',
+          ),
+          dataType: UnknownData,
+        };
+      }
+      // TODO: div
+    }
 
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess

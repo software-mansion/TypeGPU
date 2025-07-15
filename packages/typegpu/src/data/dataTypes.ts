@@ -7,13 +7,13 @@ import type {
   InferRecord,
   MemIdentityRecord,
 } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
   $memIdent,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
@@ -25,6 +25,7 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & {
     [$internal]: {
       implementation: TImpl | string;
+      gpuImplementation: () => Snippet;
       argTypes: FnArgsConversionHint;
     };
   };

@@ -13,7 +13,7 @@ import {
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
-  mBaseForVec,
+  type mBaseForVec,
   type U32,
   type v2f,
   type v2h,
