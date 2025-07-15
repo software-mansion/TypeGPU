@@ -53,7 +53,7 @@
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example",
-    "wgsl-tool": "link:/Users/konradreczko/WGSLTool/wgsl_analysis/pkg-bundler"
+    "wgsl-wasm-transpiler-bundler": "^0.0.1"
   },
   "devDependencies": {
     "@observablehq/plot": "^0.6.17",

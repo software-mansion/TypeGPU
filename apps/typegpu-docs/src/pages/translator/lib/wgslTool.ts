@@ -1,4 +1,8 @@
-import { compileShader, getSupportedFormats, init } from 'wgsl-tool';
+import {
+  compileShader,
+  getSupportedFormats,
+  init,
+} from 'wgsl-wasm-transpiler-bundler';
 
 /** Normalize any thrown value into a readable string */
 export function getErrorMessage(err: unknown): string {
