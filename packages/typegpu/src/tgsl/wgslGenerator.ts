@@ -71,6 +71,13 @@ const fluentOperatorKind = [
   'mat4x4f',
 ];
 
+const fluentOperators = [
+  'add',
+  'sub',
+  'mul',
+  'div',
+] as const;
+
 type Operator =
   | tinyest.BinaryOperator
   | tinyest.AssignmentOperator
@@ -200,20 +207,18 @@ export function generateExpression(
     const [_, targetNode, property] = expression;
     const target = generateExpression(ctx, targetNode);
 
-    // TODO: replace this temporary check once more fitting wgslGenerator infrastructure is implemented
-    if (fluentOperatorKind.includes(target.dataType.type)) {
-      // TODO: add
-      // TODO: sub
-      if (property === 'mul') {
-        return {
-          value: new InfixDispatch(
-            target,
-            std[property][$internal].gpuImplementation,
-          ),
-          dataType: UnknownData,
-        };
-      }
-      // TODO: div
+    if (
+      fluentOperatorKind.includes(target.dataType.type) &&
+      fluentOperators.includes(property as typeof fluentOperators[number])
+    ) {
+      return {
+        value: new InfixDispatch(
+          target,
+          std[property as typeof fluentOperators[number]][$internal]
+            .gpuImplementation,
+        ),
+        dataType: UnknownData,
+      };
     }
 
     if (target.dataType.type === 'unknown') {

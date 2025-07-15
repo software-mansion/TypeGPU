@@ -7,8 +7,38 @@ import * as std from '../std/index.ts';
 import { matBase } from './wgslTypes.ts';
 // @ts-ignore
 // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+VecBase.prototype.add = function (this: any, other: any) {
+  return std.add(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+VecBase.prototype.sub = function (this: any, other: any) {
+  return std.sub(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
 VecBase.prototype.mul = function (this: any, other: any) {
   return std.mul(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+VecBase.prototype.div = function (this: any, other: any) {
+  return std.div(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+matBase.prototype.add = function (this: any, other: any) {
+  return std.add(this, other);
+};
+
+// @ts-ignore
+// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+matBase.prototype.sub = function (this: any, other: any) {
+  return std.sub(this, other);
 };
 
 // @ts-ignore
