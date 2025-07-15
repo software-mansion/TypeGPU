@@ -1237,19 +1237,19 @@ export interface atomicI32 {
 export interface Align<T extends number> {
   readonly [$internal]: true;
   readonly type: '@align';
-  readonly value: T;
+  readonly params: [T];
 }
 
 export interface Size<T extends number> {
   readonly [$internal]: true;
   readonly type: '@size';
-  readonly value: T;
+  readonly params: [T];
 }
 
 export interface Location<T extends number = number> {
   readonly [$internal]: true;
   readonly type: '@location';
-  readonly value: T;
+  readonly params: [T];
 }
 
 export type PerspectiveOrLinearInterpolationType = `${
@@ -1263,13 +1263,19 @@ export type InterpolationType =
 export interface Interpolate<T extends InterpolationType = InterpolationType> {
   readonly [$internal]: true;
   readonly type: '@interpolate';
-  readonly value: T;
+  readonly params: [T];
 }
 
 export interface Builtin<T extends string> {
   readonly [$internal]: true;
   readonly type: '@builtin';
-  readonly value: T;
+  readonly params: [T];
+}
+
+export interface Invariant {
+  readonly [$internal]: true;
+  readonly type: '@invariant';
+  readonly params: [];
 }
 
 export interface Decorated<
@@ -1583,6 +1589,12 @@ export function isBuiltinAttrib<T extends Builtin<string>>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.[$internal] && (value as T)?.type === '@builtin';
+}
+
+export function isInvariantAttrib<T extends Invariant>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.[$internal] && (value as T)?.type === '@invariant';
 }
 
 export function isDecorated<T extends Decorated>(
