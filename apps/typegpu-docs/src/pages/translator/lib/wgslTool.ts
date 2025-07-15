@@ -13,7 +13,6 @@ export function getErrorMessage(err: unknown): string {
 
 export function initializeWasm() {
   init();
-  console.log(getSupportedFormats());
   return getSupportedFormats();
 }
 
