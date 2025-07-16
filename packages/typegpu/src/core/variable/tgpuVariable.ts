@@ -129,7 +129,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     }
     if (mode.type === 'comptime') {
       throw new Error(
-        'Cannot access GPU variables when executing code at compile-time',
+        'Cannot access TypeGPU variables when executing code at compile-time',
       );
     }
     return assertExhaustive(
@@ -138,7 +138,36 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     );
   }
 
+  set $(value: InferGPU<TDataType>) {
+    const mode = getExecMode();
+    if (!mode) {
+      // TODO: Add stable doc links
+      throw new Error(
+        'Cannot call functions that write to TypeGPU variables (tgpu.privateVar/tgpu.workgroupVar) top-level (see https://docs.swmansion.com/TypeGPU/error?code=123)',
+      );
+    }
+    if (mode.type === 'codegen') {
+      // The WGSL generator handles variable assignment, and does not defer to
+      // whatever's being assigned to to generate the WGSL.
+      throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
+    }
+    if (mode.type === 'simulate') {
+      mode.varValueMap.set(this, value);
+      return;
+    }
+    if (mode.type === 'comptime') {
+      throw new Error(
+        'Cannot access TypeGPU variables when executing code at compile-time',
+      );
+    }
+    assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
+  }
+
   get value(): InferGPU<TDataType> {
     return this.$;
+  }
+
+  set value(v: InferGPU<TDataType>) {
+    this.$ = v;
   }
 }
