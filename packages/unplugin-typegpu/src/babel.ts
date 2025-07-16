@@ -57,7 +57,9 @@ function functionToTranspiled(
     types.objectProperty(
       i('externals'),
       types.objectExpression(
-        externalNames.map((name) => types.objectProperty(i(name), i(name))),
+        externalNames.map((name) =>
+          types.objectProperty(i(name), i(name), false, true)
+        ),
       ),
     ),
   ]);
