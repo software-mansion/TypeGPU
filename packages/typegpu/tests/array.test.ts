@@ -121,17 +121,18 @@ describe('array', () => {
     expect(clone).not.toBe(instance);
     expect(clone[0]).not.toBe(instance[0]);
     expect(clone[0]).not.toBe(clone[1]);
-    expect(clone[0]![0]).not.toBe(instance[0]![0]);
+    expect(clone[0]?.[0]).not.toBe(instance[0]?.[0]);
+    expect(clone[0]?.[0]).toStrictEqual(d.vec3f());
   });
 
   it('throws when invalid number of arguments', () => {
     const ArraySchema = d.arrayOf(d.u32, 2);
 
     expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Array schema of 2 elements of type u32 called with 1 arguments.]`,
+      '[Error: Array schema of 2 elements of type u32 called with 1 arguments.]',
     );
     expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Array schema of 2 elements of type u32 called with 3 arguments.]`,
+      '[Error: Array schema of 2 elements of type u32 called with 3 arguments.]',
     );
   });
 
@@ -178,16 +179,19 @@ describe('array', () => {
       return;
     });
 
+    // In this case, `[10]` itself is wrapped in an `array<i32, 1>`
+    // and then the second cast of `ArraySchema` is stripped
+    // which causes elements to become `i32` instead of `u32`
     expect(parseResolved({ testFn })).toBe(parse(`
       fn testFn() {
-        var myArray = array<u32, 1>(10);
+        var myArray = (array<i32, 1>(10));
         var myClone = (myArray);
         return;
       }`));
   });
 
   it('generates correct code when complex array clone is used', () => {
-    const ArraySchema = d.arrayOf(d.u32, 1);
+    const ArraySchema = d.arrayOf(d.i32, 1);
 
     const testFn = tgpu.fn([])(() => {
       const myArrays = [ArraySchema([10])] as const;
@@ -195,10 +199,12 @@ describe('array', () => {
       return;
     });
 
+    console.log(parseResolved({ testFn }));
+
     expect(parseResolved({ testFn })).toBe(
       parse(`
           fn testFn() {
-            var myArrays = array<array<u32, 1>, 1>(TestArray(1, 2));
+            var myArrays = array<array<i32, 1>, 1>((array<i32, 1>(10)));
             var myClone = (myArrays[0]);
             return;
           }`),

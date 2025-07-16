@@ -312,7 +312,7 @@ export function generateExpression(
       return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
     }
 
-    if (wgsl.isWgslStruct(id.value)) {
+    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       const resolvedId = ctx.resolve(id.value);
       // There are three ways a struct can be called that we support:
       // - with no arguments `Struct()`,
@@ -320,6 +320,7 @@ export function generateExpression(
       // - with another struct `Struct(otherStruct)`.
       // In the last case, we assume the `otherStruct` is defined on TGSL side
       // and we just strip the constructor to let the assignment operator clone it.
+      // The behavior for arrays is analogous.
       if (args.length === 0) {
         return snip(`${resolvedId}()`, id.value);
       }

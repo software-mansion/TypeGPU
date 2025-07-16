@@ -1,6 +1,6 @@
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { WgslArray } from '../../dist/data/index.ts';
+import type { WgslArray } from '../../dist/data/index.ts';
 import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
