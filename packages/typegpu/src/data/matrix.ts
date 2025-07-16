@@ -32,7 +32,7 @@ type vBase = {
   [n: number]: number;
 };
 
-export abstract class matBase<TColumn> implements NumberArrayView {
+export abstract class MatBase<TColumn> implements NumberArrayView {
   abstract readonly [$internal]: true;
   abstract readonly columns: readonly TColumn[];
 
@@ -45,17 +45,17 @@ interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
   rows: 2 | 3 | 4;
   columns: 2 | 3 | 4;
-  makeFromElements: new (...args: number[]) => matBase<ColumnType>;
+  makeFromElements: new (...args: number[]) => MatBase<ColumnType>;
 }
 
 type MatConstructor<
-  ValueType extends matBase<ColumnType>,
+  ValueType extends MatBase<ColumnType>,
   ColumnType extends vBase,
 > = (...args: (number | ColumnType)[]) => ValueType;
 
 function createMatSchema<
   TType extends string,
-  ValueType extends matBase<ColumnType>,
+  ValueType extends MatBase<ColumnType>,
   ColumnType extends vBase,
 >(
   options: MatSchemaOptions<TType, ColumnType>,
@@ -116,7 +116,7 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f> extends matBase<TColumn>
+abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
   implements mat2x2<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
@@ -190,7 +190,7 @@ class mat2x2fImpl extends mat2x2Impl<v2f> {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f> extends matBase<TColumn>
+abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
   implements mat3x3<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
@@ -331,7 +331,7 @@ class mat3x3fImpl extends mat3x3Impl<v3f> {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f> extends matBase<TColumn>
+abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
   implements mat4x4<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];

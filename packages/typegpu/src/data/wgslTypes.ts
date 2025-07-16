@@ -58,7 +58,7 @@ export interface vecDotNotation<T extends AnyNumericVecInstance> {
  *
  * @privateRemarks
  * These functions are not defined on matrices,
- * but are instead assigned to `matBase` after both `data` and `std` are initialized.
+ * but are instead assigned to `MatBase` after both `data` and `std` are initialized.
  */
 export interface matDotNotation<T extends AnyMatInstance> {
   add(other: T): T;
