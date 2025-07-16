@@ -155,7 +155,7 @@ describe('[BABEL] auto naming', () => {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
           externals: {
-            d: d
+            d
           }
         }) && $.f)({})), "myFragmentFn");"
       `);
