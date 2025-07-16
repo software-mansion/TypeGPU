@@ -18,9 +18,7 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -298,30 +296,4 @@ describe('struct', () => {
 
   //   expect(defaultStruct).toStrictEqual({ arr: [0] });
   // });
-
-  it('resolves to correct wgsl', () => {
-    const Nested = struct({ prop1: vec2f, prop2: u32 });
-    const Outer = struct({
-      nested: Nested,
-    });
-
-    const testFunction = tgpu.fn([])(() => {
-      const defaultValue = Outer();
-    });
-
-    expect(parseResolved({ testFunction })).toBe(parse(`
-        struct Nested {
-          prop1: vec2f,
-          prop2: u32,
-        }
-
-        struct Outer {
-          nested: Nested,
-        }
-
-        fn testFunction() {
-          var defaultValue = Outer();
-        }
-      `));
-  });
 });

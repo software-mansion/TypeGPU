@@ -620,6 +620,32 @@ describe('wgslGenerator', () => {
     expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
   });
 
+  it('generates correct code when struct default constructor is used', () => {
+    const Nested = d.struct({ prop1: d.vec2f, prop2: d.u32 });
+    const Outer = d.struct({
+      nested: Nested,
+    });
+
+    const testFunction = tgpu.fn([])(() => {
+      const defaultValue = Outer();
+    });
+
+    expect(parseResolved({ testFunction })).toBe(parse(`
+        struct Nested {
+          prop1: vec2f,
+          prop2: u32,
+        }
+
+        struct Outer {
+          nested: Nested,
+        }
+
+        fn testFunction() {
+          var defaultValue = Outer();
+        }
+      `));
+  });
+
   it('generates correct code when struct clone is used', () => {
     const TestStruct = d.struct({
       x: d.u32,
