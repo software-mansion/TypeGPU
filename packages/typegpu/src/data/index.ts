@@ -3,49 +3,30 @@
  */
 
 import * as std from '../std/index.ts';
+import { InfixOperator } from '../tgsl/wgslGenerator.ts';
+import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-VecBase.prototype.add = function (this: any, other: any) {
-  return std.add(this, other);
-};
 
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-VecBase.prototype.sub = function (this: any, other: any) {
-  return std.sub(this, other);
-};
+function assignInfixOperator(
+  object: typeof VecBase | typeof MatBase,
+  operator: InfixOperator,
+) {
+  // @ts-ignore
+  // biome-ignore lint/suspicious/noExplicitAny: <shh>
+  object.prototype[operator] = function (this: any, other: any) {
+    // @ts-ignore
+    return std[operator][$internal].jsImpl(this, other);
+  };
+}
 
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-VecBase.prototype.mul = function (this: any, other: any) {
-  return std.mul(this, other);
-};
-
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-VecBase.prototype.div = function (this: any, other: any) {
-  return std.div(this, other);
-};
-
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-MatBase.prototype.add = function (this: any, other: any) {
-  return std.add(this, other);
-};
-
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-MatBase.prototype.sub = function (this: any, other: any) {
-  return std.sub(this, other);
-};
-
-// @ts-ignore
-// biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-MatBase.prototype.mul = function (this: any, other: any) {
-  return std.mul(this, other);
-};
+assignInfixOperator(VecBase, 'add');
+assignInfixOperator(VecBase, 'sub');
+assignInfixOperator(VecBase, 'mul');
+assignInfixOperator(VecBase, 'div');
+assignInfixOperator(MatBase, 'add');
+assignInfixOperator(MatBase, 'sub');
+assignInfixOperator(MatBase, 'mul');
 
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {

@@ -78,6 +78,8 @@ const infixOperators = [
   'div',
 ] as const;
 
+export type InfixOperator = typeof infixOperators[number];
+
 type Operator =
   | tinyest.BinaryOperator
   | tinyest.AssignmentOperator
@@ -217,13 +219,12 @@ export function generateExpression(
 
     if (
       infixableKind.includes(target.dataType.type) &&
-      infixOperators.includes(property as typeof infixOperators[number])
+      infixOperators.includes(property as InfixOperator)
     ) {
       return {
         value: new InfixDispatch(
           target,
-          std[property as typeof infixOperators[number]][$internal]
-            .gpuImpl,
+          std[property as InfixOperator][$internal].gpuImpl,
         ),
         dataType: UnknownData,
       };
