@@ -52,7 +52,7 @@ import {
   type U32,
 } from '../data/wgslTypes.ts';
 import { invariant } from '../errors.ts';
-import { getResolutionCtx } from '../gpuMode.ts';
+import { getResolutionCtx } from '../execMode.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';

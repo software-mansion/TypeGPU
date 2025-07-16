@@ -166,7 +166,15 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
-    const converted = convertToCommonType(ctx, [lhsExpr, rhsExpr]) as
+    const forcedType = expression[0] === NODE.assignmentExpr
+      ? [lhsExpr.dataType as AnyData]
+      : [];
+
+    const converted = convertToCommonType(
+      ctx,
+      [lhsExpr, rhsExpr],
+      forcedType,
+    ) as
       | [Snippet, Snippet]
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
@@ -346,7 +354,17 @@ export function generateExpression(
     }
 
     if (wgsl.isWgslStruct(id.value)) {
-      const resolvedId = ctx.resolve(id.value);
+      // There are two ways a struct can be called that we support:
+      // - with an objectExpr `Struct({ x: 1, y: 2 })`,
+      // - with another struct `Struct(otherStruct)`.
+      // In the second case, we assume the `otherStruct` is defined on TGSL side
+      // and we just strip the constructor to let the assignment operator clone it.
+      const resolvedId = args.length === 1 &&
+          Array.isArray(args[0]) &&
+          args[0].length > 0 &&
+          args[0][0] === NODE.objectExpr
+        ? ctx.resolve(id.value)
+        : '';
 
       return snip(
         `${resolvedId}(${argValues.join(', ')})`,

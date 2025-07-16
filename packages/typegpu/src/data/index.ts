@@ -47,83 +47,7 @@ MatBase.prototype.mul = function (this: any, other: any) {
   return std.mul(this, other);
 };
 
-export { builtin } from '../builtin.ts';
-export type {
-  AnyBuiltin,
-  BuiltinClipDistances,
-  BuiltinFragDepth,
-  BuiltinFrontFacing,
-  BuiltinGlobalInvocationId,
-  BuiltinInstanceIndex,
-  BuiltinLocalInvocationId,
-  BuiltinLocalInvocationIndex,
-  BuiltinNumWorkgroups,
-  BuiltinPosition,
-  BuiltinSampleIndex,
-  BuiltinSampleMask,
-  BuiltinVertexIndex,
-  BuiltinWorkgroupId,
-} from '../builtin.ts';
-export type { Infer, InferGPU, InferPartial } from '../shared/repr.ts';
-export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
-export { arrayOf } from './array.ts';
-export { atomic } from './atomic.ts';
-export {
-  align,
-  type AnyAttribute,
-  type HasCustomLocation,
-  interpolate,
-  type IsBuiltin,
-  isBuiltin,
-  location,
-  size,
-} from './attributes.ts';
-export {
-  isData,
-  isDisarray,
-  isLooseData,
-  isLooseDecorated,
-  isUnstruct,
-} from './dataTypes.ts';
-export type {
-  AnyData,
-  AnyLooseData,
-  Disarray,
-  LooseDecorated,
-  Unstruct,
-} from './dataTypes.ts';
-export { disarrayOf } from './disarray.ts';
-export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
-export {
-  ptrFn,
-  ptrHandle,
-  ptrPrivate,
-  ptrStorage,
-  ptrUniform,
-  ptrWorkgroup,
-} from './ptr.ts';
-export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
-export { struct } from './struct.ts';
-export { unstruct } from './unstruct.ts';
-export {
-  vec2b,
-  vec2f,
-  vec2h,
-  vec2i,
-  vec2u,
-  vec3b,
-  vec3f,
-  vec3h,
-  vec3i,
-  vec3u,
-  vec4b,
-  vec4f,
-  vec4h,
-  vec4i,
-  vec4u,
-} from './vector.ts';
-export * from './vertexFormatData.ts';
 export {
   isAlignAttrib,
   isAtomic,
@@ -194,3 +118,79 @@ export type {
   WgslArray,
   WgslStruct,
 } from './wgslTypes.ts';
+export { struct } from './struct.ts';
+export { arrayOf } from './array.ts';
+export {
+  ptrFn,
+  ptrHandle,
+  ptrPrivate,
+  ptrStorage,
+  ptrUniform,
+  ptrWorkgroup,
+} from './ptr.ts';
+export type {
+  AnyData,
+  AnyLooseData,
+  Disarray,
+  LooseDecorated,
+  Unstruct,
+} from './dataTypes.ts';
+export {
+  vec2b,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from './vector.ts';
+export { disarrayOf } from './disarray.ts';
+export { unstruct } from './unstruct.ts';
+export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
+export * from './vertexFormatData.ts';
+export { atomic } from './atomic.ts';
+export {
+  align,
+  type AnyAttribute,
+  type HasCustomLocation,
+  interpolate,
+  type IsBuiltin,
+  isBuiltin,
+  location,
+  size,
+} from './attributes.ts';
+export {
+  isData,
+  isDisarray,
+  isLooseData,
+  isLooseDecorated,
+  isUnstruct,
+} from './dataTypes.ts';
+export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
+export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
+export { builtin } from '../builtin.ts';
+export type {
+  AnyBuiltin,
+  BuiltinClipDistances,
+  BuiltinFragDepth,
+  BuiltinFrontFacing,
+  BuiltinGlobalInvocationId,
+  BuiltinInstanceIndex,
+  BuiltinLocalInvocationId,
+  BuiltinLocalInvocationIndex,
+  BuiltinNumWorkgroups,
+  BuiltinPosition,
+  BuiltinSampleIndex,
+  BuiltinSampleMask,
+  BuiltinVertexIndex,
+  BuiltinWorkgroupId,
+} from '../builtin.ts';
+export type { Infer, InferGPU, InferPartial } from '../shared/repr.ts';

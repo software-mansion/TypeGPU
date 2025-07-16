@@ -11,6 +11,7 @@ import {
   struct,
   u32,
   type v3u,
+  vec2f,
   vec2h,
   vec2u,
   vec3f,
@@ -254,5 +255,26 @@ describe('struct', () => {
 
     // @ts-expect-error
     TestStruct({ x: 1, z: 2 });
+  });
+
+  it('can be called to create a deep copy of other struct', () => {
+    const schema = struct({ nested: struct({ prop1: vec2f, prop2: u32 }) });
+    const instance = schema({ nested: { prop1: vec2f(1, 2), prop2: 21 } });
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual(instance);
+    expect(clone).not.toBe(instance);
+    expect(clone.nested).not.toBe(instance.nested);
+    expect(clone.nested.prop1).not.toBe(instance.nested.prop1);
+  });
+
+  it('can be called to strip extra properties of a struct', () => {
+    const schema = struct({ prop1: vec2f, prop2: u32 });
+    const instance = { prop1: vec2f(1, 2), prop2: 21, prop3: 'extra' };
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual({ prop1: vec2f(1, 2), prop2: 21 });
   });
 });

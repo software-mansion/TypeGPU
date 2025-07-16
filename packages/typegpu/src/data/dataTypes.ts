@@ -160,19 +160,19 @@ export function isLooseDecorated<T extends LooseDecorated>(
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isAlignAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomSize(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isSizeAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomLocation(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isLocationAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function isData(value: unknown): value is AnyData {

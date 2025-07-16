@@ -285,7 +285,7 @@ const vertex = tgpu['~unstable'].vertexFn({
 
 const fragment = tgpu['~unstable'].fragmentFn({
   in: { cell: d.f32 },
-  out: d.location(0, d.vec4f),
+  out: d.vec4f,
 })((input) => {
   if (input.cell === -1) {
     return d.vec4f(0.5, 0.5, 0.5, 1);
@@ -565,35 +565,26 @@ const createSampleScene = () => {
 // #region UI
 
 let paused = false;
-let disposed = false;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
-
-onFrame((deltaTime: number) => {
-  msSinceLastTick += deltaTime;
+let animationFrame: number;
+let lastTime = performance.now();
+function run(timestamp: number) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+  msSinceLastTick += dt;
 
   if (msSinceLastTick >= options.timestep) {
     if (!paused) {
       for (let i = 0; i < options.stepsPerTimestep; i++) {
-        render();
+        render?.();
       }
     }
     msSinceLastTick -= options.timestep;
   }
-});
+
+  animationFrame = requestAnimationFrame(run);
+}
+animationFrame = requestAnimationFrame(run);
 
 export const controls = {
   size: {
@@ -672,7 +663,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrame);
   root.destroy();
 }
 

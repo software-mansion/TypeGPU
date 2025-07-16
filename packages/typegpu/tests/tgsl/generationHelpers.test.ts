@@ -60,8 +60,8 @@ beforeEach(() => {
 });
 
 describe('generationHelpers', () => {
-  vi.mock('../../src/gpuMode.ts', () => ({
-    inGPUMode: () => true,
+  vi.mock('../../src/execMode.ts', () => ({
+    inCodegenMode: () => true,
     getResolutionCtx: () => mockCtx,
   }));
 
