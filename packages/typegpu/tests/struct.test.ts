@@ -290,14 +290,13 @@ describe('struct', () => {
     });
   });
 
-  // TODO: uncomment this once this starts working
-  // it('can be called to create a default value with nested array', () => {
-  //   const schema = struct({ arr: arrayOf(u32, 1) });
+  it('can be called to create a default value with nested array', () => {
+    const schema = struct({ arr: arrayOf(u32, 1) });
 
-  //   const defaultStruct = schema();
+    const defaultStruct = schema();
 
-  //   expect(defaultStruct).toStrictEqual({ arr: [0] });
-  // });
+    expect(defaultStruct).toStrictEqual({ arr: [0] });
+  });
 
   it('generates correct code when struct default constructor is used', () => {
     const Nested = struct({ prop1: vec2f, prop2: u32 });
