@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { fluentOperatorsTests } from './fluent-operators.ts';
+import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
 
@@ -12,7 +12,7 @@ const computeRunTests = tgpu['~unstable']
     let s = true;
     s = s && logicalExpressionTests();
     s = s && matrixOpsTests();
-    s = s && fluentOperatorsTests();
+    s = s && infixOperatorsTests();
 
     if (s) {
       result.value = 1;

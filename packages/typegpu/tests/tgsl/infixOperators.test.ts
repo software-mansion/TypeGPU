@@ -5,7 +5,7 @@ import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
 
 describe('wgslGenerator', () => {
-  it('resolves add dot operator', () => {
+  it('resolves add infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().add(1);
       const v2 = d.vec3f().add(d.vec3f());
@@ -27,7 +27,7 @@ describe('wgslGenerator', () => {
     );
   });
 
-  it('resolves sub dot operator', () => {
+  it('resolves sub infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().sub(1);
       const v2 = d.vec3f().sub(d.vec3f());
@@ -49,7 +49,7 @@ describe('wgslGenerator', () => {
     );
   });
 
-  it('resolves mul dot operator', () => {
+  it('resolves mul infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec2f().mul(1);
       const v2 = d.vec3f().mul(d.vec3f());
@@ -78,7 +78,7 @@ describe('wgslGenerator', () => {
     );
   });
 
-  it('resolves div dot operator', () => {
+  it('resolves div infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().div(1);
       const v2 = d.vec3f().div(d.vec3f());

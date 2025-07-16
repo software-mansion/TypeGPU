@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
-export const fluentOperatorsTests = tgpu.fn([], d.bool)(() => {
+export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
   let s = true;
 
   // mul

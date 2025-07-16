@@ -53,7 +53,7 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
-const fluentOperatorKind = [
+const infixableKind = [
   'vec2f',
   'vec3f',
   'vec4f',
@@ -71,7 +71,7 @@ const fluentOperatorKind = [
   'mat4x4f',
 ];
 
-const fluentOperators = [
+const infixOperators = [
   'add',
   'sub',
   'mul',
@@ -208,13 +208,13 @@ export function generateExpression(
     const target = generateExpression(ctx, targetNode);
 
     if (
-      fluentOperatorKind.includes(target.dataType.type) &&
-      fluentOperators.includes(property as typeof fluentOperators[number])
+      infixableKind.includes(target.dataType.type) &&
+      infixOperators.includes(property as typeof infixOperators[number])
     ) {
       return {
         value: new InfixDispatch(
           target,
-          std[property as typeof fluentOperators[number]][$internal]
+          std[property as typeof infixOperators[number]][$internal]
             .gpuImplementation,
         ),
         dataType: UnknownData,
