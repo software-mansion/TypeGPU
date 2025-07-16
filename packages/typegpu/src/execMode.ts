@@ -1,42 +1,44 @@
 import { invariant } from './errors.ts';
-import type { ResolutionCtx } from './types.ts';
+import type { ExecState, ResolutionCtx, SimulationState } from './types.ts';
 
-let resolutionCtx: ResolutionCtx | null = null;
-
-export type ExecMode = 'comptime' | 'codegen';
-
-const resolutionModeStack: ExecMode[] = [];
+let resolutionCtx: ResolutionCtx | undefined;
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
-  invariant(resolutionCtx === null, 'Cannot nest context providers');
+  invariant(
+    resolutionCtx === undefined || resolutionCtx === ctx,
+    'Cannot nest context providers',
+  );
+
+  if (resolutionCtx === ctx) {
+    return callback();
+  }
 
   resolutionCtx = ctx;
   try {
     return callback();
   } finally {
-    resolutionCtx = null;
+    resolutionCtx = undefined;
   }
 }
 
-export function getResolutionCtx(): ResolutionCtx | null {
+export function getResolutionCtx(): ResolutionCtx | undefined {
   return resolutionCtx;
 }
 
-export function pushMode(mode: ExecMode) {
-  resolutionModeStack.push(mode);
+export function getExecMode(): ExecState | undefined {
+  return resolutionCtx?.mode;
 }
 
-export function popMode(expected?: ExecMode) {
-  const mode = resolutionModeStack.pop();
-  if (expected !== undefined) {
-    invariant(mode === expected, 'Unexpected mode');
+export function getSimulationState(): SimulationState | undefined {
+  const mode = resolutionCtx?.mode;
+  if (mode?.type === 'simulate') {
+    return mode;
   }
+  return undefined;
 }
 
-export const inCodegenMode = () =>
-  resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === 'codegen';
+export function inCodegenMode() {
+  return resolutionCtx?.mode?.type === 'codegen';
+}
 
-export const inComptimeMode = () =>
-  resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === 'comptime';
+// You can add getters for more modes if necessary...

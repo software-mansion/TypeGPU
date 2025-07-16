@@ -107,6 +107,23 @@ export interface ItemStateStack {
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
 
+export type ExecMode = 'comptime' | 'codegen' | 'simulate';
+
+export class ComptimeState {
+  readonly type = 'comptime' as const;
+}
+
+export class CodegenState {
+  readonly type = 'codegen' as const;
+}
+
+export class SimulationState {
+  readonly type = 'simulate' as const;
+  readonly varValueMap = new WeakMap<TgpuVar, unknown>();
+}
+
+export type ExecState = ComptimeState | CodegenState | SimulationState;
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -114,6 +131,7 @@ export interface ItemStateStack {
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
+  readonly mode: ExecState | undefined;
 
   addDeclaration(declaration: string): void;
 
