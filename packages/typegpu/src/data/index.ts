@@ -3,7 +3,7 @@
  */
 
 import * as std from '../std/index.ts';
-import { InfixOperator } from '../tgsl/wgslGenerator.ts';
+import type { InfixOperator } from '../tgsl/wgslGenerator.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
