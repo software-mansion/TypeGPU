@@ -23,11 +23,9 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
 ): WgslStruct<TProps> {
   // in the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls
-  const structSchema = <T extends TProps>(instanceProps?: T) =>
+  const structSchema = (instanceProps?: TProps) =>
     Object.fromEntries(
-      Object.entries(props).map((
-        [key, schema],
-      ) => [
+      Object.entries(props).map(([key, schema]) => [
         key,
         instanceProps
           ? schemaCloneWrapper(schema, instanceProps[key])

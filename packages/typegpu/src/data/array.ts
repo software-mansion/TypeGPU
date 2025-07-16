@@ -1,5 +1,6 @@
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
+import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------
@@ -23,8 +24,21 @@ export function arrayOf<TElement extends AnyWgslData>(
 ): WgslArray<TElement> {
   // in the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls
-  const arraySchema = () => {
-    console.log('Schema called!');
+
+  const arraySchema = (elements?: TElement[]) => {
+    if (elements && elements.length !== elementCount) {
+      throw new Error(
+        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} arguments.`,
+      );
+    }
+
+    return Array.from(
+      { length: elementCount },
+      (_, i) =>
+        elements
+          ? schemaCloneWrapper(elementType, elements[i])
+          : schemaDefaultWrapper(elementType),
+    );
   };
   Object.setPrototypeOf(arraySchema, WgslArrayImpl);
 

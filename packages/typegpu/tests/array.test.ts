@@ -107,12 +107,12 @@ describe('array', () => {
   });
 
   it('can be called to create a deep copy of other array', () => {
-    const InnerSchema = d.arrayOf(d.u32, 2);
+    const InnerSchema = d.arrayOf(d.vec3f, 2);
     const OuterSchema = d.arrayOf(InnerSchema, 3);
     const instance = OuterSchema([
-      InnerSchema([1, 2]),
-      InnerSchema([3, 4]),
-      InnerSchema([5, 6]),
+      InnerSchema([d.vec3f(), d.vec3f()]),
+      InnerSchema([d.vec3f(), d.vec3f()]),
+      InnerSchema([d.vec3f(), d.vec3f()]),
     ]);
 
     const clone = OuterSchema(instance);
@@ -127,8 +127,12 @@ describe('array', () => {
   it('throws when invalid number of arguments', () => {
     const ArraySchema = d.arrayOf(d.u32, 2);
 
-    expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot();
-    expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Array schema of 2 elements of type u32 called with 1 arguments.]`,
+    );
+    expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Array schema of 2 elements of type u32 called with 3 arguments.]`,
+    );
   });
 
   it('can be called to create a default value', () => {
