@@ -317,7 +317,7 @@ import ListItem from '../../../components/ListItem.astro';
 :::
 
 ## Index Buffers and drawIndexed API
-TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` indices, which indicate in which order vertices, from a vertex buffer, ought to be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` indices, which indicate in which order vertices ought to be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
 
 When using an index buffer, instead of explicitly listing every vertex for every triangle, you should provide a list of unique vertices in a vertex buffer and then use the index buffer to define how these vertices form primitives.
 ```ts twoslash
