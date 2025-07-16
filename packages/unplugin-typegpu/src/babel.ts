@@ -52,7 +52,7 @@ function functionToTranspiled(
     ),
     types.objectProperty(
       i('ast'),
-      template.expression(embedJSON({ params, body, externalNames }))(),
+      types.stringLiteral(embedJSON({ params, body, externalNames })),
     ),
     types.objectProperty(
       i('externals'),
