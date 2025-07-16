@@ -48,7 +48,11 @@ function functionToTranspiled(
   const metadata = `{
     v: ${FORMAT_VERSION},
     ast: ${embedJSON({ params, body, externalNames })},
-    externals: {${externalNames.join(', ')}},
+    externals: {${
+    externalNames
+      .map((name) => `${name}: ${name}`)
+      .join(', ')
+  }},
   }`;
 
   return types.callExpression(
