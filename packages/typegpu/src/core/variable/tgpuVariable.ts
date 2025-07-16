@@ -64,7 +64,6 @@ export function isVariable<T extends TgpuVar>(
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   declare readonly [$internal]: {
-    // TODO: Maybe unnecessary?
     readonly scope: TScope;
   };
 
