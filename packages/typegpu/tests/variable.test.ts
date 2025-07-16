@@ -8,7 +8,7 @@ import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
-describe('var', () => {
+describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
     const fn1 = tgpu.fn([])`() {
@@ -161,5 +161,34 @@ describe('var', () => {
           var currentValue = atomicLoad(&atomicCounter);
         }`),
     );
+  });
+
+  describe('simulate mode', () => {
+    it('simulates variable incrementing', () => {
+      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+
+      const result = tgpu['~unstable'].simulate(() => {
+        counter.$ += 1;
+        counter.$ += 2;
+        counter.$ += 3;
+        return counter.$;
+      });
+
+      expect(result).toEqual(6);
+    });
+
+    it('does not keep state between simulations', () => {
+      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+
+      const fn = () => ++counter.$;
+
+      const result1 = tgpu['~unstable'].simulate(fn);
+      const result2 = tgpu['~unstable'].simulate(fn);
+      const result3 = tgpu['~unstable'].simulate(fn);
+
+      expect(result1).toEqual(1);
+      expect(result2).toEqual(1);
+      expect(result3).toEqual(1);
+    });
   });
 });

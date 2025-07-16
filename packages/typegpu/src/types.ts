@@ -155,6 +155,9 @@ export interface ResolutionCtx {
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
 
+  pushMode(state: ExecState): void;
+  popMode(expected?: ExecMode | undefined): void;
+
   /**
    * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}

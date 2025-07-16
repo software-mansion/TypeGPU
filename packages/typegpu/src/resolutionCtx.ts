@@ -651,7 +651,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#modeStack.push(mode);
   }
 
-  popMode(expected?: ExecMode) {
+  popMode(expected?: ExecMode | undefined) {
     const mode = this.#modeStack.pop();
     if (expected !== undefined) {
       invariant(mode?.type === expected, 'Unexpected mode');

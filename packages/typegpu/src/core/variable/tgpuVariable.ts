@@ -2,7 +2,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getExecMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { Infer, InferGPU } from '../../shared/repr.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -34,7 +34,7 @@ export interface TgpuVar<
  */
 export function privateVar<TDataType extends AnyData>(
   dataType: TDataType,
-  initialValue?: Infer<TDataType>,
+  initialValue?: InferGPU<TDataType>,
 ): TgpuVar<'private', TDataType> {
   return new TgpuVarImpl('private', dataType, initialValue);
 }
@@ -64,29 +64,37 @@ export function isVariable<T extends TgpuVar>(
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   declare readonly [$internal]: {
+    // TODO: Maybe unnecessary?
     readonly scope: TScope;
   };
 
+  readonly #scope: TScope;
+  readonly #dataType: TDataType;
+  readonly #initialValue: InferGPU<TDataType> | undefined;
+
   constructor(
-    readonly scope: TScope,
-    private readonly _dataType: TDataType,
-    private readonly _initialValue?: Infer<TDataType> | undefined,
+    scope: TScope,
+    dataType: TDataType,
+    initialValue?: InferGPU<TDataType> | undefined,
   ) {
+    this.#scope = scope;
+    this.#dataType = dataType;
+    this.#initialValue = initialValue;
     this[$internal] = { scope };
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
 
-    if (this._initialValue) {
+    if (this.#initialValue) {
       ctx.addDeclaration(
-        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${
-          ctx.resolveValue(this._initialValue, this._dataType)
+        `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)} = ${
+          ctx.resolveValue(this.#initialValue, this.#dataType)
         };`,
       );
     } else {
       ctx.addDeclaration(
-        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)};`,
+        `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)};`,
       );
     }
 
@@ -107,7 +115,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$wgslDataType]: this._dataType,
+        [$wgslDataType]: this.#dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TDataType>;
@@ -125,6 +133,9 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       return this[$gpuValueOf]();
     }
     if (mode.type === 'simulate') {
+      if (!mode.varValueMap.has(this)) { // Not initialized yet
+        mode.varValueMap.set(this, this.#initialValue);
+      }
       return mode.varValueMap.get(this) as InferGPU<TDataType>;
     }
     if (mode.type === 'comptime') {
