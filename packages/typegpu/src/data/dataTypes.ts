@@ -1,3 +1,4 @@
+import { MapValueToSnippet } from '../shared/generators.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,
@@ -24,8 +25,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & TImpl
   & {
     [$internal]: {
-      implementation: TImpl | string;
-      gpuImplementation: () => Snippet;
+      jsImpl: TImpl | string;
+      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
       argTypes: FnArgsConversionHint;
     };
   };

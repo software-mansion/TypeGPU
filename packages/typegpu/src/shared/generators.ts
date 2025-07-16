@@ -21,7 +21,7 @@ export function* naturalsExcept(
   }
 }
 
-type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
+export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -36,11 +36,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
     return jsImpl(...args);
   }) as T;
 
-  (impl as TgpuDualFn<T>)[$internal] = {
-    implementation: jsImpl,
-    gpuImplementation: gpuImpl,
-    argTypes,
-  };
+  (impl as TgpuDualFn<T>)[$internal] = { jsImpl, gpuImpl, argTypes };
 
   setName(impl, name);
 

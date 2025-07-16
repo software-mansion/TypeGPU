@@ -223,7 +223,7 @@ export function generateExpression(
         value: new InfixDispatch(
           target,
           std[property as typeof infixOperators[number]][$internal]
-            .gpuImplementation,
+            .gpuImpl,
         ),
         dataType: UnknownData,
       };

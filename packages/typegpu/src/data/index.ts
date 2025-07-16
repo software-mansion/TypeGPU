@@ -162,6 +162,7 @@ export {
   type AnyAttribute,
   type HasCustomLocation,
   interpolate,
+  invariant,
   type IsBuiltin,
   isBuiltin,
   location,
