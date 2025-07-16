@@ -14,7 +14,6 @@ describe('wgslGenerator', () => {
       const m2 = d.mat3x3f().add(d.mat3x3f()).add(d.mat3x3f());
     });
 
-    console.log(parseResolved({ testFn }));
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
@@ -36,7 +35,6 @@ describe('wgslGenerator', () => {
       const m2 = d.mat3x3f().sub(d.mat3x3f()).sub(d.mat3x3f());
     });
 
-    console.log(parseResolved({ testFn }));
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
@@ -78,6 +76,51 @@ describe('wgslGenerator', () => {
     );
   });
 
+  it('resolves mul infix operator on a function return value', () => {
+    const getVec = tgpu.fn([], d.vec3f)(() => {
+      'kernel';
+      return d.vec3f(1, 2, 3);
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      'kernel';
+      const v1 = getVec().mul(getVec());
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn getVec() -> vec3f {
+        return vec3f(1, 2, 3);
+      }
+
+      fn testFn() {
+        var v1 = (getVec() * getVec());
+      }`),
+    );
+  });
+
+  it('resolves mul infix operator on a struct property', () => {
+    const Struct = d.struct({ vec: d.vec3f });
+
+    const testFn = tgpu.fn([])(() => {
+      'kernel';
+      const s = Struct({ vec: d.vec3f() });
+      const v1 = s.vec.mul(s.vec);
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      struct Struct {
+        vec: vec3f,
+      }
+
+      fn testFn() {
+        var s = Struct(vec3f());
+        var v1 = (s.vec * s.vec);
+      }`),
+    );
+  });
+
   it('resolves div infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().div(1);
@@ -85,7 +128,6 @@ describe('wgslGenerator', () => {
       const v3 = d.vec2f().div(d.vec2f()).div(1);
     });
 
-    console.log(parseResolved({ testFn }));
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {

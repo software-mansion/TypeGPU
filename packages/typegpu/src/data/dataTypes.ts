@@ -1,4 +1,4 @@
-import { MapValueToSnippet } from '../shared/generators.ts';
+import type { MapValueToSnippet } from '../shared/generators.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,

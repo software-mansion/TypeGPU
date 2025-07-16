@@ -2,6 +2,8 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
+const getVec = tgpu.fn([], d.vec3f)(() => d.vec3f(1, 2, 3));
+
 // TODO: replace `s = s &&` with `s &&=` when implemented
 export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
   let s = true;
@@ -46,6 +48,9 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
         .mul(d.mat3x3f(2, 0, 0, 0, 2, 0, 0, 0, 2)),
       d.vec3f(321, 654, 987),
     );
+
+  s = s &&
+    std.allEq(getVec().mul(getVec()), d.vec3f(1, 4, 9));
 
   // add
   s = s &&
