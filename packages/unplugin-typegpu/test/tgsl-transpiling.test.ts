@@ -37,10 +37,13 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         counter.value.y += tmp;
         counter.value.z += d.f32(input.num.x);
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
-          externals: {counter, d},
-        }) && $.f)({}));"
+        v: 1,
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+        externals: {
+          counter: counter,
+          d: d
+        }
+      }) && $.f)({}));"
     `);
   });
 
@@ -69,23 +72,25 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       const b = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const y = 2 + 2;
       }, {
-          v: 1,
-          ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       const cx = 2;
       const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
-          v: 1,
-          ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
-          externals: {cx},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
+        externals: {
+          cx: cx
+        }
+      }) && $.f)({}));
       const d = tgpu.fn([])('() {}');"
     `);
   });
@@ -129,28 +134,28 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       const funcWithAs = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true as boolean;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       const funcWithSatisfies = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true satisfies boolean;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));"
+        v: 1,
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));"
     `);
   });
 });
