@@ -45,7 +45,7 @@ interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
   rows: 2 | 3 | 4;
   columns: 2 | 3 | 4;
-  makeFromElements: new (...args: number[]) => MatBase<ColumnType>;
+  MatImpl: new (...args: number[]) => MatBase<ColumnType>;
 }
 
 type MatConstructor<
@@ -99,7 +99,7 @@ function createMatSchema<
         elements.push(0);
       }
 
-      return new options.makeFromElements(...elements) as ValueType;
+      return new options.MatImpl(...elements) as ValueType;
     },
     // GPU implementation
     (...args) =>
@@ -762,7 +762,7 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
   type: 'mat2x2f',
   rows: 2,
   columns: 2,
-  makeFromElements: mat2x2fImpl,
+  MatImpl: mat2x2fImpl,
 }) as Mat2x2f;
 
 /**
@@ -792,7 +792,7 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
   type: 'mat3x3f',
   rows: 3,
   columns: 3,
-  makeFromElements: mat3x3fImpl,
+  MatImpl: mat3x3fImpl,
 }) as Mat3x3f;
 
 /**
@@ -824,7 +824,7 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   type: 'mat4x4f',
   rows: 4,
   columns: 4,
-  makeFromElements: mat4x4fImpl,
+  MatImpl: mat4x4fImpl,
 }) as Mat4x4f;
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
