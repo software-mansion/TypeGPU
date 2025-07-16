@@ -1,5 +1,6 @@
 import * as tinyest from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+import { WgslArray } from '../../dist/data/index.ts';
 import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -520,7 +521,9 @@ describe('wgslGenerator', () => {
       )[2] as unknown as tinyest.Expression,
     );
 
-    expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
+    expect(d.isWgslArray(res.dataType)).toBe(true);
+    expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
+    expect((res.dataType as unknown as WgslArray).elementType).toBe(d.u32);
   });
 
   it('generates correct code for complex array expressions', () => {
@@ -612,7 +615,9 @@ describe('wgslGenerator', () => {
       (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
     );
 
-    expect(res.dataType).toStrictEqual(d.arrayOf(TestStruct, 2));
+    expect(d.isWgslArray(res.dataType)).toBe(true);
+    expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
+    expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
   });
 
   it('generates correct code when struct clone is used', () => {

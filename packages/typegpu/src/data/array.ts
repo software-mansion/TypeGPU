@@ -1,18 +1,6 @@
-import type {
-  Infer,
-  InferGPU,
-  InferPartial,
-  MemIdentity,
-} from '../shared/repr.ts';
-import type {
-  $gpuRepr,
-  $memIdent,
-  $repr,
-  $reprPartial,
-} from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
-import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes.ts';
+import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -33,43 +21,40 @@ export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
 ): WgslArray<TElement> {
-  return new WgslArrayImpl(elementType, elementCount);
+  // in the schema call, create and return a deep copy
+  // by wrapping all the values in corresponding schema calls
+  const arraySchema = () => {
+    console.log('Schema called!');
+  };
+  Object.setPrototypeOf(arraySchema, WgslArrayImpl);
+
+  if (Number.isNaN(sizeOf(elementType))) {
+    throw new Error('Cannot nest runtime sized arrays.');
+  }
+  arraySchema.elementType = elementType;
+
+  if (!Number.isInteger(elementCount) || elementCount < 0) {
+    throw new Error(
+      `Cannot create array schema with invalid element count: ${elementCount}.`,
+    );
+  }
+  arraySchema.elementCount = elementCount;
+
+  // @ts-ignore
+  return arraySchema as WgslArray<TElement>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
-  public readonly [$internal] = true;
-  public readonly type = 'array';
+const WgslArrayImpl = {
+  [$internal]: true,
+  type: 'array',
+  elementCount: undefined,
+  elementType: undefined,
 
-  // Type-tokens, not available at runtime
-  declare readonly [$repr]: Infer<TElement>[];
-  declare readonly [$gpuRepr]: InferGPU<TElement>[];
-  declare readonly [$reprPartial]: {
-    idx: number;
-    value: InferPartial<TElement>;
-  }[];
-  declare readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
-  // ---
-
-  constructor(
-    public readonly elementType: TElement,
-    public readonly elementCount: number,
-  ) {
-    if (Number.isNaN(sizeOf(elementType))) {
-      throw new Error('Cannot nest runtime sized arrays.');
-    }
-
-    if (!Number.isInteger(elementCount) || elementCount < 0) {
-      throw new Error(
-        `Cannot create array schema with invalid element count: ${elementCount}.`,
-      );
-    }
-  }
-
-  toString() {
+  toString(): string {
     return `arrayOf(${this.elementType})`;
-  }
-}
+  },
+};
