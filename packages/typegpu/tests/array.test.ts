@@ -196,8 +196,6 @@ describe('array', () => {
       return;
     });
 
-    console.log(parseResolved({ testFn }));
-
     expect(parseResolved({ testFn })).toBe(
       parse(`
           fn testFn() {
