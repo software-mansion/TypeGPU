@@ -1,3 +1,4 @@
+import { $internal } from '../shared/symbols.ts';
 import { roundUp } from '../mathUtils.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes.ts';
@@ -106,6 +107,15 @@ function sizeOfUnstruct(data: Unstruct) {
 }
 
 function computeSize(data: object): number {
+  console.log('computing size of:', data);
+  console.log('data symbols', Object.getOwnPropertySymbols(data));
+  console.log(
+    'symbols match',
+    Object.getOwnPropertySymbols(data)[0] === $internal,
+  );
+  console.log('internal symbol', $internal);
+  // return (schema as T)?.[$internal] && (schema as T)?.type === 'struct';
+
   const knownSize = knownSizesMap[(data as BaseData)?.type];
 
   if (knownSize !== undefined) {
