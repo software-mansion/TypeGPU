@@ -199,13 +199,10 @@ export const UnknownData = {
 
 export class InfixDispatch {
   constructor(
-    private lhs: Snippet,
-    private operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+    readonly name: string,
+    readonly lhs: Snippet,
+    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
-
-  applyWith(rhs: Snippet): Snippet {
-    return this.operator(this.lhs, rhs);
-  }
 }
 
 export interface Snippet {

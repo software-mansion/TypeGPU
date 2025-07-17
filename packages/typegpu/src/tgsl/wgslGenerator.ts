@@ -376,9 +376,9 @@ export function generateExpression(
 
     if (id.value instanceof InfixDispatch) {
       if (!argSnippets[0]) {
-        throw new Error('An infix operator was called without any arguments!');
+        throw new Error(`An infix operator '${id.value.name}' was called without any arguments`);
       }
-      return id.value.applyWith(argSnippets[0]);
+      return id.value.operator(id.value.operator.lhs, argSnippets[0]);
     }
 
     if (!isMarkedInternal(id.value)) {

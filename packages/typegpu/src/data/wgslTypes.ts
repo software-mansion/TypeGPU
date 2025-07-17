@@ -25,6 +25,7 @@ export interface BaseData {
   readonly type: string;
   readonly [$repr]: unknown;
 }
+
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
