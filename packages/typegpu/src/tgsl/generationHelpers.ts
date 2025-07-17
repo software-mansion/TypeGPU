@@ -607,6 +607,30 @@ export function coerceToSnippet(value: unknown): Snippet {
     );
   }
 
+ if (
+    typeof value === 'object' &&
+    value !== null
+  ) {
+    const ctx = getResolutionCtx() as GenerationCtx | undefined;
+    if (!ctx) {
+      throw new Error('Tried to coerce object without a context');
+    }
+
+    const structType = ctx.callStack[ctx.callStack.length - 1];
+    if (isWgslStruct(structType)) {
+      const snippetString = Object
+        .keys(structType.propTypes)
+        .map((key) =>
+          coerceToSnippet((value as Record<string, unknown>)[key]).value
+        )
+        .join(', ');
+      
+      console.warn(`Coercing object ${JSON.stringify(snippetString)} to struct of type ${structType.type}`);
+      return snip(snippetString, structType);
+    }
+  } 
+
+
   if (
     typeof value === 'string' || typeof value === 'function' ||
     typeof value === 'object' || typeof value === 'symbol' ||

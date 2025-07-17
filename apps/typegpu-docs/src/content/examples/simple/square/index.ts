@@ -65,6 +65,27 @@ const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
+
+// const outerStruct = { x: 1, y: 2, z: 3 };
+// const testStruct = d.struct({ x: d.u32, y: d.u32, z: d.u32 });
+
+// const testFn = tgpu.fn([])(() => {
+//   const construct = testStruct(outerStruct);
+// });
+
+// const compute = tgpu['~unstable'].computeFn({
+//   in: { gid: d.builtin.globalInvocationId },
+//   workgroupSize: [1, 1, 1],
+// })(() => {
+//   testFn();
+// });
+
+
+// const srajpline = root['~unstable']
+//   .withCompute(compute)
+//   .createPipeline()
+//   .$name('Test');
+
 const pipeline = root['~unstable']
   .withVertex(vertex, { color: vertexLayout.attrib })
   .withFragment(mainFragment, { format: presentationFormat })
@@ -80,6 +101,9 @@ function render() {
       storeOp: 'store',
     })
     .drawIndexed(6);
+
+  // srajpline
+  //   .dispatchWorkgroups(1)
 }
 render();
 
