@@ -174,17 +174,14 @@ describe('array', () => {
     const ArraySchema = d.arrayOf(d.u32, 1);
 
     const testFn = tgpu.fn([])(() => {
-      const myArray = ArraySchema([10]);
+      const myArray = ArraySchema([d.u32(10)]);
       const myClone = ArraySchema(myArray);
       return;
     });
 
-    // In this case, `[10]` itself is wrapped in an `array<i32, 1>`
-    // and then the second cast of `ArraySchema` is stripped
-    // which causes elements to become `i32` instead of `u32`
     expect(parseResolved({ testFn })).toBe(parse(`
       fn testFn() {
-        var myArray = (array<i32, 1>(10));
+        var myArray = (array<u32, 1>(u32(10)));
         var myClone = (myArray);
         return;
       }`));
