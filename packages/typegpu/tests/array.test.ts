@@ -104,13 +104,15 @@ describe('array', () => {
 
     // @ts-expect-error
     (() => ArraySchema([1, 2, 3, d.vec3f()]));
+    // @ts-expect-error
+    (() => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]));
   });
 
   it('can be called to create a deep copy of other array', () => {
     const InnerSchema = d.arrayOf(d.vec3f, 2);
     const OuterSchema = d.arrayOf(InnerSchema, 3);
     const instance = OuterSchema([
-      InnerSchema([d.vec3f(), d.vec3f()]),
+      InnerSchema([d.vec3f(1, 2, 3), d.vec3f()]),
       InnerSchema([d.vec3f(), d.vec3f()]),
       InnerSchema([d.vec3f(), d.vec3f()]),
     ]);
@@ -122,7 +124,7 @@ describe('array', () => {
     expect(clone[0]).not.toBe(instance[0]);
     expect(clone[0]).not.toBe(clone[1]);
     expect(clone[0]?.[0]).not.toBe(instance[0]?.[0]);
-    expect(clone[0]?.[0]).toStrictEqual(d.vec3f());
+    expect(clone[0]?.[0]).toStrictEqual(d.vec3f(1, 2, 3));
   });
 
   it('throws when invalid number of arguments', () => {

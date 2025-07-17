@@ -21,8 +21,8 @@ import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
-  // in the schema call, create and return a deep copy
-  // by wrapping all the values in corresponding schema calls
+  // In the schema call, create and return a deep copy
+  // by wrapping all the values in corresponding schema calls.
   const structSchema = (instanceProps?: TProps) =>
     Object.fromEntries(
       Object.entries(props).map(([key, schema]) => [

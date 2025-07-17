@@ -22,9 +22,8 @@ export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
 ): WgslArray<TElement> {
-  // in the schema call, create and return a deep copy
-  // by wrapping all the values in corresponding schema calls
-
+  // In the schema call, create and return a deep copy
+  // by wrapping all the values in `elementType` schema calls.
   const arraySchema = (elements?: TElement[]) => {
     if (elements && elements.length !== elementCount) {
       throw new Error(
