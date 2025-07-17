@@ -15,7 +15,7 @@ import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import * as std from '../std/index.ts';
+import { add, div, mul, sub } from '../std/numeric.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
@@ -71,14 +71,14 @@ const infixableKind = [
   'mat4x4f',
 ];
 
-const infixOperators = [
-  'add',
-  'sub',
-  'mul',
-  'div',
-] as const;
+const infixOperators = {
+  add,
+  sub,
+  mul,
+  div,
+} as const;
 
-export type InfixOperator = typeof infixOperators[number];
+export type InfixOperator = keyof typeof infixOperators;
 
 type Operator =
   | tinyest.BinaryOperator
@@ -219,13 +219,13 @@ export function generateExpression(
 
     if (
       infixableKind.includes(target.dataType.type) &&
-      infixOperators.includes(property as InfixOperator)
+      property in infixOperators
     ) {
       return {
         value: new InfixDispatch(
           property,
           target,
-          std[property as InfixOperator][$internal].gpuImpl,
+          infixOperators[property as InfixOperator][$internal].gpuImpl,
         ),
         dataType: UnknownData,
       };
