@@ -1215,6 +1215,7 @@ export interface WgslStruct<
   TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  (): Prettify<InferRecord<TProps>>;
   readonly [$internal]: true;
   readonly type: 'struct';
   readonly propTypes: TProps;

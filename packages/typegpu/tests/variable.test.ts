@@ -4,6 +4,7 @@ import type {
   VariableScope,
 } from '../src/core/variable/tgpuVariable.ts';
 import * as d from '../src/data/index.ts';
+import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
@@ -134,6 +135,30 @@ describe('var', () => {
           var pos = boid;
           var vel = boid.vel;
           var velX = boid.vel.x;
+        }`),
+    );
+  });
+
+  it('supports atomic operations on workgroupVar atomics accessed via .$', () => {
+    const atomicCounter = tgpu['~unstable'].workgroupVar(d.atomic(d.u32));
+
+    const func = tgpu.fn([])(() => {
+      const oldValue = std.atomicAdd(atomicCounter.$, 1);
+      const currentValue = std.atomicLoad(atomicCounter.$);
+    });
+
+    const resolved = tgpu.resolve({
+      externals: { func },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toBe(
+      parse(`
+        var<workgroup> atomicCounter: atomic<u32>;
+
+        fn func() {
+          var oldValue = atomicAdd(&atomicCounter, 1);
+          var currentValue = atomicLoad(&atomicCounter);
         }`),
     );
   });
