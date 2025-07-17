@@ -2,10 +2,12 @@
 title: Data Schemas
 ---
 
-Writing a GPU program usually involves sharing data between the host (CPU) and the device (GPU), in this case between JavaScript and WGSL.
-Any misalignments or misinterpretations of data can lead to bugs that are hard to debug (No `console.log` on the GPU, I am afraid).
-While data is strongly typed in WGSL shaders, we give up that type safety completely when writing and reading data in JavaScript/TypeScript.
-This is precisely what TypeGPU data types help with.
+As you might have noticed by now, TypeGPU uses data schemas like `d.u32` or `d.vec3f` in quite a lot of places, like buffer or function definitions.
+
+GPU programs usually involve sharing data between the host (CPU) and the device (GPU).
+In the case of WebGPU, even though data is strongly typed in WGSL shaders, the communication between JavaScript and WGSL involves reading raw bytes from buffers.
+Any misalignments or misinterpretations of data can lead to faulty code that is hard to debug (no `console.log()` on the GPU, I am afraid).
+This is precisely what TypeGPU data schemas help with.
 
 :::note
 Complex data types such as structs require particular byte alignment and padding between fields. TypeGPU does this automatically when transforming JS values into binary.
@@ -13,7 +15,7 @@ Complex data types such as structs require particular byte alignment and padding
 
 ## Examples
 
-Let's look at some examples of defining custom data types using the `typegpu/data` module. If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
+Let's look at some examples of defining a custom compound data type using the `typegpu/data` module. 
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -23,22 +25,21 @@ const Circle = d.struct({
   radius: d.f32,
 });
 
-type Circle = d.Infer<typeof Circle>;
-//   ^?
-
-const redCircle: Circle = {
+const redCircle = Circle({
   centerPos: d.vec3i(2, 4, 0),
   radius: 0.2,
-};
+});
 ```
 
+Make no mistake, `d.vec3i` and `d.f32` are not types, but instead they are JS objects describing WGSL types, just like the `Circle` schema we just created.
+
+If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
 By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type
 definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value
-is inferred automatically, and it's enforced by TypeScript. Thanks to that, whenever we mistakenly set or assume a wrong value for an object,
-we get a type error, avoiding unnecessary debugging afterwards. That's a big improvement to the development process.
+is inferred automatically, and it's enforced by TypeScript. 
 
 ```ts twoslash
-// @errors: 2740 2322 2741 2339
+// @errors: 2740 2322 2339 2345
 
 import * as d from 'typegpu/data';
 
@@ -47,22 +48,20 @@ const Circle = d.struct({
   radius: d.f32,
 });
 
-type Circle = d.Infer<typeof Circle>;
-
 // ---cut---
-const redCircle1: Circle = {
+const redCircle1 = Circle({
   centerPos: d.vec2i(2, 4), 
   radius: 0.2,
-};
+});
 
-const redCircle2: Circle = {
+const redCircle2 = Circle({
   centerPos: d.vec3i(2, 4, 0), 
   radius: "0.2",
-};
+});
 
-const redCircle3: Circle = {
+const redCircle3 = Circle({
   centerPos: d.vec3i(2, 4, 0), 
-};
+});
 
 const diam = redCircle1.rad * 2;
 ```
@@ -71,7 +70,6 @@ Defined data structures automatically measure and hold information about their m
 
 ```ts twoslash
 import * as d from 'typegpu/data';
-import { sizeOf, alignmentOf } from 'typegpu/data';
 
 const Circle = d.struct({
   centerPos: d.vec3i,
@@ -81,11 +79,30 @@ const Circle = d.struct({
 type Circle = d.Infer<typeof Circle>;
 
 // ---cut---
-sizeOf(Circle) // 16
-alignmentOf(Circle) // 16
+d.sizeOf(Circle) // 16
+d.alignmentOf(Circle) // 16
 ```
 
 TypeGPU data types are essential for the library's automated data marshalling capabilities.
+
+:::tip
+If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
+```ts twoslash
+import * as d from 'typegpu/data';
+import { sizeOf, alignmentOf } from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+// ---cut---
+type u32 = d.Infer<typeof d.u32>;
+//   ^?
+type Circle = d.Infer<typeof Circle>;
+//   ^?
+```
+
+:::
 
 ## Scalars, Vectors & Matrices
 
