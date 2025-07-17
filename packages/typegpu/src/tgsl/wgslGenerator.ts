@@ -70,7 +70,7 @@ const infixKinds = [
   'mat4x4f',
 ];
 
-const infixOperators = {
+export const infixOperators = {
   add,
   sub,
   mul,

@@ -2,8 +2,7 @@
  * @module typegpu/data
  */
 
-import * as std from '../std/index.ts';
-import type { InfixOperator } from '../tgsl/wgslGenerator.ts';
+import { type InfixOperator, infixOperators } from '../tgsl/wgslGenerator.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
@@ -17,7 +16,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   const proto = object.prototype as {
     [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
   };
-  const opImpl = std[operator][$internal].jsImpl as (
+  const opImpl = infixOperators[operator][$internal].jsImpl as (
     lhs: Instance,
     rhs: unknown,
   ) => unknown;
