@@ -9,8 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import * as d from '../data/index.ts';
-import { abstractInt } from '../data/numeric.ts';
+import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -92,14 +91,14 @@ function operatorToType<
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
-      return d.bool;
+      return bool;
     }
 
     return lhs;
   }
 
   if (binaryLogicalOps.includes(op)) {
-    return d.bool;
+    return bool;
   }
 
   if (op === '=') {
@@ -155,7 +154,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return snip(expression ? 'true' : 'false', d.bool);
+    return snip(expression ? 'true' : 'false', bool);
   }
 
   if (
@@ -251,7 +250,7 @@ export function generateExpression(
     if (wgsl.isWgslArray(target.dataType) && property === 'length') {
       if (target.dataType.elementCount === 0) {
         // Dynamically-sized array
-        return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
+        return snip(`arrayLength(&${ctx.resolve(target.value)})`, u32);
       }
 
       return snip(String(target.dataType.elementCount), abstractInt);
@@ -526,9 +525,9 @@ export function generateExpression(
 
     const targetType = convertedValues[0]?.dataType as AnyData;
     const type = targetType.type === 'abstractFloat'
-      ? d.f32
+      ? f32
       : targetType.type === 'abstractInt'
-      ? d.i32
+      ? i32
       : targetType;
 
     const typeId = ctx.resolve(type);
@@ -605,7 +604,7 @@ export function generateStatement(
     const [_, cond, cons, alt] = statement;
     const condExpr = generateExpression(ctx, cond);
     let condSnippet = condExpr;
-    const converted = convertToCommonType(ctx, [condExpr], [d.bool]);
+    const converted = convertToCommonType(ctx, [condExpr], [bool]);
     if (converted?.[0]) {
       [condSnippet] = converted;
     }
@@ -703,7 +702,7 @@ ${alternate}`;
       : undefined;
     let condSnippet = conditionExpr;
     if (conditionExpr) {
-      const converted = convertToCommonType(ctx, [conditionExpr], [d.bool]);
+      const converted = convertToCommonType(ctx, [conditionExpr], [bool]);
       if (converted?.[0]) {
         [condSnippet] = converted;
       }
@@ -727,7 +726,7 @@ ${bodyStr}`;
     const condExpr = generateExpression(ctx, condition);
     let condSnippet = condExpr;
     if (condExpr) {
-      const converted = convertToCommonType(ctx, [condExpr], [d.bool]);
+      const converted = convertToCommonType(ctx, [condExpr], [bool]);
       if (converted?.[0]) {
         [condSnippet] = converted;
       }
