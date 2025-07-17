@@ -22,6 +22,9 @@ export interface TgpuVar<
   $: InferGPU<TDataType>;
 
   readonly [$internal]: {
+    // Makes it differentiable on the type level
+    readonly dataType: TDataType;
+    // Makes it differentiable on the type level
     readonly scope: TScope;
   };
 }
@@ -65,6 +68,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   declare readonly [$internal]: {
     readonly scope: TScope;
+    readonly dataType: TDataType;
   };
 
   readonly #scope: TScope;
@@ -79,7 +83,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     this.#scope = scope;
     this.#dataType = dataType;
     this.#initialValue = initialValue;
-    this[$internal] = { scope };
+    this[$internal] = { scope, dataType };
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -125,27 +129,24 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     if (!mode) {
       // TODO: Add stable doc links
       throw new Error(
-        'Cannot call functions that read TypeGPU variables (tgpu.privateVar/tgpu.workgroupVar) top-level (see https://docs.swmansion.com/TypeGPU/error?code=123)',
+        'Cannot call functions that read TypeGPU variables (tgpu.privateVar/tgpu.workgroupVar) top-level (see https://docs.swmansion.com/TypeGPU/err?q=123)',
       );
     }
     if (mode.type === 'codegen') {
       return this[$gpuValueOf]();
     }
     if (mode.type === 'simulate') {
-      if (!mode.varValueMap.has(this)) { // Not initialized yet
-        mode.varValueMap.set(this, this.#initialValue);
+      if (!mode.vars[this.#scope].has(this)) { // Not initialized yet
+        mode.vars[this.#scope].set(this, this.#initialValue);
       }
-      return mode.varValueMap.get(this) as InferGPU<TDataType>;
+      return mode.vars[this.#scope].get(this) as InferGPU<TDataType>;
     }
     if (mode.type === 'comptime') {
       throw new Error(
         'Cannot access TypeGPU variables when executing code at compile-time',
       );
     }
-    return assertExhaustive(
-      mode,
-      'tgpuVariable.ts#TgpuVarImpl/$',
-    );
+    return assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 
   set $(value: InferGPU<TDataType>) {
@@ -162,7 +163,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
     }
     if (mode.type === 'simulate') {
-      mode.varValueMap.set(this, value);
+      mode.vars[this.#scope].set(this, value);
       return;
     }
     if (mode.type === 'comptime') {

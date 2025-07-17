@@ -44,6 +44,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -119,7 +120,14 @@ export class CodegenState {
 
 export class SimulationState {
   readonly type = 'simulate' as const;
-  readonly varValueMap = new WeakMap<TgpuVar, unknown>();
+
+  constructor(
+    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly vars: {
+      private: Map<TgpuVar, unknown>;
+      workgroup: Map<TgpuVar, unknown>;
+    },
+  ) {}
 }
 
 export type ExecState = ComptimeState | CodegenState | SimulationState;

@@ -174,7 +174,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
         return counter.$;
       });
 
-      expect(result).toEqual(6);
+      expect(result.value).toEqual(6);
     });
 
     it('does not keep state between simulations', () => {
@@ -186,9 +186,9 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       const result2 = tgpu['~unstable'].simulate(fn);
       const result3 = tgpu['~unstable'].simulate(fn);
 
-      expect(result1).toEqual(1);
-      expect(result2).toEqual(1);
-      expect(result3).toEqual(1);
+      expect(result1.value).toEqual(1);
+      expect(result2.value).toEqual(1);
+      expect(result3.value).toEqual(1);
     });
   });
 });
