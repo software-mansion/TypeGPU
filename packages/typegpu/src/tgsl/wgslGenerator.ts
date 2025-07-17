@@ -53,7 +53,7 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
-const infixableKind = [
+const infixKinds = [
   'vec2f',
   'vec3f',
   'vec4f',
@@ -218,7 +218,7 @@ export function generateExpression(
     const target = generateExpression(ctx, targetNode);
 
     if (
-      infixableKind.includes(target.dataType.type) &&
+      infixKinds.includes(target.dataType.type) &&
       property in infixOperators
     ) {
       return {
