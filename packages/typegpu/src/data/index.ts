@@ -8,15 +8,22 @@ import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 
-function assignInfixOperator(
-  object: typeof VecBase | typeof MatBase,
+function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
+  object: T,
   operator: InfixOperator,
 ) {
-  // @ts-ignore
-  // biome-ignore lint/suspicious/noExplicitAny: <shh>
-  object.prototype[operator] = function (this: any, other: any) {
-    // @ts-ignore
-    return std[operator][$internal].jsImpl(this, other);
+  type Instance = InstanceType<T>;
+
+  const proto = object.prototype as {
+    [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
+  };
+  const opImpl = std[operator][$internal].jsImpl as (
+    lhs: Instance,
+    rhs: unknown,
+  ) => unknown;
+
+  proto[operator] = function (this: Instance, other: unknown): unknown {
+    return opImpl(this, other);
   };
 }
 
