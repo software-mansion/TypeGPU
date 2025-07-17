@@ -7,13 +7,13 @@ import type {
   InferRecord,
   MemIdentityRecord,
 } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
   $memIdent,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
@@ -24,7 +24,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & TImpl
   & {
     [$internal]: {
-      implementation: TImpl | string;
+      jsImpl: TImpl | string;
+      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
       argTypes: FnArgsConversionHint;
     };
   };
@@ -195,6 +196,14 @@ export const UnknownData = {
   },
 } as UnknownData;
 
+export class InfixDispatch {
+  constructor(
+    readonly name: string,
+    readonly lhs: Snippet,
+    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+  ) {}
+}
+
 export interface Snippet {
   readonly value: unknown;
   readonly dataType: AnyData | UnknownData;
@@ -220,6 +229,8 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
   readonly type: 'decorated';
