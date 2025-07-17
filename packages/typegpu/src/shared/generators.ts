@@ -1,4 +1,8 @@
-import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
+import type {
+  MapValueToSnippet,
+  Snippet,
+  TgpuDualFn,
+} from '../data/dataTypes.ts';
 import { inCodegenMode } from '../execMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import { setName } from './meta.ts';
@@ -20,8 +24,6 @@ export function* naturalsExcept(
     next++;
   }
 }
-
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,

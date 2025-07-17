@@ -1,4 +1,3 @@
-import type { MapValueToSnippet } from '../shared/generators.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,
@@ -230,6 +229,8 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
   readonly type: 'decorated';
