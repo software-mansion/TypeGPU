@@ -108,7 +108,10 @@ function sizeOfUnstruct(data: Unstruct) {
 
 function computeSize(data: object): number {
   console.log('computing size of:', data);
-  console.log('data symbols', Object.getOwnPropertySymbols(data));
+  console.log('data symbols', [
+    ...Object.getOwnPropertySymbols(data),
+    ...Object.getOwnPropertyNames(Object.getPrototypeOf(data)),
+  ]);
   console.log(
     'symbols match',
     Object.getOwnPropertySymbols(data)[0] === $internal,
