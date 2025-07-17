@@ -335,7 +335,7 @@ export function generateExpression(
       }
 
       // The type of the return value is the struct itself
-      return snip(`(${argValues.join(', ')})`, id.value);
+      return snip(`${argValues.join(', ')}`, id.value);
     }
 
     if (!isMarkedInternal(id.value)) {

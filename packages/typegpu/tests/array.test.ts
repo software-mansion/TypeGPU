@@ -181,8 +181,8 @@ describe('array', () => {
 
     expect(parseResolved({ testFn })).toBe(parse(`
       fn testFn() {
-        var myArray = (array<u32, 1>(u32(10)));
-        var myClone = (myArray);
+        var myArray = array<u32, 1>(u32(10));
+        var myClone = myArray;
         return;
       }`));
   });
@@ -201,8 +201,8 @@ describe('array', () => {
     expect(parseResolved({ testFn })).toBe(
       parse(`
           fn testFn() {
-            var myArrays = array<array<i32, 1>, 1>((array<i32, 1>(10)));
-            var myClone = (myArrays[0]);
+            var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10));
+            var myClone = myArrays[0];
             return;
           }`),
     );
