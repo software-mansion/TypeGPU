@@ -1,6 +1,6 @@
 {
   "name": "tgpu-gen",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A CLI tool for automatic TypeGPU code generation.",
   "license": "MIT",
   "bin": {
@@ -18,11 +18,11 @@
     "wgsl_reflect": "git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.5.9"
+    "typegpu": "workspace:^0.6.0"
   },
-  "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
+  "files": ["README.md", "LICENSE", "package.json", "**/*.mjs"],
   "devDependencies": {
-    "vitest": "catalog:"
+    "vitest": "catalog:test"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }

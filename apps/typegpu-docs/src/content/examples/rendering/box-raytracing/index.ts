@@ -1,3 +1,4 @@
+import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import {
@@ -11,7 +12,6 @@ import {
   pow,
   sub,
 } from 'typegpu/std';
-import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 import { mat4 } from 'wgpu-matrix';
 
 // init canvas and values
@@ -71,36 +71,32 @@ const IntersectionStruct = d.struct({
 
 // buffers
 
-const boxMatrixBuffer = root
-  .createBuffer(
-    d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
-    Array.from(
-      { length: X },
-      (_, i) =>
-        Array.from(
-          { length: Y },
-          (_, j) =>
-            Array.from({ length: Z }, (_, k) => ({
-              isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-              albedo: srgbToLinear(
-                d.vec3f(i / X, j / Y, k / Z * 0.8 + 0.1 + (X - i) / X * 0.6),
-              ),
-            })),
-        ),
-    ),
-  )
-  .$name('box_array')
-  .$usage('storage');
-const boxMatrixReadonly = boxMatrixBuffer.as('readonly');
+const boxMatrix = root.createReadonly(
+  d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
+  Array.from(
+    { length: X },
+    (_, i) =>
+      Array.from(
+        { length: Y },
+        (_, j) =>
+          Array.from({ length: Z }, (_, k) => ({
+            isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
+            albedo: srgbToLinear(
+              d.vec3f(i / X, j / Y, k / Z * 0.8 + 0.1 + (X - i) / X * 0.6),
+            ),
+          })),
+      ),
+  ),
+);
 
-const uniforms = root['~unstable'].createUniform(Uniforms);
+const uniforms = root.createUniform(Uniforms);
 
 // functions
 
-const getBoxIntersection = tgpu['~unstable'].fn(
+const getBoxIntersection = tgpu.fn(
   [AxisAlignedBounds, Ray],
   IntersectionStruct,
-) /* wgsl */`(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
+) /* wgsl */`(bounds, ray) {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -158,8 +154,7 @@ const getBoxIntersection = tgpu['~unstable'].fn(
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
 }`
-  .$uses({ AxisAlignedBounds, Ray, IntersectionStruct })
-  .$name('box_intersection');
+  .$uses({ IntersectionStruct });
 
 const Varying = {
   rayWorldOrigin: d.vec3f,
@@ -175,8 +170,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     d.vec2f(-1, 3),
   ];
 
-  const rayWorldOrigin =
-    mul(uniforms.value.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
+  const rayWorldOrigin = mul(uniforms.$.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
 
   return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
 });
@@ -185,17 +179,17 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
-  const boxSize3 = d.vec3f(d.f32(uniforms.value.boxSize));
+  const boxSize3 = d.vec3f(d.f32(uniforms.$.boxSize));
   const halfBoxSize3 = mul(0.5, boxSize3);
-  const halfCanvasDims = mul(0.5, uniforms.value.canvasDims);
+  const halfCanvasDims = mul(0.5, uniforms.$.canvasDims);
 
-  const minDim = min(uniforms.value.canvasDims.x, uniforms.value.canvasDims.y);
+  const minDim = min(uniforms.$.canvasDims.x, uniforms.$.canvasDims.y);
   const viewCoords = div(sub(input.position.xy, halfCanvasDims), minDim);
 
   const ray = Ray({
     origin: input.rayWorldOrigin,
     direction: mul(
-      uniforms.value.invViewMatrix,
+      uniforms.$.invViewMatrix,
       d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0),
     ).xyz,
   });
@@ -221,7 +215,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   for (let i = 0; i < X; i++) {
     for (let j = 0; j < Y; j++) {
       for (let k = 0; k < Z; k++) {
-        if (boxMatrixReadonly.value[i][j][k].isActive === 0) {
+        if (boxMatrix.$[i][j][k].isActive === 0) {
           continue;
         }
 
@@ -237,13 +231,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
         if (intersection.intersects) {
           const boxDensity = max(0, intersection.tMax - intersection.tMin) *
-            pow(uniforms.value.materialDensity, 2);
+            pow(uniforms.$.materialDensity, 2);
           density += boxDensity;
           invColor = add(
             invColor,
             mul(
               boxDensity,
-              div(d.vec3f(1), boxMatrixReadonly.value[i][j][k].albedo),
+              div(d.vec3f(1), boxMatrix.$[i][j][k].albedo),
             ),
           );
           tMin = intersection.tMin;
@@ -322,7 +316,7 @@ onFrame((deltaTime) => {
     Math.sin(frame) * cameraDistance + cameraAnchor.z,
   );
 
-  uniforms.buffer.writePartial({
+  uniforms.writePartial({
     canvasDims: d.vec2f(width, height),
     invViewMatrix: mat4.aim(
       cameraPosition,
@@ -371,7 +365,7 @@ export const controls = {
     min: 0.1,
     max: 1,
     onSliderChange: (value: number) => {
-      uniforms.buffer.writePartial({
+      uniforms.writePartial({
         boxSize: value,
       });
     },
@@ -382,7 +376,7 @@ export const controls = {
     min: 0.2,
     max: 2,
     onSliderChange: (value: number) => {
-      uniforms.buffer.writePartial({
+      uniforms.writePartial({
         materialDensity: value,
       });
     },

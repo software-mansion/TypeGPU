@@ -16,6 +16,9 @@ import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
 
+// biome-ignore lint/suspicious/noExplicitAny: it exists, I swear
+(globalThis as any).__TYPEGPU_MEASURE_PERF__ = true;
+
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);

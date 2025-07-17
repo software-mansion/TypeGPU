@@ -23,24 +23,24 @@ import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, ta
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh3 = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((v) => {
-  return select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)));
-});
+const safeTanh3 = tgpu.fn([d.vec3f], d.vec3f)((v) =>
+  select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)))
+);
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.
 const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
-const timeUniform = root['~unstable'].createUniform(d.f32);
-const aspectRatioUniform = root['~unstable'].createUniform(d.f32);
+const time = root.createUniform(d.f32);
+const aspectRatio = root.createUniform(d.f32);
 
-const cameraPosUniform = root['~unstable'].createUniform(d.vec2f);
-const tunnelDepthUniform = root['~unstable'].createUniform(d.i32);
-const bigStripsUniform = root['~unstable'].createUniform(d.f32);
-const smallStripsUniform = root['~unstable'].createUniform(d.f32);
-const dollyZoomUniform = root['~unstable'].createUniform(d.f32);
-const colorUniform = root['~unstable'].createUniform(d.vec3f);
+const cameraPos = root.createUniform(d.vec2f);
+const tunnelDepth = root.createUniform(d.i32);
+const bigStrips = root.createUniform(d.f32);
+const smallStrips = root.createUniform(d.f32);
+const dollyZoom = root.createUniform(d.f32);
+const color = root.createUniform(d.vec3f);
 
 const tunnelRadius = 11;
 const moveSpeed = 5;
@@ -49,34 +49,26 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const t = timeUniform.value;
-  const tunnelDepth = tunnelDepthUniform.value;
-  const dollyZoom = dollyZoomUniform.value;
-  const cameraPos = cameraPosUniform.value;
-  const color = colorUniform.value;
-  const bigStrips = bigStripsUniform.value;
-  const smallStrips = smallStripsUniform.value;
-
-  const ratio = d.vec2f(aspectRatioUniform.value, 1);
+  const ratio = d.vec2f(aspectRatio.$, 1);
   const dir = normalize(d.vec3f(mul(uv, ratio), -1));
 
   let z = d.f32(0);
   let acc = d.vec3f();
-  for (let i = 0; i < tunnelDepth; i++) {
+  for (let i = 0; i < tunnelDepth.$; i++) {
     const p = mul(z, dir);
-    p.x += cameraPos.x;
-    p.y += cameraPos.y;
+    p.x += cameraPos.$.x;
+    p.y += cameraPos.$.y;
 
     const coords = d.vec3f(
-      atan2(p.y, p.x) * bigStrips + t,
-      p.z * dollyZoom - moveSpeed * t,
+      atan2(p.y, p.x) * bigStrips.$ + time.$,
+      p.z * dollyZoom.$ - moveSpeed * time.$,
       length(p.xy) - tunnelRadius,
     );
 
-    const coords2 = sub(cos(add(coords, cos(mul(coords, smallStrips)))), 1.);
+    const coords2 = sub(cos(add(coords, cos(mul(coords, smallStrips.$)))), 1.);
     const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
 
-    acc = add(acc, mul(sub(1.2, cos(mul(p.z, color))), 1 / dd));
+    acc = add(acc, mul(sub(1.2, cos(mul(p.z, color.$))), 1 / dd));
     z += dd;
   }
 
@@ -116,9 +108,13 @@ const pipeline = root['~unstable']
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
-function draw() {
-  aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
-  timeUniform.write((performance.now() * 0.001) % 1000);
+let isRunning = true;
+
+function draw(timestamp: number) {
+  if (!isRunning) return;
+
+  aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
+  time.write((timestamp * 0.001) % 1000);
 
   pipeline
     .withColorAttachment({
@@ -131,7 +127,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
@@ -142,7 +138,7 @@ export const controls = {
     max: 200,
     step: 1,
     onSliderChange(v: number) {
-      tunnelDepthUniform.write(v);
+      tunnelDepth.write(v);
     },
   },
   'big strips': {
@@ -151,7 +147,7 @@ export const controls = {
     max: 60,
     step: 0.01,
     onSliderChange(v: number) {
-      bigStripsUniform.write(v);
+      bigStrips.write(v);
     },
   },
   'small strips': {
@@ -160,7 +156,7 @@ export const controls = {
     max: 10,
     step: 0.01,
     onSliderChange(v: number) {
-      smallStripsUniform.write(v);
+      smallStrips.write(v);
     },
   },
   'dolly zoom': {
@@ -169,7 +165,7 @@ export const controls = {
     max: 1,
     step: 0.01,
     onSliderChange(v: number) {
-      dollyZoomUniform.write(v);
+      dollyZoom.write(v);
     },
   },
   'camera pos': {
@@ -178,18 +174,19 @@ export const controls = {
     initial: [0, -7],
     step: [0.01, 0.01],
     onVectorSliderChange(v: [number, number]) {
-      cameraPosUniform.write(d.vec2f(...v));
+      cameraPos.write(d.vec2f(...v));
     },
   },
   color: {
     initial: [0.2, 0, 0.3],
     onColorChange(value: readonly [number, number, number]) {
-      colorUniform.write(d.vec3f(...value));
+      color.write(d.vec3f(...value));
     },
   },
 };
 
 export function onCleanup() {
+  isRunning = false;
   root.destroy();
 }
 
