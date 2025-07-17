@@ -1,4 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { clamp, smoothstepScalar } from './numberOps.ts';
 import {
   vec2b,
   vec2f,
@@ -37,9 +38,6 @@ const dotVec3 = (lhs: v3, rhs: v3) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 const dotVec4 = (lhs: v4, rhs: v4) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
-
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(Math.max(low, value), high);
 
 type UnaryOp = (a: number) => number;
 type BinaryOp = (a: number, b: number) => number;
@@ -161,6 +159,42 @@ const binaryComponentWise4x4f =
       binaryComponentWise4f(op)(a_[3], b_[3]),
     );
   };
+
+type TernaryOp = (a: number, b: number, c: number) => number;
+
+const ternaryComponentWise2f =
+  (op: TernaryOp) => (a: wgsl.v2f, b: wgsl.v2f, c: wgsl.v2f) =>
+    vec2f(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise2h =
+  (op: TernaryOp) => (a: wgsl.v2h, b: wgsl.v2h, c: wgsl.v2h) =>
+    vec2h(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise3f =
+  (op: TernaryOp) => (a: wgsl.v3f, b: wgsl.v3f, c: wgsl.v3f) =>
+    vec3f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise3h =
+  (op: TernaryOp) => (a: wgsl.v3h, b: wgsl.v3h, c: wgsl.v3h) =>
+    vec3h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise4f =
+  (op: TernaryOp) => (a: wgsl.v4f, b: wgsl.v4f, c: wgsl.v4f) =>
+    vec4f(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
+    );
+
+const ternaryComponentWise4h =
+  (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: wgsl.v4h) =>
+    vec4h(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
+    );
 
 export const NumberOps = {
   divInteger: (lhs: number, rhs: number) => {
@@ -444,6 +478,25 @@ export const VectorOps = {
   } as Record<
     VecKind | MatKind,
     <T extends vBase | mBase>(lhs: T, rhs: T) => T
+  >,
+
+  smoothstep: {
+    vec2f: ternaryComponentWise2f(smoothstepScalar),
+    vec2h: ternaryComponentWise2h(smoothstepScalar),
+    vec3f: ternaryComponentWise3f(smoothstepScalar),
+    vec3h: ternaryComponentWise3h(smoothstepScalar),
+    vec4f: ternaryComponentWise4f(smoothstepScalar),
+    vec4h: ternaryComponentWise4h(smoothstepScalar),
+  } as Record<
+    VecKind,
+    <T extends vBase>(
+      edge0: T,
+      edge1: T,
+      x: T,
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2f
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3f
+      : T extends wgsl.AnyVec4Instance ? wgsl.v4f
+      : wgsl.AnyVecInstance
   >,
 
   addMixed: {
