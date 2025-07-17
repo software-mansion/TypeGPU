@@ -1,5 +1,5 @@
 import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
-import { inGPUMode } from '../gpuMode.ts';
+import { inCodegenMode } from '../execMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import { $internal } from './symbols.ts';
 import { setName } from './meta.ts';
@@ -30,7 +30,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
   argTypes?: FnArgsConversionHint,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
-    if (inGPUMode()) {
+    if (inCodegenMode()) {
       return gpuImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
     }
     return jsImpl(...args);

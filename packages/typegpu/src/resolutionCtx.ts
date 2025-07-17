@@ -18,7 +18,7 @@ import {
 } from './data/dataTypes.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
+import { popMode, provideCtx, pushMode } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
@@ -494,14 +494,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      // Derived computations are always done on the CPU
-      pushMode(RuntimeMode.CPU);
+      // Derived computations are always done at COMPTIME
+      pushMode('comptime');
 
       let result: T;
       try {
         result = derived['~compute']();
       } finally {
-        popMode(RuntimeMode.CPU);
+        popMode('comptime');
       }
 
       // We know which slots the item used while resolving
@@ -590,11 +590,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if ((item && typeof item === 'object') || typeof item === 'function') {
       if (this._itemStateStack.itemDepth === 0) {
         try {
-          pushMode(RuntimeMode.GPU);
+          pushMode('codegen');
           const result = provideCtx(this, () => this._getOrInstantiate(item));
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
-          popMode(RuntimeMode.GPU);
+          popMode('codegen');
         }
       }
 

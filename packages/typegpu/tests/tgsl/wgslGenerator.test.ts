@@ -4,7 +4,7 @@ import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
-import * as gpu from '../../src/gpuMode.ts';
+import * as exec from '../../src/execMode.ts';
 import tgpu, { StrictNameRegistry } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
@@ -34,13 +34,13 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    gpu.pushMode(gpu.RuntimeMode.GPU);
+    exec.pushMode('codegen');
     ctx = createContext();
-    vi.spyOn(gpu, 'getResolutionCtx').mockReturnValue(ctx);
+    vi.spyOn(exec, 'getResolutionCtx').mockReturnValue(ctx);
   });
 
   afterEach(() => {
-    gpu.popMode(gpu.RuntimeMode.GPU);
+    exec.popMode('codegen');
   });
 
   it('creates a simple return statement', () => {
@@ -613,6 +613,60 @@ describe('wgslGenerator', () => {
     );
 
     expect(res.dataType).toStrictEqual(d.arrayOf(TestStruct, 2));
+  });
+
+  it('generates correct code when struct clone is used', () => {
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.f32,
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const myStruct = TestStruct({ x: 1, y: 2 });
+      const myClone = TestStruct(myStruct);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+      struct TestStruct {
+        x: u32,
+        y: f32,
+      }
+
+      fn testFn() {
+        var myStruct = TestStruct(1, 2);
+        var myClone = (myStruct);
+        return;
+      }`),
+    );
+  });
+
+  it('generates correct code when complex struct clone is used', () => {
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.f32,
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const myStructs = [TestStruct({ x: 1, y: 2 })] as const;
+      const myClone = TestStruct(myStructs[0]);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+      struct TestStruct {
+        x: u32,
+        y: f32,
+      }
+
+      fn testFn() {
+        var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
+        var myClone = (myStructs[0]);
+        return;
+      }`),
+    );
   });
 
   it('generates correct code for array expressions with derived elements', () => {

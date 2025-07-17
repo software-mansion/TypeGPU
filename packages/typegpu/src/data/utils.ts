@@ -1,16 +1,31 @@
 /**
  * A wrapper for `schema(item)` call.
- * Logs a warning if the schema is not callable.
+ * Throws an error if the schema is not callable.
  */
-export function schemaCallWrapper<T>(schema: unknown, item: T): T {
-  let result = item;
+export function schemaCloneWrapper<T>(schema: unknown, item: T): T {
   try {
-    result = (
-      schema as unknown as ((item: typeof result) => typeof result)
-    )(item);
+    return (schema as unknown as ((item: T) => T))(item);
   } catch {
     const maybeType = (schema as { type: string })?.type;
-    console.warn(`Schema of type ${maybeType ?? '<unknown>'} is not callable.`);
+    throw new Error(
+      `Schema of type ${
+        maybeType ?? '<unknown>'
+      } is not callable or was called with invalid arguments.`,
+    );
   }
-  return result;
+}
+
+/**
+ * A wrapper for `schema()` call.
+ * Throws an error if the schema is not callable.
+ */
+export function schemaDefaultWrapper<T>(schema: unknown): T {
+  try {
+    return (schema as unknown as (() => T))();
+  } catch {
+    const maybeType = (schema as { type: string })?.type;
+    throw new Error(
+      `Schema of type ${maybeType ?? '<unknown>'} is not callable.`,
+    );
+  }
 }

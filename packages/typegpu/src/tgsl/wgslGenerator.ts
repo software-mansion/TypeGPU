@@ -11,6 +11,7 @@ import {
 import * as d from '../data/index.ts';
 import { abstractInt } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
+import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
@@ -24,7 +25,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import { ResolutionError } from '../errors.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -314,12 +314,27 @@ export function generateExpression(
 
     if (wgsl.isWgslStruct(id.value)) {
       const resolvedId = ctx.resolve(id.value);
+      // There are three ways a struct can be called that we support:
+      // - with no arguments `Struct()`,
+      // - with an objectExpr `Struct({ x: 1, y: 2 })`,
+      // - with another struct `Struct(otherStruct)`.
+      // In the last case, we assume the `otherStruct` is defined on TGSL side
+      // and we just strip the constructor to let the assignment operator clone it.
+      if (args.length === 0) {
+        return snip(`${resolvedId}()`, id.value);
+      }
 
-      return snip(
-        `${resolvedId}(${argValues.join(', ')})`,
-        // Unintuitive, but the type of the return value is the struct itself
-        id.value,
-      );
+      if (
+        args.length === 1 &&
+        Array.isArray(args[0]) &&
+        args[0].length > 0 &&
+        args[0][0] === NODE.objectExpr
+      ) {
+        return snip(`${resolvedId}(${argValues.join(', ')})`, id.value);
+      }
+
+      // The type of the return value is the struct itself
+      return snip(`(${argValues.join(', ')})`, id.value);
     }
 
     if (!isMarkedInternal(id.value)) {

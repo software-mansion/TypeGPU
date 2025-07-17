@@ -57,13 +57,13 @@ export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
 
 function defineBuiltin<T extends Decorated | LooseDecorated>(
   dataType: AnyWgslData,
-  value: T['attribs'][0] extends { value: infer TValue } ? TValue : never,
+  value: T['attribs'][0] extends { params: [infer TValue] } ? TValue : never,
 ): T {
   return attribute(dataType, {
     [$internal]: true,
     type: '@builtin',
     // biome-ignore lint/suspicious/noExplicitAny: it's fine
-    value: value as any,
+    params: [value as any],
   }) as T;
 }
 

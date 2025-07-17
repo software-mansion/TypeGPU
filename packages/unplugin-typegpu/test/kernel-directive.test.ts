@@ -23,10 +23,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({});
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -57,10 +57,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       shell((a, b) => {
         return a + b;
       });"
@@ -91,10 +91,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       shell(function (a, b) {
         return a + b;
       });"
@@ -125,10 +125,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -156,10 +156,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({});
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({});
       function addCPU(a, b) {
         return a + b;
       }"
@@ -180,10 +180,10 @@ describe('[BABEL] "kernel" directive', () => {
 
         return a + b;
       }, {
-          v: 1,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({});
+        v: 1,
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        externals: {}
+      }) && $.f)({});
       ;"
     `);
   });
