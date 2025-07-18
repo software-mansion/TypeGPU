@@ -588,11 +588,9 @@ export const mod = createDualImpl(
     if (isVecInstance(a) && isVecInstance(b)) {
       // vector % vector
       return VectorOps.mod[a.kind](a, b) as T;
-    } 
+    }
     throw new Error('Mod called with invalid arguments.');
   },
-
-
   // GPU implementation
   (a, b) => {
     const returnType = isSnippetNumeric(a)
@@ -608,7 +606,6 @@ export const mod = createDualImpl(
   },
   'mod',
 );
-
 
 /**
  * @privateRemarks
