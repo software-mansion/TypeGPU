@@ -162,102 +162,57 @@ const binaryComponentWise4x4f =
     );
   };
 
-const mixedComponentWise2f =
-  (op: BinaryOp) => (a: wgsl.v2f | number, b: wgsl.v2f | number) =>
-    vec2f(
+const createMixedComponentWise2 = <T extends { x: number; y: number }>(
+  vecConstructor: (x: number, y: number) => T,
+) => {
+  return (op: BinaryOp) => (a: T | number, b: T | number) =>
+    vecConstructor(
       op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
       op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
     );
+};
 
-const mixedComponentWise2h =
-  (op: BinaryOp) => (a: wgsl.v2h | number, b: wgsl.v2h | number) =>
-    vec2h(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-    );
+const mixedComponentWise2f = createMixedComponentWise2(vec2f);
+const mixedComponentWise2h = createMixedComponentWise2(vec2h);
+const mixedComponentWise2i = createMixedComponentWise2(vec2i);
+const mixedComponentWise2u = createMixedComponentWise2(vec2u);
 
-const mixedComponentWise2i =
-  (op: BinaryOp) => (a: wgsl.v2i | number, b: wgsl.v2i | number) =>
-    vec2i(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-    );
-
-const mixedComponentWise2u =
-  (op: BinaryOp) => (a: wgsl.v2u | number, b: wgsl.v2u | number) =>
-    vec2u(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-    );
-
-const mixedComponentWise3f =
-  (op: BinaryOp) => (a: wgsl.v3f | number, b: wgsl.v3f | number) =>
-    vec3f(
+const createMixedComponentWise3 = <
+  T extends { x: number; y: number; z: number },
+>(
+  vecConstructor: (x: number, y: number, z: number) => T,
+) => {
+  return (op: BinaryOp) => (a: T | number, b: T | number) =>
+    vecConstructor(
       op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
       op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
       op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
     );
+};
 
-const mixedComponentWise3h =
-  (op: BinaryOp) => (a: wgsl.v3h | number, b: wgsl.v3h | number) =>
-    vec3h(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-    );
+const mixedComponentWise3f = createMixedComponentWise3(vec3f);
+const mixedComponentWise3h = createMixedComponentWise3(vec3h);
+const mixedComponentWise3i = createMixedComponentWise3(vec3i);
+const mixedComponentWise3u = createMixedComponentWise3(vec3u);
 
-const mixedComponentWise3i =
-  (op: BinaryOp) => (a: wgsl.v3i | number, b: wgsl.v3i | number) =>
-    vec3i(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-    );
-
-const mixedComponentWise3u =
-  (op: BinaryOp) => (a: wgsl.v3u | number, b: wgsl.v3u | number) =>
-    vec3u(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-    );
-
-const mixedComponentWise4f =
-  (op: BinaryOp) => (a: wgsl.v4f | number, b: wgsl.v4f | number) =>
-    vec4f(
+const createMixedComponentWise4 = <
+  T extends { x: number; y: number; z: number; w: number },
+>(
+  vecConstructor: (x: number, y: number, z: number, w: number) => T,
+) => {
+  return (op: BinaryOp) => (a: T | number, b: T | number) =>
+    vecConstructor(
       op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
       op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
       op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
       op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
     );
+};
 
-const mixedComponentWise4h =
-  (op: BinaryOp) => (a: wgsl.v4h | number, b: wgsl.v4h | number) =>
-    vec4h(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-      op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
-    );
-
-const mixedComponentWise4i =
-  (op: BinaryOp) => (a: wgsl.v4i | number, b: wgsl.v4i | number) =>
-    vec4i(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-      op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
-    );
-
-const mixedComponentWise4u =
-  (op: BinaryOp) => (a: wgsl.v4u | number, b: wgsl.v4u | number) =>
-    vec4u(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-      op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
-    );
-
+const mixedComponentWise4f = createMixedComponentWise4(vec4f);
+const mixedComponentWise4h = createMixedComponentWise4(vec4h);
+const mixedComponentWise4i = createMixedComponentWise4(vec4i);
+const mixedComponentWise4u = createMixedComponentWise4(vec4u);
 export const NumberOps = {
   divInteger: (lhs: number, rhs: number) => {
     if (rhs === 0) {
