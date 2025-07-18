@@ -187,6 +187,25 @@ describe('TgpuBufferMutable', () => {
         }`),
     );
   });
+
+  describe('simulate mode', () => {
+    it('allows accessing .$ in simulate mode', ({ root }) => {
+      const buffer = root.createBuffer(d.u32, 0).$usage('storage');
+      const mutable = buffer.as('mutable');
+
+      const incrementThreeTimes = tgpu.fn([])(() => {
+        mutable.$++;
+        mutable.$++;
+        mutable.$++;
+      });
+
+      const result = tgpu['~unstable'].simulate(() => {
+        incrementThreeTimes();
+        return mutable.$;
+      });
+      expect(result.value).toBe(3);
+    });
+  });
 });
 
 describe('TgpuBufferReadonly', () => {

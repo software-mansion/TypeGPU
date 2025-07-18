@@ -175,6 +175,38 @@ class TgpuFixedBufferImpl<
   get value(): InferGPU<TData> {
     return this.$;
   }
+
+  set $(value: InferGPU<TData>) {
+    const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
+    if (mode.type === 'normal') {
+      throw new IllegalBufferAccessError(
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this.buffer)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : '.$ and .value are inaccessible during normal JS execution. Try `.write()`',
+      );
+    }
+
+    if (mode.type === 'codegen') {
+      // The WGSL generator handles buffer assignment, and does not defer to
+      // whatever's being assigned to to generate the WGSL.
+      throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
+    }
+
+    if (mode.type === 'simulate') {
+      mode.buffers.set(this.buffer, value as InferGPU<TData>);
+      return;
+    }
+
+    assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
+  }
+
+  set value(value: InferGPU<TData>) {
+    this.$ = value;
+  }
 }
 
 export class TgpuLaidOutBufferImpl<
