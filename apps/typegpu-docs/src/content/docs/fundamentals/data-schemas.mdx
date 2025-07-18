@@ -161,6 +161,7 @@ const VectorSchema = d.vec2f;
 const vectorInstance = VectorSchema(1, 2);
 //    ^?
 ```
+:::
 
 Matrices work in a similar way. 
 For matrix WGSL types `mat2x2f`, `mat3x3f` and `mat4x4f`, TypeGPU has `d.mat2x2f`, `d.mat3x3f` and `d.mat4x4f` schemas respectively.
@@ -188,6 +189,51 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 :::
 
 ### Operators
+
+As you may know, it is currently impossible to overload operators in JavaScript.
+For that reason, TypeGPU provides `std` functions imitating those.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+const vec1 = d.vec3f(1, 2, 3);
+const vec2 = std.add(vec1, 3); // d.vec3f(4, 5, 6)
+//    ^?
+
+const mat = d.mat3x3f(
+  2, 0, 0,
+  0, 4, 0,
+  0, 0, 8,
+);
+
+const vec1mat = std.mul(vec2, mat); // d.vec3f(8, 20, 48);
+//    ^?
+
+const comp = std.le(d.vec3f(2, 3, 4), d.vec3f(3)); // d.vec3b(true, true, false)
+//    ^?
+```
+
+Currently implemented operators include:
+
+- arithmetic operators `add`, `sub`, `mul`, `div`, `mod`,
+- comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
+- logical operators `not`, `and`, `or`.
+
+Remember, that in case of scalars, you can still use `+`, `<=`, `!` etc., 
+the purpose of these `std` functions is to enable working on vectors and matrices.
+
+For arithmetic operators, you can also use infix notation.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const v1 = d.vec2f(1, 2);
+const v2 = d.vec2f(3, 4);
+
+const addition = v1.add(v2); // same as std.add(v1, v2)
+const multiplication = v1.mul(v2).mul(v2); // same as std.mul(std.mul(v1, v2), v2)
+```
 
 ## Structs
 
