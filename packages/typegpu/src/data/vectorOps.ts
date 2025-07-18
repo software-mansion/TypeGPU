@@ -162,6 +162,90 @@ const binaryComponentWise4x4f =
     );
   };
 
+const mixedComponentWise2f = (op: BinaryOp) => (a: wgsl.v2f | number, b: wgsl.v2f | number) =>
+  vec2f(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+  );
+
+const mixedComponentWise2h = (op: BinaryOp) => (a: wgsl.v2h | number, b: wgsl.v2h | number) =>
+  vec2h(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+  );
+
+const mixedComponentWise2i = (op: BinaryOp) => (a: wgsl.v2i | number, b: wgsl.v2i | number) =>
+  vec2i(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+  );
+
+const mixedComponentWise2u = (op: BinaryOp) => (a: wgsl.v2u | number, b: wgsl.v2u | number) =>
+  vec2u(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+  );
+
+const mixedComponentWise3f = (op: BinaryOp) => (a: wgsl.v3f | number, b: wgsl.v3f | number) =>
+  vec3f(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+  );
+
+const mixedComponentWise3h = (op: BinaryOp) => (a: wgsl.v3h | number, b: wgsl.v3h | number) =>
+  vec3h(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+  );  
+
+const mixedComponentWise3i = (op: BinaryOp) => (a: wgsl.v3i | number, b: wgsl.v3i | number) =>
+  vec3i(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+  );
+
+const mixedComponentWise3u = (op: BinaryOp) => (a: wgsl.v3u | number, b: wgsl.v3u | number) =>
+  vec3u(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+  );
+
+const mixedComponentWise4f = (op: BinaryOp) => (a: wgsl.v4f | number, b: wgsl.v4f | number) =>
+  vec4f(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+    op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
+  );
+
+const mixedComponentWise4h = (op: BinaryOp) => (a: wgsl.v4h | number, b: wgsl.v4h | number) =>
+  vec4h(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+    op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
+  );
+
+const mixedComponentWise4i = (op: BinaryOp) => (a: wgsl.v4i | number, b: wgsl.v4i | number) =>
+  vec4i(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+    op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
+  );
+
+const mixedComponentWise4u = (op: BinaryOp) => (a: wgsl.v4u | number, b: wgsl.v4u | number) =>
+  vec4u(
+    op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
+    op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+    op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+    op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
+  );
+
 export const NumberOps = {
   divInteger: (lhs: number, rhs: number) => {
     if (rhs === 0) {
@@ -812,6 +896,41 @@ export const VectorOps = {
     'vec3f' | 'vec3h',
     <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T
   >,
+
+  mod: {
+    vec2f: binaryComponentWise2f((a, b) => a % b),
+    vec2h: binaryComponentWise2h((a, b) => a % b),
+    vec2i: binaryComponentWise2i((a, b) => a % b),
+    vec2u: binaryComponentWise2u((a, b) => a % b),
+
+    vec3f: binaryComponentWise3f((a, b) => a % b),
+    vec3h: binaryComponentWise3h((a, b) => a % b),
+    vec3i: binaryComponentWise3i((a, b) => a % b),
+    vec3u: binaryComponentWise3u((a, b) => a % b),
+    
+    vec4f: binaryComponentWise4f((a, b) => a % b),
+    vec4h: binaryComponentWise4h((a, b) => a % b),
+    vec4i: binaryComponentWise4i((a, b) => a % b),
+    vec4u: binaryComponentWise4u((a, b) => a % b),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
+
+  modMixed: {
+    vec2f: mixedComponentWise2f((a, b) => a % b),
+    vec2h: mixedComponentWise2h((a, b) => a % b),
+    vec2i: mixedComponentWise2i((a, b) => a % b),
+    vec2u: mixedComponentWise2u((a, b) => a % b),
+    
+    vec3f: mixedComponentWise3f((a, b) => a % b),
+    vec3h: mixedComponentWise3h((a, b) => a % b),
+    vec3i: mixedComponentWise3i((a, b) => a % b),
+    vec3u: mixedComponentWise3u((a, b) => a % b),
+
+    vec4f: mixedComponentWise4f((a, b) => a % b),
+    vec4h: mixedComponentWise4h((a, b) => a % b),
+    vec4i: mixedComponentWise4i((a, b) => a % b),
+    vec4u: mixedComponentWise4u((a, b) => a % b),
+  } as Record<VecKind, <T extends vBase>(a: T, b: number) => T>,
 
   floor: {
     vec2f: unary2f(Math.floor),

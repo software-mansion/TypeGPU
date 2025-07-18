@@ -568,6 +568,50 @@ export const sin = createDualImpl(
 
 /**
  * @privateRemarks
+ * Both JS and WGSL implementations use truncated definition of modulo
+ */
+export const mod = createDualImpl(
+  // CPU implementation
+  <T extends NumVec | number>(a: T, b: T): T => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return (a % b) as T; // scalar % scalar
+    }
+    if (typeof a === 'number' && isVecInstance(b)) {
+      // scalar % vector
+      return VectorOps.modMixed[b.kind](a, b) as T;
+    }
+    if (isVecInstance(a) && typeof b === 'number') {
+      // vector % scalar
+      return VectorOps.modMixed[a.kind](a, b) as T;
+    }
+
+    if (isVecInstance(a) && isVecInstance(b)) {
+      // vector % vector
+      return VectorOps.mod[a.kind](a, b) as T;
+    } 
+    throw new Error('Mod called with invalid arguments.');
+  },
+
+
+  // GPU implementation
+  (a, b) => {
+    const returnType = isSnippetNumeric(a)
+      ? b.dataType
+      : isSnippetNumeric(b)
+      ? a.dataType
+      : a.dataType.type.startsWith('vec')
+      ? a.dataType
+      : b.dataType.type.startsWith('vec')
+      ? b.dataType
+      : a.dataType;
+    return snip(`(${a.value} % ${b.value})`, returnType);
+  },
+  'mod',
+);
+
+
+/**
+ * @privateRemarks
  * https://www.w3.org/TR/WGSL/#exp-builtin
  */
 export const exp = createDualImpl(
