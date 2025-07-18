@@ -275,11 +275,65 @@ import * as d from 'typegpu/data';
 // ---cut---
 const RecentResults = d.arrayOf(d.f32, 4);
 
-type RecentResults = d.Infer<typeof RecentResults>;
-//   ^?
-
-const recentResults: RecentResults = [
-  1, 0, 0.5, 20
-];
+const recentResults = RecentResults([1, 0, 0.5, 20]);
 ```
 
+## Copy constructors
+
+One of the biggest differences between JavaScript and WGSL is the existence of value/reference types.
+Let's take a look at a simple TGSL function and the WGSL code it resolves to.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const MyStruct = d.struct({ n: d.u32 });
+
+const myFn = tgpu.fn([])(() => {
+  const s1 = MyStruct({ n: 0 });
+  const s2 = s1;
+  s2.n = 1; // s1 is modified
+});
+```
+
+```wgsl
+struct MyStruct {
+  n: u32,
+}
+
+fn myFn(){
+  var s1 = MyStruct(0);
+  var s2 = s1;
+  s2.n = 1; // s1 is not modified
+}
+```
+
+On JS side, s2 is a reference to s1 and therefore s1 is modified when s2 is modified.
+On WGSL side, the assignment operator copies the value of s1, and thus s1 is not modified later on.
+
+To help with this issue, schema calls can be used as "copy constructors", that copy the value on the JS side, and disappear on the WGSL side:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const MyStruct = d.struct({ n: d.u32 });
+
+const myFn = tgpu.fn([])(() => {
+  const s1 = MyStruct({ n: 0 });
+  const s2 = MyStruct(s1); // deep copy of s1
+  s2.n = 1; // s1 is not modified
+});
+```
+
+```wgsl
+struct MyStruct {
+  n: u32,
+}
+
+fn myFn(){
+  var s1 = MyStruct(0);
+  var s2 = s1; // copies s1 into s2
+  s2.n = 1; // s1 is not modified
+}
+```
