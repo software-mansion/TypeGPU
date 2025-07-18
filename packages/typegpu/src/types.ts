@@ -44,6 +44,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -107,6 +108,30 @@ export interface ItemStateStack {
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
 
+export type ExecMode = 'comptime' | 'codegen' | 'simulate';
+
+export class ComptimeState {
+  readonly type = 'comptime' as const;
+}
+
+export class CodegenState {
+  readonly type = 'codegen' as const;
+}
+
+export class SimulationState {
+  readonly type = 'simulate' as const;
+
+  constructor(
+    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly vars: {
+      private: Map<TgpuVar, unknown>;
+      workgroup: Map<TgpuVar, unknown>;
+    },
+  ) {}
+}
+
+export type ExecState = ComptimeState | CodegenState | SimulationState;
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -114,6 +139,7 @@ export interface ItemStateStack {
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
+  readonly mode: ExecState | undefined;
 
   addDeclaration(declaration: string): void;
 
@@ -136,6 +162,9 @@ export interface ResolutionCtx {
   };
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+
+  pushMode(state: ExecState): void;
+  popMode(expected?: ExecMode | undefined): void;
 
   /**
    * Unwraps all layers of slot/derived indirection and returns the concrete value if available.

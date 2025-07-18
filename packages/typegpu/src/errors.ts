@@ -6,6 +6,7 @@ import type { WgslArray } from './data/wgslTypes.ts';
 import { getName } from './shared/meta.ts';
 import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import { ErrorCode } from './errorCodes.ts';
 
 const prefix = 'Invariant failed';
 
@@ -140,5 +141,24 @@ export class MissingVertexBuffersError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingVertexBuffersError.prototype);
+  }
+}
+
+export class ErrorWithCode extends Error {
+  constructor(msg: string, code: ErrorCode) {
+    // TODO: Add stable doc links
+    super(`${msg} (https://docs.swmansion.com/TypeGPU/err?q=${code})`);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ErrorWithCode.prototype);
+  }
+}
+
+export class IllegalBufferAccessError extends ErrorWithCode {
+  constructor(msg: string) {
+    super(msg, ErrorCode.illegalBufferAccess);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, IllegalBufferAccessError.prototype);
   }
 }

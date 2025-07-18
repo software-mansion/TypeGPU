@@ -17,6 +17,7 @@ export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   readonly $: InferGPU<TDataType>;
 
   readonly [$internal]: {
+    // Makes it differentiable on the type level
     readonly dataType: TDataType;
   };
 }
