@@ -124,13 +124,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     const mode = getExecMode();
     const insideTgpuFn = isInsideTgpuFn();
 
-    if (!mode) {
+    if (mode.type === 'normal') {
       throw new IllegalVarAccessError(
         insideTgpuFn
           ? `Cannot access variable '${
             getName(this) ?? '<unnamed>'
           }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : 'TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+          : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
 
@@ -145,12 +145,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       return mode.vars[this.#scope].get(this) as InferGPU<TDataType>;
     }
 
-    if (mode.type === 'comptime') {
-      throw new IllegalVarAccessError(
-        'Cannot access TypeGPU variables when executing code at compile-time',
-      );
-    }
-
     return assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 
@@ -158,13 +152,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     const mode = getExecMode();
     const insideTgpuFn = isInsideTgpuFn();
 
-    if (!mode) {
+    if (mode.type === 'normal') {
       throw new IllegalVarAccessError(
         insideTgpuFn
           ? `Cannot access ${
             String(this)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : 'TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+          : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
 
@@ -177,12 +171,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     if (mode.type === 'simulate') {
       mode.vars[this.#scope].set(this, value);
       return;
-    }
-
-    if (mode.type === 'comptime') {
-      throw new IllegalVarAccessError(
-        'Cannot access TypeGPU variables when executing code at compile-time',
-      );
     }
 
     assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');

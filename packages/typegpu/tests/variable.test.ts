@@ -166,7 +166,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should throw an error when trying to access variable outside of a function', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
     expect(() => x.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
+      '[Error: TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
     );
   });
 

@@ -18,7 +18,7 @@ import {
 } from './data/dataTypes.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError } from './errors.ts';
-import { provideCtx } from './execMode.ts';
+import { provideCtx, topLevelState } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
@@ -43,9 +43,9 @@ import type {
 } from './types.ts';
 import {
   CodegenState,
-  ComptimeState,
   isSelfResolvable,
   isWgsl,
+  NormalState,
 } from './types.ts';
 
 /**
@@ -502,14 +502,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      // Derived computations are always done at COMPTIME
-      this.pushMode(new ComptimeState());
+      // Getting out of codegen or simulation mode so we can execute JS normally.
+      this.pushMode(new NormalState());
 
       let result: T;
       try {
         result = derived['~compute']();
       } finally {
-        this.popMode('comptime');
+        this.popMode('normal');
       }
 
       // We know which slots the item used while resolving
@@ -651,15 +651,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#modeStack.push(mode);
   }
 
-  popMode(expected?: ExecMode | undefined) {
+  popMode(expected?: ExecMode) {
     const mode = this.#modeStack.pop();
     if (expected !== undefined) {
       invariant(mode?.type === expected, 'Unexpected mode');
     }
   }
 
-  get mode(): ExecState | undefined {
-    return this.#modeStack[this.#modeStack.length - 1];
+  get mode(): ExecState {
+    return this.#modeStack[this.#modeStack.length - 1] ?? topLevelState;
   }
 }
 

@@ -145,13 +145,13 @@ class TgpuFixedBufferImpl<
     const mode = getExecMode();
     const insideTgpuFn = isInsideTgpuFn();
 
-    if (!mode) {
+    if (mode.type === 'normal') {
       throw new IllegalBufferAccessError(
         insideTgpuFn
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible top-level. Try `.read()`',
+          : '.$ and .value are inaccessible during normal JS execution. Try `.read()`',
       );
     }
 
@@ -167,12 +167,6 @@ class TgpuFixedBufferImpl<
         );
       }
       return mode.buffers.get(this.buffer) as InferGPU<TData>;
-    }
-
-    if (mode.type === 'comptime') {
-      throw new IllegalBufferAccessError(
-        '.$ and .value are not accessible at compile-time',
-      );
     }
 
     return assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');

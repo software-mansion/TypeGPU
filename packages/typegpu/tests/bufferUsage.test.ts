@@ -284,10 +284,10 @@ describe('TgpuBufferReadonly', () => {
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible top-level. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
     );
     expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible top-level. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
     );
   });
 
@@ -303,5 +303,19 @@ describe('TgpuBufferReadonly', () => {
       [Error: Execution of the following tree failed: 
       - fn:foo: Cannot access buffer:fooBuffer. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
+  });
+
+  describe('simulate mode', () => {
+    it('allows accessing .$ in simulate mode', ({ root }) => {
+      const buffer = root.createBuffer(d.f32, 123).$usage('storage');
+      const readonly = buffer.as('readonly');
+
+      const foo = tgpu.fn([])(() => {
+        return readonly.$; // accessing GPU resource
+      });
+
+      const result = tgpu['~unstable'].simulate(foo);
+      expect(result.value).toBe(123);
+    });
   });
 });

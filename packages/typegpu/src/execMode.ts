@@ -1,5 +1,10 @@
 import { invariant } from './errors.ts';
-import type { ExecState, ResolutionCtx, SimulationState } from './types.ts';
+import {
+  type ExecState,
+  NormalState,
+  type ResolutionCtx,
+  type SimulationState,
+} from './types.ts';
 
 /**
  * Used to track if the code we're currently
@@ -49,8 +54,14 @@ export function getResolutionCtx(): ResolutionCtx | undefined {
   return resolutionCtx;
 }
 
-export function getExecMode(): ExecState | undefined {
-  return resolutionCtx?.mode;
+/**
+ * Applicable when code is being executed outside of any
+ * execution-altering APIs.
+ */
+export const topLevelState = new NormalState();
+
+export function getExecMode(): ExecState {
+  return resolutionCtx?.mode ?? topLevelState;
 }
 
 export function getSimulationState(): SimulationState | undefined {
