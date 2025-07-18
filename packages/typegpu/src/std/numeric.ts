@@ -589,7 +589,9 @@ export const mod = createDualImpl(
       // vector % vector
       return VectorOps.mod[a.kind](a, b) as T;
     }
-    throw new Error('Mod called with invalid arguments.');
+    throw new Error(
+      `Mod called with invalid arguments. Received types: a=${typeof a}, b=${typeof b}. Expected types: number or vector.`,
+    );
   },
   // GPU implementation
   (a, b) => {
