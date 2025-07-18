@@ -1189,6 +1189,8 @@ export interface Mat4x4f {
  * the `byteAlignment` requirement of its elementType.
  */
 export interface WgslArray<TElement extends BaseData = BaseData> {
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
   readonly [$internal]: true;
   readonly type: 'array';
   readonly elementCount: number;
@@ -1214,7 +1216,7 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
 export interface WgslStruct<
   TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends TgpuNamable {
-  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  <T extends TProps>(props: Prettify<InferRecord<T>>): Prettify<InferRecord<T>>;
   (): Prettify<InferRecord<TProps>>;
   readonly [$internal]: true;
   readonly type: 'struct';
