@@ -45,11 +45,24 @@ function functionToTranspiled(
 ): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
 
-  const metadata = `{
-    v: ${FORMAT_VERSION},
-    ast: ${embedJSON({ params, body, externalNames })},
-    externals: {${externalNames.join(', ')}},
-  }`;
+  const metadata = types.objectExpression([
+    types.objectProperty(
+      i('v'),
+      types.numericLiteral(FORMAT_VERSION),
+    ),
+    types.objectProperty(
+      i('ast'),
+      template.expression`${embedJSON({ params, body, externalNames })}`(),
+    ),
+    types.objectProperty(
+      i('externals'),
+      types.objectExpression(
+        externalNames.map((name) =>
+          types.objectProperty(i(name), i(name), false, true)
+        ),
+      ),
+    ),
+  ]);
 
   return types.callExpression(
     types.arrowFunctionExpression(
@@ -71,7 +84,7 @@ function functionToTranspiled(
               types.memberExpression(i('$'), i('f')),
               node,
             ),
-            template.expression`${metadata}`(),
+            metadata,
           ],
         ),
         types.memberExpression(i('$'), i('f')),
