@@ -1,6 +1,30 @@
 import { invariant } from './errors.ts';
 import type { ExecState, ResolutionCtx, SimulationState } from './types.ts';
 
+/**
+ * Used to track if the code we're currently
+ * executing is inside an executing TypeGPU function.
+ *
+ * Helpful for providing better error messages.
+ */
+let insideTgpuFn = false;
+
+export function provideInsideTgpuFn<T>(callback: () => T): T {
+  if (insideTgpuFn) {
+    return callback();
+  }
+  try {
+    insideTgpuFn = true;
+    return callback();
+  } finally {
+    insideTgpuFn = false;
+  }
+}
+
+export function isInsideTgpuFn(): boolean {
+  return insideTgpuFn;
+}
+
 let resolutionCtx: ResolutionCtx | undefined;
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {

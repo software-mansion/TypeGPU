@@ -6,7 +6,6 @@ import type { WgslArray } from './data/wgslTypes.ts';
 import { getName } from './shared/meta.ts';
 import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
-import { ErrorCode } from './errorCodes.ts';
 
 const prefix = 'Invariant failed';
 
@@ -78,6 +77,43 @@ export class ResolutionError extends Error {
 }
 
 /**
+ * An error that happens during execution of TypeGPU functions.
+ * Contains a trace of all TypeGPU functions called along the way.
+ *
+ * @category Errors
+ */
+export class ExecutionError extends Error {
+  constructor(
+    public readonly cause: unknown,
+    public readonly trace: unknown[],
+  ) {
+    let entries = trace.map((ancestor) => `- ${ancestor}`);
+
+    // Showing only the root and leaf nodes.
+    if (entries.length > 20) {
+      entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
+    }
+
+    super(
+      `Execution of the following tree failed: \n${entries.join('\n')}: ${
+        cause && typeof cause === 'object' && 'message' in cause
+          ? cause.message
+          : cause
+      }`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ExecutionError.prototype);
+  }
+
+  appendToTrace(ancestor: unknown): ExecutionError {
+    const newTrace = [ancestor, ...this.trace];
+
+    return new ExecutionError(this.cause, newTrace);
+  }
+}
+
+/**
  * @category Errors
  */
 export class MissingSlotValueError extends Error {
@@ -144,19 +180,9 @@ export class MissingVertexBuffersError extends Error {
   }
 }
 
-export class ErrorWithCode extends Error {
-  constructor(msg: string, code: ErrorCode) {
-    // TODO: Add stable doc links
-    super(`${msg} (https://docs.swmansion.com/TypeGPU/err?q=${code})`);
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, ErrorWithCode.prototype);
-  }
-}
-
-export class IllegalBufferAccessError extends ErrorWithCode {
+export class IllegalBufferAccessError extends Error {
   constructor(msg: string) {
-    super(msg, ErrorCode.illegalBufferAccess);
+    super(msg);
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, IllegalBufferAccessError.prototype);

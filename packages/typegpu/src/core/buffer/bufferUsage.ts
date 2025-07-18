@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
-import { getExecMode, inCodegenMode } from '../../execMode.ts';
+import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -143,10 +143,15 @@ class TgpuFixedBufferImpl<
 
   get $(): InferGPU<TData> {
     const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
 
     if (!mode) {
       throw new IllegalBufferAccessError(
-        '.$ and .value are not accessible top-level',
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this.buffer)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : '.$ and .value are inaccessible top-level. Try `.read()`',
       );
     }
 
