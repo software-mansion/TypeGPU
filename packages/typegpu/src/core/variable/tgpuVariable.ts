@@ -23,10 +23,10 @@ export interface TgpuVar<
   $: InferGPU<TDataType>;
 
   readonly [$internal]: {
-    // Makes it differentiable on the type level
-    readonly dataType: TDataType;
-    // Makes it differentiable on the type level
-    readonly scope: TScope;
+    /** Makes it differentiable on the type level. Does not exist at runtime. */
+    dataType?: TDataType;
+    /** Makes it differentiable on the type level. Does not exist at runtime. */
+    scope?: TScope;
   };
 }
 
@@ -67,11 +67,7 @@ export function isVariable<T extends TgpuVar>(
 
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
-  declare readonly [$internal]: {
-    readonly scope: TScope;
-    readonly dataType: TDataType;
-  };
-
+  readonly [$internal] = {};
   readonly #scope: TScope;
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
@@ -84,7 +80,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     this.#scope = scope;
     this.#dataType = dataType;
     this.#initialValue = initialValue;
-    this[$internal] = { scope, dataType };
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -132,9 +127,9 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     if (!mode) {
       throw new IllegalVarAccessError(
         insideTgpuFn
-          ? `Cannot access ${
-            String(this)
-          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          ? `Cannot access variable '${
+            getName(this) ?? '<unnamed>'
+          }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
           : 'TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
