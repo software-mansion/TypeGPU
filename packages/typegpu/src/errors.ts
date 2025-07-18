@@ -180,6 +180,15 @@ export class MissingVertexBuffersError extends Error {
   }
 }
 
+export class IllegalVarAccessError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, IllegalVarAccessError.prototype);
+  }
+}
+
 export class IllegalBufferAccessError extends Error {
   constructor(msg: string) {
     super(msg);

@@ -163,6 +163,24 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
     );
   });
 
+  it('should throw an error when trying to access variable outside of a function', () => {
+    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    expect(() => x.$).toThrowErrorMatchingInlineSnapshot(
+      '[Error: TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
+    );
+  });
+
+  it('should throw an error when trying to access variable inside of a function top-level', () => {
+    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    const foo = tgpu.fn([], d.f32)(() => {
+      return x.$; // Accessing variable inside of a function
+    });
+    expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed: 
+      - fn:foo: Cannot access var:x. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
+    `);
+  });
+
   describe('simulate mode', () => {
     it('simulates variable incrementing', () => {
       const counter = tgpu['~unstable'].privateVar(d.f32, 0);

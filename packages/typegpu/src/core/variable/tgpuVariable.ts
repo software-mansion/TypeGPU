@@ -1,5 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { getExecMode } from '../../execMode.ts';
+import { IllegalVarAccessError } from '../../errors.ts';
+import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
@@ -126,26 +127,35 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   get $(): InferGPU<TDataType> {
     const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
     if (!mode) {
-      // TODO: Add stable doc links
-      throw new Error(
-        'Cannot call functions that read TypeGPU variables (tgpu.privateVar/tgpu.workgroupVar) top-level (see https://docs.swmansion.com/TypeGPU/err?q=123)',
+      throw new IllegalVarAccessError(
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : 'TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
+
     if (mode.type === 'codegen') {
       return this[$gpuValueOf]();
     }
+
     if (mode.type === 'simulate') {
       if (!mode.vars[this.#scope].has(this)) { // Not initialized yet
         mode.vars[this.#scope].set(this, this.#initialValue);
       }
       return mode.vars[this.#scope].get(this) as InferGPU<TDataType>;
     }
+
     if (mode.type === 'comptime') {
-      throw new Error(
+      throw new IllegalVarAccessError(
         'Cannot access TypeGPU variables when executing code at compile-time',
       );
     }
+
     return assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 
