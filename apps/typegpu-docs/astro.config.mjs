@@ -235,7 +235,7 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
+            typeDocSidebarGroup,
           ]),
         },
       ]),
