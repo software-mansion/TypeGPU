@@ -112,7 +112,7 @@ const getStableStateBelow = tgpu.fn([d.u32, d.u32], d.u32)((upper, lower) => {
     return totalMass;
   }
   if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.$ * 2 && upper > lower) {
-    return totalMass / 2 + MAX_PRESSURE.$;
+    return d.u32(totalMass / 2) + MAX_PRESSURE.$;
   }
   return MAX_WATER_LEVEL_UNPRESSURIZED.$;
 });
@@ -263,11 +263,11 @@ const vertex = tgpu['~unstable'].vertexFn({
     d.f32(w)) /
     d.f32(std.max(w, h));
   const y =
-    ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
+    ((d.f32((input.idx - (input.idx % w)) / w) + d.f32(input.squareData.y)) /
         d.f32(h) -
       0.5) *
-      2 *
-      d.f32(h)) /
+    2 *
+    d.f32(h) /
     d.f32(std.max(w, h));
   const cellFlags = input.currentStateData >> 24;
   let cell = d.f32(input.currentStateData & 0xffffff);
