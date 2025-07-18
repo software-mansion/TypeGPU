@@ -30,6 +30,7 @@ export {
   max,
   min,
   mix,
+  mod,
   neg,
   normalize,
   pow,
