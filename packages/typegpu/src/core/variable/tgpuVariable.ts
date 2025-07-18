@@ -161,26 +161,35 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   set $(value: InferGPU<TDataType>) {
     const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
     if (!mode) {
-      // TODO: Add stable doc links
-      throw new Error(
-        'Cannot call functions that write to TypeGPU variables (tgpu.privateVar/tgpu.workgroupVar) top-level (see https://docs.swmansion.com/TypeGPU/error?code=123)',
+      throw new IllegalVarAccessError(
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : 'TypeGPU variables are inaccessible top-level. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
+
     if (mode.type === 'codegen') {
       // The WGSL generator handles variable assignment, and does not defer to
       // whatever's being assigned to to generate the WGSL.
       throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
     }
+
     if (mode.type === 'simulate') {
       mode.vars[this.#scope].set(this, value);
       return;
     }
+
     if (mode.type === 'comptime') {
-      throw new Error(
+      throw new IllegalVarAccessError(
         'Cannot access TypeGPU variables when executing code at compile-time',
       );
     }
+
     assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 
