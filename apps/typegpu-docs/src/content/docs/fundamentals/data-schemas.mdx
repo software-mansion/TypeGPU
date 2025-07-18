@@ -13,12 +13,14 @@ This is precisely what TypeGPU data schemas help with.
 Complex data types such as structs require particular byte alignment and padding between fields. TypeGPU does this automatically when transforming JS values into binary.
 :::
 
+Apart from defining buffers and functions, schemas can also be called to create instances of the types they represent.
+
 ## Scalars, vectors and matrices
 
 ### Constructors
 
 For scalar WGSL types `f32`, `u32`, `i32`, `f16` and `bool`, TypeGPU has `d.f32`, `d.u32`, `d.i32`, `d.f16` and `d.bool` schemas respectively.
-Apart from using them to describe buffers and functions, you can also call them to cast a value to a given type. 
+Schemas can be called to cast a value to a given type. 
 This works both in TGSL, as well as in plain JavaScript.
 
 ```ts twoslash
@@ -192,10 +194,10 @@ const redCircle3 = Circle({
   centerPos: d.vec3i(2, 4, 0), 
 });
 
-
 const diam = redCircle1.rad * 2;
 ```
 
+The `Boid` schema also allows for default value creation and code autocompletion.
 
 ```ts twoslash
 // @noErrors
@@ -209,6 +211,8 @@ const Boid = d.struct({
 });
 
 // ---cut---
+const defaultBoid = Boid(); // zero-filled boid
+
 const boid = Boid({
   position: d.vec3u(0, 0, 0),
   velocity: d.vec3f(1, 0.5, 0.5),
@@ -273,9 +277,12 @@ To define arrays of known constant length, use the `d.arrayOf` function with the
 import * as d from 'typegpu/data';
 
 // ---cut---
-const RecentResults = d.arrayOf(d.f32, 4);
+const MyArray = d.arrayOf(d.f32, 4);
 
-const recentResults = RecentResults([1, 0, 0.5, 20]);
+const myDefaultArray = MyArray(); // [0, 0, 0, 0]
+//    ^?
+
+const myInitializedArray = MyArray([1, 0, 0.5, 20]);
 ```
 
 ## Copy constructors
