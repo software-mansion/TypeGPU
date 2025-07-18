@@ -2,18 +2,19 @@ import * as tinyest from 'tinyest';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
+  InfixDispatch,
   isData,
   isLooseData,
   snip,
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import * as d from '../data/index.ts';
-import { abstractInt } from '../data/numeric.ts';
+import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { add, div, mul, sub } from '../std/numeric.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
@@ -51,6 +52,33 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
+const infixKinds = [
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+];
+
+export const infixOperators = {
+  add,
+  sub,
+  mul,
+  div,
+} as const;
+
+export type InfixOperator = keyof typeof infixOperators;
+
 type Operator =
   | tinyest.BinaryOperator
   | tinyest.AssignmentOperator
@@ -63,14 +91,14 @@ function operatorToType<
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
-      return d.bool;
+      return bool;
     }
 
     return lhs;
   }
 
   if (binaryLogicalOps.includes(op)) {
-    return d.bool;
+    return bool;
   }
 
   if (op === '=') {
@@ -126,7 +154,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return snip(expression ? 'true' : 'false', d.bool);
+    return snip(expression ? 'true' : 'false', bool);
   }
 
   if (
@@ -188,6 +216,20 @@ export function generateExpression(
     const [_, targetNode, property] = expression;
     const target = generateExpression(ctx, targetNode);
 
+    if (
+      infixKinds.includes(target.dataType.type) &&
+      property in infixOperators
+    ) {
+      return {
+        value: new InfixDispatch(
+          property,
+          target,
+          infixOperators[property as InfixOperator][$internal].gpuImpl,
+        ),
+        dataType: UnknownData,
+      };
+    }
+
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess
 
@@ -208,7 +250,7 @@ export function generateExpression(
     if (wgsl.isWgslArray(target.dataType) && property === 'length') {
       if (target.dataType.elementCount === 0) {
         // Dynamically-sized array
-        return snip(`arrayLength(&${ctx.resolve(target.value)})`, d.u32);
+        return snip(`arrayLength(&${ctx.resolve(target.value)})`, u32);
       }
 
       return snip(String(target.dataType.elementCount), abstractInt);
@@ -336,6 +378,15 @@ export function generateExpression(
 
       // The type of the return value is the struct itself
       return snip(`${argValues.join(', ')}`, id.value);
+    }
+
+    if (id.value instanceof InfixDispatch) {
+      if (!argSnippets[0]) {
+        throw new Error(
+          `An infix operator '${id.value.name}' was called without any arguments`,
+        );
+      }
+      return id.value.operator(id.value.lhs, argSnippets[0]);
     }
 
     if (!isMarkedInternal(id.value)) {
@@ -475,9 +526,9 @@ export function generateExpression(
 
     const targetType = convertedValues[0]?.dataType as AnyData;
     const type = targetType.type === 'abstractFloat'
-      ? d.f32
+      ? f32
       : targetType.type === 'abstractInt'
-      ? d.i32
+      ? i32
       : targetType;
 
     const typeId = ctx.resolve(type);
@@ -554,7 +605,7 @@ export function generateStatement(
     const [_, cond, cons, alt] = statement;
     const condExpr = generateExpression(ctx, cond);
     let condSnippet = condExpr;
-    const converted = convertToCommonType(ctx, [condExpr], [d.bool]);
+    const converted = convertToCommonType(ctx, [condExpr], [bool]);
     if (converted?.[0]) {
       [condSnippet] = converted;
     }
@@ -652,7 +703,7 @@ ${alternate}`;
       : undefined;
     let condSnippet = conditionExpr;
     if (conditionExpr) {
-      const converted = convertToCommonType(ctx, [conditionExpr], [d.bool]);
+      const converted = convertToCommonType(ctx, [conditionExpr], [bool]);
       if (converted?.[0]) {
         [condSnippet] = converted;
       }
@@ -676,7 +727,7 @@ ${bodyStr}`;
     const condExpr = generateExpression(ctx, condition);
     let condSnippet = condExpr;
     if (condExpr) {
-      const converted = convertToCommonType(ctx, [condExpr], [d.bool]);
+      const converted = convertToCommonType(ctx, [condExpr], [bool]);
       if (converted?.[0]) {
         [condSnippet] = converted;
       }
