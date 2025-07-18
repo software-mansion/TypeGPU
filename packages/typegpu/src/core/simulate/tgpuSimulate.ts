@@ -60,8 +60,8 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
         (_, j) =>
           Array.from({ length: threads[2] }, (_, k) => {
             const wi = Math.floor(i / workgroupSize[0]);
-            const wj = Math.floor(j / workgroupSize[0]);
-            const wk = Math.floor(k / workgroupSize[0]);
+            const wj = Math.floor(j / workgroupSize[1]);
+            const wk = Math.floor(k / workgroupSize[2]);
             return new SimulationState(buffers, {
               // biome-ignore lint/style/noNonNullAssertion: it's there, trust me
               private: privateVars[i]![j]![k]!,
