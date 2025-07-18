@@ -221,9 +221,7 @@ describe('TgpuBufferReadonly', () => {
   });
 
   it('resolves to buffer binding in TGSL functions', ({ root }) => {
-    const paramBuffer = root
-      .createBuffer(d.f32)
-      .$usage('storage');
+    const paramBuffer = root.createBuffer(d.f32).$usage('storage');
     const paramReadonly = paramBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
