@@ -13,97 +13,6 @@ This is precisely what TypeGPU data schemas help with.
 Complex data types such as structs require particular byte alignment and padding between fields. TypeGPU does this automatically when transforming JS values into binary.
 :::
 
-## Examples
-
-Let's look at some examples of defining a custom compound data type using the `typegpu/data` module. 
-
-```ts twoslash
-import * as d from 'typegpu/data';
-
-const Circle = d.struct({
-  centerPos: d.vec3i,
-  radius: d.f32,
-});
-
-const redCircle = Circle({
-  centerPos: d.vec3i(2, 4, 0),
-  radius: 0.2,
-});
-```
-
-Make no mistake, `d.vec3i` and `d.f32` are not types, but instead they are JS objects describing WGSL types, just like the `Circle` schema we just created.
-
-If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
-By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type
-definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value
-is inferred automatically, and it's enforced by TypeScript. 
-
-```ts twoslash
-// @errors: 2740 2322 2339 2345
-
-import * as d from 'typegpu/data';
-
-const Circle = d.struct({
-  centerPos: d.vec3i,
-  radius: d.f32,
-});
-
-// ---cut---
-const redCircle1 = Circle({
-  centerPos: d.vec2i(2, 4), 
-  radius: 0.2,
-});
-
-const redCircle2 = Circle({
-  centerPos: d.vec3i(2, 4, 0), 
-  radius: "0.2",
-});
-
-const redCircle3 = Circle({
-  centerPos: d.vec3i(2, 4, 0), 
-});
-
-const diam = redCircle1.rad * 2;
-```
-
-Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
-
-```ts twoslash
-import * as d from 'typegpu/data';
-
-const Circle = d.struct({
-  centerPos: d.vec3i,
-  radius: d.f32,
-});
-
-type Circle = d.Infer<typeof Circle>;
-
-// ---cut---
-d.sizeOf(Circle) // 16
-d.alignmentOf(Circle) // 16
-```
-
-TypeGPU data types are essential for the library's automated data marshalling capabilities.
-
-:::tip
-If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
-```ts twoslash
-import * as d from 'typegpu/data';
-import { sizeOf, alignmentOf } from 'typegpu/data';
-
-const Circle = d.struct({
-  centerPos: d.vec3i,
-  radius: d.f32,
-});
-// ---cut---
-type u32 = d.Infer<typeof d.u32>;
-//   ^?
-type Circle = d.Infer<typeof Circle>;
-//   ^?
-```
-
-:::
-
 ## Scalars, vectors and matrices
 
 ### Constructors
@@ -131,10 +40,10 @@ const myUnsignedInt = d.u32(1);
 //    ^?
 const one = d.u32(3)/d.u32(2); // 1.5
 ```
+For the WGSL and JS functions to return consistent results, TypeGPU wraps all divisions in `f32` casts.
 :::
 
 For each of the scalar types, there is a vector schema of 2, 3 and 4 elements of that type.
-
 For vector WGSL types `vec2f`, `vec2u`, `vec2i`, `vec2f` and `vec2<bool>`, TypeGPU has `d.vec2f`, `d.vec2u`, `d.vec2i`, `d.vec2f` and `d.vec2b` schemas respectively. Analogously for 3 and 4 components.
 
 Just like scalar schemas, vector schemas can be called to create values of corresponding types.
@@ -148,7 +57,6 @@ const v2 = d.vec4f(v1.x, v1[1], 4, 5); // a vector of four elements [1, 2, 4, 5]
 const v3 = v1.xy; // a vector of two elements [1, 2]
 const v4 = d.vec4f(0, v3, 3); // a vector of four elements [0, 1, 2, 3]
 ```
-
 
 :::note
 Be mindful not to confuse the schema (e.g. `d.vec2f`), the schema instance (`d.vec2f(1, 2)`), the schema type (`d.Vec2f`) and the instance type (`d.v2f`).
@@ -223,7 +131,7 @@ Currently implemented operators include:
 Remember, that in case of scalars, you can still use `+`, `<=`, `!` etc., 
 the purpose of these `std` functions is to enable working on vectors and matrices.
 
-For arithmetic operators, you can also use infix notation.
+For arithmetic operators, you can also use the infix notation.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -237,30 +145,57 @@ const multiplication = v1.mul(v2).mul(v2); // same as std.mul(std.mul(v1, v2), v
 
 ## Structs
 
-Values of different types can be grouped into structs.
+
+Let's look at some examples of defining a custom compound data type using the `typegpu/data` module. 
 
 ```ts twoslash
 import * as d from 'typegpu/data';
 
-const Boid = d.struct({
-  position: d.vec3u,
-  velocity: d.vec3f,
-  color: d.vec4f,
-  isActive: d.bool,
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
 });
 
-type Boid = d.Infer<typeof Boid>;
-//   ^?
-
-const boid: Boid = {
-  position: d.vec3u(0, 0, 0),
-  velocity: d.vec3f(1, 0.5, 0.5),
-  color: d.vec4f(1.0, 0.2, 0.3, 1.0),
-  isActive: true,
-};
+const redCircle = Circle({
+  centerPos: d.vec3i(2, 4, 0),
+  radius: 0.2,
+});
 ```
 
-You can also use the struct schema as a constructor that type-checks the object literal and provides autocomplete.
+If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
+By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type
+definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value
+is inferred automatically, and it's enforced by TypeScript. 
+
+```ts twoslash
+// @errors: 2740 2322 2339 2345
+
+import * as d from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+// ---cut---
+const redCircle1 = Circle({
+  centerPos: d.vec2i(2, 4), 
+  radius: 0.2,
+});
+
+const redCircle2 = Circle({
+  centerPos: d.vec3i(2, 4, 0), 
+  radius: "0.2",
+});
+
+const redCircle3 = Circle({
+  centerPos: d.vec3i(2, 4, 0), 
+});
+
+
+const diam = redCircle1.rad * 2;
+```
+
 
 ```ts twoslash
 // @noErrors
@@ -283,8 +218,41 @@ const boid = Boid({
 });
 ```
 
+If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
+```ts twoslash
+import * as d from 'typegpu/data';
+import { sizeOf, alignmentOf } from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+// ---cut---
+type u32 = d.Infer<typeof d.u32>;
+//   ^?
+type Circle = d.Infer<typeof Circle>;
+//   ^?
+```
+
+Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+type Circle = d.Infer<typeof Circle>;
+
+// ---cut---
+d.sizeOf(Circle) // 16
+d.alignmentOf(Circle) // 16
+```
+
 Struct schemas adjust the padding and alignment automatically, so that they comply with WebGPU's memory alignment rules.
-It is also possible to override default byte alignment and size for particular fields via the `align` and `size ` functions.
+It is also possible to override default byte alignment and size for particular fields via the `d.align` and `d.size` functions.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -299,7 +267,7 @@ const Boid = d.struct({
 
 ## Arrays
 
-To define arrays of known constant length, use the `d.arrayOf` function. It accepts as arguments the array's elements data type constructor and the length of the array.
+To define arrays of known constant length, use the `d.arrayOf` function with the schema representing the element type and with the length of the array.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
