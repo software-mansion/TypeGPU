@@ -49,7 +49,7 @@ const c = vec4f(b.xz, a.xx);  // 0, 2, 1, 1
 
 ## Constructor conventions
 
-Scalar, vector, matrix and struct schemas can be called with no arguments to get a default value of the type represented by the schema. Arrays are a WIP.
+Scalar, vector, matrix, struct and fixed-size array schemas can be called with no arguments to get a default value of the type represented by the schema. Arrays are a WIP.
 
 ```ts
 import { f32, bool, vec3f } from 'typegpu/data';
@@ -59,7 +59,7 @@ const boolDefault = bool(); // false
 const vecDefault = vec3f(); // vec3f(0.0, 0.0, 0,0)
 ```
 
-Scalar, vector, matrix and struct schemas can be called with an instance of the type represented by the schema to create a deep copy of the argument.
+Scalar, vector, matrix, struct and fixed-size array schemas can be called with an instance of the type represented by the schema to create a deep copy of the argument.
 
 ```ts
 import { vec2f, struct } from 'typegpu/data';
