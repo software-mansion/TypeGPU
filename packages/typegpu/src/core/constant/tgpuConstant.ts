@@ -17,7 +17,8 @@ export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   readonly $: InferGPU<TDataType>;
 
   readonly [$internal]: {
-    readonly dataType: TDataType;
+    /** Makes it differentiable on the type level. Does not exist at runtime. */
+    dataType?: TDataType;
   };
 }
 
@@ -37,15 +38,14 @@ export function constant<TDataType extends AnyWgslData>(
 
 class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable {
-  public readonly [$internal]: {
-    readonly dataType: TDataType;
-  };
+  readonly [$internal] = {};
+  #value: InferGPU<TDataType>;
 
   constructor(
     public readonly dataType: TDataType,
-    private readonly _value: InferGPU<TDataType>,
+    value: InferGPU<TDataType>,
   ) {
-    this[$internal] = { dataType };
+    this.#value = value;
   }
 
   $name(label: string) {
@@ -55,7 +55,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
-    const resolvedValue = ctx.resolveValue(this._value, this.dataType);
+    const resolvedValue = ctx.resolveValue(this.#value, this.dataType);
     const resolvedDataType = ctx.resolve(this.dataType);
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
@@ -83,7 +83,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
       return this[$gpuValueOf]();
     }
 
-    return this._value;
+    return this.#value;
   }
 
   get $(): InferGPU<TDataType> {

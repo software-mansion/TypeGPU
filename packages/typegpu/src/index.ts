@@ -9,6 +9,7 @@ import { fn } from './core/function/tgpuFn.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
 import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
+import { simulate } from './core/simulate/tgpuSimulate.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
 import { accessor } from './core/slot/accessor.ts';
@@ -54,6 +55,8 @@ export const tgpu = {
     declare,
     sampler,
     comparisonSampler,
+
+    simulate,
   },
 };
 export default tgpu;

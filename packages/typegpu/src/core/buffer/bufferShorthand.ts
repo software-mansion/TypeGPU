@@ -105,15 +105,15 @@ export class TgpuBufferShorthandImpl<
     return this.buffer.read();
   }
 
+  get $(): InferGPU<TData> {
+    return this.#usage.$;
+  }
+
   get value(): InferGPU<TData> {
-    return this.#usage.value;
+    return this.$;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
     return ctx.resolve(this.#usage);
-  }
-
-  get $(): InferGPU<TData> {
-    return this.value;
   }
 }
