@@ -119,15 +119,12 @@ interface Options {
   include?: FilterPattern;
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
-  forceTgpuAlias?: string;
+  autoNamingEnabled?: boolean;
 }
 ```
 
 The plugin accepts the standard `unplugin` options, that make it possible to customize which files are to be processed ([include/exclude](https://rolldown.rs/guide/plugin-development#plugin-hook-filters) patterns),
 or [enforce](https://vite.dev/guide/api-plugin.html#plugin-ordering) the order in which the plugin is run in regards to other plugins.
-
-The custom _forceTgpuAlias_ option allows specifying the name of _tgpu_ object imported from `typegpu`.
-It is only useful in a handful of custom scenarios, when the name cannot be retrieved by the plugin automatically from the import statement.
 
 ## Further reading
 

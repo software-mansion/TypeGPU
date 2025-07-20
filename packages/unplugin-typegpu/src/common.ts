@@ -16,7 +16,6 @@ export interface Options {
   include?: FilterPattern;
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
-  forceTgpuAlias?: string;
   autoNamingEnabled?: boolean;
 }
 

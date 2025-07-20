@@ -93,16 +93,12 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
         },
         handler(code, id) {
           const ctx: Context = {
-            tgpuAliases: new Set<string>(
-              options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
-            ),
+            tgpuAliases: new Set<string>(),
             fileId: id,
             autoNamingEnabled: options.autoNamingEnabled,
           };
 
-          const ast = this.parse(code, {
-            allowReturnOutsideFunction: true,
-          }) as Node;
+          const ast = this.parse(code) as Node;
 
           const tgslFunctionDefs: {
             def: FunctionNode;
@@ -163,20 +159,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          for (
-            const {
-              def,
-              name,
-            } of tgslFunctionDefs
-          ) {
+          for (const { def, name } of tgslFunctionDefs) {
             const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
             if (
               isFunctionStatement &&
               name &&
-              code
-                  .slice(0, def.start)
+              code.slice(0, def.start)
                   .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
             ) {
               console.warn(
