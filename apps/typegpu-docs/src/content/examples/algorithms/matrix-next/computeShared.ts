@@ -26,7 +26,7 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
   },
 })((input) => {
   const dimensions = computeLayout.$.dimensions;
-  const numTiles = (dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE;
+  const numTiles = d.u32((dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE);
 
   const globalRow = input.wid.x * TILE_SIZE + input.lid.x;
   const globalCol = input.wid.y * TILE_SIZE + input.lid.y;

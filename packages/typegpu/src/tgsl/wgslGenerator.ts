@@ -203,7 +203,7 @@ export function generateExpression(
         }
         return snip(
           `f32(${lhsStr}) / f32(${rhsStr})`,
-          d.f32,
+          f32,
         );
       }
 
@@ -212,7 +212,7 @@ export function generateExpression(
           !lhsIsFloat
             ? `f32(${lhsStr}) / ${rhsStr}`
             : `${lhsStr} / f32(${rhsStr})`,
-          d.f32,
+          f32,
         );
       }
     }
