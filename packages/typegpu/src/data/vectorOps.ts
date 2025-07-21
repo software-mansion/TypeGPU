@@ -162,57 +162,6 @@ const binaryComponentWise4x4f =
     );
   };
 
-const createMixedComponentWise2 = <T extends { x: number; y: number }>(
-  vecConstructor: (x: number, y: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-    );
-};
-
-const mixedComponentWise2f = createMixedComponentWise2(vec2f);
-const mixedComponentWise2h = createMixedComponentWise2(vec2h);
-const mixedComponentWise2i = createMixedComponentWise2(vec2i);
-const mixedComponentWise2u = createMixedComponentWise2(vec2u);
-
-const createMixedComponentWise3 = <
-  T extends { x: number; y: number; z: number },
->(
-  vecConstructor: (x: number, y: number, z: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-    );
-};
-
-const mixedComponentWise3f = createMixedComponentWise3(vec3f);
-const mixedComponentWise3h = createMixedComponentWise3(vec3h);
-const mixedComponentWise3i = createMixedComponentWise3(vec3i);
-const mixedComponentWise3u = createMixedComponentWise3(vec3u);
-
-const createMixedComponentWise4 = <
-  T extends { x: number; y: number; z: number; w: number },
->(
-  vecConstructor: (x: number, y: number, z: number, w: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-      op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
-    );
-};
-
-const mixedComponentWise4f = createMixedComponentWise4(vec4f);
-const mixedComponentWise4h = createMixedComponentWise4(vec4h);
-const mixedComponentWise4i = createMixedComponentWise4(vec4i);
-const mixedComponentWise4u = createMixedComponentWise4(vec4u);
 export const NumberOps = {
   divInteger: (lhs: number, rhs: number) => {
     if (rhs === 0) {
@@ -880,23 +829,6 @@ export const VectorOps = {
     vec4i: binaryComponentWise4i((a, b) => a % b),
     vec4u: binaryComponentWise4u((a, b) => a % b),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
-
-  modMixed: {
-    vec2f: mixedComponentWise2f((a, b) => a % b),
-    vec2h: mixedComponentWise2h((a, b) => a % b),
-    vec2i: mixedComponentWise2i((a, b) => a % b),
-    vec2u: mixedComponentWise2u((a, b) => a % b),
-
-    vec3f: mixedComponentWise3f((a, b) => a % b),
-    vec3h: mixedComponentWise3h((a, b) => a % b),
-    vec3i: mixedComponentWise3i((a, b) => a % b),
-    vec3u: mixedComponentWise3u((a, b) => a % b),
-
-    vec4f: mixedComponentWise4f((a, b) => a % b),
-    vec4h: mixedComponentWise4h((a, b) => a % b),
-    vec4i: mixedComponentWise4i((a, b) => a % b),
-    vec4u: mixedComponentWise4u((a, b) => a % b),
-  } as Record<VecKind, <T extends vBase>(a: T | number, b: T | number) => T>,
 
   floor: {
     vec2f: unary2f(Math.floor),

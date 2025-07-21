@@ -1,3 +1,4 @@
+import { vecTypeToConstructor } from '../data/vector.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -585,11 +586,13 @@ export const mod: ModOverload = createDualImpl(
     }
     if (typeof a === 'number' && isVecInstance(b)) {
       // scalar % vector
-      return VectorOps.modMixed[b.kind](a, b) as T;
+      const schema = vecTypeToConstructor[b.kind];
+      return VectorOps.mod[b.kind](schema(a), b) as T;
     }
     if (isVecInstance(a) && typeof b === 'number') {
+      const schema = vecTypeToConstructor[a.kind];
       // vector % scalar
-      return VectorOps.modMixed[a.kind](a, b) as T;
+      return VectorOps.mod[a.kind](a, schema(b)) as T;
     }
 
     if (isVecInstance(a) && isVecInstance(b)) {
