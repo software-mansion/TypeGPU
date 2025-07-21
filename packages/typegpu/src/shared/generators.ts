@@ -1,8 +1,12 @@
-import type { Snippet, TgpuDualFn } from '../data/dataTypes.ts';
+import type {
+  MapValueToSnippet,
+  Snippet,
+  TgpuDualFn,
+} from '../data/dataTypes.ts';
 import { inCodegenMode } from '../execMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
-import { $internal } from './symbols.ts';
 import { setName } from './meta.ts';
+import { $internal } from './symbols.ts';
 
 /**
  * Yields values in the sequence 0,1,2..∞ except for the ones in the `excluded` set.
@@ -21,8 +25,6 @@ export function* naturalsExcept(
   }
 }
 
-type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
-
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
@@ -36,10 +38,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
     return jsImpl(...args);
   }) as T;
 
-  (impl as TgpuDualFn<T>)[$internal] = {
-    implementation: jsImpl,
-    argTypes,
-  };
+  (impl as TgpuDualFn<T>)[$internal] = { jsImpl, gpuImpl, argTypes };
 
   setName(impl, name);
 

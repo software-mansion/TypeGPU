@@ -1,6 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
-import { $internal } from '../shared/symbols.ts';
 import type { $repr } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { snip } from './dataTypes.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
@@ -15,7 +15,7 @@ import type {
   Mat3x3f,
   mat4x4,
   Mat4x4f,
-  matBase,
+  NumberArrayView,
   v2f,
   v3f,
   v4f,
@@ -32,24 +32,33 @@ type vBase = {
   [n: number]: number;
 };
 
-interface MatSchemaOptions<TType extends string, ValueType> {
+export abstract class MatBase<TColumn> implements NumberArrayView {
+  abstract readonly [$internal]: true;
+  abstract readonly columns: readonly TColumn[];
+
+  abstract readonly length: number;
+  abstract [Symbol.iterator](): Iterator<number>;
+  [n: number]: number;
+}
+
+interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
   rows: 2 | 3 | 4;
   columns: 2 | 3 | 4;
-  makeFromElements(...elements: number[]): ValueType;
+  MatImpl: new (...args: number[]) => MatBase<ColumnType>;
 }
 
 type MatConstructor<
-  ValueType extends matBase<ColumnType>,
+  ValueType extends MatBase<ColumnType>,
   ColumnType extends vBase,
 > = (...args: (number | ColumnType)[]) => ValueType;
 
 function createMatSchema<
   TType extends string,
-  ValueType extends matBase<ColumnType>,
+  ValueType extends MatBase<ColumnType>,
   ColumnType extends vBase,
 >(
-  options: MatSchemaOptions<TType, ValueType>,
+  options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
   const MatSchema = {
     [$internal]: true,
@@ -90,7 +99,7 @@ function createMatSchema<
         elements.push(0);
       }
 
-      return options.makeFromElements(...elements);
+      return new options.MatImpl(...elements) as ValueType;
     },
     // GPU implementation
     (...args) =>
@@ -107,7 +116,7 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f>
+abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
   implements mat2x2<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
@@ -116,6 +125,7 @@ abstract class mat2x2Impl<TColumn extends v2f>
   [n: number]: number;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(elements[0] as number, elements[1] as number),
       this.makeColumn(elements[2] as number, elements[3] as number),
@@ -171,7 +181,8 @@ abstract class mat2x2Impl<TColumn extends v2f>
     })`;
   }
 }
-class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
+
+class mat2x2fImpl extends mat2x2Impl<v2f> {
   public readonly kind = 'mat2x2f';
 
   makeColumn(e0: number, e1: number): v2f {
@@ -179,7 +190,7 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f>
+abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
   implements mat3x3<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
@@ -188,6 +199,7 @@ abstract class mat3x3Impl<TColumn extends v3f>
   [n: number]: number;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(
         elements[0] as number,
@@ -312,20 +324,21 @@ abstract class mat3x3Impl<TColumn extends v3f>
   }
 }
 
-class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
+class mat3x3fImpl extends mat3x3Impl<v3f> {
   public readonly kind = 'mat3x3f';
   makeColumn(x: number, y: number, z: number): v3f {
     return vec3f(x, y, z);
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f>
+abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
   implements mat4x4<TColumn>, SelfResolvable {
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
 
   constructor(...elements: number[]) {
+    super();
     this.columns = [
       this.makeColumn(
         elements[0] as number,
@@ -502,7 +515,7 @@ abstract class mat4x4Impl<TColumn extends v4f>
   }
 }
 
-class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
+class mat4x4fImpl extends mat4x4Impl<v4f> {
   public readonly kind = 'mat4x4f';
 
   makeColumn(x: number, y: number, z: number, w: number): v4f {
@@ -749,7 +762,7 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
   type: 'mat2x2f',
   rows: 2,
   columns: 2,
-  makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
+  MatImpl: mat2x2fImpl,
 }) as Mat2x2f;
 
 /**
@@ -779,7 +792,7 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
   type: 'mat3x3f',
   rows: 3,
   columns: 3,
-  makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
+  MatImpl: mat3x3fImpl,
 }) as Mat3x3f;
 
 /**
@@ -811,7 +824,7 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   type: 'mat4x4f',
   rows: 4,
   columns: 4,
-  makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
+  MatImpl: mat4x4fImpl,
 }) as Mat4x4f;
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
