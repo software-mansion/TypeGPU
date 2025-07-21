@@ -897,19 +897,13 @@ describe('tgsl fn when using plugin', () => {
     );
   });
 
+  // TODO: throw an error when cyclic dependency is detected
   // it('throws when it detects a cyclic dependency', () => {
-  //   const bar = tgpu.fn([], d.f32)(() => foo() + 2);
-  //   const foo = tgpu.fn([], d.f32)(() => 1);
+  //   let bar: TgpuFn;
+  //   let foo: TgpuFn;
+  //   bar = tgpu.fn([], d.f32)(() => foo() + 2);
+  //   foo = tgpu.fn([], d.f32)(() => bar() - 2);
 
-  //   expect(parseResolved({ bar })).toBe(
-  //     parse(`
-  //       fn foo() -> f32 {
-  //         return 1;
-  //       }
-
-  //       fn bar() -> f32 {
-  //         return foo() + 2;
-  //       }`),
-  //   );
+  //   expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(``);
   // });
 });
