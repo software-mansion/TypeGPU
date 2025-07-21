@@ -9,10 +9,15 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
 }
 `.$uses({ purple, blue });
 
+const root = await tgpu.init();
+const dupaBuffer = root.createReadonly(d.arrayOf(d.u32, 2), [0, 0])
+// const buffer = root.createBuffer()
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 }) /* wgsl */`{
+
+  var zeroval = 123.2 / f32(dupa[0]);
   var pos = array<vec2f, 3>(
     vec2(0.0, 0.5),
     vec2(-0.5, -0.5),
@@ -26,7 +31,9 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   );
 
   return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
-}`;
+}`.$uses({ dupa: dupaBuffer });
+
+
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -36,7 +43,6 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 }
 `.$uses({ getGradientColor });
 
-const root = await tgpu.init();
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
