@@ -20,7 +20,7 @@ import type {
 } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
-import { schemaDefaultWrapper } from '../../data/utils.ts';
+import { schemaCloneWrapper, schemaDefaultWrapper } from '../../data/utils.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 
@@ -163,7 +163,8 @@ class TgpuFixedBufferImpl<
       if (!mode.buffers.has(this.buffer)) { // Not initialized yet
         mode.buffers.set(
           this.buffer,
-          this.buffer.initial ?? schemaDefaultWrapper(this.buffer.dataType),
+          schemaCloneWrapper(this.buffer.dataType, this.buffer.initial) ??
+            schemaDefaultWrapper(this.buffer.dataType),
         );
       }
       return mode.buffers.get(this.buffer) as InferGPU<TData>;
