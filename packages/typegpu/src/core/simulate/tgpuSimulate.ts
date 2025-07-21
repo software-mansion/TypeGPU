@@ -14,6 +14,28 @@ interface SimulationResult<T> {
   workgroupVars: Map<TgpuVar<'workgroup', AnyData>, unknown>[][][];
 }
 
+/**
+ * Runs the provided callback in a simulated environment, giving
+ * it access to buffers and variables as if it were running on the GPU.
+ *
+ * The result of the simulation is returned, and does not affect the actual GPU state,
+ * nor does it carry over to other simulations.
+ *
+ * @param callback The callback to run in the simulated environment.
+ * @returns An object containing the result of the simulation, and
+ *          the final state of the environment.
+ *
+ * @example
+ * const counter = tgpu.privateVar(d.u32);
+ *
+ * const result = tgpu.simulate(() => {
+ *  counter.$ += 1;
+ *  counter.$ += 2;
+ *  return counter.$;
+ * });
+ *
+ * console.log(result.value); // 3
+ */
 export function simulate<T>(callback: () => T): SimulationResult<T> {
   // We could already be inside a resolution context, for example
   // during derived computation, where users would like to precompute
