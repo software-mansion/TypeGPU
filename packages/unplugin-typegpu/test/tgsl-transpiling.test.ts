@@ -198,7 +198,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
-                    externals: {counter, d},
+                    get externals() { return {counter, d}; },
                   }) && $.f)({})));
       "
     `);
@@ -229,21 +229,21 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
               const cx = 2;
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
                     v: 1,
                     ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
-                    externals: {cx},
+                    get externals() { return {cx}; },
                   }) && $.f)({})));
 
               tgpu.fn([])('() {}');

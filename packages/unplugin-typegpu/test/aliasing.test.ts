@@ -82,7 +82,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);
@@ -104,7 +104,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);
@@ -126,7 +126,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);

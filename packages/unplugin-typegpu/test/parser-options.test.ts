@@ -60,7 +60,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
             }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
             console.log(increment);

@@ -242,7 +242,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({}));
 
             console.log(addGPU);
@@ -283,7 +283,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
             shell((a, b) => {
@@ -319,7 +319,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
             shell(function(a, b) {
@@ -356,7 +356,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
             shell(function addCPU(a, b) {
@@ -393,7 +393,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({}));
 
             console.log(addGPU);
@@ -422,7 +422,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             }), {
                     v: 1,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({}));
       "
     `);
