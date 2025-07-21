@@ -7,13 +7,13 @@ import type {
   InferRecord,
   MemIdentityRecord,
 } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
   $memIdent,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
@@ -24,7 +24,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & TImpl
   & {
     [$internal]: {
-      implementation: TImpl | string;
+      jsImpl: TImpl | string;
+      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
       argTypes: FnArgsConversionHint;
     };
   };
@@ -159,19 +160,19 @@ export function isLooseDecorated<T extends LooseDecorated>(
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isAlignAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomSize(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isSizeAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomLocation(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isLocationAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function isData(value: unknown): value is AnyData {
@@ -194,6 +195,14 @@ export const UnknownData = {
     return 'unknown';
   },
 } as UnknownData;
+
+export class InfixDispatch {
+  constructor(
+    readonly name: string,
+    readonly lhs: Snippet,
+    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+  ) {}
+}
 
 export interface Snippet {
   readonly value: unknown;
@@ -220,6 +229,8 @@ export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
 }
+
+export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
   readonly type: 'decorated';

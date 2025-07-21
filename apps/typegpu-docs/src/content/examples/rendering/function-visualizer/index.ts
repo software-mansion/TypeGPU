@@ -605,7 +605,9 @@ export const controls = {
   },
   Recenter: {
     async onButtonClick() {
-      properties.transformation = mat4.identity(d.mat4x4f());
+      properties.transformation = d.mat4x4f.scaling(
+        d.vec3f(canvas.clientWidth / canvas.clientHeight, 1, 1),
+      );
     },
   },
 };
