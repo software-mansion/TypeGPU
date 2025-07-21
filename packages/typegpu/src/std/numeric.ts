@@ -566,11 +566,18 @@ export const sin = createDualImpl(
   'sin',
 );
 
+type ModOverload = {
+  (a: number, b: number): number;
+  <T extends NumVec>(a: T, b: T): T;
+  <T extends NumVec>(a: number, b: T): T;
+  <T extends NumVec>(a: T, b: number): T;
+};
+
 /**
  * @privateRemarks
  * Both JS and WGSL implementations use truncated definition of modulo
  */
-export const mod = createDualImpl(
+export const mod: ModOverload = createDualImpl(
   // CPU implementation
   <T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number' && typeof b === 'number') {

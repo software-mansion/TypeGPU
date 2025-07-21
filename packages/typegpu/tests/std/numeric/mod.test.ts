@@ -29,6 +29,9 @@ import type {
 } from '../../../src/data/wgslTypes.ts';
 import { isCloseTo, mod } from '../../../src/std/index.ts';
 import { VectorOps } from '../../../src/data/vectorOps.ts';
+import tgpu from '../../../src/index.ts';
+import * as d from '../../../src/data/index.ts';
+import { parseResolved } from '../../utils/parseResolved.ts';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {
@@ -319,6 +322,27 @@ describe('VectorOps.modMixed scalar and vec', () => {
     );
     expect(VectorOps.modMixed.vec4u(25, vec4u(6, 7, 8, 9))).toEqual(
       vec4u(1, 4, 1, 7),
+    );
+  });
+});
+
+describe('mod parseResolved test', () => {
+  it('resolves mod operation to WGSL correctly', () => {
+    const modFunction = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)((a, b) => {
+      return mod(a, b);
+    });
+
+    expect(parseResolved({ modFunction })).toMatchInlineSnapshot(
+      `"fn modFunction ( a : vec2f , b : vec2f ) -> vec2f { return ( a % b ) ; }"`,
+    );
+  });
+
+  it('resolves scalar-vector mod operation to WGSL correctly', () => {
+    const modScalarVec = tgpu.fn([d.f32, d.vec3f], d.vec3f)((scalar, vec) => {
+      return mod(scalar, vec);
+    });
+    expect(parseResolved({ modScalarVec })).toMatchInlineSnapshot(
+      `"fn modScalarVec ( scalar : f32 , vec : vec3f ) -> vec3f { return ( scalar % vec ) ; }"`,
     );
   });
 });
