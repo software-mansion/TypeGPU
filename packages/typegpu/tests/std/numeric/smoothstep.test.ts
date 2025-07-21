@@ -83,4 +83,65 @@ describe('smoothstep', () => {
     // For third component: x > edge1, result = 1
     expect(isCloseTo(result, vec3f(0, 0.5, 1))).toBe(true);
   });
+
+  it('handles edge case with equal edge values', () => {
+    expect(smoothstep(0.5, 0.5, 0.4)).toBe(0);
+    expect(smoothstep(0.5, 0.5, 0.5)).toBe(0);
+    expect(smoothstep(0.5, 0.5, 0.6)).toBe(0);
+
+    const result = smoothstep(
+      vec2f(0.5, 0.3),
+      vec2f(0.5, 0.3),
+      vec2f(0.4, 0.3),
+    );
+    expect(isCloseTo(result, vec2f(0, 1))).toBe(false);
+  });
+
+  it('handles reversed edge values (edge0 > edge1)', () => {
+    expect(smoothstep(0.8, 0.2, 0.5)).toBeCloseTo(0.5);
+
+    const result = smoothstep(
+      vec2f(0.8, 0.7),
+      vec2f(0.2, 0.3),
+      vec2f(0.5, 0.5),
+    );
+    expect(isCloseTo(result, vec2f(0.5, 0.5))).toBe(true);
+  });
+
+  it('handles negative values correctly', () => {
+    expect(smoothstep(-2, -1, -1.5)).toBeCloseTo(0.5);
+    expect(smoothstep(-10, -5, -20)).toBe(0);
+    expect(smoothstep(-10, -5, 0)).toBe(1);
+
+    const result = smoothstep(
+      vec3f(-1, 0, -10),
+      vec3f(1, 1, -5),
+      vec3f(0, 0.5, -7.5),
+    );
+    expect(isCloseTo(result, vec3f(0.5, 0.5, 0.5))).toBe(true);
+  });
+
+  it('handles very small differences between edges', () => {
+    expect(smoothstep(0.5000, 0.5001, 0.50005)).toBeCloseTo(0.5);
+
+    const result = smoothstep(
+      vec2f(0.1, 0.2),
+      vec2f(0.1001, 0.2001),
+      vec2f(0.1, 0.20005),
+    );
+    expect(isCloseTo(result, vec2f(0, 0.5))).toBe(true);
+  });
+
+  it('handles extreme values', () => {
+    expect(smoothstep(1000, 2000, 1500)).toBeCloseTo(0.5);
+
+    expect(smoothstep(0.00001, 0.00002, 0.000015)).toBeCloseTo(0.5);
+
+    const result = smoothstep(
+      vec3f(0.00001, 1000, 0),
+      vec3f(0.00002, 2000, 1),
+      vec3f(0.000015, 1500, 0.5),
+    );
+    expect(isCloseTo(result, vec3f(0.5, 0.5, 0.5))).toBe(true);
+  });
 });
