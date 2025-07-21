@@ -813,6 +813,23 @@ export const VectorOps = {
     <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T
   >,
 
+  mod: {
+    vec2f: binaryComponentWise2f((a, b) => a % b),
+    vec2h: binaryComponentWise2h((a, b) => a % b),
+    vec2i: binaryComponentWise2i((a, b) => a % b),
+    vec2u: binaryComponentWise2u((a, b) => a % b),
+
+    vec3f: binaryComponentWise3f((a, b) => a % b),
+    vec3h: binaryComponentWise3h((a, b) => a % b),
+    vec3i: binaryComponentWise3i((a, b) => a % b),
+    vec3u: binaryComponentWise3u((a, b) => a % b),
+
+    vec4f: binaryComponentWise4f((a, b) => a % b),
+    vec4h: binaryComponentWise4h((a, b) => a % b),
+    vec4i: binaryComponentWise4i((a, b) => a % b),
+    vec4u: binaryComponentWise4u((a, b) => a % b),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
   floor: {
     vec2f: unary2f(Math.floor),
     vec2h: unary2h(Math.floor),
