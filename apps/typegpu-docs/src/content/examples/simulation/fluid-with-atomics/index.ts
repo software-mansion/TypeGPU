@@ -1,3 +1,4 @@
+import { u32 } from './../../../../../../../packages/typegpu/src/data/numeric';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -207,7 +208,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x - 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(std.min(4, remainingWater), d.u32(d.u32(flowRaw) / d.f32(4)));
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x - 1, y, flow);
@@ -222,7 +223,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x + 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / d.f32(4));
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x + 1, y, flow);
@@ -263,7 +264,7 @@ const vertex = tgpu['~unstable'].vertexFn({
     d.f32(w)) /
     d.f32(std.max(w, h));
   const y =
-    ((d.f32((input.idx - (input.idx % w)) / w) + d.f32(input.squareData.y)) /
+    ((d.f32((input.idx - (input.idx % w)) / d.f32(w)) + d.f32(input.squareData.y)) /
         d.f32(h) -
       0.5) *
     2 *
