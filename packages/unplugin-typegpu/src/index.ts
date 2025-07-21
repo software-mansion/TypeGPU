@@ -172,18 +172,6 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
-            if (
-              isFunctionStatement &&
-              name &&
-              code
-                  .slice(0, def.start)
-                  .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
-            ) {
-              console.warn(
-                `File ${id}: function "${name}" might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
-              );
-            }
-
             const metadata = `{
               v: ${FORMAT_VERSION},
               ast: ${embedJSON({ params, body, externalNames })},
