@@ -24,7 +24,9 @@ describe('[BABEL] auto naming', () => {
         var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: {}
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "fn");
         let shell = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell");
         console.log(bindGroupLayout, vertexLayout);"
@@ -126,14 +128,18 @@ describe('[BABEL] auto naming', () => {
         const myFunction = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-          externals: {}
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myFunction");
         const myComputeFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
           workgroupSize: [1]
         })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: {}
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myComputeFn");
         const myVertexFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({
           out: {
@@ -144,7 +150,9 @@ describe('[BABEL] auto naming', () => {
         }), {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
-          externals: {}
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myVertexFn");
         const myFragmentFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
           in: {
@@ -154,8 +162,10 @@ describe('[BABEL] auto naming', () => {
         })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => d.vec4f(), {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-          externals: {
-            d
+          get externals() {
+            return {
+              d
+            };
           }
         }) && $.f)({})), "myFragmentFn");"
       `);

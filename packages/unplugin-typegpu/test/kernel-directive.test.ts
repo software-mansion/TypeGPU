@@ -25,7 +25,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({});
       const addCPU = (a, b) => {
         return a + b;
@@ -59,7 +61,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));
       shell((a, b) => {
         return a + b;
@@ -93,7 +97,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));
       shell(function (a, b) {
         return a + b;
@@ -127,7 +133,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));
       shell(function addCPU(a, b) {
         return a + b;
@@ -158,7 +166,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({});
       function addCPU(a, b) {
         return a + b;
@@ -182,7 +192,9 @@ describe('[BABEL] "kernel" directive', () => {
       }, {
         v: 1,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({});
       ;"
     `);

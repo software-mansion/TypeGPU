@@ -18,7 +18,9 @@ describe('[BABEL] tgpu alias gathering', () => {
       }, {
         v: 1,
         ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));"
     `);
   });
@@ -39,7 +41,9 @@ describe('[BABEL] tgpu alias gathering', () => {
       }, {
         v: 1,
         ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));"
     `);
   });
@@ -60,7 +64,9 @@ describe('[BABEL] tgpu alias gathering', () => {
       }, {
         v: 1,
         ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));"
     `);
   });
