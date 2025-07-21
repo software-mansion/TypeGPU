@@ -597,21 +597,12 @@ export const mod: ModOverload = createDualImpl(
       return VectorOps.mod[a.kind](a, b) as T;
     }
     throw new Error(
-      `Mod called with invalid arguments. Received types: a=${typeof a}, b=${typeof b}. Expected types: number or vector.`,
+      'Mod called with invalid arguments, expected types: number or vector.',
     );
   },
   // GPU implementation
   (a, b) => {
-    const type = isSnippetNumeric(a)
-      ? b.dataType
-      : isSnippetNumeric(b)
-      ? a.dataType
-      : isVecInstance(a.dataType)
-      ? a.dataType
-      : isVecInstance(b.dataType)
-      ? b.dataType
-      : a.dataType;
-
+    const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
     return snip(`(${a.value} % ${b.value})`, type);
   },
   'mod',
