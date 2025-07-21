@@ -602,16 +602,17 @@ export const mod: ModOverload = createDualImpl(
   },
   // GPU implementation
   (a, b) => {
-    const returnType = isSnippetNumeric(a)
+    const type = isSnippetNumeric(a)
       ? b.dataType
       : isSnippetNumeric(b)
       ? a.dataType
-      : a.dataType.type.startsWith('vec')
+      : isVecInstance(a.dataType)
       ? a.dataType
-      : b.dataType.type.startsWith('vec')
+      : isVecInstance(b.dataType)
       ? b.dataType
       : a.dataType;
-    return snip(`(${a.value} % ${b.value})`, returnType);
+
+    return snip(`(${a.value} % ${b.value})`, type);
   },
   'mod',
 );
