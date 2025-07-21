@@ -1,5 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import { clamp, smoothstepScalar } from './numberOps.ts';
+import { clamp, divInteger, smoothstepScalar } from './numberOps.ts';
 import {
   vec2b,
   vec2f,
@@ -195,15 +195,6 @@ const ternaryComponentWise4h =
       op(a.z, b.z, c.z),
       op(a.w, b.w, c.w),
     );
-
-export const NumberOps = {
-  divInteger: (lhs: number, rhs: number) => {
-    if (rhs === 0) {
-      return lhs;
-    }
-    return Math.trunc(lhs / rhs);
-  },
-};
 
 export const VectorOps = {
   eq: {
@@ -741,41 +732,35 @@ export const VectorOps = {
   div: {
     vec2f: binaryComponentWise2f((a, b) => a / b),
     vec2h: binaryComponentWise2h((a, b) => a / b),
-    vec2i: binaryComponentWise2i(NumberOps.divInteger),
-    vec2u: binaryComponentWise2u(NumberOps.divInteger),
+    vec2i: binaryComponentWise2i(divInteger),
+    vec2u: binaryComponentWise2u(divInteger),
 
     vec3f: binaryComponentWise3f((a, b) => a / b),
     vec3h: binaryComponentWise3h((a, b) => a / b),
-    vec3i: binaryComponentWise3i(NumberOps.divInteger),
-    vec3u: binaryComponentWise3u(NumberOps.divInteger),
+    vec3i: binaryComponentWise3i(divInteger),
+    vec3u: binaryComponentWise3u(divInteger),
 
     vec4f: binaryComponentWise4f((a, b) => a / b),
     vec4h: binaryComponentWise4h((a, b) => a / b),
-    vec4i: binaryComponentWise4i(NumberOps.divInteger),
-    vec4u: binaryComponentWise4u(NumberOps.divInteger),
+    vec4i: binaryComponentWise4i(divInteger),
+    vec4u: binaryComponentWise4u(divInteger),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   divMixed: {
     vec2f: (a: wgsl.v2f, b: number) => unary2f((e) => e / b)(a),
     vec2h: (a: wgsl.v2h, b: number) => unary2h((e) => e / b)(a),
-    vec2i: (a: wgsl.v2i, b: number) =>
-      unary2i((e) => NumberOps.divInteger(e, b))(a),
-    vec2u: (a: wgsl.v2u, b: number) =>
-      unary2u((e) => NumberOps.divInteger(e, b))(a),
+    vec2i: (a: wgsl.v2i, b: number) => unary2i((e) => divInteger(e, b))(a),
+    vec2u: (a: wgsl.v2u, b: number) => unary2u((e) => divInteger(e, b))(a),
 
     vec3f: (a: wgsl.v3f, b: number) => unary3f((e) => e / b)(a),
     vec3h: (a: wgsl.v3h, b: number) => unary3h((e) => e / b)(a),
-    vec3i: (a: wgsl.v3i, b: number) =>
-      unary3i((e) => NumberOps.divInteger(e, b))(a),
-    vec3u: (a: wgsl.v3u, b: number) =>
-      unary3u((e) => NumberOps.divInteger(e, b))(a),
+    vec3i: (a: wgsl.v3i, b: number) => unary3i((e) => divInteger(e, b))(a),
+    vec3u: (a: wgsl.v3u, b: number) => unary3u((e) => divInteger(e, b))(a),
 
     vec4f: (a: wgsl.v4f, b: number) => unary4f((e) => e / b)(a),
     vec4h: (a: wgsl.v4h, b: number) => unary4h((e) => e / b)(a),
-    vec4i: (a: wgsl.v4i, b: number) =>
-      unary4i((e) => NumberOps.divInteger(e, b))(a),
-    vec4u: (a: wgsl.v4u, b: number) =>
-      unary4u((e) => NumberOps.divInteger(e, b))(a),
+    vec4i: (a: wgsl.v4i, b: number) => unary4i((e) => divInteger(e, b))(a),
+    vec4u: (a: wgsl.v4u, b: number) => unary4u((e) => divInteger(e, b))(a),
   } as Record<VecKind, <T extends vBase>(lhs: T, rhs: number) => T>,
 
   dot: {

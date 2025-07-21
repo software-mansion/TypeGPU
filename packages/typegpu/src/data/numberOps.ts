@@ -12,3 +12,10 @@ export const smoothstepScalar = (
 
 export const clamp = (value: number, low: number, high: number) =>
   Math.min(Math.max(low, value), high);
+
+export const divInteger = (lhs: number, rhs: number) => {
+  if (rhs === 0) {
+    return lhs;
+  }
+  return Math.trunc(lhs / rhs);
+};
