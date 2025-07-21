@@ -881,21 +881,21 @@ describe('tgsl fn when using plugin', () => {
     );
   });
 
-  // it('can reference function defined below', () => {
-  //   const bar = tgpu.fn([], d.f32)(() => foo() + 2);
-  //   const foo = tgpu.fn([], d.f32)(() => 1);
+  it('can reference function defined below', () => {
+    const bar = tgpu.fn([], d.f32)(() => foo() + 2);
+    const foo = tgpu.fn([], d.f32)(() => 1);
 
-  //   expect(parseResolved({ bar })).toBe(
-  //     parse(`
-  //       fn foo() -> f32 {
-  //         return 1;
-  //       }
+    expect(parseResolved({ bar })).toBe(
+      parse(`
+        fn foo() -> f32 {
+          return 1;
+        }
 
-  //       fn bar() -> f32 {
-  //         return foo() + 2;
-  //       }`),
-  //   );
-  // });
+        fn bar() -> f32 {
+          return (foo() + 2);
+        }`),
+    );
+  });
 
   // it('throws when it detects a cyclic dependency', () => {
   //   const bar = tgpu.fn([], d.f32)(() => foo() + 2);
