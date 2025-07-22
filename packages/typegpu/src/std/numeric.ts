@@ -213,7 +213,6 @@ export const div: TgpuDualFn<DivOverload> = createDualImpl(
     if (typeof lhs === 'number' && typeof rhs === 'number') {
       return (lhs / rhs) as T;
     }
-
     if (typeof lhs === 'number' && isVecInstance(rhs)) {
       const schema = vecTypeToConstructor[rhs.kind];
       return VectorOps.div[rhs.kind](schema(lhs), rhs) as T;
@@ -222,7 +221,6 @@ export const div: TgpuDualFn<DivOverload> = createDualImpl(
       const schema = vecTypeToConstructor[lhs.kind];
       return VectorOps.div[lhs.kind](lhs, schema(rhs)) as T;
     }
-
     if (isVecInstance(lhs) && isVecInstance(rhs)) {
       return VectorOps.div[lhs.kind](lhs, rhs) as T;
     }
