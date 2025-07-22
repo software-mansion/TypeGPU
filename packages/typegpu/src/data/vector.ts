@@ -251,7 +251,7 @@ export const vec4b = makeVecSchema(Vec4bImpl) as Vec4b;
 // Implementation
 // --------------
 
-const vecTypeToConstructor = {
+export const vecTypeToConstructor = {
   vec2f,
   vec2h,
   vec2i,
