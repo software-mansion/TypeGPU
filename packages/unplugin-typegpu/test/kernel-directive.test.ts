@@ -419,6 +419,21 @@ describe('[ROLLUP] "kernel" directive', () => {
     `);
   });
 
+  it('throws when hoisting was meant to be used', async () => {
+    const code = `\
+      const sum = add(1, 2);
+      function add(a, b) {
+        'kernel';
+        return a + b;
+      };
+    `;
+
+    await rollupTransform(code);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `File  virtual:code: function "add" might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+    );
+  });
+
   it('parses when no typegpu import', async () => {
     const code = `\
       function add(a, b) {
