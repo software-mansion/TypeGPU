@@ -1,9 +1,6 @@
-import {
-  type AnyData,
-  snip,
-  type Snippet,
-  type TgpuDualFn,
-} from '../data/dataTypes.ts';
+import { vecTypeToConstructor } from '../data/vector.ts';
+import { type AnyData, snip, type Snippet, TgpuDualFn } from '../data/dataTypes.ts';
+import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -583,11 +580,13 @@ export const mod: ModOverload = createDualImpl(
     }
     if (typeof a === 'number' && isVecInstance(b)) {
       // scalar % vector
-      return VectorOps.modMixed[b.kind](a, b) as T;
+      const schema = vecTypeToConstructor[b.kind];
+      return VectorOps.mod[b.kind](schema(a), b) as T;
     }
     if (isVecInstance(a) && typeof b === 'number') {
+      const schema = vecTypeToConstructor[a.kind];
       // vector % scalar
-      return VectorOps.modMixed[a.kind](a, b) as T;
+      return VectorOps.mod[a.kind](a, schema(b)) as T;
     }
 
     if (isVecInstance(a) && isVecInstance(b)) {
@@ -758,4 +757,26 @@ export const tanh = createDualImpl(
   // GPU implementation
   (value) => snip(`tanh(${value.value})`, value.dataType),
   'tanh',
+);
+
+export const smoothstep = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T => {
+    if (typeof x === 'number') {
+      return smoothstepScalar(
+        edge0 as number,
+        edge1 as number,
+        x as number,
+      ) as T;
+    }
+    return VectorOps.smoothstep[x.kind](
+      edge0 as AnyFloatVecInstance,
+      edge1 as AnyFloatVecInstance,
+      x as AnyFloatVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (edge0, edge1, x) =>
+    snip(`smoothstep(${edge0.value}, ${edge1.value}, ${x.value})`, x.dataType),
+  'smoothstep',
 );

@@ -1,4 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { clamp, divInteger, smoothstepScalar } from './numberOps.ts';
 import {
   vec2b,
   vec2f,
@@ -37,9 +38,6 @@ const dotVec3 = (lhs: v3, rhs: v3) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 const dotVec4 = (lhs: v4, rhs: v4) =>
   lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
-
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(Math.max(low, value), high);
 
 type UnaryOp = (a: number) => number;
 type BinaryOp = (a: number, b: number) => number;
@@ -162,65 +160,41 @@ const binaryComponentWise4x4f =
     );
   };
 
-const createMixedComponentWise2 = <T extends { x: number; y: number }>(
-  vecConstructor: (x: number, y: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
+type TernaryOp = (a: number, b: number, c: number) => number;
+
+const ternaryComponentWise2f =
+  (op: TernaryOp) => (a: wgsl.v2f, b: wgsl.v2f, c: wgsl.v2f) =>
+    vec2f(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise2h =
+  (op: TernaryOp) => (a: wgsl.v2h, b: wgsl.v2h, c: wgsl.v2h) =>
+    vec2h(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
+
+const ternaryComponentWise3f =
+  (op: TernaryOp) => (a: wgsl.v3f, b: wgsl.v3f, c: wgsl.v3f) =>
+    vec3f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise3h =
+  (op: TernaryOp) => (a: wgsl.v3h, b: wgsl.v3h, c: wgsl.v3h) =>
+    vec3h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
+
+const ternaryComponentWise4f =
+  (op: TernaryOp) => (a: wgsl.v4f, b: wgsl.v4f, c: wgsl.v4f) =>
+    vec4f(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
     );
-};
 
-const mixedComponentWise2f = createMixedComponentWise2(vec2f);
-const mixedComponentWise2h = createMixedComponentWise2(vec2h);
-const mixedComponentWise2i = createMixedComponentWise2(vec2i);
-const mixedComponentWise2u = createMixedComponentWise2(vec2u);
-
-const createMixedComponentWise3 = <
-  T extends { x: number; y: number; z: number },
->(
-  vecConstructor: (x: number, y: number, z: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
+const ternaryComponentWise4h =
+  (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: wgsl.v4h) =>
+    vec4h(
+      op(a.x, b.x, c.x),
+      op(a.y, b.y, c.y),
+      op(a.z, b.z, c.z),
+      op(a.w, b.w, c.w),
     );
-};
-
-const mixedComponentWise3f = createMixedComponentWise3(vec3f);
-const mixedComponentWise3h = createMixedComponentWise3(vec3h);
-const mixedComponentWise3i = createMixedComponentWise3(vec3i);
-const mixedComponentWise3u = createMixedComponentWise3(vec3u);
-
-const createMixedComponentWise4 = <
-  T extends { x: number; y: number; z: number; w: number },
->(
-  vecConstructor: (x: number, y: number, z: number, w: number) => T,
-) => {
-  return (op: BinaryOp) => (a: T | number, b: T | number) =>
-    vecConstructor(
-      op(typeof a === 'number' ? a : a.x, typeof b === 'number' ? b : b.x),
-      op(typeof a === 'number' ? a : a.y, typeof b === 'number' ? b : b.y),
-      op(typeof a === 'number' ? a : a.z, typeof b === 'number' ? b : b.z),
-      op(typeof a === 'number' ? a : a.w, typeof b === 'number' ? b : b.w),
-    );
-};
-
-const mixedComponentWise4f = createMixedComponentWise4(vec4f);
-const mixedComponentWise4h = createMixedComponentWise4(vec4h);
-const mixedComponentWise4i = createMixedComponentWise4(vec4i);
-const mixedComponentWise4u = createMixedComponentWise4(vec4u);
-export const NumberOps = {
-  divInteger: (lhs: number, rhs: number) => {
-    if (rhs === 0) {
-      return lhs;
-    }
-    return Math.trunc(lhs / rhs);
-  },
-};
 
 export const VectorOps = {
   eq: {
@@ -497,6 +471,25 @@ export const VectorOps = {
     <T extends vBase | mBase>(lhs: T, rhs: T) => T
   >,
 
+  smoothstep: {
+    vec2f: ternaryComponentWise2f(smoothstepScalar),
+    vec2h: ternaryComponentWise2h(smoothstepScalar),
+    vec3f: ternaryComponentWise3f(smoothstepScalar),
+    vec3h: ternaryComponentWise3h(smoothstepScalar),
+    vec4f: ternaryComponentWise4f(smoothstepScalar),
+    vec4h: ternaryComponentWise4h(smoothstepScalar),
+  } as Record<
+    VecKind,
+    <T extends vBase>(
+      edge0: T,
+      edge1: T,
+      x: T,
+    ) => T extends wgsl.AnyVec2Instance ? wgsl.v2f
+      : T extends wgsl.AnyVec3Instance ? wgsl.v3f
+      : T extends wgsl.AnyVec4Instance ? wgsl.v4f
+      : wgsl.AnyVecInstance
+  >,
+
   addMixed: {
     vec2f: (a: wgsl.v2f, b: number) => unary2f((e) => e + b)(a),
     vec2h: (a: wgsl.v2h, b: number) => unary2h((e) => e + b)(a),
@@ -739,39 +732,36 @@ export const VectorOps = {
   div: {
     vec2f: binaryComponentWise2f((a, b) => a / b),
     vec2h: binaryComponentWise2h((a, b) => a / b),
-    vec2i: binaryComponentWise2i((a, b) => a / b),
-    vec2u: binaryComponentWise2u((a, b) => a / b),
+    vec2i: binaryComponentWise2i(divInteger),
+    vec2u: binaryComponentWise2u(divInteger),
 
     vec3f: binaryComponentWise3f((a, b) => a / b),
     vec3h: binaryComponentWise3h((a, b) => a / b),
-    vec3i: binaryComponentWise3i((a, b) => a / b),
-    vec3u: binaryComponentWise3u((a, b) => a / b),
+    vec3i: binaryComponentWise3i(divInteger),
+    vec3u: binaryComponentWise3u(divInteger),
 
     vec4f: binaryComponentWise4f((a, b) => a / b),
     vec4h: binaryComponentWise4h((a, b) => a / b),
-    vec4i: binaryComponentWise4i((a, b) => a / b),
-    vec4u: binaryComponentWise4u((a, b) => a / b),
+    vec4i: binaryComponentWise4i(divInteger),
+    vec4u: binaryComponentWise4u(divInteger),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   divMixed: {
-    vec2f: mixedComponentWise2f((a, b) => a / b),
-    vec2h: mixedComponentWise2h((a, b) => a / b),
-    vec2i: mixedComponentWise2i((a, b) => a / b),
-    vec2u: mixedComponentWise2u((a, b) => a / b),
+    vec2f: (a: wgsl.v2f, b: number) => unary2f((e) => e / b)(a),
+    vec2h: (a: wgsl.v2h, b: number) => unary2h((e) => e / b)(a),
+    vec2i: (a: wgsl.v2i, b: number) => unary2i((e) => divInteger(e, b))(a),
+    vec2u: (a: wgsl.v2u, b: number) => unary2u((e) => divInteger(e, b))(a),
 
-    vec3f: mixedComponentWise3f((a, b) => a / b),
-    vec3h: mixedComponentWise3h((a, b) => a / b),
-    vec3i: mixedComponentWise3i((a, b) => a / b),
-    vec3u: mixedComponentWise3u((a, b) => a / b),
+    vec3f: (a: wgsl.v3f, b: number) => unary3f((e) => e / b)(a),
+    vec3h: (a: wgsl.v3h, b: number) => unary3h((e) => e / b)(a),
+    vec3i: (a: wgsl.v3i, b: number) => unary3i((e) => divInteger(e, b))(a),
+    vec3u: (a: wgsl.v3u, b: number) => unary3u((e) => divInteger(e, b))(a),
 
-    vec4f: mixedComponentWise4f((a, b) => a / b),
-    vec4h: mixedComponentWise4h((a, b) => a / b),
-    vec4i: mixedComponentWise4i((a, b) => a / b),
-    vec4u: mixedComponentWise4u((a, b) => a / b),
-  } as Record<
-    VecKind,
-    <T extends vBase>(lhs: T | number, rhs: T | number) => T
-  >,
+    vec4f: (a: wgsl.v4f, b: number) => unary4f((e) => e / b)(a),
+    vec4h: (a: wgsl.v4h, b: number) => unary4h((e) => e / b)(a),
+    vec4i: (a: wgsl.v4i, b: number) => unary4i((e) => divInteger(e, b))(a),
+    vec4u: (a: wgsl.v4u, b: number) => unary4u((e) => divInteger(e, b))(a),
+  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: number) => T>,
 
   dot: {
     vec2f: dotVec2,
@@ -877,23 +867,6 @@ export const VectorOps = {
     vec4i: binaryComponentWise4i((a, b) => a % b),
     vec4u: binaryComponentWise4u((a, b) => a % b),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
-
-  modMixed: {
-    vec2f: mixedComponentWise2f((a, b) => a % b),
-    vec2h: mixedComponentWise2h((a, b) => a % b),
-    vec2i: mixedComponentWise2i((a, b) => a % b),
-    vec2u: mixedComponentWise2u((a, b) => a % b),
-
-    vec3f: mixedComponentWise3f((a, b) => a % b),
-    vec3h: mixedComponentWise3h((a, b) => a % b),
-    vec3i: mixedComponentWise3i((a, b) => a % b),
-    vec3u: mixedComponentWise3u((a, b) => a % b),
-
-    vec4f: mixedComponentWise4f((a, b) => a % b),
-    vec4h: mixedComponentWise4h((a, b) => a % b),
-    vec4i: mixedComponentWise4i((a, b) => a % b),
-    vec4u: mixedComponentWise4u((a, b) => a % b),
-  } as Record<VecKind, <T extends vBase>(a: T | number, b: T | number) => T>,
 
   floor: {
     vec2f: unary2f(Math.floor),

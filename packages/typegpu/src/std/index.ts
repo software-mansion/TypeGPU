@@ -37,6 +37,7 @@ export {
   reflect,
   sign,
   sin,
+  smoothstep,
   sqrt,
   tanh
 } from './numeric.ts';
