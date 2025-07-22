@@ -36,6 +36,21 @@ const allPackagesSrcFiles = pipe(
   fromEntries(),
 );
 
+const threeModules = pipe(
+  entries(
+    import.meta.glob(
+      '../../../node_modules/@types/three/**/*.d.ts',
+      {
+        query: 'raw',
+        eager: true,
+        import: 'default',
+      },
+    ) as Record<string, string>,
+  ),
+  map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
+  fromEntries(),
+);
+
 const mediacaptureModules = pipe(
   entries(
     import.meta.glob(
@@ -53,6 +68,7 @@ const mediacaptureModules = pipe(
 
 export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   ...allPackagesSrcFiles,
+  ...threeModules,
   ...mediacaptureModules,
 
   '@webgpu/types': {
@@ -71,11 +87,25 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     typeDef: { reroute: ['typegpu/src/std/index.ts'] },
   },
 
+  // Three.js, for examples of @typegpu/three
+  'three': {
+    typeDef: { reroute: ['@types/three/build/three.module.d.ts'] },
+  },
+  'three/webgpu': {
+    typeDef: { reroute: ['@types/three/build/three.webgpu.d.ts'] },
+  },
+  'three/tsl': {
+    typeDef: { reroute: ['@types/three/build/three.tsl.d.ts'] },
+  },
+
   // Utility modules
   '@typegpu/noise': {
     typeDef: { reroute: ['typegpu-noise/src/index.ts'] },
   },
   '@typegpu/color': {
     typeDef: { reroute: ['typegpu-color/src/index.ts'] },
+  },
+  '@typegpu/three': {
+    typeDef: { reroute: ['typegpu-three/src/index.ts'] },
   },
 };
