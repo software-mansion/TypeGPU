@@ -9,7 +9,7 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 );
 
 export default defineConfig({
-  plugins: [typegpu({})],
+  plugins: [typegpu({ forceTgpuAlias: 'tgpu' })],
   test: {
     globalSetup: ['setupVitest.ts'],
   },

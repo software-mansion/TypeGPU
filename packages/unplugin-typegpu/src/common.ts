@@ -16,7 +16,8 @@ export interface Options {
   include?: FilterPattern;
   exclude?: FilterPattern;
   enforce?: 'post' | 'pre' | undefined;
-  autoNamingEnabled?: boolean;
+  forceTgpuAlias?: string | undefined;
+  autoNamingEnabled?: boolean | undefined;
 }
 
 export const defaultOptions = {
