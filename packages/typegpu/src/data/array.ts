@@ -64,7 +64,7 @@ const WgslArrayImpl = {
   [$internal]: true,
   type: 'array',
 
-  toString(): string {
-    return `arrayOf(${this.elementType})`;
+  toString(this: WgslArray): string {
+    return `arrayOf(${this.elementType}, ${this.elementCount})`;
   },
 };
