@@ -1,4 +1,14 @@
-import { translateTGSL } from './translateTGSL.ts';
+import * as Babel from '@babel/standalone';
+import plugin from 'unplugin-typegpu/babel';
+
+function translateTGSL(
+  code: string,
+): string {
+  const result = Babel.transform(code, {
+    plugins: [plugin],
+  }).code;
+  return result || '';
+}
 
 type TgslModule = Record<string, unknown>;
 

@@ -39,26 +39,3 @@ export const vertFn = tgpu['~unstable'].vertexFn({
 export const fragFn = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(() => d.vec4f(1.0, 0.0, 0.0, 1.0));`;
-
-export const LANGUAGE_MAP: Record<string, string> = {
-  wgsl: 'wgsl',
-  glsl: 'cpp',
-  hlsl: 'cpp',
-  metal: 'cpp',
-  spirv: 'plaintext',
-  'spirv-asm': 'plaintext',
-};
-
-export const commonEditorOptions = {
-  minimap: { enabled: false },
-  fontSize: 14,
-  fontFamily: 'Monaco, "Cascadia Code", "Roboto Mono", monospace',
-  wordWrap: 'off' as const,
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  tabSize: 2,
-  renderWhitespace: 'selection' as const,
-  lineNumbers: 'on' as const,
-  folding: true,
-  bracketPairColorization: { enabled: true },
-} as const;

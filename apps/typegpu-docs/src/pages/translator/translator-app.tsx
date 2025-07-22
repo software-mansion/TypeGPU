@@ -1,263 +1,49 @@
-import { useCallback, useEffect, useId, useRef } from 'react';
-import { Editor, type Monaco } from '@monaco-editor/react';
-import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
+import { useEffect, useId } from 'react';
+import { Editor } from '@monaco-editor/react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
-  commonEditorOptions,
+  editorLoadingAtom,
+  formatAtom,
+  initializeAtom,
+  modeAtom,
+  outputAtom,
+  tgslCodeAtom,
+  wgslCodeAtom,
+} from './lib/translatorStore.ts';
+import { TRANSLATOR_MODES } from './lib/constants.ts';
+import {
+  editableEditorOptions,
   LANGUAGE_MAP,
-  TRANSLATOR_MODES,
-} from './lib/constants.ts';
-import { useShaderTranslator } from './lib/useShaderTranslator.ts';
-import { SANDBOX_MODULES } from '../../utils/examples/sandboxModules.ts';
-import { tsCompilerOptions } from '../../utils/liveEditor/embeddedTypeScript.ts';
-
-const STATUS_COLOR_MAP: Record<string, string> = {
-  initializing: 'text-yellow-500',
-  ready: 'text-green-500',
-  compiling: 'text-yellow-500',
-  success: 'text-green-500',
-  error: 'text-red-500',
-};
-
-const STATUS_TEXT: Record<string, string> = {
-  initializing: 'Initializing…',
-  ready: 'Ready to compile!',
-  compiling: 'Compiling…',
-  success: 'Compilation successful!',
-  error: '',
-};
-
-function handleEditorWillMount(monaco: Monaco) {
-  const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
-
-  const reroutes = pipe(
-    entries(SANDBOX_MODULES),
-    map(([key, moduleDef]) => {
-      if ('reroute' in moduleDef.typeDef) {
-        return [key, moduleDef.typeDef.reroute] as const;
-      }
-      return null;
-    }),
-    filter(isTruthy),
-    fromEntries(),
-  );
-
-  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
-    if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(
-        moduleDef.typeDef.content,
-        moduleDef.typeDef.filename,
-      );
-
-      if (
-        moduleDef.typeDef.filename &&
-        moduleDef.typeDef.filename !== moduleKey
-      ) {
-        reroutes[moduleKey] = [
-          ...(reroutes[moduleKey] ?? []),
-          moduleDef.typeDef.filename,
-        ];
-      }
-    }
-  }
-
-  tsDefaults.setCompilerOptions({
-    ...tsCompilerOptions,
-    paths: reroutes,
-  });
-}
-
-const editorOptions = {
-  ...commonEditorOptions,
-  readOnly: false,
-  fixedOverflowWidgets: true,
-};
-const outputEditorOptions = {
-  ...commonEditorOptions,
-  readOnly: true,
-  fixedOverflowWidgets: true,
-};
+  readOnlyEditorOptions,
+  setupMonacoEditor,
+} from './lib/editorConfig.ts';
+import { useAutoCompile } from './lib/useAutoCompile.ts';
+import { TranslatorHeader } from './components/TranslatorHeader.tsx';
 
 export default function TranslatorApp() {
-  const {
-    status,
-    errorMessage,
-    formats,
-    mode,
-    tgslCode,
-    wgslCode,
-    output,
-    format,
-    canCompile,
-    canConvertTgsl,
-    setMode,
-    setTgslCode,
-    setWgslCode,
-    setFormat,
-    setEditorLoaded,
-    handleTgslToWgsl,
-    handleCompile,
-  } = useShaderTranslator();
+  const mode = useAtomValue(modeAtom);
+  const format = useAtomValue(formatAtom);
+  const output = useAtomValue(outputAtom);
+  const [tgslCode, setTgslCode] = useAtom(tgslCodeAtom);
+  const [wgslCode, setWgslCode] = useAtom(wgslCodeAtom);
+  const setEditorLoaded = useSetAtom(editorLoadingAtom);
+  const initialize = useSetAtom(initializeAtom);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout>(null);
-  const lastCompiledCodeRef = useRef<
-    { tgsl: string; wgsl: string; format: string }
-  >({
-    tgsl: '',
-    wgsl: '',
-    format: '',
-  });
-
-  const debouncedCompile = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
-      const lastCompiled = mode === TRANSLATOR_MODES.TGSL
-        ? lastCompiledCodeRef.current.tgsl
-        : lastCompiledCodeRef.current.wgsl;
-
-      // Only compile if code or format actually changed
-      if (
-        canCompile && (
-          currentCode !== lastCompiled ||
-          format !== lastCompiledCodeRef.current.format
-        )
-      ) {
-        lastCompiledCodeRef.current = {
-          tgsl: tgslCode,
-          wgsl: wgslCode,
-          format: format,
-        };
-        handleCompile();
-      }
-    }, 1000);
-  }, [canCompile, handleCompile, mode, tgslCode, wgslCode, format]);
-
-  // Auto-compile for WGSL mode when code changes
-  useEffect(() => {
-    if (mode === TRANSLATOR_MODES.WGSL && wgslCode.trim() && canCompile) {
-      debouncedCompile();
-    }
-  }, [wgslCode, mode, canCompile, debouncedCompile]);
-
-  // Auto-compile for TGSL mode when code changes
-  useEffect(() => {
-    if (mode === TRANSLATOR_MODES.TGSL && tgslCode.trim() && canCompile) {
-      debouncedCompile();
-    }
-  }, [tgslCode, mode, canCompile, debouncedCompile]);
-
-  // Auto-compile when format changes
-  useEffect(() => {
-    if (canCompile && (tgslCode.trim() || wgslCode.trim())) {
-      debouncedCompile();
-    }
-  }, [canCompile, tgslCode, wgslCode, debouncedCompile]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
-  const modeSelectId = useId();
-  const formatSelectId = useId();
   const tgslInputLabelId = useId();
   const wgslInputLabelId = useId();
   const compiledOutputLabelId = useId();
 
-  const statusColor = STATUS_COLOR_MAP[status];
-  const statusText = status === 'error'
-    ? errorMessage || 'An unexpected error happened.'
-    : STATUS_TEXT[status];
+  useAutoCompile();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  const handleEditorLoaded = () => setEditorLoaded(false);
 
   return (
     <div className='flex h-screen flex-col overflow-hidden'>
-      <header className='flex-shrink-0 border-gray-200 border-b px-3 py-3 sm:px-4 sm:py-4 dark:border-gray-700'>
-        <div className='mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-start sm:justify-between'>
-          <h1 className='font-bold text-gray-900 text-lg sm:text-xl dark:text-white'>
-            {mode === TRANSLATOR_MODES.TGSL ? 'TGSL' : 'WGSL'} Translator
-          </h1>
-          <div className='mr-4 h-12 w-full overflow-y-auto rounded border bg-gray-50 px-2 py-1 sm:mr-0 sm:h-10 sm:max-w-sm dark:border-gray-600 dark:bg-gray-800'>
-            <div
-              className={`font-medium text-xs sm:text-sm ${statusColor} leading-tight`}
-            >
-              {statusText}
-            </div>
-          </div>
-        </div>
-
-        <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4'>
-          <div className='flex items-center gap-2'>
-            <label
-              htmlFor={modeSelectId}
-              className='font-medium text-gray-700 text-xs sm:text-sm dark:text-gray-300'
-            >
-              Mode:
-            </label>
-            <select
-              id={modeSelectId}
-              value={mode}
-              onChange={(e) => setMode(e.target.value as typeof mode)}
-              className='rounded-md border px-2 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white'
-            >
-              <option value={TRANSLATOR_MODES.WGSL}>WGSL</option>
-              <option value={TRANSLATOR_MODES.TGSL}>TGSL</option>
-            </select>
-          </div>
-
-          <div className='flex items-center gap-2'>
-            <label
-              htmlFor={formatSelectId}
-              className='font-medium text-gray-700 text-xs sm:text-sm dark:text-gray-300'
-            >
-              Target:
-            </label>
-            <select
-              id={formatSelectId}
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              disabled={!formats.length}
-              className='rounded-md border px-2 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white'
-              title={!formats.length
-                ? 'Loading available formats...'
-                : 'Select target format'}
-            >
-              {formats.map((f) => (
-                <option key={f} value={f}>
-                  {f.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className='flex gap-2'>
-            {mode === TRANSLATOR_MODES.TGSL && (
-              <button
-                type='button'
-                onClick={handleTgslToWgsl}
-                disabled={!canConvertTgsl}
-                className='rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white text-xs hover:bg-blue-700 disabled:opacity-50 sm:px-4 sm:py-2 sm:text-sm'
-              >
-                {status === 'compiling' ? 'Converting…' : 'Convert'}
-              </button>
-            )}
-
-            <button
-              type='button'
-              onClick={handleCompile}
-              disabled={!canCompile}
-              className='rounded-lg bg-purple-600 px-3 py-1.5 font-medium text-white text-xs hover:bg-purple-700 disabled:opacity-50 sm:px-4 sm:py-2 sm:text-sm'
-            >
-              {status === 'compiling' ? 'Compiling…' : 'Compile Now'}
-            </button>
-          </div>
-        </div>
-      </header>
+      <TranslatorHeader />
 
       <main className='min-h-0 flex-1 overflow-y-auto lg:overflow-hidden'>
         <div
@@ -286,14 +72,14 @@ export default function TranslatorApp() {
                     value={tgslCode}
                     onChange={(v) => setTgslCode(v || '')}
                     theme='vs-dark'
-                    beforeMount={handleEditorWillMount}
-                    onMount={setEditorLoaded}
+                    beforeMount={setupMonacoEditor}
+                    onMount={handleEditorLoaded}
                     loading={
                       <div className='flex h-full items-center justify-center text-gray-500'>
                         Loading editor...
                       </div>
                     }
-                    options={editorOptions}
+                    options={editableEditorOptions}
                   />
                 </div>
               </div>
@@ -327,7 +113,7 @@ export default function TranslatorApp() {
                     : undefined}
                   theme='vs-dark'
                   onMount={mode === TRANSLATOR_MODES.WGSL
-                    ? setEditorLoaded
+                    ? handleEditorLoaded
                     : undefined}
                   loading={
                     <div className='flex h-full items-center justify-center text-gray-500'>
@@ -335,8 +121,8 @@ export default function TranslatorApp() {
                     </div>
                   }
                   options={mode === TRANSLATOR_MODES.TGSL
-                    ? outputEditorOptions
-                    : editorOptions}
+                    ? readOnlyEditorOptions
+                    : editableEditorOptions}
                 />
               </div>
             </div>
@@ -364,7 +150,7 @@ export default function TranslatorApp() {
                       Loading editor...
                     </div>
                   }
-                  options={outputEditorOptions}
+                  options={readOnlyEditorOptions}
                 />
               </div>
             </div>
