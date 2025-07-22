@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Editor, type Monaco } from '@monaco-editor/react';
+import { type BeforeMount, Editor, type Monaco } from '@monaco-editor/react';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import {
   commonEditorOptions,
@@ -66,8 +66,16 @@ function handleEditorWillMount(monaco: Monaco) {
   });
 }
 
-const editorOptions = { ...commonEditorOptions, readOnly: false };
-const outputEditorOptions = { ...commonEditorOptions, readOnly: true };
+const editorOptions = {
+  ...commonEditorOptions,
+  readOnly: false,
+  fixedOverflowWidgets: true,
+};
+const outputEditorOptions = {
+  ...commonEditorOptions,
+  readOnly: true,
+  fixedOverflowWidgets: true,
+};
 
 export default function TranslatorApp() {
   const {
@@ -102,26 +110,18 @@ export default function TranslatorApp() {
     : STATUS_TEXT[status];
 
   return (
-    <div className='px-4'>
-      <div className=' my-10'>
-        <header className='mb-6 text-center'>
-          <h1 className='font-bold text-3xl text-gray-900 dark:text-white'>
-            {mode === TRANSLATOR_MODES.TGSL ? 'TGSL' : 'WGSL'} Shader Translator
+    <div className='flex h-screen flex-col'>
+      <div className='flex-shrink-0 border-gray-200 border-b px-4 py-4 dark:border-gray-700'>
+        <div className='mb-4 flex items-center justify-between'>
+          <h1 className='font-bold text-gray-900 text-xl dark:text-white'>
+            {mode === TRANSLATOR_MODES.TGSL ? 'TGSL' : 'WGSL'} Translator
           </h1>
-          <p className='text-gray-600 dark:text-gray-400'>
-            {mode === TRANSLATOR_MODES.TGSL
-              ? 'Convert TypeScript shaders to WGSL and other formats'
-              : 'Convert WGSL shaders to other formats'}
-          </p>
+          <span className={`font-medium text-sm ${statusColor}`}>
+            {statusText}
+          </span>
+        </div>
 
-          <div className='mt-4 text-center'>
-            <span className={`font-medium text-sm ${statusColor}`}>
-              {statusText}
-            </span>
-          </div>
-        </header>
-
-        <div className='mb-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-center'>
+        <div className='flex flex-wrap items-center gap-4'>
           <div className='flex items-center gap-2'>
             <label
               htmlFor={modeSelectId}
@@ -189,14 +189,16 @@ export default function TranslatorApp() {
               : 'Compile Shader'}
           </button>
         </div>
+      </div>
 
+      <div className='flex-1 overflow-hidden p-4'>
         <div
-          className={`grid gap-6 ${
-            mode === TRANSLATOR_MODES.TGSL ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+          className={`h-full grid gap-4 ${
+            mode === TRANSLATOR_MODES.TGSL ? 'grid-cols-3' : 'grid-cols-2'
           }`}
         >
           {mode === TRANSLATOR_MODES.TGSL && (
-            <section className='overflow-hidden'>
+            <section className='flex flex-col h-full'>
               <div
                 id={tgslInputLabelId}
                 className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
@@ -205,7 +207,7 @@ export default function TranslatorApp() {
               </div>
               <div
                 aria-labelledby={tgslInputLabelId}
-                className='h-96 overflow-hidden rounded-lg border bg-white dark:bg-gray-700'
+                className='flex-1 overflow-visible rounded-lg border bg-white dark:bg-gray-700'
               >
                 <Editor
                   height='100%'
@@ -226,7 +228,7 @@ export default function TranslatorApp() {
             </section>
           )}
 
-          <section className='overflow-hidden'>
+          <section className='flex flex-col h-full'>
             <div
               id={wgslInputLabelId}
               className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
@@ -237,7 +239,7 @@ export default function TranslatorApp() {
             </div>
             <div
               aria-labelledby={wgslInputLabelId}
-              className={`h-96 overflow-hidden rounded-lg border ${
+              className={`flex-1 overflow-visible rounded-lg border ${
                 mode === TRANSLATOR_MODES.TGSL
                   ? 'bg-gray-50 dark:bg-gray-800'
                   : 'bg-white dark:bg-gray-700'
@@ -266,7 +268,7 @@ export default function TranslatorApp() {
             </div>
           </section>
 
-          <section className='overflow-hidden'>
+          <section className='flex flex-col h-full'>
             <div
               id={compiledOutputLabelId}
               className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
@@ -275,7 +277,7 @@ export default function TranslatorApp() {
             </div>
             <div
               aria-labelledby={compiledOutputLabelId}
-              className='h-96 overflow-hidden rounded-lg border bg-gray-50 dark:bg-gray-800'
+              className='flex-1 overflow-visible rounded-lg border bg-gray-50 dark:bg-gray-800'
             >
               <Editor
                 height='100%'
@@ -292,18 +294,6 @@ export default function TranslatorApp() {
             </div>
           </section>
         </div>
-
-        {output && (
-          <div className='mt-4 text-center'>
-            <button
-              type='button'
-              onClick={() => navigator.clipboard.writeText(output)}
-              className='rounded-md bg-gray-200 px-4 py-2 font-medium text-gray-700 text-sm hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300'
-            >
-              Copy Output
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
