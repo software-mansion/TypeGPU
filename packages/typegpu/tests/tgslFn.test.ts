@@ -574,36 +574,6 @@ describe('TGSL tgpu.fn function', () => {
     );
   });
 
-  it('(when using plugin) can be invoked for a constant with "kernel" directive', () => {
-    const addKernelJs = (x: number, y: number) => {
-      'kernel';
-      return x + y;
-    };
-
-    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
-
-    expect(addKernelJs(2, 3)).toBe(5);
-    expect(add(2, 3)).toBe(5);
-    expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
-          return (x + y);
-        }`),
-    );
-  });
-
-  it('(when using plugin) can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
-      (x, y) => x + y,
-    );
-
-    expect(add(2, 3)).toBe(5);
-    expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
-          return (x + y);
-        }`),
-    );
-  });
-
   it('resolves a function with a pointer parameter', () => {
     const addOnes = tgpu.fn([d.ptrStorage(d.vec3f, 'read-write')])((ptr) => {
       ptr.x += 1;
@@ -878,4 +848,62 @@ describe('tgpu.fn arguments', () => {
 
     expect(vec).toStrictEqual(d.vec3f());
   });
+});
+
+describe('tgsl fn when using plugin', () => {
+  it('can be invoked for a constant with "kernel" directive', () => {
+    const addKernelJs = (x: number, y: number) => {
+      'kernel';
+      return x + y;
+    };
+
+    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
+
+    expect(addKernelJs(2, 3)).toBe(5);
+    expect(add(2, 3)).toBe(5);
+    expect(parseResolved({ add })).toBe(
+      parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+    );
+  });
+
+  it('can be invoked for inline function with no directive', () => {
+    const add = tgpu.fn([d.u32, d.u32])(
+      (x, y) => x + y,
+    );
+
+    expect(add(2, 3)).toBe(5);
+    expect(parseResolved({ add })).toBe(
+      parse(`fn add(x: u32, y: u32){
+          return (x + y);
+        }`),
+    );
+  });
+
+  it('can reference function defined below', () => {
+    const bar = tgpu.fn([], d.f32)(() => foo() + 2);
+    const foo = tgpu.fn([], d.f32)(() => 1);
+
+    expect(parseResolved({ bar })).toBe(
+      parse(`
+        fn foo() -> f32 {
+          return 1;
+        }
+
+        fn bar() -> f32 {
+          return (foo() + 2);
+        }`),
+    );
+  });
+
+  // TODO: throw an error when cyclic dependency is detected
+  // it('throws when it detects a cyclic dependency', () => {
+  //   let bar: TgpuFn;
+  //   let foo: TgpuFn;
+  //   bar = tgpu.fn([], d.f32)(() => foo() + 2);
+  //   foo = tgpu.fn([], d.f32)(() => bar() - 2);
+
+  //   expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(``);
+  // });
 });

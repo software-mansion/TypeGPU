@@ -30,12 +30,14 @@ export {
   max,
   min,
   mix,
+  mod,
   neg,
   normalize,
   pow,
   reflect,
   sign,
   sin,
+  smoothstep,
   sqrt,
   tanh
 } from './numeric.ts';

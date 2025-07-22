@@ -179,7 +179,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             const metadata = `{
               v: ${FORMAT_VERSION},
               ast: ${embedJSON({ params, body, externalNames })},
-              externals: {${externalNames.join(', ')}},
+              get externals() { return {${externalNames.join(', ')}}; },
             }`;
 
             assignMetadata(magicString, def, metadata);
