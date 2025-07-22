@@ -1,5 +1,6 @@
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
+import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -763,4 +764,26 @@ export const tanh = createDualImpl(
   // GPU implementation
   (value) => snip(`tanh(${value.value})`, value.dataType),
   'tanh',
+);
+
+export const smoothstep = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T => {
+    if (typeof x === 'number') {
+      return smoothstepScalar(
+        edge0 as number,
+        edge1 as number,
+        x as number,
+      ) as T;
+    }
+    return VectorOps.smoothstep[x.kind](
+      edge0 as AnyFloatVecInstance,
+      edge1 as AnyFloatVecInstance,
+      x as AnyFloatVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (edge0, edge1, x) =>
+    snip(`smoothstep(${edge0.value}, ${edge1.value}, ${x.value})`, x.dataType),
+  'smoothstep',
 );
