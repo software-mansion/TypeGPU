@@ -928,10 +928,10 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- internalTestFn: Resolution of the following tree failed: 
+- internalTestFn: Resolution of the following tree failed:
 - internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
 `);
   });
@@ -943,7 +943,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
 - translate4: Cannot read properties of undefined (reading 'value')]
@@ -958,11 +958,25 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- vec4f: Resolution of the following tree failed: 
+- vec4f: Resolution of the following tree failed:
 - vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
 `);
+  });
+
+  it('generates correct code for pointer value assignment', () => {
+    const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
+      // biome-ignore  lint/style/noParameterAssign: <go away>
+      val += 1.0;
+    });
+
+    expect(parseResolved({ increment })).toBe(
+      parse(`
+      fn increment(val: ptr<function, f32>) {
+        *val += 1;
+      }`),
+    );
   });
 });
