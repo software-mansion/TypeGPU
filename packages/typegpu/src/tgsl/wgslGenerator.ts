@@ -167,14 +167,11 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
-    let forcedType: AnyData[] = [];
-    if (expression[0] === NODE.assignmentExpr) {
-      if (lhsExpr.dataType.type === 'ptr') {
-        forcedType = [lhsExpr.dataType.inner as AnyData];
-      } else {
-        forcedType = [lhsExpr.dataType as AnyData];
-      }
-    }
+    const forcedType = expression[0] === NODE.assignmentExpr
+      ? lhsExpr.dataType.type === 'ptr'
+        ? [lhsExpr.dataType.inner as AnyData]
+        : [lhsExpr.dataType as AnyData]
+      : [];
 
     const converted = convertToCommonType(
       ctx,
