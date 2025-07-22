@@ -969,7 +969,7 @@ describe('wgslGenerator', () => {
   it('generates correct code for pointer value assignment', () => {
     const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
       // biome-ignore  lint/style/noParameterAssign: <go away>
-      val += 1.0;
+      val += 1;
     });
 
     expect(parseResolved({ increment })).toBe(
