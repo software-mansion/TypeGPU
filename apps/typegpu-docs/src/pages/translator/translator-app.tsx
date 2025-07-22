@@ -1,7 +1,14 @@
 import { useId } from 'react';
-import { Editor } from '@monaco-editor/react';
-import { commonEditorOptions, LANGUAGE_MAP } from './lib/constants.ts';
+import { Editor, type Monaco } from '@monaco-editor/react';
+import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
+import {
+  commonEditorOptions,
+  LANGUAGE_MAP,
+  TRANSLATOR_MODES,
+} from './lib/constants.ts';
 import { useShaderTranslator } from './lib/useShaderTranslator.ts';
+import { SANDBOX_MODULES } from '../../utils/examples/sandboxModules.ts';
+import { tsCompilerOptions } from '../../utils/liveEditor/embeddedTypeScript.ts';
 
 const STATUS_COLOR_MAP: Record<string, string> = {
   initializing: 'text-yellow-500',
@@ -19,6 +26,46 @@ const STATUS_TEXT: Record<string, string> = {
   error: '',
 };
 
+function handleEditorWillMount(monaco: Monaco) {
+  const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
+
+  const reroutes = pipe(
+    entries(SANDBOX_MODULES),
+    map(([key, moduleDef]) => {
+      if ('reroute' in moduleDef.typeDef) {
+        return [key, moduleDef.typeDef.reroute] as const;
+      }
+      return null;
+    }),
+    filter(isTruthy),
+    fromEntries(),
+  );
+
+  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
+    if ('content' in moduleDef.typeDef) {
+      tsDefaults.addExtraLib(
+        moduleDef.typeDef.content,
+        moduleDef.typeDef.filename,
+      );
+
+      if (
+        moduleDef.typeDef.filename &&
+        moduleDef.typeDef.filename !== moduleKey
+      ) {
+        reroutes[moduleKey] = [
+          ...(reroutes[moduleKey] ?? []),
+          moduleDef.typeDef.filename,
+        ];
+      }
+    }
+  }
+
+  tsDefaults.setCompilerOptions({
+    ...tsCompilerOptions,
+    paths: reroutes,
+  });
+}
+
 const editorOptions = { ...commonEditorOptions, readOnly: false };
 const outputEditorOptions = { ...commonEditorOptions, readOnly: true };
 
@@ -27,17 +74,25 @@ export default function TranslatorApp() {
     status,
     errorMessage,
     formats,
+    mode,
+    tgslCode,
     wgslCode,
     output,
     format,
     canCompile,
+    canConvertTgsl,
+    setMode,
+    setTgslCode,
     setWgslCode,
     setFormat,
     setEditorLoaded,
+    handleTgslToWgsl,
     handleCompile,
   } = useShaderTranslator();
 
+  const modeSelectId = useId();
   const formatSelectId = useId();
+  const tgslInputLabelId = useId();
   const wgslInputLabelId = useId();
   const compiledOutputLabelId = useId();
 
@@ -51,23 +106,40 @@ export default function TranslatorApp() {
       <div className=' my-10'>
         <header className='mb-6 text-center'>
           <h1 className='font-bold text-3xl text-gray-900 dark:text-white'>
-            WGSL Shader Translator
+            {mode === TRANSLATOR_MODES.TGSL ? 'TGSL' : 'WGSL'} Shader Translator
           </h1>
           <p className='text-gray-600 dark:text-gray-400'>
-            Convert WGSL shaders to other formats
+            {mode === TRANSLATOR_MODES.TGSL
+              ? 'Convert TypeScript shaders to WGSL and other formats'
+              : 'Convert WGSL shaders to other formats'}
           </p>
 
           <div className='mt-4 text-center'>
             <span className={`font-medium text-sm ${statusColor}`}>
               {statusText}
-              {status === 'initializing' && (
-                <span className='ml-2 inline-block animate-spin'>⟳</span>
-              )}
             </span>
           </div>
         </header>
 
         <div className='mb-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-center'>
+          <div className='flex items-center gap-2'>
+            <label
+              htmlFor={modeSelectId}
+              className='font-medium text-gray-700 text-sm dark:text-gray-300'
+            >
+              Mode:
+            </label>
+            <select
+              id={modeSelectId}
+              value={mode}
+              onChange={(e) => setMode(e.target.value as typeof mode)}
+              className='rounded-md border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white'
+            >
+              <option value={TRANSLATOR_MODES.WGSL}>WGSL</option>
+              <option value={TRANSLATOR_MODES.TGSL}>TGSL</option>
+            </select>
+          </div>
+
           <div className='flex items-center gap-2'>
             <label
               htmlFor={formatSelectId}
@@ -93,49 +165,103 @@ export default function TranslatorApp() {
             </select>
           </div>
 
+          {mode === TRANSLATOR_MODES.TGSL && (
+            <button
+              type='button'
+              onClick={handleTgslToWgsl}
+              disabled={!canConvertTgsl}
+              className='rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-sm text-white hover:bg-blue-700 disabled:opacity-50'
+            >
+              {status === 'compiling' ? 'Converting…' : 'Convert to WGSL'}
+            </button>
+          )}
+
           <button
             type='button'
             onClick={handleCompile}
             disabled={!canCompile}
-            className='rounded-lg bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 px-6 py-2.5 font-medium text-sm text-white shadow-lg hover:from-purple-600 disabled:opacity-50'
+            className='rounded-lg bg-purple-600 px-6 py-2.5 font-medium text-sm text-white hover:bg-purple-700 disabled:opacity-50'
           >
             {status === 'compiling'
-              ? (
-                <>
-                  <span className='mr-2 inline-block animate-spin'>
-                    ⟳
-                  </span>Compiling…
-                </>
-              )
+              ? 'Compiling…'
+              : mode === TRANSLATOR_MODES.TGSL
+              ? 'Convert & Compile'
               : 'Compile Shader'}
           </button>
         </div>
 
-        <div className='grid gap-6 lg:grid-cols-2'>
+        <div
+          className={`grid gap-6 ${
+            mode === TRANSLATOR_MODES.TGSL ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+          }`}
+        >
+          {mode === TRANSLATOR_MODES.TGSL && (
+            <section className='overflow-hidden'>
+              <div
+                id={tgslInputLabelId}
+                className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
+              >
+                TypeScript Shader Code (TGSL):
+              </div>
+              <div
+                aria-labelledby={tgslInputLabelId}
+                className='h-96 overflow-hidden rounded-lg border bg-white dark:bg-gray-700'
+              >
+                <Editor
+                  height='100%'
+                  language='typescript'
+                  value={tgslCode}
+                  onChange={(v) => setTgslCode(v || '')}
+                  theme='vs-dark'
+                  beforeMount={handleEditorWillMount}
+                  onMount={setEditorLoaded}
+                  loading={
+                    <div className='flex h-full items-center justify-center text-gray-500'>
+                      Loading editor...
+                    </div>
+                  }
+                  options={editorOptions}
+                />
+              </div>
+            </section>
+          )}
+
           <section className='overflow-hidden'>
             <div
               id={wgslInputLabelId}
               className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
             >
-              WGSL Shader Code:
+              {mode === TRANSLATOR_MODES.TGSL
+                ? 'Generated WGSL:'
+                : 'WGSL Shader Code:'}
             </div>
             <div
               aria-labelledby={wgslInputLabelId}
-              className='h-96 overflow-hidden rounded-lg border bg-white dark:bg-gray-700'
+              className={`h-96 overflow-hidden rounded-lg border ${
+                mode === TRANSLATOR_MODES.TGSL
+                  ? 'bg-gray-50 dark:bg-gray-800'
+                  : 'bg-white dark:bg-gray-700'
+              }`}
             >
               <Editor
                 height='100%'
                 language='wgsl'
                 value={wgslCode}
-                onChange={(v) => setWgslCode(v || '')}
+                onChange={mode === TRANSLATOR_MODES.WGSL
+                  ? (v) => setWgslCode(v || '')
+                  : undefined}
                 theme='vs-dark'
-                onMount={setEditorLoaded}
+                onMount={mode === TRANSLATOR_MODES.WGSL
+                  ? setEditorLoaded
+                  : undefined}
                 loading={
                   <div className='flex h-full items-center justify-center text-gray-500'>
                     Loading editor...
                   </div>
                 }
-                options={editorOptions}
+                options={mode === TRANSLATOR_MODES.TGSL
+                  ? outputEditorOptions
+                  : editorOptions}
               />
             </div>
           </section>
