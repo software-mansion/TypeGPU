@@ -78,8 +78,8 @@ describe('div', () => {
   });
 
   it('handles division by 0', () => {
-    expect(div(vec2u(1, 2), vec2u(0))).toStrictEqual(vec2u(0, 0));
-    expect(div(vec4u(1, 2, 8, 9), 0)).toStrictEqual(vec4u(0, 0, 0, 0));
+    expect(div(vec2u(1, 2), vec2u(0))).toStrictEqual(vec2u(1, 2));
+    expect(div(vec4u(1, 2, 8, 9), 0)).toStrictEqual(vec4u(1, 2, 8, 9));
   });
 });
 
