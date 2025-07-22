@@ -328,6 +328,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
+  public readonly expectedTypeStack: AnyData[] = [];
   public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
 

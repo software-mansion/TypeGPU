@@ -216,10 +216,12 @@ function createFn<ImplSchema extends AnyFn>(
       }
 
       try {
+        generationCtx.expectedTypeStack.push(shell.returnType);
         generationCtx.callStack.push(shell.returnType);
         return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
         generationCtx.callStack.pop();
+        generationCtx.expectedTypeStack.pop();
       }
     },
   };

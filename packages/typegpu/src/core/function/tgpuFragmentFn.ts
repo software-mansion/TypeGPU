@@ -239,6 +239,7 @@ function createFragmentFn(
       }
 
       try {
+        generationCtx.expectedTypeStack.push(outputType);
         generationCtx.callStack.push(outputType);
         return core.resolve(
           ctx,
@@ -247,6 +248,7 @@ function createFragmentFn(
         );
       } finally {
         generationCtx.callStack.pop();
+        generationCtx.expectedTypeStack.pop();
       }
     },
 

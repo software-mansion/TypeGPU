@@ -480,6 +480,7 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
+  readonly expectedTypeStack: AnyData[];
   readonly callStack: unknown[];
   indent(): string;
   dedent(): string;

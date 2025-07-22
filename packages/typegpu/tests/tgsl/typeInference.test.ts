@@ -153,6 +153,10 @@ describe('wgsl generator type inference', () => {
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
 
-    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot();
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed: 
+      - <root>
+      - fn:myFn: Object expressions are only allowed as return values of functions or as arguments to structs.]
+    `);
   });
 });

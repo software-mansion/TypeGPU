@@ -215,6 +215,7 @@ function createVertexFn(
       }
 
       try {
+        generationCtx.expectedTypeStack.push(outputWithLocation);
         generationCtx.callStack.push(outputWithLocation);
         return core.resolve(
           ctx,
@@ -223,6 +224,7 @@ function createVertexFn(
         );
       } finally {
         generationCtx.callStack.pop();
+        generationCtx.expectedTypeStack.pop();
       }
     },
 
