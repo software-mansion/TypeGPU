@@ -171,7 +171,7 @@ export function generateExpression(
       ? lhsExpr.dataType.type === 'ptr'
         ? [lhsExpr.dataType.inner as AnyData]
         : [lhsExpr.dataType as AnyData]
-      : [];
+      : undefined;
 
     const converted = convertToCommonType(
       ctx,
