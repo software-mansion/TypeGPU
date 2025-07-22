@@ -50,7 +50,7 @@ export async function executeTgslCode(tgslCode: string): Promise<string> {
     const tgpuModule = await import('typegpu');
 
     return tgpuModule.default.resolve({
-      externals: exports,
+      externals: exports as Record<string, object>,
     });
   } catch (error) {
     throw new Error(
