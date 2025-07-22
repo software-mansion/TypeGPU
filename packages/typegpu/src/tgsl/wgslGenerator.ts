@@ -186,9 +186,11 @@ export function generateExpression(
 
     if (op === '/') {
       const lhsIsFloat = convLhs.dataType.type === 'f32' ||
-        convLhs.dataType.type === 'f16';
+        convLhs.dataType.type === 'f16' ||
+        convLhs.dataType.type === 'abstractFloat';
       const rhsIsFloat = convRhs.dataType.type === 'f32' ||
-        convRhs.dataType.type === 'f16';
+        convRhs.dataType.type === 'f16' ||
+        convRhs.dataType.type === 'abstractFloat';
 
       if (!lhsIsFloat && !rhsIsFloat) {
         if (
