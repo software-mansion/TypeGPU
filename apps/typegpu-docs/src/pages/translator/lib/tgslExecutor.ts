@@ -1,57 +1,56 @@
 import { translateTGSL } from './translateTGSL.ts';
 
-/**
- * Execute TGSL code and convert to WGSL
- */
+type TgslModule = Record<string, unknown>;
+
+async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
+  const [tgpuModule, dataModule] = await Promise.all([
+    import('typegpu'),
+    import('typegpu/data'),
+  ]);
+
+  const translatedCode = translateTGSL(tgslCode);
+
+  const exportedVariables = new Set<string>();
+  const exportPattern = /^export\s+(?:const|let|var)\s+(\w+)\s*=/gm;
+
+  let match: RegExpExecArray | null = exportPattern.exec(translatedCode);
+  while (match !== null) {
+    exportedVariables.add(match[1]);
+    match = exportPattern.exec(translatedCode);
+  }
+
+  const codeToExecute = translatedCode
+    .replace(/^import\s+.*?from\s+['"].*?['"];?\s*\n?/gm, '')
+    .replace(/^export\s+/gm, '')
+    .trim();
+
+  const returnStatement = Array.from(exportedVariables)
+    .map((name) => `...(typeof ${name} !== 'undefined' && { ${name} })`)
+    .join(',\n        ');
+
+  const executeCode = new Function(
+    'tgpu',
+    'd',
+    `
+      ${codeToExecute}
+
+      return {
+        ${returnStatement}
+      };
+    `,
+  ) as (tgpu: unknown, d: unknown) => TgslModule;
+
+  return executeCode(tgpuModule.default, dataModule);
+}
+
 export async function executeTgslCode(tgslCode: string): Promise<string> {
   try {
-    const translatedCode = translateTGSL(tgslCode);
+    const exports = await executeTgslModule(tgslCode);
 
-    const [tgpuModule, dataModule] = await Promise.all([
-      import('typegpu'),
-      import('typegpu/data'),
-    ]);
+    const tgpuModule = await import('typegpu');
 
-    const tgpu = tgpuModule.default;
-    const d = dataModule;
-
-    const codeToExecute = translatedCode
-      .replace(/^import\s+.*?from\s+['"].*?['"];?\s*\n?/gm, '')
-      .replace(/^export\s+/gm, '')
-      .trim();
-
-    const executeCode = new Function(
-      'tgpu',
-      'd',
-      `
-        ${codeToExecute}
-
-        const exports = {};
-        const variableMatches = ${
-        JSON.stringify(codeToExecute)
-      }.match(/(?:const|let|var)\\s+(\\w+)\\s*=/g);
-
-        if (variableMatches) {
-          for (const match of variableMatches) {
-            const varName = match.match(/\\w+(?=\\s*=)/)[0];
-            try {
-              if (typeof eval(varName) !== 'undefined') {
-                exports[varName] = eval(varName);
-              }
-            } catch (e) {
-              // Skip variables that can't be evaluated
-            }
-          }
-        }
-
-        return exports;
-      `,
-    );
-
-    const exportedVars = executeCode(tgpu, d);
-
-    return tgpu.resolve({
-      externals: exportedVars,
+    return tgpuModule.default.resolve({
+      externals: exports,
     });
   } catch (error) {
     throw new Error(
@@ -62,9 +61,6 @@ export async function executeTgslCode(tgslCode: string): Promise<string> {
   }
 }
 
-/**
- * Get error message from unknown error type
- */
 export function getErrorMessage(err: unknown): string {
   if (typeof err === 'string') return err;
   if (err instanceof Error) return err.message;

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { type BeforeMount, Editor, type Monaco } from '@monaco-editor/react';
+import { Editor, type Monaco } from '@monaco-editor/react';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import {
   commonEditorOptions,
@@ -191,14 +191,16 @@ export default function TranslatorApp() {
         </div>
       </div>
 
-      <div className='flex-1 overflow-hidden p-4'>
+      <div className='flex-1 overflow-y-auto p-4 lg:overflow-hidden'>
         <div
-          className={`h-full grid gap-4 ${
-            mode === TRANSLATOR_MODES.TGSL ? 'grid-cols-3' : 'grid-cols-2'
+          className={`grid gap-4 lg:h-full ${
+            mode === TRANSLATOR_MODES.TGSL
+              ? 'grid-cols-1 lg:grid-cols-3'
+              : 'grid-cols-1 lg:grid-cols-2'
           }`}
         >
           {mode === TRANSLATOR_MODES.TGSL && (
-            <section className='flex flex-col h-full'>
+            <section className='flex h-96 flex-col lg:h-full'>
               <div
                 id={tgslInputLabelId}
                 className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
@@ -228,7 +230,7 @@ export default function TranslatorApp() {
             </section>
           )}
 
-          <section className='flex flex-col h-full'>
+          <section className='flex h-96 flex-col lg:h-full'>
             <div
               id={wgslInputLabelId}
               className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
@@ -268,7 +270,7 @@ export default function TranslatorApp() {
             </div>
           </section>
 
-          <section className='flex flex-col h-full'>
+          <section className='flex h-96 flex-col lg:h-full'>
             <div
               id={compiledOutputLabelId}
               className='mb-2 block font-medium text-gray-700 text-sm dark:text-gray-300'
