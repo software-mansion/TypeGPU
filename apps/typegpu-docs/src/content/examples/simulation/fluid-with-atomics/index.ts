@@ -209,7 +209,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
     if (flowRaw > 0) {
       const change = std.max(
         std.min(4, remainingWater),
-        d.u32(d.u32(flowRaw) / d.f32(4)),
+        d.u32(flowRaw / 4),
       );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
