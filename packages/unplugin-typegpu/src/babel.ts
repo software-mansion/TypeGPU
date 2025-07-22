@@ -208,7 +208,9 @@ export default function () {
         }
 
         const ctx: Context = {
-          tgpuAliases: new Set<string>(),
+          tgpuAliases: new Set<string>(
+            options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
+          ),
           fileId: id,
           autoNamingEnabled: options?.autoNamingEnabled ?? true,
         };
