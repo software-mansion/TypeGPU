@@ -1,7 +1,7 @@
 import tgpu from "typegpu";
 import * as d from "typegpu/data";
 import * as std from "typegpu/std";
-import { sdPlane } from "@typegpu/sdf";
+import { sdSphere, sdPlane } from "@typegpu/sdf";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
@@ -19,13 +19,12 @@ const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
 const MAX_STEPS = 1000;
-const MAX_DIST = 30;
+const MAX_DIST = 17;
 const SURF_DIST = 0.001;
-const SPEED_PER_FRAME = 7;
-const GRID_SEP = 1.5;
+const SPEED_PER_FRAME = 2;
+const GRID_SEP = 1.2;
 const GRID_TIGHTNESS = 10;
 
-// const skyColor = d.vec4f(0.9, 0.21, 0.53, 1);
 const skyColor = d.vec4f(0.1, 0, 0.2, 1);
 const gridColor = d.vec3f(0.92, 0.21, 0.96);
 const gridInnerColor = d.vec3f(0, 0, 0);
@@ -39,15 +38,13 @@ const grid = tgpu.fn(
   [d.vec2f],
   d.vec3f,
 )((uv) => {
-  const uv_closest_int = std.abs(
-    std.add(
-      std.fract(
-        std.div(d.vec2f(uv.x, uv.y + SPEED_PER_FRAME * time.$), GRID_SEP),
-      ),
-      -0.5, // visual shift
-    ),
+  const uv_mod = std.fract(
+    std.div(d.vec2f(uv.x, uv.y + SPEED_PER_FRAME * time.$), GRID_SEP),
   );
-  const d_better = std.min(uv_closest_int.x, uv_closest_int.y);
+
+  const uv_closest = std.min(std.abs(std.add(-1, uv_mod)), uv_mod);
+
+  const d_better = std.min(uv_closest.x, uv_closest.y);
 
   return std.mix(
     gridInnerColor,
@@ -56,16 +53,48 @@ const grid = tgpu.fn(
   );
 });
 
+const getBall = tgpu.fn(
+  [d.vec3f, d.f32],
+  Ray,
+)((p, t) => {
+  // Center position
+  const center = d.vec3f(0, 4, 12); // hardcoded
+  const localP = std.sub(p, center); // way from center to p
+
+  // Okay some periodic pattern let it be
+  const sphere1Offset = d.vec3f(
+    std.cos(t * 2) * 4, // x
+    std.sin(t * 7) * 3,
+    std.sin(t * 2) * 2, // z
+  );
+
+  // Calculate distances and assign colors
+  return Ray({
+    dist: sdSphere(std.sub(localP, sphere1Offset), 1), // center is relative to p
+    color: d.vec3f(0.87, 0.22, 0.46),
+  });
+});
+
+const shapeUnion = tgpu.fn(
+  [Ray, Ray],
+  Ray,
+)((a, b) => ({
+  color: std.select(a.color, b.color, a.dist > b.dist),
+  dist: std.min(a.dist, b.dist),
+}));
+
+// Should return min distance to some world object
 const getSceneDist = tgpu.fn(
   [d.vec3f],
   Ray,
 )((p) => {
   const floor = Ray({
-    dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
+    dist: sdPlane(p, d.vec3f(0, 1, 0), 1),
     color: grid(p.xz),
   });
+  const ball = getBall(p, time.$);
 
-  return floor;
+  return shapeUnion(floor, ball);
 });
 
 const rayMarch = tgpu.fn(
@@ -75,7 +104,7 @@ const rayMarch = tgpu.fn(
   let dO = d.f32(0);
   const result = Ray({
     dist: d.f32(MAX_DIST),
-    color: d.vec3f(0, 0, 0),
+    color: d.vec3f(0, 1, 0),
   });
 
   for (let i = 0; i < MAX_STEPS; i++) {
@@ -83,7 +112,13 @@ const rayMarch = tgpu.fn(
     const scene = getSceneDist(p);
     dO += scene.dist;
 
-    if (dO > MAX_DIST || scene.dist < SURF_DIST) {
+    if (dO > MAX_DIST) {
+      result.dist = MAX_DIST;
+      result.color = d.vec3f(0, 1, 0); // green for debug
+      break;
+    }
+
+    if (scene.dist < SURF_DIST) {
       result.dist = dO;
       result.color = scene.color;
       break;
@@ -120,8 +155,8 @@ const fragmentMain = tgpu["~unstable"].fragmentFn({
   // Marching
   const march = rayMarch(ro, rd);
 
-  // Weird fog calculations
-  const fog = std.pow(std.min(march.dist / MAX_DIST, 1), 0.7);
+  // Cool fog calculations
+  const fog = std.min(march.dist / MAX_DIST, 1);
 
   return std.mix(d.vec4f(march.color, 1), skyColor, fog);
 });
