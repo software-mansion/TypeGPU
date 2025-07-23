@@ -9,7 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -176,7 +176,7 @@ export function generateExpression(
     const converted = convertToCommonType(
       ctx,
       [lhsExpr, rhsExpr],
-      forcedType,
+      op === '/' ? [f32, f16] : forcedType,
     ) as
       | [Snippet, Snippet]
       | undefined;
@@ -185,31 +185,6 @@ export function generateExpression(
     const lhsStr = ctx.resolve(convLhs.value);
     const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
-
-    if (op === '/') {
-      const lhsIsFloat = convLhs.dataType.type === 'f32' ||
-        convLhs.dataType.type === 'f16' ||
-        convLhs.dataType.type === 'abstractFloat';
-      const rhsIsFloat = convRhs.dataType.type === 'f32' ||
-        convRhs.dataType.type === 'f16' ||
-        convRhs.dataType.type === 'abstractFloat';
-
-      if (!lhsIsFloat && !rhsIsFloat) {
-        return snip(
-          `f32(${lhsStr}) / f32(${rhsStr})`,
-          f32,
-        );
-      }
-
-      if (!lhsIsFloat || !rhsIsFloat) {
-        return snip(
-          !lhsIsFloat
-            ? `f32(${lhsStr}) / ${rhsStr}`
-            : `${lhsStr} / f32(${rhsStr})`,
-          f32,
-        );
-      }
-    }
 
     return snip(
       parenthesizedOps.includes(op)
