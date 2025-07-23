@@ -227,7 +227,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
     if (flowRaw > 0) {
       const change = std.max(
         std.min(4, remainingWater),
-        flowRaw / 4,
+        d.u32(flowRaw / 4),
       );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
@@ -264,17 +264,15 @@ const vertex = tgpu['~unstable'].vertexFn({
 })((input) => {
   const w = size.$.x;
   const h = size.$.y;
-  const x = (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
-    2 *
-    d.f32(w)) /
-    d.f32(std.max(w, h));
-  const y = ((d.f32((input.idx - (input.idx % w)) / d.f32(w)) +
-        d.f32(input.squareData.y)) /
-      d.f32(h) -
-    0.5) *
-    2 *
-    d.f32(h) /
-    d.f32(std.max(w, h));
+  const gridX = input.idx % w;
+  const gridY = (input.idx - gridX) / w;
+  const maxDim = d.f32(std.max(w, h));
+
+  const x = ((d.f32(gridX) + input.squareData.x) / d.f32(w) - 0.5) * 2 *
+    d.f32(w) / maxDim;
+  const y = ((d.f32(gridY) + input.squareData.y) / d.f32(h) - 0.5) * 2 *
+    d.f32(h) / maxDim;
+
   const cellFlags = input.currentStateData >> 24;
   let cell = d.f32(input.currentStateData & 0xffffff);
   if (cellFlags === 1) {
