@@ -7,7 +7,7 @@ import type {
   ThumbnailPair,
 } from './types.ts';
 
-export function extractUrlFromViteImport(
+function extractUrlFromViteImport(
   importFn: () => void,
 ): [URL | undefined, boolean] {
   const filePath = String(importFn);
