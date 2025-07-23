@@ -1,5 +1,6 @@
 import * as Babel from '@babel/standalone';
 import plugin from 'unplugin-typegpu/babel';
+import { extractUrlFromViteImport } from '../../../utils/examples/exampleContent.ts';
 
 function translateTGSL(
   code: string,
@@ -10,47 +11,55 @@ function translateTGSL(
   return result || '';
 }
 
+const moduleImports = {
+  'typegpu':
+    Object.values(import.meta.glob('/node_modules/typegpu/src/index.ts'))[0] ||
+    Object.values(import.meta.glob('../../packages/typegpu/src/index.ts'))[0],
+  'typegpu/data': Object.values(
+    import.meta.glob('/node_modules/typegpu/src/data/index.ts'),
+  )[0] ||
+    Object.values(
+      import.meta.glob('../../packages/typegpu/src/data/index.ts'),
+    )[0],
+} as Record<string, () => Promise<unknown>>;
+
 type TgslModule = Record<string, unknown>;
 
 async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
-  const [tgpuModule, dataModule] = await Promise.all([
-    import('typegpu'),
-    import('typegpu/data'),
-  ]);
-
   const translatedCode = translateTGSL(tgslCode);
 
-  const exportedVariables = new Set<string>();
-  const exportPattern = /^export\s+(?:const|let|var)\s+(\w+)\s*=/gm;
+  const imports: Record<string, string> = {};
 
-  let match: RegExpExecArray | null = exportPattern.exec(translatedCode);
-  while (match !== null) {
-    exportedVariables.add(match[1]);
-    match = exportPattern.exec(translatedCode);
+  for (const [moduleName, importFn] of Object.entries(moduleImports)) {
+    console.log(
+      `Processing import for module: ${moduleName}, importFn: ${importFn}`,
+    );
+    if (importFn) {
+      const [url, isRelative] = extractUrlFromViteImport(importFn);
+      if (url) {
+        imports[moduleName] = `${isRelative ? '.' : ''}${url.pathname}`;
+      }
+    }
   }
 
-  const codeToExecute = translatedCode
-    .replace(/^import\s+.*?from\s+['"].*?['"];?\s*\n?/gm, '')
-    .replace(/^export\s+/gm, '')
-    .trim();
+  const importMap = { imports };
 
-  const returnStatement = Array.from(exportedVariables)
-    .map((name) => `...(typeof ${name} !== 'undefined' && { ${name} })`)
-    .join(',\n        ');
+  const importMapScript = document.createElement('script');
+  importMapScript.type = 'importmap';
+  importMapScript.textContent = JSON.stringify(importMap);
+  document.head.appendChild(importMapScript);
 
-  const executeCode = new Function(
-    'tgpu',
-    'd',
-    `
-      ${codeToExecute}
+  try {
+    const userBlob = new Blob([translatedCode], { type: 'text/javascript' });
+    const userModuleUrl = URL.createObjectURL(userBlob);
 
-      return {
-        ${returnStatement}
-      };
-    `,
-  ) as (tgpu: unknown, d: unknown) => TgslModule;
+    const module = await import(userModuleUrl);
 
-  return executeCode(tgpuModule.default, dataModule);
+    URL.revokeObjectURL(userModuleUrl);
+    return module;
+  } finally {
+    document.head.removeChild(importMapScript);
+  }
 }
 
 export async function executeTgslCode(tgslCode: string): Promise<string> {

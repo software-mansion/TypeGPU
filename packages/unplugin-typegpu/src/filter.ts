@@ -1,3 +1,8 @@
+// Copied from https://github.com/unjs/unplugin/blob/f514bf8e2d751b48b3a5acb1077eb1292d9711b3/src/utils/filter.ts#L2
+// Used only in the babel version of the plugin, since others can rely on native unplugin functionality.
+
+import { resolve } from 'pathe';
+import picomatch from 'picomatch';
 import type {
   Arrayable,
   Nullable,
@@ -29,14 +34,14 @@ interface NormalizedStringFilter {
   exclude?: StringOrRegExp[] | undefined;
 }
 
-// function getMatcherString(glob: string, cwd: string) {
-//   if (glob.startsWith('**') || isAbsolute(glob)) {
-//     return normalize(glob);
-//   }
+function getMatcherString(glob: string, cwd: string) {
+  if (glob.startsWith('**') || isAbsolute(glob)) {
+    return normalize(glob);
+  }
 
-//   const resolved = resolve(cwd, glob);
-//   return normalize(resolved);
-// }
+  const resolved = resolve(cwd, glob);
+  return normalize(resolved);
+}
 
 function patternToIdFilter(pattern: StringOrRegExp): PluginFilter {
   if (pattern instanceof RegExp) {
@@ -48,13 +53,12 @@ function patternToIdFilter(pattern: StringOrRegExp): PluginFilter {
     };
   }
   const cwd = process.cwd();
-  // const glob = getMatcherString(pattern, cwd);
-  // const matcher = picomatch(glob, { dot: true });
-  // return (id: string) => {
-  //   const normalizedId = normalize(id);
-  //   return matcher(normalizedId);
-  // };
-  return (id: string) => false;
+  const glob = getMatcherString(pattern, cwd);
+  const matcher = picomatch(glob, { dot: true });
+  return (id: string) => {
+    const normalizedId = normalize(id);
+    return matcher(normalizedId);
+  };
 }
 
 function patternToCodeFilter(pattern: StringOrRegExp): PluginFilter {
