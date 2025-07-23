@@ -931,7 +931,7 @@ describe('wgslGenerator', () => {
 [Error: Resolution of the following tree failed: 
 - <root>
 - fn:testFn
-- internalTestFn: Resolution of the following tree failed:
+- internalTestFn: Resolution of the following tree failed: 
 - internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
 `);
   });
