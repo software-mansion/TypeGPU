@@ -19,15 +19,7 @@ export function useAutoCompile() {
   const handleCompile = useSetAtom(compileAtom);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCompiledCodeRef = useRef<{
-    tgsl: string;
-    wgsl: string;
-    format: string;
-  }>({
-    tgsl: '',
-    wgsl: '',
-    format: '',
-  });
+  const lastCompiledRef = useRef({ tgsl: '', wgsl: '', format: '' });
 
   const debouncedCompile = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -36,38 +28,26 @@ export function useAutoCompile() {
 
     debounceTimerRef.current = setTimeout(() => {
       const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
-      const lastCompiled = mode === TRANSLATOR_MODES.TGSL
-        ? lastCompiledCodeRef.current.tgsl
-        : lastCompiledCodeRef.current.wgsl;
+      const lastCode = mode === TRANSLATOR_MODES.TGSL
+        ? lastCompiledRef.current.tgsl
+        : lastCompiledRef.current.wgsl;
 
-      // Only compile if code or format actually changed
       if (
-        canCompile && (
-          currentCode !== lastCompiled ||
-          format !== lastCompiledCodeRef.current.format
-        )
+        canCompile &&
+        (currentCode !== lastCode || format !== lastCompiledRef.current.format)
       ) {
-        lastCompiledCodeRef.current = {
-          tgsl: tgslCode,
-          wgsl: wgslCode,
-          format: format,
-        };
+        lastCompiledRef.current = { tgsl: tgslCode, wgsl: wgslCode, format };
         handleCompile();
       }
     }, 1000);
   }, [canCompile, handleCompile, mode, tgslCode, wgslCode, format]);
 
   useEffect(() => {
-    if (mode === TRANSLATOR_MODES.WGSL && wgslCode.trim() && canCompile) {
+    const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
+    if (currentCode.trim() && canCompile) {
       debouncedCompile();
     }
-  }, [wgslCode, mode, canCompile, debouncedCompile]);
-
-  useEffect(() => {
-    if (mode === TRANSLATOR_MODES.TGSL && tgslCode.trim() && canCompile) {
-      debouncedCompile();
-    }
-  }, [tgslCode, mode, canCompile, debouncedCompile]);
+  }, [tgslCode, wgslCode, mode, canCompile, debouncedCompile]);
 
   useEffect(() => {
     return () => {

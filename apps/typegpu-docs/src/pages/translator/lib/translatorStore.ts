@@ -6,87 +6,85 @@ import {
   TRANSLATOR_MODES,
   type TranslatorMode,
 } from './constants.ts';
-import { compile, getErrorMessage, initializeWasm } from './wgslTool.ts';
-import { executeTgslCode } from './tgslExecutor.ts';
+import { compile, initializeWasm } from './wgslTool.ts';
+import { executeTgslCode, getErrorMessage } from './tgslExecutor.ts';
 
-// Persisted atoms
+// Persisted state
 export const formatAtom = atomWithStorage('translator_format', 'glsl');
 export const modeAtom = atomWithStorage<TranslatorMode>(
   'translator_mode',
   TRANSLATOR_MODES.WGSL,
 );
 
-// Basic state atoms
+// Basic state
 export const tgslCodeAtom = atom(DEFAULT_TGSL);
 export const wgslCodeAtom = atom(DEFAULT_WGSL);
 export const outputAtom = atom('');
 export const formatsAtom = atom<string[]>([]);
 export const editorLoadingAtom = atom(true);
 
-// Status atoms
-export const statusAtom = atom<
-  'initializing' | 'ready' | 'compiling' | 'success' | 'error'
->('initializing');
-export const errorMessageAtom = atom<string | undefined>(undefined);
+// Combined status state
+export const statusAtom = atom<{
+  state: 'initializing' | 'ready' | 'compiling' | 'success' | 'error';
+  error?: string;
+}>({ state: 'initializing' });
 
-// Derived atoms
+// Simplified derived atoms
 export const canCompileAtom = atom((get) => {
+  const { state } = get(statusAtom);
   const formats = get(formatsAtom);
-  const loadingEditor = get(editorLoadingAtom);
-  const status = get(statusAtom);
+  const editorLoading = get(editorLoadingAtom);
   const mode = get(modeAtom);
   const wgslCode = get(wgslCodeAtom);
 
   return formats.length > 0 &&
-    !loadingEditor &&
-    status !== 'compiling' &&
+    !editorLoading &&
+    state !== 'compiling' &&
     (mode === TRANSLATOR_MODES.WGSL ||
       (mode === TRANSLATOR_MODES.TGSL && wgslCode.trim() !== ''));
 });
 
 export const canConvertTgslAtom = atom((get) => {
+  const { state } = get(statusAtom);
   const mode = get(modeAtom);
-  const loadingEditor = get(editorLoadingAtom);
-  const status = get(statusAtom);
+  const editorLoading = get(editorLoadingAtom);
 
   return mode === TRANSLATOR_MODES.TGSL &&
-    !loadingEditor &&
-    status !== 'compiling';
+    !editorLoading &&
+    state !== 'compiling';
 });
 
 // Action atoms
-export const initializeAtom = atom(null, async (get, set) => {
+export const initializeAtom = atom(null, async (_, set) => {
   try {
     const formats = initializeWasm();
     set(formatsAtom, formats);
-    set(statusAtom, 'ready');
+    set(statusAtom, { state: 'ready' });
   } catch (error) {
-    set(statusAtom, 'error');
-    set(errorMessageAtom, getErrorMessage(error));
+    set(statusAtom, { state: 'error', error: getErrorMessage(error) });
   }
 });
 
 export const convertTgslToWgslAtom = atom(null, async (get, set) => {
-  const status = get(statusAtom);
-  if (status === 'compiling') return;
+  const { state } = get(statusAtom);
+  if (state === 'compiling') return;
 
-  set(statusAtom, 'compiling');
+  set(statusAtom, { state: 'compiling' });
   try {
     const tgslCode = get(tgslCodeAtom);
     const result = await executeTgslCode(tgslCode);
     set(wgslCodeAtom, result);
-    set(statusAtom, 'ready');
+    set(statusAtom, { state: 'ready' });
   } catch (error) {
-    set(statusAtom, 'error');
-    set(errorMessageAtom, getErrorMessage(error));
+    set(statusAtom, { state: 'error', error: getErrorMessage(error) });
   }
 });
 
 export const compileAtom = atom(null, async (get, set) => {
-  const status = get(statusAtom);
-  if (status === 'compiling') return;
+  const { state } = get(statusAtom);
+  if (state === 'compiling') return;
 
-  set(statusAtom, 'compiling');
+  set(statusAtom, { state: 'compiling' });
 
   try {
     const mode = get(modeAtom);
@@ -104,28 +102,29 @@ export const compileAtom = atom(null, async (get, set) => {
       set(outputAtom, result);
     }
 
-    set(statusAtom, 'success');
+    set(statusAtom, { state: 'success' });
   } catch (error) {
-    set(statusAtom, 'error');
-    set(errorMessageAtom, getErrorMessage(error));
+    set(statusAtom, { state: 'error', error: getErrorMessage(error) });
     set(outputAtom, '');
   }
 });
 
-// Clear output when mode changes
+// Mode and format change handlers
 export const clearOutputOnModeChangeAtom = atom(
   null,
-  (get, set, mode: TranslatorMode) => {
+  (_, set, mode: TranslatorMode) => {
     set(modeAtom, mode);
     set(outputAtom, '');
-    set(statusAtom, mode === TRANSLATOR_MODES.TGSL ? 'ready' : get(statusAtom));
+
+    if (mode === TRANSLATOR_MODES.TGSL) {
+      set(statusAtom, { state: 'ready' });
+    }
   },
 );
 
-// Clear output when format changes
 export const clearOutputOnFormatChangeAtom = atom(
   null,
-  (get, set, format: string) => {
+  (_, set, format: string) => {
     set(formatAtom, format);
     set(outputAtom, '');
   },

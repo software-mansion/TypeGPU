@@ -12,7 +12,7 @@ export const LANGUAGE_MAP: Record<string, string> = {
   'spirv-asm': 'plaintext',
 };
 
-export const commonEditorOptions = {
+const baseEditorOptions = {
   minimap: { enabled: false },
   fontSize: 14,
   fontFamily: 'Monaco, "Cascadia Code", "Roboto Mono", monospace',
@@ -24,18 +24,17 @@ export const commonEditorOptions = {
   lineNumbers: 'on' as const,
   folding: true,
   bracketPairColorization: { enabled: true },
+  fixedOverflowWidgets: true,
 } as const;
 
 export const editableEditorOptions = {
-  ...commonEditorOptions,
+  ...baseEditorOptions,
   readOnly: false,
-  fixedOverflowWidgets: true,
 };
 
 export const readOnlyEditorOptions = {
-  ...commonEditorOptions,
+  ...baseEditorOptions,
   readOnly: true,
-  fixedOverflowWidgets: true,
 };
 
 export function setupMonacoEditor(monaco: Monaco) {
