@@ -20,17 +20,28 @@ describe('wgsl generator type inference', () => {
     exec.popMode('codegen');
   });
 
-  // it('coerces return value to u32', () => {
-  //   const myFn = tgpu.fn([], d.u32)(() => {
-  //     return 1.1;
-  //   });
+  it('coerces nested structs', () => {
+    const Inner = d.struct({ prop: d.vec2f });
+    const Outer = d.struct({ inner: Inner });
 
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     fn myFn() -> u32 {
-  //       return u32(1.1);
-  //     }
-  //   `));
-  // });
+    const myFn = tgpu.fn([])(() => {
+      const myStruct = Outer({ inner: { prop: d.vec2f() } });
+    });
+
+    expect(parseResolved({ myFn })).toBe(parse(`
+      struct Inner {
+        prop: vec2f,
+      }
+
+      struct Outer {
+        inner: Inner,
+      }
+
+      fn myFn() {
+        var myStruct = Outer(Inner(vec2f()));
+      }
+    `));
+  });
 
   it('coerces return value to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
@@ -49,6 +60,41 @@ describe('wgsl generator type inference', () => {
       }
     `));
   });
+
+  it('coerces return value to a nested structs', () => {
+    const Inner = d.struct({ prop: d.vec2f });
+    const Outer = d.struct({ inner: Inner });
+
+    const myFn = tgpu.fn([], Outer)(() => {
+      return Outer({ inner: { prop: d.vec2f() } });
+    });
+
+    expect(parseResolved({ myFn })).toBe(parse(`
+      struct Inner {
+        prop: vec2f,
+      }
+
+      struct Outer {
+        inner: Inner,
+      }
+
+      fn myFn() -> Outer {
+        return Outer(Inner(vec2f()));
+      }
+    `));
+  });
+
+  // it('coerces return value to u32', () => {
+  //   const myFn = tgpu.fn([], d.u32)(() => {
+  //     return 1.1;
+  //   });
+
+  //   expect(parseResolved({ myFn })).toBe(parse(`
+  //     fn myFn() -> u32 {
+  //       return u32(1.1);
+  //     }
+  //   `));
+  // });
 
   // it('coerces referenced value to a struct', () => {
   //   const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });

@@ -377,10 +377,10 @@ export function generateExpression(
         args[0].length > 0 &&
         args[0][0] === NODE.objectExpr
       ) {
-        return snip(`${resolvedId}(${argValues.join(', ')})`, id.value);
+        return snip(argValues[0], id.value);
       }
 
-      // The type of the return value is the struct itself
+      // The type of the return value is the struct reference itself
       return snip(`${argValues.join(', ')}`, id.value);
     }
 
@@ -469,26 +469,28 @@ export function generateExpression(
       );
     }
 
-    const callee = ctx.callStack[ctx.callStack.length - 1];
-
     if (wgsl.isWgslStruct(expectedType)) {
-      const propKeys = Object.keys(expectedType.propTypes);
       const entries = Object.fromEntries(
-        propKeys.map((key) => {
+        Object.entries(expectedType.propTypes).map(([key, value]) => {
           const val = obj[key];
           if (val === undefined) {
             throw new Error(
               `Missing property ${key} in object literal for struct ${expectedType}`,
             );
           }
-          return [key, generateExpression(ctx, val)];
+          ctx.expectedTypeStack.push(value as AnyData | UnknownData);
+          const result = generateExpression(ctx, val);
+          ctx.expectedTypeStack.pop();
+          return [key, result];
         }),
       );
 
       const convertedValues = convertStructValues(ctx, expectedType, entries);
 
       return snip(
-        convertedValues.map((v) => ctx.resolve(v.value)).join(', '),
+        `${ctx.resolve(expectedType)}(${
+          convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
+        })`,
         expectedType,
       );
     }
@@ -584,7 +586,7 @@ export function generateStatement(
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],
       );
-      return `${ctx.pre}return ${resolvedStruct}(${returnValue});`;
+      return `${ctx.pre}return ${returnValue};`;
     }
 
     return returnValue
