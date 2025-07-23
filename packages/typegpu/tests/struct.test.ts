@@ -290,16 +290,15 @@ describe('struct', () => {
     });
   });
 
-  // TODO: uncomment this once this starts working
-  // it('can be called to create a default value with nested array', () => {
-  //   const schema = struct({ arr: arrayOf(u32, 1) });
+  it('can be called to create a default value with nested array', () => {
+    const schema = struct({ arr: arrayOf(u32, 1) });
 
-  //   const defaultStruct = schema();
+    const defaultStruct = schema();
 
-  //   expect(defaultStruct).toStrictEqual({ arr: [0] });
-  // });
+    expect(defaultStruct).toStrictEqual({ arr: [0] });
+  });
 
-  it('resolves to correct wgsl', () => {
+  it('generates correct code when struct default constructor is used', () => {
     const Nested = struct({ prop1: vec2f, prop2: u32 });
     const Outer = struct({
       nested: Nested,
@@ -310,18 +309,72 @@ describe('struct', () => {
     });
 
     expect(parseResolved({ testFunction })).toBe(parse(`
-        struct Nested {
-          prop1: vec2f,
-          prop2: u32,
-        }
+          struct Nested {
+            prop1: vec2f,
+            prop2: u32,
+          }
+  
+          struct Outer {
+            nested: Nested,
+          }
+  
+          fn testFunction() {
+            var defaultValue = Outer();
+          }
+        `));
+  });
 
-        struct Outer {
-          nested: Nested,
-        }
+  it('generates correct code when struct clone is used', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: f32,
+    });
 
-        fn testFunction() {
-          var defaultValue = Outer();
+    const testFn = tgpu.fn([])(() => {
+      const myStruct = TestStruct({ x: 1, y: 2 });
+      const myClone = TestStruct(myStruct);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        struct TestStruct {
+          x: u32,
+          y: f32,
         }
-      `));
+  
+        fn testFn() {
+          var myStruct = TestStruct(1, 2);
+          var myClone = myStruct;
+          return;
+        }`),
+    );
+  });
+
+  it('generates correct code when complex struct clone is used', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: f32,
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const myStructs = [TestStruct({ x: 1, y: 2 })] as const;
+      const myClone = TestStruct(myStructs[0]);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        struct TestStruct {
+          x: u32,
+          y: f32,
+        }
+  
+        fn testFn() {
+          var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
+          var myClone = myStructs[0];
+          return;
+        }`),
+    );
   });
 });
