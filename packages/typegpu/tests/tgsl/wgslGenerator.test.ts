@@ -928,10 +928,10 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- internalTestFn: Resolution of the following tree failed: 
+- internalTestFn: Resolution of the following tree failed:
 - internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
 `);
   });
@@ -943,7 +943,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
 - translate4: Cannot read properties of undefined (reading 'value')]
@@ -958,10 +958,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed: 
+[Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- vec4f: Resolution of the following tree failed: 
+- vec4f: Resolution of the following tree failed:
 - vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
 `);
   });
@@ -974,7 +974,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ) ; }"`,
     );
   });
 
@@ -984,7 +984,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
     );
   });
 
