@@ -1,10 +1,5 @@
 import { invariant } from './errors.ts';
-import {
-  type ExecState,
-  NormalState,
-  type ResolutionCtx,
-  type SimulationState,
-} from './types.ts';
+import { type ExecState, NormalState, type ResolutionCtx } from './types.ts';
 
 /**
  * Used to track if the code we're currently
@@ -62,14 +57,6 @@ export const topLevelState = new NormalState();
 
 export function getExecMode(): ExecState {
   return resolutionCtx?.mode ?? topLevelState;
-}
-
-export function getSimulationState(): SimulationState | undefined {
-  const mode = resolutionCtx?.mode;
-  if (mode?.type === 'simulate') {
-    return mode;
-  }
-  return undefined;
 }
 
 export function inCodegenMode() {
