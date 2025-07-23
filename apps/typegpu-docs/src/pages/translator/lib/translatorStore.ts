@@ -9,27 +9,23 @@ import {
 import { compile, initializeWasm } from './wgslTool.ts';
 import { executeTgslCode, getErrorMessage } from './tgslExecutor.ts';
 
-// Persisted state
 export const formatAtom = atomWithStorage('translator_format', 'glsl');
 export const modeAtom = atomWithStorage<TranslatorMode>(
   'translator_mode',
   TRANSLATOR_MODES.WGSL,
 );
 
-// Basic state
 export const tgslCodeAtom = atom(DEFAULT_TGSL);
 export const wgslCodeAtom = atom(DEFAULT_WGSL);
 export const outputAtom = atom('');
 export const formatsAtom = atom<string[]>([]);
 export const editorLoadingAtom = atom(true);
 
-// Combined status state
 export const statusAtom = atom<{
   state: 'initializing' | 'ready' | 'compiling' | 'success' | 'error';
   error?: string;
 }>({ state: 'initializing' });
 
-// Simplified derived atoms
 export const canCompileAtom = atom((get) => {
   const { state } = get(statusAtom);
   const formats = get(formatsAtom);
@@ -54,7 +50,6 @@ export const canConvertTgslAtom = atom((get) => {
     state !== 'compiling';
 });
 
-// Action atoms
 export const initializeAtom = atom(null, async (_, set) => {
   try {
     const formats = initializeWasm();
@@ -109,7 +104,6 @@ export const compileAtom = atom(null, async (get, set) => {
   }
 });
 
-// Mode and format change handlers
 export const clearOutputOnModeChangeAtom = atom(
   null,
   (_, set, mode: TranslatorMode) => {
