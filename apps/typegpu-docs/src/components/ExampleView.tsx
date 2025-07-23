@@ -17,6 +17,9 @@ import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
+import { importMap } from '../utils/importmap/importmap.ts';
+
+console.log(importMap());
 
 type Props = {
   example: Example;
@@ -171,9 +174,7 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button
-                    onClick={() => openInStackBlitz(example)}
-                  >
+                  <Button onClick={() => openInStackBlitz(example)}>
                     <span className='font-bold'>Edit on</span>
                     <img
                       src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
