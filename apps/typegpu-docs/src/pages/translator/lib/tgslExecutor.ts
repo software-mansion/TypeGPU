@@ -31,9 +31,6 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   const imports: Record<string, string> = {};
 
   for (const [moduleName, importFn] of Object.entries(moduleImports)) {
-    console.log(
-      `Processing import for module: ${moduleName}, importFn: ${importFn}`,
-    );
     if (importFn) {
       const [url, isRelative] = extractUrlFromViteImport(importFn);
       if (url) {
