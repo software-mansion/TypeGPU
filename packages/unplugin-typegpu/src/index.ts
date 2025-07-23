@@ -100,7 +100,10 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             autoNamingEnabled: options.autoNamingEnabled,
           };
 
-          const ast = this.parse(code, { lang: 'ts' }) as Node;
+          const ast = this.parse(code, {
+            lang: 'ts',
+            allowReturnOutsideFunction: true,
+          }) as Node;
 
           const tgslFunctionDefs: {
             def: FunctionNode;

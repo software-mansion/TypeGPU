@@ -116,10 +116,15 @@ module.exports = (api) => {
 
 ```ts
 interface Options {
+  /** @default [/\.m?[jt]sx?$/] */
   include?: FilterPattern;
+  /** @default undefined */
   exclude?: FilterPattern;
+  /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
+  /** @default undefined */
   forceTgpuAlias?: string;
+  /** @default true */
   autoNamingEnabled?: boolean;
 }
 ```
