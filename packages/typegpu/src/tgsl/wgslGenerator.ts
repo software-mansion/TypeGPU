@@ -184,6 +184,31 @@ export function generateExpression(
     const rhsStr = ctx.resolve(convRhs.value);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
+    if (op === '/') {
+      const lhsIsFloat = convLhs.dataType.type === 'f32' ||
+        convLhs.dataType.type === 'f16' ||
+        convLhs.dataType.type === 'abstractFloat';
+      const rhsIsFloat = convRhs.dataType.type === 'f32' ||
+        convRhs.dataType.type === 'f16' ||
+        convRhs.dataType.type === 'abstractFloat';
+
+      if (!lhsIsFloat && !rhsIsFloat) {
+        return snip(
+          `f32(${lhsStr}) / f32(${rhsStr})`,
+          f32,
+        );
+      }
+
+      if (!lhsIsFloat || !rhsIsFloat) {
+        return snip(
+          !lhsIsFloat
+            ? `f32(${lhsStr}) / ${rhsStr}`
+            : `${lhsStr} / f32(${rhsStr})`,
+          f32,
+        );
+      }
+    }
+
     return snip(
       parenthesizedOps.includes(op)
         ? `(${lhsStr} ${op} ${rhsStr})`

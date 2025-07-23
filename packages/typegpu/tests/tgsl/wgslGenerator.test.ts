@@ -966,3 +966,85 @@ describe('wgslGenerator', () => {
 `);
   });
 });
+
+describe('wgslGenerator division operator', () => {
+  it('tests division operator resolution - u32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.u32(1) / d.u32(2);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - i32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.i32(1.0) / d.i32(2.0);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - f32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.f32(1.0) / d.f32(2.0);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return ( f32 ( 1 ) / f32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - f32 & i32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.f32(1.0) / d.i32(2.0);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return f32 ( 1 ) / f32 ( i32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - u32 & i32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.u32(1) / d.i32(2);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return f32 ( u32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - f16 & f32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.f16(1.0) / d.f32(2.0);
+    });
+    expect(div()).toBe(0.5);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return ( f16 ( 1 ) / f32 ( 2 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - decimal & f32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return d.f16(1 / 2) / d.f32(5.0);
+    });
+    expect(div()).toBe(0.1);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return ( f16 ( f32 ( 1 ) / f32 ( 2 ) ) / f32 ( 5 ) ) ; }"`,
+    );
+  });
+
+  it('tests division operator resolution - internal sum & f32', () => {
+    const div = tgpu.fn([], d.f32)(() => {
+      return (d.u32(1 + 2) / d.f32(5.0));
+    });
+    expect(div()).toBe(0.6);
+    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
+      `"fn div ( ) -> f32 { return f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ; }"`,
+    );
+  });
+});
