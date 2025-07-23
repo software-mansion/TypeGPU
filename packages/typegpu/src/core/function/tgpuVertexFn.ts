@@ -209,16 +209,11 @@ function createVertexFn(
 
       const generationCtx = ctx as GenerationCtx;
 
-      try {
-        generationCtx.expectedTypeStack.push(outputWithLocation);
-        return core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        );
-      } finally {
-        generationCtx.expectedTypeStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        shell.argTypes,
+        outputWithLocation,
+      );
     },
 
     toString() {
