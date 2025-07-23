@@ -9,7 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -174,7 +174,7 @@ export function generateExpression(
     const converted = convertToCommonType(
       ctx,
       [lhsExpr, rhsExpr],
-      forcedType,
+      op === '/' ? [f32, f16] : forcedType,
     ) as
       | [Snippet, Snippet]
       | undefined;
