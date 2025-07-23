@@ -329,6 +329,64 @@ Unlike render pipelines, after running this method, the execution is not submitt
 In order to do so, `root['~unstable'].flush()` needs to be run. 
 However, that is usually not necessary, as it is done automatically when trying to read the result of computation.
 
+### Drawing with `drawIndexed`
+
+The `drawIndexed` is analogous to draw, but takes advantage of the index buffer to determine the vertices to process.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+const presentationFormat = "rgba8unorm";
+
+const colorBuffer = root
+  .createBuffer(d.arrayOf(d.vec4f, 4), [
+    d.vec4f(1, 0, 0, 1), // Red
+    d.vec4f(0, 1, 0, 1), // Green
+    d.vec4f(0, 0, 1, 1), // Blue
+    d.vec4f(1, 1, 0, 1), // Yellow
+  ])
+  .$usage('vertex');
+
+const vertex = tgpu['~unstable'].vertexFn({
+  in: {
+    idx: d.builtin.vertexIndex,
+    color: d.vec4f,
+  },
+  out: {
+    color: d.vec4f,
+    pos: d.builtin.position,
+  },
+})(({ idx, color }) => {
+  return {
+    color,
+    pos: d.vec4f(d.vec2f(1, 1), 1, 1),
+  };
+});
+
+const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec4f, n));
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: {
+    color: d.vec4f,
+  },
+  out: d.vec4f,
+})((input) => input.color);
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+// ---cut---
+const pipeline = root['~unstable']
+  .withVertex(vertex, { color: vertexLayout.attrib })
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline()
+  .withIndexBuffer(indexBuffer);
+
+  pipeline 
+    .with(vertexLayout, colorBuffer)
+    .drawIndexed(6);
+```
+
 ## Low-level render pipeline execution API
 
 The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per one render pass. It also may be missing some more niche features of the WebGPU API.
