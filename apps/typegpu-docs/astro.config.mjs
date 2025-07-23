@@ -9,6 +9,7 @@ import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
 import { imagetools } from 'vite-imagetools';
+import wasm from 'vite-plugin-wasm';
 
 /**
  * @template T
@@ -26,10 +27,16 @@ export default defineConfig({
   vite: {
     // Allowing query params, for invalidation
     plugins: [
+      wasm(),
       tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
       /** @type {any} */ imagetools(),
     ],
+    ssr: {
+      noExternal: [
+        'wgsl-wasm-transpiler-bundler',
+      ],
+    },
   },
   integrations: [
     starlight({
@@ -94,6 +101,11 @@ export default defineConfig({
             {
               label: 'TGSL',
               slug: 'fundamentals/tgsl',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Pipelines',
+              slug: 'fundamentals/pipelines',
               badge: { text: 'new' },
             },
             {

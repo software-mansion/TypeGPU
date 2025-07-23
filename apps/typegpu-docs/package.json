@@ -52,7 +52,8 @@
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
-    "wgpu-matrix": "catalog:example"
+    "wgpu-matrix": "catalog:example",
+    "wgsl-wasm-transpiler-bundler": "^0.0.1"
   },
   "devDependencies": {
     "@observablehq/plot": "^0.6.17",
@@ -66,6 +67,7 @@
     "tailwindcss": "^4.1.7",
     "tailwindcss-motion": "^1.0.1",
     "vite-imagetools": "catalog:frontend",
+    "vite-plugin-wasm": "^3.4.1",
     "yaml": "^2.8.0"
   }
 }
