@@ -642,32 +642,6 @@ ${alternate}`;
     );
     const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
 
-    // If the value is a plain JS object it has to be an output struct
-    if (
-      typeof rawValue === 'object' &&
-      rawValue[0] === NODE.objectExpr &&
-      wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
-    ) {
-      const structType = ctx.callStack[
-        ctx.callStack.length - 1
-      ] as wgsl.WgslStruct;
-      const obj = rawValue[1];
-
-      const entries: Record<string, Snippet> = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (!value) {
-          throw new Error(`Missing property ${key} in object literal`);
-        }
-        entries[key] = generateExpression(ctx, value);
-      }
-
-      const convertedValues = convertStructValues(ctx, structType, entries);
-      const resolvedStruct = ctx.resolve(structType);
-      return `${ctx.pre}var ${id} = ${resolvedStruct}(${
-        convertedValues.map((sn) => ctx.resolve(sn.value)).join(', ')
-      });`;
-    }
-
     return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
   }
 
