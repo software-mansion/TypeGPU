@@ -1,10 +1,10 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
+import tgpu from "typegpu";
+import * as d from "typegpu/data";
+import * as std from "typegpu/std";
+import { sdBoxFrame3d, sdPlane, sdSphere } from "@typegpu/sdf";
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+const context = canvas.getContext("webgpu") as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const root = await tgpu.init();
@@ -12,7 +12,7 @@ const root = await tgpu.init();
 context.configure({
   device: root.device,
   format: presentationFormat,
-  alphaMode: 'premultiplied',
+  alphaMode: "premultiplied",
 });
 
 const time = root.createUniform(d.f32);
@@ -30,12 +30,18 @@ const Shape = d.struct({
   dist: d.f32,
 });
 
-const checkerBoard = tgpu.fn([d.vec2f], d.f32)((uv) => {
+const checkerBoard = tgpu.fn(
+  [d.vec2f],
+  d.f32,
+)((uv) => {
   const fuv = std.floor(uv);
   return std.abs(fuv.x + fuv.y) % 2;
 });
 
-const smoothShapeUnion = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
+const smoothShapeUnion = tgpu.fn(
+  [Shape, Shape, d.f32],
+  Shape,
+)((a, b, k) => {
   const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
   const m = h * h;
 
@@ -49,12 +55,18 @@ const smoothShapeUnion = tgpu.fn([Shape, Shape, d.f32], Shape)((a, b, k) => {
   return { dist, color };
 });
 
-const shapeUnion = tgpu.fn([Shape, Shape], Shape)((a, b) => ({
+const shapeUnion = tgpu.fn(
+  [Shape, Shape],
+  Shape,
+)((a, b) => ({
   color: std.select(a.color, b.color, a.dist > b.dist),
   dist: std.min(a.dist, b.dist),
 }));
 
-const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
+const getMorphingShape = tgpu.fn(
+  [d.vec3f, d.f32],
+  Shape,
+)((p, t) => {
   // Center position
   const center = d.vec3f(0, 2, 6);
   const localP = std.sub(p, center);
@@ -96,21 +108,23 @@ const getMorphingShape = tgpu.fn([d.vec3f, d.f32], Shape)((p, t) => {
   return smoothShapeUnion(spheres, box, 0.2);
 });
 
-const getSceneDist = tgpu.fn([d.vec3f], Shape)((p) => {
+const getSceneDist = tgpu.fn(
+  [d.vec3f],
+  Shape,
+)((p) => {
   const shape = getMorphingShape(p, time.$);
   const floor = Shape({
     dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
-    color: std.mix(
-      d.vec3f(1),
-      d.vec3f(0.2),
-      checkerBoard(std.mul(p.xz, 2)),
-    ),
+    color: std.mix(d.vec3f(1), d.vec3f(0.5), checkerBoard(std.mul(p.xz, 2))),
   });
 
   return shapeUnion(shape, floor);
 });
 
-const rayMarch = tgpu.fn([d.vec3f, d.vec3f], Shape)((ro, rd) => {
+const rayMarch = tgpu.fn(
+  [d.vec3f, d.vec3f],
+  Shape,
+)((ro, rd) => {
   let dO = d.f32(0);
   const result = Shape({
     dist: d.f32(MAX_DIST),
@@ -143,14 +157,17 @@ const softShadow = tgpu.fn(
     if (t >= maxT) break;
     const h = getSceneDist(std.add(ro, std.mul(rd, t))).dist;
     if (h < 0.001) return 0;
-    res = std.min(res, k * h / t);
+    res = std.min(res, (k * h) / t);
     t += std.max(h, 0.001);
   }
 
   return res;
 });
 
-const getNormal = tgpu.fn([d.vec3f], d.vec3f)((p) => {
+const getNormal = tgpu.fn(
+  [d.vec3f],
+  d.vec3f,
+)((p) => {
   const dist = getSceneDist(p).dist;
   const e = 0.01;
 
@@ -163,7 +180,10 @@ const getNormal = tgpu.fn([d.vec3f], d.vec3f)((p) => {
   return std.normalize(n);
 });
 
-const getOrbitingLightPos = tgpu.fn([d.f32], d.vec3f)((t) => {
+const getOrbitingLightPos = tgpu.fn(
+  [d.f32],
+  d.vec3f,
+)((t) => {
   const radius = d.f32(3);
   const height = d.f32(6);
   const speed = d.f32(1);
@@ -175,7 +195,7 @@ const getOrbitingLightPos = tgpu.fn([d.f32], d.vec3f)((t) => {
   );
 });
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu["~unstable"].vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -188,7 +208,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu["~unstable"].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -228,21 +248,21 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
-const renderPipeline = root['~unstable']
+const renderPipeline = root["~unstable"]
   .withVertex(vertexMain, {})
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
 let animationFrame: number;
 function run(timestamp: number) {
-  time.write(timestamp / 1000 % 1000);
+  time.write((timestamp / 1000) % 1000);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
+      loadOp: "clear",
+      storeOp: "store",
     })
     .draw(3);
 
