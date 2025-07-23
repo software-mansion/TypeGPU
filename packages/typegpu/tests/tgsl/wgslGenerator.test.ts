@@ -961,7 +961,7 @@ describe('wgslGenerator', () => {
 [Error: Resolution of the following tree failed:
 - <root>
 - fn:testFn
-- vec4f: Resolution of the following tree failed:
+- vec4f: Resolution of the following tree failed: 
 - vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
 `);
   });
