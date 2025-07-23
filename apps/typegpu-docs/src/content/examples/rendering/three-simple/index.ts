@@ -1,12 +1,14 @@
 import tgpu from 'typegpu';
 import * as THREE from 'three/webgpu';
-import * as t from '@typegpu/three';
+import * as tgpu3 from '@typegpu/three';
 import * as d from 'typegpu/data';
 import { uv } from 'three/tsl';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const tgpuMaterial = new t.TypeGPUMaterial(
+const dualColor = tgpu3.Tgpu3Fn();
+
+const tgpuMaterial = new tgpu3.TypeGPUMaterial(
   tgpu.fn([d.vec2f], d.vec4f)((uv) => {
     return d.vec4f(uv.x, uv.y, 0.5, 1);
   }),

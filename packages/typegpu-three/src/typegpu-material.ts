@@ -103,6 +103,7 @@ export class TypeGPUMaterial extends THREE.NodeMaterial {
   ) {
     super();
 
+    // @ts-expect-error
     this.fragmentNode = new FragmentNode(fragmentFn, threeRequirements);
   }
 }
