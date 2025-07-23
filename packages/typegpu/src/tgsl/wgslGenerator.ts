@@ -572,22 +572,12 @@ export function generateStatement(
 
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
+
+    ctx.expectedTypeStack.push(ctx.topFunctionScope.returnType);
     const returnValue = returnNode !== undefined
       ? ctx.resolve(generateExpression(ctx, returnNode).value)
       : undefined;
-
-    // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
-    // if so wrap the value returned in a constructor of the struct (its resolved name)
-    if (
-      wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
-      typeof returnNode === 'object' &&
-      returnNode[0] === NODE.objectExpr
-    ) {
-      const resolvedStruct = ctx.resolve(
-        ctx.callStack[ctx.callStack.length - 1],
-      );
-      return `${ctx.pre}return ${returnValue};`;
-    }
+    ctx.expectedTypeStack.pop();
 
     return returnValue
       ? `${ctx.pre}return ${returnValue};`

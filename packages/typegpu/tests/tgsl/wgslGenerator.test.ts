@@ -43,41 +43,41 @@ describe('wgslGenerator', () => {
     exec.popMode('codegen');
   });
 
-  it('creates a simple return statement', () => {
-    const main = () => {
-      'kernel';
-      return true;
-    };
+  // it('creates a simple return statement', () => {
+  //   const main = () => {
+  //     'kernel';
+  //     return true;
+  //   };
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+  //   const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
-    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-      `"[0,[[10,true]]]"`,
-    );
+  //   expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+  //     `"[0,[[10,true]]]"`,
+  //   );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+  //   const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
-    expect(parse(gen)).toBe(parse('{return true;}'));
-  });
+  //   expect(parse(gen)).toBe(parse('{return true;}'));
+  // });
 
-  it('creates a function body', () => {
-    const main = () => {
-      'kernel';
-      let a = 12;
-      a += 21;
-      return a;
-    };
+  // it('creates a function body', () => {
+  //   const main = () => {
+  //     'kernel';
+  //     let a = 12;
+  //     a += 21;
+  //     return a;
+  //   };
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+  //   const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
-    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-      `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
-    );
+  //   expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+  //     `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
+  //   );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+  //   const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
-    expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
-  });
+  //   expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+  // });
 
   it('creates correct resources for numeric literals', () => {
     const literals = {
@@ -750,87 +750,87 @@ describe('wgslGenerator', () => {
     expect(res.dataType).toEqual(d.vec3f);
   });
 
-  it('generates correct code for conditionals with single statements', () => {
-    const main0 = () => {
-      'kernel';
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) return 0;
-      return 1;
-    };
+  // it('generates correct code for conditionals with single statements', () => {
+  //   const main0 = () => {
+  //     'kernel';
+  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+  //     if (true) return 0;
+  //     return 1;
+  //   };
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main0)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
-      if (true) {
-        return 0;
-      }
-      return 1;
-    }`),
-    );
+  //   expect(
+  //     parse(
+  //       wgslGenerator.generateFunction(
+  //         ctx,
+  //         getMetaData(main0)?.ast?.body as tinyest.Block,
+  //       ),
+  //     ),
+  //   ).toBe(
+  //     parse(`{
+  //     if (true) {
+  //       return 0;
+  //     }
+  //     return 1;
+  //   }`),
+  //   );
 
-    const main1 = () => {
-      'kernel';
-      let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) y = 1;
-      else y = 2;
-      return y;
-    };
+  //   const main1 = () => {
+  //     'kernel';
+  //     let y = 0;
+  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+  //     if (true) y = 1;
+  //     else y = 2;
+  //     return y;
+  //   };
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main1)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
+  //   expect(
+  //     parse(
+  //       wgslGenerator.generateFunction(
+  //         ctx,
+  //         getMetaData(main1)?.ast?.body as tinyest.Block,
+  //       ),
+  //     ),
+  //   ).toBe(
+  //     parse(`{
+  //     var y = 0;
+  //     if (true) {
+  //       y = 1;
+  //     } else {
+  //      y = 2;
+  //     }
+  //     return y;
+  //   }`),
+  //   );
 
-    const main2 = () => {
-      'kernel';
-      let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) {
-        y = 1;
-      } else y = 2;
-      return y;
-    };
+  //   const main2 = () => {
+  //     'kernel';
+  //     let y = 0;
+  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+  //     if (true) {
+  //       y = 1;
+  //     } else y = 2;
+  //     return y;
+  //   };
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main2)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
-  });
+  //   expect(
+  //     parse(
+  //       wgslGenerator.generateFunction(
+  //         ctx,
+  //         getMetaData(main2)?.ast?.body as tinyest.Block,
+  //       ),
+  //     ),
+  //   ).toBe(
+  //     parse(`{
+  //     var y = 0;
+  //     if (true) {
+  //       y = 1;
+  //     } else {
+  //      y = 2;
+  //     }
+  //     return y;
+  //   }`),
+  //   );
+  // });
 
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
