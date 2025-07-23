@@ -209,18 +209,11 @@ function createFn<ImplSchema extends AnyFn>(
       }
 
       const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
 
       try {
         generationCtx.expectedTypeStack.push(shell.returnType);
-        generationCtx.callStack.push(shell.returnType);
         return core.resolve(ctx, shell.argTypes, shell.returnType);
       } finally {
-        generationCtx.callStack.pop();
         generationCtx.expectedTypeStack.pop();
       }
     },

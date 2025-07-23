@@ -337,7 +337,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly expectedTypeStack: (AnyData | UnknownData)[] = [];
-  public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {

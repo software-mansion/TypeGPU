@@ -432,7 +432,6 @@ export function generateExpression(
               }`,
               [{
                 function: id.value,
-                callStack: ctx.callStack,
                 error:
                   `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
                 toString: () => getName(id.value),

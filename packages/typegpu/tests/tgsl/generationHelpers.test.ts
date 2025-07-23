@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
+import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
   abstractFloat,
@@ -32,7 +33,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -52,7 +52,6 @@ const mockCtx = {
   }),
   unwrap: vi.fn((val) => val),
   pre: '',
-  callStack: [],
 } as unknown as GenerationCtx;
 
 beforeEach(() => {

@@ -232,22 +232,15 @@ function createFragmentFn(
       }
 
       const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
 
       try {
         generationCtx.expectedTypeStack.push(outputType);
-        generationCtx.callStack.push(outputType);
         return core.resolve(
           ctx,
           inputWithLocation ? [inputWithLocation] : [],
           shell.returnType,
         );
       } finally {
-        generationCtx.callStack.pop();
         generationCtx.expectedTypeStack.pop();
       }
     },

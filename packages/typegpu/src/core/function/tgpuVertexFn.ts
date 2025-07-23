@@ -208,22 +208,15 @@ function createVertexFn(
       }
 
       const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
 
       try {
         generationCtx.expectedTypeStack.push(outputWithLocation);
-        generationCtx.callStack.push(outputWithLocation);
         return core.resolve(
           ctx,
           shell.argTypes,
           outputWithLocation,
         );
       } finally {
-        generationCtx.callStack.pop();
         generationCtx.expectedTypeStack.pop();
       }
     },
