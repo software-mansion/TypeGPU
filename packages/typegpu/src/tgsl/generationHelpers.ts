@@ -519,6 +519,7 @@ export function convertToCommonType(
   ctx: GenerationCtx,
   values: Snippet[],
   restrictTo?: AnyData[],
+  verbose = true,
 ): Snippet[] | undefined {
   const types = values.map((value) => value.dataType);
 
@@ -526,7 +527,7 @@ export function convertToCommonType(
     return undefined;
   }
 
-  if (Array.isArray(restrictTo) && restrictTo.length === 0) {
+  if (verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
     console.warn(
       'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
     );
@@ -537,7 +538,7 @@ export function convertToCommonType(
     return undefined;
   }
 
-  if (conversion.hasImplicitConversions) {
+  if (verbose && conversion.hasImplicitConversions) {
     console.warn(
       `Implicit conversions from [\n${
         values
