@@ -112,7 +112,7 @@ const getStableStateBelow = tgpu.fn([d.u32, d.u32], d.u32)((upper, lower) => {
     return totalMass;
   }
   if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.$ * 2 && upper > lower) {
-    return totalMass / 2 + MAX_PRESSURE.$;
+    return d.u32(totalMass / 2) + MAX_PRESSURE.$;
   }
   return MAX_WATER_LEVEL_UNPRESSURIZED.$;
 });
@@ -207,7 +207,10 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x - 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(
+        std.min(4, remainingWater),
+        d.u32(flowRaw / 4),
+      );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x - 1, y, flow);
@@ -222,7 +225,10 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x + 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(
+        std.min(4, remainingWater),
+        flowRaw / 4,
+      );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x + 1, y, flow);
@@ -262,12 +268,12 @@ const vertex = tgpu['~unstable'].vertexFn({
     2 *
     d.f32(w)) /
     d.f32(std.max(w, h));
-  const y =
-    ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
-        d.f32(h) -
-      0.5) *
-      2 *
-      d.f32(h)) /
+  const y = ((d.f32((input.idx - (input.idx % w)) / d.f32(w)) +
+        d.f32(input.squareData.y)) /
+      d.f32(h) -
+    0.5) *
+    2 *
+    d.f32(h) /
     d.f32(std.max(w, h));
   const cellFlags = input.currentStateData >> 24;
   let cell = d.f32(input.currentStateData & 0xffffff);
