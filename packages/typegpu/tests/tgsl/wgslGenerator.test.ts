@@ -958,7 +958,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
+[Error: Resolution of the following tree failed: 
 - <root>
 - fn:testFn
 - vec4f: Resolution of the following tree failed: 
