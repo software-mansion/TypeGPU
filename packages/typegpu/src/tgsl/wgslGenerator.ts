@@ -328,7 +328,9 @@ export function generateExpression(
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
 
-    ctx.callStack.push(id.value);
+    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
+      ctx.expectedTypeStack.push(id.value);
+    }
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
     const resolvedSnippets = argSnippets.map((res) =>
@@ -336,7 +338,9 @@ export function generateExpression(
     );
     const argValues = resolvedSnippets.map((res) => res.value);
 
-    ctx.callStack.pop();
+    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
+      ctx.expectedTypeStack.pop();
+    }
 
     resolvedSnippets.forEach((sn, idx) => {
       if (sn.dataType === UnknownData) {
@@ -454,52 +458,39 @@ export function generateExpression(
   if (expression[0] === NODE.objectExpr) {
     // Object Literal
     const obj = expression[1];
+
+    const expectedType = ctx.expectedTypeStack.at(-1);
+
+    if (!expectedType || !wgsl.isWgslStruct(expectedType)) {
+      throw new Error(
+        `No target type could be inferred for object with keys [${
+          Object.keys(obj)
+        }], please wrap the object in the corresponding schema.`,
+      );
+    }
+
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
-    if (wgsl.isWgslStruct(callee)) {
-      const propKeys = Object.keys(callee.propTypes);
+    if (wgsl.isWgslStruct(expectedType)) {
+      const propKeys = Object.keys(expectedType.propTypes);
       const entries = Object.fromEntries(
         propKeys.map((key) => {
           const val = obj[key];
           if (val === undefined) {
             throw new Error(
-              `Missing property ${key} in object literal for struct ${callee}`,
+              `Missing property ${key} in object literal for struct ${expectedType}`,
             );
           }
           return [key, generateExpression(ctx, val)];
         }),
       );
 
-      const convertedValues = convertStructValues(ctx, callee, entries);
+      const convertedValues = convertStructValues(ctx, expectedType, entries);
 
       return snip(
         convertedValues.map((v) => ctx.resolve(v.value)).join(', '),
-        callee,
+        expectedType,
       );
-    }
-
-    if (isMarkedInternal(callee)) {
-      const argTypes = callee[$internal]?.argTypes;
-
-      if (typeof argTypes === 'object' && argTypes !== null) {
-        const propKeys = Object.keys(argTypes);
-        const snippets: Record<string, Snippet> = {};
-
-        for (const key of propKeys) {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new Error(
-              `Missing property ${key} in object literal for function ${callee}`,
-            );
-          }
-          const expr = generateExpression(ctx, val);
-          const targetType = argTypes[key as keyof typeof argTypes];
-          const converted = convertToCommonType(ctx, [expr], [targetType]);
-          snippets[key] = converted?.[0] ?? expr;
-        }
-
-        return snip(snippets, UnknownData);
-      }
     }
 
     throw new Error(
