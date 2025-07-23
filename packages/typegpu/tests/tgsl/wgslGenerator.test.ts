@@ -527,8 +527,8 @@ describe('wgslGenerator', () => {
       );
 
       expect(d.isWgslArray(res.dataType)).toBe(true);
-    expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
-    expect((res.dataType as unknown as WgslArray).elementType).toBe(d.u32);
+      expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
+      expect((res.dataType as unknown as WgslArray).elementType).toBe(d.u32);
     });
   });
 
