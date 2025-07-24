@@ -492,7 +492,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(() => parseResolved({ getColor }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "vec3f", WGSL type "vec4f".]
       `);
@@ -509,7 +509,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(() => parseResolved({ getColor }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:get_color: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "array<P,4>", WGSL type "arrayOf<P,3>".]
       `);
@@ -523,7 +523,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(() => parseResolved({ getColor }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:get_color: Type mismatch between TGPU shell and WGSL code string: return type, JS type "vec4f", WGSL type "vec2f".]
       `);
@@ -537,7 +537,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(() => parseResolved({ getColor }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:get_color: WGSL implementation has 3 arguments, while the shell has 2 arguments.]
       `);
