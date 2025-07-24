@@ -1,6 +1,14 @@
-import { useEffect, useId } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useEffect, useId } from 'react';
+import { TranslatorHeader } from './components/TranslatorHeader.tsx';
+import { TRANSLATOR_MODES } from './lib/constants.ts';
+import {
+  editableEditorOptions,
+  LANGUAGE_MAP,
+  readOnlyEditorOptions,
+  setupMonacoEditor,
+} from './lib/editorConfig.ts';
 import {
   editorLoadingAtom,
   formatAtom,
@@ -10,15 +18,7 @@ import {
   tgslCodeAtom,
   wgslCodeAtom,
 } from './lib/translatorStore.ts';
-import { TRANSLATOR_MODES } from './lib/constants.ts';
-import {
-  editableEditorOptions,
-  LANGUAGE_MAP,
-  readOnlyEditorOptions,
-  setupMonacoEditor,
-} from './lib/editorConfig.ts';
 import { useAutoCompile } from './lib/useAutoCompile.ts';
-import { TranslatorHeader } from './components/TranslatorHeader.tsx';
 
 interface EditorSectionProps {
   id: string;
@@ -36,7 +36,7 @@ function EditorSection({
   language,
   value,
   onChange,
-  readOnly = false,
+  readOnly,
   onMount,
 }: EditorSectionProps) {
   return (
@@ -47,32 +47,20 @@ function EditorSection({
       >
         {title}
       </h2>
-      <div
-        aria-labelledby={id}
-        className={`min-h-0 flex-1 overflow-hidden rounded-lg border border-gray-600 ${
-          readOnly
-            ? 'bg-gray-800/50 backdrop-blur-sm'
-            : 'bg-gray-900/50 backdrop-blur-sm'
-        }`}
-      >
-        <Editor
-          height='100%'
-          language={language}
-          value={value}
-          onChange={onChange ? (v) => onChange(v || '') : undefined}
-          theme='vs-dark'
-          beforeMount={language === 'typescript'
-            ? setupMonacoEditor
-            : undefined}
-          onMount={onMount}
-          loading={
-            <div className='flex h-full items-center justify-center text-gray-400'>
-              Loading editor...
-            </div>
-          }
-          options={readOnly ? readOnlyEditorOptions : editableEditorOptions}
-        />
-      </div>
+      <Editor
+        language={language}
+        value={value}
+        onChange={onChange ? (v) => onChange(v || '') : undefined}
+        theme='vs-dark'
+        beforeMount={language === 'typescript' ? setupMonacoEditor : undefined}
+        onMount={onMount}
+        loading={
+          <div className='flex items-center justify-center text-gray-400'>
+            Loading editor...
+          </div>
+        }
+        options={readOnly ? readOnlyEditorOptions : editableEditorOptions}
+      />
     </section>
   );
 }
@@ -104,40 +92,40 @@ export default function TranslatorApp() {
     : 'grid-cols-1 lg:grid-cols-2';
 
   return (
-    <div className='flex h-screen flex-col overflow-hidden'>
+    <div className='flex flex-1 flex-col overflow-hidden'>
       <TranslatorHeader />
 
-      <main className='min-h-0 flex-1 overflow-y-auto lg:overflow-hidden'>
-        <div className={`grid h-full gap-4 p-4 ${gridCols}`}>
-          {isTgslMode && (
-            <EditorSection
-              id={tgslInputLabelId}
-              title='TypeScript Shader Code (TGSL):'
-              language='typescript'
-              value={tgslCode}
-              onChange={setTgslCode}
-              onMount={handleEditorLoaded}
-            />
-          )}
-
+      <main
+        className={`grid flex-1 gap-4 overflow-y-auto p-4 ${gridCols}`}
+      >
+        {isTgslMode && (
           <EditorSection
-            id={wgslInputLabelId}
-            title={isTgslMode ? 'Generated WGSL:' : 'WGSL Shader Code:'}
-            language='wgsl'
-            value={wgslCode}
-            onChange={!isTgslMode ? setWgslCode : undefined}
-            readOnly={isTgslMode}
-            onMount={!isTgslMode ? handleEditorLoaded : undefined}
+            id={tgslInputLabelId}
+            title='TypeScript Shader Code (TGSL):'
+            language='typescript'
+            value={tgslCode}
+            onChange={setTgslCode}
+            onMount={handleEditorLoaded}
           />
+        )}
 
-          <EditorSection
-            id={compiledOutputLabelId}
-            title={`Compiled Output (${format.toUpperCase()}):`}
-            language={LANGUAGE_MAP[format] || 'plaintext'}
-            value={output || '// Compiled output will appear here...'}
-            readOnly
-          />
-        </div>
+        <EditorSection
+          id={wgslInputLabelId}
+          title={isTgslMode ? 'Generated WGSL:' : 'WGSL Shader Code:'}
+          language='wgsl'
+          value={wgslCode}
+          onChange={!isTgslMode ? setWgslCode : undefined}
+          readOnly={isTgslMode}
+          onMount={!isTgslMode ? handleEditorLoaded : undefined}
+        />
+
+        <EditorSection
+          id={compiledOutputLabelId}
+          title={`Compiled Output (${format.toUpperCase()}):`}
+          language={LANGUAGE_MAP[format] || 'plaintext'}
+          value={output || '// Compiled output will appear here...'}
+          readOnly
+        />
       </main>
     </div>
   );

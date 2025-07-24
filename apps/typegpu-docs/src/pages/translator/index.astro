@@ -6,16 +6,18 @@ import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
 ---
 
 <PageLayout title="WGSL Translator | TypeGPU" theme="dark">
-    <h1 class="w-full flex items-center justify-center mb-6 pt-4">
-        <a href="/TypeGPU">
-            <Image
-                src={TypeGPULogoDark}
-                alt="TypeGPU Logo"
-                class="w-40 relative"
-            />
-        </a>
-        <p class="text-lg font-sans text-gray-300">— translator</p>
-    </h1>
+    <main class="flex h-screen overflow-hidden flex-col">
+        <h1 class="flex items-center justify-center p-1 min-w-2xs">
+            <a href="/TypeGPU">
+                <Image
+                    src={TypeGPULogoDark}
+                    alt="TypeGPU Logo"
+                    class="w-40 relative"
+                />
+            </a>
+            <p class="text-lg font-sans text-gray-300">— translator</p>
+        </h1>
 
-    <TranslatorApp client:only="react" />
+        <TranslatorApp client:only="react" />
+    </main>
 </PageLayout>

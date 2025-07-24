@@ -13,6 +13,7 @@ function translateTGSL(
 const moduleImports = {
   'typegpu': 'https://esm.sh/typegpu@latest/?bundle=false',
   'typegpu/data': 'https://esm.sh/typegpu@latest/data/?bundle=false',
+  'typegpu/std': 'https://esm.sh/typegpu@latest/std/?bundle=false',
 } as Record<string, string>;
 
 type TgslModule = Record<string, unknown>;
