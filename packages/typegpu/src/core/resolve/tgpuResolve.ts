@@ -4,6 +4,7 @@ import {
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 
 export interface TgpuResolveOptions {
@@ -21,6 +22,10 @@ export interface TgpuResolveOptions {
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
+  /**
+   * A function to configure the resolution context.
+   */
+  config?: () => (cfg: Configurable) => Configurable;
 }
 
 /**
@@ -65,6 +70,7 @@ export function resolveWithContext(
     externals,
     template,
     names,
+    config,
   } = options;
 
   const dependencies = {} as Record<string, Wgsl>;
@@ -82,7 +88,7 @@ export function resolveWithContext(
     names: names === 'strict'
       ? new StrictNameRegistry()
       : new RandomNameRegistry(),
-  });
+  }, config);
 }
 
 /**

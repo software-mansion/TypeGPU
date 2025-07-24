@@ -107,7 +107,7 @@ import {
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
 
-class ConfigurableImpl implements Configurable {
+export class ConfigurableImpl implements Configurable {
   constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}
 
   with<T extends AnyWgslData>(
