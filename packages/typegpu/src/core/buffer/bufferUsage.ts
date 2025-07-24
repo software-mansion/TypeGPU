@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -20,6 +20,9 @@ import type {
 } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
+import { schemaCloneWrapper, schemaDefaultWrapper } from '../../data/utils.ts';
+import { assertExhaustive } from '../../shared/utilityTypes.ts';
+import { IllegalBufferAccessError } from '../../errors.ts';
 
 // ----------
 // Public API
@@ -138,18 +141,72 @@ class TgpuFixedBufferImpl<
     ) as InferGPU<TData>;
   }
 
-  get value(): InferGPU<TData> {
-    if (inCodegenMode()) {
+  get $(): InferGPU<TData> {
+    const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
+    if (mode.type === 'normal') {
+      throw new IllegalBufferAccessError(
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this.buffer)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : '.$ and .value are inaccessible during normal JS execution. Try `.read()`',
+      );
+    }
+
+    if (mode.type === 'codegen') {
       return this[$gpuValueOf]();
     }
 
-    throw new Error(
-      'Direct access to buffer values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
-    );
+    if (mode.type === 'simulate') {
+      if (!mode.buffers.has(this.buffer)) { // Not initialized yet
+        mode.buffers.set(
+          this.buffer,
+          schemaCloneWrapper(this.buffer.dataType, this.buffer.initial) ??
+            schemaDefaultWrapper(this.buffer.dataType),
+        );
+      }
+      return mode.buffers.get(this.buffer) as InferGPU<TData>;
+    }
+
+    return assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
   }
 
-  get $(): InferGPU<TData> {
-    return this.value;
+  get value(): InferGPU<TData> {
+    return this.$;
+  }
+
+  set $(value: InferGPU<TData>) {
+    const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
+    if (mode.type === 'normal') {
+      throw new IllegalBufferAccessError(
+        insideTgpuFn
+          ? `Cannot access ${
+            String(this.buffer)
+          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : '.$ and .value are inaccessible during normal JS execution. Try `.write()`',
+      );
+    }
+
+    if (mode.type === 'codegen') {
+      // The WGSL generator handles buffer assignment, and does not defer to
+      // whatever's being assigned to to generate the WGSL.
+      throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
+    }
+
+    if (mode.type === 'simulate') {
+      mode.buffers.set(this.buffer, value as InferGPU<TData>);
+      return;
+    }
+
+    assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
+  }
+
+  set value(value: InferGPU<TData>) {
+    this.$ = value;
   }
 }
 
@@ -200,7 +257,7 @@ export class TgpuLaidOutBufferImpl<
     ) as InferGPU<TData>;
   }
 
-  get value(): InferGPU<TData> {
+  get $(): InferGPU<TData> {
     if (inCodegenMode()) {
       return this[$gpuValueOf]();
     }
@@ -210,8 +267,8 @@ export class TgpuLaidOutBufferImpl<
     );
   }
 
-  get $(): InferGPU<TData> {
-    return this.value;
+  get value(): InferGPU<TData> {
+    return this.$;
   }
 }
 

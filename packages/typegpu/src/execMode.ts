@@ -1,42 +1,66 @@
 import { invariant } from './errors.ts';
-import type { ResolutionCtx } from './types.ts';
+import { type ExecState, NormalState, type ResolutionCtx } from './types.ts';
 
-let resolutionCtx: ResolutionCtx | null = null;
+/**
+ * Used to track if the code we're currently
+ * executing is inside an executing TypeGPU function.
+ *
+ * Helpful for providing better error messages.
+ */
+let insideTgpuFn = false;
 
-export type ExecMode = 'comptime' | 'codegen';
+export function provideInsideTgpuFn<T>(callback: () => T): T {
+  if (insideTgpuFn) {
+    return callback();
+  }
+  try {
+    insideTgpuFn = true;
+    return callback();
+  } finally {
+    insideTgpuFn = false;
+  }
+}
 
-const resolutionModeStack: ExecMode[] = [];
+export function isInsideTgpuFn(): boolean {
+  return insideTgpuFn;
+}
+
+let resolutionCtx: ResolutionCtx | undefined;
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
-  invariant(resolutionCtx === null, 'Cannot nest context providers');
+  invariant(
+    resolutionCtx === undefined || resolutionCtx === ctx,
+    'Cannot nest context providers',
+  );
+
+  if (resolutionCtx === ctx) {
+    return callback();
+  }
 
   resolutionCtx = ctx;
   try {
     return callback();
   } finally {
-    resolutionCtx = null;
+    resolutionCtx = undefined;
   }
 }
 
-export function getResolutionCtx(): ResolutionCtx | null {
+export function getResolutionCtx(): ResolutionCtx | undefined {
   return resolutionCtx;
 }
 
-export function pushMode(mode: ExecMode) {
-  resolutionModeStack.push(mode);
+/**
+ * Applicable when code is being executed outside of any
+ * execution-altering APIs.
+ */
+export const topLevelState = new NormalState();
+
+export function getExecMode(): ExecState {
+  return resolutionCtx?.mode ?? topLevelState;
 }
 
-export function popMode(expected?: ExecMode) {
-  const mode = resolutionModeStack.pop();
-  if (expected !== undefined) {
-    invariant(mode === expected, 'Unexpected mode');
-  }
+export function inCodegenMode() {
+  return resolutionCtx?.mode?.type === 'codegen';
 }
 
-export const inCodegenMode = () =>
-  resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === 'codegen';
-
-export const inComptimeMode = () =>
-  resolutionModeStack.length > 0 &&
-  resolutionModeStack[resolutionModeStack.length - 1] === 'comptime';
+// You can add getters for more modes if necessary...

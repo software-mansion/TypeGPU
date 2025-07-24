@@ -1,10 +1,11 @@
 import { attest } from '@ark/attest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -619,7 +620,7 @@ describe('TGSL tgpu.fn function', () => {
   it('allows destructuring the input struct argument', () => {
     const Input = d.struct({
       value: d.i32,
-    }).$name('Input');
+    });
 
     const fun = tgpu.fn([Input])(({ value }) => {
       const vector = d.vec2u(value);
@@ -847,6 +848,26 @@ describe('tgpu.fn arguments', () => {
     fn(vec);
 
     expect(vec).toStrictEqual(d.vec3f());
+  });
+});
+
+describe('tgpu.fn called top-level', () => {
+  it('works when void of GPU resource access', () => {
+    const fn = tgpu.fn([], d.f32)(() => 3);
+
+    expect(fn()).toBe(3);
+  });
+
+  it('throws helpful error when reading a uniform', ({ root }) => {
+    const uniform = root.createUniform(d.f32, 0);
+    const foo = tgpu.fn([], d.f32)(() => {
+      return uniform.$; // accessing GPU resource
+    });
+
+    expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed: 
+      - fn:foo: Cannot access buffer:uniform. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
+    `);
   });
 });
 
