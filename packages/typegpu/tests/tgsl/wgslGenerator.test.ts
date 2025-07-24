@@ -1,11 +1,10 @@
 import * as tinyest from 'tinyest';
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect } from 'vitest';
 import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
-import * as exec from '../../src/execMode.ts';
-import tgpu, { StrictNameRegistry } from '../../src/index.ts';
+import tgpu from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
@@ -13,6 +12,9 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { StrictNameRegistry } from '../../src/nameRegistry.ts';
+import { CodegenState } from '../../src/types.ts';
+import { provideCtx } from '../../src/execMode.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -24,23 +26,13 @@ const derivedV2f = tgpu['~unstable'].derived(() =>
   std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
 );
 
-const createContext = () => {
-  return new ResolutionCtxImpl({
-    names: new StrictNameRegistry(),
-  });
-};
-
 describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
-
   beforeEach(() => {
-    exec.pushMode('codegen');
-    ctx = createContext();
-    vi.spyOn(exec, 'getResolutionCtx').mockReturnValue(ctx);
-  });
-
-  afterEach(() => {
-    exec.popMode('codegen');
+    ctx = new ResolutionCtxImpl({
+      names: new StrictNameRegistry(),
+    });
+    ctx.pushMode(new CodegenState());
   });
 
   it('creates a simple return statement', () => {
@@ -55,9 +47,10 @@ describe('wgslGenerator', () => {
       `"[0,[[10,true]]]"`,
     );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-
-    expect(parse(gen)).toBe(parse('{return true;}'));
+    provideCtx(ctx, () => {
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      expect(parse(gen)).toBe(parse('{return true;}'));
+    });
   });
 
   it('creates a function body', () => {
@@ -74,9 +67,10 @@ describe('wgslGenerator', () => {
       `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
     );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-
-    expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+    provideCtx(ctx, () => {
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+    });
   });
 
   it('creates correct resources for numeric literals', () => {
@@ -114,17 +108,19 @@ describe('wgslGenerator', () => {
       ]),
     ]);
 
-    for (const stmt of (parsedBody as tinyest.Block)[1]) {
-      const letStatement = stmt as tinyest.Let;
-      const [_, name, numLiteral] = letStatement;
-      const generatedExpr = wgslGenerator.generateExpression(
-        ctx,
-        numLiteral as tinyest.Num,
-      );
-      const expected = literals[name as keyof typeof literals];
+    provideCtx(ctx, () => {
+      for (const stmt of (parsedBody as tinyest.Block)[1]) {
+        const letStatement = stmt as tinyest.Let;
+        const [_, name, numLiteral] = letStatement;
+        const generatedExpr = wgslGenerator.generateExpression(
+          ctx,
+          numLiteral as tinyest.Num,
+        );
+        const expected = literals[name as keyof typeof literals];
 
-      expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
-    }
+        expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
+      }
+    });
   });
 
   it('generates correct resources for member access expressions', ({ root }) => {
@@ -160,40 +156,42 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
-    // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                   ^ this should be a u32
-    const res1 = wgslGenerator.generateExpression(
-      ctx,
-      // deno-fmt-ignore: it's better that way
-      (
+    provideCtx(ctx, () => {
+      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      //                   ^ this should be a u32
+      const res1 = wgslGenerator.generateExpression(
+        ctx,
+        // deno-fmt-ignore: it's better that way
+        (
         (
           astInfo.ast?.body[1][0] as tinyest.Return
         )[1] as tinyest.BinaryExpression
       )[1],
-    );
+      );
 
-    expect(res1.dataType).toStrictEqual(d.u32);
+      expect(res1.dataType).toStrictEqual(d.u32);
 
-    // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //                                       ^ this should be a u32
-    const res2 = wgslGenerator.generateExpression(
-      ctx,
-      // deno-fmt-ignore: it's better that way
-      (
+      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      //                                       ^ this should be a u32
+      const res2 = wgslGenerator.generateExpression(
+        ctx,
+        // deno-fmt-ignore: it's better that way
+        (
         (
           astInfo.ast?.body[1][0] as tinyest.Return
         )[1] as tinyest.BinaryExpression
       )[3],
-    );
-    expect(res2.dataType).toStrictEqual(d.u32);
+      );
+      expect(res2.dataType).toStrictEqual(d.u32);
 
-    // Check for: return testUsage.value.a + testUsage.value.b.x;
-    //            ^ this should be a u32
-    const sum = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
-    );
-    expect(sum.dataType).toStrictEqual(d.u32);
+      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      //            ^ this should be a u32
+      const sum = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      );
+      expect(sum.dataType).toStrictEqual(d.u32);
+    });
   });
 
   it('generates correct resources for external resource array index access', ({ root }) => {
@@ -219,21 +217,23 @@ describe('wgslGenerator', () => {
       `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.u32,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.u32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: return testUsage.value[3];
-    //                   ^ this should be a u32
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
-    );
+      // Check for: return testUsage.value[3];
+      //                   ^ this should be a u32
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      );
 
-    expect(res.dataType).toStrictEqual(d.u32);
+      expect(res.dataType).toStrictEqual(d.u32);
+    });
   });
 
   it('generates correct resources for nested struct with atomics in a complex expression', ({ root }) => {
@@ -290,51 +290,53 @@ describe('wgslGenerator', () => {
       snip((arg as { type: 'i'; name: string }).name, d.u32)
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      args,
-      {},
-      d.vec4f,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        args,
+        {},
+        d.vec4f,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-    //                           ^ this part should be a i32
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Const)[2],
-    );
+      // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+      //                           ^ this part should be a i32
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Const)[2],
+      );
 
-    expect(res.dataType).toStrictEqual(d.i32);
+      expect(res.dataType).toStrictEqual(d.i32);
 
-    // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
-    //                        ^ this part should be a vec4f
-    ctx[$internal].itemStateStack.pushBlockScope();
-    wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
-    const res2 = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][1] as tinyest.Const)[2],
-    );
-    ctx[$internal].itemStateStack.popBlockScope();
+      // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      //                        ^ this part should be a vec4f
+      ctx[$internal].itemStateStack.pushBlockScope();
+      wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
+      const res2 = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][1] as tinyest.Const)[2],
+      );
+      ctx[$internal].itemStateStack.popBlockScope();
 
-    expect(res2.dataType).toStrictEqual(d.vec4f);
+      expect(res2.dataType).toStrictEqual(d.vec4f);
 
-    // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
-    //                            ^ this part should be an atomic u32
-    //            ^ this part should be void
-    ctx[$internal].itemStateStack.pushBlockScope();
-    wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
-    const res3 = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
-    );
-    const res4 = wgslGenerator.generateExpression(
-      ctx,
-      astInfo.ast?.body[1][2] as tinyest.Expression,
-    );
-    ctx[$internal].itemStateStack.popBlockScope();
+      // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      //                            ^ this part should be an atomic u32
+      //            ^ this part should be void
+      ctx[$internal].itemStateStack.pushBlockScope();
+      wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
+      const res3 = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
+      );
+      const res4 = wgslGenerator.generateExpression(
+        ctx,
+        astInfo.ast?.body[1][2] as tinyest.Expression,
+      );
+      ctx[$internal].itemStateStack.popBlockScope();
 
-    expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
-    expect(res4.dataType).toStrictEqual(Void);
+      expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
+      expect(res4.dataType).toStrictEqual(Void);
+    });
   });
 
   it('creates correct code for for statements', () => {
@@ -426,21 +428,23 @@ describe('wgslGenerator', () => {
       `"[0,[[10,[7,"derivedV4u","value"]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.vec4u,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.vec4u,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: return derivedV4u.value;
-    //                      ^ this should be a vec4u
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
-    );
+      // Check for: return derivedV4u.value;
+      //                      ^ this should be a vec4u
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      );
 
-    expect(res.dataType).toStrictEqual(d.vec4u);
+      expect(res.dataType).toStrictEqual(d.vec4u);
+    });
   });
 
   it('creates correct resources for indexing into a derived value', () => {
@@ -460,21 +464,23 @@ describe('wgslGenerator', () => {
       `"[0,[[10,[8,[7,"derivedV2f","value"],"idx"]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [snip('idx', d.u32)],
-      {},
-      d.f32,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [snip('idx', d.u32)],
+        {},
+        d.f32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: return derivedV2f.value[idx];
-    //                      ^ this should be a f32
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
-    );
+      // Check for: return derivedV2f.value[idx];
+      //                      ^ this should be a f32
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      );
 
-    expect(res.dataType).toStrictEqual(d.f32);
+      expect(res.dataType).toStrictEqual(d.f32);
+    });
   });
 
   it('generates correct code for array expressions', () => {
@@ -503,24 +509,26 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"arr",[100,[[6,[7,"d","u32"],[[5,"1"]]],[5,"2"],[5,"3"]]]],[10,[8,"arr",[5,"1"]]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.u32,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.u32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: const arr = [1, 2, 3]
-    //                        ^ this should be an array<u32, 3>
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      // deno-fmt-ignore: it's better that way
-      (
-        astInfo.ast?.body[1][0] as tinyest.Const
-      )[2] as unknown as tinyest.Expression,
-    );
+      // Check for: const arr = [1, 2, 3]
+      //                        ^ this should be an array<u32, 3>
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        // deno-fmt-ignore: it's better that way
+        (
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
+      );
 
-    expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
+      expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
+    });
   });
 
   it('generates correct code for complex array expressions', () => {
@@ -738,21 +746,23 @@ describe('wgslGenerator', () => {
       `"[0,[[10,[7,[7,[6,"fnOne",[]],"y"],"x"]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.f32,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.f32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: return fnOne().y.x;
-    //                   ^ this should be a f32
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
-    );
+      // Check for: return fnOne().y.x;
+      //                   ^ this should be a f32
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
+      );
 
-    expect(res.dataType).toStrictEqual(d.f32);
+      expect(res.dataType).toStrictEqual(d.f32);
+    });
   });
 
   it('properly handles .value struct properties in slots', ({ root }) => {
@@ -781,23 +791,25 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.f32,
-      astInfo.externals ?? {},
-    );
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.f32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: const value = testSlot.value.value;
-    //                  ^ this should be a vec3f
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (
-        astInfo.ast?.body[1][0] as tinyest.Const
-      )[2] as unknown as tinyest.Expression,
-    );
+      // Check for: const value = testSlot.value.value;
+      //                  ^ this should be a vec3f
+      const res = wgslGenerator.generateExpression(
+        ctx,
+        (
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
+      );
 
-    expect(res.dataType).toEqual(d.vec3f);
+      expect(res.dataType).toEqual(d.vec3f);
+    });
   });
 
   it('generates correct code for conditionals with single statements', () => {
@@ -974,7 +986,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ) ; }"`,
     );
   });
 
@@ -984,7 +996,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
     );
   });
 
@@ -1004,7 +1016,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( 1 ) / f32 ( i32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( 1 ) / f32 ( i32 ( 2 ) ) ) ; }"`,
     );
   });
 
@@ -1014,7 +1026,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( u32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
     );
   });
 
@@ -1024,7 +1036,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.5);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f16 ( 1 ) / f32 ( 2 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( f16 ( 1 ) ) / f32 ( 2 ) ) ; }"`,
     );
   });
 
@@ -1034,7 +1046,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.1);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f16 ( f32 ( 1 ) / f32 ( 2 ) ) / f32 ( 5 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( f16 ( ( 1 / 2 ) ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 
@@ -1044,7 +1056,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.6);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 });
