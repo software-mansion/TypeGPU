@@ -84,6 +84,48 @@ describe('wgsl generator type inference', () => {
     `));
   });
 
+  it('infers correct numeric array type', () => {
+    const ArrayF32 = d.arrayOf(d.f32, 2);
+    const ArrayF16 = d.arrayOf(d.f16, 2);
+    const ArrayI32 = d.arrayOf(d.i32, 2);
+    const ArrayU32 = d.arrayOf(d.u32, 2);
+
+    const myFn = tgpu.fn([])(() => {
+      const myArrayF32 = ArrayF32([1, 2]);
+      const myArrayF16 = ArrayF16([3, 4]);
+      const myArrayI32 = ArrayI32([5, 6]);
+      const myArrayU32 = ArrayU32([7, 8]);
+    });
+
+    expect(parseResolved({ myFn })).toBe(parse(`
+      fn myFn() {
+        var myArrayF32 = array<f32, 2>(1, 2);
+        var myArrayF16 = array<f16, 2>(3, 4);
+        var myArrayI32 = array<i32, 2>(5, 6);
+        var myArrayU32 = array<u32, 2>(7, 8);
+      }
+    `));
+  });
+
+  it('infers correct type inside of an array', () => {
+    const Struct = d.struct({ prop: d.vec2f });
+    const StructArray = d.arrayOf(Struct, 2);
+
+    const myFn = tgpu.fn([])(() => {
+      const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }]);
+    });
+
+    expect(parseResolved({ myFn })).toBe(parse(`
+      struct Struct {
+        prop: vec2f,
+      }
+      
+      fn myFn() {
+        var myStructArray = array<Struct, 1>(Struct(vec2f(1, 2)));
+      }
+    `));
+  });
+
   // it('coerces return value to u32', () => {
   //   const myFn = tgpu.fn([], d.u32)(() => {
   //     return 1.1;
@@ -166,43 +208,18 @@ describe('wgsl generator type inference', () => {
   //   `));
   // });
 
-  // AAA zrób jak callable array będzie zmergowany
-  // it('waits with assigning array type', () => {
-  //   const Array = d.arrayOf(d.u32, 2);
+  it('throws when no info about what to coerce to', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-  //   const myFn = tgpu.fn([])(() => {
-  //     const myBoid = Boid(boid);
-  //   });
+    const myFn = tgpu.fn([], Boid)(() => {
+      const unrelated = { pos: d.vec2f(), vel: d.vec2f() };
+      return Boid({ pos: d.vec2f(), vel: d.vec2f() });
+    });
 
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     struct Pos {
-  //       x: u32,
-  //       y: u32,
-  //     }
-
-  //     struct Boid {
-  //       pos: Pos,
-  //       vel: vec2f,
-  //     }
-
-  //     fn myFn() {
-  //       const myBoid Boid(Pos(1, 1), vec2f()));
-  //     }
-  //   `));
-  // });
-
-  // it('throws when no info about what to coerce to', () => {
-  //   const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
-
-  //   const myFn = tgpu.fn([], Boid)(() => {
-  //     const unrelated = { pos: d.vec2f(), vel: d.vec2f() };
-  //     return Boid({ pos: d.vec2f(), vel: d.vec2f() });
-  //   });
-
-  //   expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
-  //     [Error: Resolution of the following tree failed:
-  //     - <root>
-  //     - fn:myFn: Object expressions are only allowed as return values of functions or as arguments to structs.]
-  //   `);
-  // });
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed: 
+      - <root>
+      - fn:myFn: No target type could be inferred for object with keys [pos,vel], please wrap the object in the corresponding schema.]
+    `);
+  });
 });

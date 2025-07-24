@@ -502,9 +502,22 @@ export function generateExpression(
   if (expression[0] === NODE.arrayExpr) {
     const [_, valuesRaw] = expression;
     // Array Expression
+    const arrType = ctx.expectedTypeStack.at(-1);
+    const elemType = wgsl.isWgslArray(arrType)
+      ? arrType.elementType
+      : undefined;
+    if (elemType) {
+      ctx.expectedTypeStack.push(elemType as AnyData | UnknownData);
+    }
+
     const values = valuesRaw.map((value) =>
       generateExpression(ctx, value as tinyest.Expression)
     );
+
+    if (elemType) {
+      ctx.expectedTypeStack.pop();
+    }
+
     if (values.length === 0) {
       throw new Error('Cannot create empty array literal.');
     }
@@ -516,7 +529,7 @@ export function generateExpression(
       );
     }
 
-    const targetType = convertedValues[0]?.dataType as AnyData;
+    const targetType = elemType ?? convertedValues[0]?.dataType as AnyData;
     const type = targetType.type === 'abstractFloat'
       ? f32
       : targetType.type === 'abstractInt'
