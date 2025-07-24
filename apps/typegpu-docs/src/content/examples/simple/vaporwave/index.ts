@@ -84,7 +84,7 @@ const getBall = tgpu.fn(
 
   // calculate distances and assign colors
   return Ray({
-    dist: sdSphere(std.sub(localP, sphere1Offset), 3) + noise(p, t), // center is relative to p
+    dist: sdSphere(std.sub(localP, sphere1Offset), 3), // center is relative to p
     color: ballColor,
   });
 });
@@ -97,7 +97,7 @@ const shapeUnion = tgpu.fn(
   color: std.mix(
     std.select(a.color, b.color, a.dist > b.dist),
     ballColor,
-    std.exp(-b.dist * 17), // IDK WHAT I DID
+    2 / std.select(b.dist, 0, b.dist < 0), // IDK WHAT I DID
   ),
   dist: std.min(a.dist, b.dist),
 }));
