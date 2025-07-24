@@ -58,7 +58,7 @@ export class ResolutionError extends Error {
     }
 
     super(
-      `Resolution of the following tree failed: \n${entries.join('\n')}: ${
+      `Resolution of the following tree failed:\n${entries.join('\n')}: ${
         cause && typeof cause === 'object' && 'message' in cause
           ? cause.message
           : cause
