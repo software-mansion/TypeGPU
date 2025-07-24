@@ -19,11 +19,11 @@ const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
 const MAX_STEPS = 1000;
-const MAX_DIST = 17;
+const MAX_DIST = 21;
 const SURF_DIST = 0.001;
-const SPEED_PER_FRAME = 2;
+const SPEED_PER_FRAME = 11;
 const GRID_SEP = 1.2;
-const GRID_TIGHTNESS = 10;
+const GRID_TIGHTNESS = 7;
 
 const skyColor = d.vec4f(0.1, 0, 0.2, 1);
 const gridColor = d.vec3f(0.92, 0.21, 0.96);
@@ -42,14 +42,14 @@ const grid = tgpu.fn(
     std.div(d.vec2f(uv.x, uv.y + SPEED_PER_FRAME * time.$), GRID_SEP),
   );
 
-  const uv_closest = std.min(std.abs(std.add(-1, uv_mod)), uv_mod);
-
-  const d_better = std.min(uv_closest.x, uv_closest.y);
+  // x^4 + y^4 = 0.5^4
+  const diff_4 = std.pow(std.sub(d.vec2f(0.5, 0.5), uv_mod), d.vec2f(4, 4));
+  const sdf = std.pow(diff_4.x + diff_4.y, 0.25) - 0.5; // radius
 
   return std.mix(
     gridInnerColor,
     gridColor,
-    std.exp(-GRID_TIGHTNESS * d_better), // fading color
+    std.exp(GRID_TIGHTNESS * sdf), // fading color
   );
 });
 
@@ -63,10 +63,11 @@ const getBall = tgpu.fn(
 
   // Okay some periodic pattern let it be
   const sphere1Offset = d.vec3f(
-    std.cos(t * 2) * 4, // x
-    std.sin(t * 7) * 3,
-    std.sin(t * 2) * 2, // z
+    std.cos(t * 0.2) * 4, // x
+    std.sin(t * 0.7) * 3,
+    std.sin(t * 0.2) * 2, // z
   );
+  // x and z must form circle if i want horizontal orbit
 
   // Calculate distances and assign colors
   return Ray({
@@ -92,9 +93,10 @@ const getSceneDist = tgpu.fn(
     dist: sdPlane(p, d.vec3f(0, 1, 0), 1),
     color: grid(p.xz),
   });
-  const ball = getBall(p, time.$);
+  // const ball = getBall(p, time.$);
 
-  return shapeUnion(floor, ball);
+  // return shapeUnion(floor, ball);
+  return floor;
 });
 
 const rayMarch = tgpu.fn(
