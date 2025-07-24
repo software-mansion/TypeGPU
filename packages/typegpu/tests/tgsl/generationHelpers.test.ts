@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
 import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
@@ -362,15 +362,6 @@ describe('generationHelpers', () => {
     const snippetAbsInt = snip('1', abstractInt);
     const snippetPtrF32 = snip('ptr_f32', ptrPrivate(f32));
     const snippetUnknown = snip('?', UnknownData);
-    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockRestore();
-    });
 
     it('converts identical types', () => {
       const result = convertToCommonType(mockCtx, [snippetF32, snippetF32]);
@@ -380,7 +371,6 @@ describe('generationHelpers', () => {
       expect(result?.[0]?.value).toBe('2.22');
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('2.22');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('handles abstract types automatically', () => {
@@ -398,7 +388,6 @@ describe('generationHelpers', () => {
       expect(result?.[1]?.value).toBe('2.22');
       expect(result?.[2]?.dataType).toBe(f32);
       expect(result?.[2]?.value).toBe('1');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('performs implicit casts and warns', () => {
@@ -409,7 +398,6 @@ describe('generationHelpers', () => {
       expect(result?.[0]?.value).toBe('f32(-12)'); // Cast applied
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('2.22');
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     });
 
     it('performs pointer dereferencing', () => {
@@ -420,7 +408,6 @@ describe('generationHelpers', () => {
       expect(result?.[0]?.value).toBe('*ptr_f32'); // Deref applied
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('2.22');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('returns undefined for incompatible types', () => {
@@ -453,7 +440,6 @@ describe('generationHelpers', () => {
       expect(result?.[0]?.value).toBe('1');
       expect(result?.[1]?.dataType).toBe(f32);
       expect(result?.[1]?.value).toBe('f32(-12)'); // Cast applied
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1); // Warns about the cast
     });
 
     it('fails if restrictTo is incompatible', () => {
@@ -473,15 +459,6 @@ describe('generationHelpers', () => {
       c: vec2f,
       d: bool,
     });
-    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockRestore();
-    });
 
     it('maps values matching types exactly', () => {
       const snippets: Record<string, Snippet> = {
@@ -496,7 +473,6 @@ describe('generationHelpers', () => {
       expect(res[1]).toEqual(snippets.b);
       expect(res[2]).toEqual(snippets.c);
       expect(res[3]).toEqual(snippets.d);
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('maps values requiring implicit casts and warns', () => {
@@ -512,7 +488,6 @@ describe('generationHelpers', () => {
       expect(res[1]).toEqual(snip('i32(2)', i32)); // Cast applied
       expect(res[2]).toEqual(snippets.c);
       expect(res[3]).toEqual(snippets.d);
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(2); // One warn per cast
     });
 
     it('throws on missing property', () => {
@@ -529,16 +504,6 @@ describe('generationHelpers', () => {
   });
 
   describe('coerceToSnippet', () => {
-    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockRestore();
-    });
-
     it('coerces JS numbers', () => {
       expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
       expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));

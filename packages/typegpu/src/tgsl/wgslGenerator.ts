@@ -198,13 +198,16 @@ export function generateExpression(
     const rhsExpr = generateExpression(ctx, rhs);
 
     const forcedType = expression[0] === NODE.assignmentExpr
-      ? [lhsExpr.dataType as AnyData]
-      : [];
+      ? lhsExpr.dataType.type === 'ptr'
+        ? [lhsExpr.dataType.inner as AnyData]
+        : [lhsExpr.dataType as AnyData]
+      : undefined;
 
     const converted = convertToCommonType(
       ctx,
       [lhsExpr, rhsExpr],
-      forcedType,
+      op === '/' ? [f32, f16] : forcedType,
+      /* verbose */ op !== '/',
     ) as
       | [Snippet, Snippet]
       | undefined;
@@ -414,7 +417,7 @@ export function generateExpression(
         return snip(argValues[0], id.value);
       }
 
-      // The type of the return value is the struct reference itself
+      // The type of the return value is the struct itself
       return snip(`${argValues.join(', ')}`, id.value);
     }
 

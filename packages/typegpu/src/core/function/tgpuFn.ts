@@ -1,6 +1,8 @@
 import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
 import { schemaCloneWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { ExecutionError } from '../../errors.ts';
+import { provideInsideTgpuFn } from '../../execMode.ts';
 import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -212,19 +214,27 @@ function createFn<ImplSchema extends AnyFn>(
   };
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) => {
-      if (typeof implementation === 'string') {
-        throw new Error(
-          'Cannot execute on the CPU functions constructed with raw WGSL',
-        );
-      }
+    (...args) =>
+      provideInsideTgpuFn(() => {
+        try {
+          if (typeof implementation === 'string') {
+            throw new Error(
+              'Cannot execute on the CPU functions constructed with raw WGSL',
+            );
+          }
 
-      const castAndCopiedArgs = args.map((arg, index) =>
-        schemaCloneWrapper(shell.argTypes[index], arg)
-      ) as InferArgs<Parameters<ImplSchema>>;
+          const castAndCopiedArgs = args.map((arg, index) =>
+            schemaCloneWrapper(shell.argTypes[index], arg)
+          ) as InferArgs<Parameters<ImplSchema>>;
 
-      return implementation(...castAndCopiedArgs);
-    },
+          return implementation(...castAndCopiedArgs);
+        } catch (err) {
+          if (err instanceof ExecutionError) {
+            throw err.appendToTrace(fn);
+          }
+          throw new ExecutionError(err, [fn]);
+        }
+      }),
     (...args) =>
       snip(
         new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
