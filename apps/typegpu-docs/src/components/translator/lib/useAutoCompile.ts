@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
-  canCompileAtom,
   compileAtom,
-  formatAtom,
+  editorLoadingAtom,
+  formatsAtom,
   modeAtom,
   tgslCodeAtom,
   wgslCodeAtom,
@@ -12,48 +12,30 @@ import { TRANSLATOR_MODES } from './constants.ts';
 
 export function useAutoCompile() {
   const mode = useAtomValue(modeAtom);
-  const format = useAtomValue(formatAtom);
   const tgslCode = useAtomValue(tgslCodeAtom);
   const wgslCode = useAtomValue(wgslCodeAtom);
-  const canCompile = useAtomValue(canCompileAtom);
+  const formats = useAtomValue(formatsAtom);
+  const editorLoading = useAtomValue(editorLoadingAtom);
   const handleCompile = useSetAtom(compileAtom);
-
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCompiledRef = useRef({ tgsl: '', wgsl: '', format: '' });
-
-  const debouncedCompile = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
-      const lastCode = mode === TRANSLATOR_MODES.TGSL
-        ? lastCompiledRef.current.tgsl
-        : lastCompiledRef.current.wgsl;
-
-      if (
-        canCompile &&
-        (currentCode !== lastCode || format !== lastCompiledRef.current.format)
-      ) {
-        lastCompiledRef.current = { tgsl: tgslCode, wgsl: wgslCode, format };
-        handleCompile();
-      }
-    }, 1000);
-  }, [canCompile, handleCompile, mode, tgslCode, wgslCode, format]);
 
   useEffect(() => {
     const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
-    if (currentCode.trim() && canCompile) {
-      debouncedCompile();
-    }
-  }, [tgslCode, wgslCode, mode, canCompile, debouncedCompile]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
+    const canAutoCompile = formats.length > 0 &&
+      !editorLoading &&
+      currentCode.trim().length > 0 &&
+      (mode === TRANSLATOR_MODES.WGSL ||
+        (mode === TRANSLATOR_MODES.TGSL && wgslCode.trim() !== ''));
+
+    if (!canAutoCompile) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      console.log('Auto-compiling...');
+      handleCompile();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [tgslCode, wgslCode, mode, handleCompile, editorLoading, formats]);
 }
