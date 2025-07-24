@@ -363,11 +363,9 @@ export function generateExpression(
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       // There are three ways a struct can be called that we support:
-      // - with no arguments `Struct()`,
-      // - with an objectExpr `Struct({ x: 1, y: 2 })`,
-      // - with another struct `Struct(otherStruct)`.
-      // In the last case, we assume the `otherStruct` is defined on TGSL side
-      // and we just strip the constructor to let the assignment operator clone it.
+      // - with no arguments `Struct()` (resolve struct and return),
+      // - with an objectExpr `Struct({ x: 1, y: 2 })` (struct should resolve itself),
+      // - with another struct `Struct(otherStruct)` (we assume the `otherStruct` is defined on TGSL side and we let the assignment operator clone it).
       // The behavior for arrays is analogous.
       if (args.length > 1) {
         throw new Error(
@@ -375,32 +373,22 @@ export function generateExpression(
         );
       }
 
-      if (args.length === 0) {
+      if (!args[0]) {
         return snip(`${ctx.resolve(id.value)}()`, id.value);
       }
 
-      const argSnippets = args.map((arg) =>
-        generateTypedExpression(ctx, arg, id.value as AnyData)
+      const argSnippet = generateTypedExpression(
+        ctx,
+        args[0],
+        id.value as AnyData,
       );
-      const resolvedSnippets = argSnippets.map((res) =>
-        snip(ctx.resolve(res.value), res.dataType)
-      );
-      const argValues = resolvedSnippets.map((res) => res.value);
-
-      if (
-        args.length === 1 &&
-        Array.isArray(args[0]) &&
-        args[0].length > 0 &&
-        args[0][0] === NODE.objectExpr
-      ) {
-        return snip(argValues[0], id.value);
-      }
 
       // The type of the return value is the struct itself
-      return snip(`${argValues.join(', ')}`, id.value);
+      return snip(ctx.resolve(argSnippet.value), id.value);
     }
 
     // AAA wektory i macierze
+    // AAA call funkcji
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
     const resolvedSnippets = argSnippets.map((res) =>
