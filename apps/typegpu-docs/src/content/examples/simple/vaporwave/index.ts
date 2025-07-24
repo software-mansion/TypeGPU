@@ -44,7 +44,7 @@ const grid = tgpu.fn(
 
   // x^4 + y^4 = 0.5^4
   const diff_4 = std.pow(std.sub(d.vec2f(0.5, 0.5), uv_mod), d.vec2f(4, 4));
-  const sdf = std.pow(diff_4.x + diff_4.y, 0.25) - 0.5; // radius
+  const sdf = std.pow(diff_4.x + diff_4.y, 0.25) - 0.5; // - radius
 
   return std.mix(
     gridInnerColor,
@@ -53,25 +53,37 @@ const grid = tgpu.fn(
   );
 });
 
+const noise = tgpu.fn(
+  [d.vec3f, d.f32],
+  d.f32,
+)((p, t) => {
+  // some random func from the internet
+  return (
+    std.sin(4.0 * p.x + t + 1) *
+    std.sin(5.0 * p.y + t + 2) *
+    std.sin(5.0 * p.z + t + 3) *
+    3
+  );
+});
+
 const getBall = tgpu.fn(
   [d.vec3f, d.f32],
   Ray,
 )((p, t) => {
   // Center position
-  const center = d.vec3f(0, 4, 12); // hardcoded
+  const center = d.vec3f(0, 6, 17); // hardcoded
   const localP = std.sub(p, center); // way from center to p
 
-  // Okay some periodic pattern let it be
+  // okay some periodic pattern let it be
   const sphere1Offset = d.vec3f(
-    std.cos(t * 0.2) * 4, // x
-    std.sin(t * 0.7) * 3,
-    std.sin(t * 0.2) * 2, // z
+    0, // x
+    std.sin(t * 0.7) * 0.4,
+    0, // z
   );
-  // x and z must form circle if i want horizontal orbit
 
-  // Calculate distances and assign colors
+  // calculate distances and assign colors
   return Ray({
-    dist: sdSphere(std.sub(localP, sphere1Offset), 1), // center is relative to p
+    dist: sdSphere(std.sub(localP, sphere1Offset), 3) + noise(p, t), // center is relative to p
     color: d.vec3f(0.87, 0.22, 0.46),
   });
 });
@@ -84,7 +96,7 @@ const shapeUnion = tgpu.fn(
   dist: std.min(a.dist, b.dist),
 }));
 
-// Should return min distance to some world object
+// should return min distance to some world object
 const getSceneDist = tgpu.fn(
   [d.vec3f],
   Ray,
@@ -93,10 +105,9 @@ const getSceneDist = tgpu.fn(
     dist: sdPlane(p, d.vec3f(0, 1, 0), 1),
     color: grid(p.xz),
   });
-  // const ball = getBall(p, time.$);
+  const ball = getBall(p, time.$);
 
-  // return shapeUnion(floor, ball);
-  return floor;
+  return shapeUnion(floor, ball);
 });
 
 const rayMarch = tgpu.fn(
@@ -150,14 +161,14 @@ const fragmentMain = tgpu["~unstable"].fragmentFn({
   const uv = std.sub(std.mul(input.uv, 2), 1);
   uv.x *= resolution.$.x / resolution.$.y;
 
-  // Ray origin and direction
+  // ray origin and direction
   const ro = d.vec3f(0, 2, 3);
   const rd = std.normalize(d.vec3f(uv.x, uv.y, 1));
 
-  // Marching
+  // marching
   const march = rayMarch(ro, rd);
 
-  // Cool fog calculations
+  // fog calculations
   const fog = std.min(march.dist / MAX_DIST, 1);
 
   return std.mix(d.vec4f(march.color, 1), skyColor, fog);
