@@ -265,13 +265,10 @@ const vertex = tgpu['~unstable'].vertexFn({
   const w = size.$.x;
   const h = size.$.y;
   const gridX = input.idx % w;
-  const gridY = (input.idx - gridX) / w;
-  const maxDim = d.f32(std.max(w, h));
-
-  const x = ((d.f32(gridX) + input.squareData.x) / d.f32(w) - 0.5) * 2 *
-    d.f32(w) / maxDim;
-  const y = ((d.f32(gridY) + input.squareData.y) / d.f32(h) - 0.5) * 2 *
-    d.f32(h) / maxDim;
+  const gridY = d.u32(input.idx / w);
+  const maxDim = std.max(w, h);
+  const x = (2 * (d.f32(gridX) + input.squareData.x) - d.f32(w)) / maxDim;
+  const y = (2 * (d.f32(gridY) + input.squareData.y) - d.f32(h)) / maxDim;
 
   const cellFlags = input.currentStateData >> 24;
   let cell = d.f32(input.currentStateData & 0xffffff);

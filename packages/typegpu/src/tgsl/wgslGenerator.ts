@@ -177,7 +177,7 @@ export function generateExpression(
       ctx,
       [lhsExpr, rhsExpr],
       op === '/' ? [f32, f16] : forcedType,
-      op !== '/',
+      /* verbose */ op !== '/',
     ) as
       | [Snippet, Snippet]
       | undefined;
