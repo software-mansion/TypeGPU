@@ -1,6 +1,6 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import { type ResolutionResult, resolve } from '../../resolutionCtx.ts'; // HERE
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
