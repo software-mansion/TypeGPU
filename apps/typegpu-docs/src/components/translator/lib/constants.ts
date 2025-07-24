@@ -37,7 +37,7 @@ const SystemData = d.struct({
 });
 
 const layout = tgpu.bindGroupLayout({
-  systemData: {'storage': SystemData },
+  systemData: { storage: SystemData },
 });
 
 export const updateParicle = tgpu.fn([Particle, d.vec3f, d.f32], Particle)(
