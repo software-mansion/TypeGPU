@@ -362,41 +362,6 @@ export function generateExpression(
     const id = generateExpression(ctx, callee);
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
-      ctx.expectedTypeStack.push(id.value);
-    }
-
-    if (wgsl.isVec(id.value) || wgsl.isMat(id.value)) {
-      ctx.expectedTypeStack.push(schemaToElement[id.value.type]);
-    }
-
-    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedSnippets = argSnippets.map((res) =>
-      snip(ctx.resolve(res.value), res.dataType)
-    );
-    const argValues = resolvedSnippets.map((res) => res.value);
-
-    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
-      ctx.expectedTypeStack.pop();
-    }
-
-    resolvedSnippets.forEach((sn, idx) => {
-      if (sn.dataType === UnknownData) {
-        throw new Error(
-          `Tried to pass '${sn.value}' of unknown type as argument #${idx} to '${
-            typeof id.value === 'string'
-              ? id.value
-              : getName(id.value) ?? '<unnamed>'
-          }()'`,
-        );
-      }
-    });
-
-    if (typeof id.value === 'string') {
-      return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
-    }
-
-    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
-      const resolvedId = ctx.resolve(id.value);
       // There are three ways a struct can be called that we support:
       // - with no arguments `Struct()`,
       // - with an objectExpr `Struct({ x: 1, y: 2 })`,
@@ -404,9 +369,23 @@ export function generateExpression(
       // In the last case, we assume the `otherStruct` is defined on TGSL side
       // and we just strip the constructor to let the assignment operator clone it.
       // The behavior for arrays is analogous.
-      if (args.length === 0) {
-        return snip(`${resolvedId}()`, id.value);
+      if (args.length > 1) {
+        throw new Error(
+          'Array and struct schemas should always be called with at most 1 argument.',
+        );
       }
+
+      if (args.length === 0) {
+        return snip(`${ctx.resolve(id.value)}()`, id.value);
+      }
+
+      const argSnippets = args.map((arg) =>
+        generateTypedExpression(ctx, arg, id.value as AnyData)
+      );
+      const resolvedSnippets = argSnippets.map((res) =>
+        snip(ctx.resolve(res.value), res.dataType)
+      );
+      const argValues = resolvedSnippets.map((res) => res.value);
 
       if (
         args.length === 1 &&
@@ -419,6 +398,18 @@ export function generateExpression(
 
       // The type of the return value is the struct itself
       return snip(`${argValues.join(', ')}`, id.value);
+    }
+
+    // AAA wektory i macierze
+
+    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
+    const resolvedSnippets = argSnippets.map((res) =>
+      snip(ctx.resolve(res.value), res.dataType)
+    );
+    const argValues = resolvedSnippets.map((res) => res.value);
+
+    if (typeof id.value === 'string') {
+      return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
     }
 
     if (id.value instanceof InfixDispatch) {
