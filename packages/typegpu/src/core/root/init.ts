@@ -53,7 +53,7 @@ import {
   INTERNAL_createComputePipeline,
   isComputePipeline,
   type TgpuComputePipeline,
-} from '../pipeline/computePipeline.ts'; // HERE
+} from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,

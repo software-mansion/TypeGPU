@@ -1,6 +1,5 @@
 import { resolveData } from './core/resolve/resolveData.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
-// import { ConfigurableImpl } from './core/root/init.ts'; // HERE
 import type { Configurable } from './core/root/rootTypes.ts';
 import {
   type Eventual,
