@@ -11,7 +11,6 @@ import {
   $providing,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
   ResolutionCtx,
@@ -208,14 +207,7 @@ function createFn<ImplSchema extends AnyFn>(
         return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
-      const generationCtx = ctx as GenerationCtx;
-
-      try {
-        generationCtx.expectedTypeStack.push(shell.returnType);
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
-      } finally {
-        generationCtx.expectedTypeStack.pop();
-      }
+      return core.resolve(ctx, shell.argTypes, shell.returnType);
     },
   };
 

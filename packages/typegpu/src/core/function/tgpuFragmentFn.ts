@@ -233,16 +233,11 @@ function createFragmentFn(
 
       const generationCtx = ctx as GenerationCtx;
 
-      try {
-        generationCtx.expectedTypeStack.push(outputType);
-        return core.resolve(
-          ctx,
-          inputWithLocation ? [inputWithLocation] : [],
-          shell.returnType,
-        );
-      } finally {
-        generationCtx.expectedTypeStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        inputWithLocation ? [inputWithLocation] : [],
+        shell.returnType,
+      );
     },
 
     toString() {
