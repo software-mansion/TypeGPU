@@ -553,6 +553,32 @@ Consider using explicit conversions instead.`,
   });
 }
 
+export function tryConvertSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  targetDataType: AnyData,
+): Snippet {
+  if (targetDataType.type === 'void') {
+    throw new Error(
+      `Tried converting a value to null type.`,
+    );
+  }
+
+  if (targetDataType === value.dataType) {
+    return value;
+  }
+
+  const converted = convertToCommonType(ctx, [value], [targetDataType]);
+
+  if (!converted) {
+    throw new Error(
+      `Actual type ${value.dataType.type} does match and cannot be converted to expected type ${targetDataType.type}.`,
+    );
+  }
+
+  return converted[0] as Snippet;
+}
+
 export function convertStructValues(
   ctx: GenerationCtx,
   structType: AnyWgslStruct,

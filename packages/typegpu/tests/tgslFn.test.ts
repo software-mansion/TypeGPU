@@ -847,25 +847,25 @@ describe('tgsl fn when using plugin', () => {
       return x + y;
     };
 
-    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(addKernelJs);
 
     expect(addKernelJs(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );
   });
 
   it('can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(
       (x, y) => x + y,
     );
 
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );

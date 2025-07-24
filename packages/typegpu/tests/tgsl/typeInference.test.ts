@@ -126,18 +126,6 @@ describe('wgsl generator type inference', () => {
     `));
   });
 
-  // it('coerces return value to u32', () => {
-  //   const myFn = tgpu.fn([], d.u32)(() => {
-  //     return 1.1;
-  //   });
-
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     fn myFn() -> u32 {
-  //       return u32(1.1);
-  //     }
-  //   `));
-  // });
-
   // it('coerces referenced value to a struct', () => {
   //   const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
   //   const boid = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
@@ -207,6 +195,42 @@ describe('wgsl generator type inference', () => {
   //     }
   //   `));
   // });
+
+  it('throws when returning a value from void function', () => {
+    const add = tgpu.fn([d.u32, d.u32])(
+      (x, y) => x + y,
+    );
+
+    expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed: 
+      - <root>
+      - fn:add: Tried converting a value to null type.]
+    `);
+  });
+
+  it('throws when returning an unconvertible value', () => {
+    const add = tgpu.fn([], d.vec3f)(() => {
+      return 1 as unknown as d.v3f;
+    });
+
+    expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed: 
+      - <root>
+      - fn:add: Actual type abstractInt does match and cannot be converted to expected type vec3f.]
+    `);
+  });
+
+  it('does not convert float to int', () => {
+    const myFn = tgpu.fn([], d.u32)(() => {
+      return 1.1;
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed: 
+      - <root>
+      - fn:myFn: Actual type abstractFloat does match and cannot be converted to expected type u32.]
+    `);
+  });
 
   it('throws when no info about what to coerce to', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });

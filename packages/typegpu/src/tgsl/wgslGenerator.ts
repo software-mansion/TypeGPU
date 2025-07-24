@@ -9,7 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -25,6 +25,7 @@ import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   numericLiteralToSnippet,
+  tryConvertSnippet,
 } from './generationHelpers.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -69,6 +70,24 @@ const infixKinds = [
   'mat3x3f',
   'mat4x4f',
 ];
+
+const schemaToElement = {
+  'vec2f': f32,
+  'vec3f': f32,
+  'vec4f': f32,
+  'vec2h': f16,
+  'vec3h': f16,
+  'vec4h': f16,
+  'vec2i': i32,
+  'vec3i': i32,
+  'vec4i': i32,
+  'vec2u': u32,
+  'vec3u': u32,
+  'vec4u': u32,
+  'mat2x2f': f32,
+  'mat3x3f': f32,
+  'mat4x4f': f32,
+};
 
 export const infixOperators = {
   add,
@@ -143,6 +162,17 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
   }
 
   return res;
+}
+
+export function generateTypedExpression(
+  ctx: GenerationCtx,
+  expression: tinyest.Expression,
+  expectedType: AnyData,
+) {
+  ctx.expectedTypeStack.push(expectedType);
+  const result = generateExpression(ctx, expression);
+  ctx.expectedTypeStack.pop();
+  return tryConvertSnippet(ctx, result, expectedType);
 }
 
 export function generateExpression(
@@ -330,6 +360,10 @@ export function generateExpression(
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       ctx.expectedTypeStack.push(id.value);
+    }
+
+    if (wgsl.isVec(id.value) || wgsl.isMat(id.value)) {
+      ctx.expectedTypeStack.push(schemaToElement[id.value.type]);
     }
 
     const argSnippets = args.map((arg) => generateExpression(ctx, arg));
@@ -585,11 +619,15 @@ export function generateStatement(
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
 
-    ctx.expectedTypeStack.push(ctx.topFunctionScope.returnType);
     const returnValue = returnNode !== undefined
-      ? ctx.resolve(generateExpression(ctx, returnNode).value)
+      ? ctx.resolve(
+        generateTypedExpression(
+          ctx,
+          returnNode,
+          ctx.topFunctionScope.returnType,
+        ).value,
+      )
       : undefined;
-    ctx.expectedTypeStack.pop();
 
     return returnValue
       ? `${ctx.pre}return ${returnValue};`
