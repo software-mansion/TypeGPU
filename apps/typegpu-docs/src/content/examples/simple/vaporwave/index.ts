@@ -28,6 +28,7 @@ const GRID_TIGHTNESS = 7;
 const skyColor = d.vec4f(0.1, 0, 0.2, 1);
 const gridColor = d.vec3f(0.92, 0.21, 0.96);
 const gridInnerColor = d.vec3f(0, 0, 0);
+const ballColor = d.vec3f(0, 1, 0.961);
 
 const Ray = d.struct({
   color: d.vec3f,
@@ -84,7 +85,7 @@ const getBall = tgpu.fn(
   // calculate distances and assign colors
   return Ray({
     dist: sdSphere(std.sub(localP, sphere1Offset), 3) + noise(p, t), // center is relative to p
-    color: d.vec3f(0.87, 0.22, 0.46),
+    color: ballColor,
   });
 });
 
@@ -92,7 +93,12 @@ const shapeUnion = tgpu.fn(
   [Ray, Ray],
   Ray,
 )((a, b) => ({
-  color: std.select(a.color, b.color, a.dist > b.dist),
+  // hardcoded that ball is light source
+  color: std.mix(
+    std.select(a.color, b.color, a.dist > b.dist),
+    ballColor,
+    std.exp(-b.dist * 17), // IDK WHAT I DID
+  ),
   dist: std.min(a.dist, b.dist),
 }));
 
