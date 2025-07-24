@@ -1,23 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import * as d from '../../src/data/index.ts';
-import * as exec from '../../src/execMode.ts';
-import tgpu, { StrictNameRegistry } from '../../src/index.ts';
+import tgpu from '../../src/index.ts';
+import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { CodegenState } from '../../src/types.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
 
 describe('wgsl generator type inference', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    exec.pushMode('codegen');
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
     });
-    vi.spyOn(exec, 'getResolutionCtx').mockReturnValue(ctx);
-  });
-
-  afterEach(() => {
-    exec.popMode('codegen');
+    ctx.pushMode(new CodegenState());
   });
 
   it('coerces nested structs', () => {
@@ -202,7 +198,7 @@ describe('wgsl generator type inference', () => {
     );
 
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed: 
+      [Error: Resolution of the following tree failed:
       - <root>
       - fn:add: Tried converting a value to null type.]
     `);
@@ -214,7 +210,7 @@ describe('wgsl generator type inference', () => {
     });
 
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed: 
+      [Error: Resolution of the following tree failed:
       - <root>
       - fn:add: Actual type abstractInt does match and cannot be converted to expected type vec3f.]
     `);
@@ -226,7 +222,7 @@ describe('wgsl generator type inference', () => {
     });
 
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed: 
+      [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Actual type abstractFloat does match and cannot be converted to expected type u32.]
     `);
@@ -241,7 +237,7 @@ describe('wgsl generator type inference', () => {
     });
 
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed: 
+      [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: No target type could be inferred for object with keys [pos,vel], please wrap the object in the corresponding schema.]
     `);

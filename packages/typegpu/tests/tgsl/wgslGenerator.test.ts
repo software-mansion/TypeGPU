@@ -47,11 +47,11 @@ describe('wgslGenerator', () => {
   //     `"[0,[[10,true]]]"`,
   //   );
 
-    provideCtx(ctx, () => {
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-      expect(parse(gen)).toBe(parse('{return true;}'));
-    });
-  });
+  //   provideCtx(ctx, () => {
+  //     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+  //     expect(parse(gen)).toBe(parse('{return true;}'));
+  //   });
+  // });
 
   // it('creates a function body', () => {
   //   const main = () => {
@@ -67,11 +67,11 @@ describe('wgslGenerator', () => {
   //     `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
   //   );
 
-    provideCtx(ctx, () => {
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-      expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
-    });
-  });
+  //   provideCtx(ctx, () => {
+  //     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+  //     expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+  //   });
+  // });
 
   it('creates correct resources for numeric literals', () => {
     const literals = {

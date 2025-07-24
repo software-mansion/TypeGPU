@@ -1,4 +1,3 @@
-import { DEV } from '../shared/env.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -55,6 +54,7 @@ import {
 import { invariant } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import type { FunctionScopeLayer } from '../resolutionCtx.ts';
+import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
@@ -568,7 +568,7 @@ export function tryConvertSnippet(
 ): Snippet {
   if (targetDataType.type === 'void') {
     throw new Error(
-      `Tried converting a value to null type.`,
+      'Tried converting a value to null type.',
     );
   }
 
