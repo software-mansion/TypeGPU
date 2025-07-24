@@ -4,7 +4,7 @@ import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
-import tgpu, { StrictNameRegistry } from '../../src/index.ts';
+import tgpu from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
@@ -12,6 +12,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { CodegenState } from '../../src/types.ts';
 import { provideCtx } from '../../src/execMode.ts';
 
