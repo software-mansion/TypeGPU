@@ -881,7 +881,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - internalTestFn: Actual type array does match and cannot be converted to expected type vec2f.]
+        - internalTestFn: Type error: Type 'array' cannot be converted to type 'vec2f'.]
       `);
   });
 
@@ -911,7 +911,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - vec4f: Actual type array does match and cannot be converted to expected type f32.]
+        - vec4f: Type error: Type 'array' cannot be converted to type 'f32'.]
       `);
   });
 

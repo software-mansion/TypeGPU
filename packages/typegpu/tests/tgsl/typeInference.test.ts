@@ -195,7 +195,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Tried converting a value to null type.]
+      - fn:add: Type error: Tried converting a value to null type.]
     `);
   });
 
@@ -207,7 +207,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Actual type abstractInt does match and cannot be converted to expected type vec3f.]
+      - fn:add: Type error: Type 'abstractInt' cannot be converted to type 'vec3f'.]
     `);
   });
 
@@ -219,7 +219,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Actual type abstractFloat does match and cannot be converted to expected type u32.]
+      - fn:myFn: Type error: Type 'abstractFloat' cannot be converted to type 'u32'.]
     `);
   });
 
@@ -234,7 +234,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: No target type could be inferred for object with keys [pos,vel], please wrap the object in the corresponding schema.]
+      - fn:myFn: Type error: No target type could be inferred for object with keys [pos, vel], please wrap the object in the corresponding schema.]
     `);
   });
 
@@ -249,7 +249,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Actual type vec2<bool> does match and cannot be converted to expected type bool.]
+      - fn:myFn: Type error: Type 'vec2<bool>' cannot be converted to type 'bool'.]
     `);
   });
 
@@ -264,7 +264,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Actual type mat2x2f does match and cannot be converted to expected type bool.]
+      - fn:myFn: Type error: Type 'mat2x2f' cannot be converted to type 'bool'.]
     `);
   });
 
@@ -281,7 +281,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Actual type abstractInt does match and cannot be converted to expected type bool.]
+      - fn:myFn: Type error: Type 'abstractInt' cannot be converted to type 'bool'.]
     `);
   });
 
@@ -293,7 +293,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot infer the type of an empty array literal.]
+      - fn:myFn: Type error: Cannot infer the type of an empty array literal.]
     `);
   });
 });
