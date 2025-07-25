@@ -111,6 +111,7 @@
     "defu": "^6.1.4",
     "estree-walker": "^3.0.3",
     "magic-string-ast": "^0.9.1",
+    "pathe": "^2.0.3",
     "picomatch": "^4.0.2",
     "tinyest": "workspace:~0.1.1",
     "tinyest-for-wgsl": "workspace:~0.1.2",
