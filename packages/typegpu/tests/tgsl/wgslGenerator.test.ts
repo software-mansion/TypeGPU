@@ -762,87 +762,73 @@ describe('wgslGenerator', () => {
     });
   });
 
-  // it('generates correct code for conditionals with single statements', () => {
-  //   const main0 = () => {
-  //     'kernel';
-  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-  //     if (true) return 0;
-  //     return 1;
-  //   };
+  it('generates correct code for conditional with single statement', () => {
+    const main0 = tgpu.fn([], d.u32)(() => {
+      'kernel';
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) return 0;
+      return 1;
+    });
 
-  //   expect(
-  //     parse(
-  //       wgslGenerator.generateFunction(
-  //         ctx,
-  //         getMetaData(main0)?.ast?.body as tinyest.Block,
-  //       ),
-  //     ),
-  //   ).toBe(
-  //     parse(`{
-  //     if (true) {
-  //       return 0;
-  //     }
-  //     return 1;
-  //   }`),
-  //   );
+    expect(parseResolved({ main0 })).toBe(
+      parse(`
+    fn main0() -> u32 {
+      if (true) {
+        return 0;
+      }
+      return 1;
+    }`),
+    );
+  });
 
-  //   const main1 = () => {
-  //     'kernel';
-  //     let y = 0;
-  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-  //     if (true) y = 1;
-  //     else y = 2;
-  //     return y;
-  //   };
+  it('generates correct code for conditional with else', () => {
+    const main1 = tgpu.fn([], d.i32)(() => {
+      'kernel';
+      let y = 0;
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) y = 1;
+      else y = 2;
+      return y;
+    });
 
-  //   expect(
-  //     parse(
-  //       wgslGenerator.generateFunction(
-  //         ctx,
-  //         getMetaData(main1)?.ast?.body as tinyest.Block,
-  //       ),
-  //     ),
-  //   ).toBe(
-  //     parse(`{
-  //     var y = 0;
-  //     if (true) {
-  //       y = 1;
-  //     } else {
-  //      y = 2;
-  //     }
-  //     return y;
-  //   }`),
-  //   );
+    expect(parseResolved({ main1 })).toBe(
+      parse(`
+    fn main1() -> i32 {
+      var y = 0;
+      if (true) {
+        y = 1;
+      } else {
+       y = 2;
+      }
+      return y;
+    }`),
+    );
+  });
 
-  //   const main2 = () => {
-  //     'kernel';
-  //     let y = 0;
-  //     // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-  //     if (true) {
-  //       y = 1;
-  //     } else y = 2;
-  //     return y;
-  //   };
+  it('generates correct code for conditionals block', () => {
+    const main2 = tgpu.fn([], d.i32)(() => {
+      'kernel';
+      let y = 0;
+      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
+      if (true) {
+        y = 1;
+      } else y = 2;
+      return y;
+    });
 
-  //   expect(
-  //     parse(
-  //       wgslGenerator.generateFunction(
-  //         ctx,
-  //         getMetaData(main2)?.ast?.body as tinyest.Block,
-  //       ),
-  //     ),
-  //   ).toBe(
-  //     parse(`{
-  //     var y = 0;
-  //     if (true) {
-  //       y = 1;
-  //     } else {
-  //      y = 2;
-  //     }
-  //     return y;
-  //   }`),
-  //   );
-  // });
+    expect(parseResolved({ main2 })).toBe(
+      parse(`
+    fn main2() -> i32 {
+      var y = 0;
+      if (true) {
+        y = 1;
+      } else {
+       y = 2;
+      }
+      return y;
+    }`),
+    );
+  });
 
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
