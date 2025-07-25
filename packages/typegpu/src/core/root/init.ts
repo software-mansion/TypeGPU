@@ -106,28 +106,7 @@ import {
   type TgpuReadonly,
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
-
-class ConfigurableImpl implements Configurable {
-  constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}
-
-  with<T extends AnyWgslData>(
-    slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
-  ): Configurable {
-    return new ConfigurableImpl([
-      ...this.bindings,
-      [isAccessor(slot) ? slot.slot : slot, value],
-    ]);
-  }
-
-  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
-    const newCfg = transform(this);
-    return new ConfigurableImpl([
-      ...this.bindings,
-      ...newCfg.bindings,
-    ]);
-  }
-}
+import { ConfigurableImpl } from './configurableImpl.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
