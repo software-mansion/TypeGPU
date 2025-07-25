@@ -503,7 +503,6 @@ describe('tgpu resolveWithContext', () => {
         `),
     );
     // verify resolveWithContext::config impl is actually working
-    console.log(configSpy.mock.lastCall?.[0]);
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
       [[colourSlot, v]],
     );
