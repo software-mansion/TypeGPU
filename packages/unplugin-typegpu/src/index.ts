@@ -100,9 +100,22 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             autoNamingEnabled: options.autoNamingEnabled,
           };
 
-          const ast = this.parse(code, {
-            allowReturnOutsideFunction: true,
-          }) as Node;
+          let ast: Node;
+          try {
+            ast = this.parse(code, {
+              lang: 'ts',
+              allowReturnOutsideFunction: true,
+            }) as Node;
+          } catch (cause) {
+            console.warn(
+              `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
+                typeof cause === 'object' && cause && 'message' in cause
+                  ? cause.message
+                  : cause
+              }`,
+            );
+            return undefined;
+          }
 
           const tgslFunctionDefs: {
             def: FunctionNode;
@@ -163,20 +176,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          for (
-            const {
-              def,
-              name,
-            } of tgslFunctionDefs
-          ) {
+          for (const { def, name } of tgslFunctionDefs) {
             const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
             if (
               isFunctionStatement &&
               name &&
-              code
-                  .slice(0, def.start)
+              code.slice(0, def.start)
                   .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
             ) {
               console.warn(

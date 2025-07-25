@@ -110,11 +110,11 @@
     "@babel/standalone": "^7.27.0",
     "defu": "^6.1.4",
     "estree-walker": "^3.0.3",
-    "magic-string-ast": "^0.9.1",
-    "picomatch": "^4.0.2",
+    "magic-string-ast": "^1.0.0",
+    "picomatch": "^4.0.3",
     "tinyest": "workspace:~0.1.1",
     "tinyest-for-wgsl": "workspace:~0.1.2",
-    "unplugin": "^2.3.1"
+    "unplugin": "^2.3.5"
   },
   "peerDependencies": {
     "typegpu": "workspace:^0.6.0"
@@ -127,7 +127,7 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
-    "@types/picomatch": "^4.0.0",
+    "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
     "rollup": "~4.37.0",
     "tsup": "catalog:build",
