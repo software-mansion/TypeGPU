@@ -122,75 +122,70 @@ describe('wgsl generator type inference', () => {
     `));
   });
 
-  // it('coerces referenced value to a struct', () => {
-  //   const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
-  //   const boid = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
+  it('coerces argument to a struct', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-  //   const myFn = tgpu.fn([])(() => {
-  //     const myBoid = Boid(boid);
-  //   });
+    const id = tgpu.fn([Boid], Boid)((a) => a);
+    const myFn = tgpu.fn([])(() => {
+      const myBoid = id({ vel: d.vec2f(), pos: d.vec2f(1, 1) });
+    });
 
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     struct Boid {
-  //       pos: vec2f,
-  //       vel: vec2f,
-  //     }
+    expect(parseResolved({ myFn })).toBe(parse(`
+      struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
 
-  //     fn myFn() -> Boid {
-  //       return Boid(vec2f(1, 1), vec2f());
-  //     }
-  //   `));
-  // });
+      fn id(a: Boid) -> Boid {
+        return a;
+      }
 
-  // it('coerces argument to a struct', () => {
-  //   const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+      fn myFn() {
+        var myBoid = id(Boid(vec2f(1, 1), vec2f()));
+      }
+    `));
+  });
 
-  //   const id = tgpu.fn([Boid], Boid)((a) => a);
-  //   const myFn = tgpu.fn([])(() => {
-  //     const myBoid = id({ vel: d.vec2f(), pos: d.vec2f(1, 1) });
-  //   });
+  it('coerces argument to an array of nested structs', () => {
+    const Pos = d.struct({ x: d.u32, y: d.u32 });
+    const Boid = d.struct({ pos: Pos, vel: d.vec2f });
+    const BoidArray = d.arrayOf(Boid, 1);
 
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     struct Boid {
-  //       pos: vec2f,
-  //       vel: vec2f,
-  //     }
+    const nop = tgpu.fn([Pos, Boid, BoidArray])((p, b, a) => {
+      return;
+    });
+    const myFn = tgpu.fn([])(() => {
+      nop(
+        { x: 1, y: 2 },
+        { vel: d.vec2f(), pos: { x: 3, y: 4 } },
+        [{ vel: d.vec2f(), pos: { x: 5, y: 6 } }],
+      );
+    });
 
-  //     fn id(arg_0: Boid) -> Boid {
-  //       return arg_0;
-  //     }
+    expect(parseResolved({ myFn })).toBe(parse(`
+      struct Pos {
+        x: u32,
+        y: u32,
+      }
 
-  //     fn myFn() -> Boid {
-  //       const myBoid = id(Boid(vec2f(1, 1), vec2f()));
-  //     }
-  //   `));
-  // });
+      struct Boid {
+        pos: Pos,
+        vel: vec2f,
+      }
 
-  // it('coerces argument to a nested struct', () => {
-  //   const Pos = d.struct({ x: d.u32, y: d.u32 });
-  //   const Boid = d.struct({ pos: Pos, vel: d.vec2f });
-  //   const boid = Boid({ pos: { x: 1, y: 1 }, vel: d.vec2f() });
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
+        return;
+      }
 
-  //   const myFn = tgpu.fn([])(() => {
-  //     const myBoid = Boid(boid);
-  //   });
-
-  //   expect(parseResolved({ myFn })).toBe(parse(`
-  //     struct Pos {
-  //       x: u32,
-  //       y: u32,
-  //     }
-
-  //     struct Boid {
-  //       pos: Pos,
-  //       vel: vec2f,
-  //     }
-
-  //     fn myFn() {
-  //       const myBoid Boid(Pos(1, 1), vec2f()));
-  //     }
-  //   `));
-  // });
+      fn myFn() {
+        nop(
+          Pos(1, 2),
+          Boid(Pos(3, 4), vec2f()),
+          array<Boid, 1>(Boid(Pos(5, 6), vec2f()))
+        );
+      }
+    `));
+  });
 
   it('throws when returning a value from void function', () => {
     const add = tgpu.fn([d.u32, d.u32])(

@@ -411,53 +411,37 @@ export function generateExpression(
       );
     }
 
-    const resolvedSnippets = args
-      .map((arg) => generateExpression(ctx, arg))
-      .map((res) => snip(ctx.resolve(res.value), res.dataType));
-
     const argTypes = id.value[$internal]?.argTypes as FnArgsConversionHint;
-
-    let convertedResources: Snippet[];
     try {
-      if (!argTypes || argTypes === 'keep') {
-        convertedResources = resolvedSnippets;
-      } else if (argTypes === 'convert-arguments-to-common-type') {
-        convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
-          resolvedSnippets;
-      } else {
-        const pairs =
-          (Array.isArray(argTypes) ? argTypes : (argTypes(...resolvedSnippets)))
-            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const);
+      let convertedArguments: Snippet[];
 
-        convertedResources = pairs.map(([type, sn]) => {
-          if (sn.dataType.type === 'unknown') {
-            console.warn(
-              `Internal error: unknown type when generating expression: ${expression}`,
-            );
-            return sn;
+      if (Array.isArray(argTypes)) {
+        convertedArguments = args.map((arg, i) => {
+          const argType = argTypes[i];
+          if (!argType) {
+            throw new Error('Function was called with too many arguments.');
           }
-
-          const conv = convertToCommonType(ctx, [sn], [type])?.[0];
-          if (!conv) {
-            throw new ResolutionError(
-              `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}' for function ${
-                getName(id.value)
-              }`,
-              [{
-                function: id.value,
-                error:
-                  `Cannot convert argument of type '${sn.dataType.type}' to '${type.type}'`,
-                toString: () => getName(id.value),
-              }],
-            );
-          }
-          return conv;
+          return generateTypedExpression(ctx, arg, argType);
         });
-      }
+      } else {
+        const resolvedSnippets = args
+          .map((arg) => generateExpression(ctx, arg))
+          .map((res) => snip(ctx.resolve(res.value), res.dataType));
 
+        if (!argTypes || argTypes === 'keep') {
+          convertedArguments = resolvedSnippets;
+        } else if (argTypes === 'convert-arguments-to-common-type') {
+          convertedArguments = convertToCommonType(ctx, resolvedSnippets) ??
+            resolvedSnippets;
+        } else {
+          convertedArguments = argTypes(...resolvedSnippets)
+            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const)
+            .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
+        }
+      }
       // Assuming that `id` is callable
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
-        ...convertedResources,
+        ...convertedArguments,
       ) as Snippet;
       return snip(ctx.resolve(fnRes.value), fnRes.dataType);
     } catch (error) {

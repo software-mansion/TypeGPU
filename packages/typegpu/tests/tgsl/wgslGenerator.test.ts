@@ -890,12 +890,11 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- internalTestFn: Resolution of the following tree failed:
-- internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
-`);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn
+        - internalTestFn: Actual type array does match and cannot be converted to expected type vec2f.]
+      `);
   });
 
   it('throws error when initializing translate4 function', () => {
@@ -919,13 +918,13 @@ describe('wgslGenerator', () => {
       return d.mat4x4f();
     });
 
-    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- vec4f: Resolution of the following tree failed:
-- vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
-`);
+    expect(() => parseResolved({ testFn }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn
+        - vec4f: Actual type array does match and cannot be converted to expected type f32.]
+      `);
   });
 
   it('generates correct code for pointer value assignment', () => {
