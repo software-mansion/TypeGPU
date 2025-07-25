@@ -86,7 +86,7 @@ const getBall = tgpu.fn(
   const radius = 3 + std.sin(t) * 0.33;
 
   // perlin noise
-  const noise = perlin3d.sample(rayPoint);
+  const noise = perlin3d.sample(std.add(rayPoint, t));
 
   // calculate distances and assign colors
   return Ray({
