@@ -233,11 +233,13 @@ function run() {
   });
 
   try {
+    const videoFrame = new VideoFrame(video);
     device.queue.copyExternalImageToTexture(
-      { source: video, flipY: true },
+      { source: videoFrame, flipY: true },
       { texture: root.unwrap(renderTexture) },
       [video.videoWidth, video.videoHeight],
     );
+    videoFrame.close();
   } catch (error) {
     console.error('Failed to copy video frame to texture:', error);
     animationFrame = requestAnimationFrame(run);
