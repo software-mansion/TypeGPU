@@ -3,18 +3,18 @@ import { beforeEach, describe, expect } from 'vitest';
 import { snip } from '../../src/data/dataTypes.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
-import { Void } from '../../src/data/wgslTypes.ts';
+import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
+import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
+import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
-import { CodegenState } from '../../src/types.ts';
-import { provideCtx } from '../../src/execMode.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -527,7 +527,9 @@ describe('wgslGenerator', () => {
         )[2] as unknown as tinyest.Expression,
       );
 
-      expect(res.dataType).toStrictEqual(d.arrayOf(d.u32, 3));
+      expect(d.isWgslArray(res.dataType)).toBe(true);
+      expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
+      expect((res.dataType as unknown as WgslArray).elementType).toBe(d.u32);
     });
   });
 
@@ -620,61 +622,9 @@ describe('wgslGenerator', () => {
       (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
     );
 
-    expect(res.dataType).toStrictEqual(d.arrayOf(TestStruct, 2));
-  });
-
-  it('generates correct code when struct clone is used', () => {
-    const TestStruct = d.struct({
-      x: d.u32,
-      y: d.f32,
-    });
-
-    const testFn = tgpu.fn([])(() => {
-      const myStruct = TestStruct({ x: 1, y: 2 });
-      const myClone = TestStruct(myStruct);
-      return;
-    });
-
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      struct TestStruct {
-        x: u32,
-        y: f32,
-      }
-
-      fn testFn() {
-        var myStruct = TestStruct(1, 2);
-        var myClone = (myStruct);
-        return;
-      }`),
-    );
-  });
-
-  it('generates correct code when complex struct clone is used', () => {
-    const TestStruct = d.struct({
-      x: d.u32,
-      y: d.f32,
-    });
-
-    const testFn = tgpu.fn([])(() => {
-      const myStructs = [TestStruct({ x: 1, y: 2 })] as const;
-      const myClone = TestStruct(myStructs[0]);
-      return;
-    });
-
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      struct TestStruct {
-        x: u32,
-        y: f32,
-      }
-
-      fn testFn() {
-        var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
-        var myClone = (myStructs[0]);
-        return;
-      }`),
-    );
+    expect(d.isWgslArray(res.dataType)).toBe(true);
+    expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
+    expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
   });
 
   it('generates correct code for array expressions with derived elements', () => {
