@@ -499,13 +499,14 @@ export function generateExpression(
         throw new Error('Cannot infer the type of an empty array literal.');
       }
 
-      values = convertToCommonType(ctx, valuesSnippets)!;
-      if (!values) {
+      const maybeValues = convertToCommonType(ctx, valuesSnippets);
+      if (!maybeValues) {
         throw new Error(
           'The given values cannot be automatically converted to a common type. Consider explicitly casting them.',
         );
       }
 
+      values = maybeValues;
       elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
     }
 
@@ -657,7 +658,7 @@ ${bodyStr}`;
 
   if (statement[0] === NODE.while) {
     const [_, condition, body] = statement;
-    let condSnippet = generateTypedExpression(ctx, condition, bool);
+    const condSnippet = generateTypedExpression(ctx, condition, bool);
     const conditionStr = ctx.resolve(condSnippet.value);
 
     ctx.indent();
