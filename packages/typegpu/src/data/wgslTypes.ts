@@ -1189,6 +1189,8 @@ export interface Mat4x4f {
  * the `byteAlignment` requirement of its elementType.
  */
 export interface WgslArray<TElement extends BaseData = BaseData> {
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
   readonly [$internal]: true;
   readonly type: 'array';
   readonly elementCount: number;
