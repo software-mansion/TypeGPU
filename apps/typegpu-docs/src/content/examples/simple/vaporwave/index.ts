@@ -93,15 +93,15 @@ const getBall = tgpu.fn(
   [d.vec3f, d.f32],
   Ray,
 )((p, t) => {
-  const localP = std.sub(p, ballCenter); // way from center to p
+  const localP = std.sub(p, ballCenter); // (0,0) is the center to rotate easily
   const rotMatZ = d.mat4x4f.rotationZ(-t * 0.4);
   const rotMatX = d.mat4x4f.rotationX(-t * 0.4);
   const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
 
   const sphereOffset = d.vec3f(
-    std.cos(t) * 2, // x
+    std.cos(t) * 2, // x motion
     std.sin(t * 0.7) * 0.4, // y motion
-    std.sin(t) * 2, // z
+    std.sin(t) * 2, // z motion
   );
 
   const rayPoint = std.sub(rotatedP, sphereOffset);
