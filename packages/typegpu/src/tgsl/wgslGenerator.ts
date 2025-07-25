@@ -133,25 +133,6 @@ ${ctx.pre}}`;
   }
 }
 
-function generateInlineBlock(
-  ctx: GenerationCtx,
-  [_, statements]: tinyest.Block,
-): string {
-  ctx.pushBlockScope();
-  try {
-    ctx.indent();
-    const body = statements.map((statement) =>
-      generateStatement(ctx, statement)
-    ).join('\n');
-    ctx.dedent();
-    return `{
-${body}
-${ctx.pre}}`;
-  } finally {
-    ctx.popBlockScope();
-  }
-}
-
 export function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
@@ -638,9 +619,9 @@ export function generateStatement(
     }
     const condition = ctx.resolve(condSnippet.value);
 
-    const consequent = generateInlineBlock(ctx, blockifySingleStatement(cons));
+    const consequent = generateBlock(ctx, blockifySingleStatement(cons));
     const alternate = alt
-      ? generateInlineBlock(ctx, blockifySingleStatement(alt))
+      ? generateBlock(ctx, blockifySingleStatement(alt))
       : undefined;
 
     if (!alternate) {
@@ -735,7 +716,7 @@ ${ctx.pre}else ${alternate}`;
       ? updateStatement.slice(0, -1).trim()
       : '';
 
-    const bodyStr = generateInlineBlock(ctx, blockifySingleStatement(body));
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
     return `${ctx.pre}for ( ${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
   }
 
@@ -751,7 +732,7 @@ ${ctx.pre}else ${alternate}`;
     }
     const conditionStr = ctx.resolve(condSnippet.value);
 
-    const bodyStr = generateInlineBlock(ctx, blockifySingleStatement(body));
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
     return `${ctx.pre}while (${conditionStr}) ${bodyStr}`;
   }
 
