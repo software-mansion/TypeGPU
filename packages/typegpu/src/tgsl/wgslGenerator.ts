@@ -133,6 +133,25 @@ ${ctx.pre}}`;
   }
 }
 
+function generateInlineBlock(
+  ctx: GenerationCtx,
+  [_, statements]: tinyest.Block,
+): string {
+  ctx.pushBlockScope();
+  try {
+    ctx.indent();
+    const body = statements.map((statement) =>
+      generateStatement(ctx, statement)
+    ).join('\n');
+    ctx.dedent();
+    return `{
+${body}
+${ctx.pre}}`;
+  } finally {
+    ctx.popBlockScope();
+  }
+}
+
 export function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
@@ -619,35 +638,18 @@ export function generateStatement(
     }
     const condition = ctx.resolve(condSnippet.value);
 
-    const consequent = generateStatement(ctx, blockifySingleStatement(cons));
+    const consequent = generateInlineBlock(ctx, blockifySingleStatement(cons));
     const alternate = alt
-      ? generateStatement(ctx, blockifySingleStatement(alt))
+      ? generateInlineBlock(ctx, blockifySingleStatement(alt))
       : undefined;
 
-    const consequentContent = consequent.substring(
-      consequent.indexOf('\n') + 1,
-      consequent.lastIndexOf('\n'),
-    );
-
     if (!alternate) {
-      return `\
-${ctx.pre}if (${condition}) {
-${consequentContent}
-${ctx.pre}}`;
+      return `${ctx.pre}if (${condition}) ${consequent}`;
     }
 
-    const alternateContent = alternate.substring(
-      alternate.indexOf('\n') + 1,
-      alternate.lastIndexOf('\n'),
-    );
-
     return `\
-${ctx.pre}if (${condition}) {
-${consequentContent}
-${ctx.pre}}
-${ctx.pre}else {
-${alternateContent}
-${ctx.pre}}`;
+${ctx.pre}if (${condition}) ${consequent}
+${ctx.pre}else ${alternate}`;
   }
 
   if (statement[0] === NODE.let || statement[0] === NODE.const) {
@@ -733,16 +735,8 @@ ${ctx.pre}}`;
       ? updateStatement.slice(0, -1).trim()
       : '';
 
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-
-    const bodyContent = bodyStr.substring(
-      bodyStr.indexOf('\n') + 1,
-      bodyStr.lastIndexOf('\n'),
-    );
-    return `\
-${ctx.pre}for ( ${initStr}; ${conditionStr}; ${updateStr}) {
-${bodyContent}
-${ctx.pre}}`;
+    const bodyStr = generateInlineBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}for ( ${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {
@@ -757,17 +751,8 @@ ${ctx.pre}}`;
     }
     const conditionStr = ctx.resolve(condSnippet.value);
 
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-
-    const bodyContent = bodyStr.substring(
-      bodyStr.indexOf('\n') + 1,
-      bodyStr.lastIndexOf('\n'),
-    );
-
-    return `\
-${ctx.pre}while (${conditionStr}) {
-${bodyContent}
-${ctx.pre}}`;
+    const bodyStr = generateInlineBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}while (${conditionStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.continue) {
