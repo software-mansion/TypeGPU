@@ -433,9 +433,7 @@ describe('tgpu resolveWithContext', () => {
   });
 
   it('should resolve a template with additional config', () => {
-    const configSpy = vi.fn((innerCfg) =>
-      innerCfg.with(tgpu.slot(d.vec4f(1, 1, 1, 1)), d.vec4f(1.0, 1.0, 1.0, 1.0))
-    );
+    const configSpy = vi.fn((innerCfg) => innerCfg);
 
     const Voxel = d.struct({
       position: d.vec3f,
@@ -464,9 +462,50 @@ describe('tgpu resolveWithContext', () => {
         `),
     );
 
-    // verify resolveWithContext::config impl is working
+    console.log(configSpy.mock.lastCall?.[0]);
+
+    // verify resolveWithContext::config impl is being called
     expect(configSpy).toHaveBeenCalled();
     expect(configSpy).toHaveBeenCalledTimes(1);
     expect(configSpy.mock.lastCall?.[0]).toBeDefined();
+  });
+
+  it('should resolve a template with a slot', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const v = d.vec4f(1, 0, 1, 0);
+    const colourSlot = tgpu.slot<d.v4f>();
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * colorTint;
+          }
+        `,
+      externals: { Voxel, colorTint: colourSlot },
+      names: 'strict',
+      config: (cfg) => cfg.with(colourSlot, v).pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * vec4f(1, 0, 1, 0);
+          }
+        `),
+    );
+    // verify resolveWithContext::config impl is actually working
+    console.log(configSpy.mock.lastCall?.[0]);
+    expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
+      [[colourSlot, v]],
+    );
   });
 });
