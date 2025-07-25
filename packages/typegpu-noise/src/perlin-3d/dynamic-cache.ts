@@ -75,27 +75,26 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  * ### Basic usage
  * @example
  * ```ts
- * const PerlinCacheConfig = perlin3d.dynamicCacheConfig();
+ * const perlinCacheConfig = perlin3d.dynamicCacheConfig();
  * // Contains all resources that the perlin cache needs access to
- * const dynamicLayout = tgpu.bindGroupLayout({ ...PerlinCacheConfig.layout });
+ * const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
  *
  * // ...
  *
  * const root = await tgpu.init();
  * // Instantiating the cache with an initial size.
- * const perlinCache = PerlinCacheConfig.instance(root, d.vec3u(10, 10, 1));
+ * const perlinCache = perlinCacheConfig.instance(root, d.vec3u(10, 10, 1));
  *
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin3d.getJunctionGradientSlot, PerlinCacheConfig.getJunctionGradient)
- *   .with(PerlinCacheConfig.valuesSlot, dynamicLayout.value)
+ *   .pipe(perlinCacheConfig.inject(dynamicLayout.$))
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
- *   const group = root.createBindGroup(dynamicLayout, perlinCache.bindings);
+ *   const group = root.createBindGroup(dynamicLayout, { ...perlinCache.bindings });
  *
  *   pipeline
  *     .with(dynamicLayout, group)
@@ -136,12 +135,14 @@ export function dynamicCacheConfig<Prefix extends string>(
   const cleanValuesSlot = tgpu['~unstable'].derived(() => {
     return {
       get size() {
-        // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}size`] as d.v4u;
+        return (valuesSlot.$ as Record<`${Prefix}size`, d.v4u>)[
+          `${prefix}size`
+        ] as d.v4u;
       },
       get memory() {
-        // biome-ignore lint/suspicious/noExplicitAny: TS is mad at us
-        return (valuesSlot.value as any)[`${prefix}memory`] as d.v3f[];
+        return (valuesSlot.$ as Record<`${Prefix}memory`, d.v3f[]>)[
+          `${prefix}memory`
+        ] as d.v3f[];
       },
     };
   });

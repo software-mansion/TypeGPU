@@ -7,6 +7,9 @@ import typegpuColorPackageJson from '@typegpu/color/package.json' with {
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with {
   type: 'json',
 };
+import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with {
+  type: 'json',
+};
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
   type: 'json',
@@ -19,7 +22,27 @@ import type { Example } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
-  catalog: { typescript: 'string', '@webgpu/types': 'string' },
+  catalogs: {
+    build: {
+      tsup: 'string',
+      unbuild: 'string',
+      jiti: 'string',
+    },
+    types: {
+      typescript: 'string',
+      '@webgpu/types': 'string',
+    },
+    test: {
+      vitest: 'string',
+    },
+    frontend: {
+      'vite-imagetools': 'string',
+      'fuse.js': 'string',
+    },
+    example: {
+      'wgpu-matrix': 'string',
+    },
+  },
 })(parse(pnpmWorkspace));
 
 if (pnpmWorkspaceYaml instanceof type.errors) {
@@ -88,14 +111,14 @@ ${example.htmlFile.content}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "${pnpmWorkspaceYaml.catalog.typescript}",
+      "typescript": "${pnpmWorkspaceYaml.catalogs.types.typescript}",
       "vite": "^6.1.1",
-      "@webgpu/types": "${pnpmWorkspaceYaml.catalog['@webgpu/types']}"
+      "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}"
     },
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
-      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
+      "wgpu-matrix": "${pnpmWorkspaceYaml.catalogs.example['wgpu-matrix']}",
       "@loaders.gl/core": "${
           typegpuDocsPackageJson.dependencies['@loaders.gl/core']
         }",
@@ -103,7 +126,8 @@ ${example.htmlFile.content}
           typegpuDocsPackageJson.dependencies['@loaders.gl/obj']
         }",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
-      "@typegpu/color": "${typegpuColorPackageJson.version}"
+      "@typegpu/color": "${typegpuColorPackageJson.version}",
+      "@typegpu/sdf": "${typegpuSdfPackageJson.version}"
     }
 }`,
         'vite.config.js': `\

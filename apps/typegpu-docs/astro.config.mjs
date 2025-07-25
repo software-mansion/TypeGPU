@@ -9,6 +9,7 @@ import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
 import { imagetools } from 'vite-imagetools';
+import wasm from 'vite-plugin-wasm';
 
 /**
  * @template T
@@ -26,10 +27,16 @@ export default defineConfig({
   vite: {
     // Allowing query params, for invalidation
     plugins: [
+      wasm(),
       tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
       /** @type {any} */ imagetools(),
     ],
+    ssr: {
+      noExternal: [
+        'wgsl-wasm-transpiler-bundler',
+      ],
+    },
   },
   integrations: [
     starlight({
@@ -97,6 +104,11 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
+              label: 'Pipelines',
+              slug: 'fundamentals/pipelines',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
@@ -126,9 +138,10 @@ export default defineConfig({
               slug: 'fundamentals/timestamp-queries',
               badge: { text: 'new' },
             },
-            DEV && {
+            {
               label: 'Slots',
               slug: 'fundamentals/slots',
+              badge: { text: 'new' },
             },
             // {
             //   label: 'Basic Principles',
@@ -222,7 +235,7 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
+            typeDocSidebarGroup,
           ]),
         },
       ]),

@@ -17,20 +17,20 @@ describe('[BABEL] auto naming', () => {
 
     expect(babelTransform(code, { autoNamingEnabled: true }))
       .toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
-      const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
-      const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(n => d.arrayOf(d.u32, n)), "vertexLayout");
-      var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+        const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
+        const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(n => d.arrayOf(d.u32, n)), "vertexLayout");
+        var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: {},
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "fn");
-      let shell = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell");
-      console.log(bindGroupLayout, vertexLayout);"
-    `);
+        let shell = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell");
+        console.log(bindGroupLayout, vertexLayout);"
+      `);
   });
 
   it(`works with tgpu['~unstable'] items`, () => {
@@ -123,48 +123,52 @@ describe('[BABEL] auto naming', () => {
 
     expect(babelTransform(code, { autoNamingEnabled: true }))
       .toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
-      const myFunction = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+        const myFunction = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-          externals: {},
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myFunction");
-      const myComputeFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
-        workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+        const myComputeFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+          workgroupSize: [1]
+        })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: {},
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myComputeFn");
-      const myVertexFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({
-        out: {
-          ret: d.i32
-        }
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+        const myVertexFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({
+          out: {
+            ret: d.i32
+          }
+        })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => ({
+          ret: 0
+        }), {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
-          externals: {},
+          get externals() {
+            return {};
+          }
         }) && $.f)({})), "myVertexFn");
-      const myFragmentFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
-        in: {
-          position: d.builtin.position
-        },
-        out: d.vec4f
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
-      }, {
+        const myFragmentFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
+          in: {
+            position: d.builtin.position
+          },
+          out: d.vec4f
+        })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => d.vec4f(), {
           v: 1,
           ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-          externals: {d},
+          get externals() {
+            return {
+              d
+            };
+          }
         }) && $.f)({})), "myFragmentFn");"
-    `);
+      `);
   });
 
   it('works with nested calls', () => {
@@ -246,6 +250,43 @@ describe('[BABEL] auto naming', () => {
       console.log(a, b, c);"
     `);
   });
+
+  it('works with assignment expressions', () => {
+    const code = `\
+      let layout;
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        });
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "let layout;
+        layout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({
+          foo: {
+            uniform: vec3f
+          }
+        }), "layout");"
+      `);
+  });
+
+  it('works with properties', () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "const mySchemas = {
+          myStruct: (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
+            a: d.vec3f
+          }), "myStruct")
+        };"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
@@ -270,12 +311,10 @@ describe('[ROLLUP] auto naming', () => {
         const bindGroupLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
               const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), "vertexLayout"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell"));
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }), {
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
                       v: 1,
                       ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                      externals: {},
+                      get externals() { return {}; },
                     }) && $.f)({}))), "fn"));
 
               console.log(bindGroupLayout, vertexLayout);
@@ -380,41 +419,33 @@ describe('[ROLLUP] auto naming', () => {
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
-        ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }), {
+        ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => 0), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-                      externals: {},
+                      get externals() { return {}; },
                     }) && $.f)({}))), "myFunction"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
-                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }), {
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
                       v: 1,
                       ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                      externals: {},
+                      get externals() { return {}; },
                     }) && $.f)({})),
               ), "myComputeFn"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
-                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }), {
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
-                      externals: {},
+                      get externals() { return {}; },
                     }) && $.f)({})),
               ), "myVertexFn"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
                 in: { position: d.builtin.position },
                 out: d.vec4f,
               })(
-                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                          throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                        }), {
+                (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => d.vec4f()), {
                       v: 1,
                       ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-                      externals: {d},
+                      get externals() { return {d}; },
                     }) && $.f)({})),
               ), "myFragmentFn"));
         "
@@ -504,5 +535,40 @@ describe('[ROLLUP] auto naming', () => {
             console.log(a, b, c);
       "
     `);
+  });
+
+  it('works with assignment expressions', async () => {
+    const code = `\
+      let layout;
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        });
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu
+                .bindGroupLayout({
+                  foo: { uniform: vec3f },
+                }), "layout"));
+        "
+      `);
+  });
+
+  it('works with properties', async () => {
+    const code = `\
+      const mySchemas = {
+        myStruct: d.struct({ a: d.vec3f })
+      };
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "({
+                myStruct: ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.vec3f }), "myStruct"))
+              });
+        "
+      `);
   });
 });

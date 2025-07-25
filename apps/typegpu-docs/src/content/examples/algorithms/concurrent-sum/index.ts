@@ -62,7 +62,9 @@ button.addEventListener('click', async () => {
     if (!isEqual) {
       console.error(`Mismatch detected for array size ${size}`);
       results.innerHTML +=
-        `<strong>Error:</strong> Mismatch detected for array size ${size}. Expected final sum: ${jsResult[jsResult.length-1]}. Check console for details.<br>`;
+        `<strong>Error:</strong> Mismatch detected for array size ${size}. Expected final sum: ${
+          jsResult[jsResult.length - 1]
+        }. Check console for details.<br>`;
       continue;
     }
 

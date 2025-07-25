@@ -5,15 +5,13 @@ import type * as babel from '@babel/types';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
-  containsResourceConstructorCall,
   type Context,
   embedJSON,
   gatherTgpuAliases,
-  getErrorMessage,
   isShellImplementationCall,
-  type KernelDirective,
-  kernelDirectives,
+  kernelDirective,
   type Options,
+  performExpressionNaming,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -25,21 +23,17 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function getKernelDirective(
+function containsKernelDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
     | babel.ArrowFunctionExpression,
-): KernelDirective | undefined {
-  const directives = (
+): boolean {
+  return ((
     'directives' in node.body ? (node.body?.directives ?? []) : []
-  ).map((directive) => directive.value.value);
-
-  for (const directive of kernelDirectives) {
-    if (directives.includes(directive)) {
-      return directive;
-    }
-  }
+  )
+    .map((directive) => directive.value.value))
+    .includes(kernelDirective);
 }
 
 function i(identifier: string): babel.Identifier {
@@ -48,33 +42,33 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  directive: KernelDirective | undefined,
-  name?: string | undefined,
-): babel.CallExpression | null {
-  if (!directive) {
-    return null;
-  }
-
+): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
 
-  const metadata = `{
-    v: ${FORMAT_VERSION},
-    ast: ${embedJSON({ params, body, externalNames })},
-    externals: {${externalNames.join(', ')}},
-  }`;
-
-  const jsImpl = directive === 'kernel & js'
-    ? node
-    : types.arrowFunctionExpression(
+  const metadata = types.objectExpression([
+    types.objectProperty(
+      i('v'),
+      types.numericLiteral(FORMAT_VERSION),
+    ),
+    types.objectProperty(
+      i('ast'),
+      template.expression`${embedJSON({ params, body, externalNames })}`(),
+    ),
+    types.objectMethod(
+      'get',
+      i('externals'),
       [],
-      types.blockStatement(
-        [types.throwStatement(
-          types.newExpression(i('Error'), [
-            types.stringLiteral(getErrorMessage(name)),
-          ]),
-        )],
-      ),
-    );
+      types.blockStatement([
+        types.returnStatement(
+          types.objectExpression(
+            externalNames.map((name) =>
+              types.objectProperty(i(name), i(name), false, true)
+            ),
+          ),
+        ),
+      ]),
+    ),
+  ]);
 
   return types.callExpression(
     types.arrowFunctionExpression(
@@ -94,9 +88,9 @@ function functionToTranspiled(
             types.assignmentExpression(
               '=',
               types.memberExpression(i('$'), i('f')),
-              jsImpl,
+              node,
             ),
-            template.expression`${metadata}`(),
+            metadata,
           ],
         ),
         types.memberExpression(i('$'), i('f')),
@@ -121,16 +115,21 @@ function wrapInAutoName(
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     VariableDeclarator(path) {
-      if (
-        ctx.autoNamingEnabled &&
-        path.node.id.type === 'Identifier' &&
-        path.node.init &&
-        containsResourceConstructorCall(path.node.init, ctx)
-      ) {
-        path.get('init').replaceWith(
-          wrapInAutoName(path.node.init, path.node.id.name),
-        );
-      }
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('init').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    AssignmentExpression(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('right').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
+    ObjectProperty(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('value').replaceWith(wrapInAutoName(node, name));
+      });
     },
 
     ImportDeclaration(path) {
@@ -138,35 +137,15 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     ArrowFunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        getKernelDirective(path.node),
-        path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
 
     FunctionExpression(path) {
-      const transpiled = functionToTranspiled(
-        path.node,
-        getKernelDirective(path.node),
-        path.node.id?.name
-          ? path.node.id.name
-          : path.parentPath.node.type === 'VariableDeclarator'
-          ? path.parentPath.node.id.type === 'Identifier'
-            ? path.parentPath.node.id.name
-            : undefined
-          : undefined,
-      );
-      if (transpiled) {
-        path.replaceWith(transpiled);
+      if (containsKernelDirective(path.node)) {
+        path.replaceWith(functionToTranspiled(path.node));
         path.skip();
       }
     },
@@ -178,12 +157,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.params,
         node.body,
       );
-      const transpiled = functionToTranspiled(
-        expression,
-        getKernelDirective(path.node),
-        node.id?.name,
-      );
-      if (transpiled && node.id) {
+
+      if (containsKernelDirective(path.node) && node.id) {
+        const transpiled = functionToTranspiled(expression);
         path.replaceWith(
           types.variableDeclaration('const', [
             types.variableDeclarator(node.id, transpiled),
@@ -206,7 +182,6 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
-            getKernelDirective(implementation) ?? 'kernel',
           ) as babel.CallExpression;
 
           path.replaceWith(

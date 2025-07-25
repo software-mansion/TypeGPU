@@ -44,6 +44,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -108,12 +109,92 @@ export interface ItemStateStack {
 }
 
 /**
+ * # What are execution modes/states? 🤷‍♂️
+ * They're used to control how each TypeGPU resource reacts
+ * to actions upon them.
+ *
+ * ## Normal mode
+ * This is the default mode, where resources are acted upon
+ * by code either:
+ * - Not wrapped inside any of our execution-altering APIs
+ * like tgpu.resolve or tgpu.simulate.
+ * - Inside tgpu.derived definitions, where we're taking a break
+ *   from codegen/simulation to create resources on-demand.
+ *
+ * ```ts
+ * const count = tgpu.privateVar(d.f32);
+ * count.$ += 1; // Illegal in top-level
+ *
+ * const root = await tgpu.init();
+ * const countMutable = root.createMutable(d.f32);
+ * countMutable.$ = [1, 2, 3]; // Illegal in top-level
+ * countMutable.write([1, 2, 3]); // OK!
+ * ```
+ *
+ * ## Codegen mode
+ * Brought upon by `tgpu.resolve()` (or higher-level APIs using it like our pipelines).
+ * Resources are expected to generate WGSL code that represents them, instead of
+ * fulfilling their task in JS.
+ *
+ * ```ts
+ * const foo = tgpu.fn([], d.f32)(() => 123);
+ * // The following is running in `codegen` mode
+ * console.log(foo()); // Prints `foo_0()`
+ * ```
+ *
+ * ## Simulate mode
+ * Callbacks passed to `tgpu.simulate()` are executed in this mode. Each 'simulation'
+ * is isolated, and does not share state with other simulations (even nested ones).
+ * Variables and buffers can be accessed and mutated directly, and their state
+ * is returned at the end of the simulation.
+ *
+ * ```ts
+ * const var = tgpu.privateVar(d.f32, 0);
+ *
+ * const result = tgpu.simulate(() => {
+ *   // This is running in `simulate` mode
+ *   var.$ += 1; // Direct access is legal
+ *   return var.$; // Returns 1
+ * });
+ *
+ * console.log(result.value); // Prints 1
+ * ```
+ */
+export type ExecMode = 'normal' | 'codegen' | 'simulate';
+
+export class NormalState {
+  readonly type = 'normal' as const;
+}
+
+export class CodegenState {
+  readonly type = 'codegen' as const;
+}
+
+export class SimulationState {
+  readonly type = 'simulate' as const;
+
+  constructor(
+    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly vars: {
+      private: Map<TgpuVar, unknown>;
+      workgroup: Map<TgpuVar, unknown>;
+    },
+  ) {}
+}
+
+export type ExecState =
+  | NormalState
+  | CodegenState
+  | SimulationState;
+
+/**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
  * and up the tree.
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
+  readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;
 
@@ -137,6 +218,9 @@ export interface ResolutionCtx {
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
 
+  pushMode(state: ExecState): void;
+  popMode(expected?: ExecMode | undefined): void;
+
   /**
    * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
@@ -153,6 +237,12 @@ export interface ResolutionCtx {
     head: Wgsl;
     body: Wgsl;
   };
+
+  withVaryingLocations<T>(
+    locations: Record<string, number>,
+    callback: () => T,
+  ): T;
+  get varyingLocations(): Record<string, number> | undefined;
 
   [$internal]: {
     itemStateStack: ItemStateStack;

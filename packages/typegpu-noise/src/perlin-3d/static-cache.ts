@@ -1,6 +1,9 @@
-import tgpu, { type TgpuFn, type TgpuRoot } from 'typegpu';
+import tgpu, { type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { computeJunctionGradient } from './algorithm.ts';
+import {
+  computeJunctionGradient,
+  getJunctionGradientSlot,
+} from './algorithm.ts';
 
 const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
 
@@ -8,6 +11,7 @@ export interface StaticPerlin3DCache {
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
   readonly size: d.v3u;
   destroy(): void;
+  inject(): (cfg: Configurable) => Configurable;
 }
 
 /**
@@ -25,7 +29,7 @@ export interface StaticPerlin3DCache {
  * const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
  * const pipeline = root
  *   // Plugging the cache into the pipeline
- *   .with(perlin3d.getJunctionGradientSlot, cache.getJunctionGradient)
+ *   .pipe(cache.inject())
  *   // ...
  *   .withFragment(mainFragment)
  *   .createPipeline();
@@ -94,8 +98,12 @@ export function staticCache(options: {
     get size() {
       return size;
     },
+
     destroy() {
       memoryBuffer.destroy();
     },
+
+    inject: () => (cfg) =>
+      cfg.with(getJunctionGradientSlot, getJunctionGradient),
   };
 }

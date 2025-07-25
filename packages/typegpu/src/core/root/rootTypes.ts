@@ -1,5 +1,6 @@
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { UndecorateRecord } from '../../data/attributes.ts';
 import type { AnyData, Disarray, HasNestedType } from '../../data/dataTypes.ts';
 import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
@@ -56,10 +57,11 @@ export interface WithCompute {
 }
 
 export type ValidateFragmentIn<
-  VertexOut extends IORecord,
+  VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> = FragmentIn extends Partial<VertexOut> ? VertexOut extends FragmentIn ? [
+> = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
       entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
       targets: FragmentOutToTargets<FragmentOut>,
     ]
@@ -83,7 +85,9 @@ export type ValidateFragmentIn<
     },
   ];
 
-export interface WithVertex<VertexOut extends IORecord = IORecord> {
+export interface WithVertex<
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+> {
   withFragment<
     FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
@@ -116,7 +120,9 @@ export interface WithFragment<
 }
 
 export interface Configurable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
+
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -124,12 +130,12 @@ export interface Configurable {
       | TgpuBufferUsage<T>
       | TgpuBufferShorthand<T>
       | Infer<T>,
-  ): WithBinding;
+  ): Configurable;
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding extends Configurable {
+export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -141,6 +147,18 @@ export interface WithBinding extends Configurable {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;
+
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends AnyWgslData>(
+    accessor: TgpuAccessor<T>,
+    value:
+      | TgpuFn<() => T>
+      | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
+      | Infer<T>,
+  ): WithBinding;
+
+  pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
 
 export type CreateTextureOptions<

@@ -122,14 +122,13 @@ export class IcosphereGenerator {
     private maxBufferSize?: number,
   ) {
     const { prevVertices, nextVertices, smoothFlag } = generatorLayout.bound;
-
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
     const computeFn = tgpu['~unstable'].computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
-      const triangleCount = std.arrayLength(prevVertices.value) / d.u32(3);
+      const triangleCount = d.u32(std.arrayLength(prevVertices.value) / 3);
       const triangleIndex = input.gid.x + input.gid.y * MAX_DISPATCH;
       if (triangleIndex >= triangleCount) {
         return;

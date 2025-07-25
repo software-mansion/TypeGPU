@@ -1,4 +1,6 @@
+import { vecTypeToConstructor } from '../data/vector.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
+import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -566,6 +568,50 @@ export const sin = createDualImpl(
   'sin',
 );
 
+type ModOverload = {
+  (a: number, b: number): number;
+  <T extends NumVec>(a: T, b: T): T;
+  <T extends NumVec>(a: number, b: T): T;
+  <T extends NumVec>(a: T, b: number): T;
+};
+
+/**
+ * @privateRemarks
+ * Both JS and WGSL implementations use truncated definition of modulo
+ */
+export const mod: ModOverload = createDualImpl(
+  // CPU implementation
+  <T extends NumVec | number>(a: T, b: T): T => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return (a % b) as T; // scalar % scalar
+    }
+    if (typeof a === 'number' && isVecInstance(b)) {
+      // scalar % vector
+      const schema = vecTypeToConstructor[b.kind];
+      return VectorOps.mod[b.kind](schema(a), b) as T;
+    }
+    if (isVecInstance(a) && typeof b === 'number') {
+      const schema = vecTypeToConstructor[a.kind];
+      // vector % scalar
+      return VectorOps.mod[a.kind](a, schema(b)) as T;
+    }
+
+    if (isVecInstance(a) && isVecInstance(b)) {
+      // vector % vector
+      return VectorOps.mod[a.kind](a, b) as T;
+    }
+    throw new Error(
+      'Mod called with invalid arguments, expected types: number or vector.',
+    );
+  },
+  // GPU implementation
+  (a, b) => {
+    const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
+    return snip(`(${a.value} % ${b.value})`, type);
+  },
+  'mod',
+);
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#exp-builtin
@@ -718,4 +764,26 @@ export const tanh = createDualImpl(
   // GPU implementation
   (value) => snip(`tanh(${value.value})`, value.dataType),
   'tanh',
+);
+
+export const smoothstep = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T => {
+    if (typeof x === 'number') {
+      return smoothstepScalar(
+        edge0 as number,
+        edge1 as number,
+        x as number,
+      ) as T;
+    }
+    return VectorOps.smoothstep[x.kind](
+      edge0 as AnyFloatVecInstance,
+      edge1 as AnyFloatVecInstance,
+      x as AnyFloatVecInstance,
+    ) as T;
+  },
+  // GPU implementation
+  (edge0, edge1, x) =>
+    snip(`smoothstep(${edge0.value}, ${edge1.value}, ${x.value})`, x.dataType),
+  'smoothstep',
 );

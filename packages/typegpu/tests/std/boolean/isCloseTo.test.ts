@@ -32,6 +32,7 @@ describe('isCloseTo', () => {
       isCloseTo(
         vec4h(3.8, -4.87, -2.42, -1.97),
         vec4h(3.794, -4.861, -2.412, -1.971),
+        0.05,
       ),
     ).toBe(true);
   });

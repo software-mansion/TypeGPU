@@ -14,12 +14,14 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
       const increment = hello.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+        const x = 2 + 2;
       }, {
-          v: 1,
-          ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));"
+        v: 1,
+        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+        get externals() {
+          return {};
+        }
+      }) && $.f)({}));"
     `);
   });
 
@@ -35,12 +37,14 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
       const increment = t.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+        const x = 2 + 2;
       }, {
-          v: 1,
-          ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));"
+        v: 1,
+        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+        get externals() {
+          return {};
+        }
+      }) && $.f)({}));"
     `);
   });
 
@@ -56,12 +60,14 @@ describe('[BABEL] tgpu alias gathering', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
       const increment = t.tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-        throw new Error("The function \\"<unnamed>\\" is invokable only on the GPU. If you want to use it on the CPU, mark it with the \\"kernel & js\\" directive.");
+        const x = 2 + 2;
       }, {
-          v: 1,
-          ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-          externals: {},
-        }) && $.f)({}));"
+        v: 1,
+        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+        get externals() {
+          return {};
+        }
+      }) && $.f)({}));"
     `);
   });
 });
@@ -72,7 +78,6 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       import hello from 'typegpu';
       
       const increment = hello.fn([])(() => {
-        const x = 2+2;
       });
     `;
 
@@ -80,11 +85,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import hello from 'typegpu';
 
       hello.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+            }), {
                     v: 1,
-                    ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-                    externals: {},
+                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);
@@ -95,7 +99,6 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       import { tgpu as t } from 'typegpu';
       
       const increment = t.fn([])(() => {
-        const x = 2+2;
       });
     `;
 
@@ -104,11 +107,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import { tgpu } from 'typegpu';
 
       tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+            }), {
                     v: 1,
-                    ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-                    externals: {},
+                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);
@@ -120,7 +122,6 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       import * as t from 'typegpu';
       
       const increment = t.tgpu.fn([])(() => {
-        const x = 2+2;
       });
     `;
 
@@ -128,11 +129,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       "import * as t from 'typegpu';
 
       t.tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                        throw new Error(\`The function "<unnamed>" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.\`);
-                      }), {
+            }), {
                     v: 1,
-                    ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-                    externals: {},
+                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                    get externals() { return {}; },
                   }) && $.f)({})));
       "
     `);

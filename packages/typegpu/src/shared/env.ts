@@ -5,5 +5,6 @@
  * Even though the value of this constant uses Node.js specific APIs, pretty much every
  * bundler replaces the expression below with either `development` or `production`
  */
-// biome-ignore lint/suspicious/noExplicitAny: the types are not important here
-export const DEV = (globalThis as any).process.env.NODE_ENV === 'development';
+export const DEV = globalThis.process.env.NODE_ENV === 'development';
+
+export const TEST = globalThis.process.env.NODE_ENV === 'test';

@@ -4,8 +4,19 @@ packages:
 
 catalog:
   arktype: ^2.1.20
-  typescript: ^5.8.2
-  tsup: ^8.5.0
-  unbuild: ^3.5.0
-  '@webgpu/types': ^0.1.54
-  vitest: ^3.0.9
+
+catalogs:
+  build:
+    tsup: ^8.5.0
+    unbuild: ^3.5.0
+    jiti: ^2.4.2
+  types:
+    typescript: ^5.8.2
+    '@webgpu/types': ^0.1.63
+  test:
+    vitest: ^3.2.4
+  frontend:
+    'vite-imagetools': ^7.1.0
+    'fuse.js': ^7.1.0
+  example:
+    'wgpu-matrix': ^3.4.0

@@ -45,7 +45,7 @@ export async function currentSum(
 
     depthCount++;
     console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`);
-    
+
     const outputBuffer = root // output buffer for this level of recursion
       .createBuffer(d.arrayOf(d.u32, n))
       .$usage('storage');
@@ -62,8 +62,13 @@ export async function currentSum(
     });
 
     const xGroups = Math.min(Math.ceil(n / itemsPerWorkgroup), maxDispatchSize);
-    const yGroups = Math.min(Math.ceil(Math.ceil(n / itemsPerWorkgroup) / maxDispatchSize), maxDispatchSize);
-    const zGroups = Math.ceil(Math.ceil(n / itemsPerWorkgroup) / (maxDispatchSize * maxDispatchSize));
+    const yGroups = Math.min(
+      Math.ceil(Math.ceil(n / itemsPerWorkgroup) / maxDispatchSize),
+      maxDispatchSize,
+    );
+    const zGroups = Math.ceil(
+      Math.ceil(n / itemsPerWorkgroup) / (maxDispatchSize * maxDispatchSize),
+    );
     upPassPipeline
       .with(upSweepLayout, upPassBindGroup)
       .dispatchWorkgroups(xGroups, yGroups, zGroups);
@@ -91,7 +96,6 @@ export async function currentSum(
       .with(downSweepLayout, downPassBindGroup)
       .dispatchWorkgroups(xGroups, yGroups, zGroups);
 
-
     root['~unstable'].flush();
 
     if (n <= itemsPerWorkgroup) {
@@ -109,20 +113,28 @@ export async function currentSum(
       sumsArray: sumsScannedBuffer,
     });
 
-    const applyXGroups = Math.min(Math.ceil(n / workgroupSize), maxDispatchSize);
-    const applyYGroups = Math.min(Math.ceil(Math.ceil(n / workgroupSize) / maxDispatchSize), maxDispatchSize);
-    const applyZGroups = Math.ceil(Math.ceil(n / workgroupSize) / (maxDispatchSize * maxDispatchSize));
-    console.log(`Applying sums with groups: ${applyXGroups}, ${applyYGroups}, ${applyZGroups}`);
+    const applyXGroups = Math.min(
+      Math.ceil(n / workgroupSize),
+      maxDispatchSize,
+    );
+    const applyYGroups = Math.min(
+      Math.ceil(Math.ceil(n / workgroupSize) / maxDispatchSize),
+      maxDispatchSize,
+    );
+    const applyZGroups = Math.ceil(
+      Math.ceil(n / workgroupSize) / (maxDispatchSize * maxDispatchSize),
+    );
+    console.log(
+      `Applying sums with groups: ${applyXGroups}, ${applyYGroups}, ${applyZGroups}`,
+    );
     applySumsPipeline
       .with(upSweepLayout, applySumsBindGroup)
       .dispatchWorkgroups(applyXGroups, applyYGroups, applyZGroups);
     root['~unstable'].flush();
-    
 
     return finalOutputBuffer;
   }
 
-  
   // const arr = await scannedBuffer.read();
   // if (arr.length > 16776950) {
   //   console.log('Final Buffer (truncated):', arr.slice(16776950, 16776970));
@@ -132,5 +144,7 @@ export async function currentSum(
   // console.log('Final Buffer:', await scannedBuffer.read());
   // return scannedBuffer;
   const scannedBuffer = recursiveScan(inputBuffer);
-  return outputBufferOpt ? outputBufferOpt?.copyFrom(scannedBuffer) : scannedBuffer;
+  return outputBufferOpt
+    ? outputBufferOpt?.copyFrom(scannedBuffer)
+    : scannedBuffer;
 }

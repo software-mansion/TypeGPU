@@ -6,6 +6,7 @@ import type { BenchParameterSet } from './parameter-set.ts';
 import { compiledWriteSuite } from './test-suites/compiled-write.ts';
 import { partialWriteSuite } from './test-suites/partial-write.ts';
 import { vectorCreationSuite } from './test-suites/vector-creation.ts';
+import { castSuite } from './test-suites/cast.ts';
 
 export type TestIdentifier = `${string}_${string}`;
 
@@ -41,6 +42,7 @@ export const unfilteredSuites: Record<string, Suite> = {
   'Partial write': partialWriteSuite,
   'Compiled write': compiledWriteSuite,
   'Vector creation': vectorCreationSuite,
+  Cast: castSuite,
 };
 
 export function getFilteredSuites(selectedTests: TestIdentifier[]) {

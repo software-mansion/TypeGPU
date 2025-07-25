@@ -27,5 +27,4 @@ export const downSweepLayout = tgpu.bindGroupLayout({
     storage: (n: number) => d.arrayOf(d.u32, n),
     access: 'mutable',
   },
-
 });

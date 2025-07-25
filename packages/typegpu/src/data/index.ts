@@ -2,6 +2,38 @@
  * @module typegpu/data
  */
 
+import { type InfixOperator, infixOperators } from '../tgsl/wgslGenerator.ts';
+import { $internal } from '../shared/symbols.ts';
+import { MatBase } from './matrix.ts';
+import { VecBase } from './vectorImpl.ts';
+
+function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
+  object: T,
+  operator: InfixOperator,
+) {
+  type Instance = InstanceType<T>;
+
+  const proto = object.prototype as {
+    [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
+  };
+  const opImpl = infixOperators[operator][$internal].jsImpl as (
+    lhs: Instance,
+    rhs: unknown,
+  ) => unknown;
+
+  proto[operator] = function (this: Instance, other: unknown): unknown {
+    return opImpl(this, other);
+  };
+}
+
+assignInfixOperator(VecBase, 'add');
+assignInfixOperator(VecBase, 'sub');
+assignInfixOperator(VecBase, 'mul');
+assignInfixOperator(VecBase, 'div');
+assignInfixOperator(MatBase, 'add');
+assignInfixOperator(MatBase, 'sub');
+assignInfixOperator(MatBase, 'mul');
+
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
@@ -117,6 +149,7 @@ export {
   type AnyAttribute,
   type HasCustomLocation,
   interpolate,
+  invariant,
   type IsBuiltin,
   isBuiltin,
   location,
