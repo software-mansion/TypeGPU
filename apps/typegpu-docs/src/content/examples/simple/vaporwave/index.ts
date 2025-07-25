@@ -1,9 +1,8 @@
-import tgpu from "typegpu";
+import tgpu, { type TgpuFn } from "typegpu";
 import * as d from "typegpu/data";
 import * as std from "typegpu/std";
 import { sdSphere, sdPlane } from "@typegpu/sdf";
 import { perlin3d } from "@typegpu/noise";
-import { numericLiteralToSnippet } from "../../../../../../../packages/typegpu/src/tgsl/generationHelpers";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
@@ -27,10 +26,12 @@ const MAX_DIST = 21;
 const SURF_DIST = 0.001;
 const GRID_SEP = 1.2;
 const GRID_TIGHTNESS = 7;
+
 const skyColor = d.vec4f(0.1, 0, 0.2, 1);
 const gridColor = d.vec3f(0.92, 0.21, 0.96);
 const gridInnerColor = d.vec3f(0, 0, 0);
 const ballCenter = d.vec3f(0, 6, 12);
+
 let ballColor = d.vec3f(0, 0.25, 1);
 let speedPerFrame = 11;
 
@@ -44,6 +45,7 @@ ballColorBuf.write(ballColor);
 const speedPerFrameBuf = root.createUniform(d.f32);
 speedPerFrameBuf.write(speedPerFrame);
 
+// this will be placed in slot
 const grid = tgpu.fn(
   [d.vec2f],
   d.vec3f,
@@ -101,6 +103,8 @@ const shapeUnion = tgpu.fn(
   dist: std.min(a.dist, b.dist),
 }));
 
+const floorPatternSlot = tgpu.slot(grid);
+
 // should return min distance to some world object
 const getSceneDist = tgpu.fn(
   [d.vec3f],
@@ -108,7 +112,7 @@ const getSceneDist = tgpu.fn(
 )((p) => {
   const floor = Ray({
     dist: sdPlane(p, d.vec3f(0, 1, 0), 1), // hardcoded plane location
-    color: grid(p.xz),
+    color: floorPatternSlot.$(p.xz),
   });
   const ball = getBall(p, time.$);
 
@@ -143,9 +147,6 @@ const rayMarch = tgpu.fn(
     if (scene.dist < SURF_DIST) {
       result.dist = dO;
       result.color = scene.color;
-      // if (ballDist.dist < SURF_DIST) {
-      //   bloom = ballColor;
-      // }
       break;
     }
   }
@@ -196,6 +197,7 @@ const perlinCache = perlin3d.staticCache({
 });
 
 const renderPipeline = root["~unstable"]
+  .with(floorPatternSlot, grid)
   .pipe(perlinCache.inject())
   .withVertex(vertexMain, {})
   .withFragment(fragmentMain, { format: presentationFormat })
