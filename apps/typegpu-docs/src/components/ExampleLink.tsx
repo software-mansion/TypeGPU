@@ -1,10 +1,11 @@
 import cs from 'classnames';
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
-import type { MouseEvent } from 'react';
+import React, { type MouseEvent, Suspense } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
 import useEvent from '../utils/useEvent.ts';
+import CurrentMarker from './CurrentMarker.tsx';
 
 type Props = {
   exampleKey: string | undefined;
@@ -14,7 +15,7 @@ type Props = {
 export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
-  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
+  const setCurrentExample = useSetAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
@@ -22,8 +23,6 @@ export function ExampleLink(props: Props) {
     setCurrentExample(exampleKey ?? RESET);
     setMenuShownMobile(false);
   });
-
-  const isCurrentExample = currentExample === exampleKey;
 
   return (
     <a
@@ -33,11 +32,10 @@ export function ExampleLink(props: Props) {
       onClick={handleClick}
       className={cs(
         'block overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow',
-        isCurrentExample
-          ? 'shadow-lg ring-3 ring-purple-500'
-          : 'hover:shadow-lg',
+        'has-[[data-current-marker=true]]:shadow-lg has-[[data-current-marker=true]]:ring-3 has-[[data-current-marker=true]]:ring-purple-500 has-[[data-current-marker=false]]:hover:shadow-lg',
       )}
     >
+      <CurrentMarker exampleKey={exampleKey} />
       {children}
     </a>
   );

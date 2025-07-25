@@ -57,9 +57,10 @@ export function ExampleLayout(props: ExampleLayoutProps) {
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [experimentalShowing, setExperimentalShowing] = useAtom(
+  const [_experimentalShowing, setExperimentalShowing] = useAtom(
     experimentalExamplesShownAtom,
   );
+  const experimentalShowing = true;
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
 
@@ -117,7 +118,6 @@ function SideMenu() {
         <SearchableExampleList
           excludeTags={[
             experimentalShowing ? [] : ['experimental'],
-            typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
           ].flat()}
           scrollContainerRef={scrollRef}
         />
