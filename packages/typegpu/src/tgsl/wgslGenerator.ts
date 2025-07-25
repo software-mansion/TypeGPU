@@ -391,13 +391,15 @@ export function generateExpression(
 
     // Other, including tgsl functions, std and vector/matrix schema calls.
 
-    const argTypes = id.value[$internal]?.argTypes as FnArgsConversionHint;
+    const argConversionHint = id.value[$internal]
+      ?.argConversionHint as FnArgsConversionHint;
     try {
       let convertedArguments: Snippet[];
 
-      if (Array.isArray(argTypes)) {
+      if (Array.isArray(argConversionHint)) {
+        // The hint is an array of schemas.
         convertedArguments = args.map((arg, i) => {
-          const argType = argTypes[i];
+          const argType = argConversionHint[i];
           if (!argType) {
             throw new Error('Function was called with too many arguments.');
           }
@@ -408,13 +410,16 @@ export function generateExpression(
           .map((arg) => generateExpression(ctx, arg))
           .map((res) => snip(ctx.resolve(res.value), res.dataType));
 
-        if (!argTypes || argTypes === 'keep') {
+        if (!argConversionHint || argConversionHint === 'keep') {
+          // The hint tells us to do nothing.
           convertedArguments = resolvedSnippets;
-        } else if (argTypes === 'convert-arguments-to-common-type') {
+        } else if (argConversionHint === 'convert-arguments-to-common-type') {
+          // The hint tells us to unify the types.
           convertedArguments = convertToCommonType(ctx, resolvedSnippets) ??
             resolvedSnippets;
         } else {
-          convertedArguments = argTypes(...resolvedSnippets)
+          // The hint is a function that converts the arguments.
+          convertedArguments = argConversionHint(...resolvedSnippets)
             .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const)
             .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
         }

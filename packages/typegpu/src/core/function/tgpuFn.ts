@@ -83,7 +83,7 @@ export type TgpuFnShell<
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
     implementation: Implementation<ImplSchema>;
-    argTypes: FnArgsConversionHint;
+    argConversionHint: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
@@ -168,7 +168,7 @@ function createFn<ImplSchema extends AnyFn>(
   const fnBase: This = {
     [$internal]: {
       implementation,
-      argTypes: shell.argTypes,
+      argConversionHint: shell.argTypes,
     },
     shell,
     resourceType: 'function' as const,
@@ -270,7 +270,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   const fnBase: This = {
     [$internal]: {
       implementation: innerFn[$internal].implementation,
-      argTypes: innerFn[$internal].argTypes,
+      argConversionHint: innerFn[$internal].argConversionHint,
     },
     resourceType: 'function',
     shell: innerFn.shell,
