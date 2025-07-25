@@ -458,9 +458,7 @@ export function generateExpression(
             `Missing property ${key} in object literal for struct ${expectedType}`,
           );
         }
-        ctx.expectedTypeStack.push(value as AnyData | UnknownData);
-        const result = generateExpression(ctx, val);
-        ctx.expectedTypeStack.pop();
+        const result = generateTypedExpression(ctx, val, value as AnyData);
         return [key, result];
       }),
     );

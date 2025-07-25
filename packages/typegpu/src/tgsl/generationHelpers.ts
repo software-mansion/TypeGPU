@@ -482,7 +482,7 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly expectedTypeStack: (AnyData | UnknownData)[];
+  readonly expectedTypeStack: AnyData[];
   indent(): string;
   dedent(): string;
   pushBlockScope(): void;
