@@ -286,6 +286,16 @@ export class IndentController {
     this.identLevel--;
     return this.pre;
   }
+
+  withResetLevel<T>(callback: () => T): T {
+    const savedLevel = this.identLevel;
+    this.identLevel = 0;
+    try {
+      return callback();
+    } finally {
+      this.identLevel = savedLevel;
+    }
+  }
 }
 
 interface FixedBindingConfig {
@@ -386,10 +396,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
-      return {
+      return this._indentController.withResetLevel(() => ({
         head: resolveFunctionHeader(this, options.args, options.returnType),
         body: generateFunction(this, options.body),
-      };
+      }));
     } finally {
       this._itemStateStack.popFunctionScope();
     }
@@ -600,7 +610,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-          return `${[...this._declarations].join('\n\n')}${result}`;
+          const declarations = [...this._declarations]
+            .map((d) => d.trim())
+            .filter((d) => d.length > 0);
+
+          return declarations.length > 0
+            ? `\n${declarations.join('\n\n')}${result}`
+            : result;
         } finally {
           this.popMode('codegen');
         }
@@ -746,8 +762,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+    ? `(${argList}) -> ${getAttributesString(returnType)}${
       ctx.resolve(returnType)
-    }`
-    : `(${argList})`;
+    } `
+    : `(${argList}) `;
 }

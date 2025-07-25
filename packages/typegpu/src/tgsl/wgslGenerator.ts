@@ -120,9 +120,14 @@ export function generateBlock(
 ): string {
   ctx.pushBlockScope();
   try {
-    return `${ctx.indent()}{
-${statements.map((statement) => generateStatement(ctx, statement)).join('\n')}
-${ctx.dedent()}}`;
+    ctx.indent();
+    const body = statements.map((statement) =>
+      generateStatement(ctx, statement)
+    ).join('\n');
+    ctx.dedent();
+    return `{
+${body}
+${ctx.pre}}`;
   } finally {
     ctx.popBlockScope();
   }
@@ -614,27 +619,35 @@ export function generateStatement(
     }
     const condition = ctx.resolve(condSnippet.value);
 
-    ctx.indent(); // {
     const consequent = generateStatement(ctx, blockifySingleStatement(cons));
-    ctx.dedent(); // }
-
-    ctx.indent(); // {
     const alternate = alt
       ? generateStatement(ctx, blockifySingleStatement(alt))
       : undefined;
-    ctx.dedent(); // }
+
+    const consequentContent = consequent.substring(
+      consequent.indexOf('\n') + 1,
+      consequent.lastIndexOf('\n'),
+    );
 
     if (!alternate) {
       return `\
-${ctx.pre}if (${condition})
-${consequent}`;
+${ctx.pre}if (${condition}) {
+${consequentContent}
+${ctx.pre}}`;
     }
 
+    const alternateContent = alternate.substring(
+      alternate.indexOf('\n') + 1,
+      alternate.lastIndexOf('\n'),
+    );
+
     return `\
-${ctx.pre}if (${condition})
-${consequent}
-${ctx.pre}else
-${alternate}`;
+${ctx.pre}if (${condition}) {
+${consequentContent}
+${ctx.pre}}
+${ctx.pre}else {
+${alternateContent}
+${ctx.pre}}`;
   }
 
   if (statement[0] === NODE.let || statement[0] === NODE.const) {
@@ -699,7 +712,7 @@ ${alternate}`;
     const [_, init, condition, update, body] = statement;
 
     const initStatement = init ? generateStatement(ctx, init) : undefined;
-    const initStr = initStatement ? initStatement.slice(0, -1) : '';
+    const initStr = initStatement ? initStatement.slice(0, -1).trim() : '';
 
     const conditionExpr = condition
       ? generateExpression(ctx, condition)
@@ -711,18 +724,25 @@ ${alternate}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
+    const conditionStr = condSnippet
+      ? ctx.resolve(condSnippet.value).trim()
+      : '';
 
     const updateStatement = update ? generateStatement(ctx, update) : undefined;
-    const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
+    const updateStr = updateStatement
+      ? updateStatement.slice(0, -1).trim()
+      : '';
 
-    ctx.indent();
     const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
 
+    const bodyContent = bodyStr.substring(
+      bodyStr.indexOf('\n') + 1,
+      bodyStr.lastIndexOf('\n'),
+    );
     return `\
-${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
-${bodyStr}`;
+${ctx.pre}for ( ${initStr}; ${conditionStr}; ${updateStr}) {
+${bodyContent}
+${ctx.pre}}`;
   }
 
   if (statement[0] === NODE.while) {
@@ -737,13 +757,17 @@ ${bodyStr}`;
     }
     const conditionStr = ctx.resolve(condSnippet.value);
 
-    ctx.indent();
     const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
+
+    const bodyContent = bodyStr.substring(
+      bodyStr.indexOf('\n') + 1,
+      bodyStr.lastIndexOf('\n'),
+    );
 
     return `\
-${ctx.pre}while (${conditionStr})
-${bodyStr}`;
+${ctx.pre}while (${conditionStr}) {
+${bodyContent}
+${ctx.pre}}`;
   }
 
   if (statement[0] === NODE.continue) {
