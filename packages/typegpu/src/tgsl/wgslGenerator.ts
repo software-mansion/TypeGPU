@@ -71,24 +71,6 @@ const infixKinds = [
   'mat4x4f',
 ];
 
-const schemaToElement = {
-  'vec2f': f32,
-  'vec3f': f32,
-  'vec4f': f32,
-  'vec2h': f16,
-  'vec3h': f16,
-  'vec4h': f16,
-  'vec2i': i32,
-  'vec3i': i32,
-  'vec4i': i32,
-  'vec2u': u32,
-  'vec3u': u32,
-  'vec4u': u32,
-  'mat2x2f': f32,
-  'mat3x3f': f32,
-  'mat4x4f': f32,
-};
-
 export const infixOperators = {
   add,
   sub,
@@ -465,34 +447,28 @@ export function generateExpression(
       );
     }
 
-    if (wgsl.isWgslStruct(expectedType)) {
-      const entries = Object.fromEntries(
-        Object.entries(expectedType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new Error(
-              `Missing property ${key} in object literal for struct ${expectedType}`,
-            );
-          }
-          ctx.expectedTypeStack.push(value as AnyData | UnknownData);
-          const result = generateExpression(ctx, val);
-          ctx.expectedTypeStack.pop();
-          return [key, result];
-        }),
-      );
+    const entries = Object.fromEntries(
+      Object.entries(expectedType.propTypes).map(([key, value]) => {
+        const val = obj[key];
+        if (val === undefined) {
+          throw new Error(
+            `Missing property ${key} in object literal for struct ${expectedType}`,
+          );
+        }
+        ctx.expectedTypeStack.push(value as AnyData | UnknownData);
+        const result = generateExpression(ctx, val);
+        ctx.expectedTypeStack.pop();
+        return [key, result];
+      }),
+    );
 
-      const convertedValues = convertStructValues(ctx, expectedType, entries);
+    const convertedValues = convertStructValues(ctx, expectedType, entries);
 
-      return snip(
-        `${ctx.resolve(expectedType)}(${
-          convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
-        })`,
-        expectedType,
-      );
-    }
-
-    throw new Error(
-      'Object expressions are only allowed as return values of functions or as arguments to structs.',
+    return snip(
+      `${ctx.resolve(expectedType)}(${
+        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
+      })`,
+      expectedType,
     );
   }
 
@@ -599,13 +575,9 @@ export function generateStatement(
 
   if (statement[0] === NODE.if) {
     const [_, cond, cons, alt] = statement;
-    const condExpr = generateExpression(ctx, cond);
-    let condSnippet = condExpr;
-    const converted = convertToCommonType(ctx, [condExpr], [bool]);
-    if (converted?.[0]) {
-      [condSnippet] = converted;
-    }
-    const condition = ctx.resolve(condSnippet.value);
+    const condition = ctx.resolve(
+      generateTypedExpression(ctx, cond, bool).value,
+    );
 
     ctx.indent(); // {
     const consequent = generateStatement(ctx, blockifySingleStatement(cons));
@@ -668,16 +640,9 @@ ${alternate}`;
     const initStatement = init ? generateStatement(ctx, init) : undefined;
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
 
-    const conditionExpr = condition
-      ? generateExpression(ctx, condition)
+    const condSnippet = condition
+      ? generateTypedExpression(ctx, condition, bool)
       : undefined;
-    let condSnippet = conditionExpr;
-    if (conditionExpr) {
-      const converted = convertToCommonType(ctx, [conditionExpr], [bool]);
-      if (converted?.[0]) {
-        [condSnippet] = converted;
-      }
-    }
     const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
     const updateStatement = update ? generateStatement(ctx, update) : undefined;
@@ -694,14 +659,7 @@ ${bodyStr}`;
 
   if (statement[0] === NODE.while) {
     const [_, condition, body] = statement;
-    const condExpr = generateExpression(ctx, condition);
-    let condSnippet = condExpr;
-    if (condExpr) {
-      const converted = convertToCommonType(ctx, [condExpr], [bool]);
-      if (converted?.[0]) {
-        [condSnippet] = converted;
-      }
-    }
+    let condSnippet = generateTypedExpression(ctx, condition, bool);
     const conditionStr = ctx.resolve(condSnippet.value);
 
     ctx.indent();

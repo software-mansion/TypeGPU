@@ -237,4 +237,49 @@ describe('wgsl generator type inference', () => {
       - fn:myFn: No target type could be inferred for object with keys [pos,vel], please wrap the object in the corresponding schema.]
     `);
   });
+
+  it('throws when if condition is not boolean', () => {
+    const myFn = tgpu.fn([], d.bool)(() => {
+      if (d.vec2b()) {
+        return true;
+      }
+      return false;
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Actual type vec2<bool> does match and cannot be converted to expected type bool.]
+    `);
+  });
+
+  it('throws when while condition is not boolean', () => {
+    const myFn = tgpu.fn([], d.bool)(() => {
+      while (d.mat2x2f()) {
+        return true;
+      }
+      return false;
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Actual type mat2x2f does match and cannot be converted to expected type bool.]
+    `);
+  });
+
+  it('throws when for condition is not boolean', () => {
+    const myFn = tgpu.fn([], d.bool)(() => {
+      for (let i = 0; 1; i < 10) {
+        return true;
+      }
+      return false;
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Actual type abstractInt does match and cannot be converted to expected type bool.]
+    `);
+  });
 });
