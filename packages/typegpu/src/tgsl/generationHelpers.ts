@@ -565,14 +565,14 @@ export function tryConvertSnippet(
   value: Snippet,
   targetDataType: AnyData,
 ): Snippet {
-  if (targetDataType.type === 'void') {
-    throw new Error(
-      'Type error: Tried converting a value to null type.',
-    );
-  }
-
   if (targetDataType === value.dataType) {
     return value;
+  }
+
+  if (targetDataType.type === 'void') {
+    throw new Error(
+      `Type error: Tried converting a value of type '${value.dataType.type}' to null type.`,
+    );
   }
 
   const converted = convertToCommonType(ctx, [value], [targetDataType]);

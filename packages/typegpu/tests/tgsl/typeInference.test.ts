@@ -195,7 +195,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Type error: Tried converting a value to null type.]
+      - fn:add: Type error: Tried converting a value of type 'u32' to null type.]
     `);
   });
 
