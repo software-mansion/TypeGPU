@@ -35,43 +35,45 @@ describe('wgslGenerator', () => {
     ctx.pushMode(new CodegenState());
   });
 
-  // it('creates a simple return statement', () => {
-  //   const main = () => {
-  //     'kernel';
-  //     return true;
-  //   };
+  it('creates a simple return statement', () => {
+    const main = () => {
+      'kernel';
+      return true;
+    };
 
-  //   const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
-  //   expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-  //     `"[0,[[10,true]]]"`,
-  //   );
+    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+      `"[0,[[10,true]]]"`,
+    );
 
-  //   provideCtx(ctx, () => {
-  //     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-  //     expect(parse(gen)).toBe(parse('{return true;}'));
-  //   });
-  // });
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      expect(parse(gen)).toBe(parse('{return true;}'));
+    });
+  });
 
-  // it('creates a function body', () => {
-  //   const main = () => {
-  //     'kernel';
-  //     let a = 12;
-  //     a += 21;
-  //     return a;
-  //   };
+  it('creates a function body', () => {
+    const main = () => {
+      'kernel';
+      let a = 12;
+      a += 21;
+      return a;
+    };
 
-  //   const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
 
-  //   expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-  //     `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
-  //   );
+    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
+      `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
+    );
 
-  //   provideCtx(ctx, () => {
-  //     const gen = wgslGenerator.generateFunction(ctx, parsedBody);
-  //     expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
-  //   });
-  // });
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+    });
+  });
 
   it('creates correct resources for numeric literals', () => {
     const literals = {
