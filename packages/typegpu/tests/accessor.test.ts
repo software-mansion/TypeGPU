@@ -123,7 +123,7 @@ describe('tgpu.accessor', () => {
 
     expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
         - accessor:color: Missing value for 'slot:color']
