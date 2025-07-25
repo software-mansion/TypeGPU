@@ -1,4 +1,5 @@
 import type { Block } from 'tinyest';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -45,7 +46,6 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -280,7 +280,9 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type DefaultConversionStrategy = 'keep' | 'coerce';
+export type DefaultConversionStrategy =
+  | 'keep'
+  | 'convert-arguments-to-common-type';
 
 export type FnArgsConversionHint =
   | AnyData[]

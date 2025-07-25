@@ -164,6 +164,10 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
   return res;
 }
 
+/**
+ * A wrapper for `generateExpression` that updates `ctx.expectedTypeStack`
+ * and tries to convert the result when it does not match the expected type.
+ */
 export function generateTypedExpression(
   ctx: GenerationCtx,
   expression: tinyest.Expression,
@@ -357,14 +361,17 @@ export function generateExpression(
   }
 
   if (expression[0] === NODE.call) {
-    // Function Call
+    // Function Call. Possible cases requiring different treatment:
+    // - struct/array schema call,
+    // - infix operator dispatch,
+    // - other calls, including tgsl function calls and vector/matrix schema calls.
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       // There are three ways a struct can be called that we support:
-      // - with no arguments `Struct()` (resolve struct and return),
-      // - with an objectExpr `Struct({ x: 1, y: 2 })` (struct should resolve itself),
+      // - with no arguments `Struct()` (resolve struct name and return),
+      // - with an objectExpr `Struct({ x: 1, y: 2 })` (object should resolve itself),
       // - with another struct `Struct(otherStruct)` (we assume the `otherStruct` is defined on TGSL side and we let the assignment operator clone it).
       // The behavior for arrays is analogous.
       if (args.length > 1) {
@@ -387,26 +394,13 @@ export function generateExpression(
       return snip(ctx.resolve(argSnippet.value), id.value);
     }
 
-    // AAA wektory i macierze
-    // AAA call funkcji
-
-    const argSnippets = args.map((arg) => generateExpression(ctx, arg));
-    const resolvedSnippets = argSnippets.map((res) =>
-      snip(ctx.resolve(res.value), res.dataType)
-    );
-    const argValues = resolvedSnippets.map((res) => res.value);
-
-    if (typeof id.value === 'string') {
-      return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
-    }
-
     if (id.value instanceof InfixDispatch) {
-      if (!argSnippets[0]) {
+      if (!args[0]) {
         throw new Error(
           `An infix operator '${id.value.name}' was called without any arguments`,
         );
       }
-      return id.value.operator(id.value.lhs, argSnippets[0]);
+      return id.value.operator(id.value.lhs, generateExpression(ctx, args[0]));
     }
 
     if (!isMarkedInternal(id.value)) {
@@ -417,14 +411,17 @@ export function generateExpression(
       );
     }
 
-    const argTypes = id.value[$internal]?.argTypes as
-      | FnArgsConversionHint
-      | undefined;
+    const resolvedSnippets = args
+      .map((arg) => generateExpression(ctx, arg))
+      .map((res) => snip(ctx.resolve(res.value), res.dataType));
+
+    const argTypes = id.value[$internal]?.argTypes as FnArgsConversionHint;
+
     let convertedResources: Snippet[];
     try {
       if (!argTypes || argTypes === 'keep') {
         convertedResources = resolvedSnippets;
-      } else if (argTypes === 'coerce') {
+      } else if (argTypes === 'convert-arguments-to-common-type') {
         convertedResources = convertToCommonType(ctx, resolvedSnippets) ??
           resolvedSnippets;
       } else {
