@@ -282,4 +282,16 @@ describe('wgsl generator type inference', () => {
       - fn:myFn: Actual type abstractInt does match and cannot be converted to expected type bool.]
     `);
   });
+
+  it('throws when creating an empty untyped array', () => {
+    const myFn = tgpu.fn([], d.bool)(() => {
+      const myArr = [];
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Cannot infer the type of an empty array literal.]
+    `);
+  });
 });

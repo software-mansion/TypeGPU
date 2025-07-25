@@ -9,7 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -343,25 +343,19 @@ export function generateExpression(
   }
 
   if (expression[0] === NODE.call) {
-    // Function Call. Possible cases requiring different treatment:
-    // - struct/array schema call,
-    // - infix operator dispatch,
-    // - other calls, including tgsl function calls and vector/matrix schema calls.
+    // Function Call.
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
-      // There are three ways a struct can be called that we support:
-      // - with no arguments `Struct()` (resolve struct name and return),
-      // - with an objectExpr `Struct({ x: 1, y: 2 })` (object should resolve itself),
-      // - with another struct `Struct(otherStruct)` (we assume the `otherStruct` is defined on TGSL side and we let the assignment operator clone it).
-      // The behavior for arrays is analogous.
+      // Struct/array schema call.
       if (args.length > 1) {
         throw new Error(
           'Array and struct schemas should always be called with at most 1 argument.',
         );
       }
 
+      // No arguments `Struct()`, resolve struct name and return.
       if (!args[0]) {
         return snip(`${ctx.resolve(id.value)}()`, id.value);
       }
@@ -372,11 +366,13 @@ export function generateExpression(
         id.value as AnyData,
       );
 
-      // The type of the return value is the struct itself
+      // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
+      // In both cases, we just let the argument resolve everything.
       return snip(ctx.resolve(argSnippet.value), id.value);
     }
 
     if (id.value instanceof InfixDispatch) {
+      // Infix operator dispatch.
       if (!args[0]) {
         throw new Error(
           `An infix operator '${id.value.name}' was called without any arguments`,
@@ -392,6 +388,8 @@ export function generateExpression(
         } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
+
+    // Other, including tgsl functions, std and vector/matrix schema calls.
 
     const argTypes = id.value[$internal]?.argTypes as FnArgsConversionHint;
     try {
@@ -476,48 +474,45 @@ export function generateExpression(
     const [_, valuesRaw] = expression;
     // Array Expression
     const arrType = ctx.expectedTypeStack.at(-1);
-    const elemType = wgsl.isWgslArray(arrType)
-      ? arrType.elementType
-      : undefined;
-    if (elemType) {
-      ctx.expectedTypeStack.push(elemType as AnyData | UnknownData);
-    }
-
-    const values = valuesRaw.map((value) =>
-      generateExpression(ctx, value as tinyest.Expression)
-    );
+    let elemType = wgsl.isWgslArray(arrType) ? arrType.elementType : undefined;
+    let values: Snippet[];
 
     if (elemType) {
-      ctx.expectedTypeStack.pop();
-    }
-
-    if (values.length === 0) {
-      throw new Error('Cannot create empty array literal.');
-    }
-
-    const convertedValues = convertToCommonType(ctx, values);
-    if (!convertedValues) {
-      throw new Error(
-        'The given values cannot be automatically converted to a common type. Consider explicitly casting them.',
+      // The array is typed, so its elements should be as well.
+      values = valuesRaw.map((value) =>
+        generateTypedExpression(
+          ctx,
+          value as tinyest.Expression,
+          elemType as AnyData,
+        )
       );
+    } else {
+      // The array is not typed, so we try to guess the types.
+      const valuesSnippets = valuesRaw.map((value) =>
+        generateExpression(ctx, value as tinyest.Expression)
+      );
+
+      if (valuesSnippets.length === 0) {
+        throw new Error('Cannot infer the type of an empty array literal.');
+      }
+
+      values = convertToCommonType(ctx, valuesSnippets)!;
+      if (!values) {
+        throw new Error(
+          'The given values cannot be automatically converted to a common type. Consider explicitly casting them.',
+        );
+      }
+
+      elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
     }
 
-    const targetType = elemType ?? convertedValues[0]?.dataType as AnyData;
-    const type = targetType.type === 'abstractFloat'
-      ? f32
-      : targetType.type === 'abstractInt'
-      ? i32
-      : targetType;
-
-    const typeId = ctx.resolve(type);
-
-    const arrayType = `array<${typeId}, ${values.length}>`;
-    const arrayValues = convertedValues.map((sn) => ctx.resolve(sn.value));
+    const arrayType = `array<${ctx.resolve(elemType)}, ${values.length}>`;
+    const arrayValues = values.map((sn) => ctx.resolve(sn.value));
 
     return snip(
       `${arrayType}( ${arrayValues.join(', ')} )`,
       arrayOf(
-        type as wgsl.AnyWgslData,
+        elemType as wgsl.AnyWgslData,
         values.length,
       ) as wgsl.AnyWgslData,
     );
