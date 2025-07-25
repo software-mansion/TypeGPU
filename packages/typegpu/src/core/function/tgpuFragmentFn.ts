@@ -16,7 +16,6 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -222,16 +221,6 @@ function createFragmentFn(
         core.applyExternals({ In: inputWithLocation });
       }
       core.applyExternals({ Out: outputType });
-
-      if (typeof implementation === 'string') {
-        return core.resolve(
-          ctx,
-          inputWithLocation ? [inputWithLocation] : [],
-          shell.returnType,
-        );
-      }
-
-      const generationCtx = ctx as GenerationCtx;
 
       return core.resolve(
         ctx,

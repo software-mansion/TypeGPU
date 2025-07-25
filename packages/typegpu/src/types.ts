@@ -39,7 +39,6 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import type { FunctionScopeLayer } from './resolutionCtx.ts';
 import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
@@ -103,7 +102,7 @@ export interface ItemStateStack {
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
-  topFunctionScope: FunctionScopeLayer;
+  topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;

@@ -53,7 +53,6 @@ import {
 } from '../data/wgslTypes.ts';
 import { invariant } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
-import type { FunctionScopeLayer } from '../resolutionCtx.ts';
 import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
@@ -487,7 +486,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  topFunctionScope: FunctionScopeLayer;
+  topFunctionReturnType: AnyData;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };

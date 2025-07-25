@@ -205,8 +205,6 @@ function createFn<ImplSchema extends AnyFn>(
           shell.returnType,
           core.applyExternals,
         );
-
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
       return core.resolve(ctx, shell.argTypes, shell.returnType);

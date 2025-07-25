@@ -70,7 +70,7 @@ type SlotBindingLayer = {
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
 };
 
-export type FunctionScopeLayer = {
+type FunctionScopeLayer = {
   type: 'functionScope';
   args: Snippet[];
   argAliases: Record<string, Snippet>;
@@ -104,12 +104,12 @@ class ItemStateStackImpl implements ItemStateStack {
     return state;
   }
 
-  get topFunctionScope(): FunctionScopeLayer {
+  get topFunctionReturnType(): AnyData {
     const scope = this._stack.findLast((e) => e.type === 'functionScope');
     if (!scope) {
       throw new Error('Internal error, expected function scope to be present.');
     }
-    return scope;
+    return scope.returnType;
   }
 
   pushItem() {
@@ -390,8 +390,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.popBlockScope();
   }
 
-  get topFunctionScope() {
-    return this._itemStateStack.topFunctionScope;
+  get topFunctionReturnType() {
+    return this._itemStateStack.topFunctionReturnType;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

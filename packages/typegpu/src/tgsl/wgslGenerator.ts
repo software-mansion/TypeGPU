@@ -568,7 +568,7 @@ export function generateStatement(
         generateTypedExpression(
           ctx,
           returnNode,
-          ctx.topFunctionScope.returnType,
+          ctx.topFunctionReturnType,
         ).value,
       )
       : undefined;
