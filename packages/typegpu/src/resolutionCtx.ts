@@ -344,6 +344,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
+  /**
+   * A stack that holds the expected type of the currently generated expression.
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
   public readonly expectedTypeStack: AnyData[] = [];
   public readonly names: NameRegistry;
 

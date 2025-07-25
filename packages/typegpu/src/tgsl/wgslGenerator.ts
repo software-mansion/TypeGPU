@@ -440,9 +440,9 @@ export function generateExpression(
     // Object Literal
     const obj = expression[1];
 
-    const expectedType = ctx.expectedTypeStack.at(-1);
+    const structType = ctx.expectedTypeStack.at(-1);
 
-    if (!expectedType || !wgsl.isWgslStruct(expectedType)) {
+    if (!structType || !wgsl.isWgslStruct(structType)) {
       throw new Error(
         `No target type could be inferred for object with keys [${
           Object.keys(obj)
@@ -451,11 +451,11 @@ export function generateExpression(
     }
 
     const entries = Object.fromEntries(
-      Object.entries(expectedType.propTypes).map(([key, value]) => {
+      Object.entries(structType.propTypes).map(([key, value]) => {
         const val = obj[key];
         if (val === undefined) {
           throw new Error(
-            `Missing property ${key} in object literal for struct ${expectedType}`,
+            `Missing property ${key} in object literal for struct ${structType}`,
           );
         }
         const result = generateTypedExpression(ctx, val, value as AnyData);
@@ -463,13 +463,13 @@ export function generateExpression(
       }),
     );
 
-    const convertedValues = convertStructValues(ctx, expectedType, entries);
+    const convertedValues = convertStructValues(ctx, structType, entries);
 
     return snip(
-      `${ctx.resolve(expectedType)}(${
+      `${ctx.resolve(structType)}(${
         convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
       })`,
-      expectedType,
+      structType,
     );
   }
 
