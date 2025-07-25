@@ -104,6 +104,14 @@ class ItemStateStackImpl implements ItemStateStack {
     return state;
   }
 
+  get topFunctionReturnType(): AnyData {
+    const scope = this._stack.findLast((e) => e.type === 'functionScope');
+    if (!scope) {
+      throw new Error('Internal error, expected function scope to be present.');
+    }
+    return scope.returnType;
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -336,7 +344,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly callStack: unknown[] = [];
+  /**
+   * A stack that holds the expected type of the currently generated expression.
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  public readonly expectedTypeStack: AnyData[] = [];
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
@@ -375,6 +388,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
+  }
+
+  get topFunctionReturnType() {
+    return this._itemStateStack.topFunctionReturnType;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

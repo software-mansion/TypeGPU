@@ -1,7 +1,7 @@
-import { vecTypeToConstructor } from '../data/vector.ts';
 import { type AnyData, snip, type Snippet } from '../data/dataTypes.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
+import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AbstractFloat,
@@ -95,7 +95,7 @@ export const add = createDualImpl(
       `(${lhs.value} + ${rhs.value})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
-  'coerce',
+  'convert-arguments-to-common-type',
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -125,7 +125,7 @@ export const sub = createDualImpl(
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'sub',
-  'coerce',
+  'convert-arguments-to-common-type',
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -514,7 +514,7 @@ export const max = createDualImpl(
   // GPU implementation
   (a, b) => snip(`max(${a.value}, ${b.value})`, a.dataType),
   'max',
-  'coerce',
+  'convert-arguments-to-common-type',
 );
 
 /**
@@ -532,7 +532,7 @@ export const min = createDualImpl(
   // GPU implementation
   (a, b) => snip(`min(${a.value}, ${b.value})`, a.dataType),
   'min',
-  'coerce',
+  'convert-arguments-to-common-type',
 );
 
 export const sign = createDualImpl(

@@ -29,7 +29,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
   name: string,
-  argTypes?: FnArgsConversionHint,
+  argConversionHint?: FnArgsConversionHint,
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inCodegenMode()) {
@@ -40,7 +40,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
 
   setName(impl, name);
   impl.toString = () => name;
-  (impl as TgpuDualFn<T>)[$internal] = { jsImpl, gpuImpl, argTypes };
+  (impl as TgpuDualFn<T>)[$internal] = { jsImpl, gpuImpl, argConversionHint };
 
   return impl as TgpuDualFn<T>;
 }
