@@ -352,8 +352,6 @@ function resetGameData() {
     .with(vertexLayout, squareBuffer)
     .with(vertexInstanceLayout, currentStateBuffer);
 
-  console.log(tgpu.resolve({ externals: { computePipeline } }));
-
   currentStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
   nextState.write(Array.from({ length: 1024 ** 2 }, () => 0));
   size.write(d.vec2u(options.size, options.size));
