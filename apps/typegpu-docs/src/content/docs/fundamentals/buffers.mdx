@@ -325,42 +325,10 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
-const presentationFormat = "rgba8unorm";
-
-
-const vertex = tgpu['~unstable'].vertexFn({
-  in: {
-    idx: d.builtin.vertexIndex,
-    color: d.vec4f,
-  },
-  out: {
-    color: d.vec4f,
-    pos: d.builtin.position,
-  },
-})(({ idx, color }) => {
-  return {
-    color,
-    pos: d.vec4f(d.vec2f(1, 1), 1, 1),
-  };
-});
-
-const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec4f, n));
-const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: {
-    color: d.vec4f,
-  },
-  out: d.vec4f,
-})((input) => input.color);
 // ---cut---
 const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
-
-const pipeline = root['~unstable']
-  .withVertex(vertex, { color: vertexLayout.attrib })
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline()
-  .withIndexBuffer(indexBuffer);
 
 ```
 

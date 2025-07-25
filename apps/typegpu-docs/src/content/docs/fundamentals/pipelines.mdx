@@ -331,7 +331,7 @@ However, that is usually not necessary, as it is done automatically when trying 
 
 ### Drawing with `drawIndexed`
 
-The `drawIndexed` is analogous to draw, but takes advantage of the [index buffer](/TypeGPU/fundamentals/buffers/#index-buffers) to determine the vertices to process. It takes the total count of vertices it is meant to draw an argument.
+The `drawIndexed` is analogous to draw, but takes advantage of the [index buffer](/TypeGPU/fundamentals/buffers/#index-buffers) to determine the vertices to process. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -372,10 +372,11 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })((input) => input.color);
+// ---cut---
 const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
-// ---cut---
+  
 const pipeline = root['~unstable']
   .withVertex(vertex, { color: vertexLayout.attrib })
   .withFragment(mainFragment, { format: presentationFormat })
