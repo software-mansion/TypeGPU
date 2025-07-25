@@ -3,6 +3,7 @@ import * as d from "typegpu/data";
 import * as std from "typegpu/std";
 import { sdSphere, sdPlane } from "@typegpu/sdf";
 import { perlin3d } from "@typegpu/noise";
+import { numericLiteralToSnippet } from "../../../../../../../packages/typegpu/src/tgsl/generationHelpers";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
@@ -24,26 +25,31 @@ const resolution = root.createUniform(d.vec2f);
 const MAX_STEPS = 1000;
 const MAX_DIST = 21;
 const SURF_DIST = 0.001;
-const SPEED_PER_FRAME = 11;
 const GRID_SEP = 1.2;
 const GRID_TIGHTNESS = 7;
 const skyColor = d.vec4f(0.1, 0, 0.2, 1);
 const gridColor = d.vec3f(0.92, 0.21, 0.96);
 const gridInnerColor = d.vec3f(0, 0, 0);
-const ballColor = d.vec3f(0, 1, 0.961);
 const ballCenter = d.vec3f(0, 6, 12);
+let ballColor = d.vec3f(0, 0.25, 1);
+let speedPerFrame = 11;
 
 const Ray = d.struct({
   color: d.vec3f,
   dist: d.f32,
 });
 
+const ballColorBuf = root.createUniform(d.vec3f);
+ballColorBuf.write(ballColor);
+const speedPerFrameBuf = root.createUniform(d.f32);
+speedPerFrameBuf.write(speedPerFrame);
+
 const grid = tgpu.fn(
   [d.vec2f],
   d.vec3f,
 )((uv) => {
   const uv_mod = std.fract(
-    std.div(d.vec2f(uv.x, uv.y + SPEED_PER_FRAME * time.$), GRID_SEP),
+    std.div(d.vec2f(uv.x, uv.y + speedPerFrameBuf.$ * time.$), GRID_SEP),
   );
 
   // x^4 + y^4 = 0.5^4
@@ -83,7 +89,7 @@ const getBall = tgpu.fn(
   // calculate distances and assign colors
   return Ray({
     dist: sdSphere(rayPoint, radius) + noise, // center is relative to p
-    color: ballColor,
+    color: ballColorBuf.$,
   });
 });
 
@@ -125,7 +131,7 @@ const rayMarch = tgpu.fn(
     const p = std.add(ro, std.mul(rd, dO));
     const scene = getSceneDist(p);
     const ballDist = getBall(p, time.$);
-    bloom = std.add(bloom, std.mul(ballColor, std.exp(-ballDist.dist)));
+    bloom = std.add(bloom, std.mul(ballColorBuf.$, std.exp(-ballDist.dist)));
     dO += scene.dist;
 
     if (dO > MAX_DIST) {
@@ -137,6 +143,9 @@ const rayMarch = tgpu.fn(
     if (scene.dist < SURF_DIST) {
       result.dist = dO;
       result.color = scene.color;
+      // if (ballDist.dist < SURF_DIST) {
+      //   bloom = ballColor;
+      // }
       break;
     }
   }
@@ -210,7 +219,29 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
+// #region Example controls and cleanup
+
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   root.destroy();
 }
+
+export const controls = {
+  speed: {
+    initial: speedPerFrame,
+    min: 0,
+    max: 40,
+    step: 0.1,
+    onSliderChange(value: number) {
+      speedPerFrame = value;
+      speedPerFrameBuf.write(speedPerFrame);
+    },
+  },
+  "sphere color": {
+    initial: [ballColor.x, ballColor.y, ballColor.z] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
+      ballColor = d.vec3f(value[0], value[1], value[2]);
+      ballColorBuf.write(ballColor);
+    },
+  },
+};
