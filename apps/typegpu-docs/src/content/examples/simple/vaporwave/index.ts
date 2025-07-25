@@ -271,7 +271,7 @@ export const controls = {
     },
   },
   "floor pattern": {
-    initial: "grid",
+    initial: "circles",
     options: ["grid", "circles"],
     onSelectChange: (value: string) => {
       if (value === "grid") {
