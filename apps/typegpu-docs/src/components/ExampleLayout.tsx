@@ -1,6 +1,7 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import React, { useId, useRef } from 'react';
+import type React from 'react';
+import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
@@ -76,7 +77,7 @@ function SideMenu() {
         <div className='grid place-items-center'>
           <a
             href='/TypeGPU'
-            className='box-border grid cursor-pointer h-20 place-content-center'
+            className='box-border grid h-20 cursor-pointer place-content-center'
           >
             <img
               className='w-40'
