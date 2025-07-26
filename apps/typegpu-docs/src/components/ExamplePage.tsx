@@ -1,12 +1,12 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { examples, examplesStable } from '../utils/examples/exampleContent.ts';
+import { examples } from '../utils/examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 
 const getRandomExampleKey = () => {
-  const keys = Object.keys(examplesStable);
+  const keys = Object.keys(examples);
   const randomIdx = Math.floor(Math.random() * keys.length);
   return keys[randomIdx];
 };
