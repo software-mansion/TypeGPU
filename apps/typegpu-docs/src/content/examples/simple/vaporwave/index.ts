@@ -94,27 +94,19 @@ const getBall = tgpu.fn(
   Ray,
 )((p, t) => {
   const localP = std.sub(p, ballCenter); // (0,0) is the center to rotate easily
-  const rotMatZ = d.mat4x4f.rotationZ(-t * 0.4);
-  const rotMatX = d.mat4x4f.rotationX(-t * 0.4);
+  const rotMatZ = d.mat4x4f.rotationZ(-t * 0.3);
+  const rotMatX = d.mat4x4f.rotationX(-t * 0.7);
   const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
 
-  const sphereOffset = d.vec3f(
-    std.cos(t) * 2, // x motion
-    std.sin(t * 0.7) * 0.4, // y motion
-    std.sin(t) * 2, // z motion
-  );
-
-  const rayPoint = std.sub(rotatedP, sphereOffset);
-
   // breathing effect
-  const radius = 3 + std.sin(t) * 0.33;
+  const radius = 3 + std.sin(t);
 
   // perlin noise
-  const noise = perlin3d.sample(std.add(rayPoint, t));
+  const noise = perlin3d.sample(std.add(rotatedP, t));
 
   // calculate distances and assign colors
   return Ray({
-    dist: sdSphere(rayPoint, radius) + noise, // center is relative to p
+    dist: sdSphere(rotatedP, radius) + noise, // center is relative to p
     color: ballColorBuf.$,
   });
 });
