@@ -1,5 +1,7 @@
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
+  ExtractHostShareable,
+  ExtractNonHostShareable,
   Infer,
   InferGPURecord,
   InferPartial,
@@ -10,6 +12,7 @@ import type {
 import type {
   $gpuRepr,
   $memIdent,
+  $notHostShareable,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
@@ -38,7 +41,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
+export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
+  extends wgsl.BaseData {
   readonly [$internal]: true;
   readonly type: 'disarray';
   readonly elementCount: number;
@@ -49,6 +53,8 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
+  readonly [$notHostShareable]:
+    'Disarrays are not host-shareable, use arrays instead.';
   // ---
 }
 
@@ -62,7 +68,7 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
  */
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
-> extends TgpuNamable {
+> extends wgsl.BaseData, TgpuNamable {
   readonly [$internal]: true;
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
@@ -75,6 +81,8 @@ export interface Unstruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
+  readonly [$notHostShareable]:
+    'Unstructs are not host-shareable, use structs instead.';
   // ---
 }
 
@@ -84,7 +92,7 @@ export type AnyUnstruct = Unstruct<any>;
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
-> {
+> extends wgsl.BaseData {
   readonly [$internal]: true;
   readonly type: 'loose-decorated';
   readonly inner: TInner;
@@ -92,6 +100,8 @@ export interface LooseDecorated<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  readonly [$notHostShareable]:
+    'Loosely decorated schemas are not host-shareable.';
   // ---
 }
 
@@ -239,23 +249,5 @@ export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
   : TData
   : TData;
 
-export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
-  UnwrapDecorated<TData[0]> extends { readonly type: TType } ? true
-    : UnwrapDecorated<TData[0]> extends {
-      readonly type: 'array';
-      readonly elementType: infer TElement;
-    }
-      ? TElement extends wgsl.BaseData
-        ? UnwrapDecorated<TElement> extends { readonly type: TType } ? true
-        : HasNestedType<[TElement], TType>
-      : false
-    : UnwrapDecorated<TData[0]> extends
-      { readonly type: 'struct'; readonly propTypes: infer TProps }
-      ? TProps extends Record<string, wgsl.BaseData> ? true extends {
-          [K in keyof TProps]: UnwrapDecorated<TProps[K]> extends
-            { readonly type: TType } ? true
-            : HasNestedType<[TProps[K]], TType>;
-        }[keyof TProps] ? true
-        : false
-      : false
-    : false;
+export type HostShareableData = ExtractHostShareable<AnyData>;
+export type NonHostShareableData = ExtractNonHostShareable<AnyData>;

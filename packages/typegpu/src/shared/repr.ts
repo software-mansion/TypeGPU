@@ -1,4 +1,14 @@
-import type { $gpuRepr, $memIdent, $repr, $reprPartial } from './symbols.ts';
+import type { U16, WgslArray } from '../data/wgslTypes.ts';
+import type {
+  $gpuRepr,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
+  $invalidVertexSchema,
+  $memIdent,
+  $repr,
+  $reprPartial,
+} from './symbols.ts';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -52,9 +62,8 @@ export type InferGPURecord<
   [Key in keyof T]: InferGPU<T[Key]>;
 };
 
-export type MemIdentity<T> = T extends {
-  readonly [$memIdent]: infer TMemIdent;
-} ? TMemIdent
+export type MemIdentity<T> = T extends { readonly [$memIdent]: infer TMemIdent }
+  ? TMemIdent
   : T;
 
 export type MemIdentityRecord<
@@ -62,3 +71,37 @@ export type MemIdentityRecord<
 > = {
   [Key in keyof T]: MemIdentity<T[Key]>;
 };
+
+/**
+ * Checks if a schema cannot be used in any type of buffer
+ */
+export type IsInvalidBufferSchema<T> = [
+  (
+    & ([T] extends [{ readonly [$invalidStorageSchema]: string }] ? 1 : 0)
+    & ([T] extends [{ readonly [$invalidUniformSchema]: string }] ? 1 : 0)
+    & ([T] extends [{ readonly [$invalidVertexSchema]: string }] ? 1 : 0)
+    & ([T] extends [WgslArray<U16>] ? 0
+      : [T] extends [{ readonly [$invalidIndexSchema]: string }] ? 1
+      : 0)
+  ),
+] extends [0] ? false : true;
+
+export type ExtractInvalidStorageSchemaError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidStorageSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidStorageSchema]}`
+    : never;
+
+export type ExtractInvalidUniformSchemaError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidUniformSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidUniformSchema]}`
+    : never;
+
+export type ExtractInvalidVertexSchemaError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidVertexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidVertexSchema]}`
+    : never;
+
+export type ExtractInvalidIndexSchemaError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidIndexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidIndexSchema]}`
+    : never;

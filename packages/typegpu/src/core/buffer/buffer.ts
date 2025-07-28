@@ -170,8 +170,8 @@ type IsWgslLiteral<TData extends BaseData> = TData extends {
 } ? true
   : false;
 
-type RestrictUsages<TData extends BaseData> = string extends TData['type']
-  ? ('uniform' | 'storage' | 'vertex' | 'index')[]
+export type RestrictUsages<TData extends BaseData> = string extends
+  TData['type'] ? ('uniform' | 'storage' | 'vertex' | 'index')[]
   : IsIndexCompatible<TData> extends true
     ? IsArrayOfU32<TData> extends true
       ? ('uniform' | 'storage' | 'vertex' | 'index')[]

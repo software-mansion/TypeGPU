@@ -14,14 +14,20 @@ import {
   vec4i,
   vec4u,
 } from './vector.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexFormatData<T extends VertexFormat> {
+export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
   readonly [$internal]: true;
   readonly type: T;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
+  readonly [$notHostShareable]:
+    'Vertex formats are not host-shareable, use concrete types instead.';
+  // ---
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
@@ -30,6 +36,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
+  declare readonly [$notHostShareable]: TgpuVertexFormatData<
+    T
+  >[typeof $notHostShareable];
   // ---
 
   constructor(public readonly type: T) {}
