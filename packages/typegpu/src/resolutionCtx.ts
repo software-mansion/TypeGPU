@@ -615,9 +615,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
 
-          return this._declarations.length > 0
-            ? `\n${this._declarations.join('\n\n')}${result}`
-            : result;
+          return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
         }

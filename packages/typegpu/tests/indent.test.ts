@@ -30,8 +30,7 @@ describe('indents', () => {
 
     const code = tgpu.resolve({ externals: { updateParicle } });
     expect(code).toMatchInlineSnapshot(`
-      "
-      struct Particle_1 {
+      "struct Particle_1 {
         position: vec3f,
         velocity: vec3f,
       }
@@ -96,8 +95,7 @@ describe('indents', () => {
     });
 
     expect(code).toMatchInlineSnapshot(`
-      "
-      struct Particle_3 {
+      "struct Particle_3 {
         position: vec3f,
         velocity: vec3f,
       }
@@ -203,8 +201,7 @@ describe('indents', () => {
     });
 
     expect(code).toMatchInlineSnapshot(`
-      "
-      @group(0) @binding(2) var<storage, read> counter_2: u32;
+      "@group(0) @binding(2) var<storage, read> counter_2: u32;
 
       fn incrementCouner_1() {
         counter_2 += 1;
@@ -273,8 +270,7 @@ describe('indents', () => {
 
     const code = tgpu.resolve({ externals: { updateParticle } });
     expect(code).toMatchInlineSnapshot(`
-      "
-      struct Particle_1 {
+      "struct Particle_1 {
         position: vec3f,
         velocity: vec3f,
       }
@@ -314,8 +310,7 @@ describe('indents', () => {
 
     const code = tgpu.resolve({ externals: { updateParticle } });
     expect(code).toMatchInlineSnapshot(`
-      "
-      struct Particle_1 {
+      "struct Particle_1 {
         position: vec3f,
         velocity: vec3f,
       }
@@ -386,8 +381,7 @@ describe('indents', () => {
       externals: { someVertex },
     });
     expect(code).toMatchInlineSnapshot(`
-      "
-      struct someVertex_Input_1 {
+      "struct someVertex_Input_1 {
         @builtin(vertex_index) vertexIndex: u32,
         @location(0) position: vec4f,
         @location(1) something: vec4f,
