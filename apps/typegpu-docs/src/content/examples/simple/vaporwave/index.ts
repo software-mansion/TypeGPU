@@ -4,12 +4,18 @@ import * as std from "typegpu/std";
 import { sdSphere, sdPlane } from "@typegpu/sdf";
 import { perlin3d } from "@typegpu/noise";
 
+import { grid, circles } from "./floor";
+import * as c from "./constans";
+import { Ray } from "./types";
+import { getBall } from "./ball";
+import { shapeUnion } from "./helpers";
+
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const root = await tgpu.init({
-  device: { requiredFeatures: ["timestamp-query"] },
+  device: { requiredFeatures: ["timestamp-query"] }, // was used to measure performance of static cache of perlin noise
 });
 
 context.configure({
@@ -21,103 +27,14 @@ context.configure({
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
-const MAX_STEPS = 1000;
-const MAX_DIST = 19;
-const SURF_DIST = 0.001;
-const GRID_SEP = 1.2;
-const GRID_TIGHTNESS = 7;
-
-const skyColor = d.vec4f(0.1, 0, 0.2, 1);
-const gridColor = d.vec3f(0.92, 0.21, 0.96);
-const gridInnerColor = d.vec3f(0, 0, 0);
-const ballCenter = d.vec3f(0, 6, 12);
-
+// these paramaters can be changed
 let ballColor = d.vec3f(0, 0.25, 1);
 let speedPerFrame = 11;
-
-const Ray = d.struct({
-  color: d.vec3f,
-  dist: d.f32,
-});
 
 const ballColorBuf = root.createUniform(d.vec3f);
 ballColorBuf.write(ballColor);
 const speedPerFrameBuf = root.createUniform(d.f32);
 speedPerFrameBuf.write(speedPerFrame);
-
-// this will be placed in slot
-const grid = tgpu.fn(
-  [d.vec2f],
-  d.vec3f,
-)((uv) => {
-  const uv_mod = std.fract(
-    std.div(d.vec2f(uv.x, uv.y + speedPerFrameBuf.$ * time.$), GRID_SEP),
-  );
-
-  // x^4 + y^4 = 0.5^4
-  const diff_4 = std.pow(std.sub(d.vec2f(0.5, 0.5), uv_mod), d.vec2f(4, 4));
-  const sdf = std.pow(diff_4.x + diff_4.y, 0.25) - 0.5; // - radius
-
-  return std.mix(
-    gridInnerColor,
-    gridColor,
-    std.exp(GRID_TIGHTNESS * sdf), // fading color
-  );
-});
-
-const circles = tgpu.fn(
-  [d.vec2f],
-  d.vec3f,
-)((uv) => {
-  const rotMatY = d.mat4x4f.rotationY((-time.$ * speedPerFrameBuf.$) / 10); // 10 is empirical
-  const uv_rotated = std.mul(
-    rotMatY,
-    std.add(d.vec4f(uv.x, 1.0, uv.y, 1), d.vec4f(0, 0, -ballCenter.z, 0)),
-  );
-
-  const uv_mod = std.fract(
-    std.div(d.vec2f(uv_rotated.x, uv_rotated.z), GRID_SEP),
-  );
-
-  const diff_2 = std.pow(std.sub(d.vec2f(0.5, 0.5), uv_mod), d.vec2f(2, 2));
-  const dist = std.pow(diff_2.x + diff_2.y, 0.5);
-
-  return std.mix(
-    gridInnerColor,
-    gridColor,
-    std.exp(d.f32(-5) * dist), // fading color
-  );
-});
-
-const getBall = tgpu.fn(
-  [d.vec3f, d.f32],
-  Ray,
-)((p, t) => {
-  const localP = std.sub(p, ballCenter); // (0,0) is the center to rotate easily
-  const rotMatZ = d.mat4x4f.rotationZ(-t * 0.3);
-  const rotMatX = d.mat4x4f.rotationX(-t * 0.7);
-  const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
-
-  // breathing effect
-  const radius = 3 + std.sin(t);
-
-  // perlin noise
-  const noise = perlin3d.sample(std.add(rotatedP, t));
-
-  // calculate distances and assign colors
-  return Ray({
-    dist: sdSphere(rotatedP, radius) + noise, // center is relative to p
-    color: ballColorBuf.$,
-  });
-});
-
-const shapeUnion = tgpu.fn(
-  [Ray, Ray],
-  Ray,
-)((a, b) => ({
-  color: std.select(a.color, b.color, a.dist > b.dist),
-  dist: std.min(a.dist, b.dist),
-}));
 
 const floorPatternSlot = tgpu.slot(grid);
 
@@ -128,9 +45,9 @@ const getSceneDist = tgpu.fn(
 )((p) => {
   const floor = Ray({
     dist: sdPlane(p, d.vec3f(0, 1, 0), 1), // hardcoded plane location
-    color: floorPatternSlot.$(p.xz),
+    color: floorPatternSlot.$(p.xz, speedPerFrameBuf.$, time.$),
   });
-  const ball = getBall(p, time.$);
+  const ball = getBall(p, ballColorBuf.$, c.ballCenter, time.$);
 
   return shapeUnion(floor, ball);
 });
@@ -141,26 +58,26 @@ const rayMarch = tgpu.fn(
 )((ro, rd) => {
   let dO = d.f32(0);
   const result = Ray({
-    dist: d.f32(MAX_DIST),
+    dist: d.f32(c.MAX_DIST),
     color: d.vec3f(0, 1, 0), // green for debug
   });
 
   let bloom = d.vec3f(0, 0, 0);
 
-  for (let i = 0; i < MAX_STEPS; i++) {
+  for (let i = 0; i < c.MAX_STEPS; i++) {
     const p = std.add(ro, std.mul(rd, dO));
     const scene = getSceneDist(p);
-    const ballDist = getBall(p, time.$);
+    const ballDist = getBall(p, ballColorBuf.$, c.ballCenter, time.$);
     bloom = std.add(bloom, std.mul(ballColorBuf.$, std.exp(-ballDist.dist)));
     dO += scene.dist;
 
-    if (dO > MAX_DIST) {
-      result.dist = MAX_DIST;
+    if (dO > c.MAX_DIST) {
+      result.dist = c.MAX_DIST;
       result.color = d.vec3f(0, 1, 0); // also green for debug
       break;
     }
 
-    if (scene.dist < SURF_DIST) {
+    if (scene.dist < c.SURF_DIST) {
       result.dist = dO;
       result.color = scene.color;
       break;
@@ -198,12 +115,12 @@ const fragmentMain = tgpu["~unstable"].fragmentFn({
   const march = rayMarch(ro, rd);
 
   // fog calculations
-  const fog = std.min(march.ray.dist / MAX_DIST, 1);
+  const fog = std.min(march.ray.dist / c.MAX_DIST, 1);
 
   return std.mix(
     d.vec4f(march.bloom, 1),
-    std.mix(d.vec4f(march.ray.color, 1), skyColor, fog),
-    0.87, // this should not be hardcoded
+    std.mix(d.vec4f(march.ray.color, 1), c.skyColor, fog),
+    0.87, // this should not be hardcoded (but does just fine)
   );
 });
 
