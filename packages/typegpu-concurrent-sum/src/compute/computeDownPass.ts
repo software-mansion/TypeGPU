@@ -21,7 +21,7 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
 
   const totalInputLength = layout.$.inputArray.length;
 
-  // Copy input data to shared memory
+  // copy input data to shared memory
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
   if (idx0 < totalInputLength) {
@@ -32,20 +32,19 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
   }
   std.workgroupBarrier();
 
-  // // Down-sweep phase
-  // Set the last element to 0 (identity element for the scan)
+  // set the identity element for the scan to 0
   if (lid.x === 0) {
     sharedMem.value[segmentLength - 1] = 0;
   }
   std.workgroupBarrier();
 
-  // Down-sweep phase (distribution)
+  // down-sweep phase (distribution)
   for (let k = d.u32(0); k < log2Length; k++) {
     const dLevel = log2Length - 1 - k;
     const windowSize = d.u32(1 << (dLevel + 1)); // window size == step
     const offset = d.u32(1 << dLevel); // offset for the window
 
-    if (lid.x < (segmentLength / windowSize)) {
+    if (lid.x < d.u32(segmentLength / windowSize)) {
       const i = lid.x * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
@@ -58,7 +57,7 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
     std.workgroupBarrier();
   }
 
-  // copy back to work array
+  // copy back to output array
   if (idx0 < d.u32(totalInputLength)) {
     layout.$.outputArray[idx0] = sharedMem.value[lid.x * 2] as number;
   }

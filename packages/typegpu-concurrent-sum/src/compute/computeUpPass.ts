@@ -25,7 +25,7 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
 
   const totalInputLength = layout.$.inputArray.length;
 
-  // Copy input data to shared memory
+  // copy input data to shared memory
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
   if (idx0 < totalInputLength) {
@@ -36,12 +36,12 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   }
   std.workgroupBarrier();
 
-  // Up-sweep phase (reduce)
+  // up-sweep phase (reduce)
   for (let dLevel = d.u32(0); dLevel < log2Length; dLevel++) {
     const windowSize = d.u32(1 << (dLevel + 1)); // window size == step
     const offset = d.u32(1 << dLevel); // offset for the window
 
-    if (lid.x < (segmentLength / windowSize)) { // workgroup length
+    if (lid.x < d.u32(segmentLength / windowSize)) { // workgroup length
       const i = lid.x * windowSize;
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
@@ -56,7 +56,6 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   if (lid.x === 0) {
     layout.$.sumsArray[wid.x] = sharedMem.value[segmentLength - 1] as number;
   }
-  std.workgroupBarrier();
 
   // copy back to work array
   if (idx0 < totalInputLength) {

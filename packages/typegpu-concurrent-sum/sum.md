@@ -45,21 +45,44 @@ function recurence(arr){
 }
 ```
 
-
-
 ## Caching
+
 ```ts
-  const bufferCache = new Map<string, TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag>();
-  
-  function getOrCreateBuffer(size: number, purpose: string): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
-    const key = `${size}-${purpose}`;
-    if (bufferCache.has(key)) {
-      return bufferCache.get(key)!;
-    }
-    
-    const buffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-    bufferCache.set(key, buffer);
-    console.log("creating buffer")
-    return buffer;
+const bufferCache = new Map<
+  string,
+  TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag
+>();
+
+function getOrCreateBuffer(
+  size: number,
+  purpose: string,
+): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
+  const key = `${size}-${purpose}`;
+  if (bufferCache.has(key)) {
+    return bufferCache.get(key)!;
   }
+
+  const buffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+  bufferCache.set(key, buffer);
+  console.log('creating buffer');
+  return buffer;
+}
+```
+
+### Object impl
+
+```ts
+const cahce = {
+  buffers: {
+    b1: root.createBuffer(d.arrayOf(d.u32, inputBuffer.dataType.elementCount))
+      .$usage('storage'),
+    b2: root.createBuffer(d.arrayOf(d.u32, inputBuffer.dataType.elementCount))
+      .$usage('storage'),
+    b3: root.createBuffer(d.arrayOf(d.u32, inputBuffer.dataType.elementCount))
+      .$usage('storage'),
+  },
+  // get bufferOne() {
+  //     this.buffers['bufferOne'] ??= this.createBuffer();
+  // },
+};
 ```

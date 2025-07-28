@@ -26,6 +26,7 @@ button.addEventListener('click', async () => {
   button.disabled = true;
 
   const arraySizes = [6092137, 2 ** 20, 2 ** 22];
+  // const arraySizes = [2**12];
   const results = document.createElement('div');
   results.style.marginTop = '1em';
   button.insertAdjacentElement('afterend', results);

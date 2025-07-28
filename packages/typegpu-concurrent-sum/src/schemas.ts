@@ -3,7 +3,6 @@ import * as d from 'typegpu/data';
 
 export const itemsPerThread = 2;
 export const workgroupSize = 256;
-export const fixedArrayLength = 2 ** 16;
 export const maxDispatchSize = 65535;
 
 export const upSweepLayout = tgpu.bindGroupLayout({
