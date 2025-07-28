@@ -333,4 +333,100 @@ describe('indents', () => {
       }"
     `);
   });
+
+  it('should handle complex shader with a variety of nested constructs', () => {
+    const UniBoid = d.struct({
+      position: d.size(32, d.vec4f),
+      velocity: d.align(64, d.vec4f),
+    });
+
+    const layout = tgpu.bindGroupLayout({
+      boids: { uniform: UniBoid },
+      myCamera: { externalTexture: {} },
+      smoothRender: { texture: 'float', multisampled: true },
+      sampler: { sampler: 'filtering', multisampled: true },
+    });
+
+    const someVertex = tgpu['~unstable'].vertexFn({
+      in: {
+        vertexIndex: d.builtin.vertexIndex,
+        position: d.vec4f,
+        something: d.vec4f,
+      },
+      out: {
+        position: d.builtin.position,
+        uv: d.interpolate('flat, either', d.vec2f),
+      },
+    })((input) => {
+      const uniBoid = layout.$.boids;
+      for (let i = 0; i < std.floor(std.sin(123)); i++) {
+        const someVal = std.textureSample(
+          layout.$.smoothRender,
+          layout.$.sampler,
+          d.vec2f(0, 0),
+        );
+        if (someVal.x > 0.5) {
+          const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+        } else {
+          while (std.allEq(d.vec2f(1, 2), d.vec2f(1, 2))) {
+            const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+            if (newPos.x > 0) {
+              const evenNewer = std.add(newPos, input.position);
+            }
+          }
+        }
+      }
+      return {
+        position: input.position,
+        uv: input.something.xy,
+      };
+    });
+
+    const code = tgpu.resolve({
+      externals: { someVertex },
+    });
+    expect(code).toMatchInlineSnapshot(`
+      "
+      struct someVertex_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+        @location(0) position: vec4f,
+        @location(1) something: vec4f,
+      }
+
+      struct someVertex_Output_2 {
+        @builtin(position) position: vec4f,
+        @location(0) @interpolate(flat, either) uv: vec2f,
+      }
+
+      struct UniBoid_4 {
+        @size(32) position: vec4f,
+        @align(64) velocity: vec4f,
+      }
+
+      @group(0) @binding(0) var<uniform> boids_3: UniBoid_4;
+
+      @group(0) @binding(2) var smoothRender_5: texture_multisampled_2d<f32>;
+
+      @group(0) @binding(3) var sampler_6: sampler;
+
+      @vertex fn someVertex_0(input: someVertex_Input_1) -> someVertex_Output_2 {
+        var uniBoid = boids_3;
+        for (var i = 0; (i < floor(sin(123))); i++) {
+          var someVal = textureSample(smoothRender_5, sampler_6, vec2f(0, 0));
+          if ((someVal.x > 0.5)) {
+            var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+          }
+          else {
+            while (all(vec2f(1, 2) == vec2f(1, 2))) {
+              var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+              if ((newPos.x > 0)) {
+                var evenNewer = (newPos + input.position);
+              }
+            }
+          }
+        }
+        return someVertex_Output_2(input.position, input.something.xy);
+      }"
+    `);
+  });
 });
