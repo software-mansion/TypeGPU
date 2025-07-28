@@ -1,7 +1,7 @@
 import tgpu from "typegpu";
 import * as d from "typegpu/data";
 import * as std from "typegpu/std";
-import { sdSphere, sdPlane } from "@typegpu/sdf";
+import { sdPlane } from "@typegpu/sdf";
 import { perlin3d } from "@typegpu/noise";
 
 import { grid, circles } from "./floor";
@@ -73,7 +73,6 @@ const rayMarch = tgpu.fn(
 
     if (dO > c.MAX_DIST) {
       result.dist = c.MAX_DIST;
-      result.color = d.vec3f(0, 1, 0); // also green for debug
       break;
     }
 
@@ -114,12 +113,16 @@ const fragmentMain = tgpu["~unstable"].fragmentFn({
   // marching
   const march = rayMarch(ro, rd);
 
+  // sky gradient
+  const y = std.add(ro, std.mul(rd, march.ray.dist)).y - 2; // camera at level 2
+  const sky = std.mix(c.skyColor1, c.skyColor2, y / c.MAX_DIST);
+
   // fog calculations
   const fog = std.min(march.ray.dist / c.MAX_DIST, 1);
 
   return std.mix(
     d.vec4f(march.bloom, 1),
-    std.mix(d.vec4f(march.ray.color, 1), c.skyColor, fog),
+    std.mix(d.vec4f(march.ray.color, 1), sky, fog),
     0.87, // this should not be hardcoded (but does just fine)
   );
 });
