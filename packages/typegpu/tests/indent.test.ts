@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
-// import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('indents', () => {
   it('should indent sanely', () => {
