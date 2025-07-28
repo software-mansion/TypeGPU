@@ -53,7 +53,7 @@ describe('div', () => {
   it('computes quotient of a number and vecNi', () => {
     expect(div(1, vec2i(1, 2))).toStrictEqual(vec2i(1, 0));
     expect(div(2, vec3i(1, 2, 3))).toStrictEqual(vec3i(2, 1, 0));
-    expect(div(3, vec4i(5, 6, 7, 8))).toStrictEqual(vec4i(0, 0, 0, 0));
+    expect(div(3, vec4i(5, 6, 7, 8))).toStrictEqual(vec4i());
   });
 
   it('computes quotient of vecNh and vecNh', () => {
