@@ -462,8 +462,6 @@ describe('tgpu resolveWithContext', () => {
         `),
     );
 
-    console.log(configSpy.mock.lastCall?.[0]);
-
     // verify resolveWithContext::config impl is being called
     expect(configSpy).toHaveBeenCalled();
     expect(configSpy).toHaveBeenCalledTimes(1);
