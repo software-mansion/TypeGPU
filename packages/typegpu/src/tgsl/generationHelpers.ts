@@ -484,7 +484,7 @@ export type GenerationCtx = ResolutionCtx & {
   readonly callStack: unknown[];
   indent(): string;
   dedent(): string;
-  withResetLevel<T>(callback: () => T): T;
+  withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;

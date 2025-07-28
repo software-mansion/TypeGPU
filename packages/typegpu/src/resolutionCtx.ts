@@ -365,7 +365,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.dedent();
   }
 
-  withResetLevel<T>(callback: () => T): T {
+  withResetIndentLevel<T>(callback: () => T): T {
     return this._indentController.withResetLevel(callback);
   }
 
@@ -400,10 +400,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
-      return this._indentController.withResetLevel(() => ({
+      return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
         body: generateFunction(this, options.body),
-      }));
+      };
     } finally {
       this._itemStateStack.popFunctionScope();
     }

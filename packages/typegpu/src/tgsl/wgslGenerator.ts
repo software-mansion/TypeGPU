@@ -451,7 +451,11 @@ export function generateExpression(
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
         ...convertedResources,
       ) as Snippet;
-      return snip(ctx.resolve(fnRes.value), fnRes.dataType);
+      // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+      return snip(
+        ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
+        fnRes.dataType,
+      );
     } catch (error) {
       throw new ResolutionError(error, [{
         toString: () => getName(id.value),
@@ -694,13 +698,14 @@ ${ctx.pre}else ${alternate}`;
   if (statement[0] === NODE.for) {
     const [_, init, condition, update, body] = statement;
 
-    const [initStatement, conditionExpr, updateStatement] = ctx.withResetLevel(
-      () => [
-        init ? generateStatement(ctx, init) : undefined,
-        condition ? generateExpression(ctx, condition) : undefined,
-        update ? generateStatement(ctx, update) : undefined,
-      ],
-    );
+    const [initStatement, conditionExpr, updateStatement] = ctx
+      .withResetIndentLevel(
+        () => [
+          init ? generateStatement(ctx, init) : undefined,
+          condition ? generateExpression(ctx, condition) : undefined,
+          update ? generateStatement(ctx, update) : undefined,
+        ],
+      );
 
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
 
