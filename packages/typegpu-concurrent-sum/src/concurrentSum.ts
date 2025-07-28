@@ -42,7 +42,7 @@ export async function currentSum(
   ): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
     const itemsPerWorkgroup = workgroupSize * 2;
     depthCount++; //remove
-    console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`); //remove
+    // console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`); //remove
 
     // Up-pass
     const outputBuffer = cache.pop();

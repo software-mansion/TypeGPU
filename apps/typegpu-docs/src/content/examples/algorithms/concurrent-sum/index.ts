@@ -55,8 +55,8 @@ button.addEventListener('click', async () => {
         `<strong>Error:</strong> Failed to execute currentSum for array size ${size}.<br>`;
       continue;
     }
-    const gpuResult = await sumResult.read();
     const gpuEndTime = performance.now();
+    const gpuResult = await sumResult.read();
     const gpuTime = gpuEndTime - gpuStartTime;
 
     const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
