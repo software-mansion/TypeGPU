@@ -118,7 +118,7 @@ describe('indents', () => {
       }
 
       fn main_0() {
-        for ( var i = 0; (i < 100); i++) {
+        for (var i = 0; (i < 100); i++) {
           var particle = systemData_1.particles[i];
           systemData_1.particles[i] = updateParicle_4(particle, systemData_1.gravity, systemData_1.deltaTime);
         }
@@ -246,7 +246,7 @@ describe('indents', () => {
 
       fn main_0() {
         incrementCouner_1();
-        for ( var i = 0; (i < 100); i++) {
+        for (var i = 0; (i < 100); i++) {
           var particle = systemData_3.particles[i];
           systemData_3.particles[i] = updateParticle_7(particle, systemData_3.gravity, systemData_3.deltaTime);
         }
@@ -306,6 +306,9 @@ describe('indents', () => {
       while (iterations < 10) {
         particle.position = std.add(particle.position, particle.velocity);
         iterations += 1;
+        while (particle.position.x < 0) {
+          particle.position = std.add(particle.position, gravity);
+        }
       }
       return particle;
     });
@@ -323,6 +326,9 @@ describe('indents', () => {
         while ((iterations < 10)) {
           particle.position = (particle.position + particle.velocity);
           iterations += 1;
+          while ((particle.position.x < 0)) {
+            particle.position = (particle.position + gravity);
+          }
         }
         return particle;
       }"

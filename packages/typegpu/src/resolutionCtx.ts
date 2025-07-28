@@ -365,6 +365,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.dedent();
   }
 
+  withResetLevel<T>(callback: () => T): T {
+    return this._indentController.withResetLevel(callback);
+  }
+
   getById(id: string): Snippet | null {
     const item = this._itemStateStack.getSnippetById(id);
 

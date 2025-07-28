@@ -694,12 +694,16 @@ ${ctx.pre}else ${alternate}`;
   if (statement[0] === NODE.for) {
     const [_, init, condition, update, body] = statement;
 
-    const initStatement = init ? generateStatement(ctx, init) : undefined;
-    const initStr = initStatement ? initStatement.slice(0, -1).trim() : '';
+    const [initStatement, conditionExpr, updateStatement] = ctx.withResetLevel(
+      () => [
+        init ? generateStatement(ctx, init) : undefined,
+        condition ? generateExpression(ctx, condition) : undefined,
+        update ? generateStatement(ctx, update) : undefined,
+      ],
+    );
 
-    const conditionExpr = condition
-      ? generateExpression(ctx, condition)
-      : undefined;
+    const initStr = initStatement ? initStatement.slice(0, -1) : '';
+
     let condSnippet = conditionExpr;
     if (conditionExpr) {
       const converted = convertToCommonType(ctx, [conditionExpr], [bool]);
@@ -707,17 +711,12 @@ ${ctx.pre}else ${alternate}`;
         [condSnippet] = converted;
       }
     }
-    const conditionStr = condSnippet
-      ? ctx.resolve(condSnippet.value).trim()
-      : '';
+    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
-    const updateStatement = update ? generateStatement(ctx, update) : undefined;
-    const updateStr = updateStatement
-      ? updateStatement.slice(0, -1).trim()
-      : '';
+    const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
     const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
-    return `${ctx.pre}for ( ${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
+    return `${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {
