@@ -8,6 +8,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $validUniformSchema,
 } from './symbols.ts';
 
 /**
@@ -72,19 +73,35 @@ export type MemIdentityRecord<
   [Key in keyof T]: MemIdentity<T[Key]>;
 };
 
+export type IsInvalidStorageSchema<T> = [T] extends
+  [{ readonly [$invalidStorageSchema]: string }] ? true : false;
+
+export type IsInvalidUniformSchema<T> = [T] extends
+  [{ readonly [$validUniformSchema]: true }] ? false
+  : [T] extends [{ readonly [$invalidUniformSchema]: string }] ? true
+  : false;
+
+export type IsInvalidVertexSchema<T> = [T] extends
+  [{ readonly [$invalidVertexSchema]: string }] ? true : false;
+
+/**
+ * TODO: Index schemas can (probably) just be either array<u16> or array<u32>, but best verify with Konrad
+ */
+export type IsInvalidIndexSchema<T> = [T] extends [WgslArray<U16>] ? false
+  : [T] extends [{ readonly [$invalidIndexSchema]: string }] ? true
+  : false;
+
 /**
  * Checks if a schema cannot be used in any type of buffer
  */
 export type IsInvalidBufferSchema<T> = [
   (
-    & ([T] extends [{ readonly [$invalidStorageSchema]: string }] ? 1 : 0)
-    & ([T] extends [{ readonly [$invalidUniformSchema]: string }] ? 1 : 0)
-    & ([T] extends [{ readonly [$invalidVertexSchema]: string }] ? 1 : 0)
-    & ([T] extends [WgslArray<U16>] ? 0
-      : [T] extends [{ readonly [$invalidIndexSchema]: string }] ? 1
-      : 0)
+    & IsInvalidStorageSchema<T>
+    & IsInvalidUniformSchema<T>
+    & IsInvalidVertexSchema<T>
+    & IsInvalidIndexSchema<T>
   ),
-] extends [0] ? false : true;
+] extends [false] ? false : true;
 
 export type ExtractInvalidStorageSchemaError<T, TPrefix extends string = ''> =
   [T] extends [{ readonly [$invalidStorageSchema]: string }]

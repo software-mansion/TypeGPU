@@ -1,11 +1,10 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
 import * as d from '../src/data/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
-import type { ValidateBufferSchema } from '../src/core/root/rootTypes.ts';
-import type { RestrictUsages } from '../src/core/buffer/buffer.ts';
 import type {
   ExtractInvalidStorageSchemaError,
   IsInvalidBufferSchema,
@@ -518,7 +517,9 @@ describe('TgpuBuffer', () => {
   it('should only allow index usage for valid u16 schemas', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
 
-    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<['index']>();
+    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
+      ['index', ...'index'[]]
+    >();
   });
 
   it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({ root }) => {
@@ -526,7 +527,10 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(validSchema);
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      ('index' | 'storage' | 'uniform' | 'vertex')[]
+      [
+        'index' | 'storage' | 'uniform' | 'vertex',
+        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+      ]
     >();
   });
 
@@ -536,7 +540,10 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(validSchema);
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      ('index' | 'storage' | 'uniform' | 'vertex')[]
+      [
+        'index' | 'storage' | 'uniform' | 'vertex',
+        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+      ]
     >();
   });
 });
@@ -631,16 +638,37 @@ describe('ValidateBufferSchema', () => {
     >();
   });
 
-  it('can be used to wrap `createBuffer` in a generic function', ({ root }) => {
+  it('can be used to wrap `createBuffer` in a generic function (schema and usages customizable)', ({ root }) => {
     function createMyBuffer<T extends d.AnyData>(
       schema: ValidateBufferSchema<T>,
-      usages: RestrictUsages<T>,
+      usages: [ValidUsagesFor<T>, ...ValidUsagesFor<T>[]],
     ) {
       const buffer = root.createBuffer(schema).$usage(...usages);
       return buffer;
     }
 
-    // @ts-expect-error
+    // Invalid
+    // @ts-expect-error: Cannot create buffers with bools in them
     createMyBuffer(d.bool, ['']);
+    // @ts-expect-error: Cannot create uniform buffers with vertex formats in them
+    createMyBuffer(d.unorm8x4, ['uniform']);
+
+    // Valid
+    createMyBuffer(d.f32, ['uniform']);
+    createMyBuffer(d.unorm8x4, ['vertex']);
+  });
+
+  it('can be used to wrap `createBuffer` in a generic function that accepts only structs, and does not validate', ({ root }) => {
+    function createStructUniform<T extends d.WgslStruct>(schema: T) {
+      // In situations where schema is generic, we want usage validation to be lenient
+      const buffer = root.createBuffer(schema).$usage('uniform');
+      return buffer;
+    }
+
+    // Accepts a specific struct
+    createStructUniform(d.struct({ a: d.f32 }));
+    // Accepts any struct
+    const anyStruct = undefined as unknown as d.WgslStruct;
+    createStructUniform(anyStruct);
   });
 });

@@ -6,12 +6,20 @@ import {
 import { readData, writeData } from '../../data/dataIO.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
+import type {
+  Infer,
+  InferPartial,
+  IsInvalidIndexSchema,
+  IsInvalidStorageSchema,
+  IsInvalidUniformSchema,
+  IsInvalidVertexSchema,
+  MemIdentity,
+} from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
@@ -25,7 +33,7 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
-import type { AnyData, UnwrapDecorated } from '../../data/dataTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -77,17 +85,6 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
-type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
-  {
-    readonly type: 'array';
-    readonly elementType: infer TElement;
-  }
-  ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' | 'u16' } ? true
-    : false
-  : false
-  : false;
-
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
@@ -102,7 +99,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   usableAsVertex: boolean;
   usableAsIndex: boolean;
 
-  $usage<T extends RestrictUsages<TData>>(
+  $usage<T extends [ValidUsagesFor<TData>, ...ValidUsagesFor<TData>[]]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
@@ -155,29 +152,11 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // --------------
 const endianness = getSystemEndianness();
 
-type IsArrayOfU32<TData extends BaseData> = UnwrapDecorated<TData> extends {
-  readonly type: 'array';
-  readonly elementType: infer TElement;
-}
-  ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' } ? true
-    : false
-  : false
-  : false;
-
-type IsWgslLiteral<TData extends BaseData> = TData extends {
-  readonly type: WgslTypeLiteral;
-} ? true
-  : false;
-
-export type RestrictUsages<TData extends BaseData> = string extends
-  TData['type'] ? ('uniform' | 'storage' | 'vertex' | 'index')[]
-  : IsIndexCompatible<TData> extends true
-    ? IsArrayOfU32<TData> extends true
-      ? ('uniform' | 'storage' | 'vertex' | 'index')[]
-    : ['index']
-  : IsWgslLiteral<TData> extends true ? ('uniform' | 'storage' | 'vertex')[]
-  : ['vertex'];
+export type ValidUsagesFor<T> =
+  | (IsInvalidStorageSchema<T> extends true ? never : 'storage')
+  | (IsInvalidUniformSchema<T> extends true ? never : 'uniform')
+  | (IsInvalidVertexSchema<T> extends true ? never : 'vertex')
+  | (IsInvalidIndexSchema<T> extends true ? never : 'index');
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly [$internal] = true;

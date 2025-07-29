@@ -10,6 +10,7 @@ import type {
   InferPartial,
   InferPartialRecord,
   InferRecord,
+  IsInvalidUniformSchema,
   MemIdentity,
   MemIdentityRecord,
 } from '../shared/repr.ts';
@@ -22,6 +23,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $validUniformSchema,
 } from '../shared/symbols.ts';
 import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
@@ -1285,7 +1287,8 @@ type Some = ['array' | 'something'] extends ['array'] ? true : false;
  * the `byteAlignment` requirement of its members.
  */
 export interface WgslStruct<
-  TProps extends Record<string, BaseData> = Record<string, BaseData>,
+  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
+  TProps extends Record<string, BaseData> = any,
 > extends BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   (): Prettify<InferRecord<TProps>>;
@@ -1336,6 +1339,9 @@ export interface WgslStruct<
     }[keyof TProps],
     undefined
   >;
+  readonly [$validUniformSchema]: [
+    { [K in keyof TProps]: IsInvalidUniformSchema<TProps[K]> }[keyof TProps],
+  ] extends true ? true : false;
   // ---
 }
 

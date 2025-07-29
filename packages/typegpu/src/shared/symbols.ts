@@ -76,3 +76,10 @@ export const $invalidVertexSchema = Symbol(
 export const $invalidIndexSchema = Symbol(
   `typegpu:${version}:$invalidIndexSchema`,
 );
+
+/**
+ * Type token, signaling that a schema CAN be used in a uniform buffer.
+ */
+export const $validUniformSchema = Symbol(
+  `typegpu:${version}:$validUniformSchema`,
+);
