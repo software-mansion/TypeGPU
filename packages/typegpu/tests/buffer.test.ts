@@ -30,7 +30,7 @@ function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
 }
 
 describe('TgpuBuffer', () => {
-  it('should be namable', ({ root, device }) => {
+  it('should be namable', ({ root }) => {
     const buffer = root.createBuffer(d.u32).$name('myBuffer');
 
     const rawBuffer = root.unwrap(buffer);

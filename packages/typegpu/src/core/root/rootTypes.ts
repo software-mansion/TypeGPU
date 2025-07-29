@@ -422,7 +422,8 @@ export interface TgpuRoot extends Unwrapper {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
-    initial?: Infer<TData> | undefined,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: Infer<NoInfer<TData>> | undefined,
   ): TgpuBuffer<TData>;
 
   /**
@@ -435,7 +436,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createBuffer<TData extends AnyData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
@@ -448,7 +449,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createUniform<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     initial?: Infer<TData>,
   ): TgpuUniform<TData>;
 
@@ -461,7 +462,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createUniform<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuUniform<TData>;
 
@@ -474,7 +475,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createMutable<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     initial?: Infer<TData>,
   ): TgpuMutable<TData>;
 
@@ -487,7 +488,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createMutable<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuMutable<TData>;
 
@@ -500,7 +501,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createReadonly<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     initial?: Infer<TData>,
   ): TgpuReadonly<TData>;
 
@@ -513,7 +514,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createReadonly<TData extends AnyWgslData>(
-    typeSchema: TData,
+    typeSchema: ValidateBufferSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuReadonly<TData>;
 
