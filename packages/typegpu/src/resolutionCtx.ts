@@ -1,4 +1,6 @@
 import { resolveData } from './core/resolve/resolveData.ts';
+import { ConfigurableImpl } from './core/root/configurableImpl.ts';
+import type { Configurable } from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -286,6 +288,16 @@ export class IndentController {
     this.identLevel--;
     return this.pre;
   }
+
+  withResetLevel<T>(callback: () => T): T {
+    const savedLevel = this.identLevel;
+    this.identLevel = 0;
+    try {
+      return callback();
+    } finally {
+      this.identLevel = savedLevel;
+    }
+  }
 }
 
 interface FixedBindingConfig {
@@ -353,6 +365,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  withResetIndentLevel<T>(callback: () => T): T {
+    return this._indentController.withResetLevel(callback);
   }
 
   getById(id: string): Snippet | null {
@@ -600,6 +616,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
+
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
@@ -682,9 +699,15 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
+  config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
-  let code = ctx.resolve(item);
+  let code = config
+    ? ctx.withSlots(
+      config(new ConfigurableImpl([])).bindings,
+      () => ctx.resolve(item),
+    )
+    : ctx.resolve(item);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
@@ -749,8 +772,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+    ? `(${argList}) -> ${getAttributesString(returnType)}${
       ctx.resolve(returnType)
-    }`
-    : `(${argList})`;
+    } `
+    : `(${argList}) `;
 }

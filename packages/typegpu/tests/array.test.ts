@@ -290,7 +290,7 @@ describe('array.length', () => {
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
           @group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-  
+
           fn testFn() -> i32 {
             return 5;
           }
@@ -314,7 +314,7 @@ describe('array.length', () => {
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
           @group(0) @binding(0) var<storage, read_write> values: array<f32>;
-  
+
           fn testFn() -> u32 {
             return arrayLength(&values);
           }
