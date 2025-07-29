@@ -288,6 +288,16 @@ export class IndentController {
     this.identLevel--;
     return this.pre;
   }
+
+  withResetLevel<T>(callback: () => T): T {
+    const savedLevel = this.identLevel;
+    this.identLevel = 0;
+    try {
+      return callback();
+    } finally {
+      this.identLevel = savedLevel;
+    }
+  }
 }
 
 interface FixedBindingConfig {
@@ -355,6 +365,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  withResetIndentLevel<T>(callback: () => T): T {
+    return this._indentController.withResetLevel(callback);
   }
 
   getById(id: string): Snippet | null {
@@ -602,6 +616,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
+
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
@@ -754,8 +769,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+    ? `(${argList}) -> ${getAttributesString(returnType)}${
       ctx.resolve(returnType)
-    }`
-    : `(${argList})`;
+    } `
+    : `(${argList}) `;
 }

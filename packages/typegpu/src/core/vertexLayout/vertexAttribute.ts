@@ -1,4 +1,8 @@
-import type { AnyUnstruct, Disarray } from '../../data/dataTypes.ts';
+import type {
+  AnyUnstruct,
+  Disarray,
+  LooseDecorated,
+} from '../../data/dataTypes.ts';
 import type {
   AnyWgslStruct,
   Decorated,
@@ -29,6 +33,7 @@ export type DataToContainedAttribs<T> = T extends AnyWgslStruct | AnyUnstruct
   : T extends { type: keyof KindToDefaultFormatMap }
     ? TgpuVertexAttrib<KindToDefaultFormatMap[T['type']]>
   : T extends Decorated<infer TInner> ? DataToContainedAttribs<TInner>
+  : T extends LooseDecorated<infer TInner> ? DataToContainedAttribs<TInner>
   : never;
 
 /**
