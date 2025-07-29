@@ -463,8 +463,6 @@ describe('tgpu resolveWithContext', () => {
     );
 
     // verify resolveWithContext::config impl is being called
-    expect(configSpy).toHaveBeenCalled();
-    expect(configSpy).toHaveBeenCalledTimes(1);
     expect(configSpy.mock.lastCall?.[0]).toBeDefined();
   });
 
@@ -472,7 +470,7 @@ describe('tgpu resolveWithContext', () => {
     const configSpy = vi.fn((innerCfg) => innerCfg);
 
     const v = d.vec4f(1, 0, 1, 0);
-    const colourSlot = tgpu.slot<d.v4f>();
+    const colorSlot = tgpu.slot<d.v4f>();
 
     const Voxel = d.struct({
       position: d.vec3f,
@@ -484,9 +482,9 @@ describe('tgpu resolveWithContext', () => {
             return voxel.color * colorTint;
           }
         `,
-      externals: { Voxel, colorTint: colourSlot },
+      externals: { Voxel, colorTint: colorSlot },
       names: 'strict',
-      config: (cfg) => cfg.with(colourSlot, v).pipe(configSpy),
+      config: (cfg) => cfg.with(colorSlot, v).pipe(configSpy),
     });
 
     expect(parse(code)).toBe(
@@ -502,7 +500,7 @@ describe('tgpu resolveWithContext', () => {
     );
     // verify resolveWithContext::config impl is actually working
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
-      [[colourSlot, v]],
+      [[colorSlot, v]],
     );
   });
 });

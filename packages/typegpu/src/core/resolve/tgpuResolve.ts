@@ -25,7 +25,7 @@ export interface TgpuResolveOptions {
   /**
    * A function to configure the resolution context.
    */
-  config?: (cfg: Configurable) => Configurable;
+  config?: ((cfg: Configurable) => Configurable) | undefined;
 }
 
 /**
