@@ -635,7 +635,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (schema && isWgslStruct(schema)) {
       return `${this.resolve(schema)}(${
         Object.entries(schema.propTypes).map(([key, type_]) =>
-          this.resolveValue((value as Infer<typeof schema>)[key], type_)
+          this.resolveValue(
+            (value as Infer<typeof schema>)[key],
+            type_ as BaseData,
+          )
         )
       })`;
     }

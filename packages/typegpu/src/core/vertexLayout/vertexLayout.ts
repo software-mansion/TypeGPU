@@ -90,21 +90,23 @@ function dataToContainedAttribs<
     let memberOffset = offset;
 
     return Object.fromEntries(
-      Object.entries(data.propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, alignmentOf(value));
-        const attrib = [
-          key,
-          dataToContainedAttribs(
-            layout,
-            value,
-            memberOffset,
-            customLocationMap,
+      Object.entries(data.propTypes as Record<string, BaseData>).map(
+        ([key, value]) => {
+          memberOffset = roundUp(memberOffset, alignmentOf(value));
+          const attrib = [
             key,
-          ),
-        ];
-        memberOffset += sizeOf(value);
-        return attrib;
-      }),
+            dataToContainedAttribs(
+              layout,
+              value,
+              memberOffset,
+              customLocationMap,
+              key,
+            ),
+          ];
+          memberOffset += sizeOf(value);
+          return attrib;
+        },
+      ),
     ) as DataToContainedAttribs<TData>;
   }
 

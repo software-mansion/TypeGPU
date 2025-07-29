@@ -129,7 +129,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   ctx.addDeclaration(`
 struct ${id} {
 ${
-    Object.entries(struct.propTypes)
+    Object.entries(struct.propTypes as Record<string, BaseData>)
       .map((prop) => resolveStructProperty(ctx, prop))
       .join('')
   }\

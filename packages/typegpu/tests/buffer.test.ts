@@ -649,9 +649,9 @@ describe('ValidateBufferSchema', () => {
 
     // Invalid
     // @ts-expect-error: Cannot create buffers with bools in them
-    createMyBuffer(d.bool, ['']);
+    (() => createMyBuffer(d.bool, ['']));
     // @ts-expect-error: Cannot create uniform buffers with vertex formats in them
-    createMyBuffer(d.unorm8x4, ['uniform']);
+    (() => createMyBuffer(d.unorm8x4, ['uniform']));
 
     // Valid
     createMyBuffer(d.f32, ['uniform']);
@@ -668,7 +668,7 @@ describe('ValidateBufferSchema', () => {
     // Accepts a specific struct
     createStructUniform(d.struct({ a: d.f32 }));
     // Accepts any struct
-    const anyStruct = undefined as unknown as d.WgslStruct;
+    const anyStruct = d.struct({ foo: d.f32 }) as unknown as d.WgslStruct;
     createStructUniform(anyStruct);
   });
 });

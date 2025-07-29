@@ -186,8 +186,8 @@ const dataWriters = {
     alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(output, alignmentOf(property));
-      writeData(output, property, value[key] as wgsl.BaseData);
+      alignIO(output, alignmentOf(property as wgsl.BaseData));
+      writeData(output, property as wgsl.BaseData, value[key]);
     }
 
     alignIO(output, alignment);
@@ -630,8 +630,8 @@ const dataReaders = {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(input, alignmentOf(property));
-      result[key] = readData(input, property);
+      alignIO(input, alignmentOf(property as wgsl.BaseData));
+      result[key] = readData(input, property as wgsl.BaseData);
     }
 
     alignIO(input, alignment);

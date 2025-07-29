@@ -21,7 +21,10 @@ import type {
   MemIdentity,
 } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
+import type {
+  Prettify,
+  UnionToIntersection,
+} from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
@@ -85,6 +88,19 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
+/**
+ * Done as an object to later Prettify it
+ */
+type InnerValidUsagesFor<T> = {
+  usage:
+    | (IsInvalidStorageSchema<T> extends true ? never : 'storage')
+    | (IsInvalidUniformSchema<T> extends true ? never : 'uniform')
+    | (IsInvalidVertexSchema<T> extends true ? never : 'vertex')
+    | (IsInvalidIndexSchema<T> extends true ? never : 'index');
+};
+
+export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
@@ -99,7 +115,12 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   usableAsVertex: boolean;
   usableAsIndex: boolean;
 
-  $usage<T extends [ValidUsagesFor<TData>, ...ValidUsagesFor<TData>[]]>(
+  $usage<
+    T extends [
+      Prettify<InnerValidUsagesFor<TData>>['usage'],
+      ...Prettify<InnerValidUsagesFor<TData>>['usage'][],
+    ],
+  >(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
@@ -151,12 +172,6 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 const endianness = getSystemEndianness();
-
-export type ValidUsagesFor<T> =
-  | (IsInvalidStorageSchema<T> extends true ? never : 'storage')
-  | (IsInvalidUniformSchema<T> extends true ? never : 'uniform')
-  | (IsInvalidVertexSchema<T> extends true ? never : 'vertex')
-  | (IsInvalidIndexSchema<T> extends true ? never : 'index');
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly [$internal] = true;

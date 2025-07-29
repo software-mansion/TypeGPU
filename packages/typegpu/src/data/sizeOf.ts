@@ -82,10 +82,10 @@ function sizeOfStruct(struct: WgslStruct) {
       throw new Error('Only the last property of a struct can be unbounded');
     }
 
-    size = roundUp(size, alignmentOf(property));
-    size += sizeOf(property);
+    size = roundUp(size, alignmentOf(property as BaseData));
+    size += sizeOf(property as BaseData);
 
-    if (Number.isNaN(size) && property.type !== 'array') {
+    if (Number.isNaN(size) && (property as BaseData).type !== 'array') {
       throw new Error('Cannot nest unbounded struct within another struct');
     }
   }
