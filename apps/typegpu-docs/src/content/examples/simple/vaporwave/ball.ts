@@ -1,10 +1,10 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import * as std from "typegpu/std";
-import { perlin3d } from "@typegpu/noise";
-import { sdSphere } from "@typegpu/sdf";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import { perlin3d } from '@typegpu/noise';
+import { sdSphere } from '@typegpu/sdf';
 
-import { Ray } from "./types";
+import { Ray } from './types.ts';
 
 export const getBall = tgpu.fn(
   [d.vec3f, d.vec3f, d.vec3f, d.f32],
