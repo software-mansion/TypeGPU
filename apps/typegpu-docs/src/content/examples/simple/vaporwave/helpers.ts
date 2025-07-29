@@ -1,8 +1,7 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import * as std from "typegpu/std";
+import tgpu from 'typegpu';
+import * as std from 'typegpu/std';
 
-import { Ray } from "./types";
+import { Ray } from './types.ts';
 
 export const shapeUnion = tgpu.fn(
   [Ray, Ray],

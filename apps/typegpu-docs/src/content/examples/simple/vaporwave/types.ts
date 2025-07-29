@@ -1,4 +1,4 @@
-import * as d from "typegpu/data";
+import * as d from 'typegpu/data';
 
 export const Ray = d.struct({
   color: d.vec3f,

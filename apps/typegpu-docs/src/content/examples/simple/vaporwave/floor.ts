@@ -1,8 +1,8 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import * as std from "typegpu/std";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
-import * as c from "./constans";
+import * as c from './constans.ts';
 
 // these will be placed in slot
 export const grid = tgpu.fn(

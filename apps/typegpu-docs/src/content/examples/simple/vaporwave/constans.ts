@@ -1,4 +1,4 @@
-import * as d from "typegpu/data";
+import * as d from 'typegpu/data';
 
 const MAX_STEPS = 1000;
 const MAX_DIST = 19;
@@ -13,14 +13,14 @@ const gridInnerColor = d.vec3f(0, 0, 0);
 const ballCenter = d.vec3f(0, 6, 12);
 
 export {
-  MAX_STEPS,
-  MAX_DIST,
-  SURF_DIST,
+  ballCenter,
   GRID_SEP,
   GRID_TIGHTNESS,
-  skyColor1,
-  skyColor2,
   gridColor,
   gridInnerColor,
-  ballCenter,
+  MAX_DIST,
+  MAX_STEPS,
+  skyColor1,
+  skyColor2,
+  SURF_DIST,
 };

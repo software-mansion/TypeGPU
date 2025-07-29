@@ -1,27 +1,27 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import * as std from "typegpu/std";
-import { sdPlane } from "@typegpu/sdf";
-import { perlin3d } from "@typegpu/noise";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import { sdPlane } from '@typegpu/sdf';
+import { perlin3d } from '@typegpu/noise';
 
-import { grid, circles } from "./floor";
-import * as c from "./constans";
-import { Ray } from "./types";
-import { getBall } from "./ball";
-import { shapeUnion } from "./helpers";
+import { circles, grid } from './floor.ts';
+import * as c from './constans.ts';
+import { Ray } from './types.ts';
+import { getBall } from './ball.ts';
+import { shapeUnion } from './helpers.ts';
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const context = canvas.getContext("webgpu") as GPUCanvasContext;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const root = await tgpu.init({
-  device: { requiredFeatures: ["timestamp-query"] }, // was used to measure performance of static cache of perlin noise
+  device: { requiredFeatures: ['timestamp-query'] }, // was used to measure performance of static cache of perlin noise
 });
 
 context.configure({
   device: root.device,
   format: presentationFormat,
-  alphaMode: "premultiplied",
+  alphaMode: 'premultiplied',
 });
 
 const time = root.createUniform(d.f32);
@@ -86,7 +86,7 @@ const rayMarch = tgpu.fn(
   return { ray: result, bloom };
 });
 
-const vertexMain = tgpu["~unstable"].vertexFn({
+const vertexMain = tgpu['~unstable'].vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -99,7 +99,7 @@ const vertexMain = tgpu["~unstable"].vertexFn({
   };
 });
 
-const fragmentMain = tgpu["~unstable"].fragmentFn({
+const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -132,7 +132,7 @@ const perlinCache = perlin3d.staticCache({
   size: d.vec3u(64),
 });
 
-let renderPipeline = root["~unstable"]
+let renderPipeline = root['~unstable']
   .with(floorPatternSlot, circles)
   .pipe(perlinCache.inject())
   .withVertex(vertexMain, {})
@@ -147,8 +147,8 @@ function run(timestamp: number) {
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      loadOp: "clear",
-      storeOp: "store",
+      loadOp: 'clear',
+      storeOp: 'store',
     })
     .draw(3);
 
@@ -175,26 +175,26 @@ export const controls = {
       speedPerFrameBuf.write(speedPerFrame);
     },
   },
-  "sphere color": {
+  'sphere color': {
     initial: [ballColor.x, ballColor.y, ballColor.z] as const,
     onColorChange: (value: readonly [number, number, number]) => {
       ballColor = d.vec3f(value[0], value[1], value[2]);
       ballColorBuf.write(ballColor);
     },
   },
-  "floor pattern": {
-    initial: "circles",
-    options: ["grid", "circles"],
+  'floor pattern': {
+    initial: 'circles',
+    options: ['grid', 'circles'],
     onSelectChange: (value: string) => {
-      if (value === "grid") {
-        renderPipeline = root["~unstable"]
+      if (value === 'grid') {
+        renderPipeline = root['~unstable']
           .with(floorPatternSlot, grid)
           .pipe(perlinCache.inject())
           .withVertex(vertexMain, {})
           .withFragment(fragmentMain, { format: presentationFormat })
           .createPipeline();
-      } else if (value === "circles") {
-        renderPipeline = root["~unstable"]
+      } else if (value === 'circles') {
+        renderPipeline = root['~unstable']
           .with(floorPatternSlot, circles)
           .pipe(perlinCache.inject())
           .withVertex(vertexMain, {})
