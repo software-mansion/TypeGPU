@@ -1,7 +1,5 @@
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
-  ExtractHostShareable,
-  ExtractNonHostShareable,
   Infer,
   InferGPURecord,
   InferPartial,
@@ -11,8 +9,10 @@ import type {
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
   $memIdent,
-  $notHostShareable,
   $repr,
   $reprPartial,
 } from '../shared/symbols.ts';
@@ -53,8 +53,12 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
   readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
-  readonly [$notHostShareable]:
-    'Disarrays are not host-shareable, use arrays instead.';
+  readonly [$invalidStorageSchema]:
+    'Disarrays are not host-shareable, use arrays instead';
+  readonly [$invalidUniformSchema]:
+    'Disarrays are not host-shareable, use arrays instead';
+  readonly [$invalidIndexSchema]:
+    'Disarrays are not host-shareable, use arrays instead';
   // ---
 }
 
@@ -81,8 +85,12 @@ export interface Unstruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
-  readonly [$notHostShareable]:
-    'Unstructs are not host-shareable, use structs instead.';
+  readonly [$invalidStorageSchema]:
+    'Unstructs are not host-shareable, use structs instead';
+  readonly [$invalidUniformSchema]:
+    'Unstructs are not host-shareable, use structs instead';
+  readonly [$invalidIndexSchema]:
+    'Unstructs are not host-shareable, use structs instead';
   // ---
 }
 
@@ -100,8 +108,12 @@ export interface LooseDecorated<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly [$notHostShareable]:
-    'Loosely decorated schemas are not host-shareable.';
+  readonly [$invalidStorageSchema]:
+    'Loosely decorated schemas are not host-shareable';
+  readonly [$invalidUniformSchema]:
+    'Loosely decorated schemas are not host-shareable';
+  readonly [$invalidIndexSchema]:
+    'Loosely decorated schemas are not host-shareable';
   // ---
 }
 
@@ -248,6 +260,3 @@ export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
 } ? TInner extends wgsl.BaseData ? UnwrapDecorated<TInner>
   : TData
   : TData;
-
-export type HostShareableData = ExtractHostShareable<AnyData>;
-export type NonHostShareableData = ExtractNonHostShareable<AnyData>;

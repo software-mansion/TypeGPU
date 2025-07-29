@@ -119,7 +119,6 @@ export type {
   AnyData,
   AnyLooseData,
   Disarray,
-  HostShareableData,
   LooseDecorated,
   Unstruct,
 } from './dataTypes.ts';

@@ -65,9 +65,9 @@ describe('TgpuBuffer', () => {
       label: 'dataBuffer',
       mappedAtCreation: false,
       size: 64,
-      usage: global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
+      usage: GPUBufferUsage.UNIFORM |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
     });
 
     dataBuffer.write({
@@ -470,7 +470,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(boolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
 
     const nestedBoolSchema = d.struct({
@@ -485,7 +485,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(nestedBoolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
   });
 
@@ -500,7 +500,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(notFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
 
     const alsoNotFine = d.struct({
@@ -511,7 +511,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(alsoNotFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
   });
 

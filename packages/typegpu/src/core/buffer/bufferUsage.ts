@@ -235,7 +235,7 @@ export class TgpuLaidOutBufferImpl<
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(this.dataType as AnyWgslData)
+        ctx.resolve(this.dataType)
       };`,
     );
 

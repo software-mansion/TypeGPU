@@ -4,7 +4,12 @@ import type {
   InferPartial,
   MemIdentity,
 } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
+import {
+  $internal,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
+} from '../shared/symbols.ts';
 import type {
   $gpuRepr,
   $memIdent,
@@ -365,6 +370,8 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
+  declare readonly [$gpuRepr]: InferGPU<TInner>;
+  declare readonly [$reprPartial]: InferPartial<TInner>;
   // ---
 
   constructor(
@@ -423,8 +430,6 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
-  declare readonly [$gpuRepr]: InferGPU<TInner>;
-  declare readonly [$reprPartial]: InferPartial<TInner>;
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
@@ -436,4 +441,13 @@ class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements LooseDecorated<TInner, TAttribs> {
   public readonly [$internal] = true;
   public readonly type = 'loose-decorated';
+
+  // Type-tokens, not available at runtime
+  declare readonly [$invalidStorageSchema]:
+    LooseDecorated[typeof $invalidStorageSchema];
+  declare readonly [$invalidUniformSchema]:
+    LooseDecorated[typeof $invalidUniformSchema];
+  declare readonly [$invalidIndexSchema]:
+    LooseDecorated[typeof $invalidIndexSchema];
+  // ---
 }
