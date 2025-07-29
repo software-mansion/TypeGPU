@@ -1,4 +1,6 @@
 import { resolveData } from './core/resolve/resolveData.ts';
+import { ConfigurableImpl } from './core/root/configurableImpl.ts';
+import type { Configurable } from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -694,9 +696,15 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
+  config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
-  let code = ctx.resolve(item);
+  let code = config
+    ? ctx.withSlots(
+      config(new ConfigurableImpl([])).bindings,
+      () => ctx.resolve(item),
+    )
+    : ctx.resolve(item);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
