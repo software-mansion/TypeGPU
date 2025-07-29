@@ -2,19 +2,21 @@ import type {
   Infer,
   InferGPU,
   InferPartial,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
+  IsValidVertexSchema,
   MemIdentity,
 } from '../shared/repr.ts';
-import {
-  $internal,
-  $invalidIndexSchema,
-  $invalidStorageSchema,
-  $invalidUniformSchema,
-} from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
+  $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validStorageSchema,
+  $validUniformSchema,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import {
@@ -433,6 +435,11 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
+  declare readonly [$invalidSchemaReason]:
+    Decorated[typeof $invalidSchemaReason];
+  declare readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
+  declare readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
+  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 
@@ -443,11 +450,8 @@ class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'loose-decorated';
 
   // Type-tokens, not available at runtime
-  declare readonly [$invalidStorageSchema]:
-    LooseDecorated[typeof $invalidStorageSchema];
-  declare readonly [$invalidUniformSchema]:
-    LooseDecorated[typeof $invalidUniformSchema];
-  declare readonly [$invalidIndexSchema]:
-    LooseDecorated[typeof $invalidIndexSchema];
+  declare readonly [$invalidSchemaReason]:
+    LooseDecorated[typeof $invalidSchemaReason];
+  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }

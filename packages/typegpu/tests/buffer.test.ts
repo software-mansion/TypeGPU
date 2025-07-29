@@ -6,8 +6,9 @@ import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
 import type {
-  ExtractInvalidStorageSchemaError,
-  IsInvalidBufferSchema,
+  ExtractInvalidSchemaError,
+  IsValidBufferSchema,
+  IsValidUniformSchema,
 } from '../src/shared/repr.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
@@ -541,26 +542,26 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
       [
-        'index' | 'storage' | 'uniform' | 'vertex',
-        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+        'storage' | 'uniform' | 'vertex',
+        ...('storage' | 'uniform' | 'vertex')[],
       ]
     >();
   });
 });
 
-describe('ExtractInvalidStorageSchemaError', () => {
+describe('ExtractInvalidSchemaError', () => {
   it('treats booleans as invalid', () => {
-    expectTypeOf<ExtractInvalidStorageSchemaError<d.Bool>>().toEqualTypeOf<
+    expectTypeOf<ExtractInvalidSchemaError<d.Bool>>().toEqualTypeOf<
       'Bool is not host-shareable, use U32 or I32 instead'
     >();
 
-    expectTypeOf<ExtractInvalidStorageSchemaError<d.WgslArray<d.Bool>>>()
+    expectTypeOf<ExtractInvalidSchemaError<d.WgslArray<d.Bool>>>()
       .toEqualTypeOf<
         'in array element — Bool is not host-shareable, use U32 or I32 instead'
       >();
 
     expectTypeOf<
-      ExtractInvalidStorageSchemaError<d.WgslStruct<{ foo: d.Bool }>>
+      ExtractInvalidSchemaError<d.WgslStruct<{ foo: d.Bool }>>
     >()
       .toEqualTypeOf<
         "in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"
@@ -568,54 +569,73 @@ describe('ExtractInvalidStorageSchemaError', () => {
   });
 
   it('it treats arrays of valid schemas as valid', () => {
-    expectTypeOf<ExtractInvalidStorageSchemaError<d.WgslArray<d.U32>>>()
+    expectTypeOf<ExtractInvalidSchemaError<d.WgslArray<d.U32>>>()
       .toEqualTypeOf<never>();
   });
 
   it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<ExtractInvalidStorageSchemaError<d.Bool | d.U32>>()
+    expectTypeOf<ExtractInvalidSchemaError<d.Bool | d.U32>>()
       .toEqualTypeOf<never>();
 
     expectTypeOf<
-      ExtractInvalidStorageSchemaError<d.WgslArray<d.Bool> | d.U32>
+      ExtractInvalidSchemaError<d.WgslArray<d.Bool> | d.U32>
     >()
       .toEqualTypeOf<never>();
 
     expectTypeOf<
-      ExtractInvalidStorageSchemaError<d.WgslArray<d.Bool | d.U32>>
+      ExtractInvalidSchemaError<d.WgslArray<d.Bool | d.U32>>
     >()
       .toEqualTypeOf<never>();
   });
 });
 
-describe('IsInvalidBufferSchema', () => {
+describe('IsValidUniformSchema', () => {
   it('treats booleans as invalid', () => {
-    expectTypeOf<IsInvalidBufferSchema<d.Bool>>().toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.Bool>>().toEqualTypeOf<false>();
   });
 
-  it('treats schemas holding booleans as invalid', () => {
-    expectTypeOf<IsInvalidBufferSchema<d.WgslArray<d.Bool>>>()
-      .toEqualTypeOf<true>();
-    expectTypeOf<IsInvalidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>()
-      .toEqualTypeOf<true>();
-  });
-
-  it('treats other schemas as valid', () => {
-    expectTypeOf<IsInvalidBufferSchema<d.U32>>().toEqualTypeOf<false>();
-  });
-
-  it('it treats arrays of valid schemas as valid', () => {
-    expectTypeOf<IsInvalidBufferSchema<d.WgslArray<d.U32>>>()
-      .toEqualTypeOf<false>();
+  it('treats numeric schemas as valid', () => {
+    expectTypeOf<IsValidUniformSchema<d.U32>>().toEqualTypeOf<true>();
   });
 
   it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<IsInvalidBufferSchema<d.U32 | d.Bool>>()
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.Bool>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.WgslArray<d.Bool>>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.WgslArray<d.Bool | d.U32>>>()
+      .toEqualTypeOf<true>();
+  });
+});
+
+describe('IsValidBufferSchema', () => {
+  it('treats booleans as invalid', () => {
+    expectTypeOf<IsValidBufferSchema<d.Bool>>().toEqualTypeOf<false>();
+  });
+
+  it('treats schemas holding booleans as invalid', () => {
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool>>>()
       .toEqualTypeOf<false>();
-    expectTypeOf<IsInvalidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>()
+    expectTypeOf<IsValidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>()
       .toEqualTypeOf<false>();
-    expectTypeOf<IsInvalidBufferSchema<d.WgslArray<d.Bool | d.U32>>>()
-      .toEqualTypeOf<false>();
+  });
+
+  it('treats other schemas as valid', () => {
+    expectTypeOf<IsValidBufferSchema<d.U32>>().toEqualTypeOf<true>();
+  });
+
+  it('it treats arrays of valid schemas as valid', () => {
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.U32>>>()
+      .toEqualTypeOf<true>();
+  });
+
+  it('it treats union schemas as valid (even if they contain booleans)', () => {
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.Bool>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool | d.U32>>>()
+      .toEqualTypeOf<true>();
   });
 });
 
@@ -656,19 +676,5 @@ describe('ValidateBufferSchema', () => {
     // Valid
     createMyBuffer(d.f32, ['uniform']);
     createMyBuffer(d.unorm8x4, ['vertex']);
-  });
-
-  it('can be used to wrap `createBuffer` in a generic function that accepts only structs, and does not validate', ({ root }) => {
-    function createStructUniform<T extends d.WgslStruct>(schema: T) {
-      // In situations where schema is generic, we want usage validation to be lenient
-      const buffer = root.createBuffer(schema).$usage('uniform');
-      return buffer;
-    }
-
-    // Accepts a specific struct
-    createStructUniform(d.struct({ a: d.f32 }));
-    // Accepts any struct
-    const anyStruct = d.struct({ foo: d.f32 }) as unknown as d.WgslStruct;
-    createStructUniform(anyStruct);
   });
 });

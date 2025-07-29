@@ -1,29 +1,27 @@
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
-  ExtractInvalidIndexSchemaError,
-  ExtractInvalidStorageSchemaError,
-  ExtractInvalidUniformSchemaError,
-  ExtractInvalidVertexSchemaError,
+  ExtractInvalidSchemaError,
   Infer,
   InferGPU,
   InferGPURecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
-  IsInvalidUniformSchema,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
+  IsValidVertexSchema,
   MemIdentity,
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
-  $invalidIndexSchema,
-  $invalidStorageSchema,
-  $invalidUniformSchema,
-  $invalidVertexSchema,
+  $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validStorageSchema,
   $validUniformSchema,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
@@ -87,28 +85,26 @@ export function hasInternalDataType(
   return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
 }
 
-interface AbstractNumeric extends BaseData {
-  // Type-tokens, not available at runtime
-  readonly [$repr]: number;
-  readonly [$invalidStorageSchema]: 'Abstract numerics are not host-shareable';
-  readonly [$invalidUniformSchema]: 'Abstract numerics are not host-shareable';
-  readonly [$invalidVertexSchema]: 'Abstract numerics are not host-shareable';
-  readonly [$invalidIndexSchema]: 'Abstract numerics are not host-shareable';
-  // ---
-}
-
 /**
  * Represents a 64-bit integer.
  */
-export interface AbstractInt extends AbstractNumeric {
+export interface AbstractInt extends BaseData {
   readonly type: 'abstractInt';
+  // Type-tokens, not available at runtime
+  readonly [$repr]: number;
+  readonly [$invalidSchemaReason]: 'Abstract numerics are not host-shareable';
+  // ---
 }
 
 /**
  * Represents a 64-bit IEEE 754 floating point number.
  */
-export interface AbstractFloat extends AbstractNumeric {
+export interface AbstractFloat extends BaseData {
   readonly type: 'abstractFloat';
+  // Type-tokens, not available at runtime
+  readonly [$repr]: number;
+  readonly [$invalidSchemaReason]: 'Abstract numerics are not host-shareable';
+  // ---
 }
 
 export interface Void extends BaseData {
@@ -116,10 +112,7 @@ export interface Void extends BaseData {
   // Type-tokens, not available at runtime
   // biome-ignore lint/suspicious/noConfusingVoidType: void is void
   readonly [$repr]: void;
-  readonly [$invalidStorageSchema]: 'Void is not host-shareable';
-  readonly [$invalidUniformSchema]: 'Void is not host-shareable';
-  readonly [$invalidVertexSchema]: 'Void is not host-shareable';
-  readonly [$invalidIndexSchema]: 'Void is not host-shareable';
+  readonly [$invalidSchemaReason]: 'Void is not host-shareable';
   // ---
 }
 export const Void = {
@@ -762,22 +755,17 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
 
 // #region WGSL Schema Types
 
-type BoolErrorMsg = 'Bool is not host-shareable, use U32 or I32 instead';
-
 /**
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Bool extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: boolean;
-  readonly [$invalidStorageSchema]: BoolErrorMsg;
-  readonly [$invalidUniformSchema]: BoolErrorMsg;
-  readonly [$invalidVertexSchema]: BoolErrorMsg;
-  readonly [$invalidIndexSchema]: BoolErrorMsg;
+  readonly [$invalidSchemaReason]:
+    'Bool is not host-shareable, use U32 or I32 instead';
   // ---
 
   (v?: number | boolean): boolean;
@@ -787,11 +775,13 @@ export interface Bool extends BaseData {
  * 32-bit float schema representing a single WGSL f32 value.
  */
 export interface F32 extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (v?: number | boolean): number;
@@ -801,11 +791,13 @@ export interface F32 extends BaseData {
  * 16-bit float schema representing a single WGSL f16 value.
  */
 export interface F16 extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'f16';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (v?: number | boolean): number;
@@ -815,12 +807,14 @@ export interface F16 extends BaseData {
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
 export interface I32 extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'i32';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
   readonly [$memIdent]: I32 | Atomic<I32> | DecoratedLocation<I32>;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (v?: number | boolean): number;
@@ -830,33 +824,29 @@ export interface I32 extends BaseData {
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
 export interface U32 extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'u32';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
   readonly [$memIdent]: U32 | Atomic<U32> | DecoratedLocation<U32>;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (v?: number | boolean): number;
 }
 
-type U16ErrorMsg =
-  'U16 is only usable inside arrays for index buffers, use U32 or I32 instead';
-
 /**
  * Unsigned 16-bit integer schema used exclusively for index buffer schemas.
  */
 export interface U16 extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'u16';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
-  readonly [$invalidStorageSchema]: U16ErrorMsg;
-  readonly [$invalidUniformSchema]: U16ErrorMsg;
-  readonly [$invalidVertexSchema]: U16ErrorMsg;
-  readonly [$invalidIndexSchema]: U16ErrorMsg;
+  readonly [$invalidSchemaReason]:
+    'U16 is only usable inside arrays for index buffers, use U32 or I32 instead';
   // ---
 }
 
@@ -864,11 +854,13 @@ export interface U16 extends BaseData {
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
 export interface Vec2f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec2f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number): v2f;
@@ -881,11 +873,13 @@ export interface Vec2f extends BaseData {
  * Type of the `d.vec2h` object/function: vector data type schema/constructor
  */
 export interface Vec2h extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec2h';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number): v2h;
@@ -898,11 +892,13 @@ export interface Vec2h extends BaseData {
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
 export interface Vec2i extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec2i';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number): v2i;
@@ -915,11 +911,13 @@ export interface Vec2i extends BaseData {
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
 export interface Vec2u extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec2u';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number): v2u;
@@ -927,9 +925,6 @@ export interface Vec2u extends BaseData {
   (): v2u;
   (v: AnyNumericVec2Instance): v2u;
 }
-
-type VecbErrorMessage =
-  'Boolean vectors is not host-shareable, use numeric vectors instead';
 
 /**
  * Type of the `d.vec2b` object/function: vector data type schema/constructor
@@ -940,10 +935,8 @@ export interface Vec2b extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2b;
-  readonly [$invalidStorageSchema]: VecbErrorMessage;
-  readonly [$invalidUniformSchema]: VecbErrorMessage;
-  readonly [$invalidVertexSchema]: VecbErrorMessage;
-  readonly [$invalidIndexSchema]: VecbErrorMessage;
+  readonly [$invalidSchemaReason]:
+    'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
 
   (x: boolean, y: boolean): v2b;
@@ -956,11 +949,13 @@ export interface Vec2b extends BaseData {
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
 export interface Vec3f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec3f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number): v3f;
@@ -975,11 +970,13 @@ export interface Vec3f extends BaseData {
  * Type of the `d.vec3h` object/function: vector data type schema/constructor
  */
 export interface Vec3h extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec3h';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number): v3h;
@@ -994,11 +991,13 @@ export interface Vec3h extends BaseData {
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
 export interface Vec3i extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec3i';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number): v3i;
@@ -1013,11 +1012,13 @@ export interface Vec3i extends BaseData {
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
 export interface Vec3u extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec3u';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number): v3u;
@@ -1037,10 +1038,8 @@ export interface Vec3b extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3b;
-  readonly [$invalidStorageSchema]: VecbErrorMessage;
-  readonly [$invalidUniformSchema]: VecbErrorMessage;
-  readonly [$invalidVertexSchema]: VecbErrorMessage;
-  readonly [$invalidIndexSchema]: VecbErrorMessage;
+  readonly [$invalidSchemaReason]:
+    'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
 
   (x: boolean, y: boolean, z: boolean): v3b;
@@ -1055,11 +1054,13 @@ export interface Vec3b extends BaseData {
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
 export interface Vec4f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec4f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number, w: number): v4f;
@@ -1078,11 +1079,13 @@ export interface Vec4f extends BaseData {
  * Type of the `d.vec4h` object/function: vector data type schema/constructor
  */
 export interface Vec4h extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec4h';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number, w: number): v4h;
@@ -1101,11 +1104,13 @@ export interface Vec4h extends BaseData {
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
 export interface Vec4i extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec4i';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number, w: number): v4i;
@@ -1124,11 +1129,13 @@ export interface Vec4i extends BaseData {
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
 export interface Vec4u extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'vec4u';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (x: number, y: number, z: number, w: number): v4u;
@@ -1152,10 +1159,8 @@ export interface Vec4b extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4b;
-  readonly [$invalidStorageSchema]: VecbErrorMessage;
-  readonly [$invalidUniformSchema]: VecbErrorMessage;
-  readonly [$invalidVertexSchema]: VecbErrorMessage;
-  readonly [$invalidIndexSchema]: VecbErrorMessage;
+  readonly [$invalidSchemaReason]:
+    'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
 
   (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
@@ -1174,11 +1179,13 @@ export interface Vec4b extends BaseData {
  * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
  */
 export interface Mat2x2f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'mat2x2f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   (...elements: [number, number, number, number]): m2x2f;
@@ -1191,11 +1198,13 @@ export interface Mat2x2f extends BaseData {
  * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
  */
 export interface Mat3x3f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'mat3x3f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   // deno-fmt-ignore
@@ -1209,11 +1218,13 @@ export interface Mat3x3f extends BaseData {
  * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
  */
 export interface Mat4x4f extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'mat4x4f';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 
   // deno-fmt-ignore
@@ -1239,7 +1250,6 @@ export interface WgslArray<TElement extends BaseData = BaseData>
   extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
-  readonly [$internal]: true;
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -1251,22 +1261,11 @@ export interface WgslArray<TElement extends BaseData = BaseData>
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
-  readonly [$invalidStorageSchema]: SwapNever<
-    ExtractInvalidStorageSchemaError<TElement, `in array element — `>,
-    undefined
-  >;
-  readonly [$invalidUniformSchema]: SwapNever<
-    ExtractInvalidUniformSchemaError<TElement, `in array element — `>,
-    undefined
-  >;
-  readonly [$invalidVertexSchema]: SwapNever<
-    ExtractInvalidVertexSchemaError<TElement, `in array element — `>,
-    undefined
-  >;
-  readonly [$invalidIndexSchema]: SwapNever<
-    ExtractInvalidIndexSchemaError<TElement, `in array element — `>,
-    undefined
-  >;
+  readonly [$validStorageSchema]: IsValidStorageSchema<TElement>;
+  readonly [$validUniformSchema]: IsValidUniformSchema<TElement>;
+  readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
+  readonly [$invalidSchemaReason]:
+    `in array element — ${ExtractInvalidSchemaError<TElement>}`;
   // ---
 }
 
@@ -1303,45 +1302,24 @@ export interface WgslStruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
-  readonly [$invalidStorageSchema]: SwapNever<
+  readonly [$invalidSchemaReason]: SwapNever<
     {
-      [K in keyof TProps]: ExtractInvalidStorageSchemaError<
+      [K in keyof TProps]: ExtractInvalidSchemaError<
         TProps[K],
         `in struct property '${K & string}' — `
       >;
     }[keyof TProps],
     undefined
   >;
-  readonly [$invalidUniformSchema]: SwapNever<
-    {
-      [K in keyof TProps]: ExtractInvalidUniformSchemaError<
-        TProps[K],
-        `in struct property '${K & string}' — `
-      >;
-    }[keyof TProps],
-    undefined
-  >;
-  readonly [$invalidVertexSchema]: SwapNever<
-    {
-      [K in keyof TProps]: ExtractInvalidVertexSchemaError<
-        TProps[K],
-        `in struct property '${K & string}' — `
-      >;
-    }[keyof TProps],
-    undefined
-  >;
-  readonly [$invalidIndexSchema]: SwapNever<
-    {
-      [K in keyof TProps]: ExtractInvalidIndexSchemaError<
-        TProps[K],
-        `in struct property '${K & string}' — `
-      >;
-    }[keyof TProps],
-    undefined
-  >;
-  readonly [$validUniformSchema]: [
-    { [K in keyof TProps]: IsInvalidUniformSchema<TProps[K]> }[keyof TProps],
-  ] extends true ? true : false;
+  readonly [$validStorageSchema]: {
+    [K in keyof TProps]: IsValidStorageSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
+  readonly [$validUniformSchema]: {
+    [K in keyof TProps]: IsValidUniformSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
+  readonly [$validVertexSchema]: {
+    [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
   // ---
 }
 
@@ -1370,10 +1348,7 @@ export interface Ptr<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly [$invalidStorageSchema]: 'Pointers are not host-shareable';
-  readonly [$invalidUniformSchema]: 'Pointers are not host-shareable';
-  readonly [$invalidVertexSchema]: 'Pointers are not host-shareable';
-  readonly [$invalidIndexSchema]: 'Pointers are not host-shareable';
+  readonly [$invalidSchemaReason]: 'Pointers are not host-shareable';
   // ---
 }
 
@@ -1389,6 +1364,9 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> extends BaseData {
   readonly [$repr]: Infer<TInner>;
   readonly [$gpuRepr]: TInner extends U32 ? atomicU32 : atomicI32;
   readonly [$memIdent]: MemIdentity<TInner>;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  readonly [$validVertexSchema]: true;
   // ---
 }
 
@@ -1462,6 +1440,12 @@ export interface Decorated<
   readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
+  readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
+  readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
+  readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
+  readonly [$invalidSchemaReason]: `decorated — ${ExtractInvalidSchemaError<
+    TInner
+  >}`;
   // ---
 }
 

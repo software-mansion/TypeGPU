@@ -14,10 +14,10 @@ import { getName, setName } from '../../shared/meta.ts';
 import type {
   Infer,
   InferPartial,
-  IsInvalidIndexSchema,
-  IsInvalidStorageSchema,
-  IsInvalidUniformSchema,
-  IsInvalidVertexSchema,
+  IsValidIndexSchema,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
+  IsValidVertexSchema,
   MemIdentity,
 } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
@@ -93,10 +93,10 @@ const usageToUsageConstructor = {
  */
 type InnerValidUsagesFor<T> = {
   usage:
-    | (IsInvalidStorageSchema<T> extends true ? never : 'storage')
-    | (IsInvalidUniformSchema<T> extends true ? never : 'uniform')
-    | (IsInvalidVertexSchema<T> extends true ? never : 'vertex')
-    | (IsInvalidIndexSchema<T> extends true ? never : 'index');
+    | (IsValidStorageSchema<T> extends true ? 'storage' : never)
+    | (IsValidUniformSchema<T> extends true ? 'uniform' : never)
+    | (IsValidVertexSchema<T> extends true ? 'vertex' : never)
+    | (IsValidIndexSchema<T> extends true ? 'index' : never);
 };
 
 export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];

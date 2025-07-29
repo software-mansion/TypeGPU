@@ -5,16 +5,16 @@ import type {
   InferPartial,
   InferPartialRecord,
   InferRecord,
+  IsValidVertexSchema,
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
-  $invalidIndexSchema,
-  $invalidStorageSchema,
-  $invalidUniformSchema,
+  $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
@@ -53,11 +53,8 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
   readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
-  readonly [$invalidStorageSchema]:
-    'Disarrays are not host-shareable, use arrays instead';
-  readonly [$invalidUniformSchema]:
-    'Disarrays are not host-shareable, use arrays instead';
-  readonly [$invalidIndexSchema]:
+  readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
+  readonly [$invalidSchemaReason]:
     'Disarrays are not host-shareable, use arrays instead';
   // ---
 }
@@ -85,11 +82,10 @@ export interface Unstruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
-  readonly [$invalidStorageSchema]:
-    'Unstructs are not host-shareable, use structs instead';
-  readonly [$invalidUniformSchema]:
-    'Unstructs are not host-shareable, use structs instead';
-  readonly [$invalidIndexSchema]:
+  readonly [$validVertexSchema]: {
+    [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
+  readonly [$invalidSchemaReason]:
     'Unstructs are not host-shareable, use structs instead';
   // ---
 }
@@ -108,12 +104,9 @@ export interface LooseDecorated<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly [$invalidStorageSchema]:
+  readonly [$invalidSchemaReason]:
     'Loosely decorated schemas are not host-shareable';
-  readonly [$invalidUniformSchema]:
-    'Loosely decorated schemas are not host-shareable';
-  readonly [$invalidIndexSchema]:
-    'Loosely decorated schemas are not host-shareable';
+  readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 

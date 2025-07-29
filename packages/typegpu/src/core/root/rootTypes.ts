@@ -5,12 +5,9 @@ import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type {
-  ExtractInvalidIndexSchemaError,
-  ExtractInvalidStorageSchemaError,
-  ExtractInvalidUniformSchemaError,
-  ExtractInvalidVertexSchemaError,
+  ExtractInvalidSchemaError,
   Infer,
-  IsInvalidBufferSchema,
+  IsValidBufferSchema,
 } from '../../shared/repr.ts';
 import type {
   Mutable,
@@ -398,11 +395,8 @@ export type ErrorIfNonEmpty<T, TErrors extends string> = [TErrors] extends
   [never] ? T : `Error: ${TErrors}`;
 
 export type ValidateBufferSchema<TData extends AnyData> =
-  IsInvalidBufferSchema<TData> extends true ?
-      | ExtractInvalidStorageSchemaError<TData, '(Error) '>
-      | ExtractInvalidUniformSchemaError<TData, '(Error) '>
-      | ExtractInvalidVertexSchemaError<TData, '(Error) '>
-      | ExtractInvalidIndexSchemaError<TData, '(Error) '>
+  (TData extends AnyData ? IsValidBufferSchema<TData> : never) extends false
+    ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
 export interface TgpuRoot extends Unwrapper {

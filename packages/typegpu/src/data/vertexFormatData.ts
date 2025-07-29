@@ -1,10 +1,9 @@
 import type { Infer } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
-  $invalidIndexSchema,
-  $invalidStorageSchema,
-  $invalidUniformSchema,
+  $invalidSchemaReason,
   $repr,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
@@ -24,18 +23,15 @@ import type { BaseData } from './wgslTypes.ts';
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-type InvalidSchemaError =
-  'Vertex formats are not host-shareable, use concrete types instead';
-
 export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
   readonly [$internal]: true;
   readonly type: T;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
-  readonly [$invalidStorageSchema]: InvalidSchemaError;
-  readonly [$invalidUniformSchema]: InvalidSchemaError;
-  readonly [$invalidIndexSchema]: InvalidSchemaError;
+  readonly [$validVertexSchema]: true;
+  readonly [$invalidSchemaReason]:
+    'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 }
 
@@ -45,9 +41,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
-  declare readonly [$invalidStorageSchema]: InvalidSchemaError;
-  declare readonly [$invalidUniformSchema]: InvalidSchemaError;
-  declare readonly [$invalidIndexSchema]: InvalidSchemaError;
+  declare readonly [$validVertexSchema]: true;
+  declare readonly [$invalidSchemaReason]:
+    'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
   constructor(public readonly type: T) {}
