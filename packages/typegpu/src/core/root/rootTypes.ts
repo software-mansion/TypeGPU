@@ -8,6 +8,8 @@ import type {
   ExtractInvalidSchemaError,
   Infer,
   IsValidBufferSchema,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
 } from '../../shared/repr.ts';
 import type {
   Mutable,
@@ -391,11 +393,18 @@ export interface RenderPass {
   ): undefined;
 }
 
-export type ErrorIfNonEmpty<T, TErrors extends string> = [TErrors] extends
-  [never] ? T : `Error: ${TErrors}`;
-
 export type ValidateBufferSchema<TData extends AnyData> =
-  (TData extends AnyData ? IsValidBufferSchema<TData> : never) extends false
+  IsValidBufferSchema<TData> extends false
+    ? ExtractInvalidSchemaError<TData, '(Error) '>
+    : TData;
+
+export type ValidateStorageSchema<TData extends AnyData> =
+  IsValidStorageSchema<TData> extends false
+    ? ExtractInvalidSchemaError<TData, '(Error) '>
+    : TData;
+
+export type ValidateUniformSchema<TData extends AnyData> =
+  IsValidUniformSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
@@ -443,7 +452,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createUniform<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
   ): TgpuUniform<TData>;
@@ -457,7 +466,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createUniform<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateUniformSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuUniform<TData>;
 
@@ -470,7 +479,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createMutable<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
   ): TgpuMutable<TData>;
@@ -484,7 +493,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createMutable<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateStorageSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuMutable<TData>;
 
@@ -497,7 +506,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param initial The initial value of the buffer. (optional)
    */
   createReadonly<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
@@ -511,7 +520,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
   createReadonly<TData extends AnyWgslData>(
-    typeSchema: ValidateBufferSchema<TData>,
+    typeSchema: ValidateStorageSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuReadonly<TData>;
 
