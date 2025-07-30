@@ -444,7 +444,8 @@ export interface TgpuRoot extends Unwrapper {
    */
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateBufferSchema<TData>,
-    initial?: Infer<TData>,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
   /**
@@ -470,7 +471,8 @@ export interface TgpuRoot extends Unwrapper {
    */
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateBufferSchema<TData>,
-    initial?: Infer<TData>,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
   /**
@@ -496,7 +498,8 @@ export interface TgpuRoot extends Unwrapper {
    */
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateBufferSchema<TData>,
-    initial?: Infer<TData>,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
   /**
