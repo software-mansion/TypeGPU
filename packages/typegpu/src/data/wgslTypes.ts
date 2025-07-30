@@ -1323,8 +1323,8 @@ export interface WgslStruct<
   // ---
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
-export type AnyWgslStruct = WgslStruct<any>;
+/** @deprecated Just use `WgslStruct` without any type parameters */
+export type AnyWgslStruct = WgslStruct;
 
 export type AddressSpace =
   | 'uniform'
@@ -1549,7 +1549,7 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
-  | AnyWgslStruct
+  | WgslStruct
   | WgslArray
   | Ptr
   | Atomic<U32>

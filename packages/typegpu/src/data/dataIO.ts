@@ -431,7 +431,8 @@ const dataWriters = {
   },
 
   unstruct(output, schema: Unstruct, value) {
-    for (const [key, property] of Object.entries(schema.propTypes)) {
+    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    for (const [key, property] of Object.entries(propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);
     }
   },
@@ -772,7 +773,8 @@ const dataReaders = {
   unstruct(input, schema: Unstruct) {
     const result = {} as Record<string, unknown>;
 
-    for (const [key, property] of Object.entries(schema.propTypes)) {
+    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    for (const [key, property] of Object.entries(propTypes)) {
       result[key] = readData(input, property);
     }
 

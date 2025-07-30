@@ -159,7 +159,7 @@ function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(unstruct.propTypes)
+    Object.entries(unstruct.propTypes as Record<string, BaseData>)
       .map((prop) =>
         isAttribute(prop[1])
           ? resolveStructProperty(ctx, [

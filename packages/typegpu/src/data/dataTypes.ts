@@ -68,7 +68,8 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
  * via `d.align` function.
  */
 export interface Unstruct<
-  TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
+  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
+  TProps extends Record<string, wgsl.BaseData> = any,
 > extends wgsl.BaseData, TgpuNamable {
   readonly [$internal]: true;
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
@@ -90,8 +91,8 @@ export interface Unstruct<
   // ---
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
-export type AnyUnstruct = Unstruct<any>;
+/** @deprecated Just use `Unstruct` without any type parameters */
+export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
@@ -119,7 +120,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
+export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return (

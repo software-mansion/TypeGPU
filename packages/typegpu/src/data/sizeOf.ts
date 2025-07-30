@@ -96,7 +96,8 @@ function sizeOfStruct(struct: WgslStruct) {
 function sizeOfUnstruct(data: Unstruct) {
   let size = 0;
 
-  for (const property of Object.values(data.propTypes)) {
+  const propTypes = data.propTypes as Record<string, BaseData>;
+  for (const property of Object.values(propTypes)) {
     const alignment = customAlignmentOf(property);
     size = roundUp(size, alignment);
     size += sizeOf(property);
