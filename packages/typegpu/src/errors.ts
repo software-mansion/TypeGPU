@@ -95,7 +95,7 @@ export class ExecutionError extends Error {
     }
 
     super(
-      `Execution of the following tree failed: \n${entries.join('\n')}: ${
+      `Execution of the following tree failed:\n${entries.join('\n')}: ${
         cause && typeof cause === 'object' && 'message' in cause
           ? cause.message
           : cause

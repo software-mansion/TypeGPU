@@ -258,6 +258,53 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toBe(expected);
   });
 
+  it('allows access to output struct as second argument in vertexFn', () => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        in: {
+          vi: builtin.vertexIndex,
+          ii: builtin.instanceIndex,
+          color: d.vec4f,
+        },
+        out: {
+          pos: builtin.position,
+          uv: d.vec2f,
+        },
+      })((input, Out) => {
+        const myOutput = Out({
+          pos: d.vec4f(
+            d.f32(input.color.w),
+            d.f32(input.ii),
+            d.f32(input.vi),
+            1,
+          ),
+          uv: d.vec2f(d.f32(input.color.w), input.vi),
+        });
+        return myOutput;
+      })
+      .$name('vertex_fn');
+
+    expect(getName(vertexFn)).toBe('vertex_fn');
+    const actual = parseResolved({ vertexFn });
+    expect(actual).toBe(parse(`
+      struct vertex_fn_Input {
+        @builtin(vertex_index) vi: u32,
+        @builtin(instance_index) ii: u32,
+        @location(0) color: vec4f,
+      }
+
+      struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
+        var myOutput = vertex_fn_Output(vec4f(f32(input.color.w), f32(input.ii), f32(input.vi), 1), vec2f(f32(input.color.w), f32(input.vi)));
+        return myOutput;
+      }
+    `));
+  });
+
   it('resolves computeFn', () => {
     const computeFn = tgpu['~unstable']
       .computeFn({
@@ -392,6 +439,89 @@ describe('TGSL tgpu.fn function', () => {
     `);
 
     expect(actual).toBe(expected);
+  });
+
+  it('allows accessing the output struct as second argument in fragmentFn', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: d.vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: {
+          sampleMask: builtin.sampleMask,
+          fragDepth: builtin.fragDepth,
+          out: d.location(0, d.vec4f),
+        },
+      })((input, Out) => {
+        const myOutput = Out({
+          out: d.vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: 0,
+        });
+        if (input.sampleMask > 0 && input.pos.x > 0) {
+          myOutput.sampleMask = 1;
+        }
+
+        return myOutput;
+      });
+    const actual = parseResolved({ fragmentFn });
+
+    const expected = parse(`
+      struct fragmentFn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      struct fragmentFn_Output {
+        @builtin(sample_mask) sampleMask: u32,
+        @builtin(frag_depth) fragDepth: f32,
+        @location(0) out: vec4f,
+      }
+
+      @fragment
+      fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
+        var myOutput = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        if (((input.sampleMask > 0) && (input.pos.x > 0))) {
+          myOutput.sampleMask = 1;
+        }
+
+        return myOutput;
+      }
+    `);
+    expect(actual).toBe(expected);
+  });
+
+  it('allows accessing fragment output even when it is not a struct', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: d.vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: d.vec4f,
+      })((input, Out) => {
+        const hmm = Out(1.2);
+        return hmm;
+      });
+    const resolved = parseResolved({ fragmentFn });
+    const expected = parse(`
+      struct fragmentFn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      @fragment
+      fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
+        var hmm = vec4f(1.2);
+        return hmm;
+      }
+    `);
+    expect(resolved).toBe(expected);
   });
 
   it('allows destructuring the input argument in fragmentFn', () => {
@@ -855,7 +985,7 @@ describe('tgpu.fn called top-level', () => {
     });
 
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Execution of the following tree failed: 
+      [Error: Execution of the following tree failed:
       - fn:foo: Cannot access buffer:uniform. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
   });

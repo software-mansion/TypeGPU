@@ -1,4 +1,4 @@
-import { snip } from '../data/dataTypes.ts';
+import { snip } from '../data/snippet.ts';
 import { Void } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../shared/generators.ts';
 

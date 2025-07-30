@@ -5,10 +5,9 @@ import {
   InfixDispatch,
   isData,
   isLooseData,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
@@ -121,9 +120,14 @@ export function generateBlock(
 ): string {
   ctx.pushBlockScope();
   try {
-    return `${ctx.indent()}{
-${statements.map((statement) => generateStatement(ctx, statement)).join('\n')}
-${ctx.dedent()}}`;
+    ctx.indent();
+    const body = statements.map((statement) =>
+      generateStatement(ctx, statement)
+    ).join('\n');
+    ctx.dedent();
+    return `{
+${body}
+${ctx.pre}}`;
   } finally {
     ctx.popBlockScope();
   }
@@ -432,7 +436,11 @@ export function generateExpression(
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
         ...convertedArguments,
       ) as Snippet;
-      return snip(ctx.resolve(fnRes.value), fnRes.dataType);
+      // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+      return snip(
+        ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
+        fnRes.dataType,
+      );
     } catch (error) {
       throw new ResolutionError(error, [{
         toString: () => getName(id.value),
@@ -584,27 +592,18 @@ export function generateStatement(
       generateTypedExpression(ctx, cond, bool).value,
     );
 
-    ctx.indent(); // {
-    const consequent = generateStatement(ctx, blockifySingleStatement(cons));
-    ctx.dedent(); // }
-
-    ctx.indent(); // {
+    const consequent = generateBlock(ctx, blockifySingleStatement(cons));
     const alternate = alt
-      ? generateStatement(ctx, blockifySingleStatement(alt))
+      ? generateBlock(ctx, blockifySingleStatement(alt))
       : undefined;
-    ctx.dedent(); // }
 
     if (!alternate) {
-      return `\
-${ctx.pre}if (${condition})
-${consequent}`;
+      return `${ctx.pre}if (${condition}) ${consequent}`;
     }
 
     return `\
-${ctx.pre}if (${condition})
-${consequent}
-${ctx.pre}else
-${alternate}`;
+${ctx.pre}if (${condition}) ${consequent}
+${ctx.pre}else ${alternate}`;
   }
 
   if (statement[0] === NODE.let || statement[0] === NODE.const) {
@@ -642,7 +641,15 @@ ${alternate}`;
   if (statement[0] === NODE.for) {
     const [_, init, condition, update, body] = statement;
 
-    const initStatement = init ? generateStatement(ctx, init) : undefined;
+    const [initStatement, conditionExpr, updateStatement] = ctx
+      .withResetIndentLevel(
+        () => [
+          init ? generateStatement(ctx, init) : undefined,
+          condition ? generateExpression(ctx, condition) : undefined,
+          update ? generateStatement(ctx, update) : undefined,
+        ],
+      );
+
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
 
     const condSnippet = condition
@@ -650,16 +657,10 @@ ${alternate}`;
       : undefined;
     const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
-    const updateStatement = update ? generateStatement(ctx, update) : undefined;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-    ctx.indent();
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
-
-    return `\
-${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
-${bodyStr}`;
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {
@@ -667,13 +668,8 @@ ${bodyStr}`;
     const condSnippet = generateTypedExpression(ctx, condition, bool);
     const conditionStr = ctx.resolve(condSnippet.value);
 
-    ctx.indent();
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
-
-    return `\
-${ctx.pre}while (${conditionStr})
-${bodyStr}`;
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}while (${conditionStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.continue) {

@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';

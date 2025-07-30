@@ -2,7 +2,7 @@ import { createDualImpl } from '../shared/generators.ts';
 import type { $repr } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import { snip } from './dataTypes.ts';
+import { snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
   AnyWgslData,
@@ -610,7 +610,7 @@ export const translation4 = createDualImpl(
     value: `mat4x4f(
         1, 0, 0, 0,
         0, 1, 0, 0,
-        0, 0, 1, 0, 
+        0, 0, 1, 0,
         ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1
       )`,
     dataType: mat4x4f,
@@ -638,7 +638,7 @@ export const scaling4 = createDualImpl(
     value: `mat4x4f(
         ${vector.value}.x, 0, 0, 0,
         0, ${vector.value}.y, 0, 0,
-        0, 0, ${vector.value}.z, 0, 
+        0, 0, ${vector.value}.z, 0,
         0, 0, 0, 1
       )`,
     dataType: mat4x4f,
