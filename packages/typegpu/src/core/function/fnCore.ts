@@ -153,14 +153,13 @@ export function createFnCore(
         if (
           maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
         ) {
-          let trueReturnType = returnType;
-          while ('inner' in trueReturnType) {
-            trueReturnType = trueReturnType.inner as AnyData;
-          }
+          const unwrappedReturnType = 'inner' in returnType
+            ? returnType.inner
+            : returnType;
           applyExternals(
             externalMap,
             {
-              [maybeSecondArg.name]: trueReturnType,
+              [maybeSecondArg.name]: unwrappedReturnType,
             },
           );
         }
