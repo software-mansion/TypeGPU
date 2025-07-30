@@ -1,0 +1,17 @@
+import * as d from 'typegpu/data';
+
+export const MAX_STEPS = 1000;
+export const MAX_DIST = 19;
+export const SURF_DIST = 0.001;
+export const GRID_SEP = 1.2;
+export const GRID_TIGHTNESS = 7;
+export const CIRCLE_FLOOR_MASS = 5;
+
+export const skyColor1 = d.vec4f(0.1, 0, 0.2, 1);
+export const skyColor2 = d.vec4f(0.28, 0, 0.54, 1);
+export const gridColor = d.vec3f(0.92, 0.21, 0.96);
+export const gridInnerColor = d.vec3f(0, 0, 0);
+export const sphereCenter = d.vec3f(0, 6, 12);
+export const sphereRadius = d.f32(3);
+export const planeOrthonormal = d.vec3f(0, 1, 0);
+export const planeOffset = d.f32(1);

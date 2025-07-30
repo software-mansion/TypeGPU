@@ -5,7 +5,7 @@ import { sdPlane } from '@typegpu/sdf';
 import { perlin3d } from '@typegpu/noise';
 
 import { circles, grid } from './floor.ts';
-import * as c from './constans.ts';
+import * as c from './constants.ts';
 import { Ray } from './types.ts';
 import { getSphere } from './sphere.ts';
 import { rayUnion } from './helpers.ts';
@@ -45,7 +45,7 @@ const getSceneRay = tgpu.fn(
   Ray,
 )((p) => {
   const floor = Ray({
-    dist: sdPlane(p, d.vec3f(0, 1, 0), 1), // hardcoded plane location
+    dist: sdPlane(p, c.planeOrthonormal, c.planeOffset),
     color: floorPatternSlot.$(p.xz, speedPerFrameBuf.$, time.$),
   });
   const ball = getSphere(p, ballColorBuf.$, c.sphereCenter, time.$);

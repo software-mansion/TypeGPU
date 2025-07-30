@@ -5,6 +5,7 @@ import { perlin3d } from '@typegpu/noise';
 import { sdSphere } from '@typegpu/sdf';
 
 import { Ray } from './types.ts';
+import * as c from './constants.ts';
 
 export const getSphere = tgpu.fn(
   [d.vec3f, d.vec3f, d.vec3f, d.f32],
@@ -16,7 +17,7 @@ export const getSphere = tgpu.fn(
   const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
 
   // breathing effect
-  const radius = 3 + std.sin(time);
+  const radius = c.sphereRadius + std.sin(time);
 
   const noise = perlin3d.sample(std.add(rotatedP, time));
 
