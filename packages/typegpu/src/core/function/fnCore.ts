@@ -151,6 +151,8 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
+        // If an entrypoint implementation has a second argument, it represents the output schema.
+        // We look at the identifier chosen by the user and add it to externals.
         const maybeSecondArg = ast.params[1];
         if (
           maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
