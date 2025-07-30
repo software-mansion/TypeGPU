@@ -1,6 +1,7 @@
 import { currentSum } from '@typegpu/concurrent-sum';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -20,12 +21,15 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const arraySizes = [2 ** 20];
 const button = document.querySelector('#runButton') as HTMLButtonElement;
+const dataArrs = arraySizes.map((size) => {
+  return Array.from({ length: size }, () => 1);
+});
 
 button.addEventListener('click', async () => {
   button.disabled = true;
 
-  const arraySizes = [6092137, 2 ** 20, 2 ** 22];
   // const arraySizes = [2**12];
   const results = document.createElement('div');
   results.style.marginTop = '1em';
@@ -35,9 +39,9 @@ button.addEventListener('click', async () => {
     const sizeBuffer = root
       .createBuffer(
         d.arrayOf(d.u32, size),
-        Array.from({ length: size }, () => 1),
       )
       .$usage('storage');
+    sizeBuffer.write(dataArrs[arraySizes.indexOf(size)]);
 
     // JS Version
     const jsStartTime = performance.now();
@@ -81,29 +85,6 @@ button.addEventListener('click', async () => {
 
   button.disabled = false;
 });
-
-function concurrentSumOnJS(arr: number[]) {
-  arr.reduce((accumulator, currentValue, index) => {
-    if (index > 0) {
-      arr[index] = arr[index - 1] + currentValue;
-    }
-    return arr[index];
-  }, 0);
-  return arr;
-}
-
-function compareArrayWithBuffer(arr1: number[], arr2: number[]): boolean {
-  if (arr1.length !== arr2.length) {
-    return false;
-  }
-  for (let i = 0; i < arr1.length - 1; i++) {
-    if (arr1[i] !== arr2[i + 1]) {
-      console.log(`Mismatch at index ${i}: ${arr1[i]} !== ${arr2[i]}`);
-      return false;
-    }
-  }
-  return true;
-}
 
 export function onCleanup() {
   root.destroy();
