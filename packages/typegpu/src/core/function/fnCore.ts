@@ -149,6 +149,22 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
+        const maybeSecondArg = ast.params[1];
+        if (
+          maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
+        ) {
+          let trueReturnType = returnType;
+          while ('inner' in trueReturnType) {
+            trueReturnType = trueReturnType.inner as AnyData;
+          }
+          applyExternals(
+            externalMap,
+            {
+              [maybeSecondArg.name]: trueReturnType,
+            },
+          );
+        }
+
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
           args: argTypes.map((arg, i) =>

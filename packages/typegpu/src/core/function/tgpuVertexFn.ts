@@ -3,7 +3,12 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
+import type {
+  Decorated,
+  Interpolate,
+  Location,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -61,7 +66,10 @@ export type TgpuVertexFnShell<
 > =
   & TgpuVertexFnShellHeader<VertexIn, VertexOut>
   & ((
-    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+    implementation: (
+      input: InferIO<VertexIn>,
+      out: WgslStruct<VertexOut>,
+    ) => InferIO<VertexOut>,
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
   & ((
     implementation: string,
