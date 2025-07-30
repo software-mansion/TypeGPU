@@ -3,7 +3,7 @@ import * as std from 'typegpu/std';
 
 import { Ray } from './types.ts';
 
-export const shapeUnion = tgpu.fn(
+export const rayUnion = tgpu.fn(
   [Ray, Ray],
   Ray,
 )((a, b) => ({
