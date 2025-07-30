@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-import * as c from './constans.ts';
+import * as c from './constants.ts';
 
 export const grid = tgpu.fn(
   [d.vec2f, d.f32, d.f32],
