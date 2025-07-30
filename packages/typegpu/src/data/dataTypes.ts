@@ -18,7 +18,7 @@ import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import type { Undecorate } from './decorateUtils.ts';
-import type { Snippet } from './snippet.ts';
+import type { MapValueToSnippet, Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
@@ -205,8 +205,6 @@ export class InfixDispatch {
     readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }
-
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
   Undecorate<TData[0]> extends { readonly type: TType } ? true

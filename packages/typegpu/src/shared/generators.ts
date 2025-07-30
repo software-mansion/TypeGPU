@@ -1,5 +1,5 @@
-import type { MapValueToSnippet, TgpuDualFn } from '../data/dataTypes.ts';
-import type { Snippet } from '../data/snippet.ts';
+import type { TgpuDualFn } from '../data/dataTypes.ts';
+import type { MapValueToSnippet, Snippet } from '../data/snippet.ts';
 import { inCodegenMode } from '../execMode.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import { setName } from './meta.ts';

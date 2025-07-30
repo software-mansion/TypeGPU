@@ -6,6 +6,8 @@ export interface Snippet {
   readonly dataType: AnyData | UnknownData;
 }
 
+export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
+
 class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
