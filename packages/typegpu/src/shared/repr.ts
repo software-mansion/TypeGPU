@@ -1,4 +1,4 @@
-import type { Undecorate } from '../data/attributes.ts';
+import type { Undecorate } from '../data/decorateUtils.ts';
 import type { Disarray } from '../data/index.ts';
 import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
