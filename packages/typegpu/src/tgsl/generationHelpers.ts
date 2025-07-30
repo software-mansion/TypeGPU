@@ -3,12 +3,10 @@ import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
   isDisarray,
-  isSnippet,
   isUnstruct,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -58,6 +56,7 @@ import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { undecorate } from '../data/decorateUtils.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -230,13 +229,6 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function unwrapDecorated(data: AnyData): AnyData {
-  if (data.type === 'decorated') {
-    return data.inner as AnyData;
-  }
-  return data;
-}
-
 function getVectorComponent(type: AnyData): AnyData | undefined {
   return isVec(type) ? vecTypeToPrimitive[type.type] : undefined;
 }
@@ -245,8 +237,8 @@ function getAutoConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     return { rank: 0, action: 'none' };
@@ -285,8 +277,8 @@ function getImplicitConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (
     trueSrc.type === 'ptr' &&
@@ -433,9 +425,9 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
+  const uniqueTypes = [...new Set(types.map(undecorate))];
   const uniqueTargetTypes = targetTypes
-    ? [...new Set(targetTypes.map(unwrapDecorated))]
+    ? [...new Set(targetTypes.map(undecorate))]
     : uniqueTypes;
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
@@ -470,7 +462,7 @@ export function convertType(
       actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
     }
     return {
-      targetType: unwrapDecorated(targetType),
+      targetType: undecorate(targetType),
       actions: [actionDetail],
       hasImplicitConversions: conversion.action === 'cast',
     };

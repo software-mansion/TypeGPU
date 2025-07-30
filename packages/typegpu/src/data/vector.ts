@@ -1,6 +1,6 @@
 import { createDualImpl } from '../shared/generators.ts';
 import { $repr } from '../shared/symbols.ts';
-import { snip } from './dataTypes.ts';
+import { snip } from './snippet.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,

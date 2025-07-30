@@ -29,7 +29,8 @@ import type {
   TgpuTexture,
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
+import type { AnyData, UnknownData } from './data/dataTypes.ts';
+import type { Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,

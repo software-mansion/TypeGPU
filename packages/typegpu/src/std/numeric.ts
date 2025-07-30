@@ -1,10 +1,6 @@
 import { vecTypeToConstructor } from '../data/vector.ts';
-import {
-  type AnyData,
-  snip,
-  type Snippet,
-  type TgpuDualFn,
-} from '../data/dataTypes.ts';
+import type { AnyData, TgpuDualFn } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import { f32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';

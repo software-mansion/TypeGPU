@@ -32,7 +32,8 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
+import { UnknownData } from '../../src/data/dataTypes.ts';
+import { snip, type Snippet } from '../../src/data/snippet.ts';
 
 const mockCtx = {
   indent: () => '',
