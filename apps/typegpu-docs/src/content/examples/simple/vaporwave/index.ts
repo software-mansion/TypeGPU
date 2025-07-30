@@ -130,6 +130,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   );
 });
 
+// == PIPELINE ==
 const perlinCache = perlin3d.staticCache({
   root: root,
   size: d.vec3u(7),
