@@ -77,15 +77,16 @@ const knownSizesMap: Record<string, number> = {
 
 function sizeOfStruct(struct: WgslStruct) {
   let size = 0;
-  for (const property of Object.values(struct.propTypes)) {
+  const propTypes = struct.propTypes as Record<string, BaseData>;
+  for (const property of Object.values(propTypes)) {
     if (Number.isNaN(size)) {
       throw new Error('Only the last property of a struct can be unbounded');
     }
 
-    size = roundUp(size, alignmentOf(property as BaseData));
-    size += sizeOf(property as BaseData);
+    size = roundUp(size, alignmentOf(property));
+    size += sizeOf(property);
 
-    if (Number.isNaN(size) && (property as BaseData).type !== 'array') {
+    if (Number.isNaN(size) && property.type !== 'array') {
       throw new Error('Cannot nest unbounded struct within another struct');
     }
   }

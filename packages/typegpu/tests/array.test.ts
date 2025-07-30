@@ -9,7 +9,6 @@ import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
-import type { IsExactlyWgslArray } from '../src/data/wgslTypes.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -321,17 +320,5 @@ describe('array.length', () => {
         `),
       );
     });
-  });
-});
-
-describe('IsExactlyWgslArray<T>', () => {
-  it('evaluates to false for exact schemas other than arrays', () => {
-    expectTypeOf<IsExactlyWgslArray<d.U32>>().toEqualTypeOf<false>();
-    expectTypeOf<IsExactlyWgslArray<d.F32>>().toEqualTypeOf<false>();
-    expectTypeOf<IsExactlyWgslArray<d.WgslStruct>>().toEqualTypeOf<false>();
-    expectTypeOf<IsExactlyWgslArray<d.Disarray>>().toEqualTypeOf<false>();
-  });
-
-  it('', () => {
   });
 });

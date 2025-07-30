@@ -1270,15 +1270,6 @@ export interface WgslArray<TElement extends BaseData = BaseData>
 }
 
 /**
- * Evaluates to true if T is just an array schema, nothing else in the union.
- */
-export type IsExactlyWgslArray<T extends BaseData> = [T] extends
-  [{ readonly type: 'array' }] ? true : false;
-
-type Some = ['array' | 'something'] extends ['array'] ? true : false;
-//   ^?
-
-/**
  * Struct schema constructed via `d.struct` function.
  *
  * Responsible for handling reading and writing struct values
@@ -1289,11 +1280,11 @@ export interface WgslStruct<
   // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
   TProps extends Record<string, BaseData> = any,
 > extends BaseData, TgpuNamable {
-  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  (): Prettify<InferRecord<TProps>>;
-  readonly [$internal]: true;
   readonly type: 'struct';
   readonly propTypes: TProps;
+
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  (): Prettify<InferRecord<TProps>>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
@@ -1340,7 +1331,6 @@ export interface Ptr<
   TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
   TAccess extends Access = Access,
 > extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'ptr';
   readonly inner: TInner;
   readonly addressSpace: TAddr;
@@ -1356,7 +1346,6 @@ export interface Ptr<
  * Schema representing the `atomic<...>` WGSL data type.
  */
 export interface Atomic<TInner extends U32 | I32 = U32 | I32> extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'atomic';
   readonly inner: TInner;
 
@@ -1428,7 +1417,6 @@ export interface Decorated<
   TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
 > extends BaseData {
-  readonly [$internal]: true;
   readonly type: 'decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;

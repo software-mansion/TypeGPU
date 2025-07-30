@@ -24,7 +24,6 @@ export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
 export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
-  readonly [$internal]: true;
   readonly type: T;
 
   // Type-tokens, not available at runtime

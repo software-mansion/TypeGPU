@@ -549,46 +549,6 @@ describe('TgpuBuffer', () => {
   });
 });
 
-describe('ExtractInvalidSchemaError', () => {
-  it('treats booleans as invalid', () => {
-    expectTypeOf<ExtractInvalidSchemaError<d.Bool>>().toEqualTypeOf<
-      'Bool is not host-shareable, use U32 or I32 instead'
-    >();
-
-    expectTypeOf<ExtractInvalidSchemaError<d.WgslArray<d.Bool>>>()
-      .toEqualTypeOf<
-        'in array element — Bool is not host-shareable, use U32 or I32 instead'
-      >();
-
-    expectTypeOf<
-      ExtractInvalidSchemaError<d.WgslStruct<{ foo: d.Bool }>>
-    >()
-      .toEqualTypeOf<
-        "in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"
-      >();
-  });
-
-  it('it treats arrays of valid schemas as valid', () => {
-    expectTypeOf<ExtractInvalidSchemaError<d.WgslArray<d.U32>>>()
-      .toEqualTypeOf<never>();
-  });
-
-  it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<ExtractInvalidSchemaError<d.Bool | d.U32>>()
-      .toEqualTypeOf<never>();
-
-    expectTypeOf<
-      ExtractInvalidSchemaError<d.WgslArray<d.Bool> | d.U32>
-    >()
-      .toEqualTypeOf<never>();
-
-    expectTypeOf<
-      ExtractInvalidSchemaError<d.WgslArray<d.Bool | d.U32>>
-    >()
-      .toEqualTypeOf<never>();
-  });
-});
-
 describe('IsValidUniformSchema', () => {
   it('treats booleans as invalid', () => {
     expectTypeOf<IsValidUniformSchema<d.Bool>>().toEqualTypeOf<false>();

@@ -630,9 +630,10 @@ const dataReaders = {
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
 
-    for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(input, alignmentOf(property as wgsl.BaseData));
-      result[key] = readData(input, property as wgsl.BaseData);
+    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    for (const [key, property] of Object.entries(propTypes)) {
+      alignIO(input, alignmentOf(property));
+      result[key] = readData(input, property);
     }
 
     alignIO(input, alignment);

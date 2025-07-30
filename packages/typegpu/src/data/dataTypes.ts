@@ -43,7 +43,6 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  */
 export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
   extends wgsl.BaseData {
-  readonly [$internal]: true;
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -71,7 +70,6 @@ export interface Unstruct<
   // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
   TProps extends Record<string, wgsl.BaseData> = any,
 > extends wgsl.BaseData, TgpuNamable {
-  readonly [$internal]: true;
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
@@ -98,7 +96,6 @@ export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
 > extends wgsl.BaseData {
-  readonly [$internal]: true;
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
