@@ -11,13 +11,8 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import {
-  type AnyData,
-  isData,
-  snip,
-  type Snippet,
-  type UnknownData,
-} from './data/dataTypes.ts';
+import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
+import { snip, type Snippet } from './data/snippet.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';

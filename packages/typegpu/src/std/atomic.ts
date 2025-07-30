@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import {
   type AnyWgslData,

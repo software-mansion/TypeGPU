@@ -5,10 +5,9 @@ import {
   InfixDispatch,
   isData,
   isLooseData,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';

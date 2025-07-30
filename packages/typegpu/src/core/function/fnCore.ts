@@ -1,6 +1,8 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AnyData, snip } from '../../data/dataTypes.ts';
+import { undecorate } from '../../data/decorateUtils.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import {
   type AnyWgslStruct,
   isWgslData,
@@ -153,13 +155,10 @@ export function createFnCore(
         if (
           maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
         ) {
-          const unwrappedReturnType = 'inner' in returnType
-            ? returnType.inner
-            : returnType;
           applyExternals(
             externalMap,
             {
-              [maybeSecondArg.name]: unwrappedReturnType,
+              [maybeSecondArg.name]: undecorate(returnType),
             },
           );
         }
