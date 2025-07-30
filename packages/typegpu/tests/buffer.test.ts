@@ -6,7 +6,6 @@ import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
 import type {
-  ExtractInvalidSchemaError,
   IsValidBufferSchema,
   IsValidUniformSchema,
 } from '../src/shared/repr.ts';
