@@ -1,3 +1,5 @@
+import type { Undecorate } from '../data/attributes.ts';
+import type { Disarray } from '../data/index.ts';
 import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
@@ -97,10 +99,11 @@ export type IsValidVertexSchema<T> =
     : true;
 
 /**
- * TODO: Index schemas can (probably) just be either array<u16> or array<u32>, but best verify with Konrad
+ * Accepts only arrays (or disarrays) of u32 or u16.
  */
-export type IsValidIndexSchema<T> = [T] extends
-  [WgslArray<U16> | WgslArray<U32>] ? true : false;
+export type IsValidIndexSchema<T> = Undecorate<T> extends WgslArray | Disarray
+  ? (Undecorate<Undecorate<T>['elementType']>) extends U32 | U16 ? true : false
+  : false;
 
 /**
  * Checks if a schema can be used in a buffer at all

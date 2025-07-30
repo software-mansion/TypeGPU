@@ -542,8 +542,8 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
       [
-        'storage' | 'uniform' | 'vertex',
-        ...('storage' | 'uniform' | 'vertex')[],
+        'index' | 'storage' | 'uniform' | 'vertex',
+        ...('index' | 'storage' | 'uniform' | 'vertex')[],
       ]
     >();
   });
