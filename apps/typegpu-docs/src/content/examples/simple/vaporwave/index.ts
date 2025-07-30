@@ -7,16 +7,15 @@ import { perlin3d } from '@typegpu/noise';
 import { circles, grid } from './floor.ts';
 import * as c from './constans.ts';
 import { Ray } from './types.ts';
-import { getBall } from './ball.ts';
-import { shapeUnion } from './helpers.ts';
+import { getSphere } from './sphere.ts';
+import { rayUnion } from './helpers.ts';
 
+// == INIT ==
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const root = await tgpu.init({
-  device: { requiredFeatures: ['timestamp-query'] }, // was used to measure performance of static cache of perlin noise
-});
+const root = await tgpu.init();
 
 context.configure({
   device: root.device,
@@ -24,22 +23,24 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+// == BUFFERS ==
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
-// these paramaters can be changed
 let ballColor = d.vec3f(0, 0.25, 1);
-let speedPerFrame = 11;
-
 const ballColorBuf = root.createUniform(d.vec3f);
 ballColorBuf.write(ballColor);
+
+let speedPerFrame = 11;
 const speedPerFrameBuf = root.createUniform(d.f32);
 speedPerFrameBuf.write(speedPerFrame);
 
-const floorPatternSlot = tgpu.slot(grid);
+const floorPatternSlot = tgpu.slot(circles);
 
-// should return min distance to some world object
-const getSceneDist = tgpu.fn(
+// == RAYMARCHING ==
+
+// should return minimal distance to some object in the scene
+const getSceneRay = tgpu.fn(
   [d.vec3f],
   Ray,
 )((p) => {
@@ -47,43 +48,45 @@ const getSceneDist = tgpu.fn(
     dist: sdPlane(p, d.vec3f(0, 1, 0), 1), // hardcoded plane location
     color: floorPatternSlot.$(p.xz, speedPerFrameBuf.$, time.$),
   });
-  const ball = getBall(p, ballColorBuf.$, c.ballCenter, time.$);
+  const ball = getSphere(p, ballColorBuf.$, c.sphereCenter, time.$);
 
-  return shapeUnion(floor, ball);
+  return rayUnion(floor, ball);
 });
 
 const rayMarch = tgpu.fn(
   [d.vec3f, d.vec3f],
-  d.struct({ ray: Ray, bloom: d.vec3f }),
+  d.struct({ ray: Ray, glow: d.vec3f }),
 )((ro, rd) => {
-  let dO = d.f32(0);
+  let distOrigin = d.f32(0);
   const result = Ray({
     dist: d.f32(c.MAX_DIST),
     color: d.vec3f(0, 1, 0), // green for debug
   });
 
-  let bloom = d.vec3f(0, 0, 0);
+  let glow = d.vec3f(0, 0, 0);
 
   for (let i = 0; i < c.MAX_STEPS; i++) {
-    const p = std.add(ro, std.mul(rd, dO));
-    const scene = getSceneDist(p);
-    const ballDist = getBall(p, ballColorBuf.$, c.ballCenter, time.$);
-    bloom = std.add(bloom, std.mul(ballColorBuf.$, std.exp(-ballDist.dist)));
-    dO += scene.dist;
+    const p = std.add(ro, std.mul(rd, distOrigin));
+    const scene = getSceneRay(p);
+    const ballDist = getSphere(p, ballColorBuf.$, c.sphereCenter, time.$);
 
-    if (dO > c.MAX_DIST) {
+    glow = std.add(glow, std.mul(ballColorBuf.$, std.exp(-ballDist.dist)));
+
+    distOrigin += scene.dist;
+
+    if (distOrigin > c.MAX_DIST) {
       result.dist = c.MAX_DIST;
       break;
     }
 
     if (scene.dist < c.SURF_DIST) {
-      result.dist = dO;
+      result.dist = distOrigin;
       result.color = scene.color;
       break;
     }
   }
 
-  return { ray: result, bloom };
+  return { ray: result, glow };
 });
 
 const vertexMain = tgpu['~unstable'].vertexFn({
@@ -117,19 +120,19 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const y = std.add(ro, std.mul(rd, march.ray.dist)).y - 2; // camera at level 2
   const sky = std.mix(c.skyColor1, c.skyColor2, y / c.MAX_DIST);
 
-  // fog calculations
+  // fog coefficient
   const fog = std.min(march.ray.dist / c.MAX_DIST, 1);
 
   return std.mix(
-    d.vec4f(march.bloom, 1),
+    d.vec4f(march.glow, 1),
     std.mix(d.vec4f(march.ray.color, 1), sky, fog),
-    0.87, // this should not be hardcoded (but does just fine)
+    0.87, // this should not be hardcoded, but does just fine ;)
   );
 });
 
 const perlinCache = perlin3d.staticCache({
   root: root,
-  size: d.vec3u(64),
+  size: d.vec3u(7),
 });
 
 let renderPipeline = root['~unstable']
