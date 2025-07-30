@@ -1,6 +1,8 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AnyData, snip } from '../../data/dataTypes.ts';
+import { undecorate } from '../../data/decorateUtils.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import {
   isWgslData,
   isWgslStruct,
@@ -147,6 +149,20 @@ export function createFnCore(
         );
         if (missingExternals.length > 0) {
           throw new MissingLinksError(getName(this), missingExternals);
+        }
+
+        // If an entrypoint implementation has a second argument, it represents the output schema.
+        // We look at the identifier chosen by the user and add it to externals.
+        const maybeSecondArg = ast.params[1];
+        if (
+          maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
+        ) {
+          applyExternals(
+            externalMap,
+            {
+              [maybeSecondArg.name]: undecorate(returnType),
+            },
+          );
         }
 
         // generate wgsl string

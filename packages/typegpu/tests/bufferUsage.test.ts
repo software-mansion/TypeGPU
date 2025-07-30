@@ -319,7 +319,7 @@ describe('TgpuBufferReadonly', () => {
     });
 
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Execution of the following tree failed: 
+      [Error: Execution of the following tree failed:
       - fn:foo: Cannot access buffer:fooBuffer. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
   });

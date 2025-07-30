@@ -27,6 +27,7 @@ import {
   type LooseDecorated,
   type LooseTypeLiteral,
 } from './dataTypes.ts';
+import type { Undecorate } from './decorateUtils.ts';
 import { sizeOf } from './sizeOf.ts';
 import {
   type Align,
@@ -91,13 +92,6 @@ export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
 } ? T['attribs']
   : [];
-
-export type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner
-  : T;
-
-export type UndecorateRecord<T extends Record<string, unknown>> = {
-  [Key in keyof T]: Undecorate<T[Key]>;
-};
 
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.

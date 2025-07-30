@@ -20,6 +20,7 @@ import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
+import type { MapValueToSnippet, Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
@@ -216,38 +217,3 @@ export class InfixDispatch {
     readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }
-
-export interface Snippet {
-  readonly value: unknown;
-  readonly dataType: AnyData | UnknownData;
-}
-
-class SnippetImpl implements Snippet {
-  constructor(
-    readonly value: unknown,
-    readonly dataType: AnyData | UnknownData,
-  ) {}
-}
-
-export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
-  return new SnippetImpl(
-    value,
-    // We don't care about attributes in snippet land, so we discard that information.
-    dataType.type === 'decorated' || dataType.type === 'loose-decorated'
-      ? dataType.inner as AnyData
-      : dataType,
-  );
-}
-
-export function isSnippet(value: unknown): value is Snippet {
-  return value instanceof SnippetImpl;
-}
-
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
-
-export type UnwrapDecorated<TData extends wgsl.BaseData> = TData extends {
-  readonly type: 'decorated';
-  readonly inner: infer TInner;
-} ? TInner extends wgsl.BaseData ? UnwrapDecorated<TInner>
-  : TData
-  : TData;
