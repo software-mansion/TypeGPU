@@ -537,12 +537,17 @@ describe('TGSL tgpu.fn function', () => {
           fragDepth: builtin.fragDepth,
           out: d.location(0, d.vec4f),
         },
-      })(({ pos: position, sampleMask }) => {
-        return {
-          out: position,
+      })(({ pos: position, sampleMask }, Out) => {
+        const out = Out({
+          out: d.vec4f(),
           fragDepth: 1,
           sampleMask: 0,
-        };
+        });
+        if (sampleMask > 0 && position.x > 0) {
+          out.sampleMask = 1;
+        }
+
+        return out;
       });
 
     const actual = parseResolved({ fragmentFn });
@@ -562,7 +567,11 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
-        return fragmentFn_Output(0, 1, _arg_0.pos);
+        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
+          out.sampleMask = 1;
+        }
+        return out;
       }
     `);
 
