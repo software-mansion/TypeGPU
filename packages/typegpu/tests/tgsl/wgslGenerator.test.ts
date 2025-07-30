@@ -881,7 +881,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - internalTestFn: Type error: Type 'array' cannot be converted to type 'vec2f'.]
+        - internalTestFn: Type error: Cannot convert value of type 'array' to type 'vec2f']
       `);
   });
 
@@ -911,7 +911,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - vec4f: Type error: Type 'array' cannot be converted to type 'f32'.]
+        - vec4f: Type error: Cannot convert value of type 'array' to type 'f32']
       `);
   });
 

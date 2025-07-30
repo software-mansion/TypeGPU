@@ -195,7 +195,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Type error: Tried converting a value of type 'u32' to null type.]
+      - fn:add: Type error: Cannot convert value of type 'u32' to type 'void']
     `);
   });
 
@@ -207,7 +207,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ add })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Type error: Type 'abstractInt' cannot be converted to type 'vec3f'.]
+      - fn:add: Type error: Cannot convert value of type 'abstractInt' to type 'vec3f']
     `);
   });
 
@@ -219,7 +219,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Type error: Type 'abstractFloat' cannot be converted to type 'u32'.]
+      - fn:myFn: Type error: Cannot convert value of type 'abstractFloat' to type 'u32']
     `);
   });
 
@@ -249,7 +249,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Type error: Type 'vec2<bool>' cannot be converted to type 'bool'.]
+      - fn:myFn: Type error: Cannot convert value of type 'vec2<bool>' to type 'bool']
     `);
   });
 
@@ -264,7 +264,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Type error: Type 'mat2x2f' cannot be converted to type 'bool'.]
+      - fn:myFn: Type error: Cannot convert value of type 'mat2x2f' to type 'bool']
     `);
   });
 
@@ -281,7 +281,7 @@ describe('wgsl generator type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Type error: Type 'abstractInt' cannot be converted to type 'bool'.]
+      - fn:myFn: Type error: Cannot convert value of type 'abstractInt' to type 'bool']
     `);
   });
 

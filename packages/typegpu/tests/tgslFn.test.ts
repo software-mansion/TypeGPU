@@ -567,7 +567,7 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
-        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var out = fragmentFn_Output(0, 1, vec4f());
         if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
           out.sampleMask = 1;
         }

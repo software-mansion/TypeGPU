@@ -564,7 +564,7 @@ export function tryConvertSnippet(
 
   if (targetDataType.type === 'void') {
     throw new Error(
-      `Type error: Tried converting a value of type '${value.dataType.type}' to null type.`,
+      `Type error: Cannot convert value of type '${value.dataType.type}' to type 'void'`,
     );
   }
 
@@ -572,7 +572,7 @@ export function tryConvertSnippet(
 
   if (!converted) {
     throw new Error(
-      `Type error: Type '${value.dataType.type}' cannot be converted to type '${targetDataType.type}'.`,
+      `Type error: Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
     );
   }
 
