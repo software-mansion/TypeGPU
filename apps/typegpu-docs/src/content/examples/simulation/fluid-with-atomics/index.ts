@@ -112,7 +112,7 @@ const getStableStateBelow = tgpu.fn([d.u32, d.u32], d.u32)((upper, lower) => {
     return totalMass;
   }
   if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.$ * 2 && upper > lower) {
-    return totalMass / 2 + MAX_PRESSURE.$;
+    return d.u32(totalMass / 2) + MAX_PRESSURE.$;
   }
   return MAX_WATER_LEVEL_UNPRESSURIZED.$;
 });
@@ -207,7 +207,10 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x - 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(
+        std.min(4, remainingWater),
+        d.u32(flowRaw / 4),
+      );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x - 1, y, flow);
@@ -222,7 +225,10 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x + 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
     if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const change = std.max(
+        std.min(4, remainingWater),
+        d.u32(flowRaw / 4),
+      );
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x + 1, y, flow);
@@ -258,17 +264,12 @@ const vertex = tgpu['~unstable'].vertexFn({
 })((input) => {
   const w = size.$.x;
   const h = size.$.y;
-  const x = (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
-    2 *
-    d.f32(w)) /
-    d.f32(std.max(w, h));
-  const y =
-    ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
-        d.f32(h) -
-      0.5) *
-      2 *
-      d.f32(h)) /
-    d.f32(std.max(w, h));
+  const gridX = input.idx % w;
+  const gridY = d.u32(input.idx / w);
+  const maxDim = std.max(w, h);
+  const x = (2 * (d.f32(gridX) + input.squareData.x) - d.f32(w)) / maxDim;
+  const y = (2 * (d.f32(gridY) + input.squareData.y) - d.f32(h)) / maxDim;
+
   const cellFlags = input.currentStateData >> 24;
   let cell = d.f32(input.currentStateData & 0xffffff);
   if (cellFlags === 1) {

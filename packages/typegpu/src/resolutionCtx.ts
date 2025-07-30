@@ -1,4 +1,6 @@
 import { resolveData } from './core/resolve/resolveData.ts';
+import { ConfigurableImpl } from './core/root/configurableImpl.ts';
+import type { Configurable } from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -17,8 +19,8 @@ import {
   type UnknownData,
 } from './data/dataTypes.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
-import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { popMode, provideCtx, pushMode } from './execMode.ts';
+import { invariant, MissingSlotValueError, ResolutionError } from './errors.ts';
+import { provideCtx, topLevelState } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
@@ -33,13 +35,20 @@ import {
 import { coerceToSnippet } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
+  ExecMode,
+  ExecState,
   FnToWgslOptions,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
   Wgsl,
 } from './types.ts';
-import { isSelfResolvable, isWgsl } from './types.ts';
+import {
+  CodegenState,
+  isSelfResolvable,
+  isWgsl,
+  NormalState,
+} from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -279,6 +288,16 @@ export class IndentController {
     this.identLevel--;
     return this.pre;
   }
+
+  withResetLevel<T>(callback: () => T): T {
+    const savedLevel = this.identLevel;
+    this.identLevel = 0;
+    try {
+      return callback();
+    } finally {
+      this.identLevel = savedLevel;
+    }
+  }
 }
 
 interface FixedBindingConfig {
@@ -302,6 +321,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
+  readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
 
@@ -345,6 +365,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  withResetIndentLevel<T>(callback: () => T): T {
+    return this._indentController.withResetLevel(callback);
   }
 
   getById(id: string): Snippet | null {
@@ -494,14 +518,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      // Derived computations are always done at COMPTIME
-      pushMode('comptime');
+      // Getting out of codegen or simulation mode so we can execute JS normally.
+      this.pushMode(new NormalState());
 
       let result: T;
       try {
         result = derived['~compute']();
       } finally {
-        popMode('comptime');
+        this.popMode('normal');
       }
 
       // We know which slots the item used while resolving
@@ -590,11 +614,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if ((item && typeof item === 'object') || typeof item === 'function') {
       if (this._itemStateStack.itemDepth === 0) {
         try {
-          pushMode('codegen');
+          this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
+
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
-          popMode('codegen');
+          this.popMode('codegen');
         }
       }
 
@@ -638,6 +663,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }) of schema ${schema} is not resolvable to WGSL`,
     );
   }
+
+  pushMode(mode: ExecState) {
+    this.#modeStack.push(mode);
+  }
+
+  popMode(expected?: ExecMode) {
+    const mode = this.#modeStack.pop();
+    if (expected !== undefined) {
+      invariant(mode?.type === expected, 'Unexpected mode');
+    }
+  }
+
+  get mode(): ExecState {
+    return this.#modeStack[this.#modeStack.length - 1] ?? topLevelState;
+  }
 }
 
 /**
@@ -656,9 +696,15 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
+  config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
-  let code = ctx.resolve(item);
+  let code = config
+    ? ctx.withSlots(
+      config(new ConfigurableImpl([])).bindings,
+      () => ctx.resolve(item),
+    )
+    : ctx.resolve(item);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
@@ -723,8 +769,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+    ? `(${argList}) -> ${getAttributesString(returnType)}${
       ctx.resolve(returnType)
-    }`
-    : `(${argList})`;
+    } `
+    : `(${argList}) `;
 }

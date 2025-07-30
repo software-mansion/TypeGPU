@@ -104,6 +104,11 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
+              label: 'Pipelines',
+              slug: 'fundamentals/pipelines',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
@@ -230,7 +235,7 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
+            typeDocSidebarGroup,
           ]),
         },
       ]),

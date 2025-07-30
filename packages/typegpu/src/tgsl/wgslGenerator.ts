@@ -9,7 +9,7 @@ import {
   type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -120,9 +120,14 @@ export function generateBlock(
 ): string {
   ctx.pushBlockScope();
   try {
-    return `${ctx.indent()}{
-${statements.map((statement) => generateStatement(ctx, statement)).join('\n')}
-${ctx.dedent()}}`;
+    ctx.indent();
+    const body = statements.map((statement) =>
+      generateStatement(ctx, statement)
+    ).join('\n');
+    ctx.dedent();
+    return `{
+${body}
+${ctx.pre}}`;
   } finally {
     ctx.popBlockScope();
   }
@@ -168,13 +173,16 @@ export function generateExpression(
     const rhsExpr = generateExpression(ctx, rhs);
 
     const forcedType = expression[0] === NODE.assignmentExpr
-      ? [lhsExpr.dataType as AnyData]
-      : [];
+      ? lhsExpr.dataType.type === 'ptr'
+        ? [lhsExpr.dataType.inner as AnyData]
+        : [lhsExpr.dataType as AnyData]
+      : undefined;
 
     const converted = convertToCommonType(
       ctx,
       [lhsExpr, rhsExpr],
-      forcedType,
+      op === '/' ? [f32, f16] : forcedType,
+      /* verbose */ op !== '/',
     ) as
       | [Snippet, Snippet]
       | undefined;
@@ -354,7 +362,7 @@ export function generateExpression(
       return snip(`${id.value}(${argValues.join(', ')})`, id.dataType);
     }
 
-    if (wgsl.isWgslStruct(id.value)) {
+    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       const resolvedId = ctx.resolve(id.value);
       // There are three ways a struct can be called that we support:
       // - with no arguments `Struct()`,
@@ -362,6 +370,7 @@ export function generateExpression(
       // - with another struct `Struct(otherStruct)`.
       // In the last case, we assume the `otherStruct` is defined on TGSL side
       // and we just strip the constructor to let the assignment operator clone it.
+      // The behavior for arrays is analogous.
       if (args.length === 0) {
         return snip(`${resolvedId}()`, id.value);
       }
@@ -376,7 +385,7 @@ export function generateExpression(
       }
 
       // The type of the return value is the struct itself
-      return snip(`(${argValues.join(', ')})`, id.value);
+      return snip(`${argValues.join(', ')}`, id.value);
     }
 
     if (id.value instanceof InfixDispatch) {
@@ -442,7 +451,11 @@ export function generateExpression(
       const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
         ...convertedResources,
       ) as Snippet;
-      return snip(ctx.resolve(fnRes.value), fnRes.dataType);
+      // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+      return snip(
+        ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
+        fnRes.dataType,
+      );
     } catch (error) {
       throw new ResolutionError(error, [{
         toString: () => getName(id.value),
@@ -610,27 +623,18 @@ export function generateStatement(
     }
     const condition = ctx.resolve(condSnippet.value);
 
-    ctx.indent(); // {
-    const consequent = generateStatement(ctx, blockifySingleStatement(cons));
-    ctx.dedent(); // }
-
-    ctx.indent(); // {
+    const consequent = generateBlock(ctx, blockifySingleStatement(cons));
     const alternate = alt
-      ? generateStatement(ctx, blockifySingleStatement(alt))
+      ? generateBlock(ctx, blockifySingleStatement(alt))
       : undefined;
-    ctx.dedent(); // }
 
     if (!alternate) {
-      return `\
-${ctx.pre}if (${condition})
-${consequent}`;
+      return `${ctx.pre}if (${condition}) ${consequent}`;
     }
 
     return `\
-${ctx.pre}if (${condition})
-${consequent}
-${ctx.pre}else
-${alternate}`;
+${ctx.pre}if (${condition}) ${consequent}
+${ctx.pre}else ${alternate}`;
   }
 
   if (statement[0] === NODE.let || statement[0] === NODE.const) {
@@ -694,12 +698,17 @@ ${alternate}`;
   if (statement[0] === NODE.for) {
     const [_, init, condition, update, body] = statement;
 
-    const initStatement = init ? generateStatement(ctx, init) : undefined;
+    const [initStatement, conditionExpr, updateStatement] = ctx
+      .withResetIndentLevel(
+        () => [
+          init ? generateStatement(ctx, init) : undefined,
+          condition ? generateExpression(ctx, condition) : undefined,
+          update ? generateStatement(ctx, update) : undefined,
+        ],
+      );
+
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
 
-    const conditionExpr = condition
-      ? generateExpression(ctx, condition)
-      : undefined;
     let condSnippet = conditionExpr;
     if (conditionExpr) {
       const converted = convertToCommonType(ctx, [conditionExpr], [bool]);
@@ -709,16 +718,10 @@ ${alternate}`;
     }
     const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
 
-    const updateStatement = update ? generateStatement(ctx, update) : undefined;
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-    ctx.indent();
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
-
-    return `\
-${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
-${bodyStr}`;
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {
@@ -733,13 +736,8 @@ ${bodyStr}`;
     }
     const conditionStr = ctx.resolve(condSnippet.value);
 
-    ctx.indent();
-    const bodyStr = generateStatement(ctx, blockifySingleStatement(body));
-    ctx.dedent();
-
-    return `\
-${ctx.pre}while (${conditionStr})
-${bodyStr}`;
+    const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
+    return `${ctx.pre}while (${conditionStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.continue) {

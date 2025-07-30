@@ -20,7 +20,9 @@ describe('[BABEL] parser options', () => {
       }, {
         v: 1,
         ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        externals: {}
+        get externals() {
+          return {};
+        }
       }) && $.f)({}));"
     `);
 
@@ -60,7 +62,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
             }), {
                     v: 1,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: {},
+                    get externals() { return {}; },
                   }) && $.f)({})));
 
             console.log(increment);
