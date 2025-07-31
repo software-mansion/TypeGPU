@@ -10,7 +10,7 @@ import {
 import { snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { ResolutionError } from '../errors.ts';
+import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { add, div, mul, sub } from '../std/numeric.ts';
@@ -347,15 +347,15 @@ export function generateExpression(
   }
 
   if (expression[0] === NODE.call) {
-    // Function Call.
+    // Function Call
     const [_, callee, args] = expression;
     const id = generateExpression(ctx, callee);
 
     if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
       // Struct/array schema call.
       if (args.length > 1) {
-        throw new Error(
-          'Type error: Array and struct schemas should always be called with at most 1 argument.',
+        throw new WgslTypeError(
+          'Array and struct schemas should always be called with at most 1 argument',
         );
       }
 
@@ -378,8 +378,8 @@ export function generateExpression(
     if (id.value instanceof InfixDispatch) {
       // Infix operator dispatch.
       if (!args[0]) {
-        throw new Error(
-          `Type error: An infix operator '${id.value.name}' was called without any arguments`,
+        throw new WgslTypeError(
+          `An infix operator '${id.value.name}' was called without any arguments`,
         );
       }
       return id.value.operator(id.value.lhs, generateExpression(ctx, args[0]));
@@ -396,7 +396,7 @@ export function generateExpression(
     // Other, including tgsl functions, std and vector/matrix schema calls.
 
     const argConversionHint = id.value[$internal]
-      ?.argConversionHint as FnArgsConversionHint;
+      ?.argConversionHint as FnArgsConversionHint ?? 'keep';
     try {
       let convertedArguments: Snippet[];
 
@@ -405,10 +405,10 @@ export function generateExpression(
         convertedArguments = args.map((arg, i) => {
           const argType = argConversionHint[i];
           if (!argType) {
-            throw new Error(
-              `Type error: Function '${
+            throw new WgslTypeError(
+              `Function '${
                 getName(id.value)
-              }' was called with too many arguments.`,
+              }' was called with too many arguments`,
             );
           }
           return generateTypedExpression(ctx, arg, argType);
@@ -418,10 +418,10 @@ export function generateExpression(
           .map((arg) => generateExpression(ctx, arg))
           .map((res) => snip(ctx.resolve(res.value), res.dataType));
 
-        if (!argConversionHint || argConversionHint === 'keep') {
+        if (argConversionHint === 'keep') {
           // The hint tells us to do nothing.
           convertedArguments = resolvedSnippets;
-        } else if (argConversionHint === 'convert-arguments-to-common-type') {
+        } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
           convertedArguments = convertToCommonType(ctx, resolvedSnippets) ??
             resolvedSnippets;
@@ -455,8 +455,8 @@ export function generateExpression(
     const structType = ctx.expectedTypeStack.at(-1);
 
     if (!structType || !wgsl.isWgslStruct(structType)) {
-      throw new Error(
-        `Type error: No target type could be inferred for object with keys [${
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${
           Object.keys(obj).join(', ')
         }], please wrap the object in the corresponding schema.`,
       );
@@ -466,8 +466,8 @@ export function generateExpression(
       Object.entries(structType.propTypes).map(([key, value]) => {
         const val = obj[key];
         if (val === undefined) {
-          throw new Error(
-            `Type error: Missing property ${key} in object literal for struct ${structType}`,
+          throw new WgslTypeError(
+            `Missing property ${key} in object literal for struct ${structType}`,
           );
         }
         const result = generateTypedExpression(ctx, val, value as AnyData);
@@ -508,15 +508,15 @@ export function generateExpression(
       );
 
       if (valuesSnippets.length === 0) {
-        throw new Error(
-          'Type error: Cannot infer the type of an empty array literal.',
+        throw new WgslTypeError(
+          'Cannot infer the type of an empty array literal.',
         );
       }
 
       const maybeValues = convertToCommonType(ctx, valuesSnippets);
       if (!maybeValues) {
-        throw new Error(
-          'Type error: The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
+        throw new WgslTypeError(
+          'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
         );
       }
 

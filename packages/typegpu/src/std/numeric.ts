@@ -96,7 +96,7 @@ export const add = createDualImpl(
       `(${lhs.value} + ${rhs.value})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
-  'convert-arguments-to-common-type',
+  'unify',
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -126,7 +126,7 @@ export const sub = createDualImpl(
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'sub',
-  'convert-arguments-to-common-type',
+  'unify',
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -510,7 +510,7 @@ export const max = createDualImpl(
   // GPU implementation
   (a, b) => snip(`max(${a.value}, ${b.value})`, a.dataType),
   'max',
-  'convert-arguments-to-common-type',
+  'unify',
 );
 
 /**
@@ -528,7 +528,7 @@ export const min = createDualImpl(
   // GPU implementation
   (a, b) => snip(`min(${a.value}, ${b.value})`, a.dataType),
   'min',
-  'convert-arguments-to-common-type',
+  'unify',
 );
 
 export const sign = createDualImpl(

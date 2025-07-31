@@ -26,7 +26,7 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
   gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
   name: string,
-  argConversionHint?: FnArgsConversionHint,
+  argConversionHint: FnArgsConversionHint = 'keep',
 ): TgpuDualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (inCodegenMode()) {

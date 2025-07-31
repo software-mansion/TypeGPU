@@ -49,7 +49,7 @@ import {
   isWgslStruct,
   type U32,
 } from '../data/wgslTypes.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
@@ -563,16 +563,16 @@ export function tryConvertSnippet(
   }
 
   if (targetDataType.type === 'void') {
-    throw new Error(
-      `Type error: Cannot convert value of type '${value.dataType.type}' to type 'void'`,
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type 'void'`,
     );
   }
 
   const converted = convertToCommonType(ctx, [value], [targetDataType]);
 
   if (!converted) {
-    throw new Error(
-      `Type error: Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
     );
   }
 
