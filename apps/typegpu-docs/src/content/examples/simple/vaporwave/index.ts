@@ -24,53 +24,66 @@ context.configure({
 });
 
 // == BUFFERS ==
-const time = root.createUniform(d.f32);
+const floorAngleBuffer = root.createUniform(d.f32);
+const sphereAngleBuffer = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
-let sphereColor = d.vec3f(0, 0.25, 1);
-const sphereColorBuf = root.createUniform(d.vec3f);
-sphereColorBuf.write(sphereColor);
+let floorSpeed = 1;
+let sphereSpeed = 1;
 
-let speedPerFrame = 11;
-const speedPerFrameBuf = root.createUniform(d.f32);
-speedPerFrameBuf.write(speedPerFrame);
+let sphereColor = d.vec3f(0, 0.25, 1);
+const sphereColorBuffer = root.createUniform(d.vec3f);
+sphereColorBuffer.write(sphereColor);
 
 const floorPatternSlot = tgpu.slot(circles);
 
 // == RAYMARCHING ==
 
-// should return minimal distance to some object in the scene
+// returns smallest distance to some object in the scene
 const getSceneRay = tgpu.fn(
   [d.vec3f],
   Ray,
 )((p) => {
   const floor = Ray({
     dist: sdPlane(p, c.planeOrthonormal, c.planeOffset),
-    color: floorPatternSlot.$(p.xz, speedPerFrameBuf.$, time.$),
+    color: floorPatternSlot.$(p.xz, floorAngleBuffer.$),
   });
-  const ball = getSphere(p, sphereColorBuf.$, c.sphereCenter, time.$);
+  const sphere = getSphere(
+    p,
+    sphereColorBuffer.$,
+    c.sphereCenter,
+    sphereAngleBuffer.$,
+  );
 
-  return rayUnion(floor, ball);
+  return rayUnion(floor, sphere);
 });
 
 const rayMarch = tgpu.fn(
   [d.vec3f, d.vec3f],
   d.struct({ ray: Ray, glow: d.vec3f }),
 )((ro, rd) => {
-  let distOrigin = d.f32(0);
+  let distOrigin = d.f32();
   const result = Ray({
     dist: d.f32(c.MAX_DIST),
-    color: d.vec3f(0, 1, 0), // green for debug
+    color: d.vec3f(),
   });
 
-  let glow = d.vec3f(0, 0, 0);
+  let glow = d.vec3f();
 
   for (let i = 0; i < c.MAX_STEPS; i++) {
     const p = std.add(ro, std.mul(rd, distOrigin));
     const scene = getSceneRay(p);
-    const ballDist = getSphere(p, sphereColorBuf.$, c.sphereCenter, time.$);
+    const sphereDist = getSphere(
+      p,
+      sphereColorBuffer.$,
+      c.sphereCenter,
+      sphereAngleBuffer.$,
+    );
 
-    glow = std.add(glow, std.mul(sphereColorBuf.$, std.exp(-ballDist.dist)));
+    glow = std.add(
+      glow,
+      std.mul(sphereColorBuffer.$, std.exp(-sphereDist.dist)),
+    );
 
     distOrigin += scene.dist;
 
@@ -144,8 +157,21 @@ let renderPipeline = root['~unstable']
   .createPipeline();
 
 let animationFrame: number;
+let floorAngle = 0;
+let sphereAngle = 0;
+let prevAngle = 0;
 function run(timestamp: number) {
-  time.write((timestamp / 1000) % 1000);
+  const curAngle = (timestamp / 1000) % c.PERIOD / c.PERIOD * 2 * Math.PI;
+  const delta = Math.abs(curAngle + 2 * Math.PI - prevAngle) % (2 * Math.PI);
+  prevAngle = curAngle;
+
+  floorAngle += delta * floorSpeed;
+  floorAngle %= c.NUM_CYCLES * Math.PI * 2;
+  sphereAngle += delta * sphereSpeed;
+  sphereAngle %= c.NUM_CYCLES * Math.PI * 2;
+
+  floorAngleBuffer.write(floorAngle);
+  sphereAngleBuffer.write(sphereAngle);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
@@ -169,21 +195,29 @@ export function onCleanup() {
 }
 
 export const controls = {
-  speed: {
-    initial: speedPerFrame,
-    min: 0,
-    max: 40,
+  'floor speed': {
+    initial: floorSpeed,
+    min: -10,
+    max: 10,
     step: 0.1,
     onSliderChange(value: number) {
-      speedPerFrame = value;
-      speedPerFrameBuf.write(speedPerFrame);
+      floorSpeed = value;
+    },
+  },
+  'sphere speed': {
+    initial: sphereSpeed,
+    min: -10,
+    max: 10,
+    step: 0.1,
+    onSliderChange(value: number) {
+      sphereSpeed = value;
     },
   },
   'sphere color': {
     initial: [...sphereColor] as const,
     onColorChange: (value: readonly [number, number, number]) => {
       sphereColor = d.vec3f(...value);
-      sphereColorBuf.write(sphereColor);
+      sphereColorBuffer.write(sphereColor);
     },
   },
   'floor pattern': {

@@ -5,11 +5,11 @@ import * as std from 'typegpu/std';
 import * as c from './constants.ts';
 
 export const grid = tgpu.fn(
-  [d.vec2f, d.f32, d.f32],
+  [d.vec2f, d.f32],
   d.vec3f,
-)((uv, speed, time) => {
+)((uv, time) => { // time is really an angle, but we are fine as long as it keeps increasing
   const uvNormalized = std.fract(
-    std.div(d.vec2f(uv.x, uv.y + speed * time), c.GRID_SEP),
+    std.div(d.vec2f(uv.x, uv.y + time), c.GRID_SEP),
   );
 
   // x^4 + y^4 = 0.5^4
@@ -27,10 +27,10 @@ export const grid = tgpu.fn(
 });
 
 export const circles = tgpu.fn(
-  [d.vec2f, d.f32, d.f32],
+  [d.vec2f, d.f32],
   d.vec3f,
-)((uv, speed, time) => {
-  const rotMatY = d.mat4x4f.rotationY(-time * speed / 10); // 10 is hardcoded empirically
+)((uv, angle) => {
+  const rotMatY = d.mat4x4f.rotationY(angle); // 10 is hardcoded empirically
   const uvRotated = std.mul(
     rotMatY,
     std.add(d.vec4f(uv.x, 1.0, uv.y, 1), d.vec4f(0, 0, -c.sphereCenter.z, 0)),
