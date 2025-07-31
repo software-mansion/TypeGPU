@@ -351,13 +351,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  /**
-   * A stack that holds the expected type of the currently generated expression.
-   * It is used exclusively for inferring the types of structs and arrays.
-   * It is modified exclusively by `generateTypedExpression` function.
-   */
-  public readonly expectedTypeStack: AnyData[] = [];
   public readonly names: NameRegistry;
+  public expectedType: AnyData | undefined;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
@@ -365,6 +360,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get pre(): string {
     return this._indentController.pre;
+  }
+
+  get topFunctionReturnType() {
+    return this._itemStateStack.topFunctionReturnType;
   }
 
   indent(): string {
@@ -399,10 +398,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
-  }
-
-  get topFunctionReturnType() {
-    return this._itemStateStack.topFunctionReturnType;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

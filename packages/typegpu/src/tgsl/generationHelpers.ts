@@ -473,13 +473,20 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly expectedTypeStack: AnyData[];
+  /**
+   * Used by `generateTypedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  expectedType: AnyData | undefined;
+  readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
   withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
-  topFunctionReturnType: AnyData;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };

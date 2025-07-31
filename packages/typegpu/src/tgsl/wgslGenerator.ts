@@ -151,7 +151,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
 }
 
 /**
- * A wrapper for `generateExpression` that updates `ctx.expectedTypeStack`
+ * A wrapper for `generateExpression` that updates `ctx.expectedType`
  * and tries to convert the result when it does not match the expected type.
  */
 export function generateTypedExpression(
@@ -159,10 +159,15 @@ export function generateTypedExpression(
   expression: tinyest.Expression,
   expectedType: AnyData,
 ) {
-  ctx.expectedTypeStack.push(expectedType);
-  const result = generateExpression(ctx, expression);
-  ctx.expectedTypeStack.pop();
-  return tryConvertSnippet(ctx, result, expectedType);
+  const prevExpectedType = ctx.expectedType;
+  ctx.expectedType = expectedType;
+
+  try {
+    const result = generateExpression(ctx, expression);
+    return tryConvertSnippet(ctx, result, expectedType);
+  } finally {
+    ctx.expectedType = prevExpectedType;
+  }
 }
 
 export function generateExpression(
@@ -452,7 +457,7 @@ export function generateExpression(
     // Object Literal
     const obj = expression[1];
 
-    const structType = ctx.expectedTypeStack.at(-1);
+    const structType = ctx.expectedType;
 
     if (!structType || !wgsl.isWgslStruct(structType)) {
       throw new WgslTypeError(
@@ -488,7 +493,7 @@ export function generateExpression(
   if (expression[0] === NODE.arrayExpr) {
     const [_, valuesRaw] = expression;
     // Array Expression
-    const arrType = ctx.expectedTypeStack.at(-1);
+    const arrType = ctx.expectedType;
     let elemType = wgsl.isWgslArray(arrType) ? arrType.elementType : undefined;
     let values: Snippet[];
 
