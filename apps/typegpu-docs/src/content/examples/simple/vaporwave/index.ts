@@ -26,10 +26,12 @@ context.configure({
 // == BUFFERS ==
 const floorAngleBuffer = root.createUniform(d.f32);
 const sphereAngleBuffer = root.createUniform(d.f32);
+const glowIntensityBuffer = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
 let floorSpeed = 1;
 let sphereSpeed = 1;
+let glowIntensity = 0.14;
 
 let sphereColor = d.vec3f(0, 0.25, 1);
 const sphereColorBuffer = root.createUniform(d.vec3f);
@@ -137,9 +139,9 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const fog = std.min(march.ray.dist / c.MAX_DIST, 1);
 
   return std.mix(
-    d.vec4f(march.glow, 1),
     std.mix(d.vec4f(march.ray.color, 1), sky, fog),
-    0.87, // this should not be hardcoded, but does just fine ;)
+    d.vec4f(march.glow, 1),
+    glowIntensityBuffer.$,
   );
 });
 
@@ -172,6 +174,7 @@ function run(timestamp: number) {
 
   floorAngleBuffer.write(floorAngle);
   sphereAngleBuffer.write(sphereAngle);
+  glowIntensityBuffer.write(glowIntensity);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
@@ -195,6 +198,15 @@ export function onCleanup() {
 }
 
 export const controls = {
+  'glow intensity': {
+    initial: glowIntensity,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange(value: number) {
+      glowIntensity = value;
+    },
+  },
   'floor speed': {
     initial: floorSpeed,
     min: -10,
