@@ -103,12 +103,29 @@ describe('wgsl generator type inference', () => {
     `));
   });
 
-  it('infers correct type inside of an array', () => {
+  it('enforces length of array literal when expecting a specific array type', () => {
     const Struct = d.struct({ prop: d.vec2f });
     const StructArray = d.arrayOf(Struct, 2);
 
     const myFn = tgpu.fn([])(() => {
       const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }]);
+    });
+
+    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Cannot create value of type 'arrayOf(struct:Struct, 2)' from an array of length: 1]
+    `);
+  });
+
+  it('infers correct type inside of an array', () => {
+    const Struct = d.struct({ prop: d.vec2f });
+    const StructArray = d.arrayOf(Struct, 2);
+
+    const myFn = tgpu.fn([])(() => {
+      const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }, {
+        prop: d.vec2f(3, 4),
+      }]);
     });
 
     expect(parseResolved({ myFn })).toBe(parse(`
@@ -117,7 +134,7 @@ describe('wgsl generator type inference', () => {
       }
       
       fn myFn() {
-        var myStructArray = array<Struct, 1>(Struct(vec2f(1, 2)));
+        var myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
       }
     `));
   });

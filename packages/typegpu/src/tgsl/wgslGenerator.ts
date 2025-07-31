@@ -494,24 +494,27 @@ export function generateExpression(
   }
 
   if (expression[0] === NODE.arrayExpr) {
-    const [_, valuesRaw] = expression;
+    const [_, valueNodes] = expression;
     // Array Expression
     const arrType = ctx.expectedType;
-    let elemType = wgsl.isWgslArray(arrType) ? arrType.elementType : undefined;
+    let elemType: AnyData;
     let values: Snippet[];
 
-    if (elemType) {
+    if (wgsl.isWgslArray(arrType)) {
+      elemType = arrType.elementType as AnyData;
       // The array is typed, so its elements should be as well.
-      values = valuesRaw.map((value) =>
-        generateTypedExpression(
-          ctx,
-          value as tinyest.Expression,
-          elemType as AnyData,
-        )
+      values = valueNodes.map((value) =>
+        generateTypedExpression(ctx, value, elemType)
       );
+      // Since it's an expected type, we enforce the length
+      if (values.length !== arrType.elementCount) {
+        throw new WgslTypeError(
+          `Cannot create value of type '${arrType}' from an array of length: ${values.length}`,
+        );
+      }
     } else {
       // The array is not typed, so we try to guess the types.
-      const valuesSnippets = valuesRaw.map((value) =>
+      const valuesSnippets = valueNodes.map((value) =>
         generateExpression(ctx, value as tinyest.Expression)
       );
 
@@ -536,7 +539,7 @@ export function generateExpression(
     const arrayValues = values.map((sn) => ctx.resolve(sn.value));
 
     return snip(
-      `${arrayType}( ${arrayValues.join(', ')} )`,
+      `${arrayType}(${arrayValues.join(', ')})`,
       arrayOf(
         elemType as wgsl.AnyWgslData,
         values.length,
