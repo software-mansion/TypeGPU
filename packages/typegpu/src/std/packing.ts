@@ -2,8 +2,8 @@ import * as TB from 'typed-binary';
 import { u32 } from '../data/numeric.ts';
 import { vec2f, vec4f } from '../data/vector.ts';
 import type { v2f, v4f } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
-import { snip } from '../data/dataTypes.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
 
 /**
  * @privateRemarks

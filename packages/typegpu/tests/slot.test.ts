@@ -100,7 +100,7 @@ describe('tgpu.slot', () => {
 
     expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
         - slot:color: Missing value for 'slot:color']
