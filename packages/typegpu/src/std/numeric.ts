@@ -29,7 +29,7 @@ import {
   type v4i,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 
 type NumVec = AnyNumericVecInstance;
