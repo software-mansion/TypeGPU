@@ -12,7 +12,6 @@ import { computeUpPass } from './compute/computeUpPass.ts';
 import { computeDownPass } from './compute/computeDownPass.ts';
 import { ConcurrentSumCache } from './compute/cacheOld.ts';
 
-
 export async function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
@@ -30,7 +29,7 @@ export async function currentSum(
   const upPassPipelineWithTimestamp = upPassPipeline
     .withTimestampWrites({
       querySet,
-      beginningOfPassWriteIndex: 0, // Write start time at index 0
+      beginningOfPassWriteIndex: 0,
     });
 
   const downPassPipeline = root['~unstable']
@@ -46,7 +45,7 @@ export async function currentSum(
   const applySumsPipelineWithTimestamp = applySumsPipeline
     .withTimestampWrites({
       querySet: querySet,
-      endOfPassWriteIndex: 1, // Write end time at index 1
+      endOfPassWriteIndex: 1,
     })
     .$name('applySums');
 
@@ -81,24 +80,21 @@ export async function currentSum(
       ),
     };
 
-    if (depthCount === 1) {
-      console.log('sd');
-      upPassPipelineWithTimestamp
+    depthCount === 1
+      ? upPassPipelineWithTimestamp
+        .with(upSweepLayout, upPassBindGroup)
+        .dispatchWorkgroups(
+          upSweepWorkgroups.xGroups,
+          upSweepWorkgroups.yGroups,
+          upSweepWorkgroups.zGroups,
+        )
+      : upPassPipeline
         .with(upSweepLayout, upPassBindGroup)
         .dispatchWorkgroups(
           upSweepWorkgroups.xGroups,
           upSweepWorkgroups.yGroups,
           upSweepWorkgroups.zGroups,
         );
-    } else {
-      upPassPipeline
-        .with(upSweepLayout, upPassBindGroup)
-        .dispatchWorkgroups(
-          upSweepWorkgroups.xGroups,
-          upSweepWorkgroups.yGroups,
-          upSweepWorkgroups.zGroups,
-        );
-    }
 
     root['~unstable'].flush();
     cache.push(inputBuffer);

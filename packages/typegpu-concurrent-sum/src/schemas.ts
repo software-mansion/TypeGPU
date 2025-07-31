@@ -1,6 +1,5 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuQuerySet } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { TgpuQuerySet } from '../../typegpu/src/core/querySet/querySet.ts'; // no path imports in packages
 
 export const itemsPerThread = 2;
 export const workgroupSize = 256;
