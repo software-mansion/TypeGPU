@@ -164,7 +164,7 @@ let sphereAngle = 0;
 let prevAngle = 0;
 function run(timestamp: number) {
   const curAngle = (timestamp / 1000) % c.PERIOD / c.PERIOD * 2 * Math.PI;
-  const delta = Math.abs(curAngle + 2 * Math.PI - prevAngle) % (2 * Math.PI);
+  const delta = (curAngle + 2 * Math.PI - prevAngle) % (2 * Math.PI);
   prevAngle = curAngle;
 
   floorAngle += delta * floorSpeed;
