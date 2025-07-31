@@ -5,6 +5,8 @@ function translateTGSL(
   code: string,
 ): string {
   const result = Babel.transform(code, {
+    'presets': ['typescript'],
+    'filename': 'example.ts',
     plugins: [plugin],
   }).code;
   return result || '';
