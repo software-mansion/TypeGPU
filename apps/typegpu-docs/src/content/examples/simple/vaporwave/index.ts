@@ -27,9 +27,9 @@ context.configure({
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
 
-let ballColor = d.vec3f(0, 0.25, 1);
-const ballColorBuf = root.createUniform(d.vec3f);
-ballColorBuf.write(ballColor);
+let sphereColor = d.vec3f(0, 0.25, 1);
+const sphereColorBuf = root.createUniform(d.vec3f);
+sphereColorBuf.write(sphereColor);
 
 let speedPerFrame = 11;
 const speedPerFrameBuf = root.createUniform(d.f32);
@@ -48,7 +48,7 @@ const getSceneRay = tgpu.fn(
     dist: sdPlane(p, c.planeOrthonormal, c.planeOffset),
     color: floorPatternSlot.$(p.xz, speedPerFrameBuf.$, time.$),
   });
-  const ball = getSphere(p, ballColorBuf.$, c.sphereCenter, time.$);
+  const ball = getSphere(p, sphereColorBuf.$, c.sphereCenter, time.$);
 
   return rayUnion(floor, ball);
 });
@@ -68,9 +68,9 @@ const rayMarch = tgpu.fn(
   for (let i = 0; i < c.MAX_STEPS; i++) {
     const p = std.add(ro, std.mul(rd, distOrigin));
     const scene = getSceneRay(p);
-    const ballDist = getSphere(p, ballColorBuf.$, c.sphereCenter, time.$);
+    const ballDist = getSphere(p, sphereColorBuf.$, c.sphereCenter, time.$);
 
-    glow = std.add(glow, std.mul(ballColorBuf.$, std.exp(-ballDist.dist)));
+    glow = std.add(glow, std.mul(sphereColorBuf.$, std.exp(-ballDist.dist)));
 
     distOrigin += scene.dist;
 
@@ -180,33 +180,22 @@ export const controls = {
     },
   },
   'sphere color': {
-    initial: [ballColor.x, ballColor.y, ballColor.z] as const,
+    initial: [...sphereColor] as const,
     onColorChange: (value: readonly [number, number, number]) => {
-      ballColor = d.vec3f(value[0], value[1], value[2]);
-      ballColorBuf.write(ballColor);
+      sphereColor = d.vec3f(...value);
+      sphereColorBuf.write(sphereColor);
     },
   },
   'floor pattern': {
     initial: 'circles',
     options: ['grid', 'circles'],
     onSelectChange: (value: string) => {
-      if (value === 'grid') {
-        renderPipeline = root['~unstable']
-          .with(floorPatternSlot, grid)
-          .pipe(perlinCache.inject())
-          .withVertex(vertexMain, {})
-          .withFragment(fragmentMain, { format: presentationFormat })
-          .createPipeline();
-      } else if (value === 'circles') {
-        renderPipeline = root['~unstable']
-          .with(floorPatternSlot, circles)
-          .pipe(perlinCache.inject())
-          .withVertex(vertexMain, {})
-          .withFragment(fragmentMain, { format: presentationFormat })
-          .createPipeline();
-      } else {
-        /* should not happen */
-      }
+      renderPipeline = root['~unstable']
+        .with(floorPatternSlot, value === 'grid' ? grid : circles)
+        .pipe(perlinCache.inject())
+        .withVertex(vertexMain, {})
+        .withFragment(fragmentMain, { format: presentationFormat })
+        .createPipeline();
     },
   },
 };
