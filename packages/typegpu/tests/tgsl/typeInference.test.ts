@@ -62,7 +62,7 @@ describe('wgsl generator type inference', () => {
     const Outer = d.struct({ inner: Inner });
 
     const myFn = tgpu.fn([], Outer)(() => {
-      return Outer({ inner: { prop: d.vec2f() } });
+      return { inner: { prop: d.vec2f() } };
     });
 
     expect(parseResolved({ myFn })).toBe(parse(`

@@ -353,73 +353,75 @@ export function generateExpression(
 
   if (expression[0] === NODE.call) {
     // Function Call
-    const [_, callee, args] = expression;
-    const id = generateExpression(ctx, callee);
+    const [_, calleeNode, argNodes] = expression;
+    const callee = generateExpression(ctx, calleeNode);
 
-    if (wgsl.isWgslStruct(id.value) || wgsl.isWgslArray(id.value)) {
+    if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
       // Struct/array schema call.
-      if (args.length > 1) {
+      if (argNodes.length > 1) {
         throw new WgslTypeError(
           'Array and struct schemas should always be called with at most 1 argument',
         );
       }
 
       // No arguments `Struct()`, resolve struct name and return.
-      if (!args[0]) {
-        return snip(`${ctx.resolve(id.value)}()`, id.value);
+      if (!argNodes[0]) {
+        return snip(
+          `${ctx.resolve(callee.value)}()`,
+          /* the schema becomes the data type */ callee.value,
+        );
       }
 
-      const argSnippet = generateTypedExpression(
-        ctx,
-        args[0],
-        id.value as AnyData,
-      );
+      const arg = generateTypedExpression(ctx, argNodes[0], callee.value);
 
       // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
       // In both cases, we just let the argument resolve everything.
-      return snip(ctx.resolve(argSnippet.value), id.value);
+      return snip(ctx.resolve(arg.value), callee.value);
     }
 
-    if (id.value instanceof InfixDispatch) {
+    if (callee.value instanceof InfixDispatch) {
       // Infix operator dispatch.
-      if (!args[0]) {
+      if (!argNodes[0]) {
         throw new WgslTypeError(
-          `An infix operator '${id.value.name}' was called without any arguments`,
+          `An infix operator '${callee.value.name}' was called without any arguments`,
         );
       }
-      return id.value.operator(id.value.lhs, generateExpression(ctx, args[0]));
+      return callee.value.operator(
+        callee.value.lhs,
+        generateExpression(ctx, argNodes[0]),
+      );
     }
 
-    if (!isMarkedInternal(id.value)) {
+    if (!isMarkedInternal(callee.value)) {
       throw new Error(
-        `Function ${String(id.value)} ${
-          getName(id.value)
+        `Function ${String(callee.value)} ${
+          getName(callee.value)
         } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
       );
     }
 
     // Other, including tgsl functions, std and vector/matrix schema calls.
 
-    const argConversionHint = id.value[$internal]
+    const argConversionHint = callee.value[$internal]
       ?.argConversionHint as FnArgsConversionHint ?? 'keep';
     try {
       let convertedArguments: Snippet[];
 
       if (Array.isArray(argConversionHint)) {
         // The hint is an array of schemas.
-        convertedArguments = args.map((arg, i) => {
+        convertedArguments = argNodes.map((arg, i) => {
           const argType = argConversionHint[i];
           if (!argType) {
             throw new WgslTypeError(
               `Function '${
-                getName(id.value)
+                getName(callee.value)
               }' was called with too many arguments`,
             );
           }
           return generateTypedExpression(ctx, arg, argType);
         });
       } else {
-        const resolvedSnippets = args
+        const resolvedSnippets = argNodes
           .map((arg) => generateExpression(ctx, arg))
           .map((res) => snip(ctx.resolve(res.value), res.dataType));
 
@@ -437,10 +439,11 @@ export function generateExpression(
             .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
         }
       }
-      // Assuming that `id` is callable
-      const fnRes = (id.value as unknown as (...args: unknown[]) => unknown)(
-        ...convertedArguments,
-      ) as Snippet;
+      // Assuming that `callee` is callable
+      const fnRes =
+        (callee.value as unknown as (...args: unknown[]) => unknown)(
+          ...convertedArguments,
+        ) as Snippet;
       // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
       return snip(
         ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
@@ -448,7 +451,7 @@ export function generateExpression(
       );
     } catch (error) {
       throw new ResolutionError(error, [{
-        toString: () => getName(id.value),
+        toString: () => getName(callee.value),
       }]);
     }
   }
