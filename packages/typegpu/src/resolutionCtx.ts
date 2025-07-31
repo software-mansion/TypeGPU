@@ -101,6 +101,14 @@ class ItemStateStackImpl implements ItemStateStack {
     return state;
   }
 
+  get topFunctionReturnType(): AnyData {
+    const scope = this._stack.findLast((e) => e.type === 'functionScope');
+    if (!scope) {
+      throw new Error('Internal error, expected function scope to be present.');
+    }
+    return scope.returnType;
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -343,8 +351,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
+  public expectedType: AnyData | undefined;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
@@ -352,6 +360,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get pre(): string {
     return this._indentController.pre;
+  }
+
+  get topFunctionReturnType() {
+    return this._itemStateStack.topFunctionReturnType;
   }
 
   indent(): string {
