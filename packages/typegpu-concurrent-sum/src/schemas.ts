@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import type { TgpuQuerySet } from '../../typegpu/src/core/querySet/querySet.ts'; // no path imports in packages
 
 export const itemsPerThread = 2;
 export const workgroupSize = 256;
@@ -27,3 +28,5 @@ export const downSweepLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
 });
+
+export type TimeCallback = (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void;

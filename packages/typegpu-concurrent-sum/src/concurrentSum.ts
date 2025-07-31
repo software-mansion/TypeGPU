@@ -3,6 +3,7 @@ import type * as d from 'typegpu/data';
 import {
   downSweepLayout,
   maxDispatchSize,
+  type TimeCallback,
   upSweepLayout,
   workgroupSize,
 } from './schemas.ts';
@@ -10,10 +11,7 @@ import { incrementShader } from './compute/incrementShader.ts';
 import { computeUpPass } from './compute/computeUpPass.ts';
 import { computeDownPass } from './compute/computeDownPass.ts';
 import { ConcurrentSumCache } from './compute/cacheOld.ts';
-import type { TgpuQuerySet } from '../../typegpu/src/core/querySet/querySet.ts';
 
-// Time measurement callback type
-export type TimeCallback = (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void;
 
 export async function currentSum(
   root: TgpuRoot,
