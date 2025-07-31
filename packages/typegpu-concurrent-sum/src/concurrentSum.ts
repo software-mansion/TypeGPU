@@ -1,9 +1,15 @@
-import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import type {
+  StorageFlag,
+  TgpuBuffer,
+  TgpuFn,
+  TgpuQuerySet,
+  TgpuRoot,
+} from 'typegpu';
 import type * as d from 'typegpu/data';
 import {
   downSweepLayout,
   maxDispatchSize,
-  type TimeCallback,
+  operatorSlot,
   upSweepLayout,
   workgroupSize,
 } from './schemas.ts';
@@ -15,13 +21,15 @@ import { ConcurrentSumCache } from './compute/cacheOld.ts';
 export async function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
+  operatorFn: (x: number, y: number) => number,
   outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
-  timeCallback?: TimeCallback,
+  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ) {
   let depthCount = 0;
   // Pipelines
   const querySet = root.createQuerySet('timestamp', 2);
   const upPassPipeline = root['~unstable']
+    .with(operatorSlot, operatorFn as unknown as TgpuFn)
     .withCompute(computeUpPass)
     .createPipeline()
     .$name('UpScan');
@@ -175,4 +183,3 @@ export async function currentSum(
   }
   return result;
 }
-//

@@ -1,4 +1,4 @@
-import tgpu, { type TgpuQuerySet } from 'typegpu';
+import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const itemsPerThread = 2;
@@ -27,5 +27,4 @@ export const downSweepLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
 });
-
-export type TimeCallback = (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void;
+export const operatorSlot = tgpu.slot<TgpuFn>();

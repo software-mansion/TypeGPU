@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
   itemsPerThread,
+  operatorSlot,
   upSweepLayout as layout,
   workgroupSize,
 } from '../schemas.ts';
@@ -24,7 +25,6 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
   const log2Length = d.u32(std.ceil(std.log2(d.f32(segmentLength))));
 
   const totalInputLength = layout.$.inputArray.length;
-
   // copy input data to shared memory
   const idx0 = gId * 2;
   const idx1 = gId * 2 + 1;
@@ -46,8 +46,10 @@ export const computeUpPass = tgpu['~unstable'].computeFn({
       const leftIdx = i + offset - 1;
       const rightIdx = i + windowSize - 1;
 
-      (sharedMem.value[rightIdx] as number) += sharedMem
-        .value[leftIdx] as number;
+      (sharedMem.value[rightIdx] as number) = operatorSlot.$(
+        sharedMem.value[rightIdx] as number,
+        sharedMem.value[leftIdx] as number,
+      );
     }
 
     std.workgroupBarrier();

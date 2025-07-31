@@ -2,6 +2,7 @@ import { currentSum } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
+import * as std from 'typegpu/std';
 
 export async function sumWithTime(
   root: TgpuRoot,
@@ -28,6 +29,7 @@ export async function sumWithTime(
   const sumResult = await currentSum(
     root,
     sizeBuffer,
+    std.add,
     undefined,
     async (timeTgpuQuery) => {
       const timestamps = await timeTgpuQuery.read();
