@@ -53,7 +53,6 @@ const mockCtx = {
   }),
   unwrap: vi.fn((val) => val),
   pre: '',
-  callStack: [],
 } as unknown as GenerationCtx;
 
 beforeEach(() => {
