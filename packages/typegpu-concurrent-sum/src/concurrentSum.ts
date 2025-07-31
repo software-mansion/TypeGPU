@@ -9,19 +9,31 @@ import {
 import { incrementShader } from './compute/incrementShader.ts';
 import { computeUpPass } from './compute/computeUpPass.ts';
 import { computeDownPass } from './compute/computeDownPass.ts';
-import { ConcurrentSumCache } from './compute/cache.ts';
+import { ConcurrentSumCache } from './compute/cacheOld.ts';
+import type { TgpuQuerySet } from '../../typegpu/src/core/querySet/querySet.ts';
+
+// Time measurement callback type
+export type TimeCallback = (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void;
 
 export async function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
   outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
+  timeCallback?: TimeCallback,
 ) {
   let depthCount = 0;
   // Pipelines
+  const querySet = root.createQuerySet('timestamp', 2);
   const upPassPipeline = root['~unstable']
     .withCompute(computeUpPass)
     .createPipeline()
     .$name('UpScan');
+
+  const upPassPipelineWithTimestamp = upPassPipeline
+    .withTimestampWrites({
+      querySet,
+      beginningOfPassWriteIndex: 0, // Write start time at index 0
+    });
 
   const downPassPipeline = root['~unstable']
     .withCompute(computeDownPass)
@@ -33,6 +45,13 @@ export async function currentSum(
     .createPipeline()
     .$name('applySums');
 
+  const applySumsPipelineWithTimestamp = applySumsPipeline
+    .withTimestampWrites({
+      querySet: querySet,
+      endOfPassWriteIndex: 1, // Write end time at index 1
+    })
+    .$name('applySums');
+
   const n = inputBuffer.dataType.elementCount;
   const cache: ConcurrentSumCache = new ConcurrentSumCache(root, n);
 
@@ -41,7 +60,7 @@ export async function currentSum(
     inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
   ): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
     const itemsPerWorkgroup = workgroupSize * 2;
-    depthCount++; //remove
+    depthCount++;
     // console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`); //remove
 
     // Up-pass
@@ -64,16 +83,27 @@ export async function currentSum(
       ),
     };
 
-    upPassPipeline
-      .with(upSweepLayout, upPassBindGroup)
-      .dispatchWorkgroups(
-        upSweepWorkgroups.xGroups,
-        upSweepWorkgroups.yGroups,
-        upSweepWorkgroups.zGroups,
-      );
+    if (depthCount === 1) {
+      console.log('sd');
+      upPassPipelineWithTimestamp
+        .with(upSweepLayout, upPassBindGroup)
+        .dispatchWorkgroups(
+          upSweepWorkgroups.xGroups,
+          upSweepWorkgroups.yGroups,
+          upSweepWorkgroups.zGroups,
+        );
+    } else {
+      upPassPipeline
+        .with(upSweepLayout, upPassBindGroup)
+        .dispatchWorkgroups(
+          upSweepWorkgroups.xGroups,
+          upSweepWorkgroups.yGroups,
+          upSweepWorkgroups.zGroups,
+        );
+    }
+
     root['~unstable'].flush();
     cache.push(inputBuffer);
-
     // Recursive phase
     let sumsScannedBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
     if (n <= itemsPerWorkgroup) {
@@ -117,10 +147,7 @@ export async function currentSum(
     });
 
     const applyWorkgroups = {
-      XGroups: Math.min(
-        Math.ceil(n / workgroupSize),
-        maxDispatchSize,
-      ),
+      XGroups: Math.min(Math.ceil(n / workgroupSize), maxDispatchSize),
       YGroups: Math.min(
         Math.ceil(Math.ceil(n / workgroupSize) / maxDispatchSize),
         maxDispatchSize,
@@ -130,7 +157,7 @@ export async function currentSum(
       ),
     };
 
-    applySumsPipeline
+    applySumsPipelineWithTimestamp
       .with(upSweepLayout, applySumsBindGroup)
       .dispatchWorkgroups(
         applyWorkgroups.XGroups,
@@ -147,5 +174,11 @@ export async function currentSum(
     return finalOutputBuffer;
   }
 
-  return recursiveScan(n, inputBuffer);
+  const result = recursiveScan(n, inputBuffer);
+  if (timeCallback) {
+    querySet.resolve();
+    timeCallback(querySet);
+  }
+  return result;
 }
+//
