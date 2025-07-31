@@ -25,7 +25,8 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
-import type { AnyData, UnwrapDecorated } from '../../data/dataTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { Undecorate } from '../../data/decorateUtils.ts';
 
 // ----------
 // Public API
@@ -77,13 +78,12 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
-type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
-  {
-    readonly type: 'array';
-    readonly elementType: infer TElement;
-  }
+type IsIndexCompatible<TData extends BaseData> = Undecorate<TData> extends {
+  readonly type: 'array';
+  readonly elementType: infer TElement;
+}
   ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' | 'u16' } ? true
+    ? Undecorate<TElement> extends { readonly type: 'u32' | 'u16' } ? true
     : false
   : false
   : false;
@@ -155,12 +155,12 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // --------------
 const endianness = getSystemEndianness();
 
-type IsArrayOfU32<TData extends BaseData> = UnwrapDecorated<TData> extends {
+type IsArrayOfU32<TData extends BaseData> = Undecorate<TData> extends {
   readonly type: 'array';
   readonly elementType: infer TElement;
 }
   ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' } ? true
+    ? Undecorate<TElement> extends { readonly type: 'u32' } ? true
     : false
   : false
   : false;

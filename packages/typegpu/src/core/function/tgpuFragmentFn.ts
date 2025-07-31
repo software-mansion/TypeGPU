@@ -8,6 +8,7 @@ import type {
   Interpolate,
   Location,
   Vec4f,
+  WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -72,7 +73,10 @@ export type TgpuFragmentFnShell<
    * Creates a type-safe implementation of this signature
    */
   & ((
-    implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
+    implementation: (
+      input: InferIO<FragmentIn>,
+      out: FragmentOut extends IORecord ? WgslStruct<FragmentOut> : FragmentOut,
+    ) => InferIO<FragmentOut>,
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
   & /**
    * @param implementation

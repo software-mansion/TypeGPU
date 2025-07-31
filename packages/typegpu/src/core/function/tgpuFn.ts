@@ -1,5 +1,6 @@
-import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
 import { schemaCloneWrapper } from '../../data/utils.ts';
+import { snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
