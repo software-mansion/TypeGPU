@@ -1,4 +1,3 @@
-import { DEV } from '../shared/env.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -50,8 +49,9 @@ import {
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
+import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
@@ -473,7 +473,15 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly callStack: unknown[];
+  /**
+   * Used by `generateTypedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  expectedType: AnyData | undefined;
+  readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
   withResetIndentLevel<T>(callback: () => T): T;
@@ -550,6 +558,32 @@ Consider using explicit conversions instead.`,
     invariant(action, 'Action should not be undefined');
     return applyActionToSnippet(ctx, value, action, conversion.targetType);
   });
+}
+
+export function tryConvertSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  targetDataType: AnyData,
+): Snippet {
+  if (targetDataType === value.dataType) {
+    return value;
+  }
+
+  if (targetDataType.type === 'void') {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type 'void'`,
+    );
+  }
+
+  const converted = convertToCommonType(ctx, [value], [targetDataType]);
+
+  if (!converted) {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
+    );
+  }
+
+  return converted[0] as Snippet;
 }
 
 export function convertStructValues(

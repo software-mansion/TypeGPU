@@ -14,7 +14,7 @@ import {
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { isSnippetNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {

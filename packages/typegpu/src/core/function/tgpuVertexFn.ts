@@ -16,7 +16,6 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
@@ -207,31 +206,13 @@ function createVertexFn(
           core.applyExternals({ In: inputType });
         }
         core.applyExternals({ Out: outputWithLocation });
-
-        return core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        );
       }
 
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(outputWithLocation);
-        return core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        );
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        shell.argTypes,
+        outputWithLocation,
+      );
     },
 
     toString() {

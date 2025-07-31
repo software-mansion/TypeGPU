@@ -1,4 +1,4 @@
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import { snip } from './snippet.ts';
 import type {

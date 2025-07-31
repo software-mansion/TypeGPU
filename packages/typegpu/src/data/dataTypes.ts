@@ -30,7 +30,7 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
     [$internal]: {
       jsImpl: TImpl | string;
       gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
-      argTypes: FnArgsConversionHint;
+      argConversionHint: FnArgsConversionHint;
     };
   };
 
