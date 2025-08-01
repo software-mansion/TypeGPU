@@ -278,7 +278,10 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   ) => void)
   | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    throw new Error('This environment does not allow eval');
+    console.warn(
+      'This environment does not allow eval - using default writer as fallback',
+    );
+    return undefined;
   }
 
   if (compiledWriters.has(schema)) {
