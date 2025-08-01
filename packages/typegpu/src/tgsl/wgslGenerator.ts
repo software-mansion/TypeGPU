@@ -20,7 +20,6 @@ import {
   concretize,
   convertStructValues,
   convertToCommonType,
-  type ConvertToCommonTypeInfo,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,

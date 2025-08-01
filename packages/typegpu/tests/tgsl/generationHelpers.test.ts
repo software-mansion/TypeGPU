@@ -25,7 +25,6 @@ import {
   coerceToSnippet,
   convertStructValues,
   convertToCommonType,
-  type ConvertToCommonTypeInfo,
   convertType,
   type GenerationCtx,
   getBestConversion,
