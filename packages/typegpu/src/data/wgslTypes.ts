@@ -1431,9 +1431,7 @@ export interface Decorated<
   readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
   readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
   readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
-  readonly [$invalidSchemaReason]: `decorated — ${ExtractInvalidSchemaError<
-    TInner
-  >}`;
+  readonly [$invalidSchemaReason]: ExtractInvalidSchemaError<TInner>;
   // ---
 }
 
