@@ -46,6 +46,7 @@ import {
   isVec,
   isVecInstance,
   isWgslArray,
+  isWgslData,
   isWgslStruct,
   type U32,
 } from '../data/wgslTypes.ts';
@@ -539,7 +540,12 @@ export function convertToCommonType({
   }
 
   if (concretizeTypes) {
-    types = (types as AnyWgslData[]).map(concretize);
+    types = types.map((type) => {
+      if (isWgslData(type)) {
+        return concretize(type);
+      }
+      return type;
+    });
   }
 
   if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
