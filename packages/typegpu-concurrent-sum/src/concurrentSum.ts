@@ -17,7 +17,7 @@ import {
 import { incrementShader } from './compute/incrementShader.ts';
 import { computeUpPass } from './compute/computeUpPass.ts';
 import { computeDownPass } from './compute/computeDownPass.ts';
-import { ConcurrentSumCache } from './compute/cacheOld.ts';
+import { ConcurrentSumCache } from './compute/cache.ts';
 
 export async function currentSum(
   root: TgpuRoot,
@@ -71,7 +71,6 @@ export async function currentSum(
   ): TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag {
     const itemsPerWorkgroup = workgroupSize * 2;
     depthCount++;
-    // console.log(`Recursion depth: ${depthCount}, elementsCount: ${n}`); //remove
 
     // Up-pass
     const outputBuffer = cache.pop();
@@ -111,6 +110,7 @@ export async function currentSum(
 
     root['~unstable'].flush();
     cache.push(inputBuffer);
+
     // Recursive phase
     let sumsScannedBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
     if (n <= itemsPerWorkgroup) {
@@ -175,11 +175,11 @@ export async function currentSum(
     root['~unstable'].flush();
     cache.push(downSweepOutputBuffer);
     cache.push(sumsScannedBuffer);
-    console.log(
-      finalOutputBuffer.read().then((arr) => { //remove
-        console.log('Final output buffer Buffer:', arr); //remove
-      }),
-    );
+    // console.log(
+    // finalOutputBuffer.read().then((arr) => { //remove
+    // console.log('Final output buffer Buffer:', arr); //remove
+    // }),
+    // );
     return finalOutputBuffer;
   }
 

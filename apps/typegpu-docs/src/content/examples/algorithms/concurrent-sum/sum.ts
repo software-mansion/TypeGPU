@@ -1,14 +1,24 @@
 import { currentSum } from '@typegpu/concurrent-sum';
-import { compareArrayWithBuffer, concurrentMultiplyOnJS } from './utils.ts';
+import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
 import * as std from 'typegpu/std';
 
-export async function sumWithTime(
+type SumResult = {
+  success: boolean;
+  arraySize: number;
+  error?: string;
+  jsTime?: number;
+  gpuTime?: number;
+  gpuInternalTime?: number;
+  speedup?: number;
+  expectedSum?: number;
+};
+
+export async function performCalculationsWithTime(
   root: TgpuRoot,
   inputArray: number[],
-  results: HTMLDivElement,
-) {
+): Promise<SumResult> {
   const arraySize = inputArray.length;
   const sizeBuffer = root
     .createBuffer(
@@ -19,55 +29,63 @@ export async function sumWithTime(
 
   // JS Version
   const jsStartTime = performance.now();
-  const jsArray = Array.from({ length: arraySize }, () => 1);
-  const jsResult = concurrentMultiplyOnJS(jsArray);
-  const jsEndTime = performance.now();
-  const jsTime = jsEndTime - jsStartTime;
+  const jsResult = concurrentSumOnJS(inputArray);
+  const jsTime = performance.now() - jsStartTime;
 
   // GPU Version
   const gpuStartTime = performance.now();
+  let gpuInternalTime: number | undefined;
+
   const sumResult = await currentSum(
     root,
     sizeBuffer,
-    std.mul,
-    1,
+    std.add,
+    0,
     undefined,
     async (timeTgpuQuery) => {
       const timestamps = await timeTgpuQuery.read();
       const timeNs = timestamps[1] - timestamps[0];
-      results.innerHTML += `<strong>GPU time for currentSum: ${
-        (Number(timeNs) / 1000000).toFixed(2)
-      } ms</strong><br>`;
+      gpuInternalTime = Number(timeNs) / 1000000;
     },
   );
 
-  // TODO: plain ugly, refactor this //remove
   if (!sumResult) {
     console.error(`Failed to execute currentSum for array size ${arraySize}`);
-    results.innerHTML +=
-      `<strong>Error:</strong> Failed to execute currentSum for array size ${arraySize}.<br>`;
-    return;
+    return {
+      success: false,
+      error: `Failed to execute currentSum for array size ${arraySize}`,
+      arraySize,
+    };
   }
-  const gpuEndTime = performance.now();
+
+  const gpuTime = performance.now() - gpuStartTime;
   const gpuResult = await sumResult.read();
-  const gpuTime = gpuEndTime - gpuStartTime;
   root['~unstable'].flush();
+
+  // Compare results
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
   if (!isEqual) {
     console.error(`Mismatch detected for array size ${arraySize}`);
-    results.innerHTML +=
-      `<strong>Error:</strong> Mismatch detected for array size ${arraySize}. Expected final sum: ${
-        jsResult[jsResult.length - 1]
-      }. Check console for details.<br>`;
-    return;
+    return {
+      success: false,
+      error:
+        `Mismatch detected for array size ${arraySize}. Expected final sum: ${
+          jsResult[jsResult.length - 1]
+        }`,
+      arraySize,
+      jsTime,
+      gpuTime,
+      gpuInternalTime,
+    };
   }
 
-  const resultElement = document.createElement('div');
-  resultElement.innerHTML = `
-      <strong>Array size: ${arraySize.toLocaleString()}</strong><br>
-      JS time: ${jsTime.toFixed(2)}ms<br>
-      GPU time: ${gpuTime.toFixed(2)}ms<br>
-      Speedup: ${(jsTime / gpuTime).toFixed(2)}x<br>
-    `;
-  results.appendChild(resultElement);
+  return {
+    success: true,
+    arraySize,
+    jsTime,
+    gpuTime,
+    gpuInternalTime,
+    speedup: jsTime / gpuTime,
+    expectedSum: jsResult[jsResult.length - 1],
+  };
 }
