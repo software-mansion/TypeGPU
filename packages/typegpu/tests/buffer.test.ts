@@ -316,21 +316,21 @@ describe('TgpuBuffer', () => {
     expect(rawBuffer).toBeDefined();
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]), 0, 4],
+      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
     ]);
 
     buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]), 0, 4],
-      [rawBuffer, 16, new Uint8Array([64, -65]), 0, 2],
+      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
+      [rawBuffer, 16, new Uint8Array([193, 64]), 0, 2],
     ]);
 
     buffer.writePartial({ c: { d: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]), 0, 4],
-      [rawBuffer, 16, new Uint8Array([64, -65]), 0, 2],
+      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
+      [rawBuffer, 16, new Uint8Array([193, 64]), 0, 2],
       [rawBuffer, 18, new Uint8Array([3, 0, 0, 0]), 0, 4],
     ]);
   });

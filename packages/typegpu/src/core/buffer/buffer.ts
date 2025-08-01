@@ -1,8 +1,5 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
-import {
-  EVAL_ALLOWED_IN_ENV,
-  getCompiledWriterForSchema,
-} from '../../data/compiledIO.ts';
+import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
@@ -293,22 +290,18 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   compileWriter(): void {
-    if (EVAL_ALLOWED_IN_ENV) {
-      getCompiledWriterForSchema(this.dataType);
-    } else {
-      throw new Error('This environment does not allow eval');
-    }
+    getCompiledWriterForSchema(this.dataType);
   }
 
   write(data: Infer<TData>): void {
     const gpuBuffer = this.buffer;
     const device = this._group.device;
+    const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      if (EVAL_ALLOWED_IN_ENV) {
-        const writer = getCompiledWriterForSchema(this.dataType);
-        writer(new DataView(mapped), 0, data, endianness === 'little');
+      if (compiledWriter) {
+        compiledWriter(new DataView(mapped), 0, data, endianness === 'little');
         return;
       }
       writeData(new BufferWriter(mapped), this.dataType, data);
@@ -323,12 +316,17 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     // Flushing any commands yet to be encoded.
     this._group.flush();
 
-    if (EVAL_ALLOWED_IN_ENV) {
-      const writer = getCompiledWriterForSchema(this.dataType);
-      writer(new DataView(this._hostBuffer), 0, data, endianness === 'little');
+    if (compiledWriter) {
+      compiledWriter(
+        new DataView(this._hostBuffer),
+        0,
+        data,
+        endianness === 'little',
+      );
     } else {
       writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
     }
+
     device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
   }
 

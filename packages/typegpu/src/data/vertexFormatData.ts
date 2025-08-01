@@ -250,3 +250,12 @@ export type PackedData =
   | sint32x4
   | unorm10_10_10_2
   | unorm8x4_bgra;
+
+export function isPackedData(
+  value: unknown,
+): value is PackedData {
+  return (value as PackedData)?.[$internal] &&
+    Object.keys(formatToWGSLType).includes(
+      (value as PackedData)?.type,
+    );
+}
