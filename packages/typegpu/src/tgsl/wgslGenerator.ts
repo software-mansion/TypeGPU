@@ -20,6 +20,7 @@ import {
   concretize,
   convertStructValues,
   convertToCommonType,
+  type ConvertToCommonTypeInfo,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
@@ -198,12 +199,13 @@ export function generateExpression(
         : [lhsExpr.dataType as AnyData]
       : undefined;
 
-    const converted = convertToCommonType(
+    const converted = convertToCommonType({
       ctx,
-      [lhsExpr, rhsExpr],
-      op === '/' ? [f32, f16] : forcedType,
-      /* verbose */ op !== '/',
-    ) as
+      values: [lhsExpr, rhsExpr],
+      restrictTo: op === '/' ? [f32, f16] : forcedType,
+      concretizeTypes: op === '/',
+      verbose: op !== '/',
+    }) as
       | [Snippet, Snippet]
       | undefined;
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
@@ -430,8 +432,9 @@ export function generateExpression(
           convertedArguments = resolvedSnippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments = convertToCommonType(ctx, resolvedSnippets) ??
-            resolvedSnippets;
+          convertedArguments =
+            convertToCommonType({ ctx, values: resolvedSnippets }) ??
+              resolvedSnippets;
         } else {
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...resolvedSnippets)
@@ -524,7 +527,7 @@ export function generateExpression(
         );
       }
 
-      const maybeValues = convertToCommonType(ctx, valuesSnippets);
+      const maybeValues = convertToCommonType({ ctx, values: valuesSnippets });
       if (!maybeValues) {
         throw new WgslTypeError(
           'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',

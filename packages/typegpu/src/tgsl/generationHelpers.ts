@@ -517,16 +517,29 @@ function applyActionToSnippet(
   }
 }
 
-export function convertToCommonType(
-  ctx: GenerationCtx,
-  values: Snippet[],
-  restrictTo?: AnyData[],
+export type ConvertToCommonTypeInfo = {
+  ctx: GenerationCtx;
+  values: Snippet[];
+  restrictTo?: AnyData[] | undefined;
+  concretizeTypes?: boolean | undefined;
+  verbose?: boolean | undefined;
+};
+
+export function convertToCommonType({
+  ctx,
+  values,
+  restrictTo,
+  concretizeTypes = false,
   verbose = true,
-): Snippet[] | undefined {
-  const types = values.map((value) => value.dataType);
+}: ConvertToCommonTypeInfo): Snippet[] | undefined {
+  let types = values.map((value) => value.dataType);
 
   if (types.some((type) => type === UnknownData)) {
     return undefined;
+  }
+
+  if (concretizeTypes) {
+    types = (types as AnyWgslData[]).map(concretize);
   }
 
   if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
@@ -575,7 +588,11 @@ export function tryConvertSnippet(
     );
   }
 
-  const converted = convertToCommonType(ctx, [value], [targetDataType]);
+  const converted = convertToCommonType({
+    ctx,
+    values: [value],
+    restrictTo: [targetDataType],
+  });
 
   if (!converted) {
     throw new WgslTypeError(
@@ -600,7 +617,11 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const converted = convertToCommonType(ctx, [val], [targetType as AnyData]);
+    const converted = convertToCommonType({
+      ctx,
+      values: [val],
+      restrictTo: [targetType as AnyData],
+    });
     return converted?.[0] ?? val;
   });
 }
@@ -627,7 +648,10 @@ export function coerceToSnippet(value: unknown): Snippet {
       throw new Error('Tried to coerce array without a context');
     }
 
-    const converted = convertToCommonType(context, coerced as Snippet[]);
+    const converted = convertToCommonType({
+      ctx: context,
+      values: coerced as Snippet[],
+    });
     const commonType = getBestConversion(
       coerced.map((v) => v.dataType as AnyData),
     )?.targetType as AnyWgslData | undefined;
