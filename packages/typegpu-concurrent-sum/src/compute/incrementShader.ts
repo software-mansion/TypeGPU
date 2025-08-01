@@ -1,6 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { upSweepLayout as layout, workgroupSize } from '../schemas.ts';
+import {
+  operatorSlot,
+  upSweepLayout as layout,
+  workgroupSize,
+} from '../schemas.ts';
 
 export const incrementShader = tgpu['~unstable'].computeFn({
   in: {
@@ -14,7 +18,10 @@ export const incrementShader = tgpu['~unstable'].computeFn({
   if (gId < d.u32(totalInputLength)) {
     const blockId = d.u32(gId / (workgroupSize * 2));
 
-    (layout.$.outputArray[gId] as number) = layout.$
-      .sumsArray[blockId] as number + (layout.$.inputArray[gId] as number);
+    (layout.$.outputArray[gId] as number) = operatorSlot.$(
+      layout.$
+        .sumsArray[blockId] as number,
+      layout.$.inputArray[gId] as number,
+    );
   }
 });

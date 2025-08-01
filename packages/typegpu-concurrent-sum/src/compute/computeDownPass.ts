@@ -1,7 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { downSweepLayout as layout, workgroupSize } from '../schemas.ts';
+import {
+  downSweepLayout as layout,
+  identitySlot,
+  operatorSlot,
+  workgroupSize,
+} from '../schemas.ts';
 
 const sharedMem = tgpu['~unstable'].workgroupVar(
   d.arrayOf(d.u32, workgroupSize * 2),
@@ -34,7 +39,7 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
 
   // set the identity element for the scan to 0
   if (lid.x === 0) {
-    sharedMem.value[segmentLength - 1] = 0;
+    sharedMem.value[segmentLength - 1] = identitySlot.$ as number;
   }
   std.workgroupBarrier();
 
@@ -51,7 +56,10 @@ export const computeDownPass = tgpu['~unstable'].computeFn({
 
       const temp = sharedMem.value[leftIdx] as number;
       sharedMem.value[leftIdx] = sharedMem.value[rightIdx] as number;
-      sharedMem.value[rightIdx] = temp + (sharedMem.value[rightIdx] as number);
+      sharedMem.value[rightIdx] = operatorSlot.$(
+        temp,
+        sharedMem.value[rightIdx] as number,
+      );
     }
 
     std.workgroupBarrier();

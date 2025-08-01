@@ -8,6 +8,7 @@ import type {
 import type * as d from 'typegpu/data';
 import {
   downSweepLayout,
+  identitySlot,
   maxDispatchSize,
   operatorSlot,
   upSweepLayout,
@@ -22,7 +23,8 @@ export async function currentSum(
   root: TgpuRoot,
   inputBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
-  outputBufferOpt?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
+  identity: number,
+  outputBuffer?: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ) {
   let depthCount = 0;
@@ -41,11 +43,14 @@ export async function currentSum(
     });
 
   const downPassPipeline = root['~unstable']
+    .with(operatorSlot, operatorFn as unknown as TgpuFn)
+    .with(identitySlot, identity)
     .withCompute(computeDownPass)
     .createPipeline()
     .$name('DownScan');
 
   const applySumsPipeline = root['~unstable']
+    .with(operatorSlot, operatorFn as unknown as TgpuFn)
     .withCompute(incrementShader)
     .createPipeline()
     .$name('applySums');
@@ -170,9 +175,11 @@ export async function currentSum(
     root['~unstable'].flush();
     cache.push(downSweepOutputBuffer);
     cache.push(sumsScannedBuffer);
-    // console.log(finalOutputBuffer.read().then((arr) => { //remove
-    // console.log('Final output buffer Buffer:', arr); //remove
-    // }));
+    console.log(
+      finalOutputBuffer.read().then((arr) => { //remove
+        console.log('Final output buffer Buffer:', arr); //remove
+      }),
+    );
     return finalOutputBuffer;
   }
 

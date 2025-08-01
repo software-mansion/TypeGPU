@@ -1,5 +1,5 @@
 import { currentSum } from '@typegpu/concurrent-sum';
-import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
+import { compareArrayWithBuffer, concurrentMultiplyOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
 import * as std from 'typegpu/std';
@@ -20,7 +20,7 @@ export async function sumWithTime(
   // JS Version
   const jsStartTime = performance.now();
   const jsArray = Array.from({ length: arraySize }, () => 1);
-  const jsResult = concurrentSumOnJS(jsArray);
+  const jsResult = concurrentMultiplyOnJS(jsArray);
   const jsEndTime = performance.now();
   const jsTime = jsEndTime - jsStartTime;
 
@@ -29,7 +29,8 @@ export async function sumWithTime(
   const sumResult = await currentSum(
     root,
     sizeBuffer,
-    std.add,
+    std.mul,
+    1,
     undefined,
     async (timeTgpuQuery) => {
       const timestamps = await timeTgpuQuery.read();

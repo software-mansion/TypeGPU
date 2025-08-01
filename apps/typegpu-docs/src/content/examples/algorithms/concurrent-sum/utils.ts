@@ -8,6 +8,16 @@ export function concurrentSumOnJS(arr: number[]) {
   return arr;
 }
 
+export function concurrentMultiplyOnJS(arr: number[]) {
+  arr.reduce((accumulator, currentValue, index) => {
+    if (index > 0) {
+      arr[index] = arr[index - 1] * currentValue;
+    }
+    return arr[index];
+  }, 1);
+  return arr;
+}
+
 export function compareArrayWithBuffer(
   arr1: number[],
   arr2: number[],

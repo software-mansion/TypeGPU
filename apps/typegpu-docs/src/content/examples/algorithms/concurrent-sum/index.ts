@@ -19,9 +19,9 @@ context.configure({
 });
 
 const button = document.querySelector('#runButton') as HTMLButtonElement;
-const arraySizes = [2 ** 20];
+const arraySizes = [2 ** 10];
 const dataArrs = arraySizes.map((size) => {
-  return Array.from({ length: size }, () => 1);
+  return Array.from({ length: size }, (_, i) => i + 1);
 });
 
 button.addEventListener('click', async () => {
