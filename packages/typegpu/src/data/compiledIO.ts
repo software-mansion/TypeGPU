@@ -4,6 +4,7 @@ import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
@@ -42,13 +43,56 @@ const typeToPrimitive = {
   vec3f: 'f32',
   vec4f: 'f32',
 
-  vec2h: 'f32',
-  vec3h: 'f32',
-  vec4h: 'f32',
+  f16: 'f16',
+  vec2h: 'f16',
+  vec3h: 'f16',
+  vec4h: 'f16',
 
   mat2x2f: 'f32',
   mat3x3f: 'f32',
   mat4x4f: 'f32',
+} as const;
+
+const vertexFormatToPrimitive = {
+  uint8: 'u8',
+  uint8x2: 'u8',
+  uint8x4: 'u8',
+  sint8: 'i8',
+  sint8x2: 'i8',
+  sint8x4: 'i8',
+  unorm8: 'u8',
+  unorm8x2: 'u8',
+  unorm8x4: 'u8',
+  snorm8: 'i8',
+  snorm8x2: 'i8',
+  snorm8x4: 'i8',
+  uint16: 'u16',
+  uint16x2: 'u16',
+  uint16x4: 'u16',
+  sint16: 'i16',
+  sint16x2: 'i16',
+  sint16x4: 'i16',
+  unorm16: 'u16',
+  unorm16x2: 'u16',
+  unorm16x4: 'u16',
+  snorm16: 'i16',
+  snorm16x2: 'i16',
+  snorm16x4: 'i16',
+  float16: 'f16',
+  float16x2: 'f16',
+  float16x4: 'f16',
+  float32: 'f32',
+  float32x2: 'f32',
+  float32x3: 'f32',
+  float32x4: 'f32',
+  uint32: 'u32',
+  uint32x2: 'u32',
+  uint32x3: 'u32',
+  uint32x4: 'u32',
+  sint32: 'i32',
+  sint32x2: 'i32',
+  sint32x3: 'i32',
+  sint32x4: 'i32',
 } as const;
 
 const primitiveToWriteFunction = {
@@ -56,6 +100,25 @@ const primitiveToWriteFunction = {
   i32: 'setInt32',
   f32: 'setFloat32',
   u16: 'setUint16',
+  i16: 'setInt16',
+  f16: 'setFloat16',
+  u8: 'setUint8',
+  i8: 'setInt8',
+} as const;
+
+const vertexFormatValueTransform = {
+  unorm8: (value: string) => `${value} * 255`,
+  unorm8x2: (value: string) => `${value} * 255`,
+  unorm8x4: (value: string) => `${value} * 255`,
+  snorm8: (value: string) => `Math.round(${value} * 127)`,
+  snorm8x2: (value: string) => `Math.round(${value} * 127)`,
+  snorm8x4: (value: string) => `Math.round(${value} * 127)`,
+  unorm16: (value: string) => `${value} * 65535`,
+  unorm16x2: (value: string) => `${value} * 65535`,
+  unorm16x4: (value: string) => `${value} * 65535`,
+  snorm16: (value: string) => `Math.round(${value} * 32767)`,
+  snorm16x2: (value: string) => `Math.round(${value} * 32767)`,
+  snorm16x4: (value: string) => `Math.round(${value} * 32767)`,
 } as const;
 
 export function buildWriter(
@@ -69,11 +132,8 @@ export function buildWriter(
 
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
     const propOffsets = offsetsForProps(node);
-    const sortedProps = Object.entries(propOffsets).sort(
-      (a, b) => a[1].offset - b[1].offset,
-    );
     let code = '';
-    for (const [key, propOffset] of sortedProps) {
+    for (const [key, propOffset] of Object.entries(propOffsets)) {
       const subSchema = node.propTypes[key];
       if (!subSchema) continue;
       code += buildWriter(
@@ -142,6 +202,65 @@ export function buildWriter(
     return code;
   }
 
+  if (isPackedData(node)) {
+    const formatName = node.type;
+
+    if (formatName === 'unorm10-10-10-2') {
+      return `output.setUint32(${offsetExpr}, ((${valueExpr}.x*1023&0x3FF)<<22)|((${valueExpr}.y*1023&0x3FF)<<12)|((${valueExpr}.z*1023&0x3FF)<<2)|(${valueExpr}.w*3&3), littleEndian);\n`;
+    }
+
+    if (formatName === 'unorm8x4-bgra') {
+      const bgraComponents = ['z', 'y', 'x', 'w'];
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += `output.setUint8((${offsetExpr} + ${i}), ${valueExpr}.${
+          bgraComponents[i]
+        } * 255);\n`;
+      }
+      return code;
+    }
+
+    const primitive = vertexFormatToPrimitive[formatName];
+    const writeFunc = primitiveToWriteFunction[primitive];
+    const wgslType = formatToWGSLType[formatName];
+    const componentCount = wgsl.isVec4(wgslType)
+      ? 4
+      : wgsl.isVec3(wgslType)
+      ? 3
+      : wgsl.isVec2(wgslType)
+      ? 2
+      : 1;
+    const componentSize = primitive === 'u8' || primitive === 'i8'
+      ? 1
+      : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
+      ? 2
+      : 4;
+    const components = ['x', 'y', 'z', 'w'];
+    const transform = vertexFormatValueTransform[
+      formatName as keyof typeof vertexFormatValueTransform
+    ];
+
+    let code = '';
+    for (let i = 0; i < componentCount; i++) {
+      const accessor = componentCount === 1
+        ? valueExpr
+        : `${valueExpr}.${components[i]}`;
+      const value = transform ? transform(accessor) : accessor;
+      code += `output.${writeFunc}((${offsetExpr} + ${
+        i * componentSize
+      }), ${value}, littleEndian);\n`;
+    }
+
+    return code;
+  }
+
+  if (!Object.hasOwn(typeToPrimitive, node.type)) {
+    console.log(node);
+    throw new Error(
+      `Unsupported primitive encounter when compiling writer: ${node.type}`,
+    );
+  }
+
   const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
   return `output.${
     primitiveToWriteFunction[primitive]
@@ -150,12 +269,18 @@ export function buildWriter(
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   schema: T,
-): (
-  output: DataView,
-  offset: number,
-  value: Infer<T>,
-  littleEndian?: boolean,
-) => void {
+):
+  | ((
+    output: DataView,
+    offset: number,
+    value: Infer<T>,
+    littleEndian?: boolean,
+  ) => void)
+  | undefined {
+  if (!EVAL_ALLOWED_IN_ENV) {
+    throw new Error('This environment does not allow eval');
+  }
+
   if (compiledWriters.has(schema)) {
     return compiledWriters.get(schema) as (
       output: DataView,
@@ -165,22 +290,30 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     ) => void;
   }
 
-  const body = buildWriter(schema, 'offset', 'value');
+  try {
+    const body = buildWriter(schema, 'offset', 'value');
 
-  const fn = new Function(
-    'output',
-    'offset',
-    'value',
-    'littleEndian=true',
-    body,
-  ) as (
-    output: DataView,
-    offset: number,
-    value: Infer<T> | unknown,
-    littleEndian?: boolean,
-  ) => void;
+    const fn = new Function(
+      'output',
+      'offset',
+      'value',
+      'littleEndian=true',
+      body,
+    ) as (
+      output: DataView,
+      offset: number,
+      value: Infer<T> | unknown,
+      littleEndian?: boolean,
+    ) => void;
 
-  compiledWriters.set(schema, fn);
+    compiledWriters.set(schema, fn);
 
-  return fn;
+    return fn;
+  } catch (error) {
+    console.warn(
+      `Failed to compile writer for schema: ${schema}\nReason: ${
+        error instanceof Error ? error.message : String(error)
+      }\nFalling back to default writer`,
+    );
+  }
 }
