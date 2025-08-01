@@ -1,5 +1,9 @@
 {
   "title": "Vaporrave",
-  "category": "simple",
-  "tags": ["experimental"]
+  "category": "rendering",
+  "tags": [
+    "experimental",
+    "sdf",
+    "ray marching"
+  ]
 }
