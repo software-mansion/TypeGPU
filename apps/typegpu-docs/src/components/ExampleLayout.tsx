@@ -113,7 +113,6 @@ function SideMenu() {
         <SearchableExampleList
           excludeTags={[
             experimentalShowing ? [] : ['experimental'],
-            typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
           ].flat()}
           scrollContainerRef={scrollRef}
         />

@@ -10,6 +10,7 @@ import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 /**
  * @template T
@@ -31,6 +32,12 @@ export default defineConfig({
       tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
       /** @type {any} */ imagetools(),
+      {
+        ...basicSsl(),
+        apply(_, { mode }) {
+          return DEV && mode === 'https';
+        },
+      },
     ],
     ssr: {
       noExternal: [

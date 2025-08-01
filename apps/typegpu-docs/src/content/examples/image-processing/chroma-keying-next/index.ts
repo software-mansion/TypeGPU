@@ -122,10 +122,20 @@ if (!samplingContext) {
   throw new Error('Could not get 2d context');
 }
 
-const mediaProcessor = new MediaStreamTrackProcessor({
-  track: stream.getVideoTracks()[0],
-});
-const reader = mediaProcessor.readable.getReader();
+let reader: ReadableStreamDefaultReader<VideoFrame> | undefined;
+let worker: Worker | undefined;
+
+if (typeof MediaStreamTrackProcessor !== 'undefined') {
+  const mediaProcessor = new MediaStreamTrackProcessor({
+    track: stream.getVideoTracks()[0],
+  });
+  reader = mediaProcessor.readable.getReader();
+} else {
+  worker = new Worker(new URL('./processor.worker.ts', import.meta.url), {
+    type: 'module',
+  });
+  worker.postMessage({ type: 'init', track: stream.getVideoTracks()[0] });
+}
 
 const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
 
@@ -161,8 +171,26 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
+let nextFrame: VideoFrame | null = null;
+
+if (worker) {
+  worker.onmessage = (event) => {
+    if (event.data.type === 'frame') {
+      if (nextFrame) {
+        nextFrame.close();
+      }
+      nextFrame = event.data.frame;
+    }
+  };
+}
+
 async function getFrame() {
-  const { value: frame } = await reader.read();
+  if (reader) {
+    const { value: frame } = await reader.read();
+    return frame;
+  }
+  const frame = nextFrame;
+  nextFrame = null;
   return frame;
 }
 
@@ -243,7 +271,19 @@ export function onCleanup() {
     track.stop();
   }
 
-  reader.cancel();
+  if (reader) {
+    reader.cancel();
+  }
+
+  if (worker) {
+    worker.postMessage({ type: 'cleanup' });
+    worker.terminate();
+  }
+
+  if (nextFrame) {
+    nextFrame.close();
+    nextFrame = null;
+  }
 }
 
 // #endregion

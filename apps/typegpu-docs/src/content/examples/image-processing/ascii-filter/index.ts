@@ -57,7 +57,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 0), d.vec2f(2, 0), d.vec2f(0, 2)];
+  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0, 1),
@@ -192,7 +192,12 @@ const pipeline = root['~unstable']
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
-    video: true,
+    video: {
+      facingMode: 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60 },
+    },
   });
 }
 
@@ -215,34 +220,42 @@ let bindGroup:
   }>
   | undefined;
 
-let ready = true;
-let animationFrame: number;
-function run() {
-  if (!(video.currentTime > 0) || video.readyState < 2 || !ready) {
-    animationFrame = requestAnimationFrame(run);
-    return;
+let videoFrameCallbackId: number | undefined;
+
+function processVideoFrame(
+  _: number,
+  metadata: VideoFrameCallbackMetadata,
+) {
+  const frameWidth = metadata.width;
+  const frameHeight = metadata.height;
+
+  if (
+    !renderTexture || !bindGroup ||
+    renderTexture.props.size[0] !== frameWidth ||
+    renderTexture.props.size[1] !== frameHeight
+  ) {
+    renderTexture?.destroy();
+    renderTexture = root['~unstable'].createTexture({
+      size: [frameWidth, frameHeight],
+      format: 'rgba8unorm',
+    }).$usage('render', 'sampled');
+
+    bindGroup = root.createBindGroup(layout, {
+      inputTexture: renderTexture,
+    });
+
+    updateVideoDisplay(frameWidth, frameHeight);
   }
 
-  renderTexture ??= root['~unstable'].createTexture({
-    size: [video.videoWidth, video.videoHeight],
-    format: presentationFormat as 'rgba8unorm' | 'bgra8unorm',
-  }).$usage('render', 'sampled');
-
-  bindGroup ??= root.createBindGroup(layout, {
-    inputTexture: renderTexture,
-  });
-
   try {
-    const videoFrame = new VideoFrame(video);
     device.queue.copyExternalImageToTexture(
-      { source: videoFrame, flipY: true },
+      { source: video },
       { texture: root.unwrap(renderTexture) },
-      [video.videoWidth, video.videoHeight],
+      [frameWidth, frameHeight],
     );
-    videoFrame.close();
   } catch (error) {
     console.error('Failed to copy video frame to texture:', error);
-    animationFrame = requestAnimationFrame(run);
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
@@ -253,40 +266,21 @@ function run() {
   }).with(layout, bindGroup).draw(3);
 
   spinner.style.display = 'none';
-  animationFrame = requestAnimationFrame(run);
+
+  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 
-function resizeVideo() {
-  ready = false;
-  if (video.videoHeight === 0) {
-    return;
-  }
-
-  renderTexture?.destroy();
-  renderTexture = root['~unstable'].createTexture({
-    size: [video.videoWidth, video.videoHeight],
-    format: presentationFormat as 'rgba8unorm' | 'bgra8unorm',
-  }).$usage('render', 'sampled');
-  bindGroup = root.createBindGroup(layout, {
-    inputTexture: renderTexture,
-  });
-
-  const aspectRatio = video.videoWidth / video.videoHeight;
+function updateVideoDisplay(frameWidth: number, frameHeight: number) {
+  const aspectRatio = frameWidth / frameHeight;
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-
-  ready = true;
 }
 
-const videoSizeObserver = new ResizeObserver(resizeVideo);
-videoSizeObserver.observe(video);
-video.addEventListener('resize', resizeVideo);
-
-animationFrame = requestAnimationFrame(run);
+videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 export const controls = {
   'use extended characters': {
@@ -308,7 +302,7 @@ export const controls = {
     onSliderChange: (value: number) => gammaCorrection.write(value),
   },
   'glyph size (px)': {
-    initial: 8,
+    initial: 20,
     min: 4,
     max: 32,
     step: 2,
@@ -317,7 +311,9 @@ export const controls = {
 };
 
 export function onCleanup() {
-  cancelAnimationFrame(animationFrame);
+  if (videoFrameCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(videoFrameCallbackId);
+  }
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -325,5 +321,4 @@ export function onCleanup() {
   }
 
   root.destroy();
-  videoSizeObserver.disconnect();
 }
