@@ -57,10 +57,9 @@ export function ExampleLayout(props: ExampleLayoutProps) {
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [_experimentalShowing, setExperimentalShowing] = useAtom(
+  const [experimentalShowing, setExperimentalShowing] = useAtom(
     experimentalExamplesShownAtom,
   );
-  const experimentalShowing = true;
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
 
@@ -116,9 +115,7 @@ function SideMenu() {
         </section>
 
         <SearchableExampleList
-          excludeTags={[
-            experimentalShowing ? [] : ['experimental'],
-          ].flat()}
+          excludeTags={[experimentalShowing ? [] : ['experimental']].flat()}
           scrollContainerRef={scrollRef}
         />
       </div>
