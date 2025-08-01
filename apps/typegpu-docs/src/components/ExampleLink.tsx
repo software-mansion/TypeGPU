@@ -1,21 +1,22 @@
 import cs from 'classnames';
-import { useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
-import React, { type MouseEvent, Suspense } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
 import useEvent from '../utils/useEvent.ts';
-import CurrentMarker from './CurrentMarker.tsx';
+import { useHydrated } from '../utils/useHydrated.ts';
 
 type Props = {
   exampleKey: string | undefined;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
-  const setCurrentExample = useSetAtom(currentExampleAtom);
+  const hydrated = useHydrated();
+  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
@@ -23,6 +24,8 @@ export function ExampleLink(props: Props) {
     setCurrentExample(exampleKey ?? RESET);
     setMenuShownMobile(false);
   });
+
+  const isCurrentExample = hydrated && currentExample === exampleKey;
 
   return (
     <a
@@ -32,10 +35,11 @@ export function ExampleLink(props: Props) {
       onClick={handleClick}
       className={cs(
         'block overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow',
-        'has-[[data-current-marker=true]]:shadow-lg has-[[data-current-marker=true]]:ring-3 has-[[data-current-marker=true]]:ring-purple-500 has-[[data-current-marker=false]]:hover:shadow-lg',
+        isCurrentExample
+          ? 'shadow-lg ring-3 ring-purple-500'
+          : 'hover:shadow-lg',
       )}
     >
-      <CurrentMarker exampleKey={exampleKey} />
       {children}
     </a>
   );
