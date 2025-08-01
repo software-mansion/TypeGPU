@@ -1,4 +1,4 @@
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import type { $repr } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';

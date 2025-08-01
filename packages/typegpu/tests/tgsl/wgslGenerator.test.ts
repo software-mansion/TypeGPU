@@ -48,6 +48,7 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
       const gen = wgslGenerator.generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{return true;}'));
     });
@@ -68,6 +69,7 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
       const gen = wgslGenerator.generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
     });
@@ -762,48 +764,38 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it('generates correct code for conditionals with single statements', () => {
-    const main0 = () => {
+  it('generates correct code for conditional with single statement', () => {
+    const main0 = tgpu.fn([], d.u32)(() => {
       'kernel';
       // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
       if (true) return 0;
       return 1;
-    };
+    });
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main0)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
+    expect(parseResolved({ main0 })).toBe(
+      parse(`
+    fn main0() -> u32 {
       if (true) {
         return 0;
       }
       return 1;
     }`),
     );
+  });
 
-    const main1 = () => {
+  it('generates correct code for conditional with else', () => {
+    const main1 = tgpu.fn([], d.i32)(() => {
       'kernel';
       let y = 0;
       // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
       if (true) y = 1;
       else y = 2;
       return y;
-    };
+    });
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main1)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
+    expect(parseResolved({ main1 })).toBe(
+      parse(`
+    fn main1() -> i32 {
       var y = 0;
       if (true) {
         y = 1;
@@ -813,8 +805,10 @@ describe('wgslGenerator', () => {
       return y;
     }`),
     );
+  });
 
-    const main2 = () => {
+  it('generates correct code for conditionals block', () => {
+    const main2 = tgpu.fn([], d.i32)(() => {
       'kernel';
       let y = 0;
       // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
@@ -822,17 +816,11 @@ describe('wgslGenerator', () => {
         y = 1;
       } else y = 2;
       return y;
-    };
+    });
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main2)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(
-      parse(`{
+    expect(parseResolved({ main2 })).toBe(
+      parse(`
+    fn main2() -> i32 {
       var y = 0;
       if (true) {
         y = 1;
@@ -890,12 +878,11 @@ describe('wgslGenerator', () => {
 
     expect(() => parseResolved({ cleantestFn: testFn }))
       .toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- internalTestFn: Resolution of the following tree failed:
-- internalTestFn: Cannot convert argument of type 'array' to 'vec2f' for function internalTestFn]
-`);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn
+        - internalTestFn: Cannot convert value of type 'array' to type 'vec2f']
+      `);
   });
 
   it('throws error when initializing translate4 function', () => {
@@ -919,13 +906,13 @@ describe('wgslGenerator', () => {
       return d.mat4x4f();
     });
 
-    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- vec4f: Resolution of the following tree failed:
-- vec4f: Cannot convert argument of type 'array' to 'f32' for function vec4f]
-`);
+    expect(() => parseResolved({ testFn }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn
+        - vec4f: Cannot convert value of type 'array' to type 'f32']
+      `);
   });
 
   it('generates correct code for pointer value assignment', () => {

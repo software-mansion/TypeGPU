@@ -399,16 +399,16 @@ describe('TGSL tgpu.fn function', () => {
         },
       })((input) => {
         const pos = input.pos;
-        const out = {
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: 0,
-        };
+        let sampleMask = 0;
         if (input.sampleMask > 0 && pos.x > 0) {
-          out.sampleMask = 1;
+          sampleMask = 1;
         }
 
-        return out;
+        return {
+          out: d.vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: d.u32(sampleMask),
+        };
       });
 
     const actual = parseResolved({ fragmentFn });
@@ -429,12 +429,12 @@ describe('TGSL tgpu.fn function', () => {
       @fragment
       fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
         var pos = input.pos;
-        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var sampleMask = 0;
         if (((input.sampleMask > 0) && (pos.x > 0))) {
-          out.sampleMask = 1;
+          sampleMask = 1;
         }
 
-        return out;
+        return fragmentFn_Output(u32(sampleMask), 1, vec4f(0, 0, 0, 0));
       }
     `);
 
@@ -537,12 +537,12 @@ describe('TGSL tgpu.fn function', () => {
           fragDepth: builtin.fragDepth,
           out: d.location(0, d.vec4f),
         },
-      })(({ pos: position, sampleMask }) => {
-        const out = {
-          out: d.vec4f(0, 0, 0, 0),
+      })(({ pos: position, sampleMask }, Out) => {
+        const out = Out({
+          out: d.vec4f(),
           fragDepth: 1,
           sampleMask: 0,
-        };
+        });
         if (sampleMask > 0 && position.x > 0) {
           out.sampleMask = 1;
         }
@@ -567,11 +567,10 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
-        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var out = fragmentFn_Output(0, 1, vec4f());
         if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
           out.sampleMask = 1;
         }
-
         return out;
       }
     `);
@@ -1008,25 +1007,25 @@ describe('tgsl fn when using plugin', () => {
       return x + y;
     };
 
-    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(addKernelJs);
 
     expect(addKernelJs(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );
   });
 
   it('can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(
       (x, y) => x + y,
     );
 
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );

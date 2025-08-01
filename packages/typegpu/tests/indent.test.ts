@@ -158,7 +158,7 @@ describe('indents', () => {
       return std.textureLoad(layout.$.densityField, d.vec3i(position)).x;
     });
 
-    const incrementCouner = tgpu.fn([])(() => {
+    const incrementCounter = tgpu.fn([])(() => {
       layout.$.counter += 1;
     });
 
@@ -183,7 +183,7 @@ describe('indents', () => {
     });
 
     const main = tgpu.fn([])(() => {
-      incrementCouner();
+      incrementCounter();
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
         const particle = layout.$.systemData.particles[i] as d.Infer<
           typeof Particle
@@ -203,7 +203,7 @@ describe('indents', () => {
     expect(code).toMatchInlineSnapshot(`
       "@group(0) @binding(2) var<storage, read> counter_2: u32;
 
-      fn incrementCouner_1() {
+      fn incrementCounter_1() {
         counter_2 += 1;
       }
 
@@ -241,7 +241,7 @@ describe('indents', () => {
       }
 
       fn main_0() {
-        incrementCouner_1();
+        incrementCounter_1();
         for (var i = 0; (i < 100); i++) {
           var particle = systemData_3.particles[i];
           systemData_3.particles[i] = updateParticle_7(particle, systemData_3.gravity, systemData_3.deltaTime);

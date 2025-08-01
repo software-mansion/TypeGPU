@@ -29,7 +29,7 @@ import {
   type v4i,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -96,7 +96,7 @@ export const add = createDualImpl(
       `(${lhs.value} + ${rhs.value})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
-  'coerce',
+  'unify',
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -126,7 +126,7 @@ export const sub = createDualImpl(
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'sub',
-  'coerce',
+  'unify',
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -510,7 +510,7 @@ export const max = createDualImpl(
   // GPU implementation
   (a, b) => snip(`max(${a.value}, ${b.value})`, a.dataType),
   'max',
-  'coerce',
+  'unify',
 );
 
 /**
@@ -528,7 +528,7 @@ export const min = createDualImpl(
   // GPU implementation
   (a, b) => snip(`min(${a.value}, ${b.value})`, a.dataType),
   'min',
-  'coerce',
+  'unify',
 );
 
 export const sign = createDualImpl(

@@ -197,3 +197,12 @@ export class IllegalBufferAccessError extends Error {
     Object.setPrototypeOf(this, IllegalBufferAccessError.prototype);
   }
 }
+
+export class WgslTypeError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, WgslTypeError.prototype);
+  }
+}
