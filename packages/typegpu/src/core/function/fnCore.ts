@@ -4,10 +4,10 @@ import { undecorate } from '../../data/decorateUtils.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { snip } from '../../data/snippet.ts';
 import {
-  type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
   Void,
+  type WgslStruct,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
@@ -182,7 +182,7 @@ export function createFnCore(
                   alias,
                   snip(
                     `_arg_${i}.${name}`,
-                    (argTypes[i] as AnyWgslStruct)
+                    (argTypes[i] as WgslStruct)
                       .propTypes[name],
                   ),
                 ])

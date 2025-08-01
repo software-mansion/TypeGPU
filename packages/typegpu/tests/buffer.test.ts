@@ -1,9 +1,14 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
 import * as d from '../src/data/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
+import type {
+  IsValidBufferSchema,
+  IsValidUniformSchema,
+} from '../src/shared/repr.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -25,7 +30,7 @@ function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
 }
 
 describe('TgpuBuffer', () => {
-  it('should be namable', ({ root, device }) => {
+  it('should be namable', ({ root }) => {
     const buffer = root.createBuffer(d.u32).$name('myBuffer');
 
     const rawBuffer = root.unwrap(buffer);
@@ -59,9 +64,9 @@ describe('TgpuBuffer', () => {
       label: 'dataBuffer',
       mappedAtCreation: false,
       size: 64,
-      usage: global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
+      usage: GPUBufferUsage.UNIFORM |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.COPY_SRC,
     });
 
     dataBuffer.write({
@@ -464,7 +469,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(boolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
 
     const nestedBoolSchema = d.struct({
@@ -479,7 +484,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(nestedBoolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"Error: Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
   });
 
@@ -494,7 +499,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(notFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
 
     const alsoNotFine = d.struct({
@@ -505,15 +510,16 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(alsoNotFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"Error: U16 is only usable inside arrays for index buffers\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
   });
 
   it('should only allow index usage for valid u16 schemas', ({ root }) => {
-    const validSchema = d.arrayOf(d.u16, 32);
-    const buffer = root.createBuffer(validSchema);
+    const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
 
-    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<['index']>();
+    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
+      ['index', ...'index'[]]
+    >();
   });
 
   it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({ root }) => {
@@ -521,7 +527,10 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(validSchema);
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      ('index' | 'storage' | 'uniform' | 'vertex')[]
+      [
+        'index' | 'storage' | 'uniform' | 'vertex',
+        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+      ]
     >();
   });
 
@@ -531,7 +540,100 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(validSchema);
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      ('index' | 'storage' | 'uniform' | 'vertex')[]
+      [
+        'index' | 'storage' | 'uniform' | 'vertex',
+        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+      ]
     >();
+  });
+});
+
+describe('IsValidUniformSchema', () => {
+  it('treats booleans as invalid', () => {
+    expectTypeOf<IsValidUniformSchema<d.Bool>>().toEqualTypeOf<false>();
+  });
+
+  it('treats numeric schemas as valid', () => {
+    expectTypeOf<IsValidUniformSchema<d.U32>>().toEqualTypeOf<true>();
+  });
+
+  it('it treats union schemas as valid (even if they contain booleans)', () => {
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.Bool>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.WgslArray<d.Bool>>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.WgslArray<d.Bool | d.U32>>>()
+      .toEqualTypeOf<true>();
+  });
+});
+
+describe('IsValidBufferSchema', () => {
+  it('treats booleans as invalid', () => {
+    expectTypeOf<IsValidBufferSchema<d.Bool>>().toEqualTypeOf<false>();
+  });
+
+  it('treats schemas holding booleans as invalid', () => {
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool>>>()
+      .toEqualTypeOf<false>();
+    expectTypeOf<IsValidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>()
+      .toEqualTypeOf<false>();
+  });
+
+  it('treats other schemas as valid', () => {
+    expectTypeOf<IsValidBufferSchema<d.U32>>().toEqualTypeOf<true>();
+  });
+
+  it('it treats arrays of valid schemas as valid', () => {
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.U32>>>()
+      .toEqualTypeOf<true>();
+  });
+
+  it('it treats union schemas as valid (even if they contain booleans)', () => {
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.Bool>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>()
+      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool | d.U32>>>()
+      .toEqualTypeOf<true>();
+  });
+});
+
+describe('ValidateBufferSchema', () => {
+  it('is strict for exact types', () => {
+    expectTypeOf<ValidateBufferSchema<d.U32>>().toEqualTypeOf<d.U32>();
+    expectTypeOf<ValidateBufferSchema<d.Bool>>().toEqualTypeOf<
+      '(Error) Bool is not host-shareable, use U32 or I32 instead'
+    >();
+  });
+
+  // Could be not host-shareable, but we let it go to not be annoying
+  it('is lenient for union types', () => {
+    expectTypeOf<ValidateBufferSchema<d.U32 | d.Bool>>().toEqualTypeOf<
+      d.U32 | d.Bool
+    >();
+
+    expectTypeOf<ValidateBufferSchema<d.AnyData>>().toEqualTypeOf<
+      d.AnyData
+    >();
+  });
+
+  it('can be used to wrap `createBuffer` in a generic function (schema and usages customizable)', ({ root }) => {
+    function createMyBuffer<T extends d.AnyData>(
+      schema: ValidateBufferSchema<T>,
+      usages: [ValidUsagesFor<T>, ...ValidUsagesFor<T>[]],
+    ) {
+      const buffer = root.createBuffer(schema).$usage(...usages);
+      return buffer;
+    }
+
+    // Invalid
+    // @ts-expect-error: Cannot create buffers with bools in them
+    (() => createMyBuffer(d.bool, ['']));
+    // @ts-expect-error: Cannot create uniform buffers with vertex formats in them
+    (() => createMyBuffer(d.unorm8x4, ['uniform']));
+
+    // Valid
+    createMyBuffer(d.f32, ['uniform']);
+    createMyBuffer(d.unorm8x4, ['vertex']);
   });
 });

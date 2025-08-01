@@ -40,3 +40,28 @@ export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
  * Type token holding schemas that are identical in memory layout.
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);
+
+/**
+ * Type token, signaling that a schema can be used in a storage buffer.
+ */
+export const $validStorageSchema = Symbol(
+  `typegpu:${version}:$invalidStorageSchema`,
+);
+/**
+ * Type token, signaling that a schema can be used in a uniform buffer.
+ */
+export const $validUniformSchema = Symbol(
+  `typegpu:${version}:$validUniformSchema`,
+);
+/**
+ * Type token, signaling that a schema can be used in a vertex buffer.
+ */
+export const $validVertexSchema = Symbol(
+  `typegpu:${version}:$validVertexSchema`,
+);
+/**
+ * Type token, containing a reason for why the schema is invalid (if it is).
+ */
+export const $invalidSchemaReason = Symbol(
+  `typegpu:${version}:$invalidSchemaReason`,
+);

@@ -91,6 +91,7 @@ export { isTgpuFn } from './core/function/tgpuFn.ts';
 export type {
   Configurable,
   TgpuRoot,
+  ValidateBufferSchema,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -105,6 +106,7 @@ export type {
   TgpuBuffer,
   Uniform,
   UniformFlag,
+  ValidUsagesFor,
   Vertex,
   VertexFlag,
 } from './core/buffer/buffer.ts';
