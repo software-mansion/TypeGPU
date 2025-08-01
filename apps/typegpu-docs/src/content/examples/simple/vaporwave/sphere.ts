@@ -19,10 +19,14 @@ export const getSphere = tgpu.fn(
   // breathing effect
   const radius = d.f32(c.sphereRadius) + std.sin(angle);
 
-  const noise = perlin3d.sample(std.add(rotatedP, angle));
+  const rawDist = sdSphere(rotatedP, radius);
+  let noise = d.f32(0);
+  if (rawDist < d.f32(1)) {
+    noise += perlin3d.sample(std.add(rotatedP, angle));
+  }
 
   return {
-    dist: sdSphere(rotatedP, radius) + noise,
+    dist: rawDist + noise,
     color: sphereColor,
   };
 });
