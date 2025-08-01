@@ -1,10 +1,13 @@
+/**
+ * Extracts the imported URL as-in
+ */
 export function extractUrlFromViteImport(
   importFn: () => void,
-): URL | undefined {
+): string | undefined {
   const match = String(importFn).match(/import\(["']([^"']+)["']\)/);
 
   if (match?.[1]) {
-    return new URL(match[1], import.meta.url);
+    return match[1];
   }
 
   return undefined;
@@ -12,13 +15,15 @@ export function extractUrlFromViteImport(
 
 export function noCacheImport<T>(
   importFn: () => Promise<T>,
+  baseUrl?: string,
 ): Promise<T> {
-  const url = extractUrlFromViteImport(importFn);
+  const href = extractUrlFromViteImport(importFn);
 
-  if (!url) {
+  if (!href) {
     throw new Error(`Could not no-cache-import using ${importFn}`);
   }
 
+  const url = new URL(href, baseUrl);
   url.searchParams.append('update', Date.now().toString());
   return import(/* @vite-ignore */ url.href);
 }

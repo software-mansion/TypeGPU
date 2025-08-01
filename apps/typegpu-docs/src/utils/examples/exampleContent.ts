@@ -107,7 +107,7 @@ export const examples = R.pipe(
         key,
         metadata: value,
         tsFiles: readonlyTsFiles[key] ?? [],
-        tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
+        tsImport: () => noCacheImport(tsFilesImportFunctions[key], import.meta.url),
         htmlFile: htmlFiles[key]?.[0] ?? '',
         thumbnails: thumbnailFiles[key],
       }) satisfies Example,
