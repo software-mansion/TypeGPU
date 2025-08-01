@@ -86,16 +86,16 @@ export function buildWriter(
   }
 
   if (wgsl.isWgslArray(node) || isDisarray(node)) {
-    const arrSchema = node as wgsl.WgslArray;
     const elementSize = roundUp(
-      sizeOf(arrSchema.elementType),
-      alignmentOf(arrSchema.elementType),
+      sizeOf(node.elementType),
+      alignmentOf(node),
     );
+    console.log(elementSize);
     let code = '';
 
-    code += `for (let i = 0; i < ${arrSchema.elementCount}; i++) {\n`;
+    code += `for (let i = 0; i < ${node.elementCount}; i++) {\n`;
     code += buildWriter(
-      arrSchema.elementType,
+      node.elementType,
       `(${offsetExpr} + i * ${elementSize})`,
       `${valueExpr}[i]`,
     );
