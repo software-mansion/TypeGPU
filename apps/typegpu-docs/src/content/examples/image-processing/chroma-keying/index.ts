@@ -1,6 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
+if (typeof MediaStreamTrackProcessor === 'undefined') {
+  throw new Error('MediaStreamTrackProcessor is not supported in this browser');
+}
+
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   color: { uniform: d.vec3f },
