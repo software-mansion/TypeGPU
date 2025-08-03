@@ -1,6 +1,5 @@
 import type { BunPlugin } from 'bun';
 import * as Babel from '@babel/standalone';
-import presetTypeScript from '@babel/preset-typescript';
 import { defaultOptions, type Options } from './common.ts';
 import defu from 'defu';
 import babelPlugin from './babel.ts';
@@ -25,13 +24,12 @@ export default (rawOptions: Options): BunPlugin => {
 
         const result = Babel.transform(text, {
           presets: [['typescript', { allowDeclareFields: true }]],
-          filename: 'example.ts',
-          // plugins: [babelPlugin],
+          filename: args.path,
+          plugins: [babelPlugin],
         }).code;
 
         return {
-          contents:
-            `console.log('This module has been transformed by TypeGPU: ${args.path}'); ${result}`,
+          contents: result ?? text,
           loader: args.loader,
         };
       });
