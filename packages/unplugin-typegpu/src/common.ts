@@ -21,7 +21,7 @@ export interface Options {
 }
 
 export const defaultOptions = {
-  include: [/\.m?[jt]sx?$/],
+  include: /\.m?[jt]sx?$/,
   autoNamingEnabled: true,
 };
 

@@ -89,6 +89,25 @@ importers:
         specifier: catalog:test
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.1.0)(@vitest/browser@3.2.4)(jiti@2.4.2)(lightningcss@1.30.1)(msw@2.10.2(@types/node@24.1.0)(typescript@5.8.3))(tsx@4.19.3)(yaml@2.8.0)
 
+  apps/bun-example:
+    dependencies:
+      '@typegpu/noise':
+        specifier: 'workspace:'
+        version: link:../../packages/typegpu-noise
+      typegpu:
+        specifier: 'workspace:'
+        version: link:../../packages/typegpu
+      typescript:
+        specifier: ^5
+        version: 5.8.3
+      unplugin-typegpu:
+        specifier: 'workspace:'
+        version: link:../../packages/unplugin-typegpu
+    devDependencies:
+      '@types/bun':
+        specifier: latest
+        version: 1.2.19(@types/react@19.1.8)
+
   apps/infra-benchmarks:
     devDependencies:
       tinybench:
@@ -560,6 +579,9 @@ importers:
       '@types/babel__traverse':
         specifier: ^7.20.7
         version: 7.20.7
+      '@types/bun':
+        specifier: ^1.2.19
+        version: 1.2.19(@types/react@19.1.8)
       '@types/picomatch':
         specifier: ^4.0.1
         version: 4.0.1
@@ -2463,6 +2485,9 @@ packages:
   '@types/babel__traverse@7.20.7':
     resolution: {integrity: sha512-dkO5fhS7+/oos4ciWxyEyjWe48zmG6wbCheo/G2ZnHx4fs3EU6YC6UM8rk56gAjNJ9P3MTH2jo5jb92/K6wbng==}
 
+  '@types/bun@1.2.19':
+    resolution: {integrity: sha512-d9ZCmrH3CJ2uYKXQIUuZ/pUnTqIvLDS0SK7pFmbx8ma+ziH/FRMoAq5bYpRG7y+w1gl+HgyNZbtqgMq4W4e2Lg==}
+
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
 
@@ -2840,6 +2865,11 @@ packages:
 
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
+
+  bun-types@1.2.19:
+    resolution: {integrity: sha512-uAOTaZSPuYsWIXRpj7o56Let0g/wjihKCkeRqUBhlLVM/Bt+Fj9xTo+LhC1OV1XDaGkz4hNC80et5xgy+9KTHQ==}
+    peerDependencies:
+      '@types/react': ^19
 
   bundle-require@5.1.0:
     resolution: {integrity: sha512-3WrrOuZiyaaZPWiEt4G3+IffISVC9HYlWueJEBWED4ZH4aIAC2PnkdnuRrR94M+w6yGWn4AglWtJtBI8YqvgoA==}
@@ -7800,6 +7830,12 @@ snapshots:
     dependencies:
       '@babel/types': 7.26.5
 
+  '@types/bun@1.2.19(@types/react@19.1.8)':
+    dependencies:
+      bun-types: 1.2.19(@types/react@19.1.8)
+    transitivePeerDependencies:
+      - '@types/react'
+
   '@types/chai@5.2.2':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -8344,6 +8380,11 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
+
+  bun-types@1.2.19(@types/react@19.1.8):
+    dependencies:
+      '@types/node': 24.1.0
+      '@types/react': 19.1.8
 
   bundle-require@5.1.0(esbuild@0.25.6):
     dependencies:
