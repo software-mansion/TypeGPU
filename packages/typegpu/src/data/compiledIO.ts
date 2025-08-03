@@ -106,6 +106,10 @@ const primitiveToWriteFunction = {
   i8: 'setInt8',
 } as const;
 
+/**
+ * @privateRemarks
+ * based on the `Channel Formats` table https://www.w3.org/TR/WGSL/#texel-formats
+ */
 const vertexFormatValueTransform = {
   unorm8: (value: string) => `${value} * 255`,
   unorm8x2: (value: string) => `${value} * 255`,
@@ -150,7 +154,6 @@ export function buildWriter(
       sizeOf(node.elementType),
       alignmentOf(node),
     );
-    console.log(elementSize);
     let code = '';
 
     code += `for (let i = 0; i < ${node.elementCount}; i++) {\n`;
@@ -255,7 +258,6 @@ export function buildWriter(
   }
 
   if (!Object.hasOwn(typeToPrimitive, node.type)) {
-    console.log(node);
     throw new Error(
       `Unsupported primitive encounter when compiling writer: ${node.type}`,
     );

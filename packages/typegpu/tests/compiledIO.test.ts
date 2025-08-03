@@ -307,8 +307,6 @@ describe('createCompileInstructions', () => {
     // biome-ignore lint/style/noNonNullAssertion: <it's a test>
     const writer = getCompiledWriterForSchema(schema)!;
 
-    console.log(sizeOf(schema));
-    console.log(d.alignmentOf(schema));
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -561,60 +559,70 @@ describe('createCompileInstructions', () => {
 
     expect(result).toEqual([
       // First element
-      // a: unorm16x2 vec2f(0.5, 0.25) -> [32767, 16383] -> [255, 127, 255, 63]
+      // a: unorm16x2 vec2f(0.5, 0.25) -> 0.5*65535=32767.5≈32767, 0.25*65535=16383.75≈16383
+      // -> little-endian bytes: 32767=[255,127], 16383=[255,63]
       255,
       127,
       255,
       63,
-      // b: unorm8x4_bgra vec4f(0.25, 0.5, 0.75, 1) -> BGRA [191, 127, 63, 255]
+      // b: unorm8x4_bgra vec4f(0.25, 0.5, 0.75, 1) -> BGRA order: z,y,x,w
+      // -> 0.75*255=191, 0.5*255=127, 0.25*255=63, 1*255=255
       191,
       127,
       63,
       255,
-      // c: snorm8x4 vec4f(-0.5, 0.5, -0.25, 0.75) -> [-63, 64, -32, 95]
-      193,
+      // c: snorm8x4 vec4f(-0.5, 0.5, -0.25, 0.75) -> round(x*127)
+      // -> -0.5*127=-63.5≈-64 (256-64=192), 0.5*127=63.5≈64, -0.25*127=-31.75≈-32 (256-32=224), 0.75*127=95.25≈95
+      192,
       64,
       224,
       95,
-      // d: snorm16x2 vec2f(0.34, 0.67) -> [11141, 21954] -> [133, 43, 194, 85]
+      // d: snorm16x2 vec2f(0.34, 0.67) -> round(x*32767)
+      // -> 0.34*32767=11140.78≈11141, 0.67*32767=21953.89≈21954
+      // -> little-endian bytes: 11141=[133,43], 21954=[194,85]
       133,
       43,
       194,
       85,
-      // e: sint8x2 vec2i(1, 2) -> [1, 2]
+      // e: sint8x2 vec2i(1, 2) -> direct values
       1,
       2,
-      // f: sint16x2 vec2i(3, 4) -> [3, 0, 4, 0]
+      // f: sint16x2 vec2i(3, 4) -> little-endian bytes: 3=[3,0], 4=[4,0]
       3,
       0,
       4,
       0,
 
       // Second element
-      // a: unorm16x2 vec2f(0.75, 1.0) -> [49151, 65535] -> [255, 191, 255, 255]
+      // a: unorm16x2 vec2f(0.75, 1.0) -> 0.75*65535=49151.25≈49151, 1.0*65535=65535
+      // -> little-endian bytes: 49151=[255,191], 65535=[255,255]
       255,
       191,
       255,
       255,
-      // b: unorm8x4_bgra vec4f(0.1, 0.2, 0.3, 0.4) -> BGRA [76, 51, 25, 102]
+      // b: unorm8x4_bgra vec4f(0.1, 0.2, 0.3, 0.4) -> BGRA order: z,y,x,w
+      // -> 0.3*255=76.5≈76, 0.2*255=51, 0.1*255=25.5≈25, 0.4*255=102
       76,
       51,
       25,
       102,
-      // c: snorm8x4 vec4f(0.1, -0.1, 0.9, -0.9) -> [13, -13, 114, -114]
+      // c: snorm8x4 vec4f(0.1, -0.1, 0.9, -0.9) -> round(x*127)
+      // -> 0.1*127=12.7≈13, -0.1*127=-12.7≈-13 (256-13=243), 0.9*127=114.3≈114, -0.9*127=-114.3≈-114 (256-114=142)
       13,
       243,
       114,
       142,
-      // d: snorm16x2 vec2f(-0.5, 0.8) -> [-16383, 26214] -> [1, 192, 102, 102]
-      1,
+      // d: snorm16x2 vec2f(-0.5, 0.8) -> round(x*32767)
+      // -> -0.5*32767=-16383.5≈-16384 (65536-16384=49152), 0.8*32767=26213.6≈26214
+      // -> little-endian bytes: 49152=[0,192], 26214=[102,102]
+      0,
       192,
       102,
       102,
-      // e: sint8x2 vec2i(5, 6) -> [5, 6]
+      // e: sint8x2 vec2i(5, 6) -> direct values
       5,
       6,
-      // f: sint16x2 vec2i(7, 8) -> [7, 0, 8, 0]
+      // f: sint16x2 vec2i(7, 8) -> little-endian bytes: 7=[7,0], 8=[8,0]
       7,
       0,
       8,
