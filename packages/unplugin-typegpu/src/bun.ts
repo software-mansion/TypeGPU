@@ -29,7 +29,9 @@ export default (rawOptions: Options): BunPlugin => {
         // transform (costly operator)
         // TODO: Add for other plugins, with an option to disable in case
         //       the early detection hinders transformation
-        if (!kernelDirectiveRegex.test(text) && !typegpuKeywordRegex.test(text)) {
+        if (
+          !kernelDirectiveRegex.test(text) && !typegpuKeywordRegex.test(text)
+        ) {
           // Early skip
           return {
             contents: text,
