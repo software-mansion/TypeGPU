@@ -709,12 +709,15 @@ export function resolve(
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
+  console.log('OPTIONS', options);
+  console.log('CTX', ctx);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,
       () => ctx.resolve(item),
     )
     : ctx.resolve(item);
+  console.log('CODE', code);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
