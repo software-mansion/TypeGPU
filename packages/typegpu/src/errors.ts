@@ -95,7 +95,7 @@ export class ExecutionError extends Error {
     }
 
     super(
-      `Execution of the following tree failed: \n${entries.join('\n')}: ${
+      `Execution of the following tree failed:\n${entries.join('\n')}: ${
         cause && typeof cause === 'object' && 'message' in cause
           ? cause.message
           : cause
@@ -195,5 +195,14 @@ export class IllegalBufferAccessError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, IllegalBufferAccessError.prototype);
+  }
+}
+
+export class WgslTypeError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, WgslTypeError.prototype);
   }
 }

@@ -258,6 +258,53 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toBe(expected);
   });
 
+  it('allows access to output struct as second argument in vertexFn', () => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        in: {
+          vi: builtin.vertexIndex,
+          ii: builtin.instanceIndex,
+          color: d.vec4f,
+        },
+        out: {
+          pos: builtin.position,
+          uv: d.vec2f,
+        },
+      })((input, Out) => {
+        const myOutput = Out({
+          pos: d.vec4f(
+            d.f32(input.color.w),
+            d.f32(input.ii),
+            d.f32(input.vi),
+            1,
+          ),
+          uv: d.vec2f(d.f32(input.color.w), input.vi),
+        });
+        return myOutput;
+      })
+      .$name('vertex_fn');
+
+    expect(getName(vertexFn)).toBe('vertex_fn');
+    const actual = parseResolved({ vertexFn });
+    expect(actual).toBe(parse(`
+      struct vertex_fn_Input {
+        @builtin(vertex_index) vi: u32,
+        @builtin(instance_index) ii: u32,
+        @location(0) color: vec4f,
+      }
+
+      struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
+        var myOutput = vertex_fn_Output(vec4f(f32(input.color.w), f32(input.ii), f32(input.vi), 1), vec2f(f32(input.color.w), f32(input.vi)));
+        return myOutput;
+      }
+    `));
+  });
+
   it('resolves computeFn', () => {
     const computeFn = tgpu['~unstable']
       .computeFn({
@@ -352,16 +399,16 @@ describe('TGSL tgpu.fn function', () => {
         },
       })((input) => {
         const pos = input.pos;
-        const out = {
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: 0,
-        };
+        let sampleMask = 0;
         if (input.sampleMask > 0 && pos.x > 0) {
-          out.sampleMask = 1;
+          sampleMask = 1;
         }
 
-        return out;
+        return {
+          out: d.vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: d.u32(sampleMask),
+        };
       });
 
     const actual = parseResolved({ fragmentFn });
@@ -382,16 +429,99 @@ describe('TGSL tgpu.fn function', () => {
       @fragment
       fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
         var pos = input.pos;
-        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var sampleMask = 0;
         if (((input.sampleMask > 0) && (pos.x > 0))) {
-          out.sampleMask = 1;
+          sampleMask = 1;
         }
 
-        return out;
+        return fragmentFn_Output(u32(sampleMask), 1, vec4f(0, 0, 0, 0));
       }
     `);
 
     expect(actual).toBe(expected);
+  });
+
+  it('allows accessing the output struct as second argument in fragmentFn', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: d.vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: {
+          sampleMask: builtin.sampleMask,
+          fragDepth: builtin.fragDepth,
+          out: d.location(0, d.vec4f),
+        },
+      })((input, Out) => {
+        const myOutput = Out({
+          out: d.vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: 0,
+        });
+        if (input.sampleMask > 0 && input.pos.x > 0) {
+          myOutput.sampleMask = 1;
+        }
+
+        return myOutput;
+      });
+    const actual = parseResolved({ fragmentFn });
+
+    const expected = parse(`
+      struct fragmentFn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      struct fragmentFn_Output {
+        @builtin(sample_mask) sampleMask: u32,
+        @builtin(frag_depth) fragDepth: f32,
+        @location(0) out: vec4f,
+      }
+
+      @fragment
+      fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
+        var myOutput = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        if (((input.sampleMask > 0) && (input.pos.x > 0))) {
+          myOutput.sampleMask = 1;
+        }
+
+        return myOutput;
+      }
+    `);
+    expect(actual).toBe(expected);
+  });
+
+  it('allows accessing fragment output even when it is not a struct', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: d.vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: d.vec4f,
+      })((input, Out) => {
+        const hmm = Out(1.2);
+        return hmm;
+      });
+    const resolved = parseResolved({ fragmentFn });
+    const expected = parse(`
+      struct fragmentFn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      @fragment
+      fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
+        var hmm = vec4f(1.2);
+        return hmm;
+      }
+    `);
+    expect(resolved).toBe(expected);
   });
 
   it('allows destructuring the input argument in fragmentFn', () => {
@@ -407,12 +537,12 @@ describe('TGSL tgpu.fn function', () => {
           fragDepth: builtin.fragDepth,
           out: d.location(0, d.vec4f),
         },
-      })(({ pos: position, sampleMask }) => {
-        const out = {
-          out: d.vec4f(0, 0, 0, 0),
+      })(({ pos: position, sampleMask }, Out) => {
+        const out = Out({
+          out: d.vec4f(),
           fragDepth: 1,
           sampleMask: 0,
-        };
+        });
         if (sampleMask > 0 && position.x > 0) {
           out.sampleMask = 1;
         }
@@ -437,11 +567,10 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
-        var out = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var out = fragmentFn_Output(0, 1, vec4f());
         if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
           out.sampleMask = 1;
         }
-
         return out;
       }
     `);
@@ -865,7 +994,7 @@ describe('tgpu.fn called top-level', () => {
     });
 
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Execution of the following tree failed: 
+      [Error: Execution of the following tree failed:
       - fn:foo: Cannot access buffer:uniform. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
   });
@@ -878,25 +1007,25 @@ describe('tgsl fn when using plugin', () => {
       return x + y;
     };
 
-    const add = tgpu.fn([d.u32, d.u32])(addKernelJs);
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(addKernelJs);
 
     expect(addKernelJs(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );
   });
 
   it('can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(
       (x, y) => x + y,
     );
 
     expect(add(2, 3)).toBe(5);
     expect(parseResolved({ add })).toBe(
-      parse(`fn add(x: u32, y: u32){
+      parse(`fn add(x: u32, y: u32) -> u32 {
           return (x + y);
         }`),
     );

@@ -1,4 +1,5 @@
 import type { Block } from 'tinyest';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -29,7 +30,8 @@ import type {
   TgpuTexture,
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
+import type { AnyData, UnknownData } from './data/dataTypes.ts';
+import type { Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -44,7 +46,6 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -102,6 +103,7 @@ export interface ItemStateStack {
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
+  topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
@@ -278,13 +280,21 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type DefaultConversionStrategy = 'keep' | 'coerce';
+export type ConversionStrategy =
+  | 'keep'
+  | 'unify';
 
+/**
+ * Optional hints for converting function argument types during resolution.
+ * In case of tgpu functions, this is just the array of argument schemas.
+ * In case of raw dualImpls (e.g. in std), this is either a function that converts the snippets appropriately,
+ * or a string defining a conversion strategy.
+ * The strategy 'keep' is the default.
+ */
 export type FnArgsConversionHint =
   | AnyData[]
   | ((...args: Snippet[]) => AnyWgslData[])
-  | DefaultConversionStrategy
-  | undefined;
+  | ConversionStrategy;
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (

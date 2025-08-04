@@ -60,18 +60,18 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 <Tabs syncKey="package-manager">
   <TabItem label="npm" icon="seti:npm">
-    ```sh frame=none 
-    npm install --save-dev unplugin-typegpu 
+    ```sh frame=none
+    npm install --save-dev unplugin-typegpu
     ```
   </TabItem>
   <TabItem label="pnpm" icon="pnpm">
-    ```sh frame=none 
-    pnpm add -D unplugin-typegpu 
+    ```sh frame=none
+    pnpm add -D unplugin-typegpu
     ```
   </TabItem>
   <TabItem label="yarn" icon="seti:yarn">
-    ```sh frame=none 
-    yarn add -D unplugin-typegpu 
+    ```sh frame=none
+    yarn add -D unplugin-typegpu
     ```
   </TabItem>
 </Tabs>
@@ -116,10 +116,25 @@ module.exports = (api) => {
 
 ```ts
 interface Options {
+  /** @default [/\.m?[jt]sx?$/] */
   include?: FilterPattern;
+  /** @default undefined */
   exclude?: FilterPattern;
+  /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
+  /** @default undefined */
   forceTgpuAlias?: string;
+  /** @default true */
+  autoNamingEnabled?: boolean;
+
+  /**
+   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * In case this early pruning hinders transformation, you
+   * can disable it.
+   *
+   * @default true
+   */
+  earlyPruning?: boolean | undefined;
 }
 ```
 

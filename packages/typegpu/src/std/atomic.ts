@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import {
   type AnyWgslData,
@@ -7,7 +7,7 @@ import {
   isWgslData,
   Void,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = createDualImpl(

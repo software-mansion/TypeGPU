@@ -1,9 +1,9 @@
-import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
 import { schemaCloneWrapper } from '../../data/utils.ts';
+import { snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
-import { createDualImpl } from '../../shared/generators.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -13,7 +13,6 @@ import {
   $providing,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type {
   FnArgsConversionHint,
   ResolutionCtx,
@@ -42,6 +41,7 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
+import { createDualImpl } from './dualImpl.ts';
 
 // ----------
 // Public API
@@ -84,7 +84,7 @@ export type TgpuFnShell<
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
     implementation: Implementation<ImplSchema>;
-    argTypes: FnArgsConversionHint;
+    argConversionHint: FnArgsConversionHint;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
@@ -169,7 +169,7 @@ function createFn<ImplSchema extends AnyFn>(
   const fnBase: This = {
     [$internal]: {
       implementation,
-      argTypes: shell.argTypes,
+      argConversionHint: shell.argTypes,
     },
     shell,
     resourceType: 'function' as const,
@@ -206,23 +206,9 @@ function createFn<ImplSchema extends AnyFn>(
           shell.returnType,
           core.applyExternals,
         );
-
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(ctx, shell.argTypes, shell.returnType);
     },
   };
 
@@ -283,7 +269,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   const fnBase: This = {
     [$internal]: {
       implementation: innerFn[$internal].implementation,
-      argTypes: innerFn[$internal].argTypes,
+      argConversionHint: innerFn[$internal].argConversionHint,
     },
     resourceType: 'function',
     shell: innerFn.shell,

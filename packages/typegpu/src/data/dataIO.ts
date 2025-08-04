@@ -254,30 +254,30 @@ const dataWriters = {
     output.writeInt8(value.w);
   },
   unorm8(output, _, value: number) {
-    output.writeUint8(value * 255);
+    output.writeUint8(Math.round(value * 255));
   },
   unorm8x2(output, _, value: wgsl.v2f) {
-    output.writeUint8(value.x * 255);
-    output.writeUint8(value.y * 255);
+    output.writeUint8(Math.round(value.x * 255));
+    output.writeUint8(Math.round(value.y * 255));
   },
   unorm8x4(output, _, value: wgsl.v4f) {
-    output.writeUint8(value.x * 255);
-    output.writeUint8(value.y * 255);
-    output.writeUint8(value.z * 255);
-    output.writeUint8(value.w * 255);
+    output.writeUint8(Math.round(value.x * 255));
+    output.writeUint8(Math.round(value.y * 255));
+    output.writeUint8(Math.round(value.z * 255));
+    output.writeUint8(Math.round(value.w * 255));
   },
   snorm8(output, _, value: number) {
-    output.writeUint8(value * 127 + 128);
+    output.writeInt8(Math.round(value * 127));
   },
   snorm8x2(output, _, value: wgsl.v2f) {
-    output.writeUint8(value.x * 127 + 128);
-    output.writeUint8(value.y * 127 + 128);
+    output.writeInt8(Math.round(value.x * 127));
+    output.writeInt8(Math.round(value.y * 127));
   },
   snorm8x4(output, _, value: wgsl.v4f) {
-    output.writeUint8(value.x * 127 + 128);
-    output.writeUint8(value.y * 127 + 128);
-    output.writeUint8(value.z * 127 + 128);
-    output.writeUint8(value.w * 127 + 128);
+    output.writeInt8(Math.round(value.x * 127));
+    output.writeInt8(Math.round(value.y * 127));
+    output.writeInt8(Math.round(value.z * 127));
+    output.writeInt8(Math.round(value.w * 127));
   },
   uint16(output, _, value: number) {
     output.writeUint16(value);
@@ -319,17 +319,17 @@ const dataWriters = {
     output.writeUint16(value.w * 65535);
   },
   snorm16(output, _, value: number) {
-    output.writeUint16(value * 32767 + 32768);
+    output.writeInt16(Math.round(value * 32767));
   },
   snorm16x2(output, _, value: wgsl.v2f) {
-    output.writeUint16(value.x * 32767 + 32768);
-    output.writeUint16(value.y * 32767 + 32768);
+    output.writeInt16(Math.round(value.x * 32767));
+    output.writeInt16(Math.round(value.y * 32767));
   },
   snorm16x4(output, _, value: wgsl.v4f) {
-    output.writeUint16(value.x * 32767 + 32768);
-    output.writeUint16(value.y * 32767 + 32768);
-    output.writeUint16(value.z * 32767 + 32768);
-    output.writeUint16(value.w * 32767 + 32768);
+    output.writeInt16(Math.round(value.x * 32767));
+    output.writeInt16(Math.round(value.y * 32767));
+    output.writeInt16(Math.round(value.z * 32767));
+    output.writeInt16(Math.round(value.w * 32767));
   },
   float16(output, _, value: number) {
     output.writeFloat16(value);
@@ -401,9 +401,9 @@ const dataWriters = {
   'unorm10-10-10-2'(output, _, value: wgsl.v4f) {
     let packed = 0;
     packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
-    packed |= ((value.x * 1023) & 1023) << 12; // g (10 bits)
-    packed |= ((value.y * 1023) & 1023) << 2; // b (10 bits)
-    packed |= (value.z * 3) & 3; // a (2 bits)
+    packed |= ((value.y * 1023) & 1023) << 12; // g (10 bits)
+    packed |= ((value.z * 1023) & 1023) << 2; // b (10 bits)
+    packed |= (value.w * 3) & 3; // a (2 bits)
     output.writeUint32(packed);
   },
   'unorm8x4-bgra'(output, _, value: wgsl.v4f) {
@@ -695,15 +695,14 @@ const dataReaders = {
       i.readUint8() / 255,
       i.readUint8() / 255,
     ),
-  snorm8: (i) => (i.readUint8() - 128) / 127,
-  snorm8x2: (i) =>
-    vec2f((i.readUint8() - 128) / 127, (i.readUint8() - 128) / 127),
+  snorm8: (i) => i.readInt8() / 127,
+  snorm8x2: (i) => vec2f(i.readInt8() / 127, i.readInt8() / 127),
   snorm8x4: (i) =>
     vec4f(
-      (i.readUint8() - 128) / 127,
-      (i.readUint8() - 128) / 127,
-      (i.readUint8() - 128) / 127,
-      (i.readUint8() - 128) / 127,
+      i.readInt8() / 127,
+      i.readInt8() / 127,
+      i.readInt8() / 127,
+      i.readInt8() / 127,
     ),
   uint16: (i) => i.readUint16(),
   uint16x2: (i) => vec2u(i.readUint16(), i.readUint16()),
@@ -722,15 +721,15 @@ const dataReaders = {
       i.readUint16() / 65535,
       i.readUint16() / 65535,
     ),
-  snorm16: (i) => (i.readUint16() - 32768) / 32767,
+  snorm16: (i) => i.readInt16() / 32767,
   snorm16x2: (i): wgsl.v2f =>
-    vec2f(dataReaders.snorm16(i), dataReaders.snorm16(i)),
+    vec2f(i.readInt16() / 32767, i.readInt16() / 32767),
   snorm16x4: (i): wgsl.v4f =>
     vec4f(
-      dataReaders.snorm16(i),
-      dataReaders.snorm16(i),
-      dataReaders.snorm16(i),
-      dataReaders.snorm16(i),
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
     ),
   float16(i) {
     return i.readFloat16();

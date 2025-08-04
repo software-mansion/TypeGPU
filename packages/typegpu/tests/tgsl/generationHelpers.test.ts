@@ -32,7 +32,8 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { snip, type Snippet, UnknownData } from '../../src/data/dataTypes.ts';
+import { UnknownData } from '../../src/data/dataTypes.ts';
+import { snip, type Snippet } from '../../src/data/snippet.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -52,7 +53,6 @@ const mockCtx = {
   }),
   unwrap: vi.fn((val) => val),
   pre: '',
-  callStack: [],
 } as unknown as GenerationCtx;
 
 beforeEach(() => {
@@ -365,7 +365,10 @@ describe('generationHelpers', () => {
     const snippetUnknown = snip('?', UnknownData);
 
     it('converts identical types', () => {
-      const result = convertToCommonType(mockCtx, [snippetF32, snippetF32]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32, snippetF32],
+      });
       expect(result).toBeDefined();
       expect(result?.length).toBe(2);
       expect(result?.[0]?.dataType).toBe(f32);
@@ -375,11 +378,14 @@ describe('generationHelpers', () => {
     });
 
     it('handles abstract types automatically', () => {
-      const result = convertToCommonType(mockCtx, [
-        snippetAbsFloat,
-        snippetF32,
-        snippetAbsInt,
-      ]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [
+          snippetAbsFloat,
+          snippetF32,
+          snippetAbsInt,
+        ],
+      });
       // since WGSL handles all abstract types automatically, this should be basically identity
       expect(result).toBeDefined();
       expect(result?.length).toBe(3);
@@ -392,7 +398,10 @@ describe('generationHelpers', () => {
     });
 
     it('performs implicit casts and warns', () => {
-      const result = convertToCommonType(mockCtx, [snippetI32, snippetF32]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetI32, snippetF32],
+      });
       expect(result).toBeDefined();
       expect(result?.length).toBe(2);
       expect(result?.[0]?.dataType).toBe(f32);
@@ -402,7 +411,10 @@ describe('generationHelpers', () => {
     });
 
     it('performs pointer dereferencing', () => {
-      const result = convertToCommonType(mockCtx, [snippetPtrF32, snippetF32]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetPtrF32, snippetF32],
+      });
       expect(result).toBeDefined();
       expect(result?.length).toBe(2);
       expect(result?.[0]?.dataType).toBe(f32);
@@ -413,28 +425,34 @@ describe('generationHelpers', () => {
 
     it('returns undefined for incompatible types', () => {
       const snippetVec2f = snip('v2', vec2f);
-      const result = convertToCommonType(mockCtx, [snippetF32, snippetVec2f]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32, snippetVec2f],
+      });
       expect(result).toBeUndefined();
     });
 
     it('returns undefined if any type is UnknownData', () => {
-      const result = convertToCommonType(mockCtx, [snippetF32, snippetUnknown]);
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32, snippetUnknown],
+      });
       expect(result).toBeUndefined();
     });
 
     it('returns undefined for empty input', () => {
-      const result = convertToCommonType(mockCtx, []);
+      const result = convertToCommonType({ ctx: mockCtx, values: [] });
       expect(result).toBeUndefined();
     });
 
     it('respects restrictTo types', () => {
       // [abstractInt, i32] -> common type i32
       // Restrict to f32: requires cast for i32
-      const result = convertToCommonType(
-        mockCtx,
-        [snippetAbsInt, snippetI32],
-        [f32],
-      );
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetAbsInt, snippetI32],
+        restrictTo: [f32],
+      });
       expect(result).toBeDefined();
       expect(result?.length).toBe(2);
       expect(result?.[0]?.dataType).toBe(f32);
@@ -444,11 +462,11 @@ describe('generationHelpers', () => {
     });
 
     it('fails if restrictTo is incompatible', () => {
-      const result = convertToCommonType(
-        mockCtx,
-        [snippetAbsInt, snippetI32],
-        [vec2f],
-      );
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetAbsInt, snippetI32],
+        restrictTo: [vec2f],
+      });
       expect(result).toBeUndefined();
     });
   });

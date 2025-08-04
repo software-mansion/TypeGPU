@@ -105,7 +105,7 @@ describe('[BABEL] auto naming', () => {
     const code = `\
       import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
-    
+
       const myFunction = tgpu.fn([])(() => 0);
       const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
         () => {},
@@ -398,7 +398,7 @@ describe('[ROLLUP] auto naming', () => {
     const code = `\
       import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
-    
+
       const myFunction = tgpu.fn([])(() => 0);
       const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
         () => {},
@@ -563,7 +563,12 @@ describe('[ROLLUP] auto naming', () => {
       };
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+    expect(
+      await rollupTransform(code, {
+        autoNamingEnabled: true,
+        earlyPruning: false,
+      }),
+    )
       .toMatchInlineSnapshot(`
         "({
                 myStruct: ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.vec3f }), "myStruct"))

@@ -176,7 +176,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       return x.$; // Accessing variable inside of a function
     });
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Execution of the following tree failed: 
+      [Error: Execution of the following tree failed:
       - fn:foo: Cannot access variable 'x'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
   });

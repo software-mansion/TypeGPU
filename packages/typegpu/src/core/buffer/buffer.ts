@@ -1,8 +1,5 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
-import {
-  EVAL_ALLOWED_IN_ENV,
-  getCompiledWriterForSchema,
-} from '../../data/compiledIO.ts';
+import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
@@ -25,7 +22,8 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
-import type { AnyData, UnwrapDecorated } from '../../data/dataTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { Undecorate } from '../../data/decorateUtils.ts';
 
 // ----------
 // Public API
@@ -77,13 +75,12 @@ const usageToUsageConstructor = {
   readonly: asReadonly,
 };
 
-type IsIndexCompatible<TData extends BaseData> = UnwrapDecorated<TData> extends
-  {
-    readonly type: 'array';
-    readonly elementType: infer TElement;
-  }
+type IsIndexCompatible<TData extends BaseData> = Undecorate<TData> extends {
+  readonly type: 'array';
+  readonly elementType: infer TElement;
+}
   ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' | 'u16' } ? true
+    ? Undecorate<TElement> extends { readonly type: 'u32' | 'u16' } ? true
     : false
   : false
   : false;
@@ -155,12 +152,12 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // --------------
 const endianness = getSystemEndianness();
 
-type IsArrayOfU32<TData extends BaseData> = UnwrapDecorated<TData> extends {
+type IsArrayOfU32<TData extends BaseData> = Undecorate<TData> extends {
   readonly type: 'array';
   readonly elementType: infer TElement;
 }
   ? TElement extends BaseData
-    ? UnwrapDecorated<TElement> extends { readonly type: 'u32' } ? true
+    ? Undecorate<TElement> extends { readonly type: 'u32' } ? true
     : false
   : false
   : false;
@@ -293,11 +290,35 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   compileWriter(): void {
-    if (EVAL_ALLOWED_IN_ENV) {
-      getCompiledWriterForSchema(this.dataType);
-    } else {
-      throw new Error('This environment does not allow eval');
+    getCompiledWriterForSchema(this.dataType);
+  }
+
+  private _writeToTarget(
+    target: ArrayBuffer,
+    data: Infer<TData>,
+  ): void {
+    const compiledWriter = getCompiledWriterForSchema(this.dataType);
+
+    if (compiledWriter) {
+      try {
+        compiledWriter(
+          new DataView(target),
+          0,
+          data,
+          endianness === 'little',
+        );
+        return;
+      } catch (error) {
+        console.error(
+          `Error when using compiled writer for buffer ${
+            getName(this) ?? '<unnamed>'
+          } - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,
+          error,
+        );
+      }
     }
+
+    writeData(new BufferWriter(target), this.dataType, data);
   }
 
   write(data: Infer<TData>): void {
@@ -306,12 +327,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      if (EVAL_ALLOWED_IN_ENV) {
-        const writer = getCompiledWriterForSchema(this.dataType);
-        writer(new DataView(mapped), 0, data, endianness === 'little');
-        return;
-      }
-      writeData(new BufferWriter(mapped), this.dataType, data);
+      this._writeToTarget(mapped, data);
       return;
     }
 
@@ -323,12 +339,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     // Flushing any commands yet to be encoded.
     this._group.flush();
 
-    if (EVAL_ALLOWED_IN_ENV) {
-      const writer = getCompiledWriterForSchema(this.dataType);
-      writer(new DataView(this._hostBuffer), 0, data, endianness === 'little');
-    } else {
-      writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
-    }
+    this._writeToTarget(this._hostBuffer, data);
     device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
   }
 
