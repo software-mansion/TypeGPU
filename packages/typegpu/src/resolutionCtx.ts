@@ -327,6 +327,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
+  private _currentlyResolvedItems: Set<object> = new Set();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -556,7 +557,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   /**
-   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
+   * @param The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
   _getOrInstantiate(item: object): string {
     // All memoized versions of `item`
@@ -588,6 +589,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else {
         result = this.resolveValue(item);
       }
+      console.log('RESULT OF GETORINSTANTIATE', result);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -611,6 +613,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown): string {
+    console.log('INNER RESOLVE', String(item));
+
+    console.log('ITEM | TYPE', String(item), '|', typeof item);
+
+    if (item && typeof item === 'function') {
+      if (this._currentlyResolvedItems.has(item as object)) {
+        console.log('RECURSIVE RESOLUTION DETECTED', String(item));
+        return '1882';
+      }
+      this._currentlyResolvedItems.add(item as object);
+    }
+    console.log('MY SET', this._currentlyResolvedItems);
+
+    // TODO: ask what does this do
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -623,7 +639,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-
+          console.log(
+            'RESULT OF CODEGEN',
+            `${[...this._declarations].join('\n\n')}${result}`,
+          );
+          console.log('END OF ROOT');
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
@@ -633,6 +653,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return this._getOrInstantiate(item);
     }
 
+    console.log('END OF INNER RESOLVE', String(item));
     return String(item);
   }
 
@@ -708,16 +729,14 @@ export function resolve(
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
+  console.log('OUTER RESOLVE');
   const ctx = new ResolutionCtxImpl(options);
-  console.log('OPTIONS', options);
-  console.log('CTX', ctx);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,
       () => ctx.resolve(item),
     )
     : ctx.resolve(item);
-  console.log('CODE', code);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
