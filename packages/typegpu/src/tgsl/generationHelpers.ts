@@ -46,7 +46,6 @@ import {
   isVec,
   isVecInstance,
   isWgslArray,
-  isWgslData,
   isWgslStruct,
   type U32,
 } from '../data/wgslTypes.ts';
@@ -518,7 +517,7 @@ function applyActionToSnippet(
   }
 }
 
-export type ConvertToCommonTypeInfo = {
+export type ConvertToCommonTypeOptions = {
   ctx: GenerationCtx;
   values: Snippet[];
   restrictTo?: AnyData[] | undefined;
@@ -532,20 +531,13 @@ export function convertToCommonType({
   restrictTo,
   concretizeTypes = false,
   verbose = true,
-}: ConvertToCommonTypeInfo): Snippet[] | undefined {
-  let types = values.map((value) => value.dataType);
+}: ConvertToCommonTypeOptions): Snippet[] | undefined {
+  const types = values.map((value) =>
+    concretizeTypes ? concretize(value.dataType as AnyWgslData) : value.dataType
+  );
 
   if (types.some((type) => type === UnknownData)) {
     return undefined;
-  }
-
-  if (concretizeTypes) {
-    types = types.map((type) => {
-      if (isWgslData(type)) {
-        return concretize(type);
-      }
-      return type;
-    });
   }
 
   if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
