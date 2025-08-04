@@ -1,13 +1,9 @@
 import type {
-  AnyUnstruct,
   Disarray,
   LooseDecorated,
+  Unstruct,
 } from '../../data/dataTypes.ts';
-import type {
-  AnyWgslStruct,
-  Decorated,
-  WgslArray,
-} from '../../data/wgslTypes.ts';
+import type { Decorated, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
@@ -23,8 +19,7 @@ import type {
  * - WgslStruct<{ a: Vec3f, b: unorm8x2 }>
  * - WgslStruct<{ nested: WgslStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends AnyWgslStruct | AnyUnstruct
-  ? {
+export type DataToContainedAttribs<T> = T extends WgslStruct | Unstruct ? {
     [Key in keyof T['propTypes']]: DataToContainedAttribs<
       T['propTypes'][Key]
     >;
