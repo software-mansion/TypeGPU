@@ -293,18 +293,41 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     getCompiledWriterForSchema(this.dataType);
   }
 
+  private _writeToTarget(
+    target: ArrayBuffer | ArrayBufferLike,
+    data: Infer<TData>,
+  ): void {
+    const compiledWriter = getCompiledWriterForSchema(this.dataType);
+
+    if (compiledWriter) {
+      try {
+        compiledWriter(
+          new DataView(target),
+          0,
+          data,
+          endianness === 'little',
+        );
+        return;
+      } catch (error) {
+        console.error(
+          `Error when using compiled writer for buffer ${
+            getName(this) ?? '<unnamed>'
+          } - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,
+          error,
+        );
+      }
+    }
+
+    writeData(new BufferWriter(target), this.dataType, data);
+  }
+
   write(data: Infer<TData>): void {
     const gpuBuffer = this.buffer;
     const device = this._group.device;
-    const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      if (compiledWriter) {
-        compiledWriter(new DataView(mapped), 0, data, endianness === 'little');
-        return;
-      }
-      writeData(new BufferWriter(mapped), this.dataType, data);
+      this._writeToTarget(mapped, data);
       return;
     }
 
@@ -316,17 +339,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     // Flushing any commands yet to be encoded.
     this._group.flush();
 
-    if (compiledWriter) {
-      compiledWriter(
-        new DataView(this._hostBuffer),
-        0,
-        data,
-        endianness === 'little',
-      );
-    } else {
-      writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
-    }
-
+    this._writeToTarget(this._hostBuffer, data);
     device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
   }
 
