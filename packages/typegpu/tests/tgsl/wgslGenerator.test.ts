@@ -345,8 +345,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'kernel';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
-        continue;
       }
     };
 
@@ -368,8 +366,6 @@ describe('wgslGenerator', () => {
       'kernel';
       let i = 0;
       for (; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
-        continue;
       }
     };
 
@@ -836,7 +832,7 @@ describe('wgslGenerator', () => {
     const main = () => {
       'kernel';
       // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
-      for (let i = 0; i < 10; i += 1) continue;
+      for (let i = 0; i < 10; i += 1) ;
     };
 
     expect(

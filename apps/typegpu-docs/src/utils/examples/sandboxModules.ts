@@ -81,4 +81,7 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/concurrent-sum': {
     typeDef: { reroute: ['typegpu-concurrent-sum/src/index.ts'] },
   },
+  '@typegpu/concurrent-sum-2': {
+    typeDef: { reroute: ['typegpu-concurrent-sum-2/src/index.ts'] },
+  },
 };
