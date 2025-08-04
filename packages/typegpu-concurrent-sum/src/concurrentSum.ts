@@ -108,7 +108,6 @@ export async function currentSum(
           upSweepWorkgroups.zGroups,
         );
 
-    root['~unstable'].flush();
     cache.push(inputBuffer);
 
     // Recursive phase
@@ -137,7 +136,6 @@ export async function currentSum(
         upSweepWorkgroups.yGroups,
         upSweepWorkgroups.zGroups,
       );
-    root['~unstable'].flush();
     cache.push(outputBuffer);
 
     if (n <= itemsPerWorkgroup) {
@@ -172,7 +170,6 @@ export async function currentSum(
         applyWorkgroups.ZGroups,
       );
 
-    root['~unstable'].flush();
     cache.push(downSweepOutputBuffer);
     cache.push(sumsScannedBuffer);
     // console.log(
