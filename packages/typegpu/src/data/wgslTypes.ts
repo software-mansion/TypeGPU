@@ -1216,7 +1216,7 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
 export interface WgslStruct<
   TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends TgpuNamable {
-  <T extends TProps>(props: Prettify<InferRecord<T>>): Prettify<InferRecord<T>>;
+  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   (): Prettify<InferRecord<TProps>>;
   readonly [$internal]: true;
   readonly type: 'struct';
