@@ -36,7 +36,6 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  type AnyWgslStruct,
   type F16,
   type F32,
   hasInternalDataType,
@@ -48,6 +47,7 @@ import {
   isWgslArray,
   isWgslStruct,
   type U32,
+  type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
@@ -603,7 +603,7 @@ export function tryConvertSnippet(
 
 export function convertStructValues(
   ctx: GenerationCtx,
-  structType: AnyWgslStruct,
+  structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
   const propKeys = Object.keys(structType.propTypes);
