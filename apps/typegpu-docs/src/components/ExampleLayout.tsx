@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import type React from 'react';
+import type { ReactNode } from 'react';
 import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
@@ -17,7 +17,7 @@ import { Toggle } from './design/Toggle.tsx';
 import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
 
 interface ExampleLayoutProps {
-  children?: React.ReactNode | undefined;
+  children?: ReactNode | undefined;
 }
 
 export function ExampleLayout(props: ExampleLayoutProps) {
