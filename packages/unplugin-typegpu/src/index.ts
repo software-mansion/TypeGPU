@@ -5,10 +5,10 @@ import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
-import babel from './babel.ts';
 import {
   type Context,
   defaultOptions,
+  earlyPruneRegex,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
@@ -88,9 +88,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       name: 'unplugin-typegpu' as const,
       enforce: options.enforce,
       transform: {
-        filter: {
-          id: options,
-        },
+        filter: options.earlyPruning
+          ? {
+            id: options,
+            code: earlyPruneRegex,
+          }
+          : {
+            id: options,
+          },
         handler(code, id) {
           const ctx: Context = {
             tgpuAliases: new Set<string>(
@@ -222,4 +227,6 @@ export const webpackPlugin = typegpu.webpack;
 export const rspackPlugin = typegpu.rspack;
 export const esbuildPlugin = typegpu.esbuild;
 export const farmPlugin = typegpu.farm;
-export const babelPlugin = babel;
+
+export { default as babelPlugin } from './babel.ts';
+export { default as bunPlugin } from './bun.ts';

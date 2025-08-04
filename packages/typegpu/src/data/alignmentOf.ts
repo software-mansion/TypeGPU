@@ -69,7 +69,7 @@ function computeAlignment(data: object): number {
     return getCustomAlignment(data) ?? alignmentOf(data.inner);
   }
 
-  if (packedFormats.includes(dataType)) {
+  if (packedFormats.has(dataType)) {
     return 1;
   }
 

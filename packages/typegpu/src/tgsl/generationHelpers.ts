@@ -517,13 +517,24 @@ function applyActionToSnippet(
   }
 }
 
-export function convertToCommonType(
-  ctx: GenerationCtx,
-  values: Snippet[],
-  restrictTo?: AnyData[],
+export type ConvertToCommonTypeOptions = {
+  ctx: GenerationCtx;
+  values: Snippet[];
+  restrictTo?: AnyData[] | undefined;
+  concretizeTypes?: boolean | undefined;
+  verbose?: boolean | undefined;
+};
+
+export function convertToCommonType({
+  ctx,
+  values,
+  restrictTo,
+  concretizeTypes = false,
   verbose = true,
-): Snippet[] | undefined {
-  const types = values.map((value) => value.dataType);
+}: ConvertToCommonTypeOptions): Snippet[] | undefined {
+  const types = values.map((value) =>
+    concretizeTypes ? concretize(value.dataType as AnyWgslData) : value.dataType
+  );
 
   if (types.some((type) => type === UnknownData)) {
     return undefined;
@@ -575,7 +586,11 @@ export function tryConvertSnippet(
     );
   }
 
-  const converted = convertToCommonType(ctx, [value], [targetDataType]);
+  const converted = convertToCommonType({
+    ctx,
+    values: [value],
+    restrictTo: [targetDataType],
+  });
 
   if (!converted) {
     throw new WgslTypeError(
@@ -600,7 +615,11 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const converted = convertToCommonType(ctx, [val], [targetType as AnyData]);
+    const converted = convertToCommonType({
+      ctx,
+      values: [val],
+      restrictTo: [targetType as AnyData],
+    });
     return converted?.[0] ?? val;
   });
 }
@@ -627,7 +646,10 @@ export function coerceToSnippet(value: unknown): Snippet {
       throw new Error('Tried to coerce array without a context');
     }
 
-    const converted = convertToCommonType(context, coerced as Snippet[]);
+    const converted = convertToCommonType({
+      ctx: context,
+      values: coerced as Snippet[],
+    });
     const commonType = getBestConversion(
       coerced.map((v) => v.dataType as AnyData),
     )?.targetType as AnyWgslData | undefined;
