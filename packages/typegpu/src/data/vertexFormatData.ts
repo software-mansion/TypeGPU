@@ -79,7 +79,7 @@ export const formatToWGSLType = {
   'unorm8x4-bgra': vec4f,
 } as const;
 
-export const packedFormats = Object.keys(formatToWGSLType);
+export const packedFormats = new Set(Object.keys(formatToWGSLType));
 
 export type uint8 = TgpuVertexFormatData<'uint8'>;
 export const uint8 = new TgpuVertexFormatDataImpl('uint8') as uint8;
@@ -250,3 +250,12 @@ export type PackedData =
   | sint32x4
   | unorm10_10_10_2
   | unorm8x4_bgra;
+
+export function isPackedData(
+  value: unknown,
+): value is PackedData {
+  return (value as PackedData)?.[$internal] &&
+    packedFormats.has(
+      (value as PackedData)?.type,
+    );
+}
