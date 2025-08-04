@@ -3,7 +3,12 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
+import type {
+  Decorated,
+  Interpolate,
+  Location,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -11,9 +16,7 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -21,7 +24,7 @@ import type {
   InferIO,
   IORecord,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -29,7 +32,7 @@ import { stripTemplate } from './templateUtils.ts';
 // ----------
 
 export type VertexInConstrained = IORecord<
-  BaseIOData | AnyVertexInputBuiltin
+  BaseIOData | Decorated<BaseIOData, Location[]> | AnyVertexInputBuiltin
 >;
 
 export type VertexOutConstrained = IORecord<
@@ -45,9 +48,9 @@ type TgpuVertexFnShellHeader<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
 > = {
+  readonly in: VertexIn | undefined;
+  readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly returnType: IOLayoutToSchema<VertexOut>;
-  readonly attributes: [VertexIn];
   readonly isEntry: true;
 };
 
@@ -62,7 +65,10 @@ export type TgpuVertexFnShell<
 > =
   & TgpuVertexFnShellHeader<VertexIn, VertexOut>
   & ((
-    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+    implementation: (
+      input: InferIO<VertexIn>,
+      out: WgslStruct<VertexOut>,
+    ) => InferIO<VertexOut>,
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
   & ((
     implementation: string,
@@ -85,15 +91,11 @@ export type TgpuVertexFnShell<
   };
 
 export interface TgpuVertexFn<
-  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
-  VertexIn extends VertexInConstrained = any,
-  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any vertex fn to TgpuVertexFn (non-generic) type
-  VertexOut extends VertexOutConstrained = any,
+  VertexIn extends VertexInConstrained = VertexInConstrained,
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > extends TgpuNamable {
   readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
-  readonly outputType: IOLayoutToSchema<VertexOut>;
-  readonly inputType: IOLayoutToSchema<VertexIn> | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -138,8 +140,8 @@ export function vertexFn<
     );
   }
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
-    attributes: [options.in ?? ({} as VertexIn)],
-    returnType: createIoSchema(options.out),
+    in: options.in,
+    out: options.out,
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
@@ -172,21 +174,11 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(shell, implementation);
-  const outputType = shell.returnType;
+  const core = createFnCore(implementation, '@vertex ');
   const inputType = shell.argTypes[0];
-  if (typeof implementation === 'string') {
-    addReturnTypeToExternals(
-      implementation,
-      outputType,
-      (externals) => core.applyExternals(externals),
-    );
-  }
 
   const result: This = {
     shell,
-    outputType,
-    inputType,
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
@@ -197,9 +189,6 @@ function createVertexFn(
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
-      if (isNamable(outputType)) {
-        outputType.$name(`${newLabel}_Output`);
-      }
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
@@ -207,23 +196,23 @@ function createVertexFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
+      const outputWithLocation = createIoSchema(
+        shell.out,
+        ctx.varyingLocations,
+      ).$name(`${getName(this) ?? ''}_Output`);
+
       if (typeof implementation === 'string') {
-        return core.resolve(ctx, '@vertex ');
+        if (inputType) {
+          core.applyExternals({ In: inputType });
+        }
+        core.applyExternals({ Out: outputWithLocation });
       }
 
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(outputType);
-        return core.resolve(ctx, '@vertex ');
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        shell.argTypes,
+        outputWithLocation,
+      );
     },
 
     toString() {

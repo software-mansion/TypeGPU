@@ -13,16 +13,35 @@ export type Context = {
 };
 
 export interface Options {
+  /** @default [/\.m?[jt]sx?$/] */
   include?: FilterPattern;
+
+  /** @default undefined */
   exclude?: FilterPattern;
+
+  /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
-  forceTgpuAlias?: string;
-  autoNamingEnabled?: boolean;
+
+  /** @default undefined */
+  forceTgpuAlias?: string | undefined;
+
+  /** @default true */
+  autoNamingEnabled?: boolean | undefined;
+
+  /**
+   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * In case this early pruning hinders transformation, you
+   * can disable it.
+   *
+   * @default true
+   */
+  earlyPruning?: boolean | undefined;
 }
 
 export const defaultOptions = {
-  include: [/\.m?[jt]sx?$/],
+  include: /\.m?[jt]sx?$/,
   autoNamingEnabled: true,
+  earlyPruning: true,
 };
 
 export function embedJSON(jsValue: unknown) {
@@ -41,6 +60,16 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   let tail = node;
   while (true) {
     if (tail.type === 'MemberExpression') {
+      if (
+        (tail.property.type === 'Literal' ||
+          tail.property.type === 'StringLiteral') &&
+        tail.property.value === '~unstable'
+      ) {
+        // Bypassing the '~unstable' property.
+        tail = tail.object;
+        continue;
+      }
+
       if (tail.property.type !== 'Identifier') {
         // Not handling computed expressions.
         break;
@@ -89,21 +118,11 @@ export function isShellImplementationCall(
   ctx: Context,
 ) {
   return (
-    (node.callee.type === 'CallExpression' &&
-      node.callee.callee.type === 'MemberExpression' &&
-      node.callee.callee.property.type === 'Identifier' &&
-      fnShellFunctionNames.includes(node.callee.callee.property.name) &&
-      node.arguments.length === 1 &&
-      (node.callee.callee.object.type === 'MemberExpression'
-        ? isTgpu(ctx, node.callee.callee.object.object)
-        : isTgpu(ctx, node.callee.callee.object))) || // TODO: remove along with the deprecated 'does' method
-    (node.callee.type === 'MemberExpression' &&
-      node.arguments.length === 1 &&
-      node.callee.property.type === 'Identifier' &&
-      // Assuming that every call to `.does` is related to TypeGPU
-      // because shells can be created separately from calls to `tgpu`,
-      // making it hard to detect.
-      node.callee.property.name === 'does')
+    node.callee.type === 'CallExpression' &&
+    node.callee.callee.type === 'MemberExpression' &&
+    node.callee.callee.property.type === 'Identifier' &&
+    fnShellFunctionNames.includes(node.callee.callee.property.name) &&
+    node.arguments.length === 1 && isTgpu(ctx, node.callee.callee.object)
   );
 }
 
@@ -126,6 +145,7 @@ const resourceConstructors: string[] = [
   'createMutable',
   'createReadonly',
   'createUniform',
+  'createQuerySet',
   // root['~unstable']
   'createPipeline',
   'createTexture',
@@ -138,7 +158,7 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-export function containsResourceConstructorCall(
+function containsResourceConstructorCall(
   node: acorn.AnyNode | babel.Node,
   ctx: Context,
 ) {
@@ -173,11 +193,57 @@ export function containsResourceConstructorCall(
   return false;
 }
 
-export const kernelDirectives = ['kernel', 'kernel & js'] as const;
-export type KernelDirective = (typeof kernelDirectives)[number];
+type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
+  acorn.AnyNode ? acorn.Expression : babel.Expression;
 
-export function getErrorMessage(name: string | undefined) {
-  return `The function "${
-    name ?? '<unnamed>'
-  }" is invokable only on the GPU. If you want to use it on the CPU, mark it with the "kernel & js" directive.`;
+/**
+ * Checks if `node` contains a label and a tgpu expression that could be named.
+ * If so, it calls the provided callback. Nodes selected for naming include:
+ *
+ * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
+ *
+ * `name = tgpu.bindGroupLayout({});` (AssignmentExpression)
+ *
+ * `property: tgpu.bindGroupLayout({})` (Property/ObjectProperty)
+ *
+ * Since it is mostly for debugging and clean WGSL generation,
+ * some false positives and false negatives are admissible.
+ *
+ * @privateRemarks
+ * When adding new checks, you need to call this method in the corresponding node in Babel.
+ */
+export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
+  ctx: Context,
+  node: T,
+  namingCallback: (node: ExpressionFor<T>, name: string) => void,
+) {
+  if (!ctx.autoNamingEnabled) {
+    return;
+  }
+
+  if (
+    node.type === 'VariableDeclarator' &&
+    node.id.type === 'Identifier' &&
+    node.init &&
+    containsResourceConstructorCall(node.init, ctx)
+  ) {
+    namingCallback(node.init as ExpressionFor<T>, node.id.name);
+  } else if (
+    node.type === 'AssignmentExpression' &&
+    node.left.type === 'Identifier' &&
+    containsResourceConstructorCall(node.right, ctx)
+  ) {
+    namingCallback(node.right as ExpressionFor<T>, node.left.name);
+  } else if (
+    (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier' &&
+    containsResourceConstructorCall(node.value, ctx)
+  ) {
+    namingCallback(node.value as ExpressionFor<T>, node.key.name);
+  }
 }
+
+export const kernelDirective = 'kernel';
+
+/** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
+export const earlyPruneRegex = [/["']kernel["']/, /t(ype)?gpu/];

@@ -10,7 +10,7 @@ import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -153,7 +153,10 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(
+    implementation,
+    `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
+  );
   const inputType = shell.argTypes[0];
 
   const result: This = {
@@ -177,7 +180,8 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(
         ctx,
-        `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
+        shell.argTypes,
+        shell.returnType,
       );
     },
 

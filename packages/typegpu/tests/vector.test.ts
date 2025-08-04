@@ -6,6 +6,41 @@ import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
+describe('constructors', () => {
+  it('casts floats to signed integers', () => {
+    expect(d.vec2i(1.1, -1.1)).toStrictEqual(d.vec2i(1, -1));
+    expect(d.vec3i(1.7, 2.6, 0.0)).toStrictEqual(d.vec3i(1, 2, 0));
+    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(
+      d.vec4i(1, -1, -10, -1),
+    );
+  });
+
+  it('casts floats to unsigned integers', () => {
+    expect(d.vec2u(1.1, -1)).toStrictEqual(d.vec2u(1, 4294967295));
+    expect(d.vec3u(1.7, 2.6, 0.0)).toStrictEqual(d.vec3u(1, 2, 0));
+    expect(d.vec4u(1.1, 1.1, 10.2, 1.0)).toStrictEqual(d.vec4u(1, 1, 10, 1));
+  });
+});
+
+describe('setters', () => {
+  it('coerces to singed integer values', () => {
+    const vec = d.vec4i();
+    vec[0] = 1.1;
+    vec[1] = -1.1;
+    vec.z = 2.2;
+    vec.w = -2.2;
+    expect(vec).toStrictEqual(d.vec4i(1, -1, 2, -2));
+  });
+
+  it('coerces to unsigned integer values', () => {
+    const vec = d.vec3u();
+    vec[0] = 1.1;
+    vec[1] = -1.1;
+    vec.z = 2.2;
+    expect(vec).toStrictEqual(d.vec3u(1, 4294967295, 2));
+  });
+});
+
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
     expect(sizeOf(d.vec2f)).toBe(8);
@@ -790,15 +825,13 @@ describe('v3f', () => {
     it('works in TGSL', () => {
       const planarPos = d.vec2f(1, 2);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const planarPosLocal = d.vec2f(1, 2);
+      const main = tgpu.fn([])(() => {
+        const planarPosLocal = d.vec2f(1, 2);
 
-          const one = d.vec3f(planarPos, 12); // external
-          const two = d.vec3f(planarPosLocal, 12); // local variable
-          const three = d.vec3f(d.vec2f(1, 2), 12); // literal
-        })
-        .$name('main');
+        const one = d.vec3f(planarPos, 12); // external
+        const two = d.vec3f(planarPosLocal, 12); // local variable
+        const three = d.vec3f(d.vec2f(1, 2), 12); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
@@ -834,30 +867,28 @@ describe('v3i', () => {
 describe('v4f', () => {
   describe('(v3f, number) constructor', () => {
     it('works in JS', () => {
-      const red = d.vec3f(0.9, 0.2, 0.1);
+      const red = d.vec3f(0.125, 0.25, 0.375);
       const redWithAlpha = d.vec4f(red, 1);
-      expect(redWithAlpha).toStrictEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+      expect(redWithAlpha).toStrictEqual(d.vec4f(0.125, 0.25, 0.375, 1));
     });
 
     it('works in TGSL', () => {
-      const red = d.vec3f(0.9, 0.2, 0.1);
+      const red = d.vec3f(0.125, 0.25, 0.375);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const green = d.vec3f(0, 1, 0);
+      const main = tgpu.fn([])(() => {
+        const green = d.vec3f(0, 1, 0);
 
-          const one = d.vec4f(red, 1); // external
-          const two = d.vec4f(green, 1); // local variable
-          const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
-        })
-        .$name('main');
+        const one = d.vec4f(red, 1); // external
+        const two = d.vec4f(green, 1); // local variable
+        const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
           fn main() {
             var green = vec3f(0, 1, 0);
 
-            var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
+            var one = vec4f(vec3f(0.125, 0.25, 0.375), 1);
             var two = vec4f(green, 1);
             var three = vec4f(vec3f(0, 0, 1), 1);
           }
@@ -868,32 +899,30 @@ describe('v4f', () => {
 
   describe('(number, v3f) constructor', () => {
     it('works in JS', () => {
-      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const foo = d.vec3f(0.25, 0.5, 0.75);
       const bar = d.vec4f(0.1, foo);
-      expect(bar).toStrictEqual(d.vec4f(0.1, 0.2, 0.3, 0.4));
+      expect(bar).toStrictEqual(d.vec4f(0.1, 0.25, 0.5, 0.75));
     });
 
     it('works in TGSL', () => {
-      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const foo = d.vec3f(0.25, 0.5, 0.75);
 
-      const main = tgpu['~unstable']
-        .fn([])(() => {
-          const fooLocal = d.vec3f(0.2, 0.3, 0.4);
+      const main = tgpu.fn([])(() => {
+        const fooLocal = d.vec3f(0.25, 0.5, 0.75);
 
-          const one = d.vec4f(0.1, foo); // external
-          const two = d.vec4f(0.1, fooLocal); // local variable
-          const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
-        })
-        .$name('main');
+        const one = d.vec4f(0.1, foo); // external
+        const two = d.vec4f(0.1, fooLocal); // local variable
+        const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`
         fn main() {
-          var fooLocal = vec3f(0.2, 0.3, 0.4);
+          var fooLocal = vec3f(0.25, 0.5, 0.75);
 
-          var one = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var one = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
           var two = vec4f(0.1, fooLocal);
-          var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var three = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
         }
       `),
       );
@@ -919,16 +948,13 @@ describe('v4b', () => {
     it('works in TGSL', () => {
       const vecExternal = d.vec3b(true, false, true);
 
-      const main = tgpu['~unstable']
-        .fn([])
-        .does(() => {
-          const vecLocal = d.vec3b(true, true, true);
+      const main = tgpu.fn([])(() => {
+        const vecLocal = d.vec3b(true, true, true);
 
-          const one = d.vec4b(vecExternal, true); // external
-          const two = d.vec4b(vecLocal, false); // local variable
-          const three = d.vec4b(d.vec3b(false, false, true), true); // literal
-        })
-        .$name('main');
+        const one = d.vec4b(vecExternal, true); // external
+        const two = d.vec4b(vecLocal, false); // local variable
+        const three = d.vec4b(d.vec3b(false, false, true), true); // literal
+      });
 
       expect(parseResolved({ main })).toBe(
         parse(`

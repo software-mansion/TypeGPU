@@ -1,0 +1,23 @@
+---
+import { Image } from "astro:assets";
+import PageLayout from "../../layouts/PageLayout.astro";
+import TranslatorApp from "../../components/translator/TranslatorApp";
+import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
+---
+
+<PageLayout title="WGSL Translator | TypeGPU" theme="dark">
+    <main class="flex h-screen overflow-hidden flex-col">
+        <h1 class="flex items-center justify-center p-1 min-w-2xs">
+            <a href="/TypeGPU">
+                <Image
+                    src={TypeGPULogoDark}
+                    alt="TypeGPU Logo"
+                    class="w-40 relative"
+                />
+            </a>
+            <p class="text-lg font-sans text-gray-300">— translator</p>
+        </h1>
+
+        <TranslatorApp client:only="react" />
+    </main>
+</PageLayout>

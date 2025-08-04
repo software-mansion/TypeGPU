@@ -1,12 +1,12 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { examples, examplesStable } from '../utils/examples/exampleContent.ts';
+import { examples } from '../utils/examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 
 const getRandomExampleKey = () => {
-  const keys = Object.keys(examplesStable);
+  const keys = Object.keys(examples);
   const randomIdx = Math.floor(Math.random() * keys.length);
   return keys[randomIdx];
 };
@@ -14,7 +14,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'simulation--boids';
+const FLAGSHIP = 'rendering--caustics';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
@@ -26,9 +26,7 @@ function RedirectToFlagship() {
     }
     redirectedRef.current = true;
 
-    setCurrentExample(
-      FLAGSHIP in examplesStable ? FLAGSHIP : getRandomExampleKey(),
-    );
+    setCurrentExample(FLAGSHIP in examples ? FLAGSHIP : getRandomExampleKey());
   }, [setCurrentExample]);
 
   return null;

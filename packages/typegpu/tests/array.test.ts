@@ -1,14 +1,14 @@
 import { attest } from '@ark/attest';
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
 import { arrayLength } from '../src/std/array.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -89,6 +89,124 @@ describe('array', () => {
   it('throws when trying to nest runtime sized arrays', () => {
     expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0)).toThrow();
   });
+
+  it('can be called to create an array', () => {
+    const ArraySchema = d.arrayOf(d.u32, 4);
+
+    const obj = ArraySchema([1, 2, 3, 4]);
+
+    expect(obj).toStrictEqual([1, 2, 3, 4]);
+    expectTypeOf(obj).toEqualTypeOf<number[]>();
+  });
+
+  it('cannot be called with invalid properties', () => {
+    const ArraySchema = d.arrayOf(d.u32, 4);
+
+    // @ts-expect-error
+    (() => ArraySchema([1, 2, 3, d.vec3f()]));
+    // @ts-expect-error
+    (() => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]));
+  });
+
+  it('can be called to create a deep copy of other array', () => {
+    const InnerSchema = d.arrayOf(d.vec3f, 2);
+    const OuterSchema = d.arrayOf(InnerSchema, 3);
+    const instance = OuterSchema([
+      InnerSchema([d.vec3f(1, 2, 3), d.vec3f()]),
+      InnerSchema([d.vec3f(), d.vec3f()]),
+      InnerSchema([d.vec3f(), d.vec3f()]),
+    ]);
+
+    const clone = OuterSchema(instance);
+
+    expect(clone).toStrictEqual(instance);
+    expect(clone).not.toBe(instance);
+    expect(clone[0]).not.toBe(instance[0]);
+    expect(clone[0]).not.toBe(clone[1]);
+    expect(clone[0]?.[0]).not.toBe(instance[0]?.[0]);
+    expect(clone[0]?.[0]).toStrictEqual(d.vec3f(1, 2, 3));
+  });
+
+  it('throws when invalid number of arguments', () => {
+    const ArraySchema = d.arrayOf(d.u32, 2);
+
+    expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Array schema of 2 elements of type u32 called with 1 arguments.]',
+    );
+    expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Array schema of 2 elements of type u32 called with 3 arguments.]',
+    );
+  });
+
+  it('can be called to create a default value', () => {
+    const ArraySchema = d.arrayOf(d.vec3f, 2);
+
+    const defaultArray = ArraySchema();
+
+    expect(defaultArray).toStrictEqual([d.vec3f(), d.vec3f()]);
+  });
+
+  it('can be called to create a default value with nested struct', () => {
+    const StructSchema = d.struct({ vec: d.vec3f });
+    const ArraySchema = d.arrayOf(StructSchema, 2);
+
+    const defaultArray = ArraySchema();
+
+    expect(defaultArray).toStrictEqual([
+      { vec: d.vec3f() },
+      { vec: d.vec3f() },
+    ]);
+  });
+
+  it('generates correct code when Array default constructor is used', () => {
+    const Nested = d.arrayOf(d.f32, 1);
+    const Outer = d.arrayOf(Nested, 2);
+
+    const testFunction = tgpu.fn([])(() => {
+      const defaultValue = Outer();
+    });
+
+    expect(parseResolved({ testFunction })).toBe(parse(`
+      fn testFunction() {
+        var defaultValue = array<array<f32, 1>, 2>();
+      }`));
+  });
+
+  it('generates correct code when array clone is used', () => {
+    const ArraySchema = d.arrayOf(d.u32, 1);
+
+    const testFn = tgpu.fn([])(() => {
+      const myArray = ArraySchema([d.u32(10)]);
+      const myClone = ArraySchema(myArray);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(parse(`
+      fn testFn() {
+        var myArray = array<u32, 1>(u32(10));
+        var myClone = myArray;
+        return;
+      }`));
+  });
+
+  it('generates correct code when complex array clone is used', () => {
+    const ArraySchema = d.arrayOf(d.i32, 1);
+
+    const testFn = tgpu.fn([])(() => {
+      const myArrays = [ArraySchema([10])] as const;
+      const myClone = ArraySchema(myArrays[0]);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+          fn testFn() {
+            var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10));
+            var myClone = myArrays[0];
+            return;
+          }`),
+    );
+  });
 });
 
 describe('array.length', () => {
@@ -100,7 +218,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([])(() => {
+    const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
       for (let i = d.u32(0); i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
@@ -131,7 +249,7 @@ describe('array.length', () => {
       },
     });
 
-    const foo = tgpu['~unstable'].fn([])(() => {
+    const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
       for (let i = 0; i < layout.bound.values.value.length; i++) {
         layout.bound.values.value[i] = acc;
@@ -164,17 +282,14 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu['~unstable'].fn(
-        [],
-        d.i32,
-      )(() => {
+      const testFn = tgpu.fn([], d.i32)(() => {
         return arrayLength(layout.$.values);
       });
 
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
           @group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-  
+
           fn testFn() -> i32 {
             return 5;
           }
@@ -191,17 +306,14 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu['~unstable'].fn(
-        [],
-        d.u32,
-      )(() => {
+      const testFn = tgpu.fn([], d.u32)(() => {
         return arrayLength(layout.bound.values.value);
       });
 
       expect(parseResolved({ testFn })).toBe(
         parse(/* wgsl */ `
           @group(0) @binding(0) var<storage, read_write> values: array<f32>;
-  
+
           fn testFn() -> u32 {
             return arrayLength(&values);
           }

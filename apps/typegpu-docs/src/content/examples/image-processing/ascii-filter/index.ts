@@ -34,7 +34,7 @@ const displayModes = {
  * Adapted from the original Shadertoy implementation by movAX13h:
  * https://www.shadertoy.com/view/lssGDj
  */
-const characterFn = tgpu['~unstable'].fn([d.u32, d.vec2f], d.f32)((n, p) => {
+const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   // Transform texture coordinates to character bitmap coordinates (5x5 grid)
   const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
 
@@ -216,9 +216,10 @@ let bindGroup:
   | undefined;
 
 let ready = true;
+let animationFrame: number;
 function run() {
   if (!(video.currentTime > 0) || video.readyState < 2 || !ready) {
-    requestAnimationFrame(run);
+    animationFrame = requestAnimationFrame(run);
     return;
   }
 
@@ -239,7 +240,7 @@ function run() {
     );
   } catch (error) {
     console.error('Failed to copy video frame to texture:', error);
-    requestAnimationFrame(run);
+    animationFrame = requestAnimationFrame(run);
     return;
   }
 
@@ -250,7 +251,7 @@ function run() {
   }).with(layout, bindGroup).draw(3);
 
   spinner.style.display = 'none';
-  requestAnimationFrame(run);
+  animationFrame = requestAnimationFrame(run);
 }
 
 function resizeVideo() {
@@ -283,7 +284,7 @@ const videoSizeObserver = new ResizeObserver(resizeVideo);
 videoSizeObserver.observe(video);
 video.addEventListener('resize', resizeVideo);
 
-requestAnimationFrame(run);
+animationFrame = requestAnimationFrame(run);
 
 export const controls = {
   'use extended characters': {
@@ -314,6 +315,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrame);
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();

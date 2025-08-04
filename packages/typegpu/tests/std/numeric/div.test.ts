@@ -29,8 +29,9 @@ describe('div', () => {
     expect(isCloseTo(div(vec3f(1, 2, 3), 3), vec3f(0.333, 0.666, 1))).toBe(
       true,
     );
-    expect(isCloseTo(div(vec4f(1, 2, 3, 4), 4), vec4f(0.25, 0.5, 0.75, 1)))
-      .toBe(true);
+    expect(
+      isCloseTo(div(vec4f(1, 2, 3, 4), 4), vec4f(0.25, 0.5, 0.75, 1)),
+    ).toBe(true);
   });
 
   it('computes quotient of vecNi and a number', () => {
@@ -40,41 +41,35 @@ describe('div', () => {
   });
 
   it('computes quotient of a number and vecNf', () => {
-    expect(isCloseTo(div(2, vec2f(1, 2)), vec2f(0.5, 1))).toBe(true);
-    expect(isCloseTo(div(3, vec3f(1, 2, 3)), vec3f(0.333, 0.666, 1))).toBe(
+    expect(isCloseTo(div(2, vec2f(1, 2)), vec2f(2, 1))).toBe(true);
+    expect(isCloseTo(div(3, vec3f(1, 2, 3)), vec3f(3, 1.5, 1))).toBe(
       true,
     );
-    expect(isCloseTo(div(4, vec4f(1, 2, 3, 4)), vec4f(0.25, 0.5, 0.75, 1)))
-      .toBe(true);
+    expect(
+      isCloseTo(div(4, vec4f(1, 2, 3, 4)), vec4f(4, 2, 1.33, 1)),
+    ).toBe(true);
   });
 
   it('computes quotient of a number and vecNi', () => {
-    expect(div(1, vec2i(1, 2))).toStrictEqual(vec2i(1, 2));
-    expect(div(2, vec3i(1, 2, 3))).toStrictEqual(vec3i(0, 1, 1));
-    expect(div(3, vec4i(5, 6, 7, 8))).toStrictEqual(vec4i(1, 2, 2, 2));
+    expect(div(1, vec2i(1, 2))).toStrictEqual(vec2i(1, 0));
+    expect(div(2, vec3i(1, 2, 3))).toStrictEqual(vec3i(2, 1, 0));
+    expect(div(3, vec4i(5, 6, 7, 8))).toStrictEqual(vec4i());
   });
 
   it('computes quotient of vecNh and vecNh', () => {
-    expect(isCloseTo(div(vec2h(1, 2), vec2h(4)), vec2h(0.25, 0.5))).toBe(
-      true,
-    );
+    expect(isCloseTo(div(vec2h(1, 2), vec2h(4)), vec2h(0.25, 0.5))).toBe(true);
     expect(
       isCloseTo(div(vec3h(1, 2, 3), vec3h(3)), vec3h(0.333, 0.666, 1)),
     ).toBe(true);
     expect(
-      isCloseTo(
-        div(vec4h(1.5, 2, 3, 4), vec4h(2)),
-        vec4h(0.75, 1, 1.5, 2),
-      ),
+      isCloseTo(div(vec4h(1.5, 2, 3, 4), vec4h(2)), vec4h(0.75, 1, 1.5, 2)),
     ).toBe(true);
   });
 
   it('computes quotient of vecNu and vecNu', () => {
     expect(div(vec2u(1, 2), vec2u(2))).toStrictEqual(vec2u(0, 1));
     expect(div(vec3u(5, 6, 7), vec3u(3))).toStrictEqual(vec3u(1, 2, 2));
-    expect(div(vec4u(1, 2, 8, 9), vec4u(4))).toStrictEqual(
-      vec4u(0, 0, 2, 2),
-    );
+    expect(div(vec4u(1, 2, 8, 9), vec4u(4))).toStrictEqual(vec4u(0, 0, 2, 2));
   });
 
   it('handles division by 0', () => {

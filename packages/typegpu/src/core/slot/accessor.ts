@@ -1,5 +1,5 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
@@ -84,11 +84,13 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   get value(): InferGPU<T> {
-    if (!inGPUMode()) {
-      throw new Error('`tgpu.accessor` values are only accessible on the GPU');
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
   }
 
   get $(): InferGPU<T> {

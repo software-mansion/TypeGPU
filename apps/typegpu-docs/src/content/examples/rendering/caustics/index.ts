@@ -20,14 +20,14 @@ const mainVertex = tgpu['~unstable'].vertexFn({
  * Given a coordinate, it returns a grayscale floor tile pattern at that
  * location.
  */
-const tilePattern = tgpu['~unstable'].fn([d.vec2f], d.f32)((uv) => {
+const tilePattern = tgpu.fn([d.vec2f], d.f32)((uv) => {
   const tiledUv = std.fract(uv);
   const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
   const maxProximity = std.max(proximity.x, proximity.y);
   return std.clamp(std.pow(1 - maxProximity, 0.6) * 5, 0, 1);
 });
 
-const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
+const caustics = tgpu.fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
   (uv, time, profile) => {
     const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
     // Distorting UV coordinates
@@ -37,20 +37,18 @@ const caustics = tgpu['~unstable'].fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
   },
 );
 
-const clamp01 = tgpu['~unstable'].fn([d.f32], d.f32)((v) => {
-  return std.clamp(v, 0, 1);
-});
+const clamp01 = tgpu.fn([d.f32], d.f32)((v) => std.clamp(v, 0, 1));
 
 /**
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XY plane (around the imaginary Z axis)
  */
-const rotateXY = tgpu['~unstable'].fn([d.f32], d.mat2x2f)((angle) => {
-  return d.mat2x2f(
+const rotateXY = tgpu.fn([d.f32], d.mat2x2f)((angle) =>
+  d.mat2x2f(
     /* right */ d.vec2f(std.cos(angle), std.sin(angle)),
     /* up    */ d.vec2f(-std.sin(angle), std.cos(angle)),
-  );
-});
+  )
+);
 
 const root = await tgpu.init();
 
@@ -150,9 +148,7 @@ const pipeline = root['~unstable']
 let isRunning = true;
 
 function draw(timestamp: number) {
-  if (!isRunning) {
-    return;
-  }
+  if (!isRunning) return;
 
   time.write((timestamp * 0.001) % 1000);
 

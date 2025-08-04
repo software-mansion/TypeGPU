@@ -126,14 +126,14 @@ function resolveStructProperty(
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   const id = ctx.names.makeUnique(getName(struct));
 
-  ctx.addDeclaration(`
+  ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(struct.propTypes)
+    Object.entries(struct.propTypes as Record<string, BaseData>)
       .map((prop) => resolveStructProperty(ctx, prop))
       .join('')
   }\
-}\n`);
+}`);
 
   return id;
 }
@@ -156,10 +156,10 @@ ${
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   const id = ctx.names.makeUnique(getName(unstruct));
 
-  ctx.addDeclaration(`
+  ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(unstruct.propTypes)
+    Object.entries(unstruct.propTypes as Record<string, BaseData>)
       .map((prop) =>
         isAttribute(prop[1])
           ? resolveStructProperty(ctx, [
@@ -170,7 +170,7 @@ ${
       )
       .join('')
   }
-}\n`);
+}`);
 
   return id;
 }
@@ -265,12 +265,11 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
   }
 
-  if (data.type === 'abstractInt' || data.type === 'abstractFloat') {
-    throw new Error('Abstract types have no concrete representation in WGSL');
-  }
-
-  if (data.type === 'void') {
-    throw new Error('Void has no representation in WGSL');
+  if (
+    data.type === 'abstractInt' || data.type === 'abstractFloat' ||
+    data.type === 'void' || data.type === 'u16'
+  ) {
+    throw new Error(`${data.type} has no representation in WGSL`);
   }
 
   assertExhaustive(data, 'resolveData');
