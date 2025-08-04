@@ -2,14 +2,21 @@ import type {
   Infer,
   InferGPU,
   InferPartial,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
+  IsValidVertexSchema,
   MemIdentity,
 } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
   $gpuRepr,
+  $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validStorageSchema,
+  $validUniformSchema,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import {
@@ -359,6 +366,8 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
+  declare readonly [$gpuRepr]: InferGPU<TInner>;
+  declare readonly [$reprPartial]: InferPartial<TInner>;
   // ---
 
   constructor(
@@ -417,11 +426,14 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
-  declare readonly [$gpuRepr]: InferGPU<TInner>;
-  declare readonly [$reprPartial]: InferPartial<TInner>;
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
+  declare readonly [$invalidSchemaReason]:
+    Decorated[typeof $invalidSchemaReason];
+  declare readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
+  declare readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
+  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 
@@ -430,4 +442,10 @@ class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements LooseDecorated<TInner, TAttribs> {
   public readonly [$internal] = true;
   public readonly type = 'loose-decorated';
+
+  // Type-tokens, not available at runtime
+  declare readonly [$invalidSchemaReason]:
+    LooseDecorated[typeof $invalidSchemaReason];
+  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
+  // ---
 }
