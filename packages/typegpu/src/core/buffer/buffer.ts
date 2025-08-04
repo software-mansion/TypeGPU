@@ -294,7 +294,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   private _writeToTarget(
-    target: ArrayBuffer | ArrayBufferLike,
+    target: ArrayBuffer,
     data: Infer<TData>,
   ): void {
     const compiledWriter = getCompiledWriterForSchema(this.dataType);
