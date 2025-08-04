@@ -53,8 +53,7 @@ export function arrayOf<TElement extends AnyWgslData>(
   }
   arraySchema.elementCount = elementCount;
 
-  // @ts-ignore
-  return arraySchema as WgslArray<TElement>;
+  return arraySchema as unknown as WgslArray<TElement>;
 }
 
 // --------------
@@ -64,10 +63,8 @@ export function arrayOf<TElement extends AnyWgslData>(
 const WgslArrayImpl = {
   [$internal]: true,
   type: 'array',
-  elementCount: undefined,
-  elementType: undefined,
 
-  toString(): string {
-    return `arrayOf(${this.elementType})`;
+  toString(this: WgslArray): string {
+    return `arrayOf(${this.elementType}, ${this.elementCount})`;
   },
 };

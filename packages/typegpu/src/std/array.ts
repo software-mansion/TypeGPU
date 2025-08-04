@@ -1,9 +1,9 @@
-import { snip } from '../data/dataTypes.ts';
+import { snip } from '../data/snippet.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
 import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 
 export const arrayLength = createDualImpl(
   // CPU implementation

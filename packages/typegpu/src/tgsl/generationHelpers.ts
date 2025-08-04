@@ -2,12 +2,10 @@ import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
   isDisarray,
-  isSnippet,
   isUnstruct,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -51,12 +49,14 @@ import {
   isWgslStruct,
   type U32,
 } from '../data/wgslTypes.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
+import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { undecorate } from '../data/decorateUtils.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -229,13 +229,6 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function unwrapDecorated(data: AnyData): AnyData {
-  if (data.type === 'decorated') {
-    return data.inner as AnyData;
-  }
-  return data;
-}
-
 function getVectorComponent(type: AnyData): AnyData | undefined {
   return isVec(type) ? vecTypeToPrimitive[type.type] : undefined;
 }
@@ -244,8 +237,8 @@ function getAutoConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     return { rank: 0, action: 'none' };
@@ -284,8 +277,8 @@ function getImplicitConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (
     trueSrc.type === 'ptr' &&
@@ -432,9 +425,9 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
+  const uniqueTypes = [...new Set(types.map(undecorate))];
   const uniqueTargetTypes = targetTypes
-    ? [...new Set(targetTypes.map(unwrapDecorated))]
+    ? [...new Set(targetTypes.map(undecorate))]
     : uniqueTypes;
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
@@ -469,7 +462,7 @@ export function convertType(
       actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
     }
     return {
-      targetType: unwrapDecorated(targetType),
+      targetType: undecorate(targetType),
       actions: [actionDetail],
       hasImplicitConversions: conversion.action === 'cast',
     };
@@ -480,9 +473,18 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly callStack: unknown[];
+  /**
+   * Used by `generateTypedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  expectedType: AnyData | undefined;
+  readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
+  withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;
@@ -519,6 +521,7 @@ export function convertToCommonType(
   ctx: GenerationCtx,
   values: Snippet[],
   restrictTo?: AnyData[],
+  verbose = true,
 ): Snippet[] | undefined {
   const types = values.map((value) => value.dataType);
 
@@ -526,12 +529,18 @@ export function convertToCommonType(
     return undefined;
   }
 
+  if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
+    console.warn(
+      'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
+    );
+  }
+
   const conversion = getBestConversion(types as AnyData[], restrictTo);
   if (!conversion) {
     return undefined;
   }
 
-  if (conversion.hasImplicitConversions) {
+  if (DEV && verbose && conversion.hasImplicitConversions) {
     console.warn(
       `Implicit conversions from [\n${
         values
@@ -549,6 +558,32 @@ Consider using explicit conversions instead.`,
     invariant(action, 'Action should not be undefined');
     return applyActionToSnippet(ctx, value, action, conversion.targetType);
   });
+}
+
+export function tryConvertSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  targetDataType: AnyData,
+): Snippet {
+  if (targetDataType === value.dataType) {
+    return value;
+  }
+
+  if (targetDataType.type === 'void') {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type 'void'`,
+    );
+  }
+
+  const converted = convertToCommonType(ctx, [value], [targetDataType]);
+
+  if (!converted) {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
+    );
+  }
+
+  return converted[0] as Snippet;
 }
 
 export function convertStructValues(

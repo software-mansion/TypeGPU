@@ -104,6 +104,11 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
+              label: 'Pipelines',
+              slug: 'fundamentals/pipelines',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
