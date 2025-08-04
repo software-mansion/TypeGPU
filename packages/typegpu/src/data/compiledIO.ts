@@ -125,6 +125,28 @@ const vertexFormatValueTransform = {
   snorm16x4: (value: string) => `Math.round(${value} * 32767)`,
 } as const;
 
+const specialPackedFormats = {
+  'unorm10-10-10-2': {
+    writeFunction: 'setUint32',
+    generator: (offsetExpr: string, valueExpr: string) =>
+      `output.setUint32(${offsetExpr}, ((${valueExpr}.x*1023&0x3FF)<<22)|((${valueExpr}.y*1023&0x3FF)<<12)|((${valueExpr}.z*1023&0x3FF)<<2)|(${valueExpr}.w*3&3), littleEndian);\n`,
+  },
+  'unorm8x4-bgra': {
+    writeFunction: 'setUint8',
+    generator: (offsetExpr: string, valueExpr: string) => {
+      const bgraComponents = ['z', 'y', 'x', 'w'];
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code +=
+          `output.setUint8((${offsetExpr} + ${i}), Math.round(${valueExpr}.${
+            bgraComponents[i]
+          } * 255));\n`;
+      }
+      return code;
+    },
+  },
+} as const;
+
 export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
@@ -208,22 +230,15 @@ export function buildWriter(
   if (isPackedData(node)) {
     const formatName = node.type;
 
-    if (formatName === 'unorm10-10-10-2') {
-      return `output.setUint32(${offsetExpr}, ((${valueExpr}.x*1023&0x3FF)<<22)|((${valueExpr}.y*1023&0x3FF)<<12)|((${valueExpr}.z*1023&0x3FF)<<2)|(${valueExpr}.w*3&3), littleEndian);\n`;
+    if (formatName in specialPackedFormats) {
+      const handler =
+        specialPackedFormats[formatName as keyof typeof specialPackedFormats];
+      return handler.generator(offsetExpr, valueExpr);
     }
 
-    if (formatName === 'unorm8x4-bgra') {
-      const bgraComponents = ['z', 'y', 'x', 'w'];
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += `output.setUint8((${offsetExpr} + ${i}), ${valueExpr}.${
-          bgraComponents[i]
-        } * 255);\n`;
-      }
-      return code;
-    }
-
-    const primitive = vertexFormatToPrimitive[formatName];
+    const primitive = vertexFormatToPrimitive[
+      formatName as keyof typeof vertexFormatToPrimitive
+    ];
     const writeFunc = primitiveToWriteFunction[primitive];
     const wgslType = formatToWGSLType[formatName];
     const componentCount = wgsl.isVec4(wgslType)
