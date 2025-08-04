@@ -1,11 +1,8 @@
 import type { BunPlugin } from 'bun';
 import * as Babel from '@babel/standalone';
-import { defaultOptions, type Options } from './common.ts';
 import defu from 'defu';
+import { defaultOptions, earlyPruneRegex, type Options } from './common.ts';
 import babelPlugin from './babel.ts';
-
-const kernelDirectiveRegex = /["']kernel["']/;
-const typegpuKeywordRegex = /typegpu/;
 
 export default (rawOptions: Options): BunPlugin => {
   const options = defu(rawOptions, defaultOptions);
@@ -25,14 +22,8 @@ export default (rawOptions: Options): BunPlugin => {
       build.onLoad({ filter: include }, async (args) => {
         const text = await Bun.file(args.path).text();
 
-        // Quickly verifying if it's even worth it to parse and
-        // transform (costly operator)
-        // TODO: Add for other plugins, with an option to disable in case
-        //       the early detection hinders transformation
-        if (
-          !kernelDirectiveRegex.test(text) && !typegpuKeywordRegex.test(text)
-        ) {
-          // Early skip
+        // Pruning early before more expensive operations
+        if (earlyPruneRegex.every((pattern) => !pattern.test(text))) {
           return {
             contents: text,
             loader: args.loader,

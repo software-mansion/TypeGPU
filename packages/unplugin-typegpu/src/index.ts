@@ -8,6 +8,7 @@ import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import {
   type Context,
   defaultOptions,
+  earlyPruneRegex,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
@@ -87,9 +88,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       name: 'unplugin-typegpu' as const,
       enforce: options.enforce,
       transform: {
-        filter: {
-          id: options,
-        },
+        filter: options.earlyPruning
+          ? {
+            id: options,
+            code: earlyPruneRegex,
+          }
+          : {
+            id: options,
+          },
         handler(code, id) {
           const ctx: Context = {
             tgpuAliases: new Set<string>(
