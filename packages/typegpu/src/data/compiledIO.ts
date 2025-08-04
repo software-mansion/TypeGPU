@@ -140,7 +140,7 @@ const specialPackedFormats = {
         code +=
           `output.setUint8((${offsetExpr} + ${i}), Math.round(${valueExpr}.${
             bgraComponents[i]
-          } * 255));\n`;
+          } * 255), littleEndian);\n`;
       }
       return code;
     },

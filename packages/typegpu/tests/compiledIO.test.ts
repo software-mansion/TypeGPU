@@ -524,10 +524,10 @@ describe('createCompileInstructions', () => {
       "for (let i = 0; i < 2; i++) {
       output.setUint16((((offset + i * 22) + 0) + 0), Math.round(value[i].a.x * 65535), littleEndian);
       output.setUint16((((offset + i * 22) + 0) + 2), Math.round(value[i].a.y * 65535), littleEndian);
-      output.setUint8((((offset + i * 22) + 4) + 0), Math.round(value[i].b.z * 255));
-      output.setUint8((((offset + i * 22) + 4) + 1), Math.round(value[i].b.y * 255));
-      output.setUint8((((offset + i * 22) + 4) + 2), Math.round(value[i].b.x * 255));
-      output.setUint8((((offset + i * 22) + 4) + 3), Math.round(value[i].b.w * 255));
+      output.setUint8((((offset + i * 22) + 4) + 0), Math.round(value[i].b.z * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 1), Math.round(value[i].b.y * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 2), Math.round(value[i].b.x * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 3), Math.round(value[i].b.w * 255), littleEndian);
       output.setInt8((((offset + i * 22) + 8) + 0), Math.round(value[i].c.x * 127), littleEndian);
       output.setInt8((((offset + i * 22) + 8) + 1), Math.round(value[i].c.y * 127), littleEndian);
       output.setInt8((((offset + i * 22) + 8) + 2), Math.round(value[i].c.z * 127), littleEndian);
