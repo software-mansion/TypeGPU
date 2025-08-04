@@ -8,7 +8,7 @@ Any misalignments or misinterpretations of data can lead to faulty code that is 
 This is precisely what TypeGPU data schemas, like `d.u32` or `d.vec3f`, help with.
 
 :::note
-Complex data types such as structs require particular byte alignment and padding between fields. 
+Complex data types such as structs require particular byte alignment and padding between fields.
 TypeGPU does this automatically during buffer writes and reads.
 :::
 
@@ -22,8 +22,8 @@ TypeGPU provides data schemas for scalar, vector and matrix types, as well as co
 ### Constructors
 
 For scalar WGSL types `f32`, `u32`, `i32`, `f16` and `bool`, TypeGPU provides `d.f32`, `d.u32`, `d.i32`, `d.f16` and `d.bool` schemas respectively.
-Schemas can be called to cast a value to a given type. 
-This works both in TGSL, as well as in plain JavaScript.
+Schemas can be called to cast a value to a given type.
+This works both in TGSL, and in plain JavaScript.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -37,6 +37,7 @@ d.bool(0.01); // true
 
 :::caution
 On JavaScript side, the type of any number remains a number regardless of any casts.
+
 ```ts twoslash
 import * as d from 'typegpu/data';
 // ---cut---
@@ -44,6 +45,7 @@ const myUnsignedInt = d.u32(1);
 //    ^?
 const result = d.u32(3)/d.u32(2); // 1.5
 ```
+
 For the WGSL and JS functions to return consistent results, during WGSL resolution TypeGPU wraps all divisions in `f32` casts.
 :::
 
@@ -73,9 +75,10 @@ const VectorSchema = d.vec2f;
 const vectorInstance = d.vec2f(1, 2);
 //    ^?
 ```
+
 :::
 
-Matrices work in a similar way. 
+Matrices work similarly.
 For matrix WGSL types `mat2x2f`, `mat3x3f` and `mat4x4f`, TypeGPU provides `d.mat2x2f`, `d.mat3x3f` and `d.mat4x4f` schemas respectively.
 
 ```ts twoslash
@@ -103,6 +106,7 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 :::caution
 For `wgpu-matrix` integration, matrix instances implement array access.
 Matrix array access is not supported in TGSL.
+
 ```ts twoslash
 import * as d from 'typegpu/data';
 // ---cut---
@@ -110,6 +114,7 @@ const mat = d.mat2x2f(1.1, 2.2, 3.3, 4.4);
 const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
 //    ^?
 ```
+
 :::
 
 ### Operators
@@ -138,13 +143,13 @@ const comparison = std.le(d.vec3f(2, 3, 4), d.vec3f(3)); // d.vec3b(true, true, 
 //    ^?
 ```
 
-Currently implemented operators include:
+Currently, implemented operators include:
 
 - arithmetic operators `add`, `sub`, `mul`, `div`, `mod`,
 - comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
 - logical operators `not`, `and`, `or`.
 
-When operating on scalars, you can still use `+`, `<=`, `!` etc., 
+When operating on scalars, you can still use `+`, `<=`, `!` etc.,
 the purpose of these `std` functions is to enable working on vectors and matrices.
 
 For arithmetic operators, you can also use the infix notation.
@@ -161,7 +166,7 @@ const multiplication = v1.mul(v2).mul(3); // same as std.mul(std.mul(v1, v2), 3)
 
 ## Structs
 
-Here is an example of defining a custom compound data type using the `d.struct` function. 
+Here is an example of defining a custom compound data type using the `d.struct` function.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -178,8 +183,8 @@ const redCircle = Circle({
 ```
 
 If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
-We define the `Circle` struct, in a similar way to how we would in WGSL, and then we can use it to validate and cast our data values. 
-When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically. 
+We define the `Circle` struct, similarly to how we would in WGSL, and then we can use it to validate and cast our data values.
+When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically.
 
 ```ts twoslash
 // @errors: 2740 2322 2339 2345
@@ -235,6 +240,7 @@ const boid = Boid({
 ```
 
 If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
+
 ```ts twoslash
 import * as d from 'typegpu/data';
 import { sizeOf, alignmentOf } from 'typegpu/data';
