@@ -15,6 +15,7 @@
     "@astrojs/starlight": "^0.35.1",
     "@astrojs/starlight-tailwind": "^4.0.1",
     "@astrojs/tailwind": "^6.0.2",
+    "@babel/standalone": "^7.27.0",
     "@loaders.gl/core": "^4.3.4",
     "@loaders.gl/obj": "^4.3.4",
     "@monaco-editor/react": "^4.7.0",

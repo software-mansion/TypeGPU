@@ -1,5 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.ts';
+import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
 
@@ -11,6 +13,8 @@ const computeRunTests = tgpu['~unstable']
     let s = true;
     s = s && logicalExpressionTests();
     s = s && matrixOpsTests();
+    s = s && infixOperatorsTests();
+    s = s && arrayAndStructConstructorsTest();
 
     if (s) {
       result.value = 1;
@@ -40,6 +44,11 @@ export const controls = {
       table.innerText = (await runTests())
         ? 'Tests succeeded!'
         : 'Tests failed.';
+    },
+  },
+  'Log resolved pipeline': {
+    async onButtonClick() {
+      console.log(tgpu.resolve({ externals: { pipeline } }));
     },
   },
 };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDualImpl } from '../../src/shared/generators.ts';
+import { createDualImpl } from '../../src/core/function/dualImpl.ts';
 import { getName } from '../../src/shared/meta.ts';
 
 describe('createDualImpl', () => {

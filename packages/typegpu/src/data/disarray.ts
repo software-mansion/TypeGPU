@@ -1,6 +1,15 @@
-import type { Infer, InferPartial } from '../shared/repr.ts';
+import type {
+  Infer,
+  InferPartial,
+  IsValidVertexSchema,
+} from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { $repr, $reprPartial } from '../shared/symbols.ts';
+import type {
+  $invalidSchemaReason,
+  $repr,
+  $reprPartial,
+  $validVertexSchema,
+} from '../shared/symbols.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
 
 // ----------
@@ -45,6 +54,9 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
     idx: number;
     value: InferPartial<TElement>;
   }[];
+  declare readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
+  declare readonly [$invalidSchemaReason]:
+    Disarray[typeof $invalidSchemaReason];
   // ---
 
   constructor(

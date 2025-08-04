@@ -4,10 +4,11 @@ import type {
   VariableScope,
 } from '../src/core/variable/tgpuVariable.ts';
 import * as d from '../src/data/index.ts';
+import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 
-describe('var', () => {
+describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
     const fn1 = tgpu.fn([])`() {
@@ -136,5 +137,76 @@ describe('var', () => {
           var velX = boid.vel.x;
         }`),
     );
+  });
+
+  it('supports atomic operations on workgroupVar atomics accessed via .$', () => {
+    const atomicCounter = tgpu['~unstable'].workgroupVar(d.atomic(d.u32));
+
+    const func = tgpu.fn([])(() => {
+      const oldValue = std.atomicAdd(atomicCounter.$, 1);
+      const currentValue = std.atomicLoad(atomicCounter.$);
+    });
+
+    const resolved = tgpu.resolve({
+      externals: { func },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toBe(
+      parse(`
+        var<workgroup> atomicCounter: atomic<u32>;
+
+        fn func() {
+          var oldValue = atomicAdd(&atomicCounter, 1);
+          var currentValue = atomicLoad(&atomicCounter);
+        }`),
+    );
+  });
+
+  it('should throw an error when trying to access variable outside of a function', () => {
+    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    expect(() => x.$).toThrowErrorMatchingInlineSnapshot(
+      '[Error: TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
+    );
+  });
+
+  it('should throw an error when trying to access variable inside of a function top-level', () => {
+    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    const foo = tgpu.fn([], d.f32)(() => {
+      return x.$; // Accessing variable inside of a function
+    });
+    expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:foo: Cannot access variable 'x'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
+    `);
+  });
+
+  describe('simulate mode', () => {
+    it('simulates variable incrementing', () => {
+      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+
+      const result = tgpu['~unstable'].simulate(() => {
+        counter.$ += 1;
+        counter.$ += 2;
+        counter.$ += 3;
+        return counter.$;
+      });
+
+      expect(result.value).toEqual(6);
+    });
+
+    it('does not keep state between simulations', () => {
+      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+
+      const fn = () => ++counter.$;
+
+      const result1 = tgpu['~unstable'].simulate(fn);
+      const result2 = tgpu['~unstable'].simulate(fn);
+      const result3 = tgpu['~unstable'].simulate(fn);
+
+      expect(result1.value).toEqual(1);
+      expect(result2.value).toEqual(1);
+      expect(result3.value).toEqual(1);
+    });
   });
 });

@@ -1,6 +1,6 @@
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
-import { snip } from './dataTypes.ts';
+import { snip } from './snippet.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -251,7 +251,7 @@ export const vec4b = makeVecSchema(Vec4bImpl) as Vec4b;
 // Implementation
 // --------------
 
-const vecTypeToConstructor = {
+export const vecTypeToConstructor = {
   vec2f,
   vec2h,
   vec2i,
