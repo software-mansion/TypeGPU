@@ -274,7 +274,7 @@ export function buildWriter(
 
   if (!Object.hasOwn(typeToPrimitive, node.type)) {
     throw new Error(
-      `Unsupported primitive encounter when compiling writer: ${node.type}`,
+      `Primitive ${node.type} is unsupported by compiled writer`,
     );
   }
 
