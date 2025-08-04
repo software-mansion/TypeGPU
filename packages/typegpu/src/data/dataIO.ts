@@ -254,17 +254,17 @@ const dataWriters = {
     output.writeInt8(value.w);
   },
   unorm8(output, _, value: number) {
-    output.writeUint8(value * 255);
+    output.writeUint8(Math.round(value * 255));
   },
   unorm8x2(output, _, value: wgsl.v2f) {
-    output.writeUint8(value.x * 255);
-    output.writeUint8(value.y * 255);
+    output.writeUint8(Math.round(value.x * 255));
+    output.writeUint8(Math.round(value.y * 255));
   },
   unorm8x4(output, _, value: wgsl.v4f) {
-    output.writeUint8(value.x * 255);
-    output.writeUint8(value.y * 255);
-    output.writeUint8(value.z * 255);
-    output.writeUint8(value.w * 255);
+    output.writeUint8(Math.round(value.x * 255));
+    output.writeUint8(Math.round(value.y * 255));
+    output.writeUint8(Math.round(value.z * 255));
+    output.writeUint8(Math.round(value.w * 255));
   },
   snorm8(output, _, value: number) {
     output.writeInt8(Math.round(value * 127));

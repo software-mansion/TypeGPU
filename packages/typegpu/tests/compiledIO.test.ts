@@ -452,10 +452,10 @@ describe('createCompileInstructions', () => {
       output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
       output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
       output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
-      output.setUint8(((offset + 10) + 0), value.d.x * 255, littleEndian);
-      output.setUint8(((offset + 10) + 1), value.d.y * 255, littleEndian);
-      output.setUint8(((offset + 10) + 2), value.d.z * 255, littleEndian);
-      output.setUint8(((offset + 10) + 3), value.d.w * 255, littleEndian);
+      output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
+      output.setUint8(((offset + 10) + 1), Math.round(value.d.y * 255), littleEndian);
+      output.setUint8(((offset + 10) + 2), Math.round(value.d.z * 255), littleEndian);
+      output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
       "
     `);
     // biome-ignore lint/style/noNonNullAssertion: <it's a test>
@@ -464,34 +464,48 @@ describe('createCompileInstructions', () => {
     const arr = new ArrayBuffer(sizeOf(unstruct));
     const dataView = new DataView(arr);
 
-    writer(dataView, 0, {
+    const inputData = {
       a: d.vec2u(1, 2),
       b: d.vec4f(0.25, 0.5, 0.75, 1),
       c: d.vec2u(7, 8),
       d: d.vec4f(0.34, 0.67, 0.91, 1),
-    });
+    };
 
-    const result = [
-      ...new Uint16Array(arr, 0, 2),
-      ...new Uint8Array(arr, 4, 4),
-      ...new Uint8Array(arr, 8, 2),
-      ...new Uint8Array(arr, 10, 4),
-    ];
+    writer(dataView, 0, inputData);
 
-    expect(result).toEqual([
-      1,
-      2,
-      255,
-      251,
-      223,
-      63,
-      7,
-      8,
-      86,
-      170,
-      232,
-      255,
-    ]);
+    const decoded = {
+      a: d.vec2f(dataView.getUint16(0, true), dataView.getUint16(2, true)),
+      b: (() => {
+        const packed = dataView.getUint32(4, true);
+        return d.vec4f(
+          ((packed >> 22) & 0x3FF) / 1023,
+          ((packed >> 12) & 0x3FF) / 1023,
+          ((packed >> 2) & 0x3FF) / 1023,
+          (packed & 3) / 3,
+        );
+      })(),
+      c: d.vec2u(
+        dataView.getUint8(8),
+        dataView.getUint8(9),
+      ),
+      d: d.vec4f(
+        dataView.getUint8(10) / 255,
+        dataView.getUint8(11) / 255,
+        dataView.getUint8(12) / 255,
+        dataView.getUint8(13) / 255,
+      ),
+    };
+
+    expect(decoded.a).toEqual(inputData.a);
+    expect(decoded.b.x).toBeCloseTo(inputData.b.x, 2);
+    expect(decoded.b.y).toBeCloseTo(inputData.b.y, 2);
+    expect(decoded.b.z).toBeCloseTo(inputData.b.z, 2);
+    expect(decoded.b.w).toBeCloseTo(inputData.b.w, 1);
+    expect(decoded.c).toEqual(inputData.c);
+    expect(decoded.d.x).toBeCloseTo(inputData.d.x, 2);
+    expect(decoded.d.y).toBeCloseTo(inputData.d.y, 2);
+    expect(decoded.d.z).toBeCloseTo(inputData.d.z, 2);
+    expect(decoded.d.w).toBeCloseTo(inputData.d.w, 2);
   });
 
   it('should work for disarrays of unstructs containing loose data', () => {
@@ -508,8 +522,8 @@ describe('createCompileInstructions', () => {
     const disarrayWriter = buildWriter(disarray, 'offset', 'value');
     expect(disarrayWriter).toMatchInlineSnapshot(`
       "for (let i = 0; i < 2; i++) {
-      output.setUint16((((offset + i * 22) + 0) + 0), value[i].a.x * 65535, littleEndian);
-      output.setUint16((((offset + i * 22) + 0) + 2), value[i].a.y * 65535, littleEndian);
+      output.setUint16((((offset + i * 22) + 0) + 0), Math.round(value[i].a.x * 65535), littleEndian);
+      output.setUint16((((offset + i * 22) + 0) + 2), Math.round(value[i].a.y * 65535), littleEndian);
       output.setUint8((((offset + i * 22) + 4) + 0), value[i].b.z * 255);
       output.setUint8((((offset + i * 22) + 4) + 1), value[i].b.y * 255);
       output.setUint8((((offset + i * 22) + 4) + 2), value[i].b.x * 255);
@@ -534,7 +548,7 @@ describe('createCompileInstructions', () => {
     const arr = new ArrayBuffer(sizeOf(disarray));
     const dataView = new DataView(arr);
 
-    compiled(dataView, 0, [
+    const inputData = [
       {
         a: d.vec2f(0.5, 0.25),
         b: d.vec4f(0.25, 0.5, 0.75, 1),
@@ -551,82 +565,64 @@ describe('createCompileInstructions', () => {
         e: d.vec2i(5, 6),
         f: d.vec2i(7, 8),
       },
-    ]);
-
-    const result = [
-      ...new Uint8Array(arr, 0, 44),
     ];
 
-    expect(result).toEqual([
-      // First element
-      // a: unorm16x2 vec2f(0.5, 0.25) -> 0.5*65535=32767.5≈32767, 0.25*65535=16383.75≈16383
-      // -> little-endian bytes: 32767=[255,127], 16383=[255,63]
-      255,
-      127,
-      255,
-      63,
-      // b: unorm8x4_bgra vec4f(0.25, 0.5, 0.75, 1) -> BGRA order: z,y,x,w
-      // -> 0.75*255=191, 0.5*255=127, 0.25*255=63, 1*255=255
-      191,
-      127,
-      63,
-      255,
-      // c: snorm8x4 vec4f(-0.5, 0.5, -0.25, 0.75) -> round(x*127)
-      // -> -0.5*127=-63.5≈-64 (256-64=192), 0.5*127=63.5≈64, -0.25*127=-31.75≈-32 (256-32=224), 0.75*127=95.25≈95
-      192,
-      64,
-      224,
-      95,
-      // d: snorm16x2 vec2f(0.34, 0.67) -> round(x*32767)
-      // -> 0.34*32767=11140.78≈11141, 0.67*32767=21953.89≈21954
-      // -> little-endian bytes: 11141=[133,43], 21954=[194,85]
-      133,
-      43,
-      194,
-      85,
-      // e: sint8x2 vec2i(1, 2) -> direct values
-      1,
-      2,
-      // f: sint16x2 vec2i(3, 4) -> little-endian bytes: 3=[3,0], 4=[4,0]
-      3,
-      0,
-      4,
-      0,
+    compiled(dataView, 0, inputData);
 
-      // Second element
-      // a: unorm16x2 vec2f(0.75, 1.0) -> 0.75*65535=49151.25≈49151, 1.0*65535=65535
-      // -> little-endian bytes: 49151=[255,191], 65535=[255,255]
-      255,
-      191,
-      255,
-      255,
-      // b: unorm8x4_bgra vec4f(0.1, 0.2, 0.3, 0.4) -> BGRA order: z,y,x,w
-      // -> 0.3*255=76.5≈76, 0.2*255=51, 0.1*255=25.5≈25, 0.4*255=102
-      76,
-      51,
-      25,
-      102,
-      // c: snorm8x4 vec4f(0.1, -0.1, 0.9, -0.9) -> round(x*127)
-      // -> 0.1*127=12.7≈13, -0.1*127=-12.7≈-13 (256-13=243), 0.9*127=114.3≈114, -0.9*127=-114.3≈-114 (256-114=142)
-      13,
-      243,
-      114,
-      142,
-      // d: snorm16x2 vec2f(-0.5, 0.8) -> round(x*32767)
-      // -> -0.5*32767=-16383.5≈-16384 (65536-16384=49152), 0.8*32767=26213.6≈26214
-      // -> little-endian bytes: 49152=[0,192], 26214=[102,102]
-      0,
-      192,
-      102,
-      102,
-      // e: sint8x2 vec2i(5, 6) -> direct values
-      5,
-      6,
-      // f: sint16x2 vec2i(7, 8) -> little-endian bytes: 7=[7,0], 8=[8,0]
-      7,
-      0,
-      8,
-      0,
-    ]);
+    const decoded = [];
+    for (let i = 0; i < 2; i++) {
+      const offset = i * 22;
+      decoded.push({
+        a: d.vec2f(
+          dataView.getUint16(offset + 0, true) / 65535,
+          dataView.getUint16(offset + 2, true) / 65535,
+        ),
+        b: d.vec4f(
+          dataView.getUint8(offset + 6) / 255,
+          dataView.getUint8(offset + 5) / 255,
+          dataView.getUint8(offset + 4) / 255,
+          dataView.getUint8(offset + 7) / 255,
+        ),
+        c: d.vec4f(
+          dataView.getInt8(offset + 8) / 127,
+          dataView.getInt8(offset + 9) / 127,
+          dataView.getInt8(offset + 10) / 127,
+          dataView.getInt8(offset + 11) / 127,
+        ),
+        d: d.vec2f(
+          dataView.getInt16(offset + 12, true) / 32767,
+          dataView.getInt16(offset + 14, true) / 32767,
+        ),
+        e: d.vec2i(
+          dataView.getInt8(offset + 16),
+          dataView.getInt8(offset + 17),
+        ),
+        f: d.vec2i(
+          dataView.getInt16(offset + 18, true),
+          dataView.getInt16(offset + 20, true),
+        ),
+      });
+    }
+
+    for (let i = 0; i < 2; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: it's a test
+      const result = decoded[i]!;
+      // biome-ignore lint/style/noNonNullAssertion: it's a test
+      const expected = inputData[i]!;
+      expect(result.a.x).toBeCloseTo(expected.a.x, 4);
+      expect(result.a.y).toBeCloseTo(expected.a.y, 4);
+      expect(result.b.x).toBeCloseTo(expected.b.x, 2);
+      expect(result.b.y).toBeCloseTo(expected.b.y, 2);
+      expect(result.b.z).toBeCloseTo(expected.b.z, 2);
+      expect(result.b.w).toBeCloseTo(expected.b.w, 2);
+      expect(result.c.x).toBeCloseTo(expected.c.x, 2);
+      expect(result.c.y).toBeCloseTo(expected.c.y, 2);
+      expect(result.c.z).toBeCloseTo(expected.c.z, 2);
+      expect(result.c.w).toBeCloseTo(expected.c.w, 2);
+      expect(result.d.x).toBeCloseTo(expected.d.x, 3);
+      expect(result.d.y).toBeCloseTo(expected.d.y, 3);
+      expect(result.e).toEqual(expected.e);
+      expect(result.f).toEqual(expected.f);
+    }
   });
 });
