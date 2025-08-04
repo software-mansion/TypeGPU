@@ -1185,7 +1185,6 @@ export interface Mat2x2f extends BaseData {
   readonly [$repr]: m2x2f;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
-  readonly [$validVertexSchema]: true;
   // ---
 
   (...elements: [number, number, number, number]): m2x2f;
@@ -1204,7 +1203,6 @@ export interface Mat3x3f extends BaseData {
   readonly [$repr]: m3x3f;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
-  readonly [$validVertexSchema]: true;
   // ---
 
   // deno-fmt-ignore
@@ -1224,7 +1222,6 @@ export interface Mat4x4f extends BaseData {
   readonly [$repr]: m4x4f;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
-  readonly [$validVertexSchema]: true;
   // ---
 
   // deno-fmt-ignore
