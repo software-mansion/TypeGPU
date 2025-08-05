@@ -89,7 +89,9 @@ export function onCleanup() {
 
 // console.log('START OF RECURSION RESOLVE');
 
+// biome-ignore lint/style/useConst: has to be assigned later
 let bar: TgpuFn;
+// biome-ignore lint/style/useConst: has to be assigned later
 let foo: TgpuFn;
 bar = tgpu.fn([], d.f32)(() => foo() + 2);
 foo = tgpu.fn([], d.f32)(() => bar() - 2);

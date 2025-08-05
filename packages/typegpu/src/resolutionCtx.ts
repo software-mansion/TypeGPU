@@ -619,8 +619,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     if (item && typeof item === 'function') {
       if (this._currentlyResolvedItems.has(item as object)) {
+        // TODO:
+        // 1. if it is in cache it is good
+        // 2. if it is from lib it is good
+        // 3. all defined by user are wrong??
         console.log('RECURSIVE RESOLUTION DETECTED', String(item));
-        return '1882';
       }
       this._currentlyResolvedItems.add(item as object);
     }
