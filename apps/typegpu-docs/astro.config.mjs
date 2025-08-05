@@ -224,10 +224,10 @@ export default defineConfig({
             },
           ],
         },
-        DEV && {
+        {
           label: 'Reference',
           items: stripFalsy([
-            {
+            DEV && {
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
