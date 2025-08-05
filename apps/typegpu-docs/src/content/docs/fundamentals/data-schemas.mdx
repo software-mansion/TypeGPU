@@ -155,6 +155,10 @@ the purpose of these `std` functions is to enable working on vectors and matrice
 
 For arithmetic operators, you can also use the infix notation.
 
+:::note
+Infix operators return completely new objects, they don't modify in-place.
+:::
+
 ```ts twoslash
 import * as d from 'typegpu/data';
 // ---cut---
