@@ -13,16 +13,35 @@ export type Context = {
 };
 
 export interface Options {
+  /** @default [/\.m?[jt]sx?$/] */
   include?: FilterPattern;
+
+  /** @default undefined */
   exclude?: FilterPattern;
+
+  /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
-  forceTgpuAlias?: string;
-  autoNamingEnabled?: boolean;
+
+  /** @default undefined */
+  forceTgpuAlias?: string | undefined;
+
+  /** @default true */
+  autoNamingEnabled?: boolean | undefined;
+
+  /**
+   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * In case this early pruning hinders transformation, you
+   * can disable it.
+   *
+   * @default true
+   */
+  earlyPruning?: boolean | undefined;
 }
 
 export const defaultOptions = {
-  include: [/\.m?[jt]sx?$/],
+  include: /\.m?[jt]sx?$/,
   autoNamingEnabled: true,
+  earlyPruning: true,
 };
 
 export function embedJSON(jsValue: unknown) {
@@ -225,3 +244,6 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
 }
 
 export const kernelDirective = 'kernel';
+
+/** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
+export const earlyPruneRegex = [/["']kernel["']/, /t(ype)?gpu/];

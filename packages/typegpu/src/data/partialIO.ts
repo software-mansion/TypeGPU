@@ -10,7 +10,7 @@ import type * as wgsl from './wgslTypes.ts';
 import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 export interface WriteInstruction {
-  data: Uint8Array;
+  data: Uint8Array<ArrayBuffer>;
 }
 
 export function getWriteInstructions<TData extends wgsl.BaseData>(

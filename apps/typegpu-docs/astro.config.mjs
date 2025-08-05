@@ -46,7 +46,6 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        DEV &&
         starlightTypeDoc({
           entryPoints: [
             '../../packages/typegpu/src/index.ts',
@@ -235,7 +234,7 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
+            typeDocSidebarGroup,
           ]),
         },
       ]),

@@ -2,12 +2,10 @@ import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
   isDisarray,
-  isSnippet,
   isUnstruct,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -38,7 +36,6 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  type AnyWgslStruct,
   type F16,
   type F32,
   hasInternalDataType,
@@ -50,13 +47,16 @@ import {
   isWgslArray,
   isWgslStruct,
   type U32,
+  type WgslStruct,
 } from '../data/wgslTypes.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
+import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { undecorate } from '../data/decorateUtils.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -229,13 +229,6 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function unwrapDecorated(data: AnyData): AnyData {
-  if (data.type === 'decorated') {
-    return data.inner as AnyData;
-  }
-  return data;
-}
-
 function getVectorComponent(type: AnyData): AnyData | undefined {
   return isVec(type) ? vecTypeToPrimitive[type.type] : undefined;
 }
@@ -244,8 +237,8 @@ function getAutoConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     return { rank: 0, action: 'none' };
@@ -284,8 +277,8 @@ function getImplicitConversionRank(
   src: AnyData,
   dest: AnyData,
 ): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
+  const trueSrc = undecorate(src);
+  const trueDst = undecorate(dest);
 
   if (
     trueSrc.type === 'ptr' &&
@@ -432,9 +425,9 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
+  const uniqueTypes = [...new Set(types.map(undecorate))];
   const uniqueTargetTypes = targetTypes
-    ? [...new Set(targetTypes.map(unwrapDecorated))]
+    ? [...new Set(targetTypes.map(undecorate))]
     : uniqueTypes;
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
@@ -469,7 +462,7 @@ export function convertType(
       actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
     }
     return {
-      targetType: unwrapDecorated(targetType),
+      targetType: undecorate(targetType),
       actions: [actionDetail],
       hasImplicitConversions: conversion.action === 'cast',
     };
@@ -480,9 +473,18 @@ export function convertType(
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly callStack: unknown[];
+  /**
+   * Used by `generateTypedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  expectedType: AnyData | undefined;
+  readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
+  withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;
@@ -515,15 +517,33 @@ function applyActionToSnippet(
   }
 }
 
-export function convertToCommonType(
-  ctx: GenerationCtx,
-  values: Snippet[],
-  restrictTo?: AnyData[],
-): Snippet[] | undefined {
-  const types = values.map((value) => value.dataType);
+export type ConvertToCommonTypeOptions = {
+  ctx: GenerationCtx;
+  values: Snippet[];
+  restrictTo?: AnyData[] | undefined;
+  concretizeTypes?: boolean | undefined;
+  verbose?: boolean | undefined;
+};
+
+export function convertToCommonType({
+  ctx,
+  values,
+  restrictTo,
+  concretizeTypes = false,
+  verbose = true,
+}: ConvertToCommonTypeOptions): Snippet[] | undefined {
+  const types = values.map((value) =>
+    concretizeTypes ? concretize(value.dataType as AnyWgslData) : value.dataType
+  );
 
   if (types.some((type) => type === UnknownData)) {
     return undefined;
+  }
+
+  if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
+    console.warn(
+      'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
+    );
   }
 
   const conversion = getBestConversion(types as AnyData[], restrictTo);
@@ -531,7 +551,7 @@ export function convertToCommonType(
     return undefined;
   }
 
-  if (conversion.hasImplicitConversions) {
+  if (DEV && verbose && conversion.hasImplicitConversions) {
     console.warn(
       `Implicit conversions from [\n${
         values
@@ -551,9 +571,39 @@ Consider using explicit conversions instead.`,
   });
 }
 
+export function tryConvertSnippet(
+  ctx: GenerationCtx,
+  value: Snippet,
+  targetDataType: AnyData,
+): Snippet {
+  if (targetDataType === value.dataType) {
+    return value;
+  }
+
+  if (targetDataType.type === 'void') {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type 'void'`,
+    );
+  }
+
+  const converted = convertToCommonType({
+    ctx,
+    values: [value],
+    restrictTo: [targetDataType],
+  });
+
+  if (!converted) {
+    throw new WgslTypeError(
+      `Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
+    );
+  }
+
+  return converted[0] as Snippet;
+}
+
 export function convertStructValues(
   ctx: GenerationCtx,
-  structType: AnyWgslStruct,
+  structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
   const propKeys = Object.keys(structType.propTypes);
@@ -565,7 +615,11 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const converted = convertToCommonType(ctx, [val], [targetType as AnyData]);
+    const converted = convertToCommonType({
+      ctx,
+      values: [val],
+      restrictTo: [targetType as AnyData],
+    });
     return converted?.[0] ?? val;
   });
 }
@@ -592,7 +646,10 @@ export function coerceToSnippet(value: unknown): Snippet {
       throw new Error('Tried to coerce array without a context');
     }
 
-    const converted = convertToCommonType(context, coerced as Snippet[]);
+    const converted = convertToCommonType({
+      ctx: context,
+      values: coerced as Snippet[],
+    });
     const commonType = getBestConversion(
       coerced.map((v) => v.dataType as AnyData),
     )?.targetType as AnyWgslData | undefined;

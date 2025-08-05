@@ -1,3 +1,7 @@
+/**
+ * @module typegpu/std
+ */
+
 export { discard } from './discard.ts';
 
 // deno-fmt-ignore
@@ -37,6 +41,7 @@ export {
   reflect,
   sign,
   sin,
+  smoothstep,
   sqrt,
   tanh
 } from './numeric.ts';

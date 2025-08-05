@@ -5,10 +5,10 @@ import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
-import babel from './babel.ts';
 import {
   type Context,
   defaultOptions,
+  earlyPruneRegex,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
@@ -88,9 +88,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
       name: 'unplugin-typegpu' as const,
       enforce: options.enforce,
       transform: {
-        filter: {
-          id: options,
-        },
+        filter: options.earlyPruning
+          ? {
+            id: options,
+            code: earlyPruneRegex,
+          }
+          : {
+            id: options,
+          },
         handler(code, id) {
           const ctx: Context = {
             tgpuAliases: new Set<string>(
@@ -100,9 +105,22 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             autoNamingEnabled: options.autoNamingEnabled,
           };
 
-          const ast = this.parse(code, {
-            allowReturnOutsideFunction: true,
-          }) as Node;
+          let ast: Node;
+          try {
+            ast = this.parse(code, {
+              lang: 'ts',
+              allowReturnOutsideFunction: true,
+            }) as Node;
+          } catch (cause) {
+            console.warn(
+              `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
+                typeof cause === 'object' && cause && 'message' in cause
+                  ? cause.message
+                  : cause
+              }`,
+            );
+            return undefined;
+          }
 
           const tgslFunctionDefs: {
             def: FunctionNode;
@@ -163,20 +181,14 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             },
           });
 
-          for (
-            const {
-              def,
-              name,
-            } of tgslFunctionDefs
-          ) {
+          for (const { def, name } of tgslFunctionDefs) {
             const { params, body, externalNames } = transpileFn(def);
             const isFunctionStatement = def.type === 'FunctionDeclaration';
 
             if (
               isFunctionStatement &&
               name &&
-              code
-                  .slice(0, def.start)
+              code.slice(0, def.start)
                   .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
             ) {
               console.warn(
@@ -187,7 +199,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             const metadata = `{
               v: ${FORMAT_VERSION},
               ast: ${embedJSON({ params, body, externalNames })},
-              externals: {${externalNames.join(', ')}},
+              get externals() { return {${externalNames.join(', ')}}; },
             }`;
 
             assignMetadata(magicString, def, metadata);
@@ -215,4 +227,6 @@ export const webpackPlugin = typegpu.webpack;
 export const rspackPlugin = typegpu.rspack;
 export const esbuildPlugin = typegpu.esbuild;
 export const farmPlugin = typegpu.farm;
-export const babelPlugin = babel;
+
+export { default as babelPlugin } from './babel.ts';
+export { default as bunPlugin } from './bun.ts';

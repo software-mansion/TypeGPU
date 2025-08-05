@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -14,7 +14,7 @@ import {
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { isSnippetNumeric, sub } from './numeric.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {

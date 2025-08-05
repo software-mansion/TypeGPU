@@ -4,7 +4,8 @@ import type {
   TgpuStorageTexture,
 } from '../core/texture/texture.ts';
 import type { ChannelData, TexelData } from '../core/texture/texture.ts';
-import { snip } from '../data/dataTypes.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
@@ -19,7 +20,6 @@ import {
   type v4u,
   Void,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
 
 type TextureSampleOverload = {
   <T extends TgpuSampledTexture<'1d'>>(
