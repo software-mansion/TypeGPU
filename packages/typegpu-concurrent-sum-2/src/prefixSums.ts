@@ -1,4 +1,5 @@
 import tgpu, {
+  TgpuFn,
   type StorageFlag,
   type TgpuBuffer,
   type TgpuComputePipeline,
@@ -6,12 +7,11 @@ import tgpu, {
   type TgpuRoot,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import { scanLayout, uniformAddLayout, workgroupSize } from './schemas.ts';
+import { identitySlot, operatorSlot, scanLayout, uniformAddLayout, workgroupSize } from './schemas.ts';
 import { scanBlock } from './compute/scan.ts';
 import { uniformAdd } from './compute/applySums.ts';
 
 export class PrefixSumComputer {
-  private root: TgpuRoot;
   private scanPipeline?: TgpuComputePipeline;
   private addPipeline?: TgpuComputePipeline;
   private scratchBuffers: Map<
@@ -21,14 +21,15 @@ export class PrefixSumComputer {
   private qs: TgpuQuerySet<'timestamp'> | null = null;
   private first = true;
 
-  constructor(root: TgpuRoot) {
+  constructor(private root: TgpuRoot, private operatorFn: (x: number, y: number) => number, private identity: number) {
     this.root = root;
     this.qs = root.createQuerySet('timestamp', 2);
   }
 
   private getScanPipeline(): TgpuComputePipeline {
     if (!this.scanPipeline) {
-      this.scanPipeline = this.root['~unstable'].withCompute(scanBlock)
+      this.scanPipeline = this.root['~unstable'].with(operatorSlot, this.operatorFn as unknown as TgpuFn).with(identitySlot, this.identity)
+      .withCompute(scanBlock)
         .createPipeline();
     }
     return this.scanPipeline;
@@ -139,8 +140,10 @@ export class PrefixSumComputer {
 export function concurrentSum(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  operatorFn: (x: number, y: number) => number,
+  identity: number,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  const computer = new PrefixSumComputer(root);
+  const computer = new PrefixSumComputer(root, operatorFn, identity);
   const result = computer.compute(buffer);
 
   return result;

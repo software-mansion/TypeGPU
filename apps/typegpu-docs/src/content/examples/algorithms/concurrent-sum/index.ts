@@ -21,7 +21,7 @@ button.addEventListener('click', async () => {
   buffer.write(someData);
 
 const t1 = performance.now();
-const sum = concurrentSum(root, buffer);
+const sum = concurrentSum(root, buffer, std.add, 0);
 await root.device.queue.onSubmittedWorkDone();
 const t2 = performance.now();
 

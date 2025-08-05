@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { scanLayout, workgroupSize } from '../schemas.ts';
+import { identitySlot, operatorSlot, scanLayout, workgroupSize } from '../schemas.ts';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -48,14 +48,14 @@ export const scanBlock = tgpu['~unstable'].computeFn({
     if (localIdx < d_val) {
       const ai = offset * (2 * localIdx + 1) - 1;
       const bi = offset * (2 * localIdx + 2) - 1;
-      workgroupMemory.$[bi]! += workgroupMemory.$[ai] as number;
+      workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi],workgroupMemory.$[ai] as number);
     }
     offset <<= 1;
   }
 
   if (localIdx === 0) {
-    scanLayout.$.sums[globalWid]! = workgroupMemory.$[workgroupSize - 1] as number;
-    workgroupMemory.$[workgroupSize - 1] = d.f32(0);
+    scanLayout.$.sums[globalWid] = workgroupMemory.$[workgroupSize - 1] as number;
+    workgroupMemory.$[workgroupSize - 1] = d.f32(identitySlot.$);
   }
 
   // Downsweep
@@ -65,23 +65,23 @@ export const scanBlock = tgpu['~unstable'].computeFn({
     if (localIdx < d_val) {
       const ai = offset * (2 * localIdx + 1) - 1;
       const bi = offset * (2 * localIdx + 2) - 1;
-      const t = workgroupMemory.$[ai]!;
-      workgroupMemory.$[ai]! = workgroupMemory.$[bi] as number;
-      workgroupMemory.$[bi]! += t;
+      const t = workgroupMemory.$[ai];
+      workgroupMemory.$[ai] = workgroupMemory.$[bi] as number;
+      workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi], t);
     }
   }
 
   std.workgroupBarrier();
 
   // Add the scanned sum from shared memory to partial sums and write back
-  const scannedSum = workgroupMemory.$[localIdx]!;
+  const scannedSum = workgroupMemory.$[localIdx];
 
   for (let i = d.u32(0); i < 8; i++) {
     if (baseIdx + i < arrayLength) {
       if (i === 0) {
-        scanLayout.$.input[baseIdx + i]! = scannedSum;
+        scanLayout.$.input[baseIdx + i] = scannedSum;
       } else {
-        scanLayout.$.input[baseIdx + i]! = scannedSum + partialSums[i - 1]!;
+        scanLayout.$.input[baseIdx + i] = scannedSum + partialSums[i - 1]!;
       }
     }
   }
