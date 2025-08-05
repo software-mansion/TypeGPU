@@ -137,4 +137,63 @@ describe('wgslGenerator', () => {
       }`),
     );
   });
+
+  it('resolves infix operator for buffers', ({ root }) => {
+    const someUniform = root.createUniform(d.vec4f);
+    const someBuffer = root.createBuffer(d.vec2f).$usage('storage');
+    const someFixedUsage = someBuffer.as('mutable');
+
+    const testFn = tgpu.fn([])(() => {
+      const v2 = someUniform.$.mul(2);
+      const v3 = someUniform.$.add(d.vec3f().zxzx);
+      const v4 = someFixedUsage.$.add(someUniform.$.ww);
+    });
+
+    expect(tgpu.resolve({ externals: { testFn } })).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> someUniform_1: vec4f;
+
+      @group(0) @binding(1) var<storage, read_write> someBuffer_2: vec2f;
+
+      fn testFn_0() {
+        var v2 = (someUniform_1 * 2);
+        var v3 = (someUniform_1 + vec3f().zxzx);
+        var v4 = (someBuffer_2 + someUniform_1.ww);
+      }"
+    `);
+  });
+
+  it('resolves infix operator for derived and slots', () => {
+    const slot = tgpu.slot(d.vec3f(1, 2, 3));
+    const derived = tgpu['~unstable'].derived(() => d.vec3f(slot.$.zyx));
+
+    const testFn = tgpu.fn([])(() => {
+      const v1 = slot.$.add(derived.$);
+      const v2 = derived.$.mul(slot.$);
+    });
+
+    expect(tgpu.resolve({ externals: { testFn } })).toMatchInlineSnapshot(`
+      "fn testFn_0() {
+        var v1 = (vec3f(1, 2, 3) + vec3f(3, 2, 1));
+        var v2 = (vec3f(3, 2, 1) * vec3f(1, 2, 3));
+      }"
+    `);
+  });
+
+  it('resolves infix operator for layouts', () => {
+    const layout = tgpu.bindGroupLayout({
+      a: { storage: d.vec4f },
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const v1 = layout.$.a.add(1);
+    });
+
+    expect(tgpu.resolve({ externals: { testFn } })).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> a_1: vec4f;
+
+      fn testFn_0() {
+        var v1 = (a_1 + 1);
+      }"
+    `);
+  });
 });

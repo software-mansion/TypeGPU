@@ -381,6 +381,8 @@ export function generateExpression(
     }
 
     if (callee.value instanceof InfixDispatch) {
+      const lhs = callee.value.lhs;
+
       // Infix operator dispatch.
       if (!argNodes[0]) {
         throw new WgslTypeError(
@@ -388,7 +390,7 @@ export function generateExpression(
         );
       }
       return callee.value.operator(
-        callee.value.lhs,
+        snip(ctx.resolve(lhs.value), lhs.dataType),
         generateExpression(ctx, argNodes[0]),
       );
     }
