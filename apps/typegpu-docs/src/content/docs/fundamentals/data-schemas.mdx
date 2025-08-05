@@ -155,10 +155,6 @@ the purpose of these `std` functions is to enable working on vectors and matrice
 
 For arithmetic operators, you can also use the infix notation.
 
-:::note
-Infix operators return completely new objects, they don't modify in-place.
-:::
-
 ```ts twoslash
 import * as d from 'typegpu/data';
 // ---cut---
@@ -168,6 +164,10 @@ const v2 = d.vec2f(3, 4);
 const addition = v1.add(v2); // same as std.add(v1, v2)
 const multiplication = v1.mul(v2).mul(3); // same as std.mul(std.mul(v1, v2), 3)
 ```
+
+:::note
+Infix operators return completely new objects, they don't modify in-place.
+:::
 
 ## Structs
 
@@ -262,6 +262,10 @@ const Fish = d.struct({
 const instance = Fish({ kind: 0, state: { pos: d.vec3f(), vel: d.vec3f() } });
 //    ^?
 ```
+
+:::caution
+You cannot use nested structs in [vertex layouts](/TypeGPU/fundamentals/vertex-layouts).
+:::
 
 If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
 
