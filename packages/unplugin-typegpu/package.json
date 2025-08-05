@@ -129,7 +129,7 @@
   },
   "devDependencies": {
     "@babel/template": "^7.27.2",
-    "@babel/types": "^7.26.5",
+    "@babel/types": "^7.28.2",
     "@rollup/plugin-virtual": "^3.0.2",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/babel__standalone": "^7.1.9",

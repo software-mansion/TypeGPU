@@ -52,7 +52,7 @@
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@babel/parser": "^7.27.0",
-    "@babel/types": "7.26.5",
+    "@babel/types": "7.28.2",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "acorn": "^8.14.1",
     "tsup": "catalog:build",
