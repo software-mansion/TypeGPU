@@ -244,6 +244,25 @@ const boid = Boid({
 });
 ```
 
+Structs can also be nested.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+//---cut---
+const FishState = d.struct({
+  pos: d.vec3f,
+  vel: d.vec3f,
+});
+
+const Fish = d.struct({
+  kind: d.u32,
+  state: FishState, // nested struct
+});
+
+const instance = Fish({ kind: 0, state: { pos: d.vec3f(), vel: d.vec3f() } });
+//    ^?
+```
+
 If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
 
 ```ts twoslash
