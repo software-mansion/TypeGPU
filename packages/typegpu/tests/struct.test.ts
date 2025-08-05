@@ -21,6 +21,7 @@ import {
 import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { builtinStruct } from '../src/data/struct.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -313,11 +314,11 @@ describe('struct', () => {
             prop1: vec2f,
             prop2: u32,
           }
-  
+
           struct Outer {
             nested: Nested,
           }
-  
+
           fn testFunction() {
             var defaultValue = Outer();
           }
@@ -342,7 +343,7 @@ describe('struct', () => {
           x: u32,
           y: f32,
         }
-  
+
         fn testFn() {
           var myStruct = TestStruct(1, 2);
           var myClone = myStruct;
@@ -369,12 +370,32 @@ describe('struct', () => {
           x: u32,
           y: f32,
         }
-  
+
         fn testFn() {
           var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
           var myClone = myStructs[0];
           return;
         }`),
+    );
+  });
+});
+
+describe('builtinStruct', () => {
+  it('can be used to create a builtin struct (does not add declaration and alter the name)', () => {
+    const TestStruct = builtinStruct({
+      a: f32,
+      b: vec2u,
+    }, '__someBuiltinStruct');
+
+    const testFn = tgpu.fn([])(() => {
+      const myStruct = TestStruct({ a: 1.0, b: vec2u(2, 3) });
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+    fn testFn() {
+      var myStruct = __someBuiltinStruct(1, vec2u(2, 3));
+    }`),
     );
   });
 });

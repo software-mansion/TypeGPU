@@ -29,7 +29,7 @@ import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface BaseData {
-  readonly [$internal]: true;
+  readonly [$internal]: true | Record<string, unknown>;
   readonly type: string;
   readonly [$repr]: unknown;
 }
@@ -655,6 +655,17 @@ export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
 
+export type AnySignedVecInstance =
+  | v2i
+  | v2f
+  | v2h
+  | v3i
+  | v3f
+  | v3h
+  | v4i
+  | v4f
+  | v4h;
+
 export type AnyNumericVec2Instance = v2f | v2h | v2i | v2u;
 export type AnyNumericVec3Instance = v3f | v3h | v3i | v3u;
 export type AnyNumericVec4Instance = v4f | v4h | v4i | v4u;
@@ -1277,6 +1288,9 @@ export interface WgslStruct<
   // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
   TProps extends Record<string, BaseData> = any,
 > extends BaseData, TgpuNamable {
+  readonly [$internal]: {
+    builtinName: string | undefined;
+  };
   readonly type: 'struct';
   readonly propTypes: TProps;
 

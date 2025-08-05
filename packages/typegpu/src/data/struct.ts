@@ -38,12 +38,23 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
   return structSchema as WgslStruct<TProps>;
 }
 
+export function builtinStruct<TProps extends Record<string, AnyWgslData>>(
+  props: TProps,
+  builtinName: string,
+): WgslStruct<TProps> {
+  const structSchema = struct(props);
+  structSchema[$internal].builtinName = builtinName;
+  return structSchema;
+}
+
 // --------------
 // Implementation
 // --------------
 
 const WgslStructImpl = {
-  [$internal]: true,
+  [$internal]: {
+    builtinName: undefined,
+  },
   type: 'struct',
 
   $name(label: string) {

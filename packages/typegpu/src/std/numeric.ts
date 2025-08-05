@@ -2,14 +2,18 @@ import { vecTypeToConstructor } from '../data/vector.ts';
 import type { AnyData, TgpuDualFn } from '../data/dataTypes.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
-import { f32 } from '../data/numeric.ts';
+import { f16, f32, i32, u32 } from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AbstractFloat,
   type AbstractInt,
+  type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
+  type AnyIntegerVecInstance,
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type AnySignedVecInstance,
+  type AnyWgslData,
   type F16,
   type F32,
   type I32,
@@ -18,19 +22,13 @@ import {
   isVecInstance,
   type mBaseForVec,
   type U32,
-  type v2f,
-  type v2h,
-  type v2i,
   type v3f,
   type v3h,
-  type v3i,
-  type v4f,
-  type v4h,
-  type v4i,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
+import { builtinStruct } from '../data/struct.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -55,6 +53,49 @@ export function isNumericSchema(
   );
 }
 
+export const abs = createDualImpl(
+  // CPU implementation
+  <T extends NumVec | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.abs(value) as T;
+    }
+    return VectorOps.abs[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`abs(${value.value})`, value.dataType),
+  'abs',
+);
+
+export const acos = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acos(value) as T;
+    }
+    return VectorOps.acos[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`acos(${value.value})`, value.dataType),
+  'acos',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#acosh-builtin
+ */
+export const acosh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acosh(value) as T;
+    }
+    return VectorOps.acosh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`acosh(${value.value})`, value.dataType),
+  'acosh',
+);
+
 function cpuAdd(lhs: number, rhs: number): number; // default addition
 function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
 function cpuAdd<T extends NumVec>(lhs: T, rhs: number): T; // mixed addition
@@ -62,10 +103,10 @@ function cpuAdd<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise ad
 function cpuAdd<
   // union overload
   Lhs extends number | NumVec | Mat,
-  Rhs extends (Lhs extends number ? number | NumVec
+  Rhs extends Lhs extends number ? number | NumVec
     : Lhs extends NumVec ? number | Lhs
     : Lhs extends Mat ? Lhs
-    : never),
+    : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
@@ -99,150 +140,72 @@ export const add = createDualImpl(
   'unify',
 );
 
-function cpuSub(lhs: number, rhs: number): number; // default subtraction
-function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
-function cpuSub<T extends NumVec>(lhs: T, rhs: number): T; // mixed subtraction
-function cpuSub<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
-function cpuSub<
-  // union overload
-  Lhs extends number | NumVec | Mat,
-  Rhs extends (Lhs extends number ? number | NumVec
-    : Lhs extends NumVec ? number | Lhs
-    : Lhs extends Mat ? Lhs
-    : never),
->(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  // while illegal on the wgsl side, we can do this in js
-  return cpuAdd(lhs, mul(-1, rhs));
-}
-
-export const sub = createDualImpl(
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#asin-builtin
+ */
+export const asin = createDualImpl(
   // CPU implementation
-  cpuSub,
-  // GPU implementation
-  (lhs, rhs) =>
-    snip(
-      `(${lhs.value} - ${rhs.value})`,
-      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
-    ),
-  'sub',
-  'unify',
-);
-
-function cpuMul(lhs: number, rhs: number): number; // default multiplication
-function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
-function cpuMul<MV extends NumVec | Mat>(lhs: MV, rhs: number): MV; // scale
-function cpuMul<V extends NumVec>(lhs: V, rhs: V): V; // component-wise multiplication
-function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: V, rhs: M): V; // row-vector-matrix
-function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: M, rhs: V): V; // matrix-column-vector
-function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
-function cpuMul<
-  // union overload
-  Lhs extends number | NumVec | Mat,
-  Rhs extends (
-    Lhs extends number ? number | NumVec | Mat
-      : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
-      : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
-      : never
-  ),
->(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs * rhs; // default multiplication
-  }
-  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
-  }
-  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
-  }
-  if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
-  }
-  if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
-    return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
-  }
-  if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
-    return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
-  }
-  if (isMatInstance(lhs) && isMatInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
-  }
-
-  throw new Error('Mul called with invalid arguments.');
-}
-
-export const mul = createDualImpl(
-  // CPU implementation
-  cpuMul,
-  // GPU implementation
-  (lhs, rhs) => {
-    const returnType = isSnippetNumeric(lhs)
-      // Scalar * Scalar/Vector/Matrix
-      ? rhs.dataType
-      : isSnippetNumeric(rhs)
-      // Vector/Matrix * Scalar
-      ? lhs.dataType
-      : lhs.dataType.type.startsWith('vec')
-      // Vector * Vector/Matrix
-      ? lhs.dataType
-      : rhs.dataType.type.startsWith('vec')
-      // Matrix * Vector
-      ? rhs.dataType
-      // Matrix * Matrix
-      : lhs.dataType;
-    return snip(`(${lhs.value} * ${rhs.value})`, returnType);
-  },
-  'mul',
-);
-
-type DivOverload = {
-  (lhs: number, rhs: number): number; // default js division
-  <T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
-  <T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
-  <T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
-};
-
-export const div: TgpuDualFn<DivOverload> = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(lhs: T, rhs: T): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof lhs === 'number' && isVecInstance(rhs)) {
-      const schema = vecTypeToConstructor[rhs.kind];
-      return VectorOps.div[rhs.kind](schema(lhs), rhs) as T;
-    }
-    if (isVecInstance(lhs) && typeof rhs === 'number') {
-      const schema = vecTypeToConstructor[lhs.kind];
-      return VectorOps.div[lhs.kind](lhs, schema(rhs)) as T;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.div[lhs.kind](lhs, rhs) as T;
-    }
-    throw new Error('Div called with invalid arguments.');
-  },
-  // GPU implementation
-  (lhs, rhs) => {
-    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return snip(`(f32(${lhs.value}) / ${rhs.value})`, f32);
-    }
-    return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
-  },
-  'div',
-);
-
-export const abs = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
-      return Math.abs(value) as T;
+      return Math.asin(value) as T;
     }
-    return VectorOps.abs[value.kind](value) as T;
+    return VectorOps.asin[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => snip(`abs(${value.value})`, value.dataType),
-  'abs',
+  (value) => snip(`asin(${value.value})`, value.dataType),
+  'asin',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#asinh-builtin
+ */
+export const asinh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.asinh(value) as T;
+    }
+    return VectorOps.asinh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`asinh(${value.value})`, value.dataType),
+  'asinh',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#atan-builtin
+ */
+export const atan = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.atan(value) as T;
+    }
+    return VectorOps.atan[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`atan(${value.value})`, value.dataType),
+  'atan',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#atanh-builtin
+ */
+export const atanh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.atanh(value) as T;
+    }
+    return VectorOps.atanh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`atanh(${value.value})`, value.dataType),
+  'atanh',
 );
 
 export const atan2 = createDualImpl(
@@ -259,53 +222,7 @@ export const atan2 = createDualImpl(
   // GPU implementation
   (y, x) => snip(`atan2(${y.value}, ${x.value})`, y.dataType),
   'atan2',
-);
-
-export const acos = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.acos(value) as T;
-    }
-    return VectorOps.acos[value.kind](value) as T;
-  },
-  // GPU implementation
-  (value) => snip(`acos(${value.value})`, value.dataType),
-  'acos',
-);
-
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#acosh-builtin
- */
-export const acosh = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.acosh(value) as T;
-    }
-    return VectorOps.acosh[value.kind](value) as T;
-  },
-  // GPU implementation
-  (value) => snip(`acosh(${value.value})`, value.dataType),
-  'acosh',
-);
-
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#asin-builtin
- */
-export const asin = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.asin(value) as T;
-    }
-    return VectorOps.asin[value.kind](value) as T;
-  },
-  // GPU implementation
-  (value) => snip(`asin(${value.value})`, value.dataType),
-  'asin',
+  'unify',
 );
 
 /**
@@ -381,6 +298,42 @@ export const cosh = createDualImpl(
   'cosh',
 );
 
+export const countLeadingZeros = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`countLeadingZeros(${value.value})`, value.dataType),
+  'countLeadingZeros',
+);
+
+export const countOneBits = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`countOneBits(${value.value})`, value.dataType),
+  'countOneBits',
+);
+
+export const countTrailingZeros = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`countTrailingZeros(${value.value})`, value.dataType),
+  'countTrailingZeros',
+);
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#cross-builtin
@@ -391,6 +344,89 @@ export const cross = createDualImpl(
   // GPU implementation
   (a, b) => snip(`cross(${a.value}, ${b.value})`, a.dataType),
   'cross',
+);
+
+export const degrees = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return ((value * 180) / Math.PI) as T;
+    }
+    throw new Error(
+      'CPU implementation for degrees on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`degrees(${value.value})`, value.dataType),
+  'degrees',
+);
+
+export const determinant = createDualImpl(
+  // CPU implementation
+  (value: AnyMatInstance): number => {
+    throw new Error(
+      'CPU implementation for determinant not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  // TODO: The return type is potentially wrong here, it should return whatever the matrix element type is.
+  (value) => snip(`determinant(${value.value})`, f32),
+  'determinant',
+);
+
+export const distance = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(a: T, b: T): number => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return Math.abs(a - b);
+    }
+    return length(
+      sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
+    ) as number;
+  },
+  // GPU implementation
+  (a, b) =>
+    snip(
+      `distance(${a.value}, ${b.value})`,
+      a.dataType.type === 'f16' || a.dataType.type.endsWith('h') ? f16 : f32,
+    ),
+  'distance',
+);
+
+type DivOverload = {
+  (lhs: number, rhs: number): number; // default js division
+  <T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
+  <T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
+  <T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
+};
+
+export const div: TgpuDualFn<DivOverload> = createDualImpl(
+  // CPU implementation
+  <T extends NumVec | number>(lhs: T, rhs: T): T => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return (lhs / rhs) as T;
+    }
+    if (typeof lhs === 'number' && isVecInstance(rhs)) {
+      const schema = vecTypeToConstructor[rhs.kind];
+      return VectorOps.div[rhs.kind](schema(lhs), rhs) as T;
+    }
+    if (isVecInstance(lhs) && typeof rhs === 'number') {
+      const schema = vecTypeToConstructor[lhs.kind];
+      return VectorOps.div[lhs.kind](lhs, schema(rhs)) as T;
+    }
+    if (isVecInstance(lhs) && isVecInstance(rhs)) {
+      return VectorOps.div[lhs.kind](lhs, rhs) as T;
+    }
+    throw new Error('Div called with invalid arguments.');
+  },
+  // GPU implementation
+  (lhs, rhs) => {
+    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
+      return snip(`(f32(${lhs.value}) / ${rhs.value})`, f32);
+    }
+    return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
+  },
+  'div',
 );
 
 /**
@@ -406,12 +442,122 @@ export const dot = createDualImpl(
   'dot',
 );
 
-export const normalize = createDualImpl(
+export const dot4I8Packed = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
+  (e1: number, e2: number): number => {
+    throw new Error(
+      'CPU implementation for dot4I8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
   // GPU implementation
-  (v) => snip(`normalize(${v.value})`, v.dataType),
-  'normalize',
+  (e1, e2) => snip(`dot4I8Packed(${e1.value}, ${e2.value})`, i32),
+  'dot4I8Packed',
+  [i32, i32],
+);
+
+export const dot4U8Packed = createDualImpl(
+  // CPU implementation
+  (e1: number, e2: number): number => {
+    throw new Error(
+      'CPU implementation for dot4U8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e1, e2) => snip(`dot4U8Packed(${e1.value}, ${e2.value})`, u32),
+  'dot4U8Packed',
+  [u32, u32],
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#exp-builtin
+ */
+export const exp = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.exp(value) as T;
+    }
+    return VectorOps.exp[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`exp(${value.value})`, value.dataType),
+  'exp',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#exp2-builtin
+ */
+export const exp2 = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return (2 ** value) as T;
+    }
+    return VectorOps.exp2[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`exp2(${value.value})`, value.dataType),
+  'exp2',
+);
+
+export const extractBits = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(
+    e: T,
+    offset: number,
+    count: number,
+  ): T => {
+    throw new Error(
+      'CPU implementation for extractBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e, offset, count) =>
+    snip(
+      `extractBits(${e.value}, ${offset.value}, ${count.value})`,
+      e.dataType,
+    ),
+  'extractBits',
+  (e, offset, count) => [e.dataType as AnyWgslData, u32, u32],
+);
+
+export const faceForward = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T => {
+    throw new Error(
+      'CPU implementation for faceForward not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e1, e2, e3) =>
+    snip(`faceForward(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
+  'faceForward',
+);
+
+export const firstLeadingBit = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`firstLeadingBit(${value.value})`, value.dataType),
+  'firstLeadingBit',
+);
+
+export const firstTrailingBit = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`firstTrailingBit(${value.value})`, value.dataType),
+  'firstTrailingBit',
 );
 
 /**
@@ -431,6 +577,22 @@ export const floor = createDualImpl(
   'floor',
 );
 
+export const fma = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T => {
+    if (typeof e1 === 'number') {
+      return (e1 * (e2 as number) + (e3 as number)) as T;
+    }
+    throw new Error(
+      'CPU implementation for fma on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e1, e2, e3) =>
+    snip(`fma(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
+  'fma',
+);
+
 export const fract = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(a: T): T => {
@@ -442,6 +604,80 @@ export const fract = createDualImpl(
   // GPU implementation
   (a) => snip(`fract(${a.value})`, a.dataType),
   'fract',
+);
+
+export const frexp = createDualImpl(
+  // CPU implementation
+  (value: number): {
+    fract: number;
+    exp: number;
+  } => {
+    throw new Error(
+      'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) =>
+    snip(
+      `frexp(${value.value})`,
+      builtinStruct({
+        fract: f32,
+        exp: i32,
+      }, '__frexp_result_f32'),
+    ),
+  'frexp',
+  [f32],
+);
+
+export const insertBits = createDualImpl(
+  // CPU implementation
+  <T extends AnyIntegerVecInstance | number>(
+    e: T,
+    newbits: T,
+    offset: number,
+    count: number,
+  ): T => {
+    throw new Error(
+      'CPU implementation for insertBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e, newbits, offset, count) =>
+    snip(
+      `insertBits(${e.value}, ${newbits.value}, ${offset.value}, ${count.value})`,
+      e.dataType,
+    ),
+  'insertBits',
+);
+
+export const inverseSqrt = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return (1 / Math.sqrt(value)) as T;
+    }
+    throw new Error(
+      'CPU implementation for inverseSqrt on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`inverseSqrt(${value.value})`, value.dataType),
+  'inverseSqrt',
+);
+
+export const ldexp = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(
+    e1: T,
+    e2: AnyIntegerVecInstance | number,
+  ): T => {
+    throw new Error(
+      'CPU implementation for ldexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e1, e2) => snip(`ldexp(${e1.value}, ${e2.value})`, e1.dataType),
+  'ldexp',
 );
 
 /**
@@ -531,37 +767,34 @@ export const min = createDualImpl(
   'unify',
 );
 
-export const sign = createDualImpl(
-  // CPU implementation
-  //         \/ specifically no unsigned variants
-  <T extends v2f | v2h | v2i | v3f | v3h | v3i | v4f | v4h | v4i | number>(
-    e: T,
-  ): T => {
-    if (typeof e === 'number') {
-      return Math.sign(e) as T;
-    }
-    return VectorOps.sign[e.kind](e) as T;
-  },
-  // GPU implementation
-  (e) => snip(`sign(${e.value})`, e.dataType),
-  'sign',
-);
+type MixOverload = {
+  (e1: number, e2: number, e3: number): number;
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+};
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#sin-builtin
- */
-export const sin = createDualImpl(
+export const mix: MixOverload = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.sin(value) as T;
+  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T | number): T => {
+    if (typeof e1 === 'number') {
+      if (typeof e3 !== 'number' || typeof e2 !== 'number') {
+        throw new Error(
+          'When e1 and e2 are numbers, the blend factor must be a number.',
+        );
+      }
+      return (e1 * (1 - e3) + e2 * e3) as T;
     }
-    return VectorOps.sin[value.kind](value) as T;
+
+    if (typeof e1 === 'number' || typeof e2 === 'number') {
+      throw new Error('e1 and e2 need to both be vectors of the same kind.');
+    }
+
+    return VectorOps.mix[e1.kind](e1, e2, e3) as T;
   },
   // GPU implementation
-  (value) => snip(`sin(${value.value})`, value.dataType),
-  'sin',
+  (e1, e2, e3) =>
+    snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
+  'mix',
 );
 
 type ModOverload = {
@@ -608,38 +841,102 @@ export const mod: ModOverload = createDualImpl(
   'mod',
 );
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#exp-builtin
- */
-export const exp = createDualImpl(
+export const modf = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.exp(value) as T;
-    }
-    return VectorOps.exp[value.kind](value) as T;
+  <T extends AnyFloatVecInstance | number>(value: T) => {
+    throw new Error(
+      'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (value) => snip(`exp(${value.value})`, value.dataType),
-  'exp',
+  (value) => snip(`modf(${value.value})`, value.dataType),
+  'modf',
 );
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#exp2-builtin
- */
-export const exp2 = createDualImpl(
+function cpuMul(lhs: number, rhs: number): number; // default multiplication
+function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
+function cpuMul<MV extends NumVec | Mat>(lhs: MV, rhs: number): MV; // scale
+function cpuMul<V extends NumVec>(lhs: V, rhs: V): V; // component-wise multiplication
+function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: V, rhs: M): V; // row-vector-matrix
+function cpuMul<M extends Mat, V extends vBaseForMat<M>>(lhs: M, rhs: V): V; // matrix-column-vector
+function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
+function cpuMul<
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends Lhs extends number ? number | NumVec | Mat
+    : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
+    : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
+    : never,
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs * rhs; // default multiplication
+  }
+  if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
+    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
+  }
+  if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
+    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
+  }
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
+  }
+  if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
+    return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
+  }
+  if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
+    return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
+  }
+  if (isMatInstance(lhs) && isMatInstance(rhs)) {
+    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
+  }
+
+  throw new Error('Mul called with invalid arguments.');
+}
+
+export const mul = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
+  cpuMul,
+  // GPU implementation
+  (lhs, rhs) => {
+    const returnType = isSnippetNumeric(lhs)
+      // Scalar * Scalar/Vector/Matrix
+      ? rhs.dataType
+      : isSnippetNumeric(rhs)
+      // Vector/Matrix * Scalar
+      ? lhs.dataType
+      : lhs.dataType.type.startsWith('vec')
+      // Vector * Vector/Matrix
+      ? lhs.dataType
+      : rhs.dataType.type.startsWith('vec')
+      // Matrix * Vector
+      ? rhs.dataType
+      // Matrix * Matrix
+      : lhs.dataType;
+    return snip(`(${lhs.value} * ${rhs.value})`, returnType);
+  },
+  'mul',
+);
+
+export const neg = createDualImpl(
+  // CPU implementation
+  <T extends NumVec | number>(value: T): T => {
     if (typeof value === 'number') {
-      return (2 ** value) as T;
+      return -value as T;
     }
-    return VectorOps.exp2[value.kind](value) as T;
+    return VectorOps.neg[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => snip(`exp2(${value.value})`, value.dataType),
-  'exp2',
+  (value) => snip(`-(${value.value})`, value.dataType),
+  'neg',
+);
+
+export const normalize = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
+  // GPU implementation
+  (v) => snip(`normalize(${v.value})`, v.dataType),
+  'normalize',
 );
 
 type PowOverload = {
@@ -669,34 +966,31 @@ export const pow: PowOverload = createDualImpl(
   'pow',
 );
 
-type MixOverload = {
-  (e1: number, e2: number, e3: number): number;
-  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
-  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
-};
-
-export const mix: MixOverload = createDualImpl(
+export const quantizeToF16 = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T | number): T => {
-    if (typeof e1 === 'number') {
-      if (typeof e3 !== 'number' || typeof e2 !== 'number') {
-        throw new Error(
-          'When e1 and e2 are numbers, the blend factor must be a number.',
-        );
-      }
-      return (e1 * (1 - e3) + e2 * e3) as T;
-    }
-
-    if (typeof e1 === 'number' || typeof e2 === 'number') {
-      throw new Error('e1 and e2 need to both be vectors of the same kind.');
-    }
-
-    return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for quantizeToF16 not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (e1, e2, e3) =>
-    snip(`mix(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
-  'mix',
+  (value) => snip(`quantizeToF16(${value.value})`, value.dataType),
+  'quantizeToF16',
+);
+
+export const radians = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return ((value * Math.PI) / 180) as T;
+    }
+    throw new Error(
+      'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`radians(${value.value})`, value.dataType),
+  'radians',
 );
 
 export const reflect = createDualImpl(
@@ -708,58 +1002,115 @@ export const reflect = createDualImpl(
   'reflect',
 );
 
-export const distance = createDualImpl(
+export const refract = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(a: T, b: T): number => {
-    if (typeof a === 'number' && typeof b === 'number') {
-      return Math.abs(a - b);
-    }
-    return length(
-      sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
-    ) as number;
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T => {
+    throw new Error(
+      'CPU implementation for refract not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (a, b) => snip(`distance(${a.value}, ${b.value})`, f32),
-  'distance',
+  (e1, e2, e3) =>
+    snip(`refract(${e1.value}, ${e2.value}, ${e3.value})`, e1.dataType),
+  'refract',
+  (
+    e1,
+    e2,
+    e3,
+  ) => [
+    e1.dataType as AnyWgslData,
+    e2.dataType as AnyWgslData,
+    e1.dataType.type === 'f16' || e1.dataType.type.endsWith('h') ? f16 : f32,
+  ],
 );
 
-export const neg = createDualImpl(
+export const reverseBits = createDualImpl(
   // CPU implementation
-  <T extends NumVec | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return -value as T;
-    }
-    return VectorOps.neg[value.kind](value) as T;
+  <T extends AnyIntegerVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (value) => snip(`-(${value.value})`, value.dataType),
-  'neg',
+  (value) => snip(`reverseBits(${value.value})`, value.dataType),
+  'reverseBits',
 );
 
-export const sqrt = createDualImpl(
+export const round = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
-      return Math.sqrt(value) as T;
+      return Math.round(value) as T;
     }
-    return VectorOps.sqrt[value.kind](value) as T;
+    throw new Error(
+      'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (value) => snip(`sqrt(${value.value})`, value.dataType),
-  'sqrt',
+  (value) => snip(`round(${value.value})`, value.dataType),
+  'round',
 );
 
-export const tanh = createDualImpl(
+export const saturate = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
-      return Math.tanh(value) as T;
+      return Math.max(0, Math.min(1, value)) as T;
     }
-    return VectorOps.tanh[value.kind](value) as T;
+    throw new Error(
+      'CPU implementation for saturate on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
   },
   // GPU implementation
-  (value) => snip(`tanh(${value.value})`, value.dataType),
-  'tanh',
+  (value) => snip(`saturate(${value.value})`, value.dataType),
+  'saturate',
+);
+
+export const sign = createDualImpl(
+  // CPU implementation
+  <T extends AnySignedVecInstance | number>(
+    e: T,
+  ): T => {
+    if (typeof e === 'number') {
+      return Math.sign(e) as T;
+    }
+    return VectorOps.sign[e.kind](e) as T;
+  },
+  // GPU implementation
+  (e) => snip(`sign(${e.value})`, e.dataType),
+  'sign',
+);
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#sin-builtin
+ */
+export const sin = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.sin(value) as T;
+    }
+    return VectorOps.sin[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`sin(${value.value})`, value.dataType),
+  'sin',
+);
+
+export const sinh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.sinh(value) as T;
+    }
+    throw new Error(
+      'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`sinh(${value.value})`, value.dataType),
+  'sinh',
 );
 
 export const smoothstep = createDualImpl(
@@ -782,4 +1133,116 @@ export const smoothstep = createDualImpl(
   (edge0, edge1, x) =>
     snip(`smoothstep(${edge0.value}, ${edge1.value}, ${x.value})`, x.dataType),
   'smoothstep',
+);
+
+export const sqrt = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.sqrt(value) as T;
+    }
+    return VectorOps.sqrt[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`sqrt(${value.value})`, value.dataType),
+  'sqrt',
+);
+
+export const step = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(edge: T, x: T): T => {
+    if (typeof edge === 'number') {
+      return (edge <= (x as number) ? 1.0 : 0.0) as T;
+    }
+    throw new Error(
+      'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (edge, x) => snip(`step(${edge.value}, ${x.value})`, edge.dataType),
+  'step',
+);
+
+function cpuSub(lhs: number, rhs: number): number; // default subtraction
+function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
+function cpuSub<T extends NumVec>(lhs: T, rhs: number): T; // mixed subtraction
+function cpuSub<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise subtraction
+function cpuSub<
+  // union overload
+  Lhs extends number | NumVec | Mat,
+  Rhs extends Lhs extends number ? number | NumVec
+    : Lhs extends NumVec ? number | Lhs
+    : Lhs extends Mat ? Lhs
+    : never,
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  // while illegal on the wgsl side, we can do this in js
+  return cpuAdd(lhs, mul(-1, rhs));
+}
+
+export const sub = createDualImpl(
+  // CPU implementation
+  cpuSub,
+  // GPU implementation
+  (lhs, rhs) =>
+    snip(
+      `(${lhs.value} - ${rhs.value})`,
+      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
+    ),
+  'sub',
+  'unify',
+);
+
+export const tan = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.tan(value) as T;
+    }
+    throw new Error(
+      'CPU implementation for tan on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`tan(${value.value})`, value.dataType),
+  'tan',
+);
+
+export const tanh = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.tanh(value) as T;
+    }
+    return VectorOps.tanh[value.kind](value) as T;
+  },
+  // GPU implementation
+  (value) => snip(`tanh(${value.value})`, value.dataType),
+  'tanh',
+);
+
+export const transpose = createDualImpl(
+  // CPU implementation
+  (e: AnyMatInstance) => {
+    throw new Error(
+      'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (e) => {
+    return snip(`transpose(${e.value})`, e.dataType);
+  },
+  'transpose',
+);
+
+export const trunc = createDualImpl(
+  // CPU implementation
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
+    throw new Error(
+      'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  },
+  // GPU implementation
+  (value) => snip(`trunc(${value.value})`, value.dataType),
+  'trunc',
 );
