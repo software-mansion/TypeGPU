@@ -24,14 +24,22 @@ export const grid = tgpu.fn([d.vec2f, d.f32], d.vec3f)((uv, time) => {
   );
 });
 
+/**
+ * Returns a transformation matrix that represents an `angle` rotation
+ * in the XY plane (around the imaginary Z axis)
+ */
+const rotateXY = tgpu.fn([d.f32], d.mat2x2f)((angle) =>
+  d.mat2x2f(
+    /* right */ d.vec2f(std.cos(angle), std.sin(angle)),
+    /* up    */ d.vec2f(-std.sin(angle), std.cos(angle)),
+  )
+);
+
 export const circles = tgpu.fn([d.vec2f, d.f32], d.vec3f)((uv, angle) => {
-  const rotMatY = d.mat4x4f.rotationY(angle);
-  const uvRotated = d.vec4f(uv.x, 1.0, uv.y, 1)
-    .add(d.vec4f(0, 0, -c.sphereCenter.z, 0))
-    .mul(rotMatY);
+  const uvRotated = rotateXY(angle).mul(d.vec2f(uv.x, uv.y - c.sphereCenter.z));
 
   const uvNormalized = std.fract(
-    d.vec2f(uvRotated.x, uvRotated.z).div(c.GRID_SEP),
+    d.vec2f(uvRotated.x, uvRotated.y).div(c.GRID_SEP),
   );
 
   // working with circle centered at (0.5, 0.5)

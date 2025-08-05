@@ -7,14 +7,38 @@ import { sdSphere } from '@typegpu/sdf';
 import { Ray } from './types.ts';
 import * as c from './constants.ts';
 
+/**
+ * Returns a transformation matrix that represents an `angle` rotation
+ * in XY plane (around the Z axis)
+ */
+const rotateAroundZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+  d.mat3x3f(
+    d.vec3f(std.cos(angle), std.sin(angle), 0),
+    d.vec3f(-std.sin(angle), std.cos(angle), 0),
+    d.vec3f(0, 0, 1),
+  )
+);
+
+/**
+ * Returns a transformation matrix that represents an `angle` rotation
+ * in YZ plane (around the X axis)
+ */
+const rotateAroundX = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+  d.mat3x3f(
+    d.vec3f(1, 0, 0),
+    d.vec3f(0, std.cos(angle), std.sin(angle)),
+    d.vec3f(0, -std.sin(angle), std.cos(angle)),
+  )
+);
+
 export const getSphere = tgpu.fn(
   [d.vec3f, d.vec3f, d.vec3f, d.f32],
   Ray,
 )((p, sphereColor, sphereCenter, angle) => {
   const localP = p.sub(sphereCenter); // (0,0) is the center to rotate easily
-  const rotMatZ = d.mat4x4f.rotationZ(-angle * 0.3);
-  const rotMatX = d.mat4x4f.rotationX(-angle * 0.7);
-  const rotatedP = d.vec4f(localP, 1).mul(rotMatZ).mul(rotMatX).xyz;
+  const rotMatZ = rotateAroundZ(-angle * 0.3);
+  const rotMatX = rotateAroundX(-angle * 0.7);
+  const rotatedP = localP.mul(rotMatZ).mul(rotMatX);
 
   // breathing effect
   const radius = d.f32(c.SPHERE_RADIUS) + std.sin(angle);
