@@ -110,26 +110,20 @@ export class PrefixSumComputer {
       input: buffer,
       sums: sumsBuffer,
     });
-    this.getAddPipeline().with(uniformAddLayout, addBg).dispatchWorkgroups(
+    this.getAddPipeline().with(uniformAddLayout, addBg).withTimestampWrites({
+      querySet: this.qs!,
+      endOfPassWriteIndex: 1,
+    }).dispatchWorkgroups(
       numWorkgroups,
     );
   }
 
-  compute(values: number[]): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const numWorkgroups = Math.ceil(values.length / (workgroupSize * 8));
+  compute(buffer:  TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+    const numWorkgroups = Math.ceil(buffer.dataType.elementCount / (workgroupSize * 8));
     const lengthPadded = numWorkgroups * workgroupSize * 8;
 
-    const valuesBuffer = this.root.createBuffer(
-      d.arrayOf(d.f32, lengthPadded),
-      [
-        ...values,
-        ...Array(lengthPadded - values.length).fill(0),
-      ],
-    ).$usage('storage');
-
     // Perform recursive prefix sum
-    this.recursiveScan(valuesBuffer, values.length);
-
+    this.recursiveScan(buffer, buffer.dataType.elementCount);
     this.root['~unstable'].flush();
 
     this.qs?.resolve();
@@ -138,16 +132,16 @@ export class PrefixSumComputer {
       console.log(`Prefix sum computed in ${diff} ms`);
     });
 
-    return valuesBuffer;
+    return buffer;
   }
 }
 
 export function concurrentSum(
   root: TgpuRoot,
-  values: number[],
+  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   const computer = new PrefixSumComputer(root);
-  const result = computer.compute(values);
+  const result = computer.compute(buffer);
 
   return result;
 }
