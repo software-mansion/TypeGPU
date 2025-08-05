@@ -18,7 +18,7 @@ export interface StaticPerlin2DCache {
  * A statically-sized cache for perlin noise generation, which reduces the amount of redundant calculations
  * if sampling is done more than once. If you'd like to change the size of the cache at runtime, see `perlin2d.dynamicCacheConfig`.
  *
- * ### Basic usage
+ * --- Basic usage
  * @example
  * ```ts
  * const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => {

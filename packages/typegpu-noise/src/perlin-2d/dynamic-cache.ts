@@ -72,7 +72,7 @@ const DefaultPerlin2DLayoutPrefix = 'perlin2dCache__' as const;
  *
  * @param options A set of general options for instances of this cache configuration.
  *
- * ### Basic usage
+ * --- Basic usage
  * @example
  * ```ts
  * const cacheConfig = perlin2d.dynamicCacheConfig();

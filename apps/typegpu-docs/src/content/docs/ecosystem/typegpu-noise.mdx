@@ -110,7 +110,6 @@ Using it is as simple as calling the `.sample` function with the desired coordin
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { mul } from 'typegpu/std';
 // ---cut---
 import { perlin2d } from '@typegpu/noise';
 
@@ -118,14 +117,14 @@ const main = tgpu['~unstable'].fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
-  const noise = perlin2d.sample(mul(pos.xy, 0.1)); // Scale the coordinates for smoother noise
+  const noise = perlin2d.sample(pos.xy.mul(0.1)); // Scale the coordinates for smoother noise
   return d.vec4f(noise, noise, noise, 1); // Use the noise value for RGB channels
 });
 ```
 
 This simple usage is enough for most cases, but by default, `perlin.sample` computes the underlying gradients on-demand, per pixel.
 This can be inefficient for large images or when the same noise is sampled multiple times.
-To improve performance, you can precompute the gradients using either a *Static* or a *Dynamic* cache (currently only available for perlin3d).
+To improve performance, you can precompute the gradients using either a *Static* or a *Dynamic* cache. **In our tests, the efficiency gain can be up to 10x!**
 
 ### Static cache
 A static cache presumes that the domain of the noise function is fixed, and cannot change between shader invocations.
@@ -133,16 +132,23 @@ A static cache presumes that the domain of the noise function is fixed, and cann
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-// ---cut---
+const root = await tgpu.init();
 import { perlin3d } from '@typegpu/noise';
 
-const root = await tgpu.init();
-const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
-
-const main = tgpu['~unstable'].fn([])(() => {
+const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
 });
+
+// ---cut---
+const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
+
+const pipeline = root['~unstable']
+  // Plugging the cache into the pipeline
+  .pipe(cache.inject())
+  // ...
+  .withCompute(main)
+  .createPipeline();
 ```
 Or in WebGPU:
 ```ts twoslash
@@ -150,10 +156,10 @@ Or in WebGPU:
 import * as d from 'typegpu/data';
 
 declare const device: GPUDevice;
-// ---cut---
 import tgpu from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 
+// ---cut---
 const root = tgpu.initFromDevice({ device });
 const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
 
@@ -168,5 +174,54 @@ const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
     // ...
   `,
   externals: { perlin3d },
+  config: (cfg) =>
+    cfg.pipe(cache.inject())
+  // Or just:
+  // config: cache.inject()
 });
+```
+
+### Dynamic cache
+
+If you need to change the size of the noise domain at runtime (in between shader invocations)
+without having to recompile the shader, you have to use a dynamic cache. With it comes a more
+complex setup.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { perlin3d } from '@typegpu/noise';
+
+const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
+  const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
+});
+
+const root = await tgpu.init();
+// ---cut---
+const cacheConfig = perlin3d.dynamicCacheConfig();
+// Holds all resources the perlin cache needs access to
+const dynamicLayout = tgpu.bindGroupLayout({ ...cacheConfig.layout });
+
+const pipeline = root['~unstable']
+  // Plugging the cache into the pipeline
+  .pipe(cacheConfig.inject(dynamicLayout.$))
+  // ...
+  .withCompute(main)
+  .createPipeline();
+
+// Instantiating the cache with an initial size.
+const cache = cacheConfig.instance(root, d.vec3u(10, 10, 1));
+
+// A function for updating the size of the cache
+function initBindGroup(size: d.v3u) {
+  cache.size = size;
+  return root.createBindGroup(dynamicLayout, cache.bindings);
+}
+let bindGroup = initBindGroup(d.vec3u(10, 10, 1));
+
+// Dispatching the pipeline
+pipeline
+  .with(dynamicLayout, bindGroup)
+  .dispatchWorkgroups(1);
 ```
