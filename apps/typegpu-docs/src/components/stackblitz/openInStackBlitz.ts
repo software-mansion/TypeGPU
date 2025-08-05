@@ -24,8 +24,7 @@ import index from './stackBlitzIndex.ts?raw';
 const pnpmWorkspaceYaml = type({
   catalogs: {
     build: {
-      tsup: 'string',
-      unbuild: 'string',
+      tsdown: 'string',
       jiti: 'string',
     },
     types: {

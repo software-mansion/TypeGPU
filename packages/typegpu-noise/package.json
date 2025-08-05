@@ -36,7 +36,7 @@
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
-    "tsdown": "^0.12.9",
+    "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*"

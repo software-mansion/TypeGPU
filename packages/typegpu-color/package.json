@@ -24,7 +24,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "unbuild",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -38,7 +38,7 @@
     "@webgpu/types": "catalog:types",
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
-    "unbuild": "catalog:build",
+    "tsdown": "catalog:build",
     "unplugin-typegpu": "workspace:*"
   }
 }

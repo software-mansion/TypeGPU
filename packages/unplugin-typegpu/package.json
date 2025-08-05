@@ -109,7 +109,7 @@
   },
   "homepage": "https://typegpu.com",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -139,7 +139,7 @@
     "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
     "rollup": "~4.37.0",
-    "tsup": "catalog:build",
+    "tsdown": "catalog:build",
     "typescript": "catalog:types"
   }
 }

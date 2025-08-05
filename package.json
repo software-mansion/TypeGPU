@@ -41,7 +41,7 @@
     "dpdm": "^3.14.0",
     "jiti": "catalog:build",
     "pkg-pr-new": "^0.0.41",
-    "tsup": "catalog:build",
+    "tsdown": "catalog:build",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "vite-imagetools": "catalog:frontend",
