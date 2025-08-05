@@ -10,7 +10,7 @@ const root = await tgpu.init({
   },
 });
 
-const someData = Array.from({ length: 2 ** 24 }, (_, idx) => 1);
+const someData = Array.from({ length: 2 ** 24 }, (_) => 1);
 const t1 = performance.now();
 const sum = concurrentSum(root, someData);
 await root.device.queue.onSubmittedWorkDone();

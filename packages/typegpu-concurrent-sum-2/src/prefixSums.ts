@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExtraNonNullAssertion: no! */
-/** biome-ignore-all lint/style/noNonNullAssertion: no! */
 import tgpu, {
   type StorageFlag,
   type TgpuBuffer,
@@ -8,125 +6,11 @@ import tgpu, {
   type TgpuRoot,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { scanLayout, uniformAddLayout, workgroupSize } from './schemas.ts';
+import { scanBlock } from './compute/scan.ts';
+import { uniformAdd } from './compute/applySums.ts';
 
-export const workgroupSize = 256;
-const workgroupMemory = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize),
-);
-
-const scanLayout = tgpu.bindGroupLayout({
-  input: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'mutable' },
-  sums: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'mutable' },
-});
-
-const scanBlock = tgpu['~unstable'].computeFn({
-  workgroupSize: [workgroupSize],
-  in: {
-    gid: d.builtin.globalInvocationId,
-    lid: d.builtin.localInvocationId,
-    nwg: d.builtin.numWorkgroups,
-    wid: d.builtin.workgroupId,
-  },
-})(({ gid, lid, nwg, wid }) => {
-  const globalIdx = gid.x + gid.y * nwg.x + gid.z * nwg.x * nwg.y;
-  const globalWid = wid.x + wid.y * nwg.x + wid.z * nwg.x * nwg.y;
-  const localIdx = lid.x;
-  const arrayLength = scanLayout.$.input.length;
-  let offset = d.u32(1);
-
-  // Each thread processes 8 elements
-  const baseIdx = globalIdx * 8;
-
-  const elements = [d.f32(0), 0, 0, 0, 0, 0, 0, 0];
-  for (let i = d.u32(0); i < 8; i++) {
-    if (baseIdx + i < arrayLength) {
-      elements[i] = scanLayout.$.input[baseIdx + i]!;
-    }
-  }
-
-  const partialSums = [d.f32(0), 0, 0, 0, 0, 0, 0, 0];
-  partialSums[0] = elements[0]!;
-  for (let i = d.u32(1); i < 8; i++) {
-    partialSums[i] = partialSums[i - 1]! + elements[i]!;
-  }
-  const totalSum = partialSums[7];
-
-  // Store the total sum in shared memory
-  workgroupMemory.$[localIdx] = totalSum!;
-
-  // Upsweep - tree-based scan on shared memory
-  for (let d_val = d.u32(workgroupSize / 2); d_val > 0; d_val >>= 1) {
-    std.workgroupBarrier();
-    if (localIdx < d_val) {
-      const ai = offset * (2 * localIdx + 1) - 1;
-      const bi = offset * (2 * localIdx + 2) - 1;
-      workgroupMemory.$[bi]! += workgroupMemory.$[ai]!;
-    }
-    offset <<= 1;
-  }
-
-  if (localIdx === 0) {
-    scanLayout.$.sums[globalWid]! = workgroupMemory.$[workgroupSize - 1]!;
-    workgroupMemory.$[workgroupSize - 1] = d.f32(0);
-  }
-
-  // Downsweep
-  for (let d_val = d.u32(1); d_val < workgroupSize; d_val <<= 1) {
-    offset >>= 1;
-    std.workgroupBarrier();
-    if (localIdx < d_val) {
-      const ai = offset * (2 * localIdx + 1) - 1;
-      const bi = offset * (2 * localIdx + 2) - 1;
-      const t = workgroupMemory.$[ai]!;
-      workgroupMemory.$[ai]! = workgroupMemory.$[bi]!;
-      workgroupMemory.$[bi]! += t;
-    }
-  }
-
-  std.workgroupBarrier();
-
-  // Add the scanned sum from shared memory to partial sums and write back
-  const scannedSum = workgroupMemory.$[localIdx]!;
-
-  for (let i = d.u32(0); i < 8; i++) {
-    if (baseIdx + i < arrayLength) {
-      if (i === 0) {
-        scanLayout.$.input[baseIdx + i]! = scannedSum;
-      } else {
-        scanLayout.$.input[baseIdx + i]! = scannedSum + partialSums[i - 1]!;
-      }
-    }
-  }
-});
-
-const uniformAddLayout = tgpu.bindGroupLayout({
-  input: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'mutable' },
-  sums: { storage: (n: number) => d.arrayOf(d.f32, n), access: 'readonly' },
-});
-
-const uniformAdd = tgpu['~unstable'].computeFn({
-  workgroupSize: [workgroupSize],
-  in: {
-    gid: d.builtin.globalInvocationId,
-    nwg: d.builtin.numWorkgroups,
-    wid: d.builtin.workgroupId,
-  },
-})(({ gid, nwg, wid }) => {
-  const globalIdx = gid.x + gid.y * nwg.x + gid.z * nwg.x * nwg.y;
-  const workgroupId = wid.x + wid.y * nwg.x + wid.z * nwg.x * nwg.y;
-  const baseIdx = globalIdx * 8;
-  const sumValue = uniformAddLayout.$.sums[workgroupId]!;
-
-  // Add the sum to all 8 elements processed by this thread
-  for (let i = d.u32(0); i < 8; i++) {
-    if (baseIdx + i < uniformAddLayout.$.input.length) {
-      uniformAddLayout.$.input[baseIdx + i]! += sumValue;
-    }
-  }
-});
-
-class PrefixSumComputer {
+export class PrefixSumComputer {
   private root: TgpuRoot;
   private scanPipeline?: TgpuComputePipeline;
   private addPipeline?: TgpuComputePipeline;
