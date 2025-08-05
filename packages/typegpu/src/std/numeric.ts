@@ -1239,7 +1239,7 @@ export const trunc = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(value: T): T => {
     throw new Error(
-      'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+      'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
   // GPU implementation
