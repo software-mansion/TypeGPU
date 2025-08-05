@@ -11,18 +11,18 @@ export const getSphere = tgpu.fn(
   [d.vec3f, d.vec3f, d.vec3f, d.f32],
   Ray,
 )((p, sphereColor, sphereCenter, angle) => {
-  const localP = std.sub(p, sphereCenter); // (0,0) is the center to rotate easily
+  const localP = p.sub(sphereCenter); // (0,0) is the center to rotate easily
   const rotMatZ = d.mat4x4f.rotationZ(-angle * 0.3);
   const rotMatX = d.mat4x4f.rotationX(-angle * 0.7);
-  const rotatedP = std.mul(rotMatZ, std.mul(rotMatX, d.vec4f(localP, 1))).xyz;
+  const rotatedP = d.vec4f(localP, 1).mul(rotMatZ).mul(rotMatX).xyz;
 
   // breathing effect
-  const radius = d.f32(c.sphereRadius) + std.sin(angle);
+  const radius = d.f32(c.SPHERE_RADIUS) + std.sin(angle);
 
   const rawDist = sdSphere(rotatedP, radius);
   let noise = d.f32(0);
   if (rawDist < d.f32(1)) {
-    noise += perlin3d.sample(std.add(rotatedP, angle));
+    noise += perlin3d.sample(rotatedP.add(angle));
   }
 
   return {
