@@ -20,7 +20,6 @@ import {
   vec4f,
   vec4h,
 } from '../../src/data/vector.ts';
-import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import {
   coerceToSnippet,
   convertStructValues,

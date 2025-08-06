@@ -1,4 +1,3 @@
-import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
   isDisarray,
@@ -50,7 +49,6 @@ import {
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
-import { getResolutionCtx } from '../execMode.ts';
 import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
