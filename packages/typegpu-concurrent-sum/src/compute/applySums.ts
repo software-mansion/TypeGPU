@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { uniformAddLayout, workgroupSize } from '../schemas.ts';
+import { operatorSlot, uniformAddLayout, workgroupSize } from '../schemas.ts';
 
 export const uniformAdd = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
@@ -17,7 +17,10 @@ export const uniformAdd = tgpu['~unstable'].computeFn({
 
   for (let i = d.u32(0); i < 8; i++) {
     if (baseIdx + i < uniformAddLayout.$.input.length) {
-      (uniformAddLayout.$.input[baseIdx + i] as number) += sumValue as number;
+      (uniformAddLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
+        uniformAddLayout.$.input[baseIdx + i] as number,
+        sumValue as number,
+      );
     }
   }
 });

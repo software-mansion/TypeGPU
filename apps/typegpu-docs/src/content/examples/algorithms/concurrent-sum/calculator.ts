@@ -1,4 +1,4 @@
-import { concurrentScan, initConcurrentSum } from '@typegpu/concurrent-sum';
+import { concurrentScan } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';

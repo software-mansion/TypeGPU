@@ -1,10 +1,10 @@
-import tgpu, {
-  type StorageFlag,
-  type TgpuBuffer,
-  type TgpuComputePipeline,
+import type {
+  StorageFlag,
+  TgpuBuffer,
+  TgpuComputePipeline,
   TgpuFn,
-  type TgpuQuerySet,
-  type TgpuRoot,
+  TgpuQuerySet,
+  TgpuRoot,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
@@ -72,13 +72,15 @@ export class PrefixScanComputer {
         this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage'),
       );
     }
-    return this.scratchBuffers.get(key)!;
+    return this.scratchBuffers.get(key) as
+      & TgpuBuffer<d.WgslArray<d.F32>>
+      & StorageFlag;
   }
 
   private recursiveScan(
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
     actualLength: number,
-    level: number = 0,
+    level = 0,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
     const numWorkgroups = Math.ceil(actualLength / (workgroupSize * 8));
 
@@ -151,15 +153,17 @@ export class PrefixScanComputer {
       buffer.dataType.elementCount / (workgroupSize * 8),
     );
 
-    buffer = this.recursiveScan(buffer, buffer.dataType.elementCount);
+    const result = this.recursiveScan(buffer, buffer.dataType.elementCount);
     this.root['~unstable'].flush();
 
     this.qs?.resolve();
     this.qs?.read().then((timestamps) => {
-      const diff = Number(timestamps[1]! - timestamps[0]!) / 1_000_000;
-      console.log(`Prefix sum computed in ${diff} ms`);
+      if (timestamps[0] !== undefined && timestamps[1] !== undefined) {
+        const diff = Number(timestamps[1] - timestamps[0]) / 1_000_000;
+        console.log(`Prefix sum computed in ${diff} ms`);
+      }
     });
-    return buffer;
+    return result;
   }
 }
 
@@ -177,7 +181,8 @@ export function concurrentScan(
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
   identity: number,
-  onlyGreatestElement: boolean = false,
+  onlyGreatestElement = false,
+  outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   computer ??= new PrefixScanComputer(
     root,

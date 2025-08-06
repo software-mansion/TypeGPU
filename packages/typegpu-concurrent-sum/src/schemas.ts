@@ -1,4 +1,4 @@
-import tgpu, { TgpuFn } from 'typegpu';
+import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const workgroupSize = 256;
