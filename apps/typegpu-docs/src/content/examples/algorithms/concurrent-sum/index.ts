@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { performCalculationsWithTime } from './sum.ts';
+import { performCalculationsWithTime } from './calculator.ts';
 
 let arraySize = 2 ** 13;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -28,7 +28,6 @@ button.addEventListener('click', async () => {
   results.style.marginTop = '1em';
   button.insertAdjacentElement('afterend', results);
 
-  // Recreate the input array with the current arraySize
   inputArray = Array.from({ length: arraySize }, (_, i) => 1);
   const sumResults = await performCalculationsWithTime(root, [...inputArray]);
   if (!sumResults.success) {
@@ -46,22 +45,10 @@ button.addEventListener('click', async () => {
         resultHTML += `GPU time: ${sumResults.gpuTime.toFixed(2)}ms<br>`;
       }
 
-      if (sumResults.gpuInternalTime !== undefined) {
-        resultHTML += `GPU internal time: ${
-          sumResults.gpuInternalTime.toFixed(2)
-        }ms<br>`;
-      }
-
       resultElement.innerHTML = resultHTML;
       results.appendChild(resultElement);
     }
   } else {
-    if (sumResults.gpuInternalTime !== undefined) {
-      results.innerHTML += `<strong>GPU time for currentSum: ${
-        sumResults.gpuInternalTime.toFixed(2)
-      } ms</strong><br>`;
-    }
-
     const { arraySize, jsTime, gpuTime, speedup } = sumResults;
 
     const resultElement = document.createElement('div');
@@ -88,9 +75,9 @@ const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 // #region Example controls & Cleanup
 const paramSettings = {
-  min: 2048,
-  step: 100,
-  max: 2 ** 23,
+  min: 2 ** 11,
+  step: 2 ** 10,
+  max: 2 ** 24,
 };
 
 export const controls = {

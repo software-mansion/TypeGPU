@@ -1,4 +1,4 @@
-import { currentSum } from '@typegpu/concurrent-sum';
+import { concurrentSum } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
@@ -10,7 +10,6 @@ type SumResult = {
   error?: string;
   jsTime?: number;
   gpuTime?: number;
-  gpuInternalTime?: number;
   speedup?: number;
   expectedSum?: number;
 };
@@ -22,7 +21,7 @@ export async function performCalculationsWithTime(
   const arraySize = inputArray.length;
   const sizeBuffer = root
     .createBuffer(
-      d.arrayOf(d.u32, arraySize),
+      d.arrayOf(d.f32, arraySize),
     )
     .$usage('storage');
   sizeBuffer.write(inputArray);
@@ -34,35 +33,18 @@ export async function performCalculationsWithTime(
 
   // GPU Version
   const gpuStartTime = performance.now();
-  let gpuInternalTime: number | undefined;
-
-  const sumResult = await currentSum(
+  const calcResult = concurrentSum(
     root,
     sizeBuffer,
     std.add,
     0,
-    undefined,
-    async (timeTgpuQuery) => {
-      const timestamps = await timeTgpuQuery.read();
-      const timeNs = timestamps[1] - timestamps[0];
-      gpuInternalTime = Number(timeNs) / 1000000;
-    },
   );
 
-  if (!sumResult) {
-    console.error(`Failed to execute currentSum for array size ${arraySize}`);
-    return {
-      success: false,
-      error: `Failed to execute currentSum for array size ${arraySize}`,
-      arraySize,
-    };
-  }
-
   const gpuTime = performance.now() - gpuStartTime;
-  const gpuResult = await sumResult.read();
   root['~unstable'].flush();
 
   // Compare results
+  const gpuResult = await calcResult.read();
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
   if (!isEqual) {
     console.error(`Mismatch detected for array size ${arraySize}`);
@@ -75,7 +57,6 @@ export async function performCalculationsWithTime(
       arraySize,
       jsTime,
       gpuTime,
-      gpuInternalTime,
     };
   }
 
@@ -84,7 +65,6 @@ export async function performCalculationsWithTime(
     arraySize,
     jsTime,
     gpuTime,
-    gpuInternalTime,
     speedup: jsTime / gpuTime,
     expectedSum: jsResult[jsResult.length - 1],
   };

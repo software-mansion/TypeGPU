@@ -1,1 +1,1 @@
-export * from './concurrentSum.ts';
+export * from './prefixSums.ts';
