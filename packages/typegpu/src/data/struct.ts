@@ -43,7 +43,14 @@ export function builtinStruct<TProps extends Record<string, AnyWgslData>>(
   builtinName: string,
 ): WgslStruct<TProps> {
   const structSchema = struct(props);
-  structSchema[$internal].builtinName = builtinName;
+  // This check makes sure that we set the builtin name on the particular struct - not the prototype.
+  if (!Object.getOwnPropertySymbols(structSchema).includes($internal)) {
+    Object.defineProperty(structSchema, $internal, {
+      value: { builtinName },
+    });
+  } else {
+    structSchema[$internal].builtinName = builtinName;
+  }
   return structSchema;
 }
 
@@ -53,7 +60,7 @@ export function builtinStruct<TProps extends Record<string, AnyWgslData>>(
 
 const WgslStructImpl = {
   [$internal]: {
-    builtinName: undefined,
+    builtinName: null,
   },
   type: 'struct',
 

@@ -4,14 +4,7 @@
 
 export { discard } from './discard.ts';
 
-// deno-fmt-ignore
 export {
-  // ops
-  add,
-  sub,
-  mul,
-  div,
-  // builtin functions
   abs,
   acos,
   acosh,
@@ -53,9 +46,7 @@ export {
   max,
   min,
   mix,
-  mod,
   modf,
-  neg,
   normalize,
   pow,
   quantizeToF16,
@@ -74,8 +65,10 @@ export {
   tan,
   tanh,
   transpose,
-  trunc
+  trunc,
 } from './numeric.ts';
+
+export { add, div, mod, mul, neg, sub } from './operators.ts';
 
 // deno-fmt-ingore
 export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';

@@ -1289,7 +1289,7 @@ export interface WgslStruct<
   TProps extends Record<string, BaseData> = any,
 > extends BaseData, TgpuNamable {
   readonly [$internal]: {
-    builtinName: string | undefined;
+    builtinName: string | null;
   };
   readonly type: 'struct';
   readonly propTypes: TProps;

@@ -22,6 +22,7 @@ import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 import { builtinStruct } from '../src/data/struct.ts';
+import { frexp } from '../src/std/numeric.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -396,6 +397,24 @@ describe('builtinStruct', () => {
     fn testFn() {
       var myStruct = __someBuiltinStruct(1, vec2u(2, 3));
     }`),
+    );
+  });
+
+  it('gets correctly resolved when returned from an std function', () => {
+    const testFn = tgpu.fn([f32], f32)((x) => {
+      const result = frexp(x);
+      // It should know that exp is an u32 and cast it to f32
+      return result.exp;
+    });
+
+    console.log(tgpu.resolve({ externals: { testFn } }));
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        fn testFn(x: f32) -> f32 {
+          var result = frexp(x);
+          return f32(result.exp);
+        }`),
     );
   });
 });

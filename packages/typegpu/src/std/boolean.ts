@@ -15,7 +15,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, sub } from './numeric.ts';
+import { isSnippetNumeric, sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {
