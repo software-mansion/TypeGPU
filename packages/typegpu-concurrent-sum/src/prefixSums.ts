@@ -87,7 +87,7 @@ export class PrefixSumComputer {
         sums: dummySums,
       });
       this.ScanPipeline.with(scanLayout, bg).withTimestampWrites({
-        querySet: this.qs!,
+        querySet: this.qs as TgpuQuerySet<'timestamp'>,
         beginningOfPassWriteIndex: this.first
           ? 0
           : undefined as unknown as number,
@@ -106,7 +106,7 @@ export class PrefixSumComputer {
     });
     if (this.first) {
       this.ScanPipeline.with(scanLayout, scanBg).withTimestampWrites({
-        querySet: this.qs!,
+        querySet: this.qs as TgpuQuerySet<'timestamp'>,
         beginningOfPassWriteIndex: 0,
       }).dispatchWorkgroups(
         numWorkgroups,
@@ -127,7 +127,7 @@ export class PrefixSumComputer {
       sums: sumsBuffer,
     });
     this.AddPipeline.with(uniformAddLayout, addBg).withTimestampWrites({
-      querySet: this.qs!,
+      querySet: this.qs as TgpuQuerySet<'timestamp'>,
       endOfPassWriteIndex: 1,
     }).dispatchWorkgroups(
       numWorkgroups,

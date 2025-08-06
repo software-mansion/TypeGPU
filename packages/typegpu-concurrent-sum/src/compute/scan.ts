@@ -33,19 +33,19 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   const elements = [d.f32(0), 0, 0, 0, 0, 0, 0, 0];
   for (let i = d.u32(0); i < 8; i++) {
     if (baseIdx + i < arrayLength) {
-      elements[i] = scanLayout.$.input[baseIdx + i]!;
+      elements[i] = scanLayout.$.input[baseIdx + i] as number;
     }
   }
 
   const partialSums = [d.f32(0), 0, 0, 0, 0, 0, 0, 0];
-  partialSums[0] = elements[0]!;
+  partialSums[0] = elements[0] as number;
   for (let i = d.u32(1); i < 8; i++) {
-    partialSums[i] = partialSums[i - 1]! + elements[i]!;
+    partialSums[i] = partialSums[i - 1] as number + (elements[i] as number);
   }
   const totalSum = partialSums[7];
 
   // copy to shared memory
-  workgroupMemory.$[localIdx] = totalSum!;
+  workgroupMemory.$[localIdx] = totalSum as number;
 
   // Upsweep
   for (let d_val = d.u32(workgroupSize / 2); d_val > 0; d_val >>= 1) {
@@ -90,7 +90,7 @@ export const scanBlock = tgpu['~unstable'].computeFn({
       if (i === 0) {
         scanLayout.$.input[baseIdx + i] = scannedSum;
       } else {
-        scanLayout.$.input[baseIdx + i] = scannedSum + partialSums[i - 1]!;
+        scanLayout.$.input[baseIdx + i] = scannedSum + (partialSums[i - 1] as number);
       }
     }
   }
