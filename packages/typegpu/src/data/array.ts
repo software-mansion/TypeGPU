@@ -17,11 +17,26 @@ import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
  *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
+ *
+ * If `elementCount` is not specified, a partially applied function is returned.
  */
 export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
-): WgslArray<TElement> {
+): WgslArray<TElement>;
+
+export function arrayOf<TElement extends AnyWgslData>(
+  elementType: TElement,
+  elementCount?: undefined,
+): (elementCount: number) => WgslArray<TElement>;
+
+export function arrayOf<TElement extends AnyWgslData>(
+  elementType: TElement,
+  elementCount?: number | undefined,
+): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
+  if (elementCount === undefined) {
+    return (n: number) => arrayOf(elementType, n);
+  }
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const arraySchema = (elements?: TElement[]) => {
