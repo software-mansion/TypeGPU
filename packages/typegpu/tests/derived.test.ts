@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { TgpuDerived } from '../src/index.ts';
+import tgpu, { type TgpuDerived } from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
