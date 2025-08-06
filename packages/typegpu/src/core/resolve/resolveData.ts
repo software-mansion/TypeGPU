@@ -125,9 +125,8 @@ function resolveStructProperty(
  * @returns The resolved struct name.
  */
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
-  const builtinName = struct[$internal].builtinName;
-  if (builtinName) {
-    return builtinName;
+  if (struct[$internal].isAbstruct) {
+    throw new Error('Cannot resolve abstract struct types to WGSL.');
   }
   const id = ctx.names.makeUnique(getName(struct));
 

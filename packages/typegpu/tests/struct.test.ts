@@ -21,7 +21,6 @@ import {
 import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
-import { builtinStruct } from '../src/data/struct.ts';
 import { frexp } from '../src/std/numeric.ts';
 
 describe('struct', () => {
@@ -381,25 +380,7 @@ describe('struct', () => {
   });
 });
 
-describe('builtinStruct', () => {
-  it('can be used to create a builtin struct (does not add declaration and alter the name)', () => {
-    const TestStruct = builtinStruct({
-      a: f32,
-      b: vec2u,
-    }, '__someBuiltinStruct');
-
-    const testFn = tgpu.fn([])(() => {
-      const myStruct = TestStruct({ a: 1.0, b: vec2u(2, 3) });
-    });
-
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-    fn testFn() {
-      var myStruct = __someBuiltinStruct(1, vec2u(2, 3));
-    }`),
-    );
-  });
-
+describe('abstruct', () => {
   it('gets correctly resolved when returned from an std function', () => {
     const testFn = tgpu.fn([f32], f32)((x) => {
       const result = frexp(x);

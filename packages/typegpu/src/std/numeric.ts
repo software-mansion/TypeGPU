@@ -1,6 +1,13 @@
 import { snip } from '../data/snippet.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
-import { f16, f32, i32, u32 } from '../data/numeric.ts';
+import {
+  abstractFloat,
+  abstractInt,
+  f16,
+  f32,
+  i32,
+  u32,
+} from '../data/numeric.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyFloat32VecInstance,
@@ -10,12 +17,27 @@ import type {
   AnyNumericVecInstance,
   AnySignedVecInstance,
   AnyWgslData,
+  v2i,
   v3f,
   v3h,
+  v3i,
+  v4i,
 } from '../data/wgslTypes.ts';
+import type { Infer } from '../shared/repr.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { builtinStruct } from '../data/struct.ts';
+import { abstruct } from '../data/struct.ts';
 import { mul, sub } from './operators.ts';
+import {
+  vec2f,
+  vec2h,
+  vec2i,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec4f,
+  vec4h,
+  vec4i,
+} from '../data/vector.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -492,12 +514,26 @@ export const fract = createDualImpl(
   'fract',
 );
 
-const FrexpResultF32 = builtinStruct(
-  { fract: f32, exp: i32 },
-  '__frexp_result_f32',
-);
+const FrexpResults = {
+  f32: abstruct({ fract: f32, exp: i32 }),
+  f16: abstruct({ fract: f16, exp: i32 }),
+  abstractFloat: abstruct({ fract: abstractFloat, exp: abstractInt }),
+  vec2f: abstruct({ fract: vec2f, exp: vec2i }),
+  vec3f: abstruct({ fract: vec3f, exp: vec3i }),
+  vec4f: abstruct({ fract: vec4f, exp: vec4i }),
+  vec2h: abstruct({ fract: vec2h, exp: vec2i }),
+  vec3h: abstruct({ fract: vec3h, exp: vec3i }),
+  vec4h: abstruct({ fract: vec4h, exp: vec4i }),
+} as const;
 
-export const frexp = createDualImpl(
+type FrexpOverload = {
+  (value: number): Infer<typeof FrexpResults['f32']>;
+  <T extends AnyFloatVecInstance>(
+    value: T,
+  ): Infer<typeof FrexpResults[T['kind']]>;
+};
+
+export const frexp: FrexpOverload = createDualImpl(
   // CPU implementation
   (value: number): {
     fract: number;
@@ -508,13 +544,22 @@ export const frexp = createDualImpl(
     );
   },
   // GPU implementation
-  (value) =>
-    snip(
+  (value) => {
+    const returnType =
+      FrexpResults[value.dataType.type as keyof typeof FrexpResults];
+
+    if (!returnType) {
+      throw new Error(
+        `Unsupported data type for frexp: ${value.dataType.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
+      );
+    }
+
+    return snip(
       `frexp(${value.value})`,
-      FrexpResultF32,
-    ),
+      returnType,
+    );
+  },
   'frexp',
-  [f32],
 );
 
 export const insertBits = createDualImpl(
@@ -553,7 +598,24 @@ export const inverseSqrt = createDualImpl(
   'inverseSqrt',
 );
 
-export const ldexp = createDualImpl(
+type FloatVecInstanceToIntVecInstance<T extends AnyFloatVecInstance> = {
+  'vec2f': v2i;
+  'vec3f': v3i;
+  'vec4f': v4i;
+  'vec2h': v2i;
+  'vec3h': v3i;
+  'vec4h': v4i;
+}[T['kind']];
+
+type LdexpOverload = {
+  (e1: number, e2: number): number;
+  <T extends AnyFloatVecInstance>(
+    e1: T,
+    e2: FloatVecInstanceToIntVecInstance<T>,
+  ): T;
+};
+
+export const ldexp: LdexpOverload = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(
     e1: T,
@@ -566,6 +628,28 @@ export const ldexp = createDualImpl(
   // GPU implementation
   (e1, e2) => snip(`ldexp(${e1.value}, ${e2.value})`, e1.dataType),
   'ldexp',
+  (e1, _) => {
+    switch (e1.dataType.type) {
+      case 'abstractFloat':
+        return [abstractFloat, abstractInt];
+      case 'f32':
+      case 'f16':
+        return [e1.dataType, i32];
+      case 'vec2f':
+      case 'vec2h':
+        return [e1.dataType, vec2i];
+      case 'vec3f':
+      case 'vec3h':
+        return [e1.dataType, vec3i];
+      case 'vec4f':
+      case 'vec4h':
+        return [e1.dataType, vec4i];
+      default:
+        throw new Error(
+          `Unsupported data type for ldexp: ${e1.dataType.type}. Supported types are abstractFloat, f32, f16, vec2f, vec2h, vec3f, vec3h, vec4f, vec4h.`,
+        );
+    }
+  },
 );
 
 /**
@@ -685,15 +769,48 @@ export const mix: MixOverload = createDualImpl(
   'mix',
 );
 
-export const modf = createDualImpl(
+const ModfResult = {
+  f32: abstruct({ fract: f32, whole: f32 }),
+  f16: abstruct({ fract: f16, whole: f16 }),
+  abstractFloat: abstruct({ fract: abstractFloat, whole: abstractFloat }),
+  vec2f: abstruct({ fract: vec2f, whole: vec2f }),
+  vec3f: abstruct({ fract: vec3f, whole: vec3f }),
+  vec4f: abstruct({ fract: vec4f, whole: vec4f }),
+  vec2h: abstruct({ fract: vec2h, whole: vec2h }),
+  vec3h: abstruct({ fract: vec3h, whole: vec3h }),
+  vec4h: abstruct({ fract: vec4h, whole: vec4h }),
+} as const;
+
+type ModfOverload = {
+  (value: number): Infer<typeof ModfResult['f32']>;
+  <T extends AnyFloatVecInstance>(
+    value: T,
+  ): Infer<typeof ModfResult[T['kind']]>;
+};
+
+export const modf: ModfOverload = createDualImpl(
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T) => {
+  <T extends AnyFloatVecInstance | number>(value: T) => {
     throw new Error(
       'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
   // GPU implementation
-  (value) => snip(`modf(${value.value})`, value.dataType),
+  (value) => {
+    const returnType =
+      ModfResult[value.dataType.type as keyof typeof ModfResult];
+
+    if (!returnType) {
+      throw new Error(
+        `Unsupported data type for modf: ${value.dataType.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
+      );
+    }
+
+    return snip(
+      `modf(${value.value})`,
+      returnType,
+    );
+  },
   'modf',
 );
 
