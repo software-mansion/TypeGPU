@@ -9,6 +9,10 @@ utilities built on top.
 It also features a [Perlin noise](#perlin-noise) implementation, which is useful for generating smooth, natural-looking variations in visual
 effects, terrains, and other procedural elements.
 
+:::caution
+Threads do not share the generator's `State`. As a result, unless you change the seed or provide thread-dependent variables, each thread will produce the same sequence of sampled values.
+:::
+
 ## Use with either TypeGPU or WebGPU
 
 Each utility function described in this guide is usable from the context of both TypeGPU and vanilla WebGPU. This makes it really simple to
@@ -99,7 +103,7 @@ const main = tgpu['~unstable'].fragmentFn({
 There are higher-level utilities built on top of `randf.sample`:
 - `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
 - `inUnitCube` - returns a random 3D vector uniformly distributed inside a unit cube
-- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector 
+- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector
 - `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
 
 ## Perlin noise
@@ -219,12 +223,13 @@ function initBindGroup(size: d.v3u) {
   return root.createBindGroup(dynamicLayout, cache.bindings);
 }
 let bindGroup = initBindGroup(d.vec3u(10, 10, 1));
-// Can be called again to reinitialize the cache with
-// a different domain size
-bindGroup = initBindGroup(d.vec3u(5, 5, 1));
 
 // Dispatching the pipeline
 pipeline
   .with(dynamicLayout, bindGroup)
   .dispatchWorkgroups(1);
+
+// Can be called again to reinitialize the cache with
+// a different domain size
+bindGroup = initBindGroup(d.vec3u(5, 5, 1));
 ```

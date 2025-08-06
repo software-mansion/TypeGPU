@@ -35,7 +35,7 @@ export interface StaticPerlin2DCache {
  *   .createPipeline();
  * ```
  *
- * ### Wrapped coordinates
+ * --- Wrapped coordinates
  * If the noise generator samples outside of the bounds of this cache, the space is wrapped around.
  * @example
  * ```ts
