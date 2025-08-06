@@ -7,7 +7,6 @@ import type {
 } from 'typegpu';
 import type * as d from 'typegpu/data';
 import {
-  downSweepLayout,
   identitySlot,
   maxDispatchSize,
   operatorSlot,
@@ -16,7 +15,6 @@ import {
 } from './schemas.ts';
 import { incrementShader } from './compute/incrementShader.ts';
 import { computeUpPass } from './compute/computeUpPass.ts';
-import { computeDownPass } from './compute/computeDownPass.ts';
 import { ConcurrentSumCache } from './compute/cache.ts';
 
 export async function currentSum(
@@ -41,13 +39,6 @@ export async function currentSum(
       querySet,
       beginningOfPassWriteIndex: 0,
     });
-
-  const downPassPipeline = root['~unstable']
-    .with(operatorSlot, operatorFn as unknown as TgpuFn)
-    .with(identitySlot, identity)
-    .withCompute(computeDownPass)
-    .createPipeline()
-    .$name('DownScan');
 
   const applySumsPipeline = root['~unstable']
     .with(operatorSlot, operatorFn as unknown as TgpuFn)
@@ -123,32 +114,15 @@ export async function currentSum(
     }
     cache.push(upPassSumsBuffer);
 
-    // Down-pass
-    const downSweepOutputBuffer = cache.pop();
-    const downPassBindGroup = root.createBindGroup(downSweepLayout, {
-      inputArray: outputBuffer, // output from up-sweep is input for down-sweep
-      outputArray: downSweepOutputBuffer,
-    });
-
-    downPassPipeline
-      .with(downSweepLayout, downPassBindGroup)
-      .dispatchWorkgroups(
-        upSweepWorkgroups.xGroups,
-        upSweepWorkgroups.yGroups,
-        upSweepWorkgroups.zGroups,
-      );
-    root['~unstable'].flush();
-    cache.push(outputBuffer);
-
     if (n <= itemsPerWorkgroup) {
       // if the array is small enough the final tree level does not need to apply the sums
-      return downSweepOutputBuffer;
+      return outputBuffer;
     }
 
     // Apply sums
     const finalOutputBuffer = cache.pop();
     const applySumsBindGroup = root.createBindGroup(upSweepLayout, {
-      inputArray: downSweepOutputBuffer,
+      inputArray: outputBuffer,
       outputArray: finalOutputBuffer,
       sumsArray: sumsScannedBuffer,
     });
@@ -173,7 +147,7 @@ export async function currentSum(
       );
 
     root['~unstable'].flush();
-    cache.push(downSweepOutputBuffer);
+    cache.push(outputBuffer);
     cache.push(sumsScannedBuffer);
     // console.log(
     // finalOutputBuffer.read().then((arr) => { //remove

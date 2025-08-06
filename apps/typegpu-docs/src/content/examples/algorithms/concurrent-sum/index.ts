@@ -11,28 +11,27 @@ const root = await tgpu.init({
   },
 });
 
-const someData = Array.from({ length: 2 ** 24 }, (_) => 1);
+const someData = Array.from({ length: 2 ** 22 }, (_) => 1);
 
 const button = document.querySelector('#runButton') as HTMLButtonElement;
 button.addEventListener('click', async () => {
-  const buffer2 = root.createBuffer(d.arrayOf(d.u32, someData.length)).$usage('storage');
-  buffer2.write(someData);
   const buffer = root.createBuffer(d.arrayOf(d.f32, someData.length)).$usage('storage');
   buffer.write(someData);
+  const buffer2 = root.createBuffer(d.arrayOf(d.u32, someData.length)).$usage('storage');
+  buffer2.write(someData);
 
 const t1 = performance.now();
-const sum = concurrentSum(root, buffer, std.add, 0);
+const sumNew = concurrentSum(root, buffer, std.add, 0);
 await root.device.queue.onSubmittedWorkDone();
 const t2 = performance.now();
+console.log('Concurrent sum new overall time:', t2 - t1, 'ms');
 
-const buffArr = await sum.read();
-console.log(compareArrayWithBuffer(concurrentSumOnJS([...someData]), buffArr));
-console.log('concurrent sum2 time:', t2 - t1, 'ms');
-const res = await sum.read();
+const res = await sumNew.read();
 console.log(res);
+console.log(compareArrayWithBuffer(concurrentSumOnJS([...someData]), res));
 
 const t3 = performance.now();
-const sum2 = await currentSum(
+const sumOld = await currentSum(
   root,
   buffer2,
   std.add,
@@ -47,7 +46,9 @@ const sum2 = await currentSum(
 );
 await root.device.queue.onSubmittedWorkDone();
 const t4 = performance.now();
-console.log('current sum time:', t4 - t3, 'ms');
-const res2 = sum2.read();
+console.log('Concurrent sum old overall time:', t4 - t3, 'ms');
+
+const res2 = await sumOld.read();
+console.log(compareArrayWithBuffer(concurrentSumOnJS([...someData]), res2));
 console.log(res2);
 })

@@ -1,10 +1,12 @@
 export function concurrentSumOnJS(arr: number[]) {
+  const time = performance.now();
   arr.reduce((accumulator, currentValue, index) => {
     if (index > 0) {
       arr[index] = arr[index - 1] + currentValue;
     }
     return arr[index];
   }, 0);
+  console.log('Concurrent sum JS time:', performance.now() - time, 'ms');
   return arr;
 }
 

@@ -137,14 +137,29 @@ export class PrefixSumComputer {
   }
 }
 
+
+let computer: PrefixSumComputer | null = null;
+export function initConcurrentSum(
+  root: TgpuRoot,
+  operatorFn: (x: number, y: number) => number,
+  identity: number,
+): void {
+  computer = new PrefixSumComputer(root, operatorFn, identity);
+}
+
+
 export function concurrentSum(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
   identity: number,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  const computer = new PrefixSumComputer(root, operatorFn, identity);
+
+  computer ??= new PrefixSumComputer(root, operatorFn, identity);
   const result = computer.compute(buffer);
 
   return result;
 }
+
+
+

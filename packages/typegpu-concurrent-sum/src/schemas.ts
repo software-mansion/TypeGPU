@@ -17,15 +17,6 @@ export const upSweepLayout = tgpu.bindGroupLayout({
   sumsArray: { storage: (n: number) => d.arrayOf(d.u32, n), access: 'mutable' },
 });
 
-export const downSweepLayout = tgpu.bindGroupLayout({
-  inputArray: {
-    storage: (n: number) => d.arrayOf(d.u32, n),
-    access: 'readonly',
-  },
-  outputArray: {
-    storage: (n: number) => d.arrayOf(d.u32, n),
-    access: 'mutable',
-  },
-});
+
 export const operatorSlot = tgpu.slot<TgpuFn>();
 export const identitySlot = tgpu.slot<number>();
