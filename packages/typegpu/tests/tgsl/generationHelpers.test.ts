@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
+import { UnknownData } from '../../src/data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
   abstractFloat,
@@ -11,6 +12,7 @@ import {
   u32,
 } from '../../src/data/numeric.ts';
 import { ptrPrivate } from '../../src/data/ptr.ts';
+import { snip, type Snippet } from '../../src/data/snippet.ts';
 import { struct } from '../../src/data/struct.ts';
 import {
   vec2f,
@@ -32,8 +34,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
-import { UnknownData } from '../../src/data/dataTypes.ts';
-import { snip, type Snippet } from '../../src/data/snippet.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -547,13 +547,13 @@ describe('generationHelpers', () => {
       expect(resInt.dataType.type).toBe('array');
       expect((resInt.dataType as WgslArray).elementType).toBe(i32); // concretized from abstractInt
       expect((resInt.dataType as WgslArray).elementCount).toBe(3);
-      expect(resInt.value).toBe('1, 2, 3');
+      expect(resInt.value).toBe('array<i32, 3>(1, 2, 3)');
 
       const resFloat = coerceToSnippet([1.0, 2.5, -0.5]);
       expect(resFloat.dataType.type).toBe('array');
       expect((resFloat.dataType as WgslArray).elementType).toBe(f32); // concretized from abstractFloat
       expect((resFloat.dataType as WgslArray).elementCount).toBe(3);
-      expect(resFloat.value).toBe('1, 2.5, -0.5');
+      expect(resFloat.value).toBe('array<f32, 3>(1, 2.5, -0.5)');
     });
 
     it('coerces arrays requiring numeric conversion and warns', () => {
@@ -561,19 +561,20 @@ describe('generationHelpers', () => {
       expect(resMixed.dataType.type).toBe('array');
       expect((resMixed.dataType as WgslArray).elementType).toBe(f32);
       expect((resMixed.dataType as WgslArray).elementCount).toBe(3);
-      expect(resMixed.value).toBe('1, 2.5, 3');
+      expect(resMixed.value).toBe('array<f32, 3>(1, 2.5, 3)');
     });
 
-    it('returns UnknownData for arrays of incompatible types', () => {
-      const res = coerceToSnippet([1, true, 'hello']);
-      expect(res.dataType).toBe(UnknownData);
-      expect(res.value).toEqual([1, true, 'hello']); // Original array value
+    it('throws for arrays of incompatible types', () => {
+      expect(() => coerceToSnippet([1, true, 'hello']))
+        .toThrowErrorMatchingInlineSnapshot(
+          `[Error: The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema]`,
+        );
     });
 
-    it('returns UnknownData for empty arrays', () => {
-      const res = coerceToSnippet([]);
-      expect(res.dataType).toBe(UnknownData);
-      expect(res.value).toEqual([]);
+    it('throws for empty arrays', () => {
+      expect(() => coerceToSnippet([])).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot infer the type of an empty array literal.]`,
+      );
     });
 
     it('returns UnknownData for other types', () => {

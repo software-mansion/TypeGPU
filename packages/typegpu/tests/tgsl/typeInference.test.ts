@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as d from '../../src/data/index.ts';
+import { vec2f } from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
@@ -326,6 +327,21 @@ describe('wgsl generator js type inference', () => {
   });
 
   it('coerces nested structs', () => {
+    const MyStruct = d.struct({ v: vec2f });
+    const myFn = tgpu.fn([MyStruct])(() => {
+      return;
+    });
+
+    const structValue = { v: vec2f(3, 4) };
+    const testFn = tgpu.fn([])(() => {
+      myFn(MyStruct({ v: vec2f(1, 2) }));
+      myFn(structValue);
+    });
+
+    console.log(parseResolved({ testFn }));
+  });
+
+  it('coerces nested structs', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
 
@@ -533,7 +549,7 @@ describe('wgsl generator js type inference', () => {
     expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: No target type could be inferred for object with keys [pos, vel], please wrap the object in the corresponding schema.]
+      - fn:myFn: Tried to define variable 'unrelated' of unknown type]
     `);
   });
 

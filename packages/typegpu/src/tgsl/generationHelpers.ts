@@ -572,11 +572,11 @@ Consider using explicit conversions instead.`,
 }
 
 export function tryConvertSnippet(
-  ctx: GenerationCtx,
+  ctx: GenerationCtx | undefined,
   value: Snippet,
   targetDataType?: AnyData,
 ): Snippet {
-  if (!targetDataType) {
+  if (!ctx || !targetDataType) {
     return value;
   }
 
@@ -687,6 +687,7 @@ export function coerceToTypedSnippet(
 }
 
 export function coerceToSnippet(value: unknown): Snippet {
+  console.log('COERCING', value);
   if (isSnippet(value)) {
     // Already a snippet
     return value;
@@ -700,16 +701,8 @@ export function coerceToSnippet(value: unknown): Snippet {
   const ctx = getResolutionCtx() as GenerationCtx | undefined;
   const expectedType = ctx?.expectedType;
 
-  if (!ctx) {
-    throw new Error('aaa');
-  }
-
   if (isVecInstance(value) || isMatInstance(value)) {
-    return tryConvertSnippet(
-      ctx,
-      snip(value, kindToSchema[value.kind]),
-      expectedType,
-    );
+    return snip(value, kindToSchema[value.kind]);
   }
 
   if (

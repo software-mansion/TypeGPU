@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';

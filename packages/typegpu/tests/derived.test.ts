@@ -81,12 +81,10 @@ describe('TgpuDerived', () => {
     const fillWith2 = fill.with(gridSizeSlot, 2);
     const fillWith3 = fill.with(gridSizeSlot, 3);
 
-    const exampleArray: number[] = [1, 2, 3];
-
     const main = tgpu.fn([])(() => {
-      fill.value(exampleArray);
-      fillWith2.value(exampleArray);
-      fillWith3.value(exampleArray);
+      fill.value([1]);
+      fillWith2.value([1, 2]);
+      fillWith3.value([1, 2, 3]);
     })
       .with(gridSizeSlot, 1);
 
@@ -97,9 +95,9 @@ describe('TgpuDerived', () => {
       fn fill_2(arr: array<f32, 3>) {}
 
       fn main() {
-        fill(1, 2, 3);
-        fill_1(1, 2, 3);
-        fill_2(1, 2, 3);
+        fill(array<f32, 1>(1));
+        fill_1(array<f32, 2>(1, 2));
+        fill_2(array<f32, 3>(1, 2, 3));
       }
     `),
     );
