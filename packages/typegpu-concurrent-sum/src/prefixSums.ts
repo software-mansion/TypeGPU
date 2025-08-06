@@ -16,12 +16,14 @@ import {
 } from './schemas.ts';
 import { scanBlock } from './compute/scan.ts';
 import { uniformAdd } from './compute/applySums.ts';
+import { scanGreatestBlock } from './compute/onlyGreatestScan.ts';
 
 let computer: PrefixSumComputer | null = null;
 
 export class PrefixSumComputer {
   private scanPipeline?: TgpuComputePipeline;
   private addPipeline?: TgpuComputePipeline;
+
   private scratchBuffers: Map<
     number,
     TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag
@@ -33,6 +35,7 @@ export class PrefixSumComputer {
     private root: TgpuRoot,
     private operatorFn: (x: number, y: number) => number,
     private identity: number,
+    private onlyGreatestElement: boolean,
   ) {
     this.root = root;
     this.qs = root.createQuerySet('timestamp', 2);
@@ -44,7 +47,7 @@ export class PrefixSumComputer {
         operatorSlot,
         this.operatorFn as unknown as TgpuFn,
       ).with(identitySlot, this.identity)
-        .withCompute(scanBlock)
+        .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
         .createPipeline();
     }
     return this.scanPipeline;
@@ -76,7 +79,7 @@ export class PrefixSumComputer {
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
     actualLength: number,
     level: number = 0,
-  ): void {
+  ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
     const numWorkgroups = Math.ceil(actualLength / (workgroupSize * 8));
 
     // Base case: single workgroup
@@ -93,11 +96,14 @@ export class PrefixSumComputer {
           : undefined as unknown as number,
         endOfPassWriteIndex: 1,
       }).dispatchWorkgroups(1);
-      return;
-    }
 
+      if (this.onlyGreatestElement) {
+        return dummySums;
+      }
+      return buffer;
+    }
     // Recursive case:
-    const sumsBuffer = this.getScratchBuffer(numWorkgroups, level);
+    let sumsBuffer = this.getScratchBuffer(numWorkgroups, level);
 
     // Up-scan & Down-scan
     const scanBg = this.root.createBindGroup(scanLayout, {
@@ -119,8 +125,11 @@ export class PrefixSumComputer {
     }
 
     // Recursively scan the sums
-    this.recursiveScan(sumsBuffer, numWorkgroups, level + 1);
+    sumsBuffer = this.recursiveScan(sumsBuffer, numWorkgroups, level + 1);
 
+    if (this.onlyGreatestElement) {
+      return sumsBuffer;
+    }
     // Add the scanned sums back
     const addBg = this.root.createBindGroup(uniformAddLayout, {
       input: buffer,
@@ -132,6 +141,7 @@ export class PrefixSumComputer {
     }).dispatchWorkgroups(
       numWorkgroups,
     );
+    return buffer;
   }
 
   compute(
@@ -141,7 +151,7 @@ export class PrefixSumComputer {
       buffer.dataType.elementCount / (workgroupSize * 8),
     );
 
-    this.recursiveScan(buffer, buffer.dataType.elementCount);
+    buffer = this.recursiveScan(buffer, buffer.dataType.elementCount);
     this.root['~unstable'].flush();
 
     this.qs?.resolve();
@@ -149,7 +159,6 @@ export class PrefixSumComputer {
       const diff = Number(timestamps[1]! - timestamps[0]!) / 1_000_000;
       console.log(`Prefix sum computed in ${diff} ms`);
     });
-
     return buffer;
   }
 }
@@ -160,7 +169,7 @@ export function initConcurrentSum(
   identity: number,
 ): void {
   // allocate all resources ahead of demand
-  computer = new PrefixSumComputer(root, operatorFn, identity);
+  computer = new PrefixSumComputer(root, operatorFn, identity, false);
 }
 
 export function concurrentSum(
@@ -168,8 +177,14 @@ export function concurrentSum(
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
   identity: number,
+  onlyGreatestElement: boolean = true,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  computer ??= new PrefixSumComputer(root, operatorFn, identity);
+  computer ??= new PrefixSumComputer(
+    root,
+    operatorFn,
+    identity,
+    onlyGreatestElement,
+  );
   const result = computer.compute(buffer);
 
   return result;

@@ -12,7 +12,7 @@ const workgroupMemory = tgpu['~unstable'].workgroupVar(
   d.arrayOf(d.f32, workgroupSize),
 );
 
-export const scanBlock = tgpu['~unstable'].computeFn({
+export const scanGreatestBlock = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -64,35 +64,5 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   if (localIdx === 0) {
     scanLayout.$.sums[globalWid] = workgroupMemory
       .$[workgroupSize - 1] as number;
-    workgroupMemory.$[workgroupSize - 1] = d.f32(identitySlot.$);
-  }
-
-  // Downsweep
-  for (let d_val = d.u32(1); d_val < workgroupSize; d_val <<= 1) {
-    offset >>= 1;
-    std.workgroupBarrier();
-    if (localIdx < d_val) {
-      const ai = offset * (2 * localIdx + 1) - 1;
-      const bi = offset * (2 * localIdx + 2) - 1;
-      const t = workgroupMemory.$[ai];
-      workgroupMemory.$[ai] = workgroupMemory.$[bi] as number;
-      workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi], t);
-    }
-  }
-
-  std.workgroupBarrier();
-
-  // copy back to input
-  const scannedSum = workgroupMemory.$[localIdx];
-
-  for (let i = d.u32(0); i < 8; i++) {
-    if (baseIdx + i < arrayLength) {
-      if (i === 0) {
-        scanLayout.$.input[baseIdx + i] = scannedSum;
-      } else {
-        scanLayout.$.input[baseIdx + i] = scannedSum +
-          (partialSums[i - 1] as number);
-      }
-    }
   }
 });

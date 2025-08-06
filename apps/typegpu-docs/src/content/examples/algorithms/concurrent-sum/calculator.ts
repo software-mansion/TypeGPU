@@ -19,12 +19,12 @@ export async function performCalculationsWithTime(
   inputArray: number[],
 ): Promise<SumResult> {
   const arraySize = inputArray.length;
-  const sizeBuffer = root
+  const inputBuffer = root
     .createBuffer(
       d.arrayOf(d.f32, arraySize),
     )
     .$usage('storage');
-  sizeBuffer.write(inputArray);
+  inputBuffer.write(inputArray);
 
   // JS Version
   const jsStartTime = performance.now();
@@ -35,7 +35,7 @@ export async function performCalculationsWithTime(
   const gpuStartTime = performance.now();
   const calcResult = concurrentSum(
     root,
-    sizeBuffer,
+    inputBuffer,
     std.add,
     0,
   );
@@ -45,6 +45,7 @@ export async function performCalculationsWithTime(
 
   // Compare results
   const gpuResult = await calcResult.read();
+  console.log(`GPU result: ${gpuResult}`);
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
   if (!isEqual) {
     console.error(`Mismatch detected for array size ${arraySize}`);
