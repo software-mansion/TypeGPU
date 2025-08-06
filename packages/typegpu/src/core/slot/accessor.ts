@@ -4,10 +4,8 @@ import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
-  $gpuRepr,
   $gpuValueOf,
   $internal,
-  $repr,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
@@ -45,11 +43,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>
   >;
 
-  // Type-tokens, not available at runtime
-  declare readonly [$repr]: Infer<T>;
-  declare readonly [$gpuRepr]: InferGPU<T>;
-  declare readonly [$getNameForward]: unknown;
-  // ---
+  readonly [$getNameForward]: unknown;
 
   constructor(
     public readonly schema: T,
