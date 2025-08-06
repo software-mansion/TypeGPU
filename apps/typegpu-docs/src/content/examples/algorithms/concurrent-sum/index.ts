@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import { performCalculationsWithTime } from './calculator.ts';
 
-let arraySize = 2 ** 22;
+let arraySize:number;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -20,6 +20,7 @@ context.configure({
 });
 
 const button = document.querySelector('#runButton') as HTMLButtonElement;
+
 let inputArray: number[];
 
 button.addEventListener('click', async () => {
@@ -75,14 +76,14 @@ const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 // #region Example controls & Cleanup
 const paramSettings = {
-  min: 2 ** 13,
+  min: 2 ** 12,
   step: 2 ** 10,
   max: 2 ** 24,
 };
 
 export const controls = {
   'Array length': {
-    initial: 2 ** 13,
+    initial: 2 ** 22,
     ...paramSettings,
     onSliderChange: (value: number) => {
       arraySize = value;

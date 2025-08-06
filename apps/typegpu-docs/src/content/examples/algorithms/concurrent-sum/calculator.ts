@@ -1,4 +1,4 @@
-import { concurrentSum } from '@typegpu/concurrent-sum';
+import { concurrentSum, initConcurrentSum } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
@@ -38,6 +38,7 @@ export async function performCalculationsWithTime(
     inputBuffer,
     std.add,
     0,
+    false
   );
 
   const gpuTime = performance.now() - gpuStartTime;

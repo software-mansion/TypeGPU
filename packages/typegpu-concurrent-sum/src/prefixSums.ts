@@ -177,7 +177,7 @@ export function concurrentSum(
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
   identity: number,
-  onlyGreatestElement: boolean = true,
+  onlyGreatestElement: boolean = false,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   computer ??= new PrefixSumComputer(
     root,
