@@ -5,7 +5,7 @@ import {
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { undecorate } from '../data/decorateUtils.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -16,6 +16,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -52,11 +53,10 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { DEV } from '../shared/env.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
+import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { undecorate } from '../data/decorateUtils.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -637,6 +637,93 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (isVecInstance(value) || isMatInstance(value)) {
     return snip(value, kindToSchema[value.kind]);
+  }
+
+  const ctx = getResolutionCtx() as GenerationCtx | undefined;
+  const expectedType = ctx?.expectedType;
+
+  if (
+    ctx &&
+    typeof value === 'object' &&
+    value !== null &&
+    !($internal in value) &&
+    isWgslStruct(expectedType)
+  ) {
+    const entries = Object.fromEntries(
+      Object.entries(expectedType.propTypes).map(([key, schema]) => {
+        const val = (value as Record<string, unknown>)[key];
+        if (val === undefined) {
+          throw new WgslTypeError(
+            `Missing property ${key} in object literal for struct ${expectedType}`,
+          );
+        }
+        ctx.expectedType = schema as AnyData;
+        const result = coerceToSnippet(val);
+        ctx.expectedType = expectedType;
+        return [key, result];
+      }),
+    );
+
+    const convertedValues = convertStructValues(ctx, expectedType, entries);
+
+    return snip(
+      `${ctx.resolve(expectedType)}(${
+        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
+      })`,
+      expectedType,
+    );
+  }
+
+  if (ctx && Array.isArray(value)) {
+    let elemType: AnyData;
+    let values: Snippet[];
+
+    if (isWgslArray(expectedType)) {
+      elemType = expectedType.elementType as AnyData;
+      // The array is typed, so its elements should be as well.
+      values = value.map((elem) => {
+        ctx.expectedType = elemType as AnyData;
+        const result = coerceToSnippet(elem);
+        ctx.expectedType = expectedType;
+        return result;
+      });
+      // Since it's an expected type, we enforce the length
+      if (values.length !== expectedType.elementCount) {
+        throw new WgslTypeError(
+          `Cannot create value of type '${expectedType}' from an array of length: ${values.length}`,
+        );
+      }
+    } else {
+      // The array is not typed, so we try to guess the types.
+      const valuesSnippets = value.map((elem) => coerceToSnippet(elem));
+
+      if (valuesSnippets.length === 0) {
+        throw new WgslTypeError(
+          'Cannot infer the type of an empty array literal.',
+        );
+      }
+
+      const maybeValues = convertToCommonType({ ctx, values: valuesSnippets });
+      if (!maybeValues) {
+        throw new WgslTypeError(
+          'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
+        );
+      }
+
+      values = maybeValues;
+      elemType = concretize(values[0]?.dataType as AnyWgslData);
+    }
+
+    const arrayType = `array<${ctx.resolve(elemType)}, ${values.length}>`;
+    const arrayValues = values.map((sn) => ctx.resolve(sn.value));
+
+    return snip(
+      `${arrayType}(${arrayValues.join(', ')})`,
+      arrayOf(
+        elemType as AnyWgslData,
+        values.length,
+      ) as AnyWgslData,
+    );
   }
 
   if (Array.isArray(value)) {
