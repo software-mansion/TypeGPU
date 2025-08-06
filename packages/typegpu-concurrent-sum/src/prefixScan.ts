@@ -16,11 +16,11 @@ import {
 } from './schemas.ts';
 import { scanBlock } from './compute/scan.ts';
 import { uniformAdd } from './compute/applySums.ts';
-import { scanGreatestBlock } from './compute/onlyGreatestScan.ts';
+import { scanGreatestBlock } from './compute/singleScan.ts';
 
-let computer: PrefixSumComputer | null = null;
+let computer: PrefixScanComputer | null = null;
 
-export class PrefixSumComputer {
+export class PrefixScanComputer {
   private scanPipeline?: TgpuComputePipeline;
   private addPipeline?: TgpuComputePipeline;
 
@@ -169,17 +169,17 @@ export function initConcurrentSum(
   identity: number,
 ): void {
   // allocate all resources ahead of demand
-  computer = new PrefixSumComputer(root, operatorFn, identity, false);
+  computer = new PrefixScanComputer(root, operatorFn, identity, false);
 }
 
-export function concurrentSum(
+export function concurrentScan(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   operatorFn: (x: number, y: number) => number,
   identity: number,
   onlyGreatestElement: boolean = false,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  computer ??= new PrefixSumComputer(
+  computer ??= new PrefixScanComputer(
     root,
     operatorFn,
     identity,

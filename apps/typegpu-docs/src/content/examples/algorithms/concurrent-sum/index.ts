@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import { performCalculationsWithTime } from './calculator.ts';
 
-let arraySize:number;
+let arraySize: number;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;

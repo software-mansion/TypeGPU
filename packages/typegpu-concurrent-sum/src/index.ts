@@ -1,1 +1,1 @@
-export * from './prefixSums.ts';
+export * from './prefixScan.ts';
