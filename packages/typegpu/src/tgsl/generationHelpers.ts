@@ -573,28 +573,36 @@ Consider using explicit conversions instead.`,
 
 export function tryConvertSnippet(
   ctx: GenerationCtx,
-  value: Snippet,
+  snippet: Snippet,
   targetDataType: AnyData,
 ): Snippet {
-  if (targetDataType === value.dataType) {
-    return value;
+  if (targetDataType === snippet.dataType) {
+    return snippet;
   }
 
   if (targetDataType.type === 'void') {
     throw new WgslTypeError(
-      `Cannot convert value of type '${value.dataType.type}' to type 'void'`,
+      `Cannot convert value of type '${snippet.dataType.type}' to type 'void'`,
+    );
+  }
+
+  if (snippet.dataType.type === 'unknown') {
+    // This is it, it's now or never. We expect a specific type, and we're going to get it
+    return snip(
+      ctx.resolveValue(snippet.value, targetDataType),
+      targetDataType,
     );
   }
 
   const converted = convertToCommonType({
     ctx,
-    values: [value],
+    values: [snippet],
     restrictTo: [targetDataType],
   });
 
   if (!converted) {
     throw new WgslTypeError(
-      `Cannot convert value of type '${value.dataType.type}' to type '${targetDataType.type}'`,
+      `Cannot convert value of type '${snippet.dataType.type}' to type '${targetDataType.type}'`,
     );
   }
 
@@ -637,31 +645,6 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (isVecInstance(value) || isMatInstance(value)) {
     return snip(value, kindToSchema[value.kind]);
-  }
-
-  if (Array.isArray(value)) {
-    const coerced = value.map(coerceToSnippet).filter(Boolean);
-    const context = getResolutionCtx() as GenerationCtx | undefined;
-    if (!context) {
-      throw new Error('Tried to coerce array without a context');
-    }
-
-    const converted = convertToCommonType({
-      ctx: context,
-      values: coerced as Snippet[],
-    });
-    const commonType = getBestConversion(
-      coerced.map((v) => v.dataType as AnyData),
-    )?.targetType as AnyWgslData | undefined;
-
-    if (!converted || !commonType) {
-      return snip(value, UnknownData);
-    }
-
-    return snip(
-      converted.map((v) => v.value).join(', '),
-      arrayOf(concretize(commonType), value.length),
-    );
   }
 
   if (
