@@ -18,8 +18,8 @@ import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
   concretize,
-  convertStructValues,
   convertToCommonType,
+  generateStructSnippet,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
@@ -462,36 +462,10 @@ export function generateExpression(
     // Object Literal
     const obj = expression[1];
 
-    const structType = ctx.expectedType;
-
-    if (!structType || !wgsl.isWgslStruct(structType)) {
-      throw new WgslTypeError(
-        `No target type could be inferred for object with keys [${
-          Object.keys(obj).join(', ')
-        }], please wrap the object in the corresponding schema.`,
-      );
-    }
-
-    const entries = Object.fromEntries(
-      Object.entries(structType.propTypes).map(([key, value]) => {
-        const val = obj[key];
-        if (val === undefined) {
-          throw new WgslTypeError(
-            `Missing property ${key} in object literal for struct ${structType}`,
-          );
-        }
-        const result = generateTypedExpression(ctx, val, value as AnyData);
-        return [key, result];
-      }),
-    );
-
-    const convertedValues = convertStructValues(ctx, structType, entries);
-
-    return snip(
-      `${ctx.resolve(structType)}(${
-        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
-      })`,
-      structType,
+    return generateStructSnippet(
+      obj,
+      (entryValue, expectedType) =>
+        generateTypedExpression(ctx, entryValue, expectedType),
     );
   }
 

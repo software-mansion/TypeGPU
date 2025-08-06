@@ -574,8 +574,12 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: GenerationCtx,
   value: Snippet,
-  targetDataType: AnyData,
+  targetDataType?: AnyData,
 ): Snippet {
+  if (!targetDataType) {
+    return value;
+  }
+
   if (targetDataType === value.dataType) {
     return value;
   }
@@ -624,6 +628,64 @@ export function convertStructValues(
   });
 }
 
+export function generateStructSnippet<T>(
+  objectToParse: Record<string, T>,
+  callback: (value: T, expectedType: AnyData) => Snippet,
+): Snippet {
+  const ctx = getResolutionCtx() as GenerationCtx | undefined;
+  const expectedType = ctx?.expectedType;
+
+  if (!expectedType || !isWgslStruct(expectedType)) {
+    throw new WgslTypeError(
+      `No target type could be inferred for object with keys [${
+        Object.keys(objectToParse).join(', ')
+      }], please wrap the object in the corresponding schema.`,
+    );
+  }
+
+  const entries = Object.fromEntries(
+    Object.entries(expectedType.propTypes).map(([key, schema]) => {
+      const val = (objectToParse as Record<string, unknown>)[key];
+      if (val === undefined) {
+        throw new WgslTypeError(
+          `Missing property ${key} in object literal for struct ${expectedType}`,
+        );
+      }
+      const result = callback(val as T, schema as AnyData);
+      return [key, result];
+    }),
+  );
+
+  const convertedValues = convertStructValues(ctx, expectedType, entries);
+
+  return snip(
+    `${ctx.resolve(expectedType)}(${
+      convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
+    })`,
+    expectedType,
+  );
+}
+
+/**
+ * A wrapper for `generateExpression` that updates `ctx.expectedType`
+ * and tries to convert the result when it does not match the expected type.
+ */
+export function coerceToTypedSnippet(
+  ctx: GenerationCtx,
+  value: unknown,
+  expectedType: AnyData,
+) {
+  const prevExpectedType = ctx.expectedType;
+  ctx.expectedType = expectedType;
+
+  try {
+    const result = coerceToSnippet(value);
+    return tryConvertSnippet(ctx, result, expectedType);
+  } finally {
+    ctx.expectedType = prevExpectedType;
+  }
+}
+
 export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
@@ -635,12 +697,20 @@ export function coerceToSnippet(value: unknown): Snippet {
     return snip(value, value[$wgslDataType] as AnyData);
   }
 
-  if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, kindToSchema[value.kind]);
-  }
-
   const ctx = getResolutionCtx() as GenerationCtx | undefined;
   const expectedType = ctx?.expectedType;
+
+  if (!ctx) {
+    throw new Error('aaa');
+  }
+
+  if (isVecInstance(value) || isMatInstance(value)) {
+    return tryConvertSnippet(
+      ctx,
+      snip(value, kindToSchema[value.kind]),
+      expectedType,
+    );
+  }
 
   if (
     ctx &&
@@ -649,28 +719,10 @@ export function coerceToSnippet(value: unknown): Snippet {
     !($internal in value) &&
     isWgslStruct(expectedType)
   ) {
-    const entries = Object.fromEntries(
-      Object.entries(expectedType.propTypes).map(([key, schema]) => {
-        const val = (value as Record<string, unknown>)[key];
-        if (val === undefined) {
-          throw new WgslTypeError(
-            `Missing property ${key} in object literal for struct ${expectedType}`,
-          );
-        }
-        ctx.expectedType = schema as AnyData;
-        const result = coerceToSnippet(val);
-        ctx.expectedType = expectedType;
-        return [key, result];
-      }),
-    );
-
-    const convertedValues = convertStructValues(ctx, expectedType, entries);
-
-    return snip(
-      `${ctx.resolve(expectedType)}(${
-        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
-      })`,
-      expectedType,
+    return generateStructSnippet(
+      value as Record<string, unknown>,
+      (entryValue, expectedType) =>
+        coerceToTypedSnippet(ctx, entryValue, expectedType),
     );
   }
 
@@ -726,31 +778,6 @@ export function coerceToSnippet(value: unknown): Snippet {
     );
   }
 
-  if (Array.isArray(value)) {
-    const coerced = value.map(coerceToSnippet).filter(Boolean);
-    const context = getResolutionCtx() as GenerationCtx | undefined;
-    if (!context) {
-      throw new Error('Tried to coerce array without a context');
-    }
-
-    const converted = convertToCommonType({
-      ctx: context,
-      values: coerced as Snippet[],
-    });
-    const commonType = getBestConversion(
-      coerced.map((v) => v.dataType as AnyData),
-    )?.targetType as AnyWgslData | undefined;
-
-    if (!converted || !commonType) {
-      return snip(value, UnknownData);
-    }
-
-    return snip(
-      converted.map((v) => v.value).join(', '),
-      arrayOf(concretize(commonType), value.length),
-    );
-  }
-
   if (
     typeof value === 'string' || typeof value === 'function' ||
     typeof value === 'object' || typeof value === 'symbol' ||
@@ -761,14 +788,18 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'number' || typeof value === 'bigint') {
-    return snip(
-      value,
-      numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
+    return tryConvertSnippet(
+      ctx,
+      snip(
+        value,
+        numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
+      ),
+      expectedType,
     );
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool);
+    return tryConvertSnippet(ctx, snip(value, bool), expectedType);
   }
 
   return snip(value, UnknownData);
