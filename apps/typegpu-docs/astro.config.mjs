@@ -46,7 +46,6 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        DEV &&
         starlightTypeDoc({
           entryPoints: [
             '../../packages/typegpu/src/index.ts',

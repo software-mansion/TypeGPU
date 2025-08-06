@@ -5,19 +5,21 @@ import type {
   InferPartial,
   InferPartialRecord,
   InferRecord,
+  IsValidVertexSchema,
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { FnArgsConversionHint } from '../types.ts';
-import type { Undecorate } from './decorateUtils.ts';
 import type { MapValueToSnippet, Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
@@ -40,8 +42,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
-  readonly [$internal]: true;
+export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
+  extends wgsl.BaseData {
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -51,6 +53,9 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
+  readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
+  readonly [$invalidSchemaReason]:
+    'Disarrays are not host-shareable, use arrays instead';
   // ---
 }
 
@@ -63,9 +68,9 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
  * via `d.align` function.
  */
 export interface Unstruct<
-  TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
-> extends TgpuNamable {
-  readonly [$internal]: true;
+  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
+  TProps extends Record<string, wgsl.BaseData> = any,
+> extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
@@ -77,23 +82,30 @@ export interface Unstruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
+  readonly [$validVertexSchema]: {
+    [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
+  readonly [$invalidSchemaReason]:
+    'Unstructs are not host-shareable, use structs instead';
   // ---
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
-export type AnyUnstruct = Unstruct<any>;
+/** @deprecated Just use `Unstruct` without any type parameters */
+export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
-> {
-  readonly [$internal]: true;
+> extends wgsl.BaseData {
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  readonly [$invalidSchemaReason]:
+    'Loosely decorated schemas are not host-shareable';
+  readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 
@@ -106,7 +118,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
+export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return (
@@ -205,24 +217,3 @@ export class InfixDispatch {
     readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }
-
-export type HasNestedType<TData extends [wgsl.BaseData], TType extends string> =
-  Undecorate<TData[0]> extends { readonly type: TType } ? true
-    : Undecorate<TData[0]> extends {
-      readonly type: 'array';
-      readonly elementType: infer TElement;
-    }
-      ? TElement extends wgsl.BaseData
-        ? Undecorate<TElement> extends { readonly type: TType } ? true
-        : HasNestedType<[TElement], TType>
-      : false
-    : Undecorate<TData[0]> extends
-      { readonly type: 'struct'; readonly propTypes: infer TProps }
-      ? TProps extends Record<string, wgsl.BaseData> ? true extends {
-          [K in keyof TProps]: Undecorate<TProps[K]> extends
-            { readonly type: TType } ? true
-            : HasNestedType<[TProps[K]], TType>;
-        }[keyof TProps] ? true
-        : false
-      : false
-    : false;
