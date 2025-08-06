@@ -14,7 +14,12 @@ import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
 import { snip, type Snippet } from './data/snippet.ts';
 import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
-import { invariant, MissingSlotValueError, ResolutionError } from './errors.ts';
+import {
+  invariant,
+  MissingSlotValueError,
+  ResolutionError,
+  WgslTypeError,
+} from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
@@ -645,7 +650,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (schema && isWgslArray(schema)) {
-      return `array(${
+      if (!Array.isArray(value)) {
+        throw new WgslTypeError(
+          `Cannot coerce ${value} into value of type '${schema}'`,
+        );
+      }
+      if (schema.elementCount !== (value as unknown[]).length) {
+        throw new WgslTypeError(
+          `Cannot create value of type '${schema}' from an array of length: ${
+            (value as unknown[]).length
+          }`,
+        );
+      }
+
+      const elementTypeString = this.resolve(schema.elementType);
+      return `array<${elementTypeString}, ${schema.elementCount}>(${
         (value as unknown[]).map((element) =>
           this.resolveValue(element, schema.elementType)
         )
