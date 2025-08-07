@@ -416,7 +416,7 @@ describe('connectAttributesToShader', () => {
   });
 
   it('throws when trying to use type that has no attribute representation', () => {
-    expect(() => tgpu.vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)))
+    expect(() => tgpu.vertexLayout(d.disarrayOf(d.vec3h)))
       .toThrow();
   });
 });

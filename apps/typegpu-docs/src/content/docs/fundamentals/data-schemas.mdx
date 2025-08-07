@@ -331,13 +331,16 @@ const myDefaultArray = MyArray(); // [0, 0, 0, 0]
 const myInitializedArray = MyArray([1, 0, 0.5, 20]);
 ```
 
-You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use schema to declare WGSL runtime-sized arrays.
+You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use schema to declare WGSL [runtime-sized arrays](/TypeGPU/fundamentals/bind-groups#runtime-sized-example).
 
 ```ts twoslash
 import * as d from 'typegpu/data';
 
 // ---cut---
 const ArrayPartialScheme = d.arrayOf(d.f32);
+//    ^?
+
+const array = ArrayPartialScheme(2)([1.2, 19.29]);
 //    ^?
 ```
 

@@ -123,7 +123,7 @@ describe('TgpuRoot', () => {
       });
 
       const vertexLayout = tgpu.vertexLayout(
-        (n: number) => d.disarrayOf(VertexData, n),
+        d.disarrayOf(VertexData),
         'instance',
       );
 

@@ -162,23 +162,10 @@ describe('array', () => {
     const ArrayPartialSchema = d.arrayOf(d.f32);
 
     const array3 = ArrayPartialSchema(3)();
-    const array7 = ArrayPartialSchema(7)();
+    expect(array3).toStrictEqual([d.f32(), d.f32(), d.f32()]);
 
-    expect(array3).toStrictEqual([
-      d.f32(),
-      d.f32(),
-      d.f32(),
-    ]);
-
-    expect(array7).toStrictEqual([
-      d.f32(),
-      d.f32(),
-      d.f32(),
-      d.f32(),
-      d.f32(),
-      d.f32(),
-      d.f32(),
-    ]);
+    const array7 = ArrayPartialSchema(7)([1, 2, 1, 9, 2, 9, 7]);
+    expect(array7).toStrictEqual([1, 2, 1, 9, 2, 9, 7]);
   });
 
   it('generates correct code when Array default constructor is used', () => {
