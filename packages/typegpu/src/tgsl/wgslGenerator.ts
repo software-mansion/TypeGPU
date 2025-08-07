@@ -377,7 +377,7 @@ export function generateExpression(
 
       // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
       // In both cases, we just let the argument resolve everything.
-      return snip(ctx.resolve(arg.value), callee.value);
+      return snip(ctx.resolve(arg.value, callee.value), callee.value);
     }
 
     if (callee.value instanceof InfixDispatch) {

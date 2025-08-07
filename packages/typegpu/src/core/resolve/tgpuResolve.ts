@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
@@ -77,6 +78,7 @@ export function resolveWithContext(
   applyExternals(dependencies, externals ?? {});
 
   const resolutionObj: SelfResolvable = {
+    [$internal]: true,
     '~resolve'(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },

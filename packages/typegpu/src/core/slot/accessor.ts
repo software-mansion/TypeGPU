@@ -69,6 +69,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   [$gpuValueOf](): InferGPU<T> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.schema,
@@ -102,6 +103,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return `${ctx.resolve(value)}()`;
     }
 
-    return ctx.resolveValue(value as Infer<T>, this.schema);
+    return ctx.resolve(value, this.schema);
   }
 }
