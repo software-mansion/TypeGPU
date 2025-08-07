@@ -3,6 +3,7 @@ import { mat4x4f } from '../data/matrix.ts';
 import type { m4x4f, v3f } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { mul } from './operators.ts';
+
 /**
  * Translates the given 4-by-4 matrix by the given vector.
  * @param {m4x4f} matrix - The matrix to be modified.
