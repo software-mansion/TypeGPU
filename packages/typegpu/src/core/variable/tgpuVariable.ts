@@ -19,6 +19,7 @@ export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
   TDataType extends AnyData = AnyData,
 > extends TgpuNamable {
+  [$gpuValueOf](): InferGPU<TDataType>;
   value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;
 
@@ -88,7 +89,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     if (this.#initialValue) {
       ctx.addDeclaration(
         `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)} = ${
-          ctx.resolveValue(this.#initialValue, this.#dataType)
+          ctx.resolve(this.#initialValue, this.#dataType)
         };`,
       );
     } else {
@@ -112,6 +113,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   [$gpuValueOf](): InferGPU<TDataType> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.#dataType,
