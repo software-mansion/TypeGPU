@@ -87,7 +87,10 @@ describe('array', () => {
   });
 
   it('throws when trying to nest runtime sized arrays', () => {
-    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0)).toThrow();
+    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot nest runtime sized arrays.]`,
+      );
   });
 
   it('can be called to create an array', () => {
@@ -206,6 +209,14 @@ describe('array', () => {
             return;
           }`),
     );
+  });
+
+  it('can be immediately-invoked in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32, 4)();
+    });
+
+    expect(parseResolved({ foo })).toBe(parse(``));
   });
 });
 

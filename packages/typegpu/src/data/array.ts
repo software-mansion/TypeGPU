@@ -1,7 +1,10 @@
+import { createDualImpl } from 'src/core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
 import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
+import { snip } from './snippet.ts';
+import { UnknownData } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -18,7 +21,29 @@ import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export function arrayOf<TElement extends AnyWgslData>(
+export const arrayOf = createDualImpl(
+  <TElement extends AnyWgslData>(
+    elementType: TElement,
+    elementCount: number,
+  ): WgslArray<TElement> => {
+    return INTERNAL_arrayOf(elementType, elementCount);
+  },
+  (elementType, elementCount) => {
+    console.log(elementType, elementCount);
+    const schema = INTERNAL_arrayOf(
+      elementType.value as AnyWgslData,
+      elementCount.value as number,
+    );
+    return snip(schema, UnknownData);
+  },
+  'arrayOf',
+);
+
+// --------------
+// Implementation
+// --------------
+
+function INTERNAL_arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
 ): WgslArray<TElement> {
@@ -55,10 +80,6 @@ export function arrayOf<TElement extends AnyWgslData>(
 
   return arraySchema as unknown as WgslArray<TElement>;
 }
-
-// --------------
-// Implementation
-// --------------
 
 const WgslArrayImpl = {
   [$internal]: true,

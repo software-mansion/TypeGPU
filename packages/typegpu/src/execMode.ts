@@ -27,6 +27,13 @@ export function isInsideTgpuFn(): boolean {
 
 let resolutionCtx: ResolutionCtx | undefined;
 
+/**
+ * Used to mock the context before all tests. For normal use-cases, use `provideCtx`
+ */
+export function INTERNAL_setCtx<T>(ctx: ResolutionCtx | undefined) {
+  resolutionCtx = ctx;
+}
+
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
   invariant(
     resolutionCtx === undefined || resolutionCtx === ctx,
