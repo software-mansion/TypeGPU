@@ -45,7 +45,6 @@ export const Time = d.struct({ passed: d.f32, multiplier: d.f32 });
 export const computeLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
     uniform: d.i32,
-    access: 'readonly',
   },
   inState: {
     storage: d.arrayOf(CelestialBody),
@@ -57,8 +56,8 @@ export const computeLayout = tgpu.bindGroupLayout({
   },
 });
 
-export const renderSkyBoxVertexLayout = tgpu.vertexLayout((n) =>
-  d.arrayOf(SkyBoxVertex, n)
+export const renderSkyBoxVertexLayout = tgpu.vertexLayout(
+  d.arrayOf(SkyBoxVertex),
 );
 
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);
