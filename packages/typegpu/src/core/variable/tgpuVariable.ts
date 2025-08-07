@@ -19,6 +19,7 @@ export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
   TDataType extends AnyData = AnyData,
 > extends TgpuNamable {
+  [$gpuValueOf](): InferGPU<TDataType>;
   value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;
 
