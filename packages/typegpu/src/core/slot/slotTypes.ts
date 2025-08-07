@@ -1,23 +1,14 @@
+import type { ResolutionCtx } from '../../types.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import type { Infer, InferGPU } from '../../shared/repr.ts';
-import {
-  $gpuRepr,
-  $internal,
-  $providing,
-  $repr,
-} from '../../shared/symbols.ts';
+import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
+import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'slot';
-
-  // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<T>;
-  readonly [$gpuRepr]: InferGPU<T>;
-  // ---
 
   readonly defaultValue: T | undefined;
 
@@ -27,18 +18,19 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  readonly value: InferGPU<T>;
-  readonly $: InferGPU<T>;
+  [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T>;
+  readonly value: GPUValueOf<T>;
+  readonly $: GPUValueOf<T>;
 }
 
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
-  readonly value: InferGPU<T>;
-  readonly $: InferGPU<T>;
+
+  [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T>;
+  readonly value: GPUValueOf<T>;
+  readonly $: GPUValueOf<T>;
 
   // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<T>;
-  readonly [$gpuRepr]: InferGPU<T>;
   readonly [$providing]?: Providing | undefined;
   // ---
 
@@ -54,11 +46,6 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
-  // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<T>;
-  readonly [$gpuRepr]: InferGPU<T>;
-  // ---
-
   readonly schema: T;
   readonly defaultValue:
     | TgpuFn<() => T>
@@ -67,6 +54,7 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
     | undefined;
   readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
 
+  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T>;
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
 }

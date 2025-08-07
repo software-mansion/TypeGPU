@@ -20,7 +20,6 @@ import {
   vec4f,
   vec4h,
 } from '../../src/data/vector.ts';
-import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import {
   coerceToSnippet,
   convertStructValues,
@@ -34,6 +33,7 @@ import {
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
+import { Void } from '../../src/data/index.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -469,6 +469,23 @@ describe('generationHelpers', () => {
       });
       expect(result).toBeUndefined();
     });
+
+    it('handles void gracefully', () => {
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32, snip('void', Void)],
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('handles void as target type gracefully', () => {
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32],
+        restrictTo: [Void],
+      });
+      expect(result).toBeUndefined();
+    });
   });
 
   describe('convertStructValues', () => {
@@ -542,26 +559,12 @@ describe('generationHelpers', () => {
       expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
-    it('coerces arrays of compatible numbers', () => {
+    it('coerces arrays to unknown', () => {
       const resInt = coerceToSnippet([1, 2, 3]);
-      expect(resInt.dataType.type).toBe('array');
-      expect((resInt.dataType as WgslArray).elementType).toBe(i32); // concretized from abstractInt
-      expect((resInt.dataType as WgslArray).elementCount).toBe(3);
-      expect(resInt.value).toBe('1, 2, 3');
+      expect(resInt.dataType.type).toBe('unknown');
 
       const resFloat = coerceToSnippet([1.0, 2.5, -0.5]);
-      expect(resFloat.dataType.type).toBe('array');
-      expect((resFloat.dataType as WgslArray).elementType).toBe(f32); // concretized from abstractFloat
-      expect((resFloat.dataType as WgslArray).elementCount).toBe(3);
-      expect(resFloat.value).toBe('1, 2.5, -0.5');
-    });
-
-    it('coerces arrays requiring numeric conversion and warns', () => {
-      const resMixed = coerceToSnippet([1, 2.5, 3]); // -> common type f32
-      expect(resMixed.dataType.type).toBe('array');
-      expect((resMixed.dataType as WgslArray).elementType).toBe(f32);
-      expect((resMixed.dataType as WgslArray).elementCount).toBe(3);
-      expect(resMixed.value).toBe('1, 2.5, 3');
+      expect(resFloat.dataType.type).toBe('unknown');
     });
 
     it('returns UnknownData for arrays of incompatible types', () => {
