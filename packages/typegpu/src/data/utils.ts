@@ -1,12 +1,20 @@
+import { formatToWGSLType } from './vertexFormatData';
+
 /**
  * A wrapper for `schema(item)` call.
  * Throws an error if the schema is not callable.
  */
 export function schemaCloneWrapper<T>(schema: unknown, item: T): T {
+  const maybeType = (schema as { type: string })?.type;
+
   try {
-    return (schema as unknown as ((item: T) => T))(item);
-  } catch {
-    const maybeType = (schema as { type: string })?.type;
+    // TgpuVertexFormatData are not callable
+    const cloningSchema = maybeType in formatToWGSLType
+      ? formatToWGSLType[maybeType as keyof typeof formatToWGSLType]
+      : schema;
+    return (cloningSchema as unknown as ((item: T) => T))(item);
+  } catch (e) {
+    console.log(e);
     throw new Error(
       `Schema of type ${
         maybeType ?? '<unknown>'
@@ -20,10 +28,15 @@ export function schemaCloneWrapper<T>(schema: unknown, item: T): T {
  * Throws an error if the schema is not callable.
  */
 export function schemaDefaultWrapper<T>(schema: unknown): T {
+  const maybeType = (schema as { type: string })?.type;
+
   try {
-    return (schema as unknown as (() => T))();
+    // TgpuVertexFormatData are not callable
+    const cloningSchema = maybeType in formatToWGSLType
+      ? formatToWGSLType[maybeType as keyof typeof formatToWGSLType]
+      : schema;
+    return (cloningSchema as unknown as (() => T))();
   } catch {
-    const maybeType = (schema as { type: string })?.type;
     throw new Error(
       `Schema of type ${maybeType ?? '<unknown>'} is not callable.`,
     );

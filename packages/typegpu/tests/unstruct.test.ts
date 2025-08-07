@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 
@@ -234,4 +234,69 @@ describe('d.unstruct', () => {
     expect(data.c.x).toBeCloseTo(-0.25);
     expect(data.c.y).toBeCloseTo(0.25);
   });
+
+  it('can be called to create an object', () => {
+    const TestStruct = d.unstruct({
+      x: d.u32,
+      y: d.uint32x3,
+    });
+
+    const obj = TestStruct({ x: 1, y: d.vec3u(1, 2, 3) });
+
+    expect(obj).toStrictEqual({ x: 1, y: d.vec3u(1, 2, 3) });
+    expectTypeOf(obj).toEqualTypeOf<{ x: number; y: d.v3u }>();
+  });
+
+  it('cannot be called with invalid properties', () => {
+    const TestStruct = d.unstruct({
+      x: d.u32,
+      y: d.uint32x3,
+    });
+
+    // @ts-expect-error
+    (() => TestStruct({ x: 1, z: 2 }));
+  });
+
+  it('can be called to create a deep copy of other struct', () => {
+    const schema = d.unstruct({
+      nested: d.unstruct({ prop1: d.float32x2, prop2: d.u32 }),
+    });
+    const instance = schema({ nested: { prop1: d.vec2f(1, 2), prop2: 21 } });
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual(instance);
+    expect(clone).not.toBe(instance);
+    expect(clone.nested).not.toBe(instance.nested);
+    expect(clone.nested.prop1).not.toBe(instance.nested.prop1);
+  });
+
+  it('can be called to strip extra properties of a struct', () => {
+    const schema = d.unstruct({ prop1: d.vec2f, prop2: d.u32 });
+    const instance = { prop1: d.vec2f(1, 2), prop2: 21, prop3: 'extra' };
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual({ prop1: d.vec2f(1, 2), prop2: 21 });
+  });
+
+  it('can be called to create a default value', () => {
+    const schema = d.unstruct({
+      nested: d.unstruct({ prop1: d.vec2f, prop2: d.u32 }),
+    });
+
+    const defaultStruct = schema();
+
+    expect(defaultStruct).toStrictEqual({
+      nested: { prop1: d.vec2f(), prop2: d.u32() },
+    });
+  });
+
+  // it('can be called to create a default value with nested array', () => {
+  //   const schema = d.unstruct({ arr: d.disarrayOf(d.u32, 1) });
+
+  //   const defaultStruct = schema();
+
+  //   expect(defaultStruct).toStrictEqual({ arr: [0] });
+  // });
 });
