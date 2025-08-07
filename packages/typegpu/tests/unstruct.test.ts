@@ -293,11 +293,11 @@ describe('d.unstruct', () => {
     });
   });
 
-  // it('can be called to create a default value with nested disarray', () => {
-  //   const TestUnstruct = d.unstruct({ arr: d.disarrayOf(d.u32, 1) });
+  it('can be called to create a default value with nested disarray', () => {
+    const TestUnstruct = d.unstruct({ arr: d.disarrayOf(d.uint16, 1) });
 
-  //   const defaultStruct = TestUnstruct();
+    const defaultStruct = TestUnstruct();
 
-  //   expect(defaultStruct).toStrictEqual({ arr: [0] });
-  // });
+    expect(defaultStruct).toStrictEqual({ arr: [0] });
+  });
 });

@@ -44,6 +44,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  */
 export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
   extends wgsl.BaseData {
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;

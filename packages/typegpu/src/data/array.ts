@@ -27,7 +27,7 @@ export function arrayOf<TElement extends AnyWgslData>(
   const arraySchema = (elements?: TElement[]) => {
     if (elements && elements.length !== elementCount) {
       throw new Error(
-        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} arguments.`,
+        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} argument(s).`,
       );
     }
 

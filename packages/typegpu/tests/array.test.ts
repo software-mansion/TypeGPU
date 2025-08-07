@@ -99,7 +99,7 @@ describe('array', () => {
     expectTypeOf(obj).toEqualTypeOf<number[]>();
   });
 
-  it('cannot be called with invalid properties', () => {
+  it('cannot be called with invalid elements', () => {
     const ArraySchema = d.arrayOf(d.u32, 4);
 
     // @ts-expect-error
@@ -131,10 +131,10 @@ describe('array', () => {
     const ArraySchema = d.arrayOf(d.u32, 2);
 
     expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot(
-      '[Error: Array schema of 2 elements of type u32 called with 1 arguments.]',
+      `[Error: Array schema of 2 elements of type u32 called with 1 argument(s).]`,
     );
     expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot(
-      '[Error: Array schema of 2 elements of type u32 called with 3 arguments.]',
+      `[Error: Array schema of 2 elements of type u32 called with 3 argument(s).]`,
     );
   });
 

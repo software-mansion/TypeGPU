@@ -32,7 +32,7 @@ export function disarrayOf<TElement extends AnyData>(
   const disarraySchema = (elements?: TElement[]) => {
     if (elements && elements.length !== elementCount) {
       throw new Error(
-        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} arguments.`,
+        `Disarray schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} argument(s).`,
       );
     }
 
