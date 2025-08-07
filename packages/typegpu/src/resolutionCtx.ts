@@ -13,7 +13,7 @@ import {
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
 import { snip, type Snippet } from './data/snippet.ts';
-import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
+import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -45,8 +45,8 @@ import type {
 } from './types.ts';
 import {
   CodegenState,
+  isMarkedInternal,
   isSelfResolvable,
-  isWgsl,
   NormalState,
 } from './types.ts';
 
@@ -591,7 +591,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isSelfResolvable(item)) {
         result = item['~resolve'](this);
       } else {
-        result = this.resolveValue(item);
+        throw new TypeError(
+          `Unresolvable internal value: ${item} (as json: ${
+            JSON.stringify(item)
+          })`,
+        );
       }
 
       // We know which slots the item used while resolving
@@ -615,15 +619,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown): string {
+  resolve(item: unknown, schema?: AnyData | undefined): string {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner),
+        () => this.resolve(item[$providing].inner, schema),
       );
     }
 
-    if ((item && typeof item === 'object') || typeof item === 'function') {
+    if (isMarkedInternal(item)) {
+      // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {
           this.pushMode(new CodegenState());
@@ -638,58 +643,48 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return this._getOrInstantiate(item);
     }
 
-    return String(item);
-  }
-
-  resolveValue<T extends BaseData>(
-    value: Infer<T>,
-    schema?: T | undefined,
-  ): string {
-    if (isWgsl(value)) {
-      return this.resolve(value);
+    // This is a value that comes from the outside, maybe we can coerce it
+    if (typeof item !== 'object' && typeof item !== 'function') {
+      return String(item);
     }
 
     if (schema && isWgslArray(schema)) {
-      if (!Array.isArray(value)) {
+      if (!Array.isArray(item)) {
         throw new WgslTypeError(
-          `Cannot coerce ${value} into value of type '${schema}'`,
+          `Cannot coerce ${item} into value of type '${schema}'`,
         );
       }
-      if (schema.elementCount !== (value as unknown[]).length) {
+
+      if (schema.elementCount !== item.length) {
         throw new WgslTypeError(
-          `Cannot create value of type '${schema}' from an array of length: ${
-            (value as unknown[]).length
-          }`,
+          `Cannot create value of type '${schema}' from an array of length: ${item.length}`,
         );
       }
 
       const elementTypeString = this.resolve(schema.elementType);
       return `array<${elementTypeString}, ${schema.elementCount}>(${
-        (value as unknown[]).map((element) =>
-          this.resolveValue(element, schema.elementType)
+        item.map((element) =>
+          this.resolve(element, schema.elementType as AnyData)
         )
       })`;
     }
 
-    if (Array.isArray(value)) {
-      return `array(${value.map((element) => this.resolveValue(element))})`;
+    if (Array.isArray(item)) {
+      return `array(${item.map((element) => this.resolve(element))})`;
     }
 
     if (schema && isWgslStruct(schema)) {
       return `${this.resolve(schema)}(${
         Object.entries(schema.propTypes).map(([key, type_]) =>
-          this.resolveValue(
-            (value as Infer<typeof schema>)[key],
-            type_ as BaseData,
-          )
+          this.resolve((item as Infer<typeof schema>)[key], type_ as AnyData)
         )
       })`;
     }
 
-    throw new Error(
-      `Value ${value} (as json: ${
-        JSON.stringify(value)
-      }) of schema ${schema} is not resolvable to WGSL`,
+    throw new WgslTypeError(
+      `Value ${item} (as json: ${JSON.stringify(item)}) is not resolvable${
+        schema ? ` to type ${schema}` : ''
+      }`,
     );
   }
 

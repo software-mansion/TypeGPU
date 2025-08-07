@@ -40,7 +40,6 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
@@ -229,11 +228,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: unknown): string;
-  resolveValue<T extends BaseData>(
-    value: Infer<T> | InferGPU<T>,
-    schema: T,
-  ): string;
+  resolve(item: unknown, schema?: AnyData | undefined): string;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
@@ -257,12 +252,14 @@ export interface ResolutionCtx {
  * to another mechanism.
  */
 export interface SelfResolvable {
+  [$internal]: unknown;
   '~resolve'(ctx: ResolutionCtx): string;
   toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
-  return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
+  return isMarkedInternal(value) &&
+    typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

@@ -133,6 +133,7 @@ class TgpuFixedBufferImpl<
   [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.buffer.dataType,
@@ -249,6 +250,7 @@ export class TgpuLaidOutBufferImpl<
   [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.dataType,

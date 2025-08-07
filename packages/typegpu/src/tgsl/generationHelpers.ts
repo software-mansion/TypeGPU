@@ -586,10 +586,7 @@ export function tryConvertSnippet(
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(
-      ctx.resolveValue(snippet.value, targetDataType),
-      targetDataType,
-    );
+    return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
   }
 
   const converted = convertToCommonType({
