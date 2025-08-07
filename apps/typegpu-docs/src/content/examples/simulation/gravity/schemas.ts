@@ -48,11 +48,11 @@ export const computeLayout = tgpu.bindGroupLayout({
     access: 'readonly',
   },
   inState: {
-    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    storage: d.arrayOf(CelestialBody),
     access: 'readonly',
   },
   outState: {
-    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    storage: d.arrayOf(CelestialBody),
     access: 'mutable',
   },
 });
@@ -71,10 +71,10 @@ export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
     celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
     celestialBodies: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
+      storage: d.arrayOf(CelestialBody),
       access: 'readonly',
     },
   });
 
 export const renderVertexLayout = tgpu
-  .vertexLayout((n) => d.arrayOf(d.struct(VertexInput), n));
+  .vertexLayout(d.arrayOf(d.struct(VertexInput)));
