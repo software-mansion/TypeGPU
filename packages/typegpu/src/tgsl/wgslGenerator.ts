@@ -388,6 +388,7 @@ export function generateExpression(
         );
       }
       return callee.value.operator(
+        ctx,
         callee.value.lhs,
         generateExpression(ctx, argNodes[0]),
       );

@@ -42,9 +42,9 @@ export const atomicLoad = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a) => {
+  (ctx, a) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicLoad(&${a.value})`, a.dataType.inner);
+      return snip(`atomicLoad(&${ctx.resolve(a.value)})`, a.dataType.inner);
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -61,13 +61,16 @@ export const atomicStore = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (!isWgslData(a.dataType) || a.dataType.type !== 'atomic') {
       throw new Error(
         `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
       );
     }
-    return snip(`atomicStore(&${a.value}, ${value.value})`, Void);
+    return snip(
+      `atomicStore(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+      Void,
+    );
   },
   'atomicStore',
 );
@@ -87,9 +90,12 @@ export const atomicAdd = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicAdd(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicAdd(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -107,9 +113,12 @@ export const atomicSub = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicSub(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicSub(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -127,9 +136,12 @@ export const atomicMax = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicMax(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicMax(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -147,9 +159,12 @@ export const atomicMin = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicMin(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicMin(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -167,9 +182,12 @@ export const atomicAnd = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicAnd(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicAnd(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -187,9 +205,12 @@ export const atomicOr = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicOr(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicOr(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -207,9 +228,12 @@ export const atomicXor = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (a, value) => {
+  (ctx, a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicXor(&${a.value}, ${value.value})`, a.dataType.inner);
+      return snip(
+        `atomicXor(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        a.dataType.inner,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,

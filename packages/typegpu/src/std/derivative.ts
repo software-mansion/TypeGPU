@@ -8,7 +8,7 @@ export const dpdx = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdx(${value.value})`, value.dataType),
+  (ctx, value) => snip(`dpdx(${ctx.resolve(value.value)})`, value.dataType),
   'dpdx',
 );
 
@@ -18,7 +18,8 @@ export const dpdxCoarse = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdxCoarse(${value.value})`, value.dataType),
+  (ctx, value) =>
+    snip(`dpdxCoarse(${ctx.resolve(value.value)})`, value.dataType),
   'dpdxCoarse',
 );
 
@@ -28,7 +29,7 @@ export const dpdxFine = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdxFine(${value.value})`, value.dataType),
+  (ctx, value) => snip(`dpdxFine(${ctx.resolve(value.value)})`, value.dataType),
   'dpdxFine',
 );
 
@@ -38,7 +39,7 @@ export const dpdy = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdy(${value.value})`, value.dataType),
+  (ctx, value) => snip(`dpdy(${ctx.resolve(value.value)})`, value.dataType),
   'dpdy',
 );
 
@@ -48,7 +49,8 @@ export const dpdyCoarse = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdyCoarse(${value.value})`, value.dataType),
+  (ctx, value) =>
+    snip(`dpdyCoarse(${ctx.resolve(value.value)})`, value.dataType),
   'dpdyCoarse',
 );
 
@@ -58,7 +60,7 @@ export const dpdyFine = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`dpdyFine(${value.value})`, value.dataType),
+  (ctx, value) => snip(`dpdyFine(${ctx.resolve(value.value)})`, value.dataType),
   'dpdyFine',
 );
 
@@ -68,7 +70,7 @@ export const fwidth = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`fwidth(${value.value})`, value.dataType),
+  (ctx, value) => snip(`fwidth(${ctx.resolve(value.value)})`, value.dataType),
   'fwidth',
 );
 
@@ -78,7 +80,8 @@ export const fwidthCoarse = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`fwidthCoarse(${value.value})`, value.dataType),
+  (ctx, value) =>
+    snip(`fwidthCoarse(${ctx.resolve(value.value)})`, value.dataType),
   'fwidthCoarse',
 );
 
@@ -88,6 +91,7 @@ export const fwidthFine = createDualImpl(
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(`fwidthFine(${value.value})`, value.dataType),
+  (ctx, value) =>
+    snip(`fwidthFine(${ctx.resolve(value.value)})`, value.dataType),
   'fwidthFine',
 );

@@ -9,14 +9,14 @@ export const arrayLength = createDualImpl(
   // CPU implementation
   (a: unknown[]) => a.length,
   // GPU implementation
-  (a) => {
+  (ctx, a) => {
     if (
       isPtr(a.dataType) && isWgslArray(a.dataType.inner) &&
       a.dataType.inner.elementCount > 0
     ) {
       return snip(String(a.dataType.inner.elementCount), abstractInt);
     }
-    return snip(`arrayLength(${a.value})`, u32);
+    return snip(`arrayLength(${ctx.resolve(a.value)})`, u32);
   },
   'arrayLength',
   (a) => [ptrFn(a.dataType as AnyWgslData)],

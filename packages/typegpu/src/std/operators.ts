@@ -80,11 +80,12 @@ export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
   // GPU implementation
-  (lhs, rhs) =>
+  (ctx, lhs, rhs) =>
     snip(
-      `(${lhs.value} + ${rhs.value})`,
+      `(${ctx.resolve(lhs.value)} + ${ctx.resolve(rhs.value)})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
+  'add',
   'unify',
 );
 
@@ -109,9 +110,9 @@ export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
   // GPU implementation
-  (lhs, rhs) =>
+  (ctx, lhs, rhs) =>
     snip(
-      `(${lhs.value} - ${rhs.value})`,
+      `(${ctx.resolve(lhs.value)} - ${ctx.resolve(rhs.value)})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'sub',
@@ -163,7 +164,7 @@ export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
   // GPU implementation
-  (lhs, rhs) => {
+  (ctx, lhs, rhs) => {
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
@@ -178,7 +179,10 @@ export const mul = createDualImpl(
       ? rhs.dataType
       // Matrix * Matrix
       : lhs.dataType;
-    return snip(`(${lhs.value} * ${rhs.value})`, returnType);
+    return snip(
+      `(${ctx.resolve(lhs.value)} * ${ctx.resolve(rhs.value)})`,
+      returnType,
+    );
   },
   'mul',
 );
@@ -210,11 +214,17 @@ export const div: TgpuDualFn<DivOverload> = createDualImpl(
     throw new Error('Div called with invalid arguments.');
   },
   // GPU implementation
-  (lhs, rhs) => {
+  (ctx, lhs, rhs) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return snip(`(f32(${lhs.value}) / ${rhs.value})`, f32);
+      return snip(
+        `(f32(${ctx.resolve(lhs.value)}) / ${ctx.resolve(rhs.value)})`,
+        f32,
+      );
     }
-    return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
+    return snip(
+      `(${ctx.resolve(lhs.value)} / ${ctx.resolve(rhs.value)})`,
+      lhs.dataType,
+    );
   },
   'div',
 );
@@ -256,9 +266,9 @@ export const mod: ModOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (a, b) => {
+  (ctx, a, b) => {
     const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
-    return snip(`(${a.value} % ${b.value})`, type);
+    return snip(`(${ctx.resolve(a.value)} % ${ctx.resolve(b.value)})`, type);
   },
   'mod',
 );
@@ -272,6 +282,6 @@ export const neg = createDualImpl(
     return VectorOps.neg[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => snip(`-(${value.value})`, value.dataType),
+  (ctx, value) => snip(`-(${ctx.resolve(value.value)})`, value.dataType),
   'neg',
 );

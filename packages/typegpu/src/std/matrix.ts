@@ -16,11 +16,13 @@ export const translate4 = createDualImpl(
     return mul(mat4x4f.translation(vector), matrix);
   },
   // GPU implementation
-  (matrix, vector) => ({
+  (ctx, matrix, vector) => ({
     value: `(${
-      (mat4x4f.translation(vector as unknown as v3f) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
+      ctx.resolve(
+        (mat4x4f.translation(vector as unknown as v3f) as unknown as Snippet)
+          .value,
+      )
+    } * ${ctx.resolve(matrix.value)})`,
     dataType: matrix.dataType,
   }),
   'translate4',
@@ -38,11 +40,13 @@ export const scale4 = createDualImpl(
     return mul(mat4x4f.scaling(vector), matrix);
   },
   // GPU implementation
-  (matrix, vector) => ({
+  (ctx, matrix, vector) => ({
     value: `(${
-      (mat4x4f.scaling(vector as unknown as v3f) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
+      ctx.resolve(
+        (mat4x4f.scaling(vector as unknown as v3f) as unknown as Snippet)
+          .value,
+      )
+    } * ${ctx.resolve(matrix.value)})`,
     dataType: matrix.dataType,
   }),
   'scale4',
@@ -60,11 +64,13 @@ export const rotateX4 = createDualImpl(
     return mul(mat4x4f.rotationX(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
+  (ctx, matrix, angle) => ({
     value: `(${
-      (mat4x4f.rotationX(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
+      ctx.resolve(
+        (mat4x4f.rotationX(angle as unknown as number) as unknown as Snippet)
+          .value,
+      )
+    } * ${ctx.resolve(matrix.value)})`,
     dataType: matrix.dataType,
   }),
   'rotateX4',
@@ -82,11 +88,13 @@ export const rotateY4 = createDualImpl(
     return mul(mat4x4f.rotationY(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
+  (ctx, matrix, angle) => ({
     value: `(${
-      (mat4x4f.rotationY(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
+      ctx.resolve(
+        (mat4x4f.rotationY(angle as unknown as number) as unknown as Snippet)
+          .value,
+      )
+    } * ${ctx.resolve(matrix.value)})`,
     dataType: matrix.dataType,
   }),
   'rotateY4',
@@ -104,11 +112,13 @@ export const rotateZ4 = createDualImpl(
     return mul(mat4x4f.rotationZ(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
+  (ctx, matrix, angle) => ({
     value: `(${
-      (mat4x4f.rotationZ(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
+      ctx.resolve(
+        (mat4x4f.rotationZ(angle as unknown as number) as unknown as Snippet)
+          .value,
+      )
+    } * ${ctx.resolve(matrix.value)})`,
     dataType: matrix.dataType,
   }),
   'rotateZ4',

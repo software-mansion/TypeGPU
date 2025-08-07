@@ -120,7 +120,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, sampler, coords, offsetOrArrayIndex, maybeOffset) => {
+  (ctx, texture, sampler, coords, offsetOrArrayIndex, maybeOffset) => {
     const args = [texture, sampler, coords];
 
     if (offsetOrArrayIndex !== undefined) {
@@ -182,7 +182,7 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, sampler, coords, level, offsetOrArrayIndex) => {
+  (ctx, texture, sampler, coords, level, offsetOrArrayIndex) => {
     const args = [texture, sampler, coords, level];
 
     if (offsetOrArrayIndex !== undefined) {
@@ -270,7 +270,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, coords, levelOrArrayIndex) => {
+  (ctx, texture, coords, levelOrArrayIndex) => {
     const args = [texture, coords];
 
     if (levelOrArrayIndex !== undefined) {
@@ -328,7 +328,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, coords, arrayIndexOrValue, maybeValue) =>
+  (ctx, texture, coords, arrayIndexOrValue, maybeValue) =>
     snip(
       `textureStore(${
         [texture, coords, arrayIndexOrValue, maybeValue].filter(
@@ -382,12 +382,12 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, level) => {
+  (ctx, texture, level) => {
     const dim =
       (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
         .dimension;
     return snip(
-      `textureDimensions(${texture.value}${
+      `textureDimensions(${ctx.resolve(texture.value)}${
         level !== undefined ? `, ${level.value}` : ''
       })`,
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,

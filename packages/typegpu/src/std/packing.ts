@@ -19,7 +19,7 @@ export const unpack2x16float = createDualImpl(
     return vec2f(reader.readFloat16(), reader.readFloat16());
   },
   // GPU implementation
-  (e) => snip(`unpack2x16float(${e.value})`, vec2f),
+  (ctx, e) => snip(`unpack2x16float(${ctx.resolve(e.value)})`, vec2f),
   'unpack2x16float',
 );
 
@@ -38,7 +38,7 @@ export const pack2x16float = createDualImpl(
     return u32(reader.readUint32());
   },
   // GPU implementation
-  (e) => snip(`pack2x16float(${e.value})`, u32),
+  (ctx, e) => snip(`pack2x16float(${ctx.resolve(e.value)})`, u32),
   'pack2x16float',
 );
 
@@ -61,7 +61,7 @@ export const unpack4x8unorm = createDualImpl(
     );
   },
   // GPU implementation
-  (e) => snip(`unpack4x8unorm(${e.value})`, vec4f),
+  (ctx, e) => snip(`unpack4x8unorm(${ctx.resolve(e.value)})`, vec4f),
   'unpack4x8unorm',
 );
 
@@ -82,6 +82,6 @@ export const pack4x8unorm = createDualImpl(
     return u32(reader.readUint32());
   },
   // GPU implementation
-  (e) => snip(`pack4x8unorm(${e.value})`, u32),
+  (ctx, e) => snip(`pack4x8unorm(${ctx.resolve(e.value)})`, u32),
   'pack4x8unorm',
 );

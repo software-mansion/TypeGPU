@@ -6,7 +6,7 @@ describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
     const dual = createDualImpl(
       (a) => a,
-      (snippet) => snippet,
+      (_ctx, snippet) => snippet,
       'myDualImpl',
     );
     expect(getName(dual)).toBe('myDualImpl');

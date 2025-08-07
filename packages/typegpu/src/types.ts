@@ -228,7 +228,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: unknown, schema?: AnyData | undefined): string;
+  resolve(item: unknown, schema?: AnyData | UnknownData | undefined): string;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;

@@ -19,7 +19,7 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
-import type { FnArgsConversionHint } from '../types.ts';
+import type { FnArgsConversionHint, ResolutionCtx } from '../types.ts';
 import type { MapValueToSnippet, Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
@@ -29,7 +29,10 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & {
     [$internal]: {
       jsImpl: TImpl | string;
-      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
+      gpuImpl: (
+        ctx: ResolutionCtx,
+        ...args: MapValueToSnippet<Parameters<TImpl>>
+      ) => Snippet;
       argConversionHint: FnArgsConversionHint;
     };
   };
@@ -214,6 +217,10 @@ export class InfixDispatch {
   constructor(
     readonly name: string,
     readonly lhs: Snippet,
-    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+    readonly operator: (
+      ctx: ResolutionCtx,
+      lhs: Snippet,
+      rhs: Snippet,
+    ) => Snippet,
   ) {}
 }

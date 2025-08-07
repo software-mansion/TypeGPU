@@ -320,9 +320,9 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `'${type}' constructor called with invalid number of arguments.`,
       );
     },
-    (...args) =>
+    (ctx, ...args) =>
       snip(
-        `${type}(${args.map((v) => v.value).join(', ')})`,
+        `${type}(${args.map((v) => ctx.resolve(v.value)).join(', ')})`,
         vecTypeToConstructor[type],
       ),
     type,
