@@ -309,13 +309,13 @@ interface FixedBindingConfig {
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private readonly _memoizedResolves = new WeakMap<
+  private readonly _memoizedResolves = new Map<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
-  private readonly _memoizedDerived = new WeakMap<
+  private readonly _memoizedDerived = new Map<
     // WeakMap because if the "derived" does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     TgpuDerived<unknown>,
@@ -613,20 +613,37 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown): string {
-    console.log('INNER RESOLVE', String(item));
-
-    console.log('ITEM | TYPE', String(item), '|', typeof item);
-
     if (item && typeof item === 'function') {
-      if (this._currentlyResolvedItems.has(item as object)) {
+      console.log('INNER RESOLVE', String(item));
+      console.log('ITEM | TYPE', String(item), '|', typeof item);
+      console.log('SIZE OF MEMOIZED', this._memoizedResolves.size);
+      console.log(
+        'MEMOIZED',
+        Array.from(this._memoizedResolves.keys().map((key) => String(key))),
+      );
+      console.log('SIZE OF DERIVED', this._memoizedDerived.size);
+      console.log(
+        'DERIVED',
+        Array.from(this._memoizedDerived.keys().map((key) => String(key))),
+      );
+      if (
+        this._currentlyResolvedItems.has(item) &&
+        !this._memoizedResolves.has(item)
+      ) {
         // TODO:
         // 1. if it is in cache it is good
         // 2. if it is from lib it is good
         // 3. all defined by user are wrong??
         console.log('RECURSIVE RESOLUTION DETECTED', String(item));
+        throw new Error(
+          `Recursive function ${
+            String(item)
+          } detected. Recursion is not allowed on the GPU.`,
+        );
       }
       this._currentlyResolvedItems.add(item as object);
     }
+    console.log('MY SET SIZE', this._currentlyResolvedItems.size);
     console.log('MY SET', this._currentlyResolvedItems);
 
     // TODO: ask what does this do

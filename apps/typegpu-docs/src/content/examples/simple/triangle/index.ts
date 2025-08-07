@@ -68,22 +68,22 @@ export function onCleanup() {
   root.destroy();
 }
 
-// const buf = root.createBuffer(d.arrayOf(d.f32, 1)).$usage('storage');
-// const val = buf.as('mutable');
+const buf = root.createBuffer(d.arrayOf(d.f32, 1)).$usage('storage');
+const val = buf.as('mutable');
 
-// const f = tgpu['~unstable'].computeFn({
-//   in: { gid: d.builtin.globalInvocationId },
-//   workgroupSize: [1],
-// })((input) => {
-//   val.$[0] = 1 / 5;
-// });
+const f = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((input) => {
+  val.$[0] = 1 / 5;
+});
 
-// const p1 = root['~unstable'].withCompute(f).createPipeline();
+const p1 = root['~unstable'].withCompute(f).createPipeline();
 // const p2 = root['~unstable'].withCompute(f).createPipeline();
-// p1.dispatchWorkgroups(1);
+p1.dispatchWorkgroups(1);
 // p2.dispatchWorkgroups(1);
 
-// const x = await buf.read();
+const x = await buf.read();
 
 // tgpu.resolve({ externals: { f } });
 
