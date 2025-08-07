@@ -72,6 +72,7 @@ export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = any,
 > extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  (): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
 
