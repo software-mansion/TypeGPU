@@ -44,12 +44,12 @@ const layerShader = `
 `;
 
 const ReadonlyFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
+  storage: d.arrayOf(d.f32),
   access: 'readonly',
 } as const;
 
 const MutableFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
+  storage: d.arrayOf(d.f32),
   access: 'mutable',
 } as const;
 

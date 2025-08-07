@@ -130,7 +130,7 @@ let textureBindGroup = root.createBindGroup(textureLayout, {
   texSampler: sampler,
 });
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout(d.disarrayOf(Vertex));
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(CubeVertex, n)
 );

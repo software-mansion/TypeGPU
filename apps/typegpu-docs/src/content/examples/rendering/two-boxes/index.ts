@@ -38,7 +38,7 @@ const Transform = d.struct({
   model: d.mat4x4f,
 });
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 // Scene Setup
 

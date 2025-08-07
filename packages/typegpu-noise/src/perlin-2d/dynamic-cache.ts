@@ -15,7 +15,7 @@ import {
   getJunctionGradientSlot,
 } from './algorithm.ts';
 
-const MemorySchema = (n: number) => d.arrayOf(d.vec2f, n);
+const MemorySchema = d.arrayOf(d.vec2f);
 
 type Layout<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {

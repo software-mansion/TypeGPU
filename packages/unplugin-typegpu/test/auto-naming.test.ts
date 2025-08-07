@@ -8,7 +8,7 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       const bindGroupLayout = tgpu.bindGroupLayout({});
-      const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.u32, n));
+      const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
       var fn = tgpu.fn([])(() => {});
       let shell = tgpu.fn([]);
 
@@ -20,7 +20,7 @@ describe('[BABEL] auto naming', () => {
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
-        const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(n => d.arrayOf(d.u32, n)), "vertexLayout");
+        const vertexLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout");
         var fn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
@@ -296,7 +296,7 @@ describe('[ROLLUP] auto naming', () => {
       import * as d from 'typegpu/data';
 
       const bindGroupLayout = tgpu.bindGroupLayout({});
-      const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.u32, n));
+      const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
       let shell = tgpu.fn([]);
       var fn = tgpu.fn([])(() => {});
 
@@ -309,7 +309,7 @@ describe('[ROLLUP] auto naming', () => {
         import * as d from 'typegpu/data';
 
         const bindGroupLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
-              const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout((n) => d.arrayOf(d.u32, n)), "vertexLayout"));
+              const vertexLayout = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell"));
               ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
                       v: 1,

@@ -108,13 +108,13 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
-        tgpu.x()((n) => d.arrayOf(d.u32, n));
+        tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
-      tgpu.x()(n => d.arrayOf(d.u32, n));"
+      tgpu.x()(d.arrayOf(d.u32));"
     `);
   });
 
@@ -179,12 +179,12 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     const code = `\
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
-        
+
         const counterBuffer = root
             .createBuffer(d.vec3f, d.vec3f(0, 1, 0))
             .$usage('storage');
         const counter = counterBuffer.as('mutable');
-        
+
         const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
             const tmp = counter.value.x;
@@ -202,7 +202,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   .createBuffer(d.vec3f, d.vec3f(0, 1, 0))
                   .$usage('storage');
               const counter = counterBuffer.as('mutable');
-              
+
               tgpu
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
                   const tmp = counter.value.x;
@@ -270,14 +270,14 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
         import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
-        tgpu.x()((n) => d.arrayOf(d.u32, n));
+        tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
 
-      tgpu.x()((n) => d.arrayOf(d.u32, n));
+      tgpu.x()(d.arrayOf(d.u32));
       "
     `);
   });

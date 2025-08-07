@@ -5,7 +5,7 @@ import {
   getJunctionGradientSlot,
 } from './algorithm.ts';
 
-const MemorySchema = (n: number) => d.arrayOf(d.vec2f, n);
+const MemorySchema = d.arrayOf(d.vec2f);
 
 export interface StaticPerlin2DCache {
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec2i) => d.Vec2f>;
