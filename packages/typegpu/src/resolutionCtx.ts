@@ -562,7 +562,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   /**
-   * @param The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
+   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
   _getOrInstantiate(item: object): string {
     // All memoized versions of `item`
