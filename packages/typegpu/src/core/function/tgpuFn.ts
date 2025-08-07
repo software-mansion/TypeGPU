@@ -327,6 +327,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 }
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
+  readonly [$internal] = true;
   readonly [$getNameForward]: TgpuFnBase<ImplSchema>;
 
   constructor(
