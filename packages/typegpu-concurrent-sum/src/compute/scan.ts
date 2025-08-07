@@ -40,7 +40,9 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   const partialSums = [d.f32(0), 0, 0, 0, 0, 0, 0, 0];
   partialSums[0] = elements[0] as number;
   for (let i = d.u32(1); i < 8; i++) {
-    partialSums[i] = partialSums[i - 1] as number + (elements[i] as number);
+    partialSums[i] = operatorSlot.$(
+      partialSums[i - 1] as number, (elements[i] as number),
+    );
   }
   const totalSum = partialSums[7];
 

@@ -23,7 +23,6 @@ let computer: PrefixScanComputer | null = null;
 export class PrefixScanComputer {
   private scanPipeline?: TgpuComputePipeline;
   private addPipeline?: TgpuComputePipeline;
-
   private scratchBuffers: Map<
     number,
     TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag
@@ -55,7 +54,10 @@ export class PrefixScanComputer {
 
   private get AddPipeline(): TgpuComputePipeline {
     if (!this.addPipeline) {
-      this.addPipeline = this.root['~unstable'].withCompute(uniformAdd)
+      this.addPipeline = this.root['~unstable'].with(
+        operatorSlot,
+        this.operatorFn as unknown as TgpuFn,
+      ).withCompute(uniformAdd)
         .createPipeline();
     }
     return this.addPipeline;
@@ -182,7 +184,6 @@ export function concurrentScan(
   operatorFn: (x: number, y: number) => number,
   identity: number,
   onlyGreatestElement = false,
-  outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   computer ??= new PrefixScanComputer(
     root,
