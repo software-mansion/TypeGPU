@@ -1,6 +1,6 @@
-import { describe, expect, vi } from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { type TgpuDerived } from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
@@ -210,6 +210,46 @@ describe('TgpuDerived', () => {
 
     expect(() => parseResolved({ fn })).toThrow(
       'Cannot create tgpu.derived objects at the resolution stage.',
+    );
+  });
+
+  it('can return dynamic schemas, which can be used in function bodies', () => {
+    const halfPrecisionSlot = tgpu.slot(false);
+
+    const ResultArray = tgpu['~unstable'].derived(() =>
+      d.arrayOf(halfPrecisionSlot.$ ? d.f16 : d.f32, 4)
+    );
+
+    const foo = tgpu.fn([])(() => {
+      const array = ResultArray.$();
+    });
+
+    const fooHalf = foo.with(halfPrecisionSlot, true);
+
+    const main = tgpu.fn([])(() => {
+      foo();
+      fooHalf();
+    });
+
+    expectTypeOf(ResultArray).toEqualTypeOf<
+      TgpuDerived<d.WgslArray<d.F16 | d.F32>>
+    >();
+
+    expect(parseResolved({ main })).toBe(
+      parse(`
+        fn foo() {
+          var array = array<f32, 4>();
+        }
+
+        fn foo_1() {
+          var array = array<f16, 4>();
+        }
+
+        fn main() {
+          foo();
+          foo_1();
+        }
+      `),
     );
   });
 });

@@ -35,6 +35,8 @@ export interface TgpuBufferUsage<
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly [$repr]: Infer<TData>;
+
+  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<TData>;
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
