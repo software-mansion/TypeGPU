@@ -578,12 +578,6 @@ export function tryConvertSnippet(
     return snippet;
   }
 
-  if (targetDataType.type === 'void') {
-    throw new WgslTypeError(
-      `Cannot convert value of type '${snippet.dataType.type}' to type 'void'`,
-    );
-  }
-
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
     return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);

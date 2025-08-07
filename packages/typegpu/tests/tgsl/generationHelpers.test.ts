@@ -33,6 +33,7 @@ import {
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
+import { Void } from 'packages/typegpu/src/data/index.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -465,6 +466,23 @@ describe('generationHelpers', () => {
         ctx: mockCtx,
         values: [snippetAbsInt, snippetI32],
         restrictTo: [vec2f],
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('handles void gracefully', () => {
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32, snip('void', Void)],
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('handles void as target type gracefully', () => {
+      const result = convertToCommonType({
+        ctx: mockCtx,
+        values: [snippetF32],
+        restrictTo: [Void],
       });
       expect(result).toBeUndefined();
     });

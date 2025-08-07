@@ -340,7 +340,7 @@ describe('wgsl generator js type inference', () => {
     `);
   });
 
-  it('coerces nested structs', () => {
+  it('coerces structs', () => {
     const MyStruct = d.struct({ v: d.vec2f });
     const myFn = tgpu.fn([MyStruct])(() => {
       return;
@@ -352,7 +352,20 @@ describe('wgsl generator js type inference', () => {
       myFn(structValue);
     });
 
-    console.log(parseResolved({ testFn }));
+    expect(parseResolved({ testFn })).toBe(parse(`
+      struct MyStruct {
+        v: vec2f,
+      }
+
+      fn myFn(_arg_0: MyStruct) {
+        return;
+      }
+
+      fn testFn() {
+        myFn(MyStruct(vec2f(1, 2)));
+        myFn(MyStruct(vec2f(3, 4)));
+      }
+    `));
   });
 
   it('coerces nested structs', () => {
