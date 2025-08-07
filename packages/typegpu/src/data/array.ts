@@ -1,6 +1,6 @@
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
-import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
+import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------
@@ -33,10 +33,7 @@ export function arrayOf<TElement extends AnyWgslData>(
 
     return Array.from(
       { length: elementCount },
-      (_, i) =>
-        elements
-          ? schemaCloneWrapper(elementType, elements[i])
-          : schemaDefaultWrapper(elementType),
+      (_, i) => schemaCallWrapper(elementType, elements?.[i]),
     );
   };
   Object.setPrototypeOf(arraySchema, WgslArrayImpl);
