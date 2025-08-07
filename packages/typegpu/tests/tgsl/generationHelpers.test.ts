@@ -33,7 +33,7 @@ import {
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
-import { Void } from 'packages/typegpu/src/data/index.ts';
+import { Void } from '../../src/data/index.ts';
 
 const mockCtx = {
   indent: () => '',
