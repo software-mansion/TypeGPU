@@ -52,9 +52,9 @@ import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { undecorate } from '../data/decorateUtils.ts';
+import { isNumericSchema } from '../std/operators.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
