@@ -6,7 +6,7 @@ describe('schemaCallWrapper', () => {
   it('throws when the schema is not callable', () => {
     expect(() => schemaCallWrapper(d.Void))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Schema of type void is not callable or was called with invalid arguments.]`,
+        '[Error: Schema of type void is not callable or was called with invalid arguments.]',
       );
   });
 

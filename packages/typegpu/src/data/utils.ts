@@ -1,4 +1,4 @@
-import { AnyData } from './index.ts';
+import type { AnyData } from './index.ts';
 import { formatToWGSLType } from './vertexFormatData.ts';
 
 /**
