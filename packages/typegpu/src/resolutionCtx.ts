@@ -634,6 +634,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
       this._currentlyResolvedItems.add(item as object);
     }
+
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
