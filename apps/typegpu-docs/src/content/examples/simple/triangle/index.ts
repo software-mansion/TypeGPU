@@ -1,4 +1,4 @@
-import { tgpu } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
