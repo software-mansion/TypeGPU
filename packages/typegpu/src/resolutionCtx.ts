@@ -627,9 +627,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         !this._memoizedResolves.has(item)
       ) {
         throw new Error(
-          `Recursive function ${
-            String(item)
-          } detected. Recursion is not allowed on the GPU.`,
+          `Recursive function ${item.toString()} detected. Recursion is not allowed on the GPU.`,
         );
       }
       this._currentlyResolvedItems.add(item as object);
