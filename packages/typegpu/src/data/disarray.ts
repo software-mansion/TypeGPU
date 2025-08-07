@@ -47,7 +47,7 @@ export function disarrayOf<TElement extends AnyData>(
 
   if (!Number.isInteger(elementCount) || elementCount < 0) {
     throw new Error(
-      `Cannot create array schema with invalid element count: ${elementCount}.`,
+      `Cannot create disarray schema with invalid element count: ${elementCount}.`,
     );
   }
   disarraySchema.elementCount = elementCount;
