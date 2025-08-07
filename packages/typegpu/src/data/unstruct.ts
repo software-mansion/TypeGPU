@@ -1,6 +1,6 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { Unstruct } from './dataTypes.ts';
+import type { AnyData, Unstruct } from './dataTypes.ts';
 import { schemaCallWrapper } from './utils.ts';
 import type { BaseData } from './wgslTypes.ts';
 
@@ -35,7 +35,7 @@ export function unstruct<TProps extends Record<string, BaseData>>(
     Object.fromEntries(
       Object.entries(properties).map(([key, schema]) => [
         key,
-        schemaCallWrapper(schema, instanceProps?.[key]),
+        schemaCallWrapper(schema as AnyData, instanceProps?.[key]),
       ]),
     );
   Object.setPrototypeOf(unstructSchema, UnstructImpl);
