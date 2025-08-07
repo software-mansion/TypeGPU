@@ -1,4 +1,4 @@
-import { formatToWGSLType } from './vertexFormatData';
+import { formatToWGSLType } from './vertexFormatData.ts';
 
 /**
  * A wrapper for `schema(item)` or `schema()` call.

@@ -154,11 +154,11 @@ describe('disarray', () => {
 
     expect(() => DisarraySchema([d.vec2f()]))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]`,
+        '[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]',
       );
     expect(() => DisarraySchema([d.vec2f(), d.vec2f(), d.vec2f()]))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]`,
+        '[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]',
       );
   });
 
