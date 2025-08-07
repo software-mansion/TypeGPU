@@ -1,0 +1,55 @@
+<!-- <div id="bars-container"></div> -->
+<div id="hist"></div>
+
+<style>
+    #bars-container {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-start;
+        column-gap: 0.5rem;
+        @media (max-width: 1024px) {
+            width: calc(100% + 8rem);
+            column-gap: 0.1rem;
+        }
+    }
+
+    .bar {
+        position: relative;
+        width: 1rem;
+        min-height: 50vh;
+        font-family: "Monaco", monospace;
+        font-size: 1rem;
+        background: linear-gradient(to bottom, transparent, #dadaed);
+        border-radius: 9999px;
+        @media (max-width: 1024px) {
+            width: 1rem;
+            font-size: 0.75rem;
+        }
+    }
+
+    .bar::before {
+        width: 100%;
+        height: calc((100%) * var(--bar-height, 0%));
+        background-color: #dadaed;
+        position: absolute;
+        left: 2rem;
+        border-radius: 9999px;
+        content: "";
+        transition: all 0.2s ease-in-out;
+    }
+
+    .bar::after {
+        width: 100%;
+        height: calc((100%) * var(--bar-height, 0%));
+        opacity: var(--highlight-opacity, 0);
+        background-image: linear-gradient(to right, #c464ff, #1d72f0);
+        position: absolute;
+        left: 2rem;
+        border-radius: 9999px;
+        transition:
+            width 0.2s ease-in-out,
+            opacity 0.5s ease-in-out;
+        content: "";
+    }
+</style>
