@@ -309,13 +309,13 @@ interface FixedBindingConfig {
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private readonly _memoizedResolves = new Map<
+  private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
-  private readonly _memoizedDerived = new Map<
+  private readonly _memoizedDerived = new WeakMap<
     // WeakMap because if the "derived" does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     TgpuDerived<unknown>,
@@ -327,7 +327,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
-  private _currentlyResolvedItems: Set<object> = new Set();
+  private _currentlyResolvedItems: WeakSet<object> = new WeakSet();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -589,7 +589,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else {
         result = this.resolveValue(item);
       }
-      console.log('RESULT OF GETORINSTANTIATE', result);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -614,27 +613,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(item: unknown): string {
     if (item && typeof item === 'function') {
-      console.log('INNER RESOLVE', String(item));
-      console.log('ITEM | TYPE', String(item), '|', typeof item);
-      console.log('SIZE OF MEMOIZED', this._memoizedResolves.size);
-      console.log(
-        'MEMOIZED',
-        Array.from(this._memoizedResolves.keys().map((key) => String(key))),
-      );
-      console.log('SIZE OF DERIVED', this._memoizedDerived.size);
-      console.log(
-        'DERIVED',
-        Array.from(this._memoizedDerived.keys().map((key) => String(key))),
-      );
       if (
         this._currentlyResolvedItems.has(item) &&
         !this._memoizedResolves.has(item)
       ) {
-        // TODO:
-        // 1. if it is in cache it is good
-        // 2. if it is from lib it is good
-        // 3. all defined by user are wrong??
-        console.log('RECURSIVE RESOLUTION DETECTED', String(item));
         throw new Error(
           `Recursive function ${
             String(item)
@@ -643,10 +625,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
       this._currentlyResolvedItems.add(item as object);
     }
-    console.log('MY SET SIZE', this._currentlyResolvedItems.size);
-    console.log('MY SET', this._currentlyResolvedItems);
 
-    // TODO: ask what does this do
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -659,11 +638,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-          console.log(
-            'RESULT OF CODEGEN',
-            `${[...this._declarations].join('\n\n')}${result}`,
-          );
-          console.log('END OF ROOT');
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
@@ -673,7 +647,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return this._getOrInstantiate(item);
     }
 
-    console.log('END OF INNER RESOLVE', String(item));
     return String(item);
   }
 
@@ -749,7 +722,6 @@ export function resolve(
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
-  console.log('OUTER RESOLVE');
   const ctx = new ResolutionCtxImpl(options);
   let code = config
     ? ctx.withSlots(
