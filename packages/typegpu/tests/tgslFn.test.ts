@@ -2,7 +2,7 @@ import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { tgpu, type TgpuFn } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
@@ -1047,13 +1047,23 @@ describe('tgsl fn when using plugin', () => {
     );
   });
 
-  // TODO: throw an error when cyclic dependency is detected
-  // it('throws when it detects a cyclic dependency', () => {
-  //   let bar: TgpuFn;
-  //   let foo: TgpuFn;
-  //   bar = tgpu.fn([], d.f32)(() => foo() + 2);
-  //   foo = tgpu.fn([], d.f32)(() => bar() - 2);
+  it('throws when it detects a cyclic dependency (recursion)', () => {
+    // biome-ignore lint/style/useConst: bar has to be assigned later
+    let bar: TgpuFn;
+    // biome-ignore lint/style/useConst: foo has to be assigned later
+    let foo: TgpuFn;
+    bar = tgpu.fn([], d.f32)(() => foo() + 2);
+    foo = tgpu.fn([], d.f32)(() => bar() - 2);
 
-  //   expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(``);
-  // });
+    expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:bar
+      - foo: Resolution of the following tree failed:
+      - call:foo
+      - fn:foo
+      - bar: Resolution of the following tree failed:
+      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+      `);
+  });
 });
