@@ -38,6 +38,7 @@ import {
   vec4h,
   vec4i,
 } from '../data/vector.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -50,7 +51,7 @@ export const abs = createDualImpl(
     return VectorOps.abs[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`abs(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`abs(${value})`, value.dataType),
   'abs',
 );
 
@@ -63,7 +64,7 @@ export const acos = createDualImpl(
     return VectorOps.acos[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`acos(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`acos(${value})`, value.dataType),
   'acos',
 );
 
@@ -80,7 +81,7 @@ export const acosh = createDualImpl(
     return VectorOps.acosh[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`acosh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`acosh(${value})`, value.dataType),
   'acosh',
 );
 
@@ -97,7 +98,7 @@ export const asin = createDualImpl(
     return VectorOps.asin[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`asin(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`asin(${value})`, value.dataType),
   'asin',
 );
 
@@ -114,7 +115,7 @@ export const asinh = createDualImpl(
     return VectorOps.asinh[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`asinh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`asinh(${value})`, value.dataType),
   'asinh',
 );
 
@@ -131,7 +132,7 @@ export const atan = createDualImpl(
     return VectorOps.atan[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`atan(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`atan(${value})`, value.dataType),
   'atan',
 );
 
@@ -148,7 +149,7 @@ export const atanh = createDualImpl(
     return VectorOps.atanh[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`atanh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`atanh(${value})`, value.dataType),
   'atanh',
 );
 
@@ -164,8 +165,7 @@ export const atan2 = createDualImpl(
     ) as T;
   },
   // GPU implementation
-  (ctx, y, x) =>
-    snip(`atan2(${ctx.resolve(y.value)}, ${ctx.resolve(x.value)})`, y.dataType),
+  (y, x) => snip(stitch`atan2(${y}, ${x})`, y.dataType),
   'atan2',
   'unify',
 );
@@ -183,7 +183,7 @@ export const ceil = createDualImpl(
     return VectorOps.ceil[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`ceil(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`ceil(${value})`, value.dataType),
   'ceil',
 );
 
@@ -204,11 +204,9 @@ export const clamp = createDualImpl(
     ) as T;
   },
   // GPU implementation
-  (ctx, value, low, high) =>
+  (value, low, high) =>
     snip(
-      `clamp(${ctx.resolve(value.value)}, ${ctx.resolve(low.value)}, ${
-        ctx.resolve(high.value)
-      })`,
+      stitch`clamp(${value}, ${low}, ${high})`,
       value.dataType,
     ),
   'clamp',
@@ -227,7 +225,7 @@ export const cos = createDualImpl(
     return VectorOps.cos[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`cos(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`cos(${value})`, value.dataType),
   'cos',
 );
 
@@ -244,7 +242,7 @@ export const cosh = createDualImpl(
     return VectorOps.cosh[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`cosh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`cosh(${value})`, value.dataType),
   'cosh',
 );
 
@@ -256,8 +254,7 @@ export const countLeadingZeros = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`countLeadingZeros(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`countLeadingZeros(${value})`, value.dataType),
   'countLeadingZeros',
 );
 
@@ -269,8 +266,7 @@ export const countOneBits = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`countOneBits(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`countOneBits(${value})`, value.dataType),
   'countOneBits',
 );
 
@@ -282,8 +278,7 @@ export const countTrailingZeros = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`countTrailingZeros(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`countTrailingZeros(${value})`, value.dataType),
   'countTrailingZeros',
 );
 
@@ -295,8 +290,7 @@ export const cross = createDualImpl(
   // CPU implementation
   <T extends v3f | v3h>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
   // GPU implementation
-  (ctx, a, b) =>
-    snip(`cross(${ctx.resolve(a.value)}, ${ctx.resolve(b.value)})`, a.dataType),
+  (a, b) => snip(stitch`cross(${a}, ${b})`, a.dataType),
   'cross',
 );
 
@@ -311,7 +305,7 @@ export const degrees = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`degrees(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`degrees(${value})`, value.dataType),
   'degrees',
 );
 
@@ -324,7 +318,7 @@ export const determinant = createDualImpl(
   },
   // GPU implementation
   // TODO: The return type is potentially wrong here, it should return whatever the matrix element type is.
-  (ctx, value) => snip(`determinant(${ctx.resolve(value.value)})`, f32),
+  (value) => snip(stitch`determinant(${value})`, f32),
   'determinant',
 );
 
@@ -339,9 +333,9 @@ export const distance = createDualImpl(
     ) as number;
   },
   // GPU implementation
-  (ctx, a, b) =>
+  (a, b) =>
     snip(
-      `distance(${ctx.resolve(a.value)}, ${ctx.resolve(b.value)})`,
+      stitch`distance(${a}, ${b})`,
       a.dataType.type === 'f16' || a.dataType.type.endsWith('h') ? f16 : f32,
     ),
   'distance',
@@ -356,8 +350,7 @@ export const dot = createDualImpl(
   <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
-  (ctx, lhs, rhs) =>
-    snip(`dot(${ctx.resolve(lhs.value)}, ${ctx.resolve(rhs.value)})`, f32),
+  (lhs, rhs) => snip(stitch`dot(${lhs}, ${rhs})`, f32),
   'dot',
 );
 
@@ -369,9 +362,9 @@ export const dot4U8Packed = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2) =>
+  (e1, e2) =>
     snip(
-      `dot4U8Packed(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)})`,
+      stitch`dot4U8Packed(${e1}, ${e2})`,
       u32,
     ),
   'dot4U8Packed',
@@ -386,9 +379,9 @@ export const dot4I8Packed = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2) =>
+  (e1, e2) =>
     snip(
-      `dot4I8Packed(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)})`,
+      stitch`dot4I8Packed(${e1}, ${e2})`,
       i32,
     ),
   'dot4I8Packed',
@@ -408,7 +401,7 @@ export const exp = createDualImpl(
     return VectorOps.exp[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`exp(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`exp(${value})`, value.dataType),
   'exp',
 );
 
@@ -425,7 +418,7 @@ export const exp2 = createDualImpl(
     return VectorOps.exp2[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`exp2(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`exp2(${value})`, value.dataType),
   'exp2',
 );
 
@@ -441,11 +434,9 @@ export const extractBits = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e, offset, count) =>
+  (e, offset, count) =>
     snip(
-      `extractBits(${ctx.resolve(e.value)}, ${ctx.resolve(offset.value)}, ${
-        ctx.resolve(count.value)
-      })`,
+      stitch`extractBits(${e}, ${offset}, ${count})`,
       e.dataType,
     ),
   'extractBits',
@@ -460,11 +451,9 @@ export const faceForward = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2, e3) =>
+  (e1, e2, e3) =>
     snip(
-      `faceForward(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)}, ${
-        ctx.resolve(e3.value)
-      })`,
+      stitch`faceForward(${e1}, ${e2}, ${e3})`,
       e1.dataType,
     ),
   'faceForward',
@@ -478,8 +467,7 @@ export const firstLeadingBit = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`firstLeadingBit(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`firstLeadingBit(${value})`, value.dataType),
   'firstLeadingBit',
 );
 
@@ -491,8 +479,7 @@ export const firstTrailingBit = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`firstTrailingBit(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`firstTrailingBit(${value})`, value.dataType),
   'firstTrailingBit',
 );
 
@@ -509,7 +496,7 @@ export const floor = createDualImpl(
     return VectorOps.floor[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`floor(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`floor(${value})`, value.dataType),
   'floor',
 );
 
@@ -524,11 +511,9 @@ export const fma = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2, e3) =>
+  (e1, e2, e3) =>
     snip(
-      `fma(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)}, ${
-        ctx.resolve(e3.value)
-      })`,
+      stitch`fma(${e1}, ${e2}, ${e3})`,
       e1.dataType,
     ),
   'fma',
@@ -543,7 +528,7 @@ export const fract = createDualImpl(
     return VectorOps.fract[a.kind](a) as T;
   },
   // GPU implementation
-  (ctx, a) => snip(`fract(${ctx.resolve(a.value)})`, a.dataType),
+  (a) => snip(stitch`fract(${a})`, a.dataType),
   'fract',
 );
 
@@ -577,7 +562,7 @@ export const frexp: FrexpOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => {
+  (value) => {
     const returnType =
       FrexpResults[value.dataType.type as keyof typeof FrexpResults];
 
@@ -588,7 +573,7 @@ export const frexp: FrexpOverload = createDualImpl(
     }
 
     return snip(
-      `frexp(${ctx.resolve(value.value)})`,
+      stitch`frexp(${value})`,
       returnType,
     );
   },
@@ -608,11 +593,9 @@ export const insertBits = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e, newbits, offset, count) =>
+  (e, newbits, offset, count) =>
     snip(
-      `insertBits(${ctx.resolve(e.value)}, ${ctx.resolve(newbits.value)}, ${
-        ctx.resolve(offset.value)
-      }, ${ctx.resolve(count.value)})`,
+      stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`,
       e.dataType,
     ),
   'insertBits',
@@ -629,8 +612,7 @@ export const inverseSqrt = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`inverseSqrt(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`inverseSqrt(${value})`, value.dataType),
   'inverseSqrt',
 );
 
@@ -662,9 +644,9 @@ export const ldexp: LdexpOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2) =>
+  (e1, e2) =>
     snip(
-      `ldexp(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)})`,
+      stitch`ldexp(${e1}, ${e2})`,
       e1.dataType,
     ),
   'ldexp',
@@ -705,7 +687,7 @@ export const length = createDualImpl(
     return VectorOps.length[value.kind](value);
   },
   // GPU implementation
-  (ctx, value) => snip(`length(${ctx.resolve(value.value)})`, f32),
+  (value) => snip(stitch`length(${value})`, f32),
   'length',
 );
 
@@ -722,7 +704,7 @@ export const log = createDualImpl(
     return VectorOps.log[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`log(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`log(${value})`, value.dataType),
   'log',
 );
 
@@ -739,7 +721,7 @@ export const log2 = createDualImpl(
     return VectorOps.log2[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`log2(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`log2(${value})`, value.dataType),
   'log2',
 );
 
@@ -756,8 +738,7 @@ export const max = createDualImpl(
     return VectorOps.max[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
-  (ctx, a, b) =>
-    snip(`max(${ctx.resolve(a.value)}, ${ctx.resolve(b.value)})`, a.dataType),
+  (a, b) => snip(stitch`max(${a}, ${b})`, a.dataType),
   'max',
   'unify',
 );
@@ -775,8 +756,7 @@ export const min = createDualImpl(
     return VectorOps.min[a.kind](a, b as NumVec) as T;
   },
   // GPU implementation
-  (ctx, a, b) =>
-    snip(`min(${ctx.resolve(a.value)}, ${ctx.resolve(b.value)})`, a.dataType),
+  (a, b) => snip(stitch`min(${a}, ${b})`, a.dataType),
   'min',
   'unify',
 );
@@ -806,11 +786,9 @@ export const mix: MixOverload = createDualImpl(
     return VectorOps.mix[e1.kind](e1, e2, e3) as T;
   },
   // GPU implementation
-  (ctx, e1, e2, e3) =>
+  (e1, e2, e3) =>
     snip(
-      `mix(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)}, ${
-        ctx.resolve(e3.value)
-      })`,
+      stitch`mix(${e1}, ${e2}, ${e3})`,
       e1.dataType,
     ),
   'mix',
@@ -843,7 +821,7 @@ export const modf: ModfOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => {
+  (value) => {
     const returnType =
       ModfResult[value.dataType.type as keyof typeof ModfResult];
 
@@ -854,7 +832,7 @@ export const modf: ModfOverload = createDualImpl(
     }
 
     return snip(
-      `modf(${ctx.resolve(value.value)})`,
+      stitch`modf(${value})`,
       returnType,
     );
   },
@@ -865,7 +843,7 @@ export const normalize = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
   // GPU implementation
-  (ctx, v) => snip(`normalize(${ctx.resolve(v.value)})`, v.dataType),
+  (v) => snip(stitch`normalize(${v})`, v.dataType),
   'normalize',
 );
 
@@ -891,9 +869,9 @@ export const pow: PowOverload = createDualImpl(
     throw new Error('Invalid arguments to pow()');
   },
   // GPU implementation
-  (ctx, base, exponent) =>
+  (base, exponent) =>
     snip(
-      `pow(${ctx.resolve(base.value)}, ${ctx.resolve(exponent.value)})`,
+      stitch`pow(${base}, ${exponent})`,
       base.dataType,
     ),
   'pow',
@@ -907,8 +885,7 @@ export const quantizeToF16 = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`quantizeToF16(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`quantizeToF16(${value})`, value.dataType),
   'quantizeToF16',
 );
 
@@ -923,7 +900,7 @@ export const radians = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`radians(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`radians(${value})`, value.dataType),
   'radians',
 );
 
@@ -932,9 +909,9 @@ export const reflect = createDualImpl(
   <T extends AnyFloatVecInstance>(e1: T, e2: T): T =>
     sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
-  (ctx, e1, e2) =>
+  (e1, e2) =>
     snip(
-      `reflect(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)})`,
+      stitch`reflect(${e1}, ${e2})`,
       e1.dataType,
     ),
   'reflect',
@@ -948,11 +925,9 @@ export const refract = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e1, e2, e3) =>
+  (e1, e2, e3) =>
     snip(
-      `refract(${ctx.resolve(e1.value)}, ${ctx.resolve(e2.value)}, ${
-        ctx.resolve(e3.value)
-      })`,
+      stitch`refract(${e1}, ${e2}, ${e3})`,
       e1.dataType,
     ),
   'refract',
@@ -971,8 +946,7 @@ export const reverseBits = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) =>
-    snip(`reverseBits(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`reverseBits(${value})`, value.dataType),
   'reverseBits',
 );
 
@@ -987,7 +961,7 @@ export const round = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`round(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`round(${value})`, value.dataType),
   'round',
 );
 
@@ -1002,7 +976,7 @@ export const saturate = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`saturate(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`saturate(${value})`, value.dataType),
   'saturate',
 );
 
@@ -1017,7 +991,7 @@ export const sign = createDualImpl(
     return VectorOps.sign[e.kind](e) as T;
   },
   // GPU implementation
-  (ctx, e) => snip(`sign(${ctx.resolve(e.value)})`, e.dataType),
+  (e) => snip(stitch`sign(${e})`, e.dataType),
   'sign',
 );
 
@@ -1034,7 +1008,7 @@ export const sin = createDualImpl(
     return VectorOps.sin[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`sin(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`sin(${value})`, value.dataType),
   'sin',
 );
 
@@ -1049,7 +1023,7 @@ export const sinh = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`sinh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`sinh(${value})`, value.dataType),
   'sinh',
 );
 
@@ -1070,11 +1044,9 @@ export const smoothstep = createDualImpl(
     ) as T;
   },
   // GPU implementation
-  (ctx, edge0, edge1, x) =>
+  (edge0, edge1, x) =>
     snip(
-      `smoothstep(${ctx.resolve(edge0.value)}, ${ctx.resolve(edge1.value)}, ${
-        ctx.resolve(x.value)
-      })`,
+      stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
       x.dataType,
     ),
   'smoothstep',
@@ -1089,7 +1061,7 @@ export const sqrt = createDualImpl(
     return VectorOps.sqrt[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`sqrt(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`sqrt(${value})`, value.dataType),
   'sqrt',
 );
 
@@ -1104,9 +1076,9 @@ export const step = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, edge, x) =>
+  (edge, x) =>
     snip(
-      `step(${ctx.resolve(edge.value)}, ${ctx.resolve(x.value)})`,
+      stitch`step(${edge}, ${x})`,
       edge.dataType,
     ),
   'step',
@@ -1123,7 +1095,7 @@ export const tan = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`tan(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`tan(${value})`, value.dataType),
   'tan',
 );
 
@@ -1136,7 +1108,7 @@ export const tanh = createDualImpl(
     return VectorOps.tanh[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`tanh(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`tanh(${value})`, value.dataType),
   'tanh',
 );
 
@@ -1148,8 +1120,8 @@ export const transpose = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, e) => {
-    return snip(`transpose(${ctx.resolve(e.value)})`, e.dataType);
+  (e) => {
+    return snip(stitch`transpose(${e})`, e.dataType);
   },
   'transpose',
 );
@@ -1162,6 +1134,6 @@ export const trunc = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, value) => snip(`trunc(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`trunc(${value})`, value.dataType),
   'trunc',
 );

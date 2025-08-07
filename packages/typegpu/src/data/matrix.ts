@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import type { $repr } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -102,13 +103,7 @@ function createMatSchema<
       return new options.MatImpl(...elements) as ValueType;
     },
     // GPU implementation
-    (ctx, ...args) =>
-      snip(
-        `${MatSchema.type}(${
-          args.map((v) => ctx.resolve(v.value)).join(', ')
-        })`,
-        MatSchema,
-      ),
+    (...args) => snip(`${MatSchema.type}${stitch`(${args})`}`, MatSchema),
     MatSchema.type,
   );
 
@@ -608,19 +603,15 @@ export const translation4 = createDualImpl(
       vector.x, vector.y, vector.z, 1,
     ),
   // GPU implementation
-  (ctx, vector) => {
-    const resolvedVector = ctx.resolve(vector.value);
-
-    return {
-      value: `mat4x4f(
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        ${resolvedVector}.x, ${resolvedVector}.y, ${resolvedVector}.z, 1
-      )`,
-      dataType: mat4x4f,
-    };
-  },
+  (vector) => ({
+    value: stitch`mat4x4f(
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      ${vector}.x, ${vector}.y, ${vector}.z, 1
+    )`,
+    dataType: mat4x4f,
+  }),
   'translation4',
 );
 
@@ -640,18 +631,15 @@ export const scaling4 = createDualImpl(
       0, 0, 0, 1,
     ),
   // GPU implementation
-  (ctx, vector) => {
-    const resolvedVector = ctx.resolve(vector.value);
-    return {
-      value: `mat4x4f(
-        ${resolvedVector}.x, 0, 0, 0,
-        0, ${resolvedVector}.y, 0, 0,
-        0, 0, ${resolvedVector}.z, 0,
-        0, 0, 0, 1
-      )`,
-      dataType: mat4x4f,
-    };
-  },
+  (vector) => ({
+    value: stitch`mat4x4f(
+      ${vector}.x, 0, 0, 0,
+      0, ${vector}.y, 0, 0,
+      0, 0, ${vector}.z, 0,
+      0, 0, 0, 1
+    )`,
+    dataType: mat4x4f,
+  }),
   'scaling4',
 );
 
@@ -671,12 +659,12 @@ export const rotationX4 = createDualImpl(
       0, 0, 0, 1,
     ),
   // GPU implementation
-  (ctx, a) =>
+  (a) =>
     snip(
-      `mat4x4f(
+      stitch`mat4x4f(
         1, 0, 0, 0,
-        0, cos(${ctx.resolve(a.value)}), sin(${ctx.resolve(a.value)}), 0,
-        0, -sin(${ctx.resolve(a.value)}), cos(${ctx.resolve(a.value)}), 0,
+        0, cos(${a}), sin(${a}), 0,
+        0, -sin(${a}), cos(${a}), 0,
         0, 0, 0, 1
       )`,
       mat4x4f,
@@ -700,12 +688,12 @@ export const rotationY4 = createDualImpl(
       0, 0, 0, 1,
     ),
   // GPU implementation
-  (ctx, a) =>
+  (a) =>
     snip(
-      `mat4x4f(
-        cos(${ctx.resolve(a.value)}), 0, -sin(${ctx.resolve(a.value)}), 0,
+      stitch`mat4x4f(
+        cos(${a}), 0, -sin(${a}), 0,
         0, 1, 0, 0,
-        sin(${ctx.resolve(a.value)}), 0, cos(${ctx.resolve(a.value)}), 0,
+        sin(${a}), 0, cos(${a}), 0,
         0, 0, 0, 1
       )`,
       mat4x4f,
@@ -729,11 +717,11 @@ export const rotationZ4 = createDualImpl(
       0, 0, 0, 1,
     ),
   // GPU implementation
-  (ctx, a) =>
+  (a) =>
     snip(
-      `mat4x4f(
-        cos(${ctx.resolve(a.value)}), sin(${ctx.resolve(a.value)}), 0, 0,
-        -sin(${ctx.resolve(a.value)}), cos(${ctx.resolve(a.value)}), 0, 0,
+      stitch`mat4x4f(
+        cos(${a}), sin(${a}), 0, 0,
+        -sin(${a}), cos(${a}), 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1
       )`,

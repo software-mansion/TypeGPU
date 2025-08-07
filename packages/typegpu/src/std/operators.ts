@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import type { AnyData, TgpuDualFn } from '../data/dataTypes.ts';
 import { f32 } from '../data/numeric.ts';
@@ -80,9 +81,9 @@ export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
   // GPU implementation
-  (ctx, lhs, rhs) =>
+  (lhs, rhs) =>
     snip(
-      `(${ctx.resolve(lhs.value)} + ${ctx.resolve(rhs.value)})`,
+      stitch`(${lhs} + ${rhs})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'add',
@@ -110,9 +111,9 @@ export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
   // GPU implementation
-  (ctx, lhs, rhs) =>
+  (lhs, rhs) =>
     snip(
-      `(${ctx.resolve(lhs.value)} - ${ctx.resolve(rhs.value)})`,
+      stitch`(${lhs} - ${rhs})`,
       isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
     ),
   'sub',
@@ -164,7 +165,7 @@ export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
   // GPU implementation
-  (ctx, lhs, rhs) => {
+  (lhs, rhs) => {
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
@@ -180,7 +181,7 @@ export const mul = createDualImpl(
       // Matrix * Matrix
       : lhs.dataType;
     return snip(
-      `(${ctx.resolve(lhs.value)} * ${ctx.resolve(rhs.value)})`,
+      stitch`(${lhs} * ${rhs})`,
       returnType,
     );
   },
@@ -214,15 +215,15 @@ export const div: TgpuDualFn<DivOverload> = createDualImpl(
     throw new Error('Div called with invalid arguments.');
   },
   // GPU implementation
-  (ctx, lhs, rhs) => {
+  (lhs, rhs) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return snip(
-        `(f32(${ctx.resolve(lhs.value)}) / ${ctx.resolve(rhs.value)})`,
+        stitch`(f32(${lhs}) / ${rhs})`,
         f32,
       );
     }
     return snip(
-      `(${ctx.resolve(lhs.value)} / ${ctx.resolve(rhs.value)})`,
+      stitch`(${lhs} / ${rhs})`,
       lhs.dataType,
     );
   },
@@ -266,9 +267,9 @@ export const mod: ModOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (ctx, a, b) => {
+  (a, b) => {
     const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
-    return snip(`(${ctx.resolve(a.value)} % ${ctx.resolve(b.value)})`, type);
+    return snip(stitch`(${a} % ${b})`, type);
   },
   'mod',
 );
@@ -282,6 +283,6 @@ export const neg = createDualImpl(
     return VectorOps.neg[value.kind](value) as T;
   },
   // GPU implementation
-  (ctx, value) => snip(`-(${ctx.resolve(value.value)})`, value.dataType),
+  (value) => snip(stitch`-(${value})`, value.dataType),
   'neg',
 );

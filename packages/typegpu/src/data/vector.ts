@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
 import { snip } from './snippet.ts';
@@ -320,11 +321,8 @@ function makeVecSchema<TValue, S extends number | boolean>(
         `'${type}' constructor called with invalid number of arguments.`,
       );
     },
-    (ctx, ...args) =>
-      snip(
-        `${type}(${args.map((v) => ctx.resolve(v.value)).join(', ')})`,
-        vecTypeToConstructor[type],
-      ),
+    (...args) =>
+      snip(`${type}(${stitch`${args}`})`, vecTypeToConstructor[type]),
     type,
     (...args) =>
       args.map((arg) => {

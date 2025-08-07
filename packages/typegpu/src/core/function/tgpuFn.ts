@@ -233,7 +233,7 @@ function createFn<ImplSchema extends AnyFn>(
           throw new ExecutionError(err, [fn]);
         }
       }),
-    (_ctx, ...args) => snip(new FnCall(fn, args), shell.returnType),
+    (...args) => snip(new FnCall(fn, args), shell.returnType),
     'tgpuFnCall',
     shell.argTypes,
   );
@@ -297,7 +297,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) => innerFn(...args),
-    (_ctx, ...args) => snip(new FnCall(fn, args), innerFn.shell.returnType),
+    (...args) => snip(new FnCall(fn, args), innerFn.shell.returnType),
     'tgpuFnCall',
     innerFn.shell.argTypes,
   );

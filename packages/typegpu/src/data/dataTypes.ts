@@ -29,10 +29,7 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
   & {
     [$internal]: {
       jsImpl: TImpl | string;
-      gpuImpl: (
-        ctx: ResolutionCtx,
-        ...args: MapValueToSnippet<Parameters<TImpl>>
-      ) => Snippet;
+      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
       argConversionHint: FnArgsConversionHint;
     };
   };
@@ -217,10 +214,6 @@ export class InfixDispatch {
   constructor(
     readonly name: string,
     readonly lhs: Snippet,
-    readonly operator: (
-      ctx: ResolutionCtx,
-      lhs: Snippet,
-      rhs: Snippet,
-    ) => Snippet,
+    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }

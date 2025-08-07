@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import {
@@ -42,9 +43,9 @@ export const atomicLoad = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a) => {
+  (a) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(`atomicLoad(&${ctx.resolve(a.value)})`, a.dataType.inner);
+      return snip(stitch`atomicLoad(&${a})`, a.dataType.inner);
     }
     throw new Error(
       `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
@@ -61,14 +62,14 @@ export const atomicStore = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (!isWgslData(a.dataType) || a.dataType.type !== 'atomic') {
       throw new Error(
         `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
       );
     }
     return snip(
-      `atomicStore(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+      stitch`atomicStore(&${a}, ${value})`,
       Void,
     );
   },
@@ -90,10 +91,10 @@ export const atomicAdd = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicAdd(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicAdd(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -113,10 +114,10 @@ export const atomicSub = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicSub(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicSub(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -136,10 +137,10 @@ export const atomicMax = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicMax(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicMax(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -159,10 +160,10 @@ export const atomicMin = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicMin(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicMin(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -182,10 +183,10 @@ export const atomicAnd = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicAnd(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicAnd(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -205,10 +206,10 @@ export const atomicOr = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicOr(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicOr(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
@@ -228,10 +229,10 @@ export const atomicXor = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (ctx, a, value) => {
+  (a, value) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return snip(
-        `atomicXor(&${ctx.resolve(a.value)}, ${ctx.resolve(value.value)})`,
+        stitch`atomicXor(&${a}, ${value})`,
         a.dataType.inner,
       );
     }
