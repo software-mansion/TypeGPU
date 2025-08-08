@@ -332,6 +332,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
+  private _currentlyResolvedItems: WeakSet<object> = new WeakSet();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -620,6 +621,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: AnyData | undefined): string {
+    if (item && typeof item === 'function') {
+      if (
+        this._currentlyResolvedItems.has(item) &&
+        !this._memoizedResolves.has(item)
+      ) {
+        throw new Error(
+          `Recursive function ${item.toString()} detected. Recursion is not allowed on the GPU.`,
+        );
+      }
+      this._currentlyResolvedItems.add(item as object);
+    }
+
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -633,7 +646,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
