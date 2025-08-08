@@ -109,7 +109,7 @@ const colorBuffer = root
   .$usage('uniform');
 
 const uvTransformBuffer = root
-  .createBuffer(d.mat2x2f, d.mat2x2f(1, 0, 0, 1))
+  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
   .$usage('uniform');
 
 const sampler = device.createSampler({

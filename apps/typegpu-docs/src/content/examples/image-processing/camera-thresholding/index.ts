@@ -73,7 +73,7 @@ const sampler = root.device.createSampler({
 const thresholdBuffer = root.createBuffer(d.f32).$usage('uniform');
 
 const uvTransformBuffer = root
-  .createBuffer(d.mat2x2f, d.mat2x2f(1, 0, 0, 1))
+  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
   .$usage('uniform');
 
 const rareBindGroup = root.createBindGroup(rareLayout, {
