@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -16,7 +16,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, sub } from './operators.ts';
+import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {

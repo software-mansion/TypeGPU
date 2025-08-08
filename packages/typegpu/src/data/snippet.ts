@@ -1,6 +1,7 @@
 import { undecorate } from './decorateUtils.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
+import { isNumericSchema } from './wgslTypes.ts';
 
 export interface Snippet {
   readonly value: unknown;
@@ -18,6 +19,10 @@ class SnippetImpl implements Snippet {
 
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
+}
+
+export function isSnippetNumeric(snippet: Snippet) {
+  return isNumericSchema(snippet.dataType);
 }
 
 export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {

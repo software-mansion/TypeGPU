@@ -1,49 +1,21 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { f16, f32 } from '../data/numeric.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
-  type AbstractFloat,
-  type AbstractInt,
   type AnyMatInstance,
   type AnyNumericVecInstance,
-  type F16,
-  type F32,
-  type I32,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
   type mBaseForVec,
-  type U32,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
 import { convertToCommonType } from '../tgsl/generationHelpers.ts';
 import { asNormal, getResolutionCtx } from '../execMode.ts';
 import type { ResolutionCtx } from '../types.ts';
-
-export function isNumericSchema(
-  schema: unknown,
-): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
-  const type = (schema as AnyData)?.type;
-
-  return (
-    !!(schema as AnyData)?.[$internal] &&
-    (type === 'abstractInt' ||
-      type === 'abstractFloat' ||
-      type === 'f32' ||
-      type === 'f16' ||
-      type === 'i32' ||
-      type === 'u32')
-  );
-}
-
-export function isSnippetNumeric(snippet: Snippet) {
-  return isNumericSchema(snippet.dataType);
-}
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;

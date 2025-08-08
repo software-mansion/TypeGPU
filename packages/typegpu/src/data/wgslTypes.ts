@@ -1769,3 +1769,19 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
 export function isVoid(value: unknown): value is Void {
   return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }
+
+export function isNumericSchema(
+  schema: unknown,
+): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    !!(schema as BaseData)?.[$internal] &&
+    (type === 'abstractInt' ||
+      type === 'abstractFloat' ||
+      type === 'f32' ||
+      type === 'f16' ||
+      type === 'i32' ||
+      type === 'u32')
+  );
+}
