@@ -532,7 +532,7 @@ export const identity2 = createDualImpl(
   // CPU implementation
   () => mat2x2f(1, 0, 0, 1),
   // CODEGEN implementation
-  () => snip('mat4x4f(1, 0, 0, 1)', mat2x2f),
+  () => snip('mat2x2f(1, 0, 0, 1)', mat2x2f),
   'identity2',
 );
 
@@ -582,10 +582,10 @@ export const translation4 = createDualImpl(
       0, 0, 1, 0,
       vector.x, vector.y, vector.z, 1,
     ),
-  // GPU implementation
-  (vector) =>
+  // CODEGEN implementation
+  (v) =>
     snip(
-      stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector}.x, ${vector}.y, ${vector}.z, 1)`,
+      stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
       mat4x4f,
     ),
   'translation4',
@@ -606,7 +606,7 @@ export const scaling4 = createDualImpl(
       0, 0, vector.z, 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (v) =>
     snip(
       stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
@@ -630,7 +630,7 @@ export const rotationX4 = createDualImpl(
       0, -Math.sin(a), Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
       stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
@@ -654,7 +654,7 @@ export const rotationY4 = createDualImpl(
       Math.sin(a), 0, Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
       stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
@@ -678,7 +678,7 @@ export const rotationZ4 = createDualImpl(
       0, 0, 1, 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
       stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
