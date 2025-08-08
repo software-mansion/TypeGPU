@@ -60,7 +60,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
 
     test(
       tgpu['~unstable'].privateVar(d.vec3f, d.vec3f()).$name('x'),
-      'var<private> x: vec3f = vec3f(0, 0, 0);',
+      'var<private> x: vec3f = vec3f();',
     );
 
     test(

@@ -3,6 +3,7 @@ import { u32 } from '../data/numeric.ts';
 import { vec2f, vec4f } from '../data/vector.ts';
 import type { v2f, v4f } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { snip } from '../data/snippet.ts';
 
 /**
@@ -19,7 +20,7 @@ export const unpack2x16float = createDualImpl(
     return vec2f(reader.readFloat16(), reader.readFloat16());
   },
   // GPU implementation
-  (e) => snip(`unpack2x16float(${e.value})`, vec2f),
+  (e) => snip(stitch`unpack2x16float(${e})`, vec2f),
   'unpack2x16float',
 );
 
@@ -38,7 +39,7 @@ export const pack2x16float = createDualImpl(
     return u32(reader.readUint32());
   },
   // GPU implementation
-  (e) => snip(`pack2x16float(${e.value})`, u32),
+  (e) => snip(stitch`pack2x16float(${e})`, u32),
   'pack2x16float',
 );
 
@@ -61,7 +62,7 @@ export const unpack4x8unorm = createDualImpl(
     );
   },
   // GPU implementation
-  (e) => snip(`unpack4x8unorm(${e.value})`, vec4f),
+  (e) => snip(stitch`unpack4x8unorm(${e})`, vec4f),
   'unpack4x8unorm',
 );
 
@@ -82,6 +83,6 @@ export const pack4x8unorm = createDualImpl(
     return u32(reader.readUint32());
   },
   // GPU implementation
-  (e) => snip(`pack4x8unorm(${e.value})`, u32),
+  (e) => snip(stitch`pack4x8unorm(${e})`, u32),
   'pack4x8unorm',
 );

@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import type { $repr } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -101,12 +102,8 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    // GPU implementation
-    (...args) =>
-      snip(
-        `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
-        MatSchema,
-      ),
+    // CODEGEN implementation
+    (...args) => snip(`${MatSchema.type}${stitch`(${args})`}`, MatSchema),
     MatSchema.type,
   );
 
@@ -534,14 +531,8 @@ class mat4x4fImpl extends mat4x4Impl<v4f> {
 export const identity2 = createDualImpl(
   // CPU implementation
   () => mat2x2f(1, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0,
-      0.0, 1.0
-    )`,
-    dataType: mat2x2f,
-  }),
+  // CODEGEN implementation
+  () => snip('mat2x2f(1, 0, 0, 1)', mat2x2f),
   'identity2',
 );
 
@@ -552,15 +543,8 @@ export const identity2 = createDualImpl(
 export const identity3 = createDualImpl(
   // CPU implementation
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      0.0, 0.0, 1.0,
-    )`,
-    dataType: mat3x3f,
-  }),
+  // CODEGEN implementation
+  () => snip('mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1)', mat3x3f),
   'identity3',
 );
 
@@ -571,16 +555,9 @@ export const identity3 = createDualImpl(
 export const identity4 = createDualImpl(
   // CPU implementation
   () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
-  // GPU implementation
-  () => ({
-    value: `mat4x4f(
-      1.0, 0.0, 0.0, 0.0,
-      0.0, 1.0, 0.0, 0.0,
-      0.0, 0.0, 1.0, 0.0,
-      0.0, 0.0, 0.0, 1.0
-    )`,
-    dataType: mat4x4f,
-  }),
+  // CODEGEN implementation
+  () =>
+    snip('mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)', mat4x4f),
   'identity4',
 );
 
@@ -605,16 +582,12 @@ export const translation4 = createDualImpl(
       0, 0, 1, 0,
       vector.x, vector.y, vector.z, 1,
     ),
-  // GPU implementation
-  (vector) => ({
-    value: `mat4x4f(
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1
-      )`,
-    dataType: mat4x4f,
-  }),
+  // CODEGEN implementation
+  (v) =>
+    snip(
+      stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
+      mat4x4f,
+    ),
   'translation4',
 );
 
@@ -633,16 +606,12 @@ export const scaling4 = createDualImpl(
       0, 0, vector.z, 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
-  (vector) => ({
-    value: `mat4x4f(
-        ${vector.value}.x, 0, 0, 0,
-        0, ${vector.value}.y, 0, 0,
-        0, 0, ${vector.value}.z, 0,
-        0, 0, 0, 1
-      )`,
-    dataType: mat4x4f,
-  }),
+  // CODEGEN implementation
+  (v) =>
+    snip(
+      stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
+      mat4x4f,
+    ),
   'scaling4',
 );
 
@@ -661,15 +630,10 @@ export const rotationX4 = createDualImpl(
       0, -Math.sin(a), Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
-      `mat4x4f(
-        1, 0, 0, 0,
-        0, cos(${a.value}), sin(${a.value}), 0,
-        0, -sin(${a.value}), cos(${a.value}), 0,
-        0, 0, 0, 1
-      )`,
+      stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
       mat4x4f,
     ),
   'rotationX4',
@@ -690,15 +654,10 @@ export const rotationY4 = createDualImpl(
       Math.sin(a), 0, Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
-      `mat4x4f(
-        cos(${a.value}), 0, -sin(${a.value}), 0,
-        0, 1, 0, 0,
-        sin(${a.value}), 0, cos(${a.value}), 0,
-        0, 0, 0, 1
-      )`,
+      stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
       mat4x4f,
     ),
   'rotationY4',
@@ -719,15 +678,10 @@ export const rotationZ4 = createDualImpl(
       0, 0, 1, 0,
       0, 0, 0, 1,
     ),
-  // GPU implementation
+  // CODEGEN implementation
   (a) =>
     snip(
-      `mat4x4f(
-        cos(${a.value}), sin(${a.value}), 0, 0,
-        -sin(${a.value}), cos(${a.value}), 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-      )`,
+      stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
       mat4x4f,
     ),
   'rotationZ4',

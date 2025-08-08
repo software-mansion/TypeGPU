@@ -1,4 +1,5 @@
-import type { Snippet } from '../data/snippet.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { mat4x4f } from '../data/matrix.ts';
 import type { m4x4f, v3f } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
@@ -16,13 +17,13 @@ export const translate4 = createDualImpl(
     return mul(mat4x4f.translation(vector), matrix);
   },
   // GPU implementation
-  (matrix, vector) => ({
-    value: `(${
-      (mat4x4f.translation(vector as unknown as v3f) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
-    dataType: matrix.dataType,
-  }),
+  (matrix, vector) =>
+    snip(
+      stitch`(${mat4x4f.translation(
+        vector as unknown as v3f,
+      ) as unknown as Snippet} * ${matrix})`,
+      matrix.dataType,
+    ),
   'translate4',
 );
 
@@ -38,13 +39,13 @@ export const scale4 = createDualImpl(
     return mul(mat4x4f.scaling(vector), matrix);
   },
   // GPU implementation
-  (matrix, vector) => ({
-    value: `(${
-      (mat4x4f.scaling(vector as unknown as v3f) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
-    dataType: matrix.dataType,
-  }),
+  (matrix, vector) =>
+    snip(
+      stitch`(${(mat4x4f.scaling(
+        vector as unknown as v3f,
+      ) as unknown as Snippet)} * ${matrix})`,
+      matrix.dataType,
+    ),
   'scale4',
 );
 
@@ -60,13 +61,13 @@ export const rotateX4 = createDualImpl(
     return mul(mat4x4f.rotationX(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
-    value: `(${
-      (mat4x4f.rotationX(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
-    dataType: matrix.dataType,
-  }),
+  (matrix, angle) =>
+    snip(
+      stitch`(${(mat4x4f.rotationX(
+        angle as unknown as number,
+      ) as unknown as Snippet)} * ${matrix})`,
+      matrix.dataType,
+    ),
   'rotateX4',
 );
 
@@ -82,13 +83,13 @@ export const rotateY4 = createDualImpl(
     return mul(mat4x4f.rotationY(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
-    value: `(${
-      (mat4x4f.rotationY(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
-    dataType: matrix.dataType,
-  }),
+  (matrix, angle) =>
+    snip(
+      stitch`(${(mat4x4f.rotationY(
+        angle as unknown as number,
+      ) as unknown as Snippet)} * ${matrix})`,
+      matrix.dataType,
+    ),
   'rotateY4',
 );
 
@@ -104,12 +105,12 @@ export const rotateZ4 = createDualImpl(
     return mul(mat4x4f.rotationZ(angle), matrix);
   },
   // GPU implementation
-  (matrix, angle) => ({
-    value: `(${
-      (mat4x4f.rotationZ(angle as unknown as number) as unknown as Snippet)
-        .value
-    } * ${matrix.value})`,
-    dataType: matrix.dataType,
-  }),
+  (matrix, angle) =>
+    snip(
+      stitch`(${(mat4x4f.rotationZ(
+        angle as unknown as number,
+      ) as unknown as Snippet)} * ${matrix})`,
+      matrix.dataType,
+    ),
   'rotateZ4',
 );

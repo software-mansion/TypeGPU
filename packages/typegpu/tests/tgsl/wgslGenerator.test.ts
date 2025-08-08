@@ -632,13 +632,13 @@ describe('wgslGenerator', () => {
   it('generates correct code for array expressions with derived elements', () => {
     const testFn = tgpu.fn([], d.f32)(() => {
       const arr = [derivedV2f.$, std.mul(derivedV2f.$, d.vec2f(2, 2))];
-      return (arr[1] as { x: number; y: number }).y;
+      return (arr[1] as d.v2f).y;
     });
 
     expect(parseResolved({ testFn })).toBe(
       parse(`
       fn testFn() -> f32 {
-        var arr = array<vec2f, 2>(vec2f(44, 88), (vec2f(44, 88) * vec2f(2, 2)));
+        var arr = array<vec2f, 2>(vec2f(44, 88), vec2f(88, 176));
         return arr[1].y;
       }`),
     );
@@ -892,11 +892,11 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- translate4: Cannot read properties of undefined (reading 'value')]
-`);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn
+      - translate4: Cannot read properties of undefined (reading 'dataType')]
+    `);
   });
 
   it('throws error when initializing vec4f with an array', () => {
@@ -1007,7 +1007,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.6);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 });

@@ -24,6 +24,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
 }
 
 export interface TgpuDerived<T> {
+  readonly [$internal]: true;
   readonly resourceType: 'derived';
 
   [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T>;

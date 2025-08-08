@@ -1,5 +1,5 @@
-import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
-import { snip } from '../../data/snippet.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
@@ -17,7 +17,6 @@ import type {
   FnArgsConversionHint,
   ResolutionCtx,
   SelfResolvable,
-  Wgsl,
 } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
@@ -234,11 +233,7 @@ function createFn<ImplSchema extends AnyFn>(
           throw new ExecutionError(err, [fn]);
         }
       }),
-    (...args) =>
-      snip(
-        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        shell.returnType ?? UnknownData,
-      ),
+    (...args) => snip(new FnCall(fn, args), shell.returnType),
     'tgpuFnCall',
     shell.argTypes,
   );
@@ -302,13 +297,9 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) => innerFn(...args),
-    (...args) =>
-      snip(
-        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        innerFn.shell.returnType ?? UnknownData,
-      ),
+    (...args) => snip(new FnCall(fn, args), innerFn.shell.returnType),
     'tgpuFnCall',
-    innerFn.shell.argTypes as AnyData[],
+    innerFn.shell.argTypes,
   );
 
   const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
@@ -328,20 +319,26 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$internal] = true;
-  readonly [$getNameForward]: TgpuFnBase<ImplSchema>;
+  readonly [$getNameForward]: unknown;
+  readonly #fn: TgpuFnBase<ImplSchema>;
+  readonly #params: Snippet[];
 
   constructor(
-    private readonly _fn: TgpuFnBase<ImplSchema>,
-    private readonly _params: Wgsl[],
+    fn: TgpuFnBase<ImplSchema>,
+    params: Snippet[],
   ) {
-    this[$getNameForward] = _fn;
+    this.#fn = fn;
+    this.#params = params;
+    this[$getNameForward] = fn;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    return ctx.resolve(
-      `${ctx.resolve(this._fn)}(${
-        this._params.map((param) => ctx.resolve(param)).join(', ')
-      })`,
+    const resolvedParams = this.#params.map((param) =>
+      ctx.resolve(param.value, param.dataType)
+    );
+    // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+    return ctx.withResetIndentLevel(() =>
+      `${ctx.resolve(this.#fn)}(${resolvedParams.join(', ')})`
     );
   }
 
