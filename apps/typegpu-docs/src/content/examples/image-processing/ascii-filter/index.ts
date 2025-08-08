@@ -214,6 +214,11 @@ function processVideoFrame(
   _: number,
   metadata: VideoFrameCallbackMetadata,
 ) {
+  if (video.readyState < 2) {
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
+    return;
+  }
+
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
@@ -255,28 +260,25 @@ function updateVideoDisplay(frameWidth: number, frameHeight: number) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+}
 
-  function setUVTransformForIOS() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (!isIOS) {
-      uvTransformBuffer.write(d.mat2x2f(1, 0, 0, 1));
-      return;
-    }
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function setUVTransformForIOS() {
+  const angle = screen.orientation.type;
 
-    const angle = screen.orientation.type;
-
-    let m = d.mat2x2f(1, 0, 0, 1);
-    if (angle === 'portrait-primary') {
-      m = d.mat2x2f(0, -1, 1, 0);
-    } else if (angle === 'portrait-secondary') {
-      m = d.mat2x2f(0, 1, -1, 0);
-    } else if (angle === 'landscape-primary') {
-      m = d.mat2x2f(-1, 0, 0, -1);
-    }
-
-    uvTransformBuffer.write(m);
+  let m = d.mat2x2f(1, 0, 0, 1);
+  if (angle === 'portrait-primary') {
+    m = d.mat2x2f(0, -1, 1, 0);
+  } else if (angle === 'portrait-secondary') {
+    m = d.mat2x2f(0, 1, -1, 0);
+  } else if (angle === 'landscape-primary') {
+    m = d.mat2x2f(-1, 0, 0, -1);
   }
 
+  uvTransformBuffer.write(m);
+}
+
+if (isIOS) {
   setUVTransformForIOS();
   window.addEventListener('orientationchange', setUVTransformForIOS);
 }
