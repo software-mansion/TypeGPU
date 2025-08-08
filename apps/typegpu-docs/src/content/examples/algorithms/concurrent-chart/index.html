@@ -4,6 +4,7 @@
     <div class="predictions-label">Timings</div>
 
     <div class="bars-container">
+      <div class="vertical-line"></div>
       <div class="bar">JS1</div>
       <div class="bar">GPU1</div>
       <div class="bar">JS2</div>
@@ -14,12 +15,41 @@
       <div class="bar">GPU4</div>
       <div class="bar">JS5</div>
       <div class="bar">GPU5</div>
+      <div class="horizontal-line"></div>
     </div>
   </div>
 </div>
 
+
+
 <style>
-  .predictions-container {
+  .vertical-line {
+    position: absolute;
+    left: 1%; 
+    height: 95%; 
+    width: 3px;
+    background-color: #656565;
+    z-index: 1;
+    @media (max-width: 1024px) {
+      left: 15%; /* Adjust for smaller screens */
+    }
+  }
+
+  .horizontal-line {
+    position: absolute;
+    bottom: 1%; 
+    left: 1%;
+    width: 100%; 
+    height: 3px;
+    background-color: #656565;
+    z-index: 1;
+    @media (max-width: 1024px) {
+      left: 15%; /* Adjust for smaller screens */
+      width: 85%; /* Adjust width for smaller screens */
+    }
+  }
+
+  .bars-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -43,13 +73,15 @@
     justify-content: center;
     gap: 1rem;
     row-gap: 2rem;
+    position: relative; /* Added to make absolute positioning of lines work relative to this container */
+    min-height: 17rem; /* Ensure enough space for the bars and lines */
     @media (max-width: 1024px) {
       width: calc(100% + 8rem);
       row-gap: 0.1rem;
     }
   }
 
-    .bars-container > .bar:nth-child(odd) {
+    .bars-container > .bar:nth-child(even) {
       margin-left: 2rem;
   }
 
