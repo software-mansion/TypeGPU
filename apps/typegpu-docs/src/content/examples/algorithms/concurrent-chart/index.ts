@@ -1,4 +1,5 @@
 import tgpu from 'typegpu';
+import * as std from 'typegpu/std';
 import { performCalculationsWithTime } from './calculator.ts';
 
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
@@ -30,7 +31,6 @@ const lengthMap: Record<string, { jsTime: number; gpuTime: number }> = {
 async function initCalc() {
   const inputArrays: number[][] = [];
 
-  // populate arrays for calculation
   for (const length of Object.keys(lengthMap)) {
     const arrayLength = Number.parseInt(length);
     const onesArray = Array(arrayLength).fill(1);
@@ -40,37 +40,23 @@ async function initCalc() {
       onesArray,
     );
     if (success && jsTime !== undefined && gpuTime !== undefined) {
-      console.log(`Calculation successful ${jsTime} and ${gpuTime}`);
       lengthMap[onesArray.length].jsTime = jsTime;
       lengthMap[onesArray.length].gpuTime = gpuTime;
     }
   }
-  //calc prefix sum
-
-
   return inputArrays;
 }
 
   function drawCharts() {
-    // graph the results
     const keys = Object.keys(lengthMap);
-    console.log('Keys:', keys);
     for (let i = 0; i < bars.length/2; i++) {
       const value = lengthMap[keys[i]];
-      console.log('bars lenght', bars.length)
-      console.log(`Bar ${i} value:`, value);
-        // Set the height of the bar based on relative time
-        bars[2*i].style.setProperty('--bar-height', `${value.jsTime / 50}`);
+        bars[2*i].style.setProperty('--bar-height', `${std.min(value.jsTime / 50, 1)}`);
         bars[2*i].style.setProperty('--highlight-opacity', '1');
-        // Add the time value inside the bar
-        bars[2*i].textContent = `${value.jsTime.toFixed(1)}`;
+        bars[2*i].textContent = `${(Number(value.jsTime) / Number(value.gpuTime)).toFixed(1)}x`;
 
-        // Set the height of the bar based on relative time
-        bars[2*i+1].style.setProperty('--bar-height', `${value.gpuTime / 50}`);
+        bars[2*i+1].style.setProperty('--bar-height', `${std.min(value.gpuTime / 50, 1)}`);
         bars[2*i+1].style.setProperty('--highlight-opacity', '1');
-        // Add the time value inside the bar
-        bars[2*i+1].textContent = `${value.gpuTime.toFixed(1)}`;
-
     }
   }
 

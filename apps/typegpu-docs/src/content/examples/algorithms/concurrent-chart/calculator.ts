@@ -15,7 +15,6 @@ export async function performCalculationsWithTime(
   root: TgpuRoot,
   inputArray: number[],
 ): Promise<SumResult> {
-  console.log('wywolajam sie kurwa')
   const arraySize = inputArray.length;
   const inputBuffer = root
     .createBuffer(
