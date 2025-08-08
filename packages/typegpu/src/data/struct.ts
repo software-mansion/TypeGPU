@@ -1,6 +1,6 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import { AnyData } from './index.ts';
+import type { AnyData } from './index.ts';
 import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
