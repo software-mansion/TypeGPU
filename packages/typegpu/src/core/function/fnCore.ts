@@ -1,11 +1,13 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AnyData, snip } from '../../data/dataTypes.ts';
+import { undecorate } from '../../data/decorateUtils.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import {
-  type AnyWgslStruct,
   isWgslData,
   isWgslStruct,
   Void,
+  type WgslStruct,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
@@ -149,6 +151,20 @@ export function createFnCore(
           throw new MissingLinksError(getName(this), missingExternals);
         }
 
+        // If an entrypoint implementation has a second argument, it represents the output schema.
+        // We look at the identifier chosen by the user and add it to externals.
+        const maybeSecondArg = ast.params[1];
+        if (
+          maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
+        ) {
+          applyExternals(
+            externalMap,
+            {
+              [maybeSecondArg.name]: undecorate(returnType),
+            },
+          );
+        }
+
         // generate wgsl string
         const { head, body } = ctx.fnToWgsl({
           args: argTypes.map((arg, i) =>
@@ -166,7 +182,7 @@ export function createFnCore(
                   alias,
                   snip(
                     `_arg_${i}.${name}`,
-                    (argTypes[i] as AnyWgslStruct)
+                    (argTypes[i] as WgslStruct)
                       .propTypes[name],
                   ),
                 ])

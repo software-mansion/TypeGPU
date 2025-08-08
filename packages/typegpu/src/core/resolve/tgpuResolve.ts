@@ -1,9 +1,11 @@
+import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 
 export interface TgpuResolveOptions {
@@ -21,6 +23,10 @@ export interface TgpuResolveOptions {
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
+  /**
+   * A function to configure the resolution context.
+   */
+  config?: ((cfg: Configurable) => Configurable) | undefined;
 }
 
 /**
@@ -65,12 +71,14 @@ export function resolveWithContext(
     externals,
     template,
     names,
+    config,
   } = options;
 
   const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, externals ?? {});
 
   const resolutionObj: SelfResolvable = {
+    [$internal]: true,
     '~resolve'(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
@@ -82,7 +90,7 @@ export function resolveWithContext(
     names: names === 'strict'
       ? new StrictNameRegistry()
       : new RandomNameRegistry(),
-  });
+  }, config);
 }
 
 /**

@@ -1,13 +1,11 @@
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inGPUMode } from '../../gpuMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
-  $gpuRepr,
   $gpuValueOf,
   $internal,
-  $repr,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
@@ -45,11 +43,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>
   >;
 
-  // Type-tokens, not available at runtime
-  declare readonly [$repr]: Infer<T>;
-  declare readonly [$gpuRepr]: InferGPU<T>;
-  declare readonly [$getNameForward]: unknown;
-  // ---
+  readonly [$getNameForward]: unknown;
 
   constructor(
     public readonly schema: T,
@@ -75,6 +69,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   [$gpuValueOf](): InferGPU<T> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.schema,
@@ -84,11 +79,13 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   get value(): InferGPU<T> {
-    if (!inGPUMode()) {
-      throw new Error('`tgpu.accessor` values are only accessible on the GPU');
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
     }
 
-    return this[$gpuValueOf]();
+    throw new Error(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
   }
 
   get $(): InferGPU<T> {
@@ -106,6 +103,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return `${ctx.resolve(value)}()`;
     }
 
-    return ctx.resolveValue(value as Infer<T>, this.schema);
+    return ctx.resolve(value, this.schema);
   }
 }

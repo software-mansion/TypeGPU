@@ -53,7 +53,6 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        DEV &&
         starlightTypeDoc({
           entryPoints: [
             '../../packages/typegpu/src/index.ts',
@@ -234,15 +233,11 @@ export default defineConfig({
         {
           label: 'Reference',
           items: stripFalsy([
-            {
-              label: 'Data Schema Cheatsheet',
-              slug: 'reference/data-schema-cheatsheet',
-            },
             DEV && {
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
-            DEV && typeDocSidebarGroup,
+            typeDocSidebarGroup,
           ]),
         },
       ]),

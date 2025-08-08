@@ -377,7 +377,7 @@ type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
 
 abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
-  declare readonly length = 2;
+  declare readonly length: 2;
 
   e0: S;
   e1: S;
@@ -422,7 +422,7 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
 }
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
-  declare readonly length = 3;
+  declare readonly length: 3;
 
   e0: S;
   e1: S;
@@ -485,7 +485,7 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
 }
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
-  declare readonly length = 4;
+  declare readonly length: 4;
 
   e0: S;
   e1: S;

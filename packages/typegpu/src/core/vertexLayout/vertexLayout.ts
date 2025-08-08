@@ -89,8 +89,9 @@ function dataToContainedAttribs<
   if (isWgslStruct(data)) {
     let memberOffset = offset;
 
+    const propTypes = data.propTypes as Record<string, BaseData>;
     return Object.fromEntries(
-      Object.entries(data.propTypes).map(([key, value]) => {
+      Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
@@ -111,8 +112,9 @@ function dataToContainedAttribs<
   if (isUnstruct(data)) {
     let memberOffset = offset;
 
+    const propTypes = data.propTypes as Record<string, BaseData>;
     return Object.fromEntries(
-      Object.entries(data.propTypes).map(([key, value]) => {
+      Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,

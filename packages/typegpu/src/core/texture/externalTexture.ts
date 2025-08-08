@@ -1,4 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import { $internal } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -26,6 +27,7 @@ export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
   public readonly resourceType = 'external-texture';
   public readonly [$wgslDataType]: AnyData;
+  readonly [$internal] = true;
 
   constructor(private readonly _membership: LayoutMembership) {
     setName(this, _membership.key);

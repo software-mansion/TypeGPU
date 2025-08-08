@@ -1,5 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
+import type { ReactNode } from 'react';
 import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
@@ -10,16 +11,16 @@ import {
   menuShownAtom,
   menuShownMobileAtom,
 } from '../utils/examples/menuShownAtom.ts';
-import ExamplePage from './ExamplePage.tsx';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
 
-// biome-ignore lint/suspicious/noExplicitAny: it exists, I swear
-(globalThis as any).__TYPEGPU_MEASURE_PERF__ = true;
+interface ExampleLayoutProps {
+  children?: ReactNode | undefined;
+}
 
-export function ExampleLayout() {
+export function ExampleLayout(props: ExampleLayoutProps) {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
   const [codeShownMobile, setCodeShownMobile] = useAtom(
@@ -47,7 +48,7 @@ export function ExampleLayout() {
 
       <div className='box-border flex h-dvh gap-4 bg-tameplum-50 p-4'>
         {menuShown || menuShownMobile ? <SideMenu /> : null}
-        <ExamplePage />
+        {props.children}
       </div>
     </>
   );
@@ -74,7 +75,10 @@ function SideMenu() {
     >
       <header className='p-5'>
         <div className='grid place-items-center'>
-          <a href='/TypeGPU' className='box-border block cursor-pointer py-4'>
+          <a
+            href='/TypeGPU'
+            className='box-border grid h-20 cursor-pointer place-content-center'
+          >
             <img
               className='w-40'
               src='/TypeGPU/typegpu-logo-light.svg'
@@ -111,9 +115,7 @@ function SideMenu() {
         </section>
 
         <SearchableExampleList
-          excludeTags={[
-            experimentalShowing ? [] : ['experimental'],
-          ].flat()}
+          excludeTags={[experimentalShowing ? [] : ['experimental']].flat()}
           scrollContainerRef={scrollRef}
         />
       </div>

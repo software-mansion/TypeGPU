@@ -1,11 +1,13 @@
-import { snip } from '../data/dataTypes.ts';
+import { snip } from '../data/snippet.ts';
 import { Void } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 
 export const discard = createDualImpl(
   // CPU
   (): never => {
-    throw new Error('discard() can only be used on the GPU.');
+    throw new Error(
+      '`discard` relies on GPU resources and cannot be executed outside of a draw call',
+    );
   },
   // GPU
   () => snip('discard;', Void),

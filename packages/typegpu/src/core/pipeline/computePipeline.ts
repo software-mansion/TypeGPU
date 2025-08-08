@@ -204,6 +204,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 }
 
 class ComputePipelineCore implements SelfResolvable {
+  readonly [$internal] = true;
   private _memo: Memo | undefined;
 
   constructor(

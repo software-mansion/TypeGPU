@@ -1,4 +1,5 @@
 import type { Block } from 'tinyest';
+import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -29,7 +30,8 @@ import type {
   TgpuTexture,
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData, Snippet, UnknownData } from './data/dataTypes.ts';
+import type { AnyData, UnknownData } from './data/dataTypes.ts';
+import type { Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -38,7 +40,6 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import type { Infer, InferGPU } from './shared/repr.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
@@ -101,11 +102,91 @@ export interface ItemStateStack {
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
+  topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
+
+/**
+ * # What are execution modes/states? 🤷‍♂️
+ * They're used to control how each TypeGPU resource reacts
+ * to actions upon them.
+ *
+ * ## Normal mode
+ * This is the default mode, where resources are acted upon
+ * by code either:
+ * - Not wrapped inside any of our execution-altering APIs
+ * like tgpu.resolve or tgpu.simulate.
+ * - Inside tgpu.derived definitions, where we're taking a break
+ *   from codegen/simulation to create resources on-demand.
+ *
+ * ```ts
+ * const count = tgpu.privateVar(d.f32);
+ * count.$ += 1; // Illegal in top-level
+ *
+ * const root = await tgpu.init();
+ * const countMutable = root.createMutable(d.f32);
+ * countMutable.$ = [1, 2, 3]; // Illegal in top-level
+ * countMutable.write([1, 2, 3]); // OK!
+ * ```
+ *
+ * ## Codegen mode
+ * Brought upon by `tgpu.resolve()` (or higher-level APIs using it like our pipelines).
+ * Resources are expected to generate WGSL code that represents them, instead of
+ * fulfilling their task in JS.
+ *
+ * ```ts
+ * const foo = tgpu.fn([], d.f32)(() => 123);
+ * // The following is running in `codegen` mode
+ * console.log(foo()); // Prints `foo_0()`
+ * ```
+ *
+ * ## Simulate mode
+ * Callbacks passed to `tgpu.simulate()` are executed in this mode. Each 'simulation'
+ * is isolated, and does not share state with other simulations (even nested ones).
+ * Variables and buffers can be accessed and mutated directly, and their state
+ * is returned at the end of the simulation.
+ *
+ * ```ts
+ * const var = tgpu.privateVar(d.f32, 0);
+ *
+ * const result = tgpu.simulate(() => {
+ *   // This is running in `simulate` mode
+ *   var.$ += 1; // Direct access is legal
+ *   return var.$; // Returns 1
+ * });
+ *
+ * console.log(result.value); // Prints 1
+ * ```
+ */
+export type ExecMode = 'normal' | 'codegen' | 'simulate';
+
+export class NormalState {
+  readonly type = 'normal' as const;
+}
+
+export class CodegenState {
+  readonly type = 'codegen' as const;
+}
+
+export class SimulationState {
+  readonly type = 'simulate' as const;
+
+  constructor(
+    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly vars: {
+      private: Map<TgpuVar, unknown>;
+      workgroup: Map<TgpuVar, unknown>;
+    },
+  ) {}
+}
+
+export type ExecState =
+  | NormalState
+  | CodegenState
+  | SimulationState;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
@@ -114,6 +195,7 @@ export interface ItemStateStack {
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
+  readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;
 
@@ -137,17 +219,16 @@ export interface ResolutionCtx {
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
 
+  pushMode(state: ExecState): void;
+  popMode(expected?: ExecMode | undefined): void;
+
   /**
    * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: unknown): string;
-  resolveValue<T extends BaseData>(
-    value: Infer<T> | InferGPU<T>,
-    schema: T,
-  ): string;
+  resolve(item: unknown, schema?: AnyData | undefined): string;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
@@ -171,12 +252,14 @@ export interface ResolutionCtx {
  * to another mechanism.
  */
 export interface SelfResolvable {
+  [$internal]: unknown;
   '~resolve'(ctx: ResolutionCtx): string;
   toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
-  return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
+  return isMarkedInternal(value) &&
+    typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }
 
 export function isWgsl(value: unknown): value is Wgsl {
@@ -194,13 +277,21 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type DefaultConversionStrategy = 'keep' | 'coerce';
+export type ConversionStrategy =
+  | 'keep'
+  | 'unify';
 
+/**
+ * Optional hints for converting function argument types during resolution.
+ * In case of tgpu functions, this is just the array of argument schemas.
+ * In case of raw dualImpls (e.g. in std), this is either a function that converts the snippets appropriately,
+ * or a string defining a conversion strategy.
+ * The strategy 'keep' is the default.
+ */
 export type FnArgsConversionHint =
   | AnyData[]
   | ((...args: Snippet[]) => AnyWgslData[])
-  | DefaultConversionStrategy
-  | undefined;
+  | ConversionStrategy;
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (

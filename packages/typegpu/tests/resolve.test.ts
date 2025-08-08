@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
-import { $wgslDataType } from '../src/shared/symbols.ts';
+import { $internal, $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -28,8 +29,11 @@ describe('tgpu resolve', () => {
 
   it('should deduplicate dependencies', () => {
     const intensity = {
+      [$internal]: true,
+
       get value(): number {
         return {
+          [$internal]: true,
           [$wgslDataType]: d.f32,
           '~resolve'(ctx: ResolutionCtx) {
             return ctx.resolve(intensity);
@@ -397,6 +401,109 @@ describe('tgpu resolve', () => {
           let x = 3;
           let y = 2;
         }`),
+    );
+  });
+});
+
+describe('tgpu resolveWithContext', () => {
+  it('should resolve a template with external values', () => {
+    const Gradient = d.struct({
+      from: d.vec3f,
+      to: d.vec3f,
+    });
+
+    const { code } = tgpu.resolveWithContext({
+      template: `
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `,
+      externals: { Gradient },
+      names: 'strict',
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+        struct Gradient {
+          from: vec3f,
+          to: vec3f,
+        }
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `),
+    );
+  });
+
+  it('should resolve a template with additional config', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `,
+      externals: { Voxel },
+      names: 'strict',
+      config: (cfg) => cfg.pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `),
+    );
+
+    // verify resolveWithContext::config impl is being called
+    expect(configSpy.mock.lastCall?.[0]).toBeDefined();
+  });
+
+  it('should resolve a template with a slot', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const v = d.vec4f(1, 0, 1, 0);
+    const colorSlot = tgpu.slot<d.v4f>();
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * colorTint;
+          }
+        `,
+      externals: { Voxel, colorTint: colorSlot },
+      names: 'strict',
+      config: (cfg) => cfg.with(colorSlot, v).pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * vec4f(1, 0, 1, 0);
+          }
+        `),
+    );
+    // verify resolveWithContext::config impl is actually working
+    expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
+      [[colorSlot, v]],
     );
   });
 });

@@ -57,7 +57,7 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type {
   Default,
   NullableToOptional,
@@ -168,6 +168,9 @@ export interface TgpuBindGroupLayout<
   readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+  [$gpuValueOf](): {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
   readonly value: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
@@ -429,6 +432,10 @@ class TgpuBindGroupLayoutImpl<
   public readonly $ = this.value as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
+
+  [$gpuValueOf]() {
+    return this.$;
+  }
 
   constructor(public readonly entries: Entries) {
     let idx = 0;

@@ -1,4 +1,6 @@
 import { resolveData } from './core/resolve/resolveData.ts';
+import { ConfigurableImpl } from './core/root/configurableImpl.ts';
+import type { Configurable } from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -9,16 +11,16 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
+import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
+import { snip, type Snippet } from './data/snippet.ts';
+import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
-  type AnyData,
-  isData,
-  snip,
-  type Snippet,
-  type UnknownData,
-} from './data/dataTypes.ts';
-import { type BaseData, isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
-import { MissingSlotValueError, ResolutionError } from './errors.ts';
-import { popMode, provideCtx, pushMode, RuntimeMode } from './gpuMode.ts';
+  invariant,
+  MissingSlotValueError,
+  ResolutionError,
+  WgslTypeError,
+} from './errors.ts';
+import { provideCtx, topLevelState } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
@@ -33,13 +35,20 @@ import {
 import { coerceToSnippet } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
+  ExecMode,
+  ExecState,
   FnToWgslOptions,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
   Wgsl,
 } from './types.ts';
-import { isSelfResolvable, isWgsl } from './types.ts';
+import {
+  CodegenState,
+  isMarkedInternal,
+  isSelfResolvable,
+  NormalState,
+} from './types.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -95,6 +104,14 @@ class ItemStateStackImpl implements ItemStateStack {
       throw new Error('Internal error, expected item layer to be on top.');
     }
     return state;
+  }
+
+  get topFunctionReturnType(): AnyData {
+    const scope = this._stack.findLast((e) => e.type === 'functionScope');
+    if (!scope) {
+      throw new Error('Internal error, expected function scope to be present.');
+    }
+    return scope.returnType;
   }
 
   pushItem() {
@@ -279,6 +296,16 @@ export class IndentController {
     this.identLevel--;
     return this.pre;
   }
+
+  withResetLevel<T>(callback: () => T): T {
+    const savedLevel = this.identLevel;
+    this.identLevel = 0;
+    try {
+      return callback();
+    } finally {
+      this.identLevel = savedLevel;
+    }
+  }
 }
 
 interface FixedBindingConfig {
@@ -302,6 +329,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
+  readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
 
@@ -328,8 +356,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
+  public expectedType: AnyData | undefined;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
@@ -339,12 +367,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.pre;
   }
 
+  get topFunctionReturnType() {
+    return this._itemStateStack.topFunctionReturnType;
+  }
+
   indent(): string {
     return this._indentController.indent();
   }
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  withResetIndentLevel<T>(callback: () => T): T {
+    return this._indentController.withResetLevel(callback);
   }
 
   getById(id: string): Snippet | null {
@@ -494,14 +530,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      // Derived computations are always done on the CPU
-      pushMode(RuntimeMode.CPU);
+      // Getting out of codegen or simulation mode so we can execute JS normally.
+      this.pushMode(new NormalState());
 
       let result: T;
       try {
         result = derived['~compute']();
       } finally {
-        popMode(RuntimeMode.CPU);
+        this.popMode('normal');
       }
 
       // We know which slots the item used while resolving
@@ -555,7 +591,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isSelfResolvable(item)) {
         result = item['~resolve'](this);
       } else {
-        result = this.resolveValue(item);
+        throw new TypeError(
+          `Unresolvable internal value: ${item} (as json: ${
+            JSON.stringify(item)
+          })`,
+        );
       }
 
       // We know which slots the item used while resolving
@@ -579,64 +619,88 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown): string {
+  resolve(item: unknown, schema?: AnyData | undefined): string {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner),
+        () => this.resolve(item[$providing].inner, schema),
       );
     }
 
-    if ((item && typeof item === 'object') || typeof item === 'function') {
+    if (isMarkedInternal(item)) {
+      // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {
-          pushMode(RuntimeMode.GPU);
+          this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
+
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
-          popMode(RuntimeMode.GPU);
+          this.popMode('codegen');
         }
       }
 
       return this._getOrInstantiate(item);
     }
 
-    return String(item);
-  }
-
-  resolveValue<T extends BaseData>(
-    value: Infer<T>,
-    schema?: T | undefined,
-  ): string {
-    if (isWgsl(value)) {
-      return this.resolve(value);
+    // This is a value that comes from the outside, maybe we can coerce it
+    if (typeof item !== 'object' && typeof item !== 'function') {
+      return String(item);
     }
 
     if (schema && isWgslArray(schema)) {
-      return `array(${
-        (value as unknown[]).map((element) =>
-          this.resolveValue(element, schema.elementType)
+      if (!Array.isArray(item)) {
+        throw new WgslTypeError(
+          `Cannot coerce ${item} into value of type '${schema}'`,
+        );
+      }
+
+      if (schema.elementCount !== item.length) {
+        throw new WgslTypeError(
+          `Cannot create value of type '${schema}' from an array of length: ${item.length}`,
+        );
+      }
+
+      const elementTypeString = this.resolve(schema.elementType);
+      return `array<${elementTypeString}, ${schema.elementCount}>(${
+        item.map((element) =>
+          this.resolve(element, schema.elementType as AnyData)
         )
       })`;
     }
 
-    if (Array.isArray(value)) {
-      return `array(${value.map((element) => this.resolveValue(element))})`;
+    if (Array.isArray(item)) {
+      return `array(${item.map((element) => this.resolve(element))})`;
     }
 
     if (schema && isWgslStruct(schema)) {
       return `${this.resolve(schema)}(${
         Object.entries(schema.propTypes).map(([key, type_]) =>
-          this.resolveValue((value as Infer<typeof schema>)[key], type_)
+          this.resolve((item as Infer<typeof schema>)[key], type_ as AnyData)
         )
       })`;
     }
 
-    throw new Error(
-      `Value ${value} (as json: ${
-        JSON.stringify(value)
-      }) of schema ${schema} is not resolvable to WGSL`,
+    throw new WgslTypeError(
+      `Value ${item} (as json: ${JSON.stringify(item)}) is not resolvable${
+        schema ? ` to type ${schema}` : ''
+      }`,
     );
+  }
+
+  pushMode(mode: ExecState) {
+    this.#modeStack.push(mode);
+  }
+
+  popMode(expected?: ExecMode) {
+    const mode = this.#modeStack.pop();
+    if (expected !== undefined) {
+      invariant(mode?.type === expected, 'Unexpected mode');
+    }
+  }
+
+  get mode(): ExecState {
+    return this.#modeStack[this.#modeStack.length - 1] ?? topLevelState;
   }
 }
 
@@ -656,9 +720,15 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
+  config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
-  let code = ctx.resolve(item);
+  let code = config
+    ? ctx.withSlots(
+      config(new ConfigurableImpl([])).bindings,
+      () => ctx.resolve(item),
+    )
+    : ctx.resolve(item);
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
@@ -723,8 +793,8 @@ export function resolveFunctionHeader(
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)} ${
+    ? `(${argList}) -> ${getAttributesString(returnType)}${
       ctx.resolve(returnType)
-    }`
-    : `(${argList})`;
+    } `
+    : `(${argList}) `;
 }
