@@ -80,7 +80,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
-  // GPU implementation
+  // CODEGEN implementation
   (lhs, rhs) =>
     snip(
       stitch`(${lhs} + ${rhs})`,
@@ -110,7 +110,7 @@ function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
-  // GPU implementation
+  // CODEGEN implementation
   (lhs, rhs) =>
     snip(
       stitch`(${lhs} - ${rhs})`,
@@ -180,10 +180,7 @@ export const mul = createDualImpl(
       ? rhs.dataType
       // Matrix * Matrix
       : lhs.dataType;
-    return snip(
-      stitch`(${lhs} * ${rhs})`,
-      returnType,
-    );
+    return snip(stitch`(${lhs} * ${rhs})`, returnType);
   },
   'mul',
 );
@@ -217,15 +214,9 @@ export const div: TgpuDualFn<DivOverload> = createDualImpl(
   // GPU implementation
   (lhs, rhs) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return snip(
-        stitch`(f32(${lhs}) / ${rhs})`,
-        f32,
-      );
+      return snip(stitch`(f32(${lhs}) / ${rhs})`, f32);
     }
-    return snip(
-      stitch`(${lhs} / ${rhs})`,
-      lhs.dataType,
-    );
+    return snip(stitch`(${lhs} / ${rhs})`, lhs.dataType);
   },
   'div',
 );

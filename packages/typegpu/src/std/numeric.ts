@@ -362,11 +362,7 @@ export const dot4U8Packed = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2) =>
-    snip(
-      stitch`dot4U8Packed(${e1}, ${e2})`,
-      u32,
-    ),
+  (e1, e2) => snip(stitch`dot4U8Packed(${e1}, ${e2})`, u32),
   'dot4U8Packed',
   [u32, u32],
 );
@@ -379,11 +375,7 @@ export const dot4I8Packed = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2) =>
-    snip(
-      stitch`dot4I8Packed(${e1}, ${e2})`,
-      i32,
-    ),
+  (e1, e2) => snip(stitch`dot4I8Packed(${e1}, ${e2})`, i32),
   'dot4I8Packed',
   [i32, i32],
 );
@@ -435,10 +427,7 @@ export const extractBits = createDualImpl(
   },
   // GPU implementation
   (e, offset, count) =>
-    snip(
-      stitch`extractBits(${e}, ${offset}, ${count})`,
-      e.dataType,
-    ),
+    snip(stitch`extractBits(${e}, ${offset}, ${count})`, e.dataType),
   'extractBits',
   (e, offset, count) => [e.dataType as AnyWgslData, u32, u32],
 );
@@ -451,11 +440,7 @@ export const faceForward = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2, e3) =>
-    snip(
-      stitch`faceForward(${e1}, ${e2}, ${e3})`,
-      e1.dataType,
-    ),
+  (e1, e2, e3) => snip(stitch`faceForward(${e1}, ${e2}, ${e3})`, e1.dataType),
   'faceForward',
 );
 
@@ -511,11 +496,7 @@ export const fma = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2, e3) =>
-    snip(
-      stitch`fma(${e1}, ${e2}, ${e3})`,
-      e1.dataType,
-    ),
+  (e1, e2, e3) => snip(stitch`fma(${e1}, ${e2}, ${e3})`, e1.dataType),
   'fma',
 );
 
@@ -572,10 +553,7 @@ export const frexp: FrexpOverload = createDualImpl(
       );
     }
 
-    return snip(
-      stitch`frexp(${value})`,
-      returnType,
-    );
+    return snip(stitch`frexp(${value})`, returnType);
   },
   'frexp',
 );
@@ -594,10 +572,7 @@ export const insertBits = createDualImpl(
   },
   // GPU implementation
   (e, newbits, offset, count) =>
-    snip(
-      stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`,
-      e.dataType,
-    ),
+    snip(stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`, e.dataType),
   'insertBits',
 );
 
@@ -644,11 +619,7 @@ export const ldexp: LdexpOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2) =>
-    snip(
-      stitch`ldexp(${e1}, ${e2})`,
-      e1.dataType,
-    ),
+  (e1, e2) => snip(stitch`ldexp(${e1}, ${e2})`, e1.dataType),
   'ldexp',
   (e1, _) => {
     switch (e1.dataType.type) {
@@ -786,11 +757,7 @@ export const mix: MixOverload = createDualImpl(
     return VectorOps.mix[e1.kind](e1, e2, e3) as T;
   },
   // GPU implementation
-  (e1, e2, e3) =>
-    snip(
-      stitch`mix(${e1}, ${e2}, ${e3})`,
-      e1.dataType,
-    ),
+  (e1, e2, e3) => snip(stitch`mix(${e1}, ${e2}, ${e3})`, e1.dataType),
   'mix',
 );
 
@@ -831,10 +798,7 @@ export const modf: ModfOverload = createDualImpl(
       );
     }
 
-    return snip(
-      stitch`modf(${value})`,
-      returnType,
-    );
+    return snip(stitch`modf(${value})`, returnType);
   },
   'modf',
 );
@@ -869,11 +833,7 @@ export const pow: PowOverload = createDualImpl(
     throw new Error('Invalid arguments to pow()');
   },
   // GPU implementation
-  (base, exponent) =>
-    snip(
-      stitch`pow(${base}, ${exponent})`,
-      base.dataType,
-    ),
+  (base, exponent) => snip(stitch`pow(${base}, ${exponent})`, base.dataType),
   'pow',
 );
 
@@ -909,11 +869,7 @@ export const reflect = createDualImpl(
   <T extends AnyFloatVecInstance>(e1: T, e2: T): T =>
     sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
-  (e1, e2) =>
-    snip(
-      stitch`reflect(${e1}, ${e2})`,
-      e1.dataType,
-    ),
+  (e1, e2) => snip(stitch`reflect(${e1}, ${e2})`, e1.dataType),
   'reflect',
 );
 
@@ -925,11 +881,7 @@ export const refract = createDualImpl(
     );
   },
   // GPU implementation
-  (e1, e2, e3) =>
-    snip(
-      stitch`refract(${e1}, ${e2}, ${e3})`,
-      e1.dataType,
-    ),
+  (e1, e2, e3) => snip(stitch`refract(${e1}, ${e2}, ${e3})`, e1.dataType),
   'refract',
   (e1, e2, e3) => [
     e1.dataType as AnyWgslData,
@@ -1045,10 +997,7 @@ export const smoothstep = createDualImpl(
   },
   // GPU implementation
   (edge0, edge1, x) =>
-    snip(
-      stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
-      x.dataType,
-    ),
+    snip(stitch`smoothstep(${edge0}, ${edge1}, ${x})`, x.dataType),
   'smoothstep',
 );
 
@@ -1076,11 +1025,7 @@ export const step = createDualImpl(
     );
   },
   // GPU implementation
-  (edge, x) =>
-    snip(
-      stitch`step(${edge}, ${x})`,
-      edge.dataType,
-    ),
+  (edge, x) => snip(stitch`step(${edge}, ${x})`, edge.dataType),
   'step',
 );
 
@@ -1120,9 +1065,7 @@ export const transpose = createDualImpl(
     );
   },
   // GPU implementation
-  (e) => {
-    return snip(stitch`transpose(${e})`, e.dataType);
-  },
+  (e) => snip(stitch`transpose(${e})`, e.dataType),
   'transpose',
 );
 

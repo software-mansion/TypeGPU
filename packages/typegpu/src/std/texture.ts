@@ -343,12 +343,14 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (texture, level) => {
-    const dim =
-      (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
-        .dimension;
+  (...args) => {
+    const textureInfo = args[0].dataType as unknown as
+      | TgpuSampledTexture
+      | TgpuStorageTexture;
+    const dim = textureInfo.dimension;
+
     return snip(
-      stitch`textureDimensions(${level ? [texture, level] : [texture]})`,
+      stitch`textureDimensions(${args})`,
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     );
   },
