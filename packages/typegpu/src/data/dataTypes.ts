@@ -44,6 +44,8 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  */
 export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
   extends wgsl.BaseData {
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -72,6 +74,7 @@ export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = any,
 > extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  (): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
 
