@@ -19,7 +19,7 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
-import type { FnArgsConversionHint, ResolutionCtx } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import type { MapValueToSnippet, Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';

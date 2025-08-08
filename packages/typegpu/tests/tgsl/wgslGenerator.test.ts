@@ -892,11 +892,11 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
-[Error: Resolution of the following tree failed:
-- <root>
-- fn:testFn
-- translate4: Cannot read properties of undefined (reading 'value')]
-`);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn
+      - translate4: Cannot read properties of undefined (reading 'dataType')]
+    `);
   });
 
   it('throws error when initializing vec4f with an array', () => {

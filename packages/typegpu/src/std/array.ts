@@ -1,4 +1,5 @@
-import { stitch } from '../core/resolve/stitch.ts';import { snip } from '../data/snippet.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { snip } from '../data/snippet.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
 import type { AnyWgslData } from '../data/wgslTypes.ts';
