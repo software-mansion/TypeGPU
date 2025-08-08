@@ -55,6 +55,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { undecorate } from '../data/decorateUtils.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
+import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -202,7 +203,10 @@ export function parseNumericString(str: string): number {
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
-  return snip(value, Number.isInteger(value) ? abstractInt : abstractFloat);
+  if (Number.isInteger(value) && value >= MIN_INT32 && value <= MAX_INT32) {
+    return snip(value, abstractInt);
+  }
+  return snip(value, abstractFloat);
 }
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';

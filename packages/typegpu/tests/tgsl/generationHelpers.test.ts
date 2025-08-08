@@ -78,7 +78,7 @@ describe('generationHelpers', () => {
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(10000000000, abstractInt),
+        snip(1e10, abstractFloat),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(

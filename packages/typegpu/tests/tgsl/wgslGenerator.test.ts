@@ -82,7 +82,7 @@ describe('wgslGenerator', () => {
       scientificLiteral: {
         value: '12e10',
         wgsl: '12e10',
-        dataType: abstractInt,
+        dataType: abstractFloat,
       },
       scientificNegativeExponentLiteral: {
         value: '12e-4',
