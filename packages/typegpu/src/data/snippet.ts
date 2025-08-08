@@ -20,6 +20,10 @@ export function isSnippet(value: unknown): value is Snippet {
 }
 
 export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
+  if (isSnippet(value)) {
+    throw new Error('Cannot nest snippets');
+  }
+
   return new SnippetImpl(
     value,
     // We don't care about attributes in snippet land, so we discard that information.

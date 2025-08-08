@@ -7,7 +7,7 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
@@ -402,10 +402,8 @@ export function generateExpression(
           `An infix operator '${callee.value.name}' was called without any arguments`,
         );
       }
-      return callee.value.operator(
-        callee.value.lhs,
-        generateExpression(ctx, argNodes[0]),
-      );
+      const rhs = generateExpression(ctx, argNodes[0]);
+      return callee.value.operator(callee.value.lhs, rhs);
     }
 
     if (!isMarkedInternal(callee.value)) {
@@ -457,12 +455,14 @@ export function generateExpression(
       const fnRes =
         (callee.value as unknown as (...args: unknown[]) => unknown)(
           ...convertedArguments,
-        ) as Snippet;
-      // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-      return snip(
-        ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
-        fnRes.dataType,
-      );
+        );
+
+      if (!isSnippet(fnRes)) {
+        throw new Error(
+          'Functions running in codegen mode must return snippets',
+        );
+      }
+      return fnRes;
     } catch (error) {
       throw new ResolutionError(error, [{
         toString: () => getName(callee.value),

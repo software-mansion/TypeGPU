@@ -42,8 +42,7 @@ import type {
   Vec4u,
 } from './wgslTypes.ts';
 import { isDecorated, isVec, isVecInstance } from './wgslTypes.ts';
-import { getResolutionCtx } from '../execMode.ts';
-import { NormalState, ResolutionCtx } from '../types.ts';
+import { asNormal } from '../execMode.ts';
 
 // ----------
 // Public API
@@ -333,16 +332,12 @@ function makeVecSchema<TValue, S extends number | boolean>(
       ) {
         // Return an actual vector at resolution time
         const knownParams = args.map((arg) => arg.value);
-        const ctx = getResolutionCtx() as ResolutionCtx;
-        ctx.pushMode(new NormalState());
-        try {
-          return snip(
+        return asNormal(() =>
+          snip(
             cpuConstruct(...(knownParams as never[])),
             vecTypeToConstructor[type],
-          );
-        } finally {
-          ctx.popMode('normal');
-        }
+          )
+        );
       }
       return snip(`${type}(${stitch`${args}`})`, vecTypeToConstructor[type]);
     },

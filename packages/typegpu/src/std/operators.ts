@@ -22,7 +22,7 @@ import {
 } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
 import { convertToCommonType } from '../tgsl/generationHelpers.ts';
-import { getResolutionCtx } from '../execMode.ts';
+import { asNormal, getResolutionCtx } from '../execMode.ts';
 import type { ResolutionCtx } from '../types.ts';
 
 export function isNumericSchema(
@@ -96,7 +96,9 @@ export const add = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
+      return asNormal(() =>
+        snip(cpuAdd(lhs.value as never, rhs.value as never), resultType)
+      );
     }
 
     return snip(stitch`(${lhs} + ${rhs})`, resultType);
@@ -137,7 +139,9 @@ export const sub = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
+      return asNormal(() =>
+        snip(cpuSub(lhs.value as never, rhs.value as never), resultType)
+      );
     }
 
     return snip(stitch`(${lhs} - ${rhs})`, resultType);
@@ -215,7 +219,9 @@ export const mul = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
+      return asNormal(() =>
+        snip(cpuMul(lhs.value as never, rhs.value as never), returnType)
+      );
     }
 
     return snip(stitch`(${lhs} * ${rhs})`, returnType);
@@ -275,7 +281,9 @@ export const div = createDualImpl(
       (typeof rhsVal === 'number' || isVecInstance(rhsVal))
     ) {
       // Precomputing
-      return snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType);
+      return asNormal(() =>
+        snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType)
+      );
     }
 
     return snip(stitch`(${conv[0]} / ${conv[1]})`, conv[0].dataType);

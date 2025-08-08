@@ -912,7 +912,7 @@ describe('v4f', () => {
 
         const one = d.vec4f(0.25, foo); // external
         const two = d.vec4f(0.1, fooLocal); // local variable
-        const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
+        const three = d.vec4f(0.125, d.vec3f(0.25, 0.5, 0.75)); // literal
       });
 
       expect(parseResolved({ main })).toBe(
@@ -922,7 +922,7 @@ describe('v4f', () => {
 
           var one = vec4f(0.25, 0.25, 0.5, 0.75);
           var two = vec4f(0.1, fooLocal);
-          var three = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
+          var three = vec4f(0.125, 0.25, 0.5, 0.75);
         }
       `),
       );

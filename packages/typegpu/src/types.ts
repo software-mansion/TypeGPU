@@ -198,6 +198,7 @@ export interface ResolutionCtx {
   readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;
+  withResetIndentLevel<T>(callback: () => T): T;
 
   /**
    * Reserves a bind group number, and returns a placeholder that will be replaced

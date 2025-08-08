@@ -336,7 +336,10 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     const resolvedParams = this.#params.map((param) =>
       ctx.resolve(param.value, param.dataType)
     );
-    return `${ctx.resolve(this.#fn)}(${resolvedParams.join(', ')})`;
+    // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+    return ctx.withResetIndentLevel(() =>
+      `${ctx.resolve(this.#fn)}(${resolvedParams.join(', ')})`
+    );
   }
 
   toString() {

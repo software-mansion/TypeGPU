@@ -9,7 +9,6 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract get kind(): VecKind;
   abstract getElementSchema(): (v?: S) => S;
 
-
   abstract get _Vec2(): new (
     x: S,
     y: S,
@@ -27,8 +26,11 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   ) => Vec4<S>;
 
   '~resolve'(): string {
-    if (this.every(e => !e)) {
+    if (this.every((e) => !e)) {
       return `${this.kind}()`;
+    }
+    if (this.every((e) => this[0] === e)) {
+      return `${this.kind}(${this[0]})`;
     }
     return `${this.kind}(${this.join(', ')})`;
   }

@@ -471,7 +471,6 @@ export type GenerationCtx = ResolutionCtx & {
   readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
-  withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;

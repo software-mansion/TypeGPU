@@ -52,7 +52,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() -> Boid {
-        return Boid(vec2f(1, 1), vec2f());
+        return Boid(vec2f(1), vec2f());
       }
     `));
   });
@@ -158,7 +158,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() {
-        var myBoid = id(Boid(vec2f(1, 1), vec2f()));
+        var myBoid = id(Boid(vec2f(1), vec2f()));
       }
     `));
   });
@@ -404,7 +404,7 @@ describe('wgsl generator js type inference', () => {
         vel: vec2f,
       }
       fn myFn() -> Boid {
-        return Boid(vec2f(1, 1), vec2f());
+        return Boid(vec2f(1), vec2f());
       }
     `));
   });
@@ -512,7 +512,7 @@ describe('wgsl generator js type inference', () => {
         return a;
       }
       fn myFn() {
-        var myBoid = id(Boid(vec2f(1, 1), vec2f()));
+        var myBoid = id(Boid(vec2f(1), vec2f()));
       }
     `));
   });

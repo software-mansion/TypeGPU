@@ -517,7 +517,7 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var hmm = vec4f(1.25, 1.25, 1.25, 1.25);
+        var hmm = vec4f(1.25);
         return hmm;
       }
     `);

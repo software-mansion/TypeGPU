@@ -8,8 +8,8 @@ describe('wgslGenerator', () => {
   it('resolves add infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().add(1);
-      const v2 = d.vec3f().add(d.vec3f());
-      const v3 = d.vec2f().add(d.vec2f()).add(1);
+      const v2 = d.vec3f(2).add(d.vec3f(1, 2, 3));
+      const v3 = d.vec2f(3).add(d.vec2f(2)).add(1);
       const m1 = d.mat2x2f().add(d.mat2x2f());
       const m2 = d.mat3x3f().add(d.mat3x3f()).add(d.mat3x3f());
     });
@@ -17,9 +17,9 @@ describe('wgslGenerator', () => {
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
-        var v1 = (vec4f() + 1);
-        var v2 = (vec3f() + vec3f());
-        var v3 = ((vec2f() + vec2f()) + 1);
+        var v1 = vec4f(1);
+        var v2 = vec3f(3, 4, 5);
+        var v3 = vec2f(6);
         var m1 = (mat2x2f() + mat2x2f());
         var m2 = ((mat3x3f() + mat3x3f()) + mat3x3f());
       }`),
@@ -29,8 +29,8 @@ describe('wgslGenerator', () => {
   it('resolves sub infix operator', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().sub(1);
-      const v2 = d.vec3f().sub(d.vec3f());
-      const v3 = d.vec2f().sub(d.vec2f()).sub(1);
+      const v2 = d.vec3f().sub(d.vec3f(1, 2, 3));
+      const v3 = d.vec2f(3).sub(d.vec2f(2)).sub(1);
       const m1 = d.mat2x2f().sub(d.mat2x2f());
       const m2 = d.mat3x3f().sub(d.mat3x3f()).sub(d.mat3x3f());
     });
@@ -38,9 +38,9 @@ describe('wgslGenerator', () => {
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
-        var v1 = (vec4f() - 1);
-        var v2 = (vec3f() - vec3f());
-        var v3 = ((vec2f() - vec2f()) - 1);
+        var v1 = vec4f(-1);
+        var v2 = vec3f(-1, -2, -3);
+        var v3 = vec2f();
         var m1 = (mat2x2f() - mat2x2f());
         var m2 = ((mat3x3f() - mat3x3f()) - mat3x3f());
       }`),
@@ -49,8 +49,8 @@ describe('wgslGenerator', () => {
 
   it('resolves mul infix operator', () => {
     const testFn = tgpu.fn([])(() => {
-      const v1 = d.vec2f().mul(1);
-      const v2 = d.vec3f().mul(d.vec3f());
+      const v1 = d.vec2f(2).mul(3);
+      const v2 = d.vec3f(2).mul(d.vec3f(2, 3, 4));
       const v3 = d.vec4f().mul(d.mat4x4f());
       const v4 = d.vec3f().mul(d.mat3x3f()).mul(1);
 
@@ -63,8 +63,8 @@ describe('wgslGenerator', () => {
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
-        var v1 = (vec2f() * 1);
-        var v2 = (vec3f() * vec3f());
+        var v1 = vec2f(6);
+        var v2 = vec3f(4, 6, 8);
         var v3 = (vec4f() * mat4x4f());
         var v4 = ((vec3f() * mat3x3f()) * 1);
 
@@ -123,17 +123,17 @@ describe('wgslGenerator', () => {
 
   it('resolves div infix operator', () => {
     const testFn = tgpu.fn([])(() => {
-      const v1 = d.vec4f().div(1);
-      const v2 = d.vec3f().div(d.vec3f());
-      const v3 = d.vec2f().div(d.vec2f()).div(1);
+      const v1 = d.vec4f(1).div(2);
+      const v2 = d.vec3f(6).div(d.vec3f(1, 2, 3));
+      const v3 = d.vec2f(1).div(d.vec2f(2)).div(2);
     });
 
     expect(parseResolved({ testFn })).toEqual(
       parse(`
       fn testFn() {
-        var v1 = (vec4f() / 1);
-        var v2 = (vec3f() / vec3f());
-        var v3 = ((vec2f() / vec2f()) / 1);
+        var v1 = vec4f(0.5);
+        var v2 = vec3f(6, 3, 2);
+        var v3 = vec2f(0.25);
       }`),
     );
   });
@@ -171,7 +171,7 @@ describe('wgslGenerator', () => {
       parse(`
       fn testFn() {
         var v1 = vec3f(6, 7, 8);
-        var v2 = vec3f(4, 4, 4);
+        var v2 = vec3f(4);
       }`),
     );
   });
