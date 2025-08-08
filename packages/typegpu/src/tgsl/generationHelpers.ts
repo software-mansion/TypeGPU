@@ -490,7 +490,7 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 function applyActionToSnippet(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   value: Snippet,
   action: ConversionResultAction,
   targetType: AnyData,
@@ -516,7 +516,7 @@ function applyActionToSnippet(
 }
 
 export type ConvertToCommonTypeOptions = {
-  ctx: GenerationCtx;
+  ctx: ResolutionCtx;
   values: Snippet[];
   restrictTo?: AnyData[] | undefined;
   concretizeTypes?: boolean | undefined;
@@ -570,7 +570,7 @@ Consider using explicit conversions instead.`,
 }
 
 export function tryConvertSnippet(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   snippet: Snippet,
   targetDataType: AnyData,
 ): Snippet {
@@ -599,7 +599,7 @@ export function tryConvertSnippet(
 }
 
 export function convertStructValues(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {

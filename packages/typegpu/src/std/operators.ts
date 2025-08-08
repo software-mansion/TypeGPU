@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import type { AnyData, TgpuDualFn } from '../data/dataTypes.ts';
-import { f32 } from '../data/numeric.ts';
+import type { AnyData } from '../data/dataTypes.ts';
+import { f16, f32 } from '../data/numeric.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -21,6 +21,9 @@ import {
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { convertToCommonType } from '../tgsl/generationHelpers.ts';
+import { getResolutionCtx } from '../execMode.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 export function isNumericSchema(
   schema: unknown,
@@ -81,11 +84,23 @@ export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
   // CODEGEN implementation
-  (lhs, rhs) =>
-    snip(
-      stitch`(${lhs} + ${rhs})`,
-      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
-    ),
+  (lhs, rhs) => {
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
+    }
+
+    return snip(stitch`(${lhs} + ${rhs})`, resultType);
+  },
   'add',
   'unify',
 );
@@ -111,11 +126,23 @@ export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
   // CODEGEN implementation
-  (lhs, rhs) =>
-    snip(
-      stitch`(${lhs} - ${rhs})`,
-      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
-    ),
+  (lhs, rhs) => {
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
+    }
+
+    return snip(stitch`(${lhs} - ${rhs})`, resultType);
+  },
   'sub',
   'unify',
 );
@@ -180,43 +207,80 @@ export const mul = createDualImpl(
       ? rhs.dataType
       // Matrix * Matrix
       : lhs.dataType;
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
+    }
+
     return snip(stitch`(${lhs} * ${rhs})`, returnType);
   },
   'mul',
 );
 
-type DivOverload = {
-  (lhs: number, rhs: number): number; // default js division
-  <T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
-  <T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
-  <T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
-};
+function cpuDiv(lhs: number, rhs: number): number; // default js division
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
+function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs / rhs;
+  }
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    const schema = vecTypeToConstructor[rhs.kind];
+    return VectorOps.div[rhs.kind](schema(lhs), rhs);
+  }
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
+    const schema = vecTypeToConstructor[lhs.kind];
+    return VectorOps.div[lhs.kind](lhs, schema(rhs));
+  }
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    return VectorOps.div[lhs.kind](lhs, rhs);
+  }
+  throw new Error('Div called with invalid arguments.');
+}
 
-export const div: TgpuDualFn<DivOverload> = createDualImpl(
+export const div = createDualImpl(
   // CPU implementation
-  <T extends NumVec | number>(lhs: T, rhs: T): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof lhs === 'number' && isVecInstance(rhs)) {
-      const schema = vecTypeToConstructor[rhs.kind];
-      return VectorOps.div[rhs.kind](schema(lhs), rhs) as T;
-    }
-    if (isVecInstance(lhs) && typeof rhs === 'number') {
-      const schema = vecTypeToConstructor[lhs.kind];
-      return VectorOps.div[lhs.kind](lhs, schema(rhs)) as T;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.div[lhs.kind](lhs, rhs) as T;
-    }
-    throw new Error('Div called with invalid arguments.');
-  },
-  // GPU implementation
+  cpuDiv,
+  // CODEGEN implementation
   (lhs, rhs) => {
+    let conv: [Snippet, Snippet] = [lhs, rhs];
+
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return snip(stitch`(f32(${lhs}) / ${rhs})`, f32);
+      const ctx = getResolutionCtx() as ResolutionCtx;
+      const converted = convertToCommonType({
+        ctx,
+        values: [lhs, rhs],
+        restrictTo: [f32, f16],
+        concretizeTypes: true,
+      }) as
+        | [Snippet, Snippet]
+        | undefined;
+      if (converted) {
+        conv = converted;
+      }
     }
-    return snip(stitch`(${lhs} / ${rhs})`, lhs.dataType);
+
+    const lhsVal = conv[0].value;
+    const rhsVal = conv[1].value;
+
+    if (
+      (typeof lhsVal === 'number' || isVecInstance(lhsVal)) &&
+      (typeof rhsVal === 'number' || isVecInstance(rhsVal))
+    ) {
+      // Precomputing
+      return snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType);
+    }
+
+    return snip(stitch`(${conv[0]} / ${conv[1]})`, conv[0].dataType);
   },
   'div',
 );

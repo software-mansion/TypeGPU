@@ -170,6 +170,15 @@ export function generateTypedExpression(
   }
 }
 
+const opCodeToCodegen = {
+  '+': add[$internal].gpuImpl,
+  '-': sub[$internal].gpuImpl,
+  '*': mul[$internal].gpuImpl,
+  '/': div[$internal].gpuImpl,
+} satisfies Partial<
+  Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
+>;
+
 export function generateExpression(
   ctx: GenerationCtx,
   expression: tinyest.Expression,
@@ -192,6 +201,11 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
+    const codegen = opCodeToCodegen[op as keyof typeof opCodeToCodegen];
+    if (codegen) {
+      return codegen(lhsExpr, rhsExpr);
+    }
+
     const forcedType = expression[0] === NODE.assignmentExpr
       ? lhsExpr.dataType.type === 'ptr'
         ? [lhsExpr.dataType.inner as AnyData]
@@ -201,9 +215,7 @@ export function generateExpression(
     const converted = convertToCommonType({
       ctx,
       values: [lhsExpr, rhsExpr],
-      restrictTo: op === '/' ? [f32, f16] : forcedType,
-      concretizeTypes: op === '/',
-      verbose: op !== '/',
+      restrictTo: forcedType,
     }) as
       | [Snippet, Snippet]
       | undefined;
@@ -422,22 +434,19 @@ export function generateExpression(
           return generateTypedExpression(ctx, arg, argType);
         });
       } else {
-        const resolvedSnippets = argNodes
-          .map((arg) => generateExpression(ctx, arg))
-          .map((res) => snip(ctx.resolve(res.value), res.dataType));
+        const snippets = argNodes.map((arg) => generateExpression(ctx, arg));
 
         if (argConversionHint === 'keep') {
           // The hint tells us to do nothing.
-          convertedArguments = resolvedSnippets;
+          convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments =
-            convertToCommonType({ ctx, values: resolvedSnippets }) ??
-              resolvedSnippets;
+          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
+            snippets;
         } else {
           // The hint is a function that converts the arguments.
-          convertedArguments = argConversionHint(...resolvedSnippets)
-            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const)
+          convertedArguments = argConversionHint(...snippets)
+            .map((type, i) => [type, snippets[i] as Snippet] as const)
             .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
         }
       }

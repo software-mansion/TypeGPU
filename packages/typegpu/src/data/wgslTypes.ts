@@ -1561,28 +1561,28 @@ export type AnyWgslData =
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
   return !!v?.[$internal] &&
-    typeof v.kind?.startsWith === 'function' &&
+    typeof v.kind === 'string' &&
     v.kind.startsWith('vec');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
-    v.type.startsWith?.('vec2');
+    typeof v.type === 'string' &&
+    v.type.startsWith('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
+    typeof v.type === 'string' &&
     v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
+    typeof v.type === 'string' &&
     v.type.startsWith('vec4');
 }
 
