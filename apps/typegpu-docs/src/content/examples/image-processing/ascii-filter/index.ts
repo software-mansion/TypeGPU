@@ -1,23 +1,19 @@
-import tgpu, {
-  type Render,
-  type Sampled,
-  type TgpuBindGroup,
-  type TgpuTexture,
-} from 'typegpu';
+import tgpu, { type TgpuBindGroup } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
-const device = root.device;
 
 const layout = tgpu.bindGroupLayout({
-  inputTexture: { texture: 'float' },
+  externalTexture: { externalTexture: {} },
 });
 
 const charsetExtended = root.createUniform(d.u32);
 const displayMode = root.createUniform(d.u32);
 const gammaCorrection = root.createUniform(d.f32);
 const glyphSize = root.createUniform(d.u32, 8);
+const uvTransformBuffer = root
+  .createUniform(d.mat2x2f, d.mat2x2f(1, 0, 0, 1));
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
@@ -75,8 +71,12 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })((input) => {
-  const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
-  const pix = std.mul(input.uv, textureSize);
+  const uv2 = std.add(
+    std.mul(uvTransformBuffer.$, std.sub(input.uv, d.vec2f(0.5))),
+    d.vec2f(0.5),
+  );
+  const textureSize = d.vec2f(std.textureDimensions(layout.$.externalTexture));
+  const pix = std.mul(uv2, textureSize);
 
   const cellSize = d.f32(glyphSize.$);
   const halfCell = std.mul(cellSize, 0.5);
@@ -85,8 +85,8 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
     std.mul(std.floor(std.div(pix, cellSize)), cellSize),
     textureSize,
   );
-  const color = std.textureSample(
-    layout.bound.inputTexture,
+  const color = std.textureSampleBaseClampToEdge(
+    layout.bound.externalTexture,
     shaderSampler,
     blockCoord,
   );
@@ -201,26 +201,14 @@ if (navigator.mediaDevices.getUserMedia) {
   });
 }
 
-let renderTexture:
-  | (
-    & TgpuTexture<{
-      size: [number, number];
-      format: 'rgba8unorm' | 'bgra8unorm';
-    }>
-    & Sampled
-    & Render
-  )
-  | undefined;
-
 let bindGroup:
   | TgpuBindGroup<{
-    inputTexture: {
-      texture: 'float';
-    };
+    externalTexture: { externalTexture: Record<string, never> };
   }>
   | undefined;
 
 let videoFrameCallbackId: number | undefined;
+let lastFrameSize: { width: number; height: number } | undefined = undefined;
 
 function processVideoFrame(
   _: number,
@@ -230,31 +218,21 @@ function processVideoFrame(
   const frameHeight = metadata.height;
 
   if (
-    !renderTexture || !bindGroup ||
-    renderTexture.props.size[0] !== frameWidth ||
-    renderTexture.props.size[1] !== frameHeight
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
   ) {
-    renderTexture?.destroy();
-    renderTexture = root['~unstable'].createTexture({
-      size: [frameWidth, frameHeight],
-      format: 'rgba8unorm',
-    }).$usage('render', 'sampled');
-
-    bindGroup = root.createBindGroup(layout, {
-      inputTexture: renderTexture,
-    });
+    lastFrameSize = { width: frameWidth, height: frameHeight };
 
     updateVideoDisplay(frameWidth, frameHeight);
   }
 
-  try {
-    device.queue.copyExternalImageToTexture(
-      { source: video },
-      { texture: root.unwrap(renderTexture) },
-      [frameWidth, frameHeight],
-    );
-  } catch (error) {
-    console.error('Failed to copy video frame to texture:', error);
+  bindGroup = root.createBindGroup(layout, {
+    externalTexture: root.device.importExternalTexture({ source: video }),
+  });
+  if (!bindGroup) {
+    console.warn('Bind group is not ready yet.');
+
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
@@ -272,12 +250,35 @@ function processVideoFrame(
 
 function updateVideoDisplay(frameWidth: number, frameHeight: number) {
   const aspectRatio = frameWidth / frameHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+
+  function setUVTransformForIOS() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isIOS) {
+      uvTransformBuffer.write(d.mat2x2f(1, 0, 0, 1));
+      return;
+    }
+
+    const angle = screen.orientation.type;
+
+    let m = d.mat2x2f(1, 0, 0, 1);
+    if (angle === 'portrait-primary') {
+      m = d.mat2x2f(0, -1, 1, 0);
+    } else if (angle === 'portrait-secondary') {
+      m = d.mat2x2f(0, 1, -1, 0);
+    } else if (angle === 'landscape-primary') {
+      m = d.mat2x2f(-1, 0, 0, -1);
+    }
+
+    uvTransformBuffer.write(m);
+  }
+
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
 }
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);

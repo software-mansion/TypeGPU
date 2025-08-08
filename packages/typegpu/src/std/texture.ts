@@ -1,4 +1,5 @@
 import type { TgpuSampler } from '../core/sampler/sampler.ts';
+import type { TgpuExternalTexture } from '../core/texture/externalTexture.ts';
 import type {
   TgpuSampledTexture,
   TgpuStorageTexture,
@@ -8,6 +9,7 @@ import { snip } from '../data/dataTypes.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
+  type F32,
   type v2f,
   type v2i,
   type v2u,
@@ -323,9 +325,10 @@ export const textureStore: TextureStoreOverload = createDualImpl(
   (texture, coords, arrayIndexOrValue, maybeValue) =>
     snip(
       `textureStore(${
-        [texture, coords, arrayIndexOrValue, maybeValue].filter(
-          (arg) => arg !== undefined,
-        ).map((v) => v.value).join(', ')
+        [texture, coords, arrayIndexOrValue, maybeValue]
+          .filter((arg) => arg !== undefined)
+          .map((v) => v.value)
+          .join(', ')
       })`,
       Void,
     ),
@@ -345,7 +348,8 @@ type TextureDimensionsOverload = {
       | TgpuSampledTexture<'cube'>
       | TgpuSampledTexture<'cube-array'>
       | TgpuStorageTexture<'2d'>
-      | TgpuStorageTexture<'2d-array'>,
+      | TgpuStorageTexture<'2d-array'>
+      | TgpuExternalTexture,
   >(
     texture: T,
   ): v2u;
@@ -368,16 +372,25 @@ type TextureDimensionsOverload = {
 
 export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   // CPU implementation
-  (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
+  (
+    _texture: TgpuSampledTexture | TgpuStorageTexture | TgpuExternalTexture,
+    _level?: number,
+  ) => {
     throw new Error(
       'Texture dimensions are not supported outside of GPU mode.',
     );
   },
   // GPU implementation
   (texture, level) => {
-    const dim =
-      (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
-        .dimension;
+    const resourceType = (texture as unknown as
+      | TgpuSampledTexture
+      | TgpuStorageTexture
+      | TgpuExternalTexture).resourceType;
+
+    const dim = resourceType === 'external-texture' ? '2d' : (
+      texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture
+    ).dimension;
+
     return snip(
       `textureDimensions(${texture.value}${
         level !== undefined ? `, ${level.value}` : ''
@@ -387,3 +400,33 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   },
   'textureDimensions',
 );
+
+type TextureSampleBaseClampToEdge = {
+  <T extends TgpuSampledTexture<'2d', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+  ): v4f;
+  (texture: TgpuExternalTexture, sampler: TgpuSampler, coords: v2f): v4f;
+};
+
+export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuSampledTexture | TgpuExternalTexture,
+      _sampler: TgpuSampler,
+      _coords: v2f,
+    ) => {
+      throw new Error(
+        'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
+      );
+    },
+    // GPU implementation
+    (texture, sampler, coords) =>
+      snip(
+        `textureSampleBaseClampToEdge(${texture.value}, ${sampler.value}, ${coords.value})`,
+        vec4f,
+      ),
+    'textureSampleBaseClampToEdge',
+  );

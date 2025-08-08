@@ -108,6 +108,7 @@ export {
   textureDimensions,
   textureLoad,
   textureSample,
+  textureSampleBaseClampToEdge,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';
