@@ -1,7 +1,7 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
-import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
+import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -21,6 +21,23 @@ import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
+  return INTERNAL_createStruct(props, false);
+}
+
+export function abstruct<TProps extends Record<string, BaseData>>(
+  props: TProps,
+): WgslStruct<TProps> {
+  return INTERNAL_createStruct(props, true);
+}
+
+// --------------
+// Implementation
+// --------------
+
+function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
+  props: TProps,
+  isAbstruct: boolean,
+): WgslStruct<TProps> {
   // In the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls.
   const structSchema = (instanceProps?: TProps) =>
@@ -32,18 +49,19 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
           : schemaDefaultWrapper(schema),
       ]),
     );
+
   Object.setPrototypeOf(structSchema, WgslStructImpl);
   structSchema.propTypes = props;
+  Object.defineProperty(structSchema, $internal, {
+    value: {
+      isAbstruct,
+    },
+  });
 
   return structSchema as WgslStruct<TProps>;
 }
 
-// --------------
-// Implementation
-// --------------
-
 const WgslStructImpl = {
-  [$internal]: true,
   type: 'struct',
 
   $name(label: string) {

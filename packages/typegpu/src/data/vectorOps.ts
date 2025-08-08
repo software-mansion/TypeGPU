@@ -346,18 +346,45 @@ export const VectorOps = {
   asin: {
     vec2f: unary2f(Math.asin),
     vec2h: unary2h(Math.asin),
-    vec2i: unary2i(Math.asin),
-    vec2u: unary2u(Math.asin),
 
     vec3f: unary3f(Math.asin),
     vec3h: unary3h(Math.asin),
-    vec3i: unary3i(Math.asin),
-    vec3u: unary3u(Math.asin),
 
     vec4f: unary4f(Math.asin),
     vec4h: unary4h(Math.asin),
-    vec4i: unary4i(Math.asin),
-    vec4u: unary4u(Math.asin),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  asinh: {
+    vec2f: unary2f(Math.asinh),
+    vec2h: unary2h(Math.asinh),
+
+    vec3f: unary3f(Math.asinh),
+    vec3h: unary3h(Math.asinh),
+
+    vec4f: unary4f(Math.asinh),
+    vec4h: unary4h(Math.asinh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  atan: {
+    vec2f: unary2f(Math.atan),
+    vec2h: unary2h(Math.atan),
+
+    vec3f: unary3f(Math.atan),
+    vec3h: unary3h(Math.atan),
+
+    vec4f: unary4f(Math.atan),
+    vec4h: unary4h(Math.atan),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  atanh: {
+    vec2f: unary2f(Math.atanh),
+    vec2h: unary2h(Math.atanh),
+
+    vec3f: unary3f(Math.atanh),
+    vec3h: unary3h(Math.atanh),
+
+    vec4f: unary4f(Math.atanh),
+    vec4h: unary4h(Math.atanh),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   ceil: {

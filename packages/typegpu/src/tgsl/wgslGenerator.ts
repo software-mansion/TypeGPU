@@ -13,7 +13,6 @@ import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import { add, div, mul, sub } from '../std/numeric.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
@@ -26,6 +25,7 @@ import {
   numericLiteralToSnippet,
   tryConvertSnippet,
 } from './generationHelpers.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -377,7 +377,7 @@ export function generateExpression(
 
       // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
       // In both cases, we just let the argument resolve everything.
-      return snip(ctx.resolve(arg.value), callee.value);
+      return snip(ctx.resolve(arg.value, callee.value), callee.value);
     }
 
     if (callee.value instanceof InfixDispatch) {
