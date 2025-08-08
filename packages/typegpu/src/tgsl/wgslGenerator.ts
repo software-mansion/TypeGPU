@@ -23,6 +23,7 @@ import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   numericLiteralToSnippet,
+  parseNumericString,
   tryConvertSnippet,
 } from './generationHelpers.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
@@ -357,7 +358,9 @@ export function generateExpression(
 
   if (expression[0] === NODE.numericLiteral) {
     // Numeric Literal
-    const type = numericLiteralToSnippet(expression[1]);
+    const type = typeof expression[1] === 'string'
+      ? numericLiteralToSnippet(parseNumericString(expression[1]))
+      : numericLiteralToSnippet(expression[1]);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression[1]}`);
     }

@@ -82,7 +82,7 @@ describe('wgslGenerator', () => {
       scientificLiteral: {
         value: '12e10',
         wgsl: '12e10',
-        dataType: abstractFloat,
+        dataType: abstractInt,
       },
       scientificNegativeExponentLiteral: {
         value: '12e-4',
@@ -1007,7 +1007,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.6);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( u32 ( ( 1 + 2 ) ) ) / f32 ( 5 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 });

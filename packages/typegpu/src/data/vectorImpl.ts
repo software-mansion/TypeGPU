@@ -27,6 +27,9 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   ) => Vec4<S>;
 
   '~resolve'(): string {
+    if (this.every(e => !e)) {
+      return `${this.kind}()`;
+    }
     return `${this.kind}(${this.join(', ')})`;
   }
 

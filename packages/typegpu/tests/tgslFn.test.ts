@@ -330,7 +330,7 @@ describe('TGSL tgpu.fn function', () => {
         var index = input.gid.x;
         var iterationF = f32(0);
         var sign = 0;
-        var change = vec4f(0, 0, 0, 0);
+        var change = vec4f();
       }
     `);
 
@@ -362,7 +362,7 @@ describe('TGSL tgpu.fn function', () => {
         var index = _arg_0.gid.x;
         var iterationF = f32(0);
         var sign = 0;
-        var change = vec4f(0, 0, 0, 0);
+        var change = vec4f();
       }
     `);
 
@@ -434,7 +434,7 @@ describe('TGSL tgpu.fn function', () => {
           sampleMask = 1;
         }
 
-        return fragmentFn_Output(u32(sampleMask), 1, vec4f(0, 0, 0, 0));
+        return fragmentFn_Output(u32(sampleMask), 1, vec4f());
       }
     `);
 
@@ -483,7 +483,7 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        var myOutput = fragmentFn_Output(0, 1, vec4f(0, 0, 0, 0));
+        var myOutput = fragmentFn_Output(0, 1, vec4f());
         if (((input.sampleMask > 0) && (input.pos.x > 0))) {
           myOutput.sampleMask = 1;
         }
@@ -504,7 +504,7 @@ describe('TGSL tgpu.fn function', () => {
         },
         out: d.vec4f,
       })((input, Out) => {
-        const hmm = Out(1.2);
+        const hmm = Out(1.25);
         return hmm;
       });
     const resolved = parseResolved({ fragmentFn });
@@ -517,7 +517,7 @@ describe('TGSL tgpu.fn function', () => {
 
       @fragment
       fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var hmm = vec4f(1.2);
+        var hmm = vec4f(1.25, 1.25, 1.25, 1.25);
         return hmm;
       }
     `);

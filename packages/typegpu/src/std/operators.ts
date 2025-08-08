@@ -102,7 +102,6 @@ export const add = createDualImpl(
     return snip(stitch`(${lhs} + ${rhs})`, resultType);
   },
   'add',
-  'unify',
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -144,7 +143,6 @@ export const sub = createDualImpl(
     return snip(stitch`(${lhs} - ${rhs})`, resultType);
   },
   'sub',
-  'unify',
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication

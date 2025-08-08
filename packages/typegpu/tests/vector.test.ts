@@ -838,9 +838,9 @@ describe('v3f', () => {
           fn main() {
             var planarPosLocal = vec2f(1, 2);
 
-            var one = vec3f(vec2f(1, 2), 12);
+            var one = vec3f(1, 2, 12);
             var two = vec3f(planarPosLocal, 12);
-            var three = vec3f(vec2f(1, 2), 12);
+            var three = vec3f(1, 2, 12);
           }
         `),
       );
@@ -888,9 +888,9 @@ describe('v4f', () => {
           fn main() {
             var green = vec3f(0, 1, 0);
 
-            var one = vec4f(vec3f(0.125, 0.25, 0.375), 1);
+            var one = vec4f(0.125, 0.25, 0.375, 1);
             var two = vec4f(green, 1);
-            var three = vec4f(vec3f(0, 0, 1), 1);
+            var three = vec4f(0, 0, 1, 1);
           }
         `),
       );
@@ -910,7 +910,7 @@ describe('v4f', () => {
       const main = tgpu.fn([])(() => {
         const fooLocal = d.vec3f(0.25, 0.5, 0.75);
 
-        const one = d.vec4f(0.1, foo); // external
+        const one = d.vec4f(0.25, foo); // external
         const two = d.vec4f(0.1, fooLocal); // local variable
         const three = d.vec4f(0.1, d.vec3f(0.25, 0.5, 0.75)); // literal
       });
@@ -920,7 +920,7 @@ describe('v4f', () => {
         fn main() {
           var fooLocal = vec3f(0.25, 0.5, 0.75);
 
-          var one = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
+          var one = vec4f(0.25, 0.25, 0.5, 0.75);
           var two = vec4f(0.1, fooLocal);
           var three = vec4f(0.1, vec3f(0.25, 0.5, 0.75));
         }
@@ -960,7 +960,7 @@ describe('v4b', () => {
         parse(`
           fn main() {
             var vecLocal = vec3<bool>(true, true, true);
-            
+
             var one = vec4<bool>(vec3<bool>(true, false, true), true);
             var two = vec4<bool>(vecLocal, false);
             var three = vec4<bool>(vec3<bool>(false, false, true), true);

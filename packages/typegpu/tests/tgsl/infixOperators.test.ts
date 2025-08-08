@@ -137,4 +137,42 @@ describe('wgslGenerator', () => {
       }`),
     );
   });
+
+  it('resolves add infix operator on uniform vector', ({ root }) => {
+    const fooUniform = root.createUniform(d.vec3f);
+    const barUniform = root.createUniform(d.vec3f);
+
+    const testFn = tgpu.fn([])(() => {
+      const v1 = fooUniform.$.add(2); // lhs
+      const v2 = d.vec3f(1, 2, 3).add(barUniform.$); // rhs
+      const v3 = fooUniform.$.add(barUniform.$);
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      @group(0) @binding(0) var<uniform> fooUniform: vec3f;
+      @group(0) @binding(1) var<uniform> barUniform: vec3f;
+
+      fn testFn() {
+        var v1 = (fooUniform + 2);
+        var v2 = (vec3f(1, 2, 3) + barUniform);
+        var v3 = (fooUniform + barUniform);
+      }`),
+    );
+  });
+
+  it('precomputes adds on known values', () => {
+    const testFn = tgpu.fn([])(() => {
+      const v1 = d.vec3f(1, 2, 3).add(5);
+      const v2 = d.vec3f(1, 2, 3).add(d.vec3f(3, 2, 1));
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() {
+        var v1 = vec3f(6, 7, 8);
+        var v2 = vec3f(4, 4, 4);
+      }`),
+    );
+  });
 });

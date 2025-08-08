@@ -187,33 +187,22 @@ export function getTypeForIndexAccess(
   return UnknownData;
 }
 
-export function numericLiteralToSnippet(value: string): Snippet | undefined {
+export function parseNumericString(str: string): number {
   // Hex literals
-  if (/^0x[0-9a-f]+$/i.test(value)) {
-    return snip(value, abstractInt);
+  if (/^0x[0-9a-f]+$/i.test(str)) {
+    return Number.parseInt(str);
   }
 
   // Binary literals
-  if (/^0b[01]+$/i.test(value)) {
-    return snip(`${Number.parseInt(value.slice(2), 2)}`, abstractInt);
+  if (/^0b[01]+$/i.test(str)) {
+    return Number.parseInt(str.slice(2), 2);
   }
 
-  // Floating point literals
-  if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
+  return Number.parseFloat(str);
+}
 
-  // Floating point literals with scientific notation
-  if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
-
-  // Integer literals
-  if (/^-?\d+$/i.test(value)) {
-    return snip(value, abstractInt);
-  }
-
-  return undefined;
+export function numericLiteralToSnippet(value: number): Snippet {
+  return snip(value, Number.isInteger(value) ? abstractInt : abstractFloat);
 }
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
@@ -645,11 +634,8 @@ export function coerceToSnippet(value: unknown): Snippet {
     return snip(value, UnknownData);
   }
 
-  if (typeof value === 'number' || typeof value === 'bigint') {
-    return snip(
-      value,
-      numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
-    );
+  if (typeof value === 'number') {
+    return numericLiteralToSnippet(value);
   }
 
   if (typeof value === 'boolean') {

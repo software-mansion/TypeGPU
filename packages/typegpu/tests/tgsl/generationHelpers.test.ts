@@ -69,33 +69,31 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(String(1))).toEqual(
-        snip('1', abstractInt),
+      expect(numericLiteralToSnippet(1)).toEqual(
+        snip(1, abstractInt),
       );
 
-      expect(numericLiteralToSnippet(String(1.1))).toEqual(
-        snip('1.1', abstractFloat),
+      expect(numericLiteralToSnippet(1.1)).toEqual(
+        snip(1.1, abstractFloat),
       );
 
-      expect(numericLiteralToSnippet(String(1e10))).toEqual(
-        snip('10000000000', abstractInt),
+      expect(numericLiteralToSnippet(1e10)).toEqual(
+        snip(10000000000, abstractInt),
       );
 
-      expect(numericLiteralToSnippet(String(0.5))).toEqual(
-        snip('0.5', abstractFloat),
+      expect(numericLiteralToSnippet(0.5)).toEqual(
+        snip(0.5, abstractFloat),
       );
 
-      expect(numericLiteralToSnippet(String(-45))).toEqual(
-        snip('-45', abstractInt),
+      expect(numericLiteralToSnippet(-45)).toEqual(
+        snip(-45, abstractInt),
       );
 
-      expect(numericLiteralToSnippet('0x1A')).toEqual(
-        snip('0x1A', abstractInt),
+      expect(numericLiteralToSnippet(0x1A)).toEqual(
+        snip(0x1A, abstractInt),
       );
 
-      expect(numericLiteralToSnippet('0b101')).toEqual(snip('5', abstractInt));
-
-      expect(numericLiteralToSnippet('asdf')).toBeUndefined();
+      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt));
     });
   });
 
