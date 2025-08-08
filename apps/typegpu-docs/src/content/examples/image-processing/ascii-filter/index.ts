@@ -32,7 +32,7 @@ const displayModes = {
  */
 const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   // Transform texture coordinates to character bitmap coordinates (5x5 grid)
-  const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
+  const pos = std.floor(p.mul(d.vec2f(-4, 4)).add(2.5));
 
   // Check if position is outside the 5x5 character bitmap bounds
   if (pos.x < 0 || pos.x > 4 || pos.y < 0 || pos.y > 4) {
@@ -40,12 +40,9 @@ const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   }
 
   // Convert 2D bitmap position to 1D bit index (row-major order)
-  const a = d.u32(std.add(pos.x, std.mul(5, pos.y)));
+  const a = d.u32(pos.x + 5 * pos.y);
   // Extract the bit at position 'a' from the character bitmap 'n'
-  if ((n >> a) & 1) {
-    return 1;
-  }
-  return 0;
+  return (n >> a) & 1;
 });
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -66,27 +63,21 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
  * https://www.shadertoy.com/view/lssGDj
  */
 const fragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv2 = std.add(
-    std.mul(uvTransformBuffer.$, std.sub(input.uv, d.vec2f(0.5))),
-    d.vec2f(0.5),
-  );
+  const uv2 = std.mul(uvTransformBuffer.$, input.uv.sub(0.5)).add(0.5);
   const textureSize = d.vec2f(std.textureDimensions(layout.$.externalTexture));
-  const pix = std.mul(uv2, textureSize);
+  const pix = uv2.mul(textureSize);
 
   const cellSize = d.f32(glyphSize.$);
-  const halfCell = std.mul(cellSize, 0.5);
+  const halfCell = cellSize * 0.5;
 
-  const blockCoord = std.div(
-    std.mul(std.floor(std.div(pix, cellSize)), cellSize),
-    textureSize,
-  );
+  const blockCoord = std.floor(pix.div(cellSize))
+    .mul(cellSize).div(textureSize);
+
   const color = std.textureSampleBaseClampToEdge(
-    layout.bound.externalTexture,
+    layout.$.externalTexture,
     shaderSampler,
     blockCoord,
   );
@@ -158,15 +149,15 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   let resultColor = d.vec3f(1);
   // Color mode
   if (displayMode.$ === displayModes.color) {
-    resultColor = d.vec3f(std.mul(color, charValue).xyz);
+    resultColor = color.mul(charValue).xyz;
   }
   // Grayscale mode
   if (displayMode.$ === displayModes.grayscale) {
-    resultColor = d.vec3f(std.mul(d.vec3f(gray), charValue));
+    resultColor = d.vec3f(gray * charValue);
   }
   // White mode
   if (displayMode.$ === displayModes.white) {
-    resultColor = d.vec3f(std.mul(d.vec3f(1), charValue));
+    resultColor = d.vec3f(charValue);
   }
   return d.vec4f(resultColor, 1.0);
 });
@@ -242,11 +233,14 @@ function processVideoFrame(
     return;
   }
 
-  pipeline.withColorAttachment({
-    loadOp: 'clear',
-    storeOp: 'store',
-    view: context.getCurrentTexture().createView(),
-  }).with(layout, bindGroup).draw(3);
+  pipeline
+    .with(layout, bindGroup)
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: context.getCurrentTexture().createView(),
+    })
+    .draw(3);
 
   spinner.style.display = 'none';
 
