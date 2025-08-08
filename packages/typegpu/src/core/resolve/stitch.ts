@@ -6,10 +6,6 @@ type ValueOrArray<T> = T | T[];
 
 /**
  * The reverse of snipping
- * @param strings T
- * @param ctx
- * @param snippets
- * @returns
  */
 export function stitch(
   strings: TemplateStringsArray,

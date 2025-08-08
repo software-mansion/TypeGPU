@@ -171,7 +171,7 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(`textureSampleLevel(${args})`, vec4f),
+  (...args) => snip(stitch`textureSampleLevel(${args})`, vec4f),
   'textureSampleLevel',
 );
 
@@ -302,7 +302,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(`textureStore(${args})`, Void),
+  (...args) => snip(stitch`textureStore(${args})`, Void),
   'textureStore',
 );
 
