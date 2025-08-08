@@ -9,7 +9,7 @@ utilities built on top.
 It also features a [Perlin noise](#perlin-noise) implementation, which is useful for generating smooth, natural-looking variations in visual
 effects, terrains, and other procedural elements.
 
-:::caution
+:::note
 Threads do not share the generator's `State`. As a result, unless you change the seed or provide thread-dependent variables, each thread will produce the same sequence of sampled values.
 :::
 
@@ -29,7 +29,7 @@ import * as d from 'typegpu/data';
 // ---cut---
 import { randf } from '@typegpu/noise';
 
-const randomVec2f = tgpu['~unstable'].fn([], d.vec2f)(() => {
+const randomVec2f = tgpu.fn([], d.vec2f)(() => {
   const x = randf.sample(); // returns a random float in [0, 1)
   const y = randf.sample(); // returns the next random float in [0, 1)
   return d.vec2f(x, y);

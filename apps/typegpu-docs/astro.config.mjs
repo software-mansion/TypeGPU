@@ -156,18 +156,18 @@ export default defineConfig({
             // },
           ]),
         },
-        DEV && {
+        {
           label: 'Ecosystem',
           items: stripFalsy([
             {
               label: '@typegpu/noise',
               slug: 'ecosystem/typegpu-noise',
             },
-            {
+            DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',
             },
-            {
+            DEV && {
               label: 'Third-party',
               slug: 'ecosystem/third-party',
             },
