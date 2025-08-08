@@ -1,0 +1,100 @@
+<div class="example">
+  <canvas></canvas>
+  <div class="predictions-container">
+    <div class="predictions-label">Timings</div>
+
+    <div class="bars-container">
+      <div class="bar">JS1</div>
+      <div class="bar">GPU1</div>
+      <div class="bar">JS2</div>
+      <div class="bar">GPU2</div>
+      <div class="bar">JS3</div>
+      <div class="bar">GPU3</div>
+      <div class="bar">JS4</div>
+      <div class="bar">GPU4</div>
+      <div class="bar">JS5</div>
+      <div class="bar">GPU5</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .predictions-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+
+  .predictions-label {
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    @media (max-width: 1024px) {
+      font-size: 1rem;
+    }
+  }
+
+  .bars-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+    gap: 1rem;
+    row-gap: 2rem;
+    @media (max-width: 1024px) {
+      width: calc(100% + 8rem);
+      row-gap: 0.1rem;
+    }
+  }
+
+    .bars-container > .bar:nth-child(odd) {
+      margin-left: 2rem;
+  }
+
+  .bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+    height: 15.25rem;
+    width: 2rem;
+    background: linear-gradient(to right, transparent, #e6e6f2);
+    border-radius: 9999px;
+    @media (max-width: 1024px) {
+      width: 1rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  /* .bar::before {
+    width: 100%;
+    height: calc((100% - 2rem) * var(--bar-height, 0%));
+    background-color: #dadaed;
+    position: absolute;
+    left: 2rem;
+    bottom: 2rem;
+    border-radius: 9999px;
+    content: '';
+    transition: all 0.2s ease-in-out;
+  } */
+
+  .bar::after {
+    width: 2rem;
+    height: calc((100% - 2rem) * var(--bar-height, 0%, 100%));
+    opacity: var(--highlight-opacity, 0);
+    background-image: linear-gradient(to right, #c464ff, #1d72f0);
+    position: absolute;
+    bottom: 2rem;
+    border-radius: 9999px;
+    transition: height 0.2s ease-in-out, opacity 0.5s ease-in-out;
+    content: '';
+  }
+
+  /* Make JS bars (odd items) yellow */
+  .bars-container > .bar:nth-child(odd)::after {
+    background-image: none;
+    background-color: #ffd54a; /* yellow */
+  }
+</style>
