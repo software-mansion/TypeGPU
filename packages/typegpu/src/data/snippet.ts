@@ -1,5 +1,6 @@
 import { undecorate } from './decorateUtils.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
+import { DEV } from '../shared/env.ts';
 
 export interface Snippet {
   readonly value: unknown;
@@ -20,7 +21,8 @@ export function isSnippet(value: unknown): value is Snippet {
 }
 
 export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
-  if (isSnippet(value)) {
+  if (DEV && isSnippet(value)) {
+    // An early error, but not worth checking every time in production
     throw new Error('Cannot nest snippets');
   }
 

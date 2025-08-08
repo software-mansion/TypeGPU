@@ -205,10 +205,7 @@ export const clamp = createDualImpl(
   },
   // GPU implementation
   (value, low, high) =>
-    snip(
-      stitch`clamp(${value}, ${low}, ${high})`,
-      value.dataType,
-    ),
+    snip(stitch`clamp(${value}, ${low}, ${high})`, value.dataType),
   'clamp',
 );
 
