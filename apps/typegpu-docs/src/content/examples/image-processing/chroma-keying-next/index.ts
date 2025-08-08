@@ -6,6 +6,7 @@ const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   color: { uniform: d.vec3f },
   threshold: { uniform: d.f32 },
+  uvTransform: { uniform: d.mat2x2f },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
@@ -48,8 +49,8 @@ fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
 
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
-
+  let uv2 = uvTransform * (uv - vec2f(0.5)) + vec2f(0.5);
+  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv2);
   let ycbcr = col.rgb * rgbToYcbcrMatrix;
   let colycbcr = color * rgbToYcbcrMatrix;
 
@@ -76,27 +77,15 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 
-video.addEventListener('resize', () => {
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-});
-
-const width = video.width;
-const height = video.height;
-
-let stream: MediaStream;
-
 if (navigator.mediaDevices.getUserMedia) {
-  stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: true,
+  video.srcObject = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60 },
+    },
   });
-  video.srcObject = stream;
 } else {
   throw new Error('getUserMedia not supported');
 }
@@ -113,34 +102,14 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const samplingCanvas = document.createElement('canvas');
-const samplingContext = samplingCanvas.getContext('2d');
-samplingCanvas.width = width;
-samplingCanvas.height = height;
-
-if (!samplingContext) {
-  throw new Error('Could not get 2d context');
-}
-
-let reader: ReadableStreamDefaultReader<VideoFrame> | undefined;
-let worker: Worker | undefined;
-
-if (typeof MediaStreamTrackProcessor !== 'undefined') {
-  const mediaProcessor = new MediaStreamTrackProcessor({
-    track: stream.getVideoTracks()[0],
-  });
-  reader = mediaProcessor.readable.getReader();
-} else {
-  worker = new Worker(new URL('./processor.worker.ts', import.meta.url), {
-    type: 'module',
-  });
-  worker.postMessage({ type: 'init', track: stream.getVideoTracks()[0] });
-}
-
 const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
 
 const colorBuffer = root
   .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
+  .$usage('uniform');
+
+const uvTransformBuffer = root
+  .createBuffer(d.mat2x2f, d.mat2x2f(1, 0, 0, 1))
   .$usage('uniform');
 
 const sampler = device.createSampler({
@@ -152,6 +121,7 @@ const rareBindGroup = root.createBindGroup(rareLayout, {
   color: colorBuffer,
   sampling: sampler,
   threshold: thresholdBuffer,
+  uvTransform: uvTransformBuffer,
 });
 
 const shaderModule = device.createShaderModule({
@@ -171,27 +141,38 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
-let nextFrame: VideoFrame | null = null;
-
-if (worker) {
-  worker.onmessage = (event) => {
-    if (event.data.type === 'frame') {
-      if (nextFrame) {
-        nextFrame.close();
-      }
-      nextFrame = event.data.frame;
-    }
-  };
-}
-
-async function getFrame() {
-  if (reader) {
-    const { value: frame } = await reader.read();
-    return frame;
+function onVideoChange(size: { width: number; height: number }) {
+  const aspectRatio = size.width / size.height;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-  const frame = nextFrame;
-  nextFrame = null;
-  return frame;
+
+  function setUVTransformForIOS() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isIOS) {
+      uvTransformBuffer.write(d.mat2x2f(1, 0, 0, 1));
+      return;
+    }
+
+    const angle = screen.orientation.type;
+
+    let m = d.mat2x2f(1, 0, 0, 1);
+    if (angle === 'portrait-primary') {
+      m = d.mat2x2f(0, -1, 1, 0);
+    } else if (angle === 'portrait-secondary') {
+      m = d.mat2x2f(0, 1, -1, 0);
+    } else if (angle === 'landscape-primary') {
+      m = d.mat2x2f(-1, 0, 0, -1);
+    }
+
+    uvTransformBuffer.write(m);
+  }
+
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
 }
 
 const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -205,13 +186,30 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
   ],
 };
 
-async function drawFrame() {
-  const frame = await getFrame();
-  if (!frame) {
+let videoFrameCallbackId: number | undefined;
+let lastFrameSize: { width: number; height: number } | undefined = undefined;
+
+function processVideoFrame(
+  _: number,
+  metadata: VideoFrameCallbackMetadata,
+) {
+  if (video.readyState < 2) {
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
-  // Updating the target render texture
+  const frameWidth = metadata.width;
+  const frameHeight = metadata.height;
+
+  if (
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
+  ) {
+    lastFrameSize = { width: frameWidth, height: frameHeight };
+    onVideoChange(lastFrameSize);
+  }
+
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
   )[0].view = context.getCurrentTexture().createView();
@@ -225,7 +223,7 @@ async function drawFrame() {
     1,
     root.unwrap(
       root.createBindGroup(frequentLayout, {
-        inputTexture: device.importExternalTexture({ source: frame }),
+        inputTexture: device.importExternalTexture({ source: video }),
       }),
     ),
   );
@@ -233,18 +231,11 @@ async function drawFrame() {
   pass.end();
 
   device.queue.submit([encoder.finish()]);
-  frame.close();
+
+  video.requestVideoFrameCallback(processVideoFrame);
 }
 
-let frameRequest = requestAnimationFrame(run);
-
-function run() {
-  frameRequest = requestAnimationFrame(run);
-
-  if (video.currentTime > 0) {
-    drawFrame();
-  }
-}
+video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
@@ -265,24 +256,8 @@ export const controls = {
 };
 
 export function onCleanup() {
-  cancelAnimationFrame(frameRequest);
-
-  for (const track of stream.getTracks()) {
-    track.stop();
-  }
-
-  if (reader) {
-    reader.cancel();
-  }
-
-  if (worker) {
-    worker.postMessage({ type: 'cleanup' });
-    worker.terminate();
-  }
-
-  if (nextFrame) {
-    nextFrame.close();
-    nextFrame = null;
+  if (videoFrameCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(videoFrameCallbackId);
   }
 }
 
