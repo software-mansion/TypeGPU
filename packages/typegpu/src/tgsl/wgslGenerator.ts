@@ -542,10 +542,10 @@ export function generateExpression(
 
     return snip(
       `${arrayType}(${arrayValues.join(', ')})`,
-      arrayOf(
+      arrayOf[$internal].jsImpl(
         elemType as wgsl.AnyWgslData,
         values.length,
-      ) as wgsl.AnyWgslData,
+      ),
     );
   }
 

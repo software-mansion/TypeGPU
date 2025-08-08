@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
@@ -34,10 +34,13 @@ import {
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
 import { Void } from '../../src/data/index.ts';
+import { CodegenState } from '../../src/types.ts';
+import { INTERNAL_setCtx } from 'packages/typegpu/src/execMode.ts';
 
 const mockCtx = {
   indent: () => '',
   dedent: () => '',
+  mode: new CodegenState(),
   pushBlockScope: () => {},
   popBlockScope: () => {},
   getById: vi.fn(),
@@ -55,15 +58,14 @@ const mockCtx = {
   pre: '',
 } as unknown as GenerationCtx;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 describe('generationHelpers', () => {
-  vi.mock('../../src/execMode.ts', () => ({
-    inCodegenMode: () => true,
-    getResolutionCtx: () => mockCtx,
-  }));
+  beforeEach(() => {
+    INTERNAL_setCtx(mockCtx);
+  });
+
+  afterEach(() => {
+    INTERNAL_setCtx(undefined);
+  });
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
@@ -122,8 +124,9 @@ describe('generationHelpers', () => {
   });
 
   describe('getTypeForIndexAccess', () => {
+    const arr = arrayOf(f32, 2);
+
     it('returns element type for arrays', () => {
-      const arr = arrayOf(f32, 2);
       expect(getTypeForIndexAccess(arr)).toBe(f32);
     });
 
