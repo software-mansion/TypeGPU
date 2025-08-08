@@ -1,8 +1,8 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
-import { snip } from './snippet.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import { snip } from './snippet.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
