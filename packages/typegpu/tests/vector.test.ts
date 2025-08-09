@@ -929,6 +929,20 @@ describe('v4f', () => {
     });
   });
 
+  describe('swizzling', () => {
+    it('works in TGSL on compile-time known vectors', () => {
+      const foo = tgpu.fn([], d.vec3f)(() => {
+        return d.vec4f(1, 2, 3, 4).zyx;
+      });
+
+      expect(parseResolved({ foo })).toEqual(parse(`
+        fn foo() -> vec3f {
+          return vec3f(3, 2, 1);
+        }
+      `));
+    });
+  });
+
   it('differs structurally from other vector instances', () => {
     expect(d.vec4f(1, 2, 3, 4)).toStrictEqual(d.vec4f(1, 2, 3, 4));
     expect(d.vec4f(1, 2, 3, 4)).not.toStrictEqual(d.vec4h(1, 2, 3, 4));

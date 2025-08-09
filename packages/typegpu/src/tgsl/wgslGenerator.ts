@@ -27,6 +27,7 @@ import {
   tryConvertSnippet,
 } from './generationHelpers.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
+import { asNormal } from '../execMode.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -307,7 +308,7 @@ export function generateExpression(
     ) {
       // We're operating on a vector that's known at resolution time
       // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
-      return coerceToSnippet((target.value as any)[property]);
+      return asNormal(() => coerceToSnippet((target.value as any)[property]));
     }
 
     return snip(
