@@ -191,7 +191,6 @@ describe('disarray', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-
     expect(instance3).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
