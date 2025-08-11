@@ -6,7 +6,6 @@ import type { SelfResolvable } from '../types.ts';
 import { snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
-  AnyWgslData,
   m2x2f,
   m3x3f,
   m4x4f,
@@ -22,6 +21,7 @@ import type {
   v4f,
   VecKind,
 } from './wgslTypes.ts';
+import type { AnyData } from './dataTypes.ts';
 
 // --------------
 // Implementation
@@ -61,17 +61,6 @@ function createMatSchema<
 >(
   options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
-  const MatSchema = {
-    [$internal]: true,
-    type: options.type,
-    identity: identityFunctions[options.columns],
-    translation: options.columns === 4 ? translation4 : undefined,
-    scaling: options.columns === 4 ? scaling4 : undefined,
-    rotationX: options.columns === 4 ? rotationX4 : undefined,
-    rotationY: options.columns === 4 ? rotationY4 : undefined,
-    rotationZ: options.columns === 4 ? rotationZ4 : undefined,
-  } as unknown as AnyWgslData;
-
   const construct = createDualImpl(
     // CPU implementation
     (...args: (number | ColumnType)[]): ValueType => {
@@ -103,14 +92,25 @@ function createMatSchema<
       return new options.MatImpl(...elements) as ValueType;
     },
     // CODEGEN implementation
-    (...args) => snip(`${MatSchema.type}${stitch`(${args})`}`, MatSchema),
-    MatSchema.type,
+    (...args) =>
+      snip(stitch`${options.type}(${args})`, schema as unknown as AnyData),
+    options.type,
   );
 
-  return Object.assign(construct, MatSchema) as unknown as {
+  const schema = Object.assign(construct, {
+    type: options.type,
+    identity: identityFunctions[options.columns],
+    translation: options.columns === 4 ? translation4 : undefined,
+    scaling: options.columns === 4 ? scaling4 : undefined,
+    rotationX: options.columns === 4 ? rotationX4 : undefined,
+    rotationY: options.columns === 4 ? rotationY4 : undefined,
+    rotationZ: options.columns === 4 ? rotationZ4 : undefined,
+  }) as unknown as {
     type: TType;
     [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
+
+  return schema;
 }
 
 abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>

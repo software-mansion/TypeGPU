@@ -1,4 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import type { DualFn } from '../../data/dualFn.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
@@ -13,11 +14,7 @@ import {
   $providing,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
-import type {
-  FnArgsConversionHint,
-  ResolutionCtx,
-  SelfResolvable,
-} from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,
@@ -82,10 +79,6 @@ export type TgpuFnShell<
   ) => TgpuFn<(...args: Args) => Return>);
 
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
-  readonly [$internal]: {
-    implementation: Implementation<ImplSchema>;
-    argConversionHint: FnArgsConversionHint;
-  };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
@@ -104,7 +97,14 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
 // biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
 export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & TgpuFnBase<ImplSchema>
-  & InferImplSchema<ImplSchema>;
+  & InferImplSchema<ImplSchema>
+  & {
+    readonly [$internal]:
+      & DualFn<InferImplSchema<ImplSchema>>[typeof $internal]
+      & {
+        implementation: Implementation<ImplSchema>;
+      };
+  };
 
 export function fn<
   Args extends AnyData[] | [],
@@ -160,17 +160,16 @@ function createFn<ImplSchema extends AnyFn>(
   >,
   implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
-  type This = TgpuFnBase<ImplSchema> & SelfResolvable & {
-    [$getNameForward]: FnCore;
-  };
+  type This =
+    & TgpuFnBase<ImplSchema>
+    & SelfResolvable
+    & {
+      [$getNameForward]: FnCore;
+    };
 
   const core = createFnCore(implementation as Implementation, '');
 
-  const fnBase: This = {
-    [$internal]: {
-      implementation,
-      argConversionHint: shell.argTypes,
-    },
+  const fnBase = {
     shell,
     resourceType: 'function' as const,
 
@@ -210,7 +209,7 @@ function createFn<ImplSchema extends AnyFn>(
 
       return core.resolve(ctx, shell.argTypes, shell.returnType);
     },
-  };
+  } as This;
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) =>
@@ -242,6 +241,7 @@ function createFn<ImplSchema extends AnyFn>(
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     ImplSchema
   >;
+  fn[$internal].implementation = implementation;
 
   Object.defineProperty(fn, 'toString', {
     value() {
@@ -261,10 +261,6 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   };
 
   const fnBase: This = {
-    [$internal]: {
-      implementation: innerFn[$internal].implementation,
-      argConversionHint: innerFn[$internal].argConversionHint,
-    },
     resourceType: 'function',
     shell: innerFn.shell,
     [$providing]: {
@@ -301,7 +297,8 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     innerFn.shell.argTypes,
   );
 
-  const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
+  const fn = Object.assign(call, fnBase) as unknown as TgpuFn<ImplSchema>;
+  fn[$internal].implementation = innerFn[$internal].implementation;
 
   Object.defineProperty(fn, 'toString', {
     value() {
