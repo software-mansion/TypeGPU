@@ -321,7 +321,6 @@ To define arrays of known constant length, use the `d.arrayOf` function with the
 
 ```ts twoslash
 import * as d from 'typegpu/data';
-
 // ---cut---
 const MyArray = d.arrayOf(d.f32, 4);
 
@@ -330,6 +329,34 @@ const myDefaultArray = MyArray(); // [0, 0, 0, 0]
 
 const myInitializedArray = MyArray([1, 0, 0.5, 20]);
 ```
+
+## Atomics
+
+To create a schema corresponding to an atomic data type, wrap `d.i32` or `d.u32` with `d.atomic`.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const AtomicI32 = d.atomic(d.i32);
+//    ^?
+```
+
+## Pointers
+
+To create a schema corresponding to a pointer data type, wrap the inner schema with a pointer constructor corresponding to the appropriate address space.
+
+For address spaces `function`, `private`, `workgroup`, `storage`, `uniform`, `handle`, use `d.ptrFn`, `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage`, `d.ptrUniform`, `d.ptrHandle` respectively.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const VecPtrFn = d.ptrFn(d.vec3f);
+//    ^?
+
+const VecPtrUniform = d.ptrUniform(d.vec2f);
+//    ^?
+```
+
 
 ## Copy constructors
 
