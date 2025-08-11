@@ -88,6 +88,12 @@ export function replaceExternalsInWgsl(
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     if (isWgsl(external) || isLooseData(external)) {
+      if ([...acc.matchAll(identifierRegex(externalName))].length === 0) {
+        console.warn(
+          `During resolution, the external ${externalName} was unused.`,
+        );
+      }
+
       return acc.replaceAll(
         identifierRegex(externalName),
         ctx.resolve(external),
@@ -104,7 +110,13 @@ export function replaceExternalsInWgsl(
             'g',
           ),
         ),
-      ].map((found) => found[1]) ?? [];
+      ].map((found) => found[1]);
+
+      if (foundProperties.length === 0) {
+        console.warn(
+          `During resolution, the external ${externalName} was unused.`,
+        );
+      }
 
       return foundProperties.reduce(
         (innerAcc: string, prop) =>
@@ -121,6 +133,10 @@ export function replaceExternalsInWgsl(
         acc,
       );
     }
+
+    console.warn(
+      `During resolution, the external ${externalName} has been omitted. Only primitives, TGPU objects and plain JS objects can be used as externals.`,
+    );
 
     return acc;
   }, wgsl);

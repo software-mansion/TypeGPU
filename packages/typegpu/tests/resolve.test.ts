@@ -4,8 +4,8 @@ import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
 import { $internal, $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
-import { parse } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -504,6 +504,67 @@ describe('tgpu resolveWithContext', () => {
     // verify resolveWithContext::config impl is actually working
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
       [[colorSlot, v]],
+    );
+  });
+
+  it('should warn when external WGSL is not used', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: `
+          fn testFn() {
+            return;
+          }
+        `,
+      externals: { ArraySchema: d.arrayOf(d.u32, 4) },
+      names: 'strict',
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'During resolution, the external ArraySchema was unused.',
+    );
+  });
+
+  it('should warn when external JS is not used', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: `
+          fn testFn() {
+            return;
+          }
+        `,
+      externals: { JavaScriptObject: { field: d.vec2f() } },
+      names: 'strict',
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'During resolution, the external JavaScriptObject was unused.',
+    );
+  });
+
+  it('should warn when external is neither wgsl nor an object', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: `
+          fn testFn() {
+            var a = identity(1);
+            return;
+          }
+        `,
+      externals: { identity: (a: number) => a },
+      names: 'strict',
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'During resolution, the external identity has been omitted. Only primitives, TGPU objects and plain JS objects can be used as externals.',
     );
   });
 });
