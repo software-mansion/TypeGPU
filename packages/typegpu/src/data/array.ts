@@ -1,9 +1,8 @@
-import { createDualImpl } from 'src/core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
 import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
-import { snip } from './snippet.ts';
+import { isSnippet, snip } from './snippet.ts';
 import { UnknownData } from './dataTypes.ts';
 
 // ----------
@@ -26,29 +25,7 @@ import { UnknownData } from './dataTypes.ts';
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const arrayOf = createDualImpl(
-  <TElement extends AnyWgslData>(
-    elementType: TElement,
-    elementCount: number,
-  ): WgslArray<TElement> => {
-    return INTERNAL_arrayOf(elementType, elementCount);
-  },
-  (elementType, elementCount) => {
-    console.log(elementType, elementCount);
-    const schema = INTERNAL_arrayOf(
-      elementType.value as AnyWgslData,
-      elementCount.value as number,
-    );
-    return snip(schema, UnknownData);
-  },
-  'arrayOf',
-);
-
-// --------------
-// Implementation
-// --------------
-
-function INTERNAL_arrayOf<TElement extends AnyWgslData>(
+export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
 ): WgslArray<TElement>;
@@ -63,8 +40,46 @@ export function arrayOf<TElement extends AnyWgslData>(
   elementCount?: number | undefined,
 ): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
   if (elementCount === undefined) {
-    return (n: number) => arrayOf(elementType, n);
+    const partial = (count: number) => arrayOf(elementType, count);
+    partial[$internal] = true;
+
+    if (isSnippet(elementType)) {
+      // biome-ignore lint/suspicious/noExplicitAny: should return a snippet!
+      return snip(partial, UnknownData) as any;
+    }
+    return partial;
   }
+
+  if (
+    isSnippet(elementType) &&
+    (isSnippet(elementCount) || elementCount === undefined)
+  ) {
+    if (typeof elementCount.value !== 'number') {
+      throw new Error(
+        `Cannot create array schema with count unknown at compile-time: '${elementCount.value}'`,
+      );
+    }
+    const schema = cpu_arrayOf(
+      elementType.value as AnyWgslData,
+      elementCount.value,
+    );
+    // biome-ignore lint/suspicious/noExplicitAny: should return a snippet!
+    return snip(schema, UnknownData) as any;
+  }
+
+  return cpu_arrayOf(elementType, elementCount);
+}
+
+arrayOf[$internal] = true;
+
+// --------------
+// Implementation
+// --------------
+
+function cpu_arrayOf<TElement extends AnyWgslData>(
+  elementType: TElement,
+  elementCount: number,
+): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const arraySchema = (elements?: TElement[]) => {

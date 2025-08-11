@@ -226,7 +226,36 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)();
     });
 
-    expect(parseResolved({ foo })).toBe(parse(``));
+    expect(parseResolved({ foo })).toBe(parse(`
+      fn foo() {
+        var result = array<f32, 4>();
+      }
+    `));
+  });
+
+  it('can be immediately-partially-invoked in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32)(4)();
+    });
+
+    expect(parseResolved({ foo })).toBe(parse(`
+      fn foo() {
+        var result = array<f32, 4>();
+      }
+    `));
+  });
+
+  it('throws when creating schema with runtime-known count', () => {
+    const foo = tgpu.fn([d.u32])((count) => {
+      const result = d.arrayOf(d.f32, count)();
+    });
+
+    expect(() => parseResolved({ foo })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo
+      - undefined: Cannot create array schema with count unknown at compile-time: 'count']
+    `);
   });
 
   it('generates correct code when array is partially called', () => {
