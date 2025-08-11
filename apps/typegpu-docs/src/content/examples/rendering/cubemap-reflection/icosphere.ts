@@ -99,11 +99,11 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
 
 const generatorLayout = tgpu.bindGroupLayout({
   prevVertices: {
-    storage: (n: number) => d.arrayOf(ComputeVertex, n),
+    storage: d.arrayOf(ComputeVertex),
     access: 'readonly',
   },
   nextVertices: {
-    storage: (n: number) => d.arrayOf(ComputeVertex, n),
+    storage: d.arrayOf(ComputeVertex),
     access: 'mutable',
   },
   smoothFlag: { uniform: d.u32 },
