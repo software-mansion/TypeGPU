@@ -30,7 +30,8 @@ import type { DualFn } from './dualFn.ts';
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface BaseData {
-  readonly [$internal]: true | Record<string, unknown>;
+  // biome-ignore lint/suspicious/noExplicitAny: we sometimes house functions on the internal object, so the type needs to be wider
+  readonly [$internal]: true | Record<string, any>;
   readonly type: string;
   readonly [$repr]: unknown;
 }

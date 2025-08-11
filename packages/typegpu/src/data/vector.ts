@@ -337,7 +337,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
           schema as AnyData,
         );
       }
-      return snip(`${type}(${stitch`${args}`})`, schema as AnyData);
+      return snip(stitch`${type}(${args})`, schema as AnyData);
     },
     type,
     (...args) =>
