@@ -89,7 +89,7 @@ describe('array', () => {
   it('throws when trying to nest runtime sized arrays', () => {
     expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Cannot nest runtime sized arrays.]`,
+        '[Error: Cannot nest runtime sized arrays.]',
       );
   });
 
