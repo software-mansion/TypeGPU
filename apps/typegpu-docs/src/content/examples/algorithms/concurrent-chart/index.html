@@ -2,35 +2,23 @@
   <canvas></canvas>
   <div class="predictions-container">
     <div class="bars-container">
-      <div class="predictions-label">Time [ms]</div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
+      <div class="predictions-label">Time</div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
+      <div class="bar"><div class="label"></div></div>
     </div>
   </div>
 </div>
 
 
-
 <style>
-
-
-  .bars-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    gap: 1rem;
-  }
-
   .predictions-label {
     position: absolute;
     left: -5rem; /* Position to the left of the vertical line */
@@ -46,26 +34,27 @@
     }
   }
 
+  /* Rewritten from Flexbox to CSS Grid */
   .bars-container {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    justify-content: center;
-    gap: 1rem;
+    display: grid;
+    grid-auto-flow: column; /* place each .bar in a column */
+    justify-content: center; /* center bars horizontally */
+    align-items: end; /* bottom-align bars to the x-axis */
+    column-gap: 1rem;
     row-gap: 2rem;
-    position: relative; /* Added to make absolute positioning of lines work relative to this container */
+    position: relative; /* for absolute elements like axes and label */
+    width: 100%;
     min-height: 17rem; /* Ensure enough space for the bars and lines */
-    border-left: 2px solid #b2b2b2; /* Add left border */
-    border-bottom: 2px solid #b2b2b2; /* Add bottom border */
-    padding-left: 1rem; /* Add some spacing from the left border */
-    padding-bottom: 1rem; /* Add some spacing from the bottom border */
+    border-left: 2px solid #e6e6f2; /* left axis */
+    border-bottom: 2px solid #e6e6f2; /* bottom axis */
+    padding-left: 1rem; /* spacing from the left border */
+    padding-bottom: 1rem; /* spacing from the bottom border */
     @media (max-width: 1024px) {
       width: calc(100% + 8rem);
       row-gap: 0.1rem;
     }
   }
 
-  
   /* up arrow */
   .bars-container::before {
     content: '';
@@ -76,7 +65,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 8px solid #b2b2b2;
+    border-bottom: 8px solid #e6e6f2;
     transform: translateX(-5px);
   }
   
@@ -90,18 +79,26 @@
     height: 0;
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
-    border-left: 8px solid #b2b2b2;
+    border-left: 8px solid #e6e6f2;
     transform: translateY(1px);
   }
 
-    .bars-container > .bar:nth-child(even) {
-      margin-left: 2rem;
+  .label {
+    display: grid;
+    grid-auto-flow: row;
+    justify-content: center;
+
+    padding-top: 1rem;
+  }
+  /* Add extra space before every even (JS) bar */
+  .bars-container > .bar:nth-child(even):not(:first-child){
+    margin-left: 2rem;
   }
 
   .bar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    display: grid; /* instead of flex */
+    align-items: end; /* align pseudo content to the bottom */
+    justify-items: center; /* center horizontally */
     position: relative;
     height: 15.25rem;
     width: 2rem;
@@ -126,7 +123,7 @@
   } */
 
   .bar::after {
-    width: 2rem;
+    width: 100%; /* follow the bar width */
     height: calc((100% - 2rem) * var(--bar-height, 0%, 100%));
     opacity: var(--highlight-opacity, 0);
     background-image: linear-gradient(to right, #c464ff, #1d72f0);
@@ -137,7 +134,7 @@
     content: '';
   }
 
-  /* Make JS bars (odd items) yellow */
+  /* Make JS bars yellow */
   .bars-container > .bar:nth-child(even)::after {
     background-image: none;
     background-color: #ffd54a; /* yellow */
