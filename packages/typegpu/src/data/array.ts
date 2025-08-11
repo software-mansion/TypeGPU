@@ -1,10 +1,10 @@
-import { $internal } from '../shared/symbols.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
+import { $internal } from '../shared/symbols.ts';
+import { UnknownData } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
+import { snip, type Snippet } from './snippet.ts';
 import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
-import { snip, type Snippet } from './snippet.ts';
-import { UnknownData } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -53,7 +53,7 @@ export const arrayOf = createDualImpl(
   }) as WgslArrayConstructor,
   // CODEGEN implementation
   (elementType, elementCount) => {
-    if (elementCount === undefined) {
+    if (elementCount === undefined || elementCount.value === undefined) {
       const partial = (count: Snippet) =>
         arrayOf[$internal].gpuImpl(elementType, count);
       // Marking so the WGSL generator lets this function through
