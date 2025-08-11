@@ -5,6 +5,7 @@ import * as std from 'typegpu/std';
 const SimpleStruct = d.struct({ vec: d.vec2f });
 
 const modifyNum = tgpu.fn([d.ptrFn(d.u32)])((ptr) => {
+  // biome-ignore lint/style/noParameterAssign: it's just a test
   ptr += 1;
 });
 
@@ -20,7 +21,7 @@ const modifyStruct = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
 export const pointersTest = tgpu.fn([], d.bool)(() => {
   let s = true;
 
-  let num = d.u32(0);
+  const num = d.u32(0);
   modifyNum(num);
   s = s && (num === 1);
 
