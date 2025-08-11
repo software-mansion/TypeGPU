@@ -1,7 +1,9 @@
 import {
+  randExponential,
   randFloat01,
   randInUnitCircle,
   randInUnitCube,
+  randNormal,
   randOnUnitHemisphere,
   randOnUnitSphere,
   randSeed,
@@ -16,6 +18,8 @@ export const randf: {
   seed3: typeof randSeed3;
   seed4: typeof randSeed4;
   sample: typeof randFloat01;
+  normal: typeof randNormal;
+  exponential: typeof randExponential;
   inUnitCircle: typeof randInUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
@@ -26,6 +30,8 @@ export const randf: {
   seed3: randSeed3,
   seed4: randSeed4,
   sample: randFloat01,
+  normal: randNormal,
+  exponential: randExponential,
   inUnitCircle: randInUnitCircle,
   inUnitCube: randInUnitCube,
   onHemisphere: randOnUnitHemisphere,

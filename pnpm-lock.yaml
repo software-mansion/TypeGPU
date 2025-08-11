@@ -106,7 +106,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.2.19(@types/react@19.1.8)
+        version: 1.2.20(@types/react@19.1.8)
 
   apps/infra-benchmarks:
     devDependencies:
@@ -2488,6 +2488,9 @@ packages:
   '@types/bun@1.2.19':
     resolution: {integrity: sha512-d9ZCmrH3CJ2uYKXQIUuZ/pUnTqIvLDS0SK7pFmbx8ma+ziH/FRMoAq5bYpRG7y+w1gl+HgyNZbtqgMq4W4e2Lg==}
 
+  '@types/bun@1.2.20':
+    resolution: {integrity: sha512-dX3RGzQ8+KgmMw7CsW4xT5ITBSCrSbfHc36SNT31EOUg/LA9JWq0VDdEXDRSe1InVWpd2yLUM1FUF/kEOyTzYA==}
+
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
 
@@ -2868,6 +2871,11 @@ packages:
 
   bun-types@1.2.19:
     resolution: {integrity: sha512-uAOTaZSPuYsWIXRpj7o56Let0g/wjihKCkeRqUBhlLVM/Bt+Fj9xTo+LhC1OV1XDaGkz4hNC80et5xgy+9KTHQ==}
+    peerDependencies:
+      '@types/react': ^19
+
+  bun-types@1.2.20:
+    resolution: {integrity: sha512-pxTnQYOrKvdOwyiyd/7sMt9yFOenN004Y6O4lCcCUoKVej48FS5cvTw9geRaEcB9TsDZaJKAxPTVvi8tFsVuXA==}
     peerDependencies:
       '@types/react': ^19
 
@@ -7837,6 +7845,12 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
+  '@types/bun@1.2.20(@types/react@19.1.8)':
+    dependencies:
+      bun-types: 1.2.20(@types/react@19.1.8)
+    transitivePeerDependencies:
+      - '@types/react'
+
   '@types/chai@5.2.2':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -8383,6 +8397,11 @@ snapshots:
       ieee754: 1.2.1
 
   bun-types@1.2.19(@types/react@19.1.8):
+    dependencies:
+      '@types/node': 24.1.0
+      '@types/react': 19.1.8
+
+  bun-types@1.2.20(@types/react@19.1.8):
     dependencies:
       '@types/node': 24.1.0
       '@types/react': 19.1.8

@@ -1,9 +1,10 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
-import { cos, dot, mul, sign, sin, sqrt } from 'typegpu/std';
+import { clamp, cos, dot, log, mul, sign, sin, sqrt } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
+const EPS = 1e-6;
 
 export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
   .fn([d.f32])((seed) => {
@@ -69,3 +70,24 @@ export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
 
     return mul(sign(alignment), value);
   });
+
+const randUniformExclusive: TgpuFn<() => d.F32> = tgpu.fn([], d.f32)(() => {
+  return clamp(randomGeneratorSlot.value.sample(), 0 + EPS, 1 - EPS);
+});
+
+export const randNormal: TgpuFn<(mu: d.F32, sigma: d.F32) => d.F32> = tgpu.fn(
+  [d.f32, d.f32],
+  d.f32,
+)((mu, sigma) => {
+  const theta = TWO_PI * randUniformExclusive();
+  const R = sqrt(-2 * log(randUniformExclusive()));
+  return R * sin(theta) * sigma + mu;
+});
+
+export const randExponential: TgpuFn<(rate: d.F32) => d.F32> = tgpu.fn(
+  [d.f32],
+  d.f32,
+)((rate) => {
+  const u = randUniformExclusive();
+  return (-1 / rate) * log(1 - u);
+});
