@@ -1,3 +1,5 @@
+import { TgpuSampler } from '../core/sampler/sampler.ts';
+import { TgpuTexture } from '../core/texture/texture.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -1549,9 +1551,9 @@ export type StorableData =
   | MatData
   | Atomic
   | WgslArray
-  | WgslStruct;
-// | Texture
-// | Sampler
+  | WgslStruct
+  | TgpuTexture
+  | TgpuSampler;
 
 export type AnyWgslData =
   | Bool
@@ -1719,7 +1721,7 @@ export function isWgslStruct<T extends WgslStruct>(
 }
 
 /**
- * Checks whether passed in value is a pointer ('function' scope) schema.
+ * Checks whether passed in value is a pointer schema.
  *
  * @example
  * isPtrFn(d.ptrFn(d.f32)) // true

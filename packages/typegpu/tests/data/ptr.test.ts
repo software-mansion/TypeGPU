@@ -19,21 +19,6 @@ describe('d.ptrFn', () => {
     ).toMatchInlineSnapshot(`"ptr<function, u32>"`);
   });
 
-  // TODO: implement boxed for primitives
-  // it('modifies primitives in JS', () => {
-  //   const modifyNum = tgpu.fn([d.ptrFn(d.u32)])((ptr) => {
-  //     ptr += 1;
-  //   });
-
-  //   const testFn = tgpu.fn([], d.u32)(() => {
-  //     let num = 1;
-  //     modifyNum(num);
-  //     return num;
-  //   });
-
-  //   expect(testFn()).toStrictEqual(2);
-  // });
-
   it('modifies reference types in JS', () => {
     const modifyVec = tgpu.fn([d.ptrFn(d.vec2f)])((ptr) => {
       ptr.x += 1;
