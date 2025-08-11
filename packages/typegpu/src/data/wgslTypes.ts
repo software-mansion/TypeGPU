@@ -1339,7 +1339,7 @@ export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
-  TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TInner extends StorableData = StorableData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
   TAccess extends Access = Access,
 > extends BaseData {
   readonly type: 'ptr';
@@ -1520,6 +1520,38 @@ export type ScalarData =
   | U32
   | AbstractInt
   | AbstractFloat;
+
+export type VecData =
+  | Vec2f
+  | Vec2h
+  | Vec2i
+  | Vec2u
+  | Vec2b
+  | Vec3f
+  | Vec3h
+  | Vec3i
+  | Vec3u
+  | Vec3b
+  | Vec4f
+  | Vec4h
+  | Vec4i
+  | Vec4u
+  | Vec4b;
+
+export type MatData =
+  | Mat2x2f
+  | Mat3x3f
+  | Mat4x4f;
+
+export type StorableData =
+  | ScalarData
+  | VecData
+  | MatData
+  | Atomic
+  | WgslArray
+  | WgslStruct;
+// | Texture
+// | Sampler
 
 export type AnyWgslData =
   | Bool

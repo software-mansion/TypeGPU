@@ -1,9 +1,9 @@
-import { snip } from '../data/snippet.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
-import type { AnyWgslData } from '../data/wgslTypes.ts';
+import { snip } from '../data/snippet.ts';
+import type { ScalarData } from '../data/wgslTypes.ts';
 import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
 
 export const arrayLength = createDualImpl(
   // CPU implementation
@@ -19,5 +19,5 @@ export const arrayLength = createDualImpl(
     return snip(`arrayLength(${a.value})`, u32);
   },
   'arrayLength',
-  (a) => [ptrFn(a.dataType as AnyWgslData)],
+  (a) => [ptrFn(a.dataType as ScalarData)],
 );
