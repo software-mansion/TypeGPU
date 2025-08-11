@@ -554,7 +554,7 @@ export function generateExpression(
 
     return snip(
       `${arrayType}(${arrayValues.join(', ')})`,
-      arrayOf(elemType as wgsl.AnyWgslData, values.length),
+      arrayOf[$internal].jsImpl(elemType as wgsl.AnyWgslData, values.length),
     );
   }
 

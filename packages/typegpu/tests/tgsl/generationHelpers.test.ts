@@ -554,10 +554,10 @@ describe('generationHelpers', () => {
       expect(coerceToSnippet(false)).toEqual(snip(false, bool));
     });
 
+    const arr = arrayOf(f32, 2);
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
       expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
       expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
-      const arr = arrayOf(f32, 2);
       expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
