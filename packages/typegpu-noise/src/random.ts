@@ -1,6 +1,6 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
-import { clamp, cos, dot, log, mul, sign, sin, sqrt } from 'typegpu/std';
+import { clamp, cos, dot, log, mul, sign, sin, sqrt, tan } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
@@ -90,4 +90,12 @@ export const randExponential: TgpuFn<(rate: d.F32) => d.F32> = tgpu.fn(
 )((rate) => {
   const u = randUniformExclusive();
   return (-1 / rate) * log(1 - u);
+});
+
+export const randCauchy: TgpuFn<(x0: d.F32, gamma: d.F32) => d.F32> = tgpu.fn(
+  [d.f32, d.f32],
+  d.f32,
+)((x0, gamma) => {
+  const u = randNormal(0, 1);
+  return x0 + gamma * (tan(Math.PI * (u - 0.5)));
 });

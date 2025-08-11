@@ -1,4 +1,5 @@
 import {
+  randCauchy,
   randExponential,
   randFloat01,
   randInUnitCircle,
@@ -20,6 +21,7 @@ export const randf: {
   sample: typeof randFloat01;
   normal: typeof randNormal;
   exponential: typeof randExponential;
+  cauchy: typeof randCauchy;
   inUnitCircle: typeof randInUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
@@ -32,6 +34,7 @@ export const randf: {
   sample: randFloat01,
   normal: randNormal,
   exponential: randExponential,
+  cauchy: randCauchy,
   inUnitCircle: randInUnitCircle,
   inUnitCube: randInUnitCube,
   onHemisphere: randOnUnitHemisphere,
