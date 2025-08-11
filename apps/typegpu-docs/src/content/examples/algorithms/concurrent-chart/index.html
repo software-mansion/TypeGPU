@@ -1,66 +1,61 @@
 <div class="example">
   <canvas></canvas>
   <div class="predictions-container">
-    <div class="bars-container">
-      <div class="predictions-label">Time</div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
-      <div class="bar"><div class="label"></div></div>
+    <div class="bars-container grid grid-flow-col justify-center items-end gap-x-4 gap-y-8 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] pl-4 pb-4 max-lg:w-[calc(100%+8rem)] max-lg:gap-y-[0.1rem]">
+      <div class="predictions-label absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap max-lg:text-base max-lg:left-[-2.5rem]">Time</div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
+      <div class="bar"><div class="label grid grid-flow-row justify-center pt-4"></div></div>
     </div>
   </div>
 </div>
 
 
 <style>
-  .predictions-label {
-    position: absolute;
-    left: -5rem; /* Position to the left of the vertical line */
-    top: 30%; /* Center vertically */
-    z-index: 2; /* Above the lines */
-    font-size: 1.25rem;
-    transform: rotate(-90deg) translateX(-50%); /* Rotate text and adjust position */
-    transform-origin: center;
-    white-space: nowrap; /* Prevent text from wrapping */
-    @media (max-width: 1024px) {
-      font-size: 1rem;
-      left: -2.5rem; /* Adjust position for smaller screens */
-    }
-  }
-
-  /* Rewritten from Flexbox to CSS Grid */
-  .bars-container {
+  
+  .bar {
     display: grid;
-    grid-auto-flow: column; /* place each .bar in a column */
-    justify-content: center; /* center bars horizontally */
-    align-items: end; /* bottom-align bars to the x-axis */
-    column-gap: 1rem;
-    row-gap: 2rem;
-    position: relative; /* for absolute elements like axes and label */
-    width: 100%;
-    min-height: 17rem; /* Ensure enough space for the bars and lines */
-    border-left: 2px solid #e6e6f2; /* left axis */
-    border-bottom: 2px solid #e6e6f2; /* bottom axis */
-    padding-left: 1rem; /* spacing from the left border */
-    padding-bottom: 1rem; /* spacing from the bottom border */
-    @media (max-width: 1024px) {
-      width: calc(100% + 8rem);
-      row-gap: 0.1rem;
+    align-items: end;
+    justify-items: center;
+    position: relative;
+    height: 15.25rem;
+    width: 2rem;
+    background: linear-gradient(to right, transparent, #e6e6f2);
+    border-radius: 9999px;
+  }
+  
+  @media (max-width: 1024px) {
+    .bar {
+      width: 1rem;
+      font-size: 0.75rem;
     }
   }
-
+  
+  .bar::after {
+    width: 100%;
+    height: calc((100% - 2rem) * var(--bar-height, 0%, 100%));
+    opacity: var(--highlight-opacity, 0);
+    background-image: linear-gradient(to right, #c464ff, #1d72f0);
+    position: absolute;
+    bottom: 2rem;
+    border-radius: 9999px;
+    transition: height 0.2s ease-in-out, opacity 0.5s ease-in-out;
+    content: '';
+  }
+  
   /* up arrow */
   .bars-container::before {
     content: '';
     position: absolute;
     top: -8px;
-    left: -2px; /* Align with border-left */
+    left: -2px;
     width: 0;
     height: 0;
     border-left: 6px solid transparent;
@@ -83,60 +78,13 @@
     transform: translateY(1px);
   }
 
-  .label {
-    display: grid;
-    grid-auto-flow: row;
-    justify-content: center;
-
-    padding-top: 1rem;
-  }
   /* Add extra space before every even (JS) bar */
   .bars-container > .bar:nth-child(even):not(:first-child){
     margin-left: 2rem;
   }
-
-  .bar {
-    display: grid; /* instead of flex */
-    align-items: end; /* align pseudo content to the bottom */
-    justify-items: center; /* center horizontally */
-    position: relative;
-    height: 15.25rem;
-    width: 2rem;
-    background: linear-gradient(to right, transparent, #e6e6f2);
-    border-radius: 9999px;
-    @media (max-width: 1024px) {
-      width: 1rem;
-      font-size: 0.75rem;
-    }
-  }
-
-  /* .bar::before {
-    width: 100%;
-    height: calc((100% - 2rem) * var(--bar-height, 0%));
-    background-color: #dadaed;
-    position: absolute;
-    left: 2rem;
-    bottom: 2rem;
-    border-radius: 9999px;
-    content: '';
-    transition: all 0.2s ease-in-out;
-  } */
-
-  .bar::after {
-    width: 100%; /* follow the bar width */
-    height: calc((100% - 2rem) * var(--bar-height, 0%, 100%));
-    opacity: var(--highlight-opacity, 0);
-    background-image: linear-gradient(to right, #c464ff, #1d72f0);
-    position: absolute;
-    bottom: 2rem;
-    border-radius: 9999px;
-    transition: height 0.2s ease-in-out, opacity 0.5s ease-in-out;
-    content: '';
-  }
-
   /* Make JS bars yellow */
   .bars-container > .bar:nth-child(even)::after {
     background-image: none;
-    background-color: #ffd54a; /* yellow */
+    background-color: #ffd54a;
   }
 </style>
