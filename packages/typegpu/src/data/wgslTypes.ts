@@ -1,5 +1,5 @@
-import { TgpuSampler } from '../core/sampler/sampler.ts';
-import { TgpuTexture } from '../core/texture/texture.ts';
+import type { TgpuSampler } from '../core/sampler/sampler.ts';
+import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
