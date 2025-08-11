@@ -71,16 +71,3 @@ export function inCodegenMode() {
 }
 
 // You can add getters for more modes if necessary...
-
-export function asNormal<T>(callback: () => T): T {
-  if (!resolutionCtx) {
-    return callback();
-  }
-
-  resolutionCtx.pushMode(new NormalState());
-  try {
-    return callback();
-  } finally {
-    resolutionCtx.popMode('normal');
-  }
-}

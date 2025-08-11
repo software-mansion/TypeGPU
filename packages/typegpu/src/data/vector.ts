@@ -42,7 +42,7 @@ import type {
   Vec4u,
 } from './wgslTypes.ts';
 import { isDecorated, isVec, isVecInstance } from './wgslTypes.ts';
-import { asNormal } from '../execMode.ts';
+import type { AnyData } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -332,14 +332,12 @@ function makeVecSchema<TValue, S extends number | boolean>(
       ) {
         // Return an actual vector at resolution time
         const knownParams = args.map((arg) => arg.value);
-        return asNormal(() =>
-          snip(
-            cpuConstruct(...(knownParams as never[])),
-            vecTypeToConstructor[type],
-          )
+        return snip(
+          cpuConstruct(...(knownParams as never[])),
+          schema as AnyData,
         );
       }
-      return snip(`${type}(${stitch`${args}`})`, vecTypeToConstructor[type]);
+      return snip(`${type}(${stitch`${args}`})`, schema as AnyData);
     },
     type,
     (...args) =>
@@ -353,8 +351,12 @@ function makeVecSchema<TValue, S extends number | boolean>(
       }),
   );
 
-  return Object.assign(construct, {
-    type,
-    [$repr]: undefined as TValue,
-  });
+  const schema:
+    & VecSchemaBase<TValue>
+    & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+      type,
+      [$repr]: undefined as TValue,
+    });
+
+  return schema;
 }

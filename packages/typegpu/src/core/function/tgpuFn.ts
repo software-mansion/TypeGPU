@@ -238,8 +238,6 @@ function createFn<ImplSchema extends AnyFn>(
     shell.argTypes,
   );
 
-  call[$internal].jsImpl = implementation;
-
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     ImplSchema
   >;

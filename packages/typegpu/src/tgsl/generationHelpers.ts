@@ -56,6 +56,7 @@ import type { ResolutionCtx } from '../types.ts';
 import { undecorate } from '../data/decorateUtils.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
 import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -491,15 +492,13 @@ function applyActionToSnippet(
     return snip(value.value, targetType);
   }
 
-  const resolvedValue = ctx.resolve(value.value);
-
   switch (action.action) {
     case 'ref':
-      return snip(`&${resolvedValue}`, targetType);
+      return snip(stitch`&${value}`, targetType);
     case 'deref':
-      return snip(`*${resolvedValue}`, targetType);
+      return snip(stitch`*${value}`, targetType);
     case 'cast': {
-      return snip(`${ctx.resolve(targetType)}(${resolvedValue})`, targetType);
+      return snip(stitch`${ctx.resolve(targetType)}(${value})`, targetType);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');

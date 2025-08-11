@@ -14,8 +14,9 @@ import {
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
 import { convertToCommonType } from '../tgsl/generationHelpers.ts';
-import { asNormal, getResolutionCtx } from '../execMode.ts';
+import { getResolutionCtx } from '../execMode.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { $internal } from '../shared/symbols.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -68,9 +69,7 @@ export const add = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return asNormal(() =>
-        snip(cpuAdd(lhs.value as never, rhs.value as never), resultType)
-      );
+      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
     }
 
     return snip(stitch`(${lhs} + ${rhs})`, resultType);
@@ -92,7 +91,7 @@ function cpuSub<
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
-  return cpuAdd(lhs, mul(-1, rhs));
+  return cpuAdd(lhs, cpuMul(-1, rhs));
 }
 
 export const sub = createDualImpl(
@@ -111,9 +110,7 @@ export const sub = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return asNormal(() =>
-        snip(cpuSub(lhs.value as never, rhs.value as never), resultType)
-      );
+      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
     }
 
     return snip(stitch`(${lhs} - ${rhs})`, resultType);
@@ -191,9 +188,7 @@ export const mul = createDualImpl(
         isMatInstance(rhs.value))
     ) {
       // Precomputing...
-      return asNormal(() =>
-        snip(cpuMul(lhs.value as never, rhs.value as never), returnType)
-      );
+      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
     }
 
     return snip(stitch`(${lhs} * ${rhs})`, returnType);
@@ -210,11 +205,11 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
     return lhs / rhs;
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = vecTypeToConstructor[rhs.kind];
+    const schema = vecTypeToConstructor[rhs.kind][$internal].jsImpl;
     return VectorOps.div[rhs.kind](schema(lhs), rhs);
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = vecTypeToConstructor[lhs.kind];
+    const schema = vecTypeToConstructor[lhs.kind][$internal].jsImpl;
     return VectorOps.div[lhs.kind](lhs, schema(rhs));
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
@@ -253,9 +248,7 @@ export const div = createDualImpl(
       (typeof rhsVal === 'number' || isVecInstance(rhsVal))
     ) {
       // Precomputing
-      return asNormal(() =>
-        snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType)
-      );
+      return snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType);
     }
 
     return snip(stitch`(${conv[0]} / ${conv[1]})`, conv[0].dataType);

@@ -19,20 +19,9 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
-import type { FnArgsConversionHint } from '../types.ts';
-import type { MapValueToSnippet, Snippet } from './snippet.ts';
+import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
-
-export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
-  & TImpl
-  & {
-    [$internal]: {
-      jsImpl: TImpl | string;
-      gpuImpl: (...args: MapValueToSnippet<Parameters<TImpl>>) => Snippet;
-      argConversionHint: FnArgsConversionHint;
-    };
-  };
 
 /**
  * Array schema constructed via `d.disarrayOf` function.

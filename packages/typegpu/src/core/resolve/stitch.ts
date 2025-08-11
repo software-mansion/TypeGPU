@@ -9,20 +9,24 @@ type ValueOrArray<T> = T | T[];
  */
 export function stitch(
   strings: TemplateStringsArray,
-  ...snippets: ValueOrArray<Snippet | undefined>[]
+  ...snippets: ValueOrArray<Snippet | string | undefined>[]
 ) {
   const ctx = getResolutionCtx() as ResolutionCtx;
 
   let result = '';
   for (let i = 0; i < strings.length; ++i) {
     result += strings[i];
-    const snippet = snippets[i] as ValueOrArray<Snippet | undefined>; // It's there!
+    const snippet = snippets[i] as ValueOrArray<Snippet | string | undefined>; // It's there!
     if (Array.isArray(snippet)) {
       result += snippet
-        .filter((s) => !!s)
-        .map((s) => ctx.resolve(s.value, s.dataType)).join(', ');
+        .filter((s) => s !== undefined)
+        .map((s) =>
+          typeof s === 'string' ? s : ctx.resolve(s.value, s.dataType)
+        ).join(', ');
     } else if (snippet) {
-      result += ctx.resolve(snippet.value, snippet.dataType);
+      result += typeof snippet === 'string'
+        ? snippet
+        : ctx.resolve(snippet.value, snippet.dataType);
     }
   }
   return result;
