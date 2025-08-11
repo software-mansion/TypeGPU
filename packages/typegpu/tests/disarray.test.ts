@@ -116,16 +116,6 @@ describe('disarray', () => {
     expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
   });
 
-  it('can be partially called', () => {
-    const DisarrayPartialSchema = d.disarrayOf(d.vec3u);
-
-    const disarray3 = DisarrayPartialSchema(3);
-    expect(d.sizeOf(disarray3)).toBe(36);
-
-    const disarray7 = DisarrayPartialSchema(7);
-    expect(d.sizeOf(disarray7)).toBe(84);
-  });
-
   it('can be called to create a disarray', () => {
     const DisarraySchema = d.disarrayOf(d.uint16x2, 2);
 
@@ -189,6 +179,43 @@ describe('disarray', () => {
     expect(defaultDisarray).toStrictEqual([
       { vec: d.vec3f() },
       { vec: d.vec3f() },
+    ]);
+  });
+
+  it('can be partially called', () => {
+    const DisarrayPartialSchema = d.disarrayOf(d.vec3u);
+
+    const disarray3 = DisarrayPartialSchema(3);
+    const instance3 = disarray3([
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
+    ]);
+
+    expect(instance3).toStrictEqual([
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
+    ]);
+
+    const disarray7 = DisarrayPartialSchema(7);
+    const instance7 = disarray7([
+      d.vec3u(1, 1, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 5, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 1, 1),
+    ]);
+    expect(instance7).toStrictEqual([
+      d.vec3u(1, 1, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 5, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 1, 1),
     ]);
   });
 });
