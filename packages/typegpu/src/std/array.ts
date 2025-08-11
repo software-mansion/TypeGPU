@@ -19,5 +19,5 @@ export const arrayLength = createDualImpl(
     return snip(`arrayLength(${a.value})`, u32);
   },
   'arrayLength',
-  (a) => [ptrFn(a.dataType as ScalarData)],
+  (a) => [ptrFn(a.dataType as StorableData)],
 );
