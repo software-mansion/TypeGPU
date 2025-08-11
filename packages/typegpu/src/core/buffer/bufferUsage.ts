@@ -1,7 +1,9 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import { schemaCallWrapper } from '../../data/utils.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
-import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
+import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
+import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -12,6 +14,7 @@ import {
   $repr,
   $wgslDataType,
 } from '../../shared/symbols.ts';
+import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   BindableBufferUsage,
@@ -20,9 +23,6 @@ import type {
 } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
-import { schemaCloneWrapper, schemaDefaultWrapper } from '../../data/utils.ts';
-import { assertExhaustive } from '../../shared/utilityTypes.ts';
-import { IllegalBufferAccessError } from '../../errors.ts';
 
 // ----------
 // Public API
@@ -35,6 +35,8 @@ export interface TgpuBufferUsage<
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly [$repr]: Infer<TData>;
+
+  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<TData>;
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
@@ -133,6 +135,7 @@ class TgpuFixedBufferImpl<
   [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.buffer.dataType,
@@ -163,8 +166,7 @@ class TgpuFixedBufferImpl<
       if (!mode.buffers.has(this.buffer)) { // Not initialized yet
         mode.buffers.set(
           this.buffer,
-          schemaCloneWrapper(this.buffer.dataType, this.buffer.initial) ??
-            schemaDefaultWrapper(this.buffer.dataType),
+          schemaCallWrapper(this.buffer.dataType, this.buffer.initial),
         );
       }
       return mode.buffers.get(this.buffer) as InferGPU<TData>;
@@ -249,6 +251,7 @@ export class TgpuLaidOutBufferImpl<
   [$gpuValueOf](): InferGPU<TData> {
     return new Proxy(
       {
+        [$internal]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.dataType,

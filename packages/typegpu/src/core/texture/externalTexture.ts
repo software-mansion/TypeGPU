@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -22,7 +23,8 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
-  public readonly resourceType = 'external-texture';
+  readonly [$internal] = true;
+  readonly resourceType = 'external-texture';
 
   constructor(private readonly _membership: LayoutMembership) {
     setName(this, _membership.key);
