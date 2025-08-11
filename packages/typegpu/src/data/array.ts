@@ -1,13 +1,31 @@
 import { $internal } from '../shared/symbols.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { sizeOf } from './sizeOf.ts';
 import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
-import { isSnippet, snip } from './snippet.ts';
+import { snip, type Snippet } from './snippet.ts';
 import { UnknownData } from './dataTypes.ts';
 
 // ----------
 // Public API
 // ----------
+
+interface WgslArrayConstructor {
+  <TElement extends AnyWgslData>(
+    elementType: TElement,
+    elementCount: number,
+  ): WgslArray<TElement>;
+
+  <TElement extends AnyWgslData>(
+    elementType: TElement,
+    elementCount?: undefined,
+  ): (elementCount: number) => WgslArray<TElement>;
+
+  <TElement extends AnyWgslData>(
+    elementType: TElement,
+    elementCount?: number | undefined,
+  ): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>);
+}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -25,52 +43,38 @@ import { UnknownData } from './dataTypes.ts';
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export function arrayOf<TElement extends AnyWgslData>(
-  elementType: TElement,
-  elementCount: number,
-): WgslArray<TElement>;
-
-export function arrayOf<TElement extends AnyWgslData>(
-  elementType: TElement,
-  elementCount?: undefined,
-): (elementCount: number) => WgslArray<TElement>;
-
-export function arrayOf<TElement extends AnyWgslData>(
-  elementType: TElement,
-  elementCount?: number | undefined,
-): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
-  if (elementCount === undefined) {
-    const partial = (count: number) => arrayOf(elementType, count);
-    partial[$internal] = true;
-
-    if (isSnippet(elementType)) {
-      // biome-ignore lint/suspicious/noExplicitAny: should return a snippet!
-      return snip(partial, UnknownData) as any;
+export const arrayOf = createDualImpl(
+  // JS implementation
+  ((elementType, elementCount) => {
+    if (elementCount === undefined) {
+      return (count: number) => cpu_arrayOf(elementType, count);
     }
-    return partial;
-  }
+    return cpu_arrayOf(elementType, elementCount);
+  }) as WgslArrayConstructor,
+  // CODEGEN implementation
+  (elementType, elementCount) => {
+    if (elementCount === undefined) {
+      const partial = (count: Snippet) =>
+        arrayOf[$internal].gpuImpl(elementType, count);
+      // Marking so the WGSL generator lets this function through
+      partial[$internal] = true;
 
-  if (
-    isSnippet(elementType) &&
-    (isSnippet(elementCount) || elementCount === undefined)
-  ) {
+      return snip(partial, UnknownData);
+    }
+
     if (typeof elementCount.value !== 'number') {
       throw new Error(
         `Cannot create array schema with count unknown at compile-time: '${elementCount.value}'`,
       );
     }
-    const schema = cpu_arrayOf(
+
+    return snip(
+      cpu_arrayOf(elementType.value as AnyWgslData, elementCount.value),
       elementType.value as AnyWgslData,
-      elementCount.value,
     );
-    // biome-ignore lint/suspicious/noExplicitAny: should return a snippet!
-    return snip(schema, UnknownData) as any;
-  }
-
-  return cpu_arrayOf(elementType, elementCount);
-}
-
-arrayOf[$internal] = true;
+  },
+  'arrayOf',
+);
 
 // --------------
 // Implementation
@@ -79,7 +83,7 @@ arrayOf[$internal] = true;
 function cpu_arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
-): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
+): WgslArray<TElement> {
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const arraySchema = (elements?: TElement[]) => {
