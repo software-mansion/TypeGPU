@@ -5,7 +5,10 @@ const t = tgpu;
 // setup
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
-const copyModule = device!.createShaderModule({
+if (!device) {
+  throw new Error('WebGPU is not supported!');
+}
+const copyModule = device.createShaderModule({
   label: 'copying compute module',
   code: `
     struct Item {
@@ -23,7 +26,7 @@ const copyModule = device!.createShaderModule({
     `,
 });
 
-const pipeline = device!.createComputePipeline({
+const pipeline = device.createComputePipeline({
   label: 'copying compute pipeline',
   layout: 'auto',
   compute: {
@@ -32,7 +35,7 @@ const pipeline = device!.createComputePipeline({
 });
 
 // work buffer 1
-const sourceBuffer = device!.createBuffer({
+const sourceBuffer = device.createBuffer({
   label: 'source buffer',
   size: 16,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
@@ -40,7 +43,7 @@ const sourceBuffer = device!.createBuffer({
 });
 
 // work buffer 2
-const targetBuffer = device!.createBuffer({
+const targetBuffer = device.createBuffer({
   label: 'target buffer',
   size: 16,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
@@ -48,13 +51,13 @@ const targetBuffer = device!.createBuffer({
 });
 
 // buffer for reading the results
-const resultBuffer = device!.createBuffer({
+const resultBuffer = device.createBuffer({
   label: 'result buffer',
   size: 16,
   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
 });
 
-const bindGroup = device!.createBindGroup({
+const bindGroup = device.createBindGroup({
   label: 'bind group for work buffers',
   layout: pipeline.getBindGroupLayout(0),
   entries: [
@@ -70,9 +73,9 @@ input.setUint32(0, 1);
 input.setUint32(4, 3);
 input.setUint32(8, 5);
 input.setUint32(12, 7);
-device!.queue.writeBuffer(sourceBuffer, 0, input);
+device.queue.writeBuffer(sourceBuffer, 0, input);
 
-const encoder = device!.createCommandEncoder({
+const encoder = device.createCommandEncoder({
   label: 'copying encoder',
 });
 const pass = encoder.beginComputePass({
@@ -84,7 +87,7 @@ pass.dispatchWorkgroups(1);
 pass.end();
 
 encoder.copyBufferToBuffer(targetBuffer, 0, resultBuffer, 0, 16);
-device!.queue.submit([encoder.finish()]);
+device.queue.submit([encoder.finish()]);
 
 await resultBuffer.mapAsync(GPUMapMode.READ);
 const result = new DataView(resultBuffer.getMappedRange().slice());
