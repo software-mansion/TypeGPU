@@ -16,6 +16,9 @@ import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
  * const array = d.arrayOf(d.u32, LENGTH);
  *
  * If `elementCount` is not specified, a partially applied function is returned.
+ * @example
+ * const array = d.arrayOf(d.vec3f);
+ * //    ^? (n: number) => WgslArray<d.Vec3f>
  *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.

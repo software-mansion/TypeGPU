@@ -21,6 +21,9 @@ import { schemaCallWrapper } from './utils.ts';
  * const disarray = d.disarrayOf(d.align(16, d.vec3f), 3);
  *
  * If `elementCount` is not specified, a partially applied function is returned.
+ * @example
+ * const disarray = d.disarrayOf(d.vec3f);
+ * //    ^? (n: number) => Disarray<d.Vec3f>
  *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
