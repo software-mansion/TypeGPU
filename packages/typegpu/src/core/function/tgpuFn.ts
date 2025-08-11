@@ -160,12 +160,9 @@ function createFn<ImplSchema extends AnyFn>(
   >,
   implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
-  type This =
-    & TgpuFnBase<ImplSchema>
-    & SelfResolvable
-    & {
-      [$getNameForward]: FnCore;
-    };
+  type This = TgpuFnBase<ImplSchema> & SelfResolvable & {
+    [$getNameForward]: FnCore;
+  };
 
   const core = createFnCore(implementation as Implementation, '');
 

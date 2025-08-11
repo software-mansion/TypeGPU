@@ -35,7 +35,7 @@ const boolCast = createDualImpl(
     return !!v;
   },
   // GPU implementation
-  (v) => snip(v ? stitch`bool(${v})` : 'bool()', bool),
+  (v) => snip(stitch`bool(${v})`, bool),
   'boolCast',
 );
 
@@ -69,7 +69,7 @@ const u32Cast = createDualImpl(
     return (v & 0xffffffff) >>> 0;
   },
   // GPU implementation
-  (v) => snip(v ? stitch`u32(${v})` : 'u32()', u32),
+  (v) => snip(stitch`u32(${v})`, u32),
   'u32Cast',
 );
 
@@ -105,7 +105,7 @@ const i32Cast = createDualImpl(
     return v | 0;
   },
   // GPU implementation
-  (v) => snip(v ? stitch`i32(${v})` : 'i32()', i32),
+  (v) => snip(stitch`i32(${v})`, i32),
   'i32Cast',
 );
 
@@ -144,7 +144,7 @@ const f32Cast = createDualImpl(
     return Math.fround(v);
   },
   // GPU implementation
-  (v) => snip(v ? stitch`f32(${v})` : 'f32()', f32),
+  (v) => snip(stitch`f32(${v})`, f32),
   'f32Cast',
 );
 
@@ -267,7 +267,7 @@ const f16Cast = createDualImpl(
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => snip(v ? stitch`f16(${v})` : 'f16()', f16),
+  (v) => snip(stitch`f16(${v})`, f16),
   'f16Cast',
 );
 
