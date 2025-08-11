@@ -42,7 +42,6 @@ export function disarrayOf<TElement extends AnyData>(
   if (elementCount === undefined) {
     return (n: number) => disarrayOf(elementType, n);
   }
-  return new DisarrayImpl(elementType, count);
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const disarraySchema = (elements?: TElement[]) => {

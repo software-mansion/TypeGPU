@@ -125,7 +125,7 @@ describe('disarray', () => {
     const disarray7 = DisarrayPartialSchema(7);
     expect(d.sizeOf(disarray7)).toBe(84);
   });
-  
+
   it('can be called to create a disarray', () => {
     const DisarraySchema = d.disarrayOf(d.uint16x2, 2);
 
