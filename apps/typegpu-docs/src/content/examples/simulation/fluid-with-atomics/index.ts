@@ -309,11 +309,11 @@ const fragment = tgpu['~unstable'].fragmentFn({
 });
 
 const vertexInstanceLayout = tgpu.vertexLayout(
-  (n: number) => d.arrayOf(d.u32, n),
+  d.arrayOf(d.u32),
   'instance',
 );
 const vertexLayout = tgpu.vertexLayout(
-  (n: number) => d.arrayOf(d.vec2f, n),
+  d.arrayOf(d.vec2f),
   'vertex',
 );
 

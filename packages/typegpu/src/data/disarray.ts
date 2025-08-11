@@ -20,13 +20,31 @@ import { schemaCallWrapper } from './utils.ts';
  * @example
  * const disarray = d.disarrayOf(d.align(16, d.vec3f), 3);
  *
+ * If `elementCount` is not specified, a partially applied function is returned.
+ * @example
+ * const disarray = d.disarrayOf(d.vec3f);
+ * //    ^? (n: number) => Disarray<d.Vec3f>
+ *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
 export function disarrayOf<TElement extends AnyData>(
   elementType: TElement,
   elementCount: number,
-): Disarray<TElement> {
+): Disarray<TElement>;
+
+export function disarrayOf<TElement extends AnyData>(
+  elementType: TElement,
+  elementCount?: undefined,
+): (elementCount: number) => Disarray<TElement>;
+
+export function disarrayOf<TElement extends AnyData>(
+  elementType: TElement,
+  elementCount?: number | undefined,
+): Disarray<TElement> | ((elementCount: number) => Disarray<TElement>) {
+  if (elementCount === undefined) {
+    return (n: number) => disarrayOf(elementType, n);
+  }
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const disarraySchema = (elements?: TElement[]) => {
