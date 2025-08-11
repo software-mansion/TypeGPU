@@ -23,6 +23,7 @@ import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
+import { stitch } from '../resolve/stitch.ts';
 import {
   type Eventual,
   isAccessor,
@@ -331,12 +332,9 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const resolvedParams = this.#params.map((param) =>
-      ctx.resolve(param.value, param.dataType)
-    );
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
     return ctx.withResetIndentLevel(() =>
-      `${ctx.resolve(this.#fn)}(${resolvedParams.join(', ')})`
+      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
     );
   }
 
