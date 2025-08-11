@@ -1,16 +1,6 @@
-import type {
-  Infer,
-  InferPartial,
-  IsValidVertexSchema,
-} from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type {
-  $invalidSchemaReason,
-  $repr,
-  $reprPartial,
-  $validVertexSchema,
-} from '../shared/symbols.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
+import { schemaCallWrapper } from './utils.ts';
 
 // ----------
 // Public API
@@ -31,42 +21,49 @@ import type { AnyData, Disarray } from './dataTypes.ts';
  * const disarray = d.disarrayOf(d.align(16, d.vec3f), 3);
  *
  * @param elementType The type of elements in the array.
- * @param count The number of elements in the array.
+ * @param elementCount The number of elements in the array.
  */
 export function disarrayOf<TElement extends AnyData>(
   elementType: TElement,
-  count: number,
+  elementCount: number,
 ): Disarray<TElement> {
-  return new DisarrayImpl(elementType, count);
+  // In the schema call, create and return a deep copy
+  // by wrapping all the values in `elementType` schema calls.
+  const disarraySchema = (elements?: TElement[]) => {
+    if (elements && elements.length !== elementCount) {
+      throw new Error(
+        `Disarray schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} argument(s).`,
+      );
+    }
+
+    return Array.from(
+      { length: elementCount },
+      (_, i) => schemaCallWrapper(elementType, elements?.[i]),
+    );
+  };
+  Object.setPrototypeOf(disarraySchema, DisarrayImpl);
+
+  disarraySchema.elementType = elementType;
+
+  if (!Number.isInteger(elementCount) || elementCount < 0) {
+    throw new Error(
+      `Cannot create disarray schema with invalid element count: ${elementCount}.`,
+    );
+  }
+  disarraySchema.elementCount = elementCount;
+
+  return disarraySchema as unknown as Disarray<TElement>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
-  public readonly [$internal] = true;
-  public readonly type = 'disarray';
+const DisarrayImpl = {
+  [$internal]: true,
+  type: 'disarray',
 
-  // Type-tokens, not available at runtime
-  declare readonly [$repr]: Infer<TElement>[];
-  declare readonly [$reprPartial]: {
-    idx: number;
-    value: InferPartial<TElement>;
-  }[];
-  declare readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
-  declare readonly [$invalidSchemaReason]:
-    Disarray[typeof $invalidSchemaReason];
-  // ---
-
-  constructor(
-    public readonly elementType: TElement,
-    public readonly elementCount: number,
-  ) {
-    if (!Number.isInteger(elementCount) || elementCount < 0) {
-      throw new Error(
-        `Cannot create disarray schema with invalid element count: ${elementCount}.`,
-      );
-    }
-  }
-}
+  toString(this: Disarray): string {
+    return `disarrayOf(${this.elementType}, ${this.elementCount})`;
+  },
+};

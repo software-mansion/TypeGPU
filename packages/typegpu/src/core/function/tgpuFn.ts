@@ -1,6 +1,6 @@
 import { type AnyData, UnknownData } from '../../data/dataTypes.ts';
-import { schemaCloneWrapper } from '../../data/utils.ts';
 import { snip } from '../../data/snippet.ts';
+import { schemaCallWrapper } from '../../data/utils.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
@@ -32,6 +32,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
+import { createDualImpl } from './dualImpl.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   AnyFn,
@@ -41,7 +42,6 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
-import { createDualImpl } from './dualImpl.ts';
 
 // ----------
 // Public API
@@ -223,7 +223,7 @@ function createFn<ImplSchema extends AnyFn>(
           }
 
           const castAndCopiedArgs = args.map((arg, index) =>
-            schemaCloneWrapper(shell.argTypes[index], arg)
+            schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
           return implementation(...castAndCopiedArgs);

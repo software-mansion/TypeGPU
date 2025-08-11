@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 
@@ -133,7 +133,7 @@ describe('d.unstruct', () => {
     expect(data.c.z).toBeCloseTo(3.0);
   });
 
-  it('properly writes and reads data with nested structs', () => {
+  it('properly writes and reads data with nested unstructs', () => {
     const s = d.unstruct({
       a: d.unorm8x2,
       b: d.align(16, d.snorm16x2),
@@ -181,7 +181,7 @@ describe('d.unstruct', () => {
     const a = d.disarrayOf(s, 8);
 
     expect(d.sizeOf(s)).toBe(12);
-    // since the struct is aligned to 16 bytes, the array stride should be 16 not 12
+    // since the unstruct is aligned to 16 bytes, the array stride should be 16 not 12
     expect(d.sizeOf(a)).toBe(16 * 8);
 
     const buffer = new ArrayBuffer(d.sizeOf(a));
@@ -233,5 +233,71 @@ describe('d.unstruct', () => {
     expect(data.b.w).toBeCloseTo(1.0);
     expect(data.c.x).toBeCloseTo(-0.25);
     expect(data.c.y).toBeCloseTo(0.25);
+  });
+
+  it('can be called to create an object', () => {
+    const TestUnstruct = d.unstruct({
+      x: d.u32,
+      y: d.uint32x3,
+    });
+
+    const obj = TestUnstruct({ x: 1, y: d.vec3u(1, 2, 3) });
+
+    expect(obj).toStrictEqual({ x: 1, y: d.vec3u(1, 2, 3) });
+    expectTypeOf(obj).toEqualTypeOf<{ x: number; y: d.v3u }>();
+  });
+
+  it('cannot be called with invalid properties', () => {
+    const TestUnstruct = d.unstruct({
+      x: d.u32,
+      y: d.uint32x3,
+    });
+
+    // @ts-expect-error
+    (() => TestUnstruct({ x: 1, z: 2 }));
+  });
+
+  it('can be called to create a deep copy of other unstruct', () => {
+    const NestedUnstruct = d.unstruct({ prop1: d.float32x2, prop2: d.u32 });
+    const TestUnstruct = d.unstruct({ nested: NestedUnstruct });
+    const instance = TestUnstruct({
+      nested: { prop1: d.vec2f(1, 2), prop2: 21 },
+    });
+
+    const clone = TestUnstruct(instance);
+
+    expect(clone).toStrictEqual(instance);
+    expect(clone).not.toBe(instance);
+    expect(clone.nested).not.toBe(instance.nested);
+    expect(clone.nested.prop1).not.toBe(instance.nested.prop1);
+  });
+
+  it('can be called to strip extra properties of a unstruct', () => {
+    const TestUnstruct = d.unstruct({ prop1: d.vec2f, prop2: d.u32 });
+    const instance = { prop1: d.vec2f(1, 2), prop2: 21, prop3: 'extra' };
+
+    const clone = TestUnstruct(instance);
+
+    expect(clone).toStrictEqual({ prop1: d.vec2f(1, 2), prop2: 21 });
+  });
+
+  it('can be called to create a default value', () => {
+    const TestUnstruct = d.unstruct({
+      nested: d.unstruct({ prop1: d.vec2f, prop2: d.u32 }),
+    });
+
+    const defaultStruct = TestUnstruct();
+
+    expect(defaultStruct).toStrictEqual({
+      nested: { prop1: d.vec2f(), prop2: d.u32() },
+    });
+  });
+
+  it('can be called to create a default value with nested disarray', () => {
+    const TestUnstruct = d.unstruct({ arr: d.disarrayOf(d.uint16, 1) });
+
+    const defaultStruct = TestUnstruct();
+
+    expect(defaultStruct).toStrictEqual({ arr: [0] });
   });
 });

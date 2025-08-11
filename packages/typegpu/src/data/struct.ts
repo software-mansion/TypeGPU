@@ -1,6 +1,7 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
+import type { AnyData } from './dataTypes.ts';
+import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
@@ -44,9 +45,7 @@ function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
     Object.fromEntries(
       Object.entries(props).map(([key, schema]) => [
         key,
-        instanceProps
-          ? schemaCloneWrapper(schema, instanceProps[key])
-          : schemaDefaultWrapper(schema),
+        schemaCallWrapper(schema as AnyData, instanceProps?.[key]),
       ]),
     );
 
