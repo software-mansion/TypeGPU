@@ -30,10 +30,10 @@ import type { AnyData, Disarray } from './dataTypes.ts';
  * @example
  * const disarray = d.disarrayOf(d.align(16, d.vec3f), 3);
  *
+ * If `count` is not specified, a partially applied function is returned.
+ *
  * @param elementType The type of elements in the array.
  * @param count The number of elements in the array.
- *
- * If `count` is not specified, a partially applied function is returned.
  */
 export function disarrayOf<TElement extends AnyData>(
   elementType: TElement,

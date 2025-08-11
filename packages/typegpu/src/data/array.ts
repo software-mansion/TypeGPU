@@ -15,10 +15,10 @@ import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
  * const LENGTH = 3;
  * const array = d.arrayOf(d.u32, LENGTH);
  *
+ * If `elementCount` is not specified, a partially applied function is returned.
+ *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
- *
- * If `elementCount` is not specified, a partially applied function is returned.
  */
 export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,

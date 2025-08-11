@@ -133,6 +133,23 @@ Runtime-sized arrays are only usable with **storage** buffers.
 const Filter = (n: number) =>
   d.struct({
     clamp: d.f32,
+    values: d.arrayOf(d.f32, n),
+  });
+
+const fooLayout = tgpu.bindGroupLayout({
+  factors: { storage: (n: number) => d.arrayOf(d.f32, n) },
+  filter: { storage: Filter },
+  // ...
+});
+```
+
+You don't have to write arrow functions every time, `d.arrayOf(schema)` is a convenient shorhand for that.
+
+```ts
+// main.ts
+const Filter = (n: number) =>
+  d.struct({
+    clamp: d.f32,
     // Unfortunately, in structs, you cannot simply write d.arrayOf(d.f32)
     values: d.arrayOf(d.f32, n),
   });

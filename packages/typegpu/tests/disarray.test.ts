@@ -117,29 +117,12 @@ describe('disarray', () => {
   });
 
   it('can be partially called', () => {
-    const DisarrayPartialSchema = d.disarrayOf(d.vec3f);
+    const DisarrayPartialSchema = d.disarrayOf(d.vec3u);
 
     const disarray3 = DisarrayPartialSchema(3);
-
-    const buffer3 = new ArrayBuffer(d.sizeOf(disarray3));
-
-    expect(readData(new BufferReader(buffer3), disarray3)).toStrictEqual([
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-    ]);
+    expect(d.sizeOf(disarray3)).toBe(36);
 
     const disarray7 = DisarrayPartialSchema(7);
-    const buffer7 = new ArrayBuffer(d.sizeOf(disarray7));
-
-    expect(readData(new BufferReader(buffer7), disarray7)).toStrictEqual([
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-      d.vec3f(),
-    ]);
+    expect(d.sizeOf(disarray7)).toBe(84);
   });
 });
