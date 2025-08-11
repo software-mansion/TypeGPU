@@ -40,7 +40,6 @@ import { INTERNAL_setCtx } from '../../src/execMode.ts';
 const mockCtx = {
   indent: () => '',
   dedent: () => '',
-  mode: new CodegenState(),
   pushBlockScope: () => {},
   popBlockScope: () => {},
   mode: new CodegenState(),
@@ -542,6 +541,8 @@ describe('generationHelpers', () => {
   });
 
   describe('coerceToSnippet', () => {
+    const arr = arrayOf(f32, 2);
+
     it('coerces JS numbers', () => {
       expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
       expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
@@ -554,7 +555,6 @@ describe('generationHelpers', () => {
       expect(coerceToSnippet(false)).toEqual(snip(false, bool));
     });
 
-    const arr = arrayOf(f32, 2);
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
       expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
       expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
