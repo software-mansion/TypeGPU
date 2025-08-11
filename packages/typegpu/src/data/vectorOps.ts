@@ -1,22 +1,7 @@
+import { $internal } from '../shared/symbols.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { clamp, divInteger, smoothstepScalar } from './numberOps.ts';
-import {
-  vec2b,
-  vec2f,
-  vec2h,
-  vec2i,
-  vec2u,
-  vec3b,
-  vec3f,
-  vec3h,
-  vec3i,
-  vec3u,
-  vec4b,
-  vec4f,
-  vec4h,
-  vec4i,
-  vec4u,
-} from './vector.ts';
+import * as vectorConstructors from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
 
@@ -27,6 +12,23 @@ type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
 type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
 
 type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
+
+// We're doing operations on the CPU, so we fallthrough directly to the JS impl
+const vec2b = vectorConstructors.vec2b[$internal].jsImpl;
+const vec2f = vectorConstructors.vec2f[$internal].jsImpl;
+const vec2h = vectorConstructors.vec2h[$internal].jsImpl;
+const vec2i = vectorConstructors.vec2i[$internal].jsImpl;
+const vec2u = vectorConstructors.vec2u[$internal].jsImpl;
+const vec3b = vectorConstructors.vec3b[$internal].jsImpl;
+const vec3f = vectorConstructors.vec3f[$internal].jsImpl;
+const vec3h = vectorConstructors.vec3h[$internal].jsImpl;
+const vec3i = vectorConstructors.vec3i[$internal].jsImpl;
+const vec3u = vectorConstructors.vec3u[$internal].jsImpl;
+const vec4b = vectorConstructors.vec4b[$internal].jsImpl;
+const vec4f = vectorConstructors.vec4f[$internal].jsImpl;
+const vec4h = vectorConstructors.vec4h[$internal].jsImpl;
+const vec4i = vectorConstructors.vec4i[$internal].jsImpl;
+const vec4u = vectorConstructors.vec4u[$internal].jsImpl;
 
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
@@ -346,18 +348,45 @@ export const VectorOps = {
   asin: {
     vec2f: unary2f(Math.asin),
     vec2h: unary2h(Math.asin),
-    vec2i: unary2i(Math.asin),
-    vec2u: unary2u(Math.asin),
 
     vec3f: unary3f(Math.asin),
     vec3h: unary3h(Math.asin),
-    vec3i: unary3i(Math.asin),
-    vec3u: unary3u(Math.asin),
 
     vec4f: unary4f(Math.asin),
     vec4h: unary4h(Math.asin),
-    vec4i: unary4i(Math.asin),
-    vec4u: unary4u(Math.asin),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  asinh: {
+    vec2f: unary2f(Math.asinh),
+    vec2h: unary2h(Math.asinh),
+
+    vec3f: unary3f(Math.asinh),
+    vec3h: unary3h(Math.asinh),
+
+    vec4f: unary4f(Math.asinh),
+    vec4h: unary4h(Math.asinh),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  atan: {
+    vec2f: unary2f(Math.atan),
+    vec2h: unary2h(Math.atan),
+
+    vec3f: unary3f(Math.atan),
+    vec3h: unary3h(Math.atan),
+
+    vec4f: unary4f(Math.atan),
+    vec4h: unary4h(Math.atan),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  atanh: {
+    vec2f: unary2f(Math.atanh),
+    vec2h: unary2h(Math.atanh),
+
+    vec3f: unary3f(Math.atanh),
+    vec3h: unary3h(Math.atanh),
+
+    vec4f: unary4f(Math.atanh),
+    vec4h: unary4h(Math.atanh),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   ceil: {

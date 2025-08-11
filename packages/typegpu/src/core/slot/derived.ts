@@ -1,7 +1,7 @@
 import { getResolutionCtx } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
-import { $gpuValueOf, $providing } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type {
@@ -35,6 +35,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
   }
 
   const result = {
+    [$internal]: true as const,
     resourceType: 'derived' as const,
     '~compute': compute,
 
@@ -77,6 +78,7 @@ function createBoundDerived<T>(
   pairs: SlotValuePair[],
 ): TgpuDerived<T> {
   const result = {
+    [$internal]: true as const,
     resourceType: 'derived' as const,
 
     '~compute'() {

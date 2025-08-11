@@ -67,7 +67,7 @@ export function getExecMode(): ExecState {
 }
 
 export function inCodegenMode() {
-  return resolutionCtx?.mode?.type === 'codegen';
+  return resolutionCtx?.mode.type === 'codegen';
 }
 
 // You can add getters for more modes if necessary...

@@ -35,7 +35,7 @@ import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
 import { Void } from '../../src/data/index.ts';
 import { CodegenState } from '../../src/types.ts';
-import { INTERNAL_setCtx } from 'packages/typegpu/src/execMode.ts';
+import { INTERNAL_setCtx } from '../../src/execMode.ts';
 
 const mockCtx = {
   indent: () => '',
@@ -43,6 +43,7 @@ const mockCtx = {
   mode: new CodegenState(),
   pushBlockScope: () => {},
   popBlockScope: () => {},
+  mode: new CodegenState(),
   getById: vi.fn(),
   defineVariable: vi.fn((id, dataType) => ({ value: id, dataType })),
   resolve: vi.fn((val) => {
@@ -69,33 +70,31 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(String(1))).toEqual(
-        snip('1', abstractInt),
+      expect(numericLiteralToSnippet(1)).toEqual(
+        snip(1, abstractInt),
       );
 
-      expect(numericLiteralToSnippet(String(1.1))).toEqual(
-        snip('1.1', abstractFloat),
+      expect(numericLiteralToSnippet(1.1)).toEqual(
+        snip(1.1, abstractFloat),
       );
 
-      expect(numericLiteralToSnippet(String(1e10))).toEqual(
-        snip('10000000000', abstractInt),
+      expect(numericLiteralToSnippet(1e10)).toEqual(
+        snip(1e10, abstractFloat),
       );
 
-      expect(numericLiteralToSnippet(String(0.5))).toEqual(
-        snip('0.5', abstractFloat),
+      expect(numericLiteralToSnippet(0.5)).toEqual(
+        snip(0.5, abstractFloat),
       );
 
-      expect(numericLiteralToSnippet(String(-45))).toEqual(
-        snip('-45', abstractInt),
+      expect(numericLiteralToSnippet(-45)).toEqual(
+        snip(-45, abstractInt),
       );
 
-      expect(numericLiteralToSnippet('0x1A')).toEqual(
-        snip('0x1A', abstractInt),
+      expect(numericLiteralToSnippet(0x1A)).toEqual(
+        snip(0x1A, abstractInt),
       );
 
-      expect(numericLiteralToSnippet('0b101')).toEqual(snip('5', abstractInt));
-
-      expect(numericLiteralToSnippet('asdf')).toBeUndefined();
+      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt));
     });
   });
 

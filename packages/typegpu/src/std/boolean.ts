@@ -1,4 +1,5 @@
-import { snip, type Snippet } from '../data/snippet.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -15,7 +16,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, sub } from './numeric.ts';
+import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(value: Snippet) {
   if (value.dataType.type.includes('2')) {
@@ -40,7 +41,7 @@ export const allEq = createDualImpl(
   // CPU implementation
   <T extends AnyVecInstance>(lhs: T, rhs: T) => all(eq(lhs, rhs)),
   // GPU implementation
-  (lhs, rhs) => snip(`all(${lhs.value} == ${rhs.value})`, bool),
+  (lhs, rhs) => snip(stitch`all(${lhs} == ${rhs})`, bool),
   'allEq',
 );
 
@@ -59,10 +60,7 @@ export const eq = createDualImpl(
     VectorOps.eq[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} == ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} == ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'eq',
 );
 
@@ -79,10 +77,7 @@ export const ne = createDualImpl(
   <T extends AnyVecInstance>(lhs: T, rhs: T) => not(eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} != ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} != ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'ne',
 );
 
@@ -100,10 +95,7 @@ export const lt = createDualImpl(
     VectorOps.lt[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} < ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} < ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'lt',
 );
 
@@ -121,10 +113,7 @@ export const le = createDualImpl(
     or(lt(lhs, rhs), eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} <= ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} <= ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'le',
 );
 
@@ -142,10 +131,7 @@ export const gt = createDualImpl(
     and(not(lt(lhs, rhs)), not(eq(lhs, rhs))),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} > ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} > ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'gt',
 );
 
@@ -162,10 +148,7 @@ export const ge = createDualImpl(
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lt(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) =>
-    snip(
-      `(${lhs.value} >= ${rhs.value})`,
-      correspondingBooleanVectorSchema(lhs),
-    ),
+    snip(stitch`(${lhs} >= ${rhs})`, correspondingBooleanVectorSchema(lhs)),
   'ge',
 );
 
@@ -182,7 +165,7 @@ export const not = createDualImpl(
   <T extends AnyBooleanVecInstance>(value: T): T =>
     VectorOps.neg[value.kind](value),
   // GPU implementation
-  (value) => snip(`!(${value.value})`, value.dataType),
+  (value) => snip(stitch`!(${value})`, value.dataType),
   'not',
 );
 
@@ -197,7 +180,7 @@ export const or = createDualImpl(
   <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
     VectorOps.or[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) => snip(`(${lhs.value} | ${rhs.value})`, lhs.dataType),
+  (lhs, rhs) => snip(stitch`(${lhs} | ${rhs})`, lhs.dataType),
   'or',
 );
 
@@ -212,7 +195,7 @@ export const and = createDualImpl(
   <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
     not(or(not(lhs), not(rhs))),
   // GPU implementation
-  (lhs, rhs) => snip(`(${lhs.value} & ${rhs.value})`, lhs.dataType),
+  (lhs, rhs) => snip(stitch`(${lhs} & ${rhs})`, lhs.dataType),
   'and',
 );
 
@@ -228,7 +211,7 @@ export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value),
   // GPU implementation
-  (value) => snip(`all(${value.value})`, bool),
+  (value) => snip(stitch`all(${value})`, bool),
   'all',
 );
 
@@ -242,7 +225,7 @@ export const any = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => !all(not(value)),
   // GPU implementation
-  (value) => snip(`any(${value.value})`, bool),
+  (value) => snip(stitch`any(${value})`, bool),
   'any',
 );
 
@@ -279,7 +262,7 @@ export const isCloseTo = createDualImpl(
   (lhs, rhs, precision = snip(0.01, f32)) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return snip(
-        `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
+        stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`,
         bool,
       );
     }
@@ -287,7 +270,7 @@ export const isCloseTo = createDualImpl(
       return snip(
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
+        stitch`all(abs(${lhs} - ${rhs}) <= (${lhs} - ${lhs}) + ${precision})`,
         bool,
       );
     }
@@ -333,7 +316,6 @@ export const select: SelectOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (f, t, cond) =>
-    snip(`select(${f.value}, ${t.value}, ${cond.value})`, f.dataType),
+  (f, t, cond) => snip(stitch`select(${f}, ${t}, ${cond})`, f.dataType),
   'select',
 );

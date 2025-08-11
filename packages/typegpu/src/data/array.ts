@@ -1,7 +1,7 @@
 import { createDualImpl } from 'src/core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import { sizeOf } from './sizeOf.ts';
-import { schemaCloneWrapper, schemaDefaultWrapper } from './utils.ts';
+import { schemaCallWrapper } from './utils.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 import { snip } from './snippet.ts';
 import { UnknownData } from './dataTypes.ts';
@@ -17,6 +17,11 @@ import { UnknownData } from './dataTypes.ts';
  * @example
  * const LENGTH = 3;
  * const array = d.arrayOf(d.u32, LENGTH);
+ *
+ * If `elementCount` is not specified, a partially applied function is returned.
+ * @example
+ * const array = d.arrayOf(d.vec3f);
+ * //    ^? (n: number) => WgslArray<d.Vec3f>
  *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
@@ -46,22 +51,32 @@ export const arrayOf = createDualImpl(
 function INTERNAL_arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
-): WgslArray<TElement> {
+): WgslArray<TElement>;
+
+export function arrayOf<TElement extends AnyWgslData>(
+  elementType: TElement,
+  elementCount?: undefined,
+): (elementCount: number) => WgslArray<TElement>;
+
+export function arrayOf<TElement extends AnyWgslData>(
+  elementType: TElement,
+  elementCount?: number | undefined,
+): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>) {
+  if (elementCount === undefined) {
+    return (n: number) => arrayOf(elementType, n);
+  }
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const arraySchema = (elements?: TElement[]) => {
     if (elements && elements.length !== elementCount) {
       throw new Error(
-        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} arguments.`,
+        `Array schema of ${elementCount} elements of type ${elementType.type} called with ${elements.length} argument(s).`,
       );
     }
 
     return Array.from(
       { length: elementCount },
-      (_, i) =>
-        elements
-          ? schemaCloneWrapper(elementType, elements[i])
-          : schemaDefaultWrapper(elementType),
+      (_, i) => schemaCallWrapper(elementType, elements?.[i]),
     );
   };
   Object.setPrototypeOf(arraySchema, WgslArrayImpl);
