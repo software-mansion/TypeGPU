@@ -11,8 +11,6 @@ const range = Array.from(
   (_, i) => -10 + i * 0.05,
 );
 
-const bins = [Number.NEGATIVE_INFINITY, ...range, Number.POSITIVE_INFINITY];
-
 const root = await tgpu.init();
 const b = root.createBuffer(d.arrayOf(d.f32, N)).$usage('storage');
 const bView = b.as('mutable');

@@ -6,6 +6,8 @@ import {
   dot,
   log,
   mul,
+  normalize,
+  pow,
   sign,
   sin,
   sqrt,
@@ -67,11 +69,19 @@ export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() => {
     const z = 2 * randomGeneratorSlot.value.sample() - 1;
     const oneMinusZSq = sqrt(1 - z * z);
-    // TODO: Work out if the -Math.PI offset is necessary
-    const theta = TWO_PI * randomGeneratorSlot.value.sample() - Math.PI;
-    const x = sin(theta) * oneMinusZSq;
-    const y = cos(theta) * oneMinusZSq;
+    const theta = TWO_PI * randomGeneratorSlot.value.sample();
+    const x = cos(theta) * oneMinusZSq;
+    const y = sin(theta) * oneMinusZSq;
     return d.vec3f(x, y, z);
+  });
+
+export const randInUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
+  .fn([], d.vec3f)(() => {
+    const u = randomGeneratorSlot.value.sample();
+    const v = normalize(
+      d.vec3f(randNormal(0, 1), randNormal(0, 1), randNormal(0, 1)),
+    );
+    return v.mul(pow(u, 1 / 3));
   });
 
 export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu

@@ -1,4 +1,8 @@
 import * as MorphCharts from 'morphcharts';
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
+import { sqrt } from 'typegpu/std';
 
 // Core
 const core = new MorphCharts.Core({
@@ -24,15 +28,45 @@ const positionsY = new Float64Array(count);
 const positionsZ = new Float64Array(count);
 const sizes = new Float64Array(count);
 const dists = new Float64Array(count);
+
+const root = await tgpu.init();
+const b = root.createBuffer(d.arrayOf(d.vec3f, count)).$usage('storage');
+const bView = b.as('mutable');
+
+const f1 = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  for (let i = d.i32(0); i < d.i32(count); i++) {
+    bView.$[i] = d.vec3f(randf.inUnitSphere());
+  }
+});
+
+const p1 = root['~unstable'].withCompute(f1).createPipeline();
+p1.dispatchWorkgroups(1);
+const samples1 = await b.read();
+
+const f2 = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((input) => {
+  randf.seed2(d.vec2f(input.gid.xy));
+  bView.$[input.gid.x * d.u32(sqrt(count)) + input.gid.y] = d.vec3f(
+    randf.onUnitSphere(),
+  );
+});
+
+const p2 = root['~unstable'].withCompute(f2).createPipeline();
+p2.dispatchWorkgroups(d.u32(sqrt(count)), d.u32(sqrt(count)));
+const samples2 = await b.read();
+
+const buffer = samples1;
+
 for (let i = 0; i < count; i++) {
   ids[i] = i;
-  positionsX[i] = Math.random();
-  positionsY[i] = Math.random();
-  positionsZ[i] = Math.random();
+  positionsX[i] = buffer[i].x;
+  positionsY[i] = buffer[i].y;
+  positionsZ[i] = buffer[i].z;
   sizes[i] = 0.17;
   dists[i] = Math.sqrt(
-    (positionsX[i] - 0.5) ** 2 + (positionsY[i] - 0.5) ** 2 +
-      (positionsZ[i] - 0.5) ** 2,
+    (positionsX[i]) ** 2 + (positionsY[i]) ** 2 + (positionsZ[i] ** 2),
   );
 }
 
@@ -74,6 +108,9 @@ const axes = MorphCharts.Axes.Cartesian3dAxesHelper.create(
     labelsX: (value) => {
       return value.toFixed(1);
     },
+    minValueX: -1,
+    minValueY: -1,
+    // minValueZ: -1,
     labelsY: (value) => {
       return value.toFixed(1);
     },

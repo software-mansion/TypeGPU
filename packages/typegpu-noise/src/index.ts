@@ -5,7 +5,9 @@ import {
   randFloat01,
   randInUnitCircle,
   randInUnitCube,
+  randInUnitSphere,
   randNormal,
+  randOnUnitCircle,
   randOnUnitHemisphere,
   randOnUnitSphere,
   randSeed,
@@ -25,9 +27,11 @@ export const randf: {
   cauchy: typeof randCauchy;
   bernoulli: typeof randBernoulli;
   inUnitCircle: typeof randInUnitCircle;
+  onUnitCircle: typeof randOnUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
   onUnitSphere: typeof randOnUnitSphere;
+  inUnitSphere: typeof randInUnitSphere;
 } = {
   seed: randSeed,
   seed2: randSeed2,
@@ -39,9 +43,11 @@ export const randf: {
   cauchy: randCauchy,
   bernoulli: randBernoulli,
   inUnitCircle: randInUnitCircle,
+  onUnitCircle: randOnUnitCircle,
   inUnitCube: randInUnitCube,
   onHemisphere: randOnUnitHemisphere,
   onUnitSphere: randOnUnitSphere,
+  inUnitSphere: randInUnitSphere,
 };
 
 export {
