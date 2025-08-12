@@ -256,6 +256,12 @@ export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
     video.cancelVideoFrameCallback(videoFrameCallbackId);
   }
+  if (video.srcObject) {
+    for (const track of (video.srcObject as MediaStream).getTracks()) {
+      track.stop();
+    }
+  }
+  root.destroy();
 }
 
 // #endregion

@@ -409,14 +409,11 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   'textureDimensions',
 );
 
-type TextureSampleBaseClampToEdge = {
-  <T extends TgpuSampledTexture<'2d', F32>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v2f,
-  ): v4f;
-  (texture: TgpuExternalTexture, sampler: TgpuSampler, coords: v2f): v4f;
-};
+type TextureSampleBaseClampToEdge = (
+  texture: TgpuSampledTexture<'2d', F32> | TgpuExternalTexture,
+  sampler: TgpuSampler,
+  coords: v2f,
+) => v4f;
 
 export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
   createDualImpl(
