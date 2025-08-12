@@ -107,9 +107,9 @@ type TextureSampleOverload = {
   // ): number;
 };
 
-export const textureSample: TextureSampleOverload = createDualImpl(
-  // CPU implementation
-  (
+export const textureSample: TextureSampleOverload = createDualImpl({
+  name: 'textureSample',
+  normalImpl: (
     _texture: TgpuSampledTexture,
     _sampler: TgpuSampler,
     _coords: number | v2f | v3f,
@@ -120,10 +120,8 @@ export const textureSample: TextureSampleOverload = createDualImpl(
       'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // CODEGEN implementation
-  (...args) => snip(stitch`textureSample(${args})`, vec4f),
-  'textureSample',
-);
+  codegenImpl: (...args) => snip(stitch`textureSample(${args})`, vec4f),
+});
 
 type TextureSampleLevelOverload = {
   <T extends TgpuSampledTexture<'2d'>>(
@@ -157,9 +155,9 @@ type TextureSampleLevelOverload = {
   ): v4f;
 };
 
-export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
-  // CPU implementation
-  (
+export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl({
+  name: 'textureSampleLevel',
+  normalImpl: (
     _texture: TgpuSampledTexture,
     _sampler: TgpuSampler,
     _coords: number | v2f | v3f,
@@ -170,10 +168,8 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
       'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // CODEGEN implementation
-  (...args) => snip(stitch`textureSampleLevel(${args})`, vec4f),
-  'textureSampleLevel',
-);
+  codegenImpl: (...args) => snip(stitch`textureSampleLevel(${args})`, vec4f),
+});
 
 type TexelDataToInstance<TF extends TexelData> = {
   vec4f: v4f;
@@ -236,9 +232,9 @@ type TextureLoadOverload = {
   // TODO: Support multisampled textures and depth textures
 };
 
-export const textureLoad: TextureLoadOverload = createDualImpl(
-  // CPU implementation
-  (
+export const textureLoad: TextureLoadOverload = createDualImpl({
+  name: 'textureLoad',
+  normalImpl: (
     _texture: TgpuStorageTexture | TgpuSampledTexture,
     _coords: number | v2i | v2u | v3i | v3u,
     _levelOrArrayIndex?: number,
@@ -247,8 +243,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
       '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // CODEGEN implementation
-  (...args) => {
+  codegenImpl: (...args) => {
     const texture = args[0];
 
     const textureInfo = texture.dataType as unknown as
@@ -262,8 +257,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
         : channelDataToInstance[textureInfo.channelDataType.type],
     );
   },
-  'textureLoad',
-);
+});
 
 type TextureStoreOverload = {
   <T extends TgpuStorageTexture<'1d'>>(
@@ -289,9 +283,9 @@ type TextureStoreOverload = {
   ): void;
 };
 
-export const textureStore: TextureStoreOverload = createDualImpl(
-  // CPU implementation
-  (
+export const textureStore: TextureStoreOverload = createDualImpl({
+  name: 'textureStore',
+  normalImpl: (
     _texture: TgpuStorageTexture,
     _coords: number | v2i | v2u | v3i | v3u,
     _arrayIndexOrValue?: number | TexelData,
@@ -301,10 +295,8 @@ export const textureStore: TextureStoreOverload = createDualImpl(
       '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // CODEGEN implementation
-  (...args) => snip(stitch`textureStore(${args})`, Void),
-  'textureStore',
-);
+  codegenImpl: (...args) => snip(stitch`textureStore(${args})`, Void),
+});
 
 type TextureDimensionsOverload = {
   <T extends TgpuSampledTexture<'1d'> | TgpuStorageTexture<'1d'>>(
@@ -335,15 +327,17 @@ type TextureDimensionsOverload = {
   <T extends TgpuSampledTexture<'3d'>>(texture: T, level: number): v3u;
 };
 
-export const textureDimensions: TextureDimensionsOverload = createDualImpl(
-  // CPU implementation
-  (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
+export const textureDimensions: TextureDimensionsOverload = createDualImpl({
+  name: 'textureDimensions',
+  normalImpl: (
+    _texture: TgpuSampledTexture | TgpuStorageTexture,
+    _level?: number,
+  ) => {
     throw new Error(
       '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // CODEGEN implementation
-  (...args) => {
+  codegenImpl: (...args) => {
     const textureInfo = args[0].dataType as unknown as
       | TgpuSampledTexture
       | TgpuStorageTexture;
@@ -354,5 +348,4 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     );
   },
-  'textureDimensions',
-);
+});

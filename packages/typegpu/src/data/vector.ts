@@ -322,9 +322,9 @@ function makeVecSchema<TValue, S extends number | boolean>(
     );
   };
 
-  const construct = createDualImpl(
-    cpuConstruct,
-    (...args) => {
+  const construct = createDualImpl({
+    normalImpl: cpuConstruct,
+    codegenImpl: (...args) => {
       if (
         args.every((arg) =>
           typeof arg.value === 'number' ||
@@ -341,8 +341,8 @@ function makeVecSchema<TValue, S extends number | boolean>(
       }
       return snip(stitch`${type}(${args})`, schema as AnyData);
     },
-    type,
-    (...args) =>
+    name: type,
+    args: (...args) =>
       args.map((arg) => {
         let argType = arg.dataType;
         if (isDecorated(argType)) {
@@ -351,7 +351,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
         return isVec(argType) ? argType : vecTypeToPrimitive[type];
       }),
-  );
+  });
 
   const schema:
     & VecSchemaBase<TValue>

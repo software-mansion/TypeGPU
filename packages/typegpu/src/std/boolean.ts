@@ -30,6 +30,9 @@ function correspondingBooleanVectorSchema(value: Snippet) {
 
 // comparison
 
+const normalAllEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
+  all(eq(lhs, rhs));
+
 /**
  * Checks whether `lhs == rhs` on all components.
  * Equivalent to `all(eq(lhs, rhs))`.
@@ -37,13 +40,13 @@ function correspondingBooleanVectorSchema(value: Snippet) {
  * allEq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns false
  * allEq(vec3u(0, 1, 2), vec3u(0, 1, 2)) // returns true
  */
-export const allEq = createDualImpl(
-  // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) => all(eq(lhs, rhs)),
-  // GPU implementation
-  (lhs, rhs) => snip(stitch`all(${lhs} == ${rhs})`, bool),
-  'allEq',
-);
+export const allEq = createDualImpl({
+  name: 'allEq',
+  // NORMAL
+  normalImpl: normalAllEq,
+  // CODEGEN
+  codegenImpl: (lhs, rhs) => snip(stitch`all(${lhs} == ${rhs})`, bool),
+});
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -54,15 +57,15 @@ export const allEq = createDualImpl(
  * all(eq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1))) // returns true
  * allEq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1)) // returns true
  */
-export const eq = createDualImpl(
+export const eq = createDualImpl({
+  name: 'eq',
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) =>
     VectorOps.eq[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} == ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'eq',
-);
+});
 
 /**
  * Checks **component-wise** whether `lhs != rhs`.
@@ -72,14 +75,14 @@ export const eq = createDualImpl(
  * ne(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
  * any(ne(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
  */
-export const ne = createDualImpl(
+export const ne = createDualImpl({
+  name: 'ne',
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) => not(eq(lhs, rhs)),
+  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => not(eq(lhs, rhs)),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} != ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'ne',
-);
+});
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -89,15 +92,15 @@ export const ne = createDualImpl(
  * lt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
  * all(lt(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
  */
-export const lt = createDualImpl(
+export const lt = createDualImpl({
+  name: 'lt',
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     VectorOps.lt[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} < ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'lt',
-);
+});
 
 /**
  * Checks **component-wise** whether `lhs <= rhs`.
@@ -107,15 +110,15 @@ export const lt = createDualImpl(
  * le(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
  * all(le(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
  */
-export const le = createDualImpl(
+export const le = createDualImpl({
+  name: 'le',
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     or(lt(lhs, rhs), eq(lhs, rhs)),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} <= ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'le',
-);
+});
 
 /**
  * Checks **component-wise** whether `lhs > rhs`.
@@ -125,15 +128,15 @@ export const le = createDualImpl(
  * gt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, false, true)
  * all(gt(vec4i(2, 3, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const gt = createDualImpl(
+export const gt = createDualImpl({
+  name: 'gt',
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     and(not(lt(lhs, rhs)), not(eq(lhs, rhs))),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} > ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'gt',
-);
+});
 
 /**
  * Checks **component-wise** whether `lhs >= rhs`.
@@ -143,14 +146,15 @@ export const gt = createDualImpl(
  * ge(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
  * all(ge(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const ge = createDualImpl(
+export const ge = createDualImpl({
+  name: 'ge',
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lt(lhs, rhs)),
+  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+    not(lt(lhs, rhs)),
   // GPU implementation
-  (lhs, rhs) =>
+  codegenImpl: (lhs, rhs) =>
     snip(stitch`(${lhs} >= ${rhs})`, correspondingBooleanVectorSchema(lhs)),
-  'ge',
-);
+});
 
 // logical ops
 
@@ -167,19 +171,19 @@ const cpuNot = <T extends AnyBooleanVecInstance | boolean>(value: T): T => {
  * not(vec2b(false, true)) // returns vec2b(true, false)
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
  */
-export const not = createDualImpl(
+export const not = createDualImpl({
+  name: 'not',
   // NORMAL
-  cpuNot,
+  normalImpl: cpuNot,
   // CODEGEN
-  (arg) => {
+  codegenImpl: (arg) => {
     if (typeof arg.value === 'boolean' || isVecInstance(arg.value)) {
       // Precomputing...
       return snip(cpuNot(arg.value as never), arg.dataType);
     }
     return snip(stitch`!(${arg})`, arg.dataType);
   },
-  'not',
-);
+});
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -187,14 +191,14 @@ export const not = createDualImpl(
  * or(vec2b(false, true), vec2b(false, false)) // returns vec2b(false, true)
  * or(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(true, true, false)
  */
-export const or = createDualImpl(
+export const or = createDualImpl({
+  name: 'or',
   // CPU implementation
-  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
     VectorOps.or[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) => snip(stitch`(${lhs} | ${rhs})`, lhs.dataType),
-  'or',
-);
+  codegenImpl: (lhs, rhs) => snip(stitch`(${lhs} | ${rhs})`, lhs.dataType),
+});
 
 /**
  * Returns **component-wise** logical `and` result.
@@ -202,16 +206,19 @@ export const or = createDualImpl(
  * and(vec2b(false, true), vec2b(true, true)) // returns vec2b(false, true)
  * and(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(false, true, false)
  */
-export const and = createDualImpl(
+export const and = createDualImpl({
+  name: 'and',
   // CPU implementation
-  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+  normalImpl: <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
     not(or(not(lhs), not(rhs))),
   // GPU implementation
-  (lhs, rhs) => snip(stitch`(${lhs} & ${rhs})`, lhs.dataType),
-  'and',
-);
+  codegenImpl: (lhs, rhs) => snip(stitch`(${lhs} & ${rhs})`, lhs.dataType),
+});
 
 // logical aggregation
+
+const normalAll = (value: AnyBooleanVecInstance) =>
+  VectorOps.all[value.kind](value);
 
 /**
  * Returns `true` if each component of `value` is true.
@@ -219,13 +226,19 @@ export const and = createDualImpl(
  * all(vec2b(false, true)) // returns false
  * all(vec3b(true, true, true)) // returns true
  */
-export const all = createDualImpl(
-  // CPU implementation
-  (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value),
-  // GPU implementation
-  (value) => snip(stitch`all(${value})`, bool),
-  'all',
-);
+export const all = createDualImpl({
+  name: 'all',
+  // NORMAL
+  normalImpl: normalAll,
+  // CODEGEN
+  codegenImpl: (arg) => {
+    if (isVecInstance(arg.value)) {
+      // Precomputing...
+      return snip(normalAll(arg.value as never), bool);
+    }
+    return snip(stitch`all(${arg})`, bool);
+  },
+});
 
 /**
  * Returns `true` if any component of `value` is true.
@@ -233,13 +246,13 @@ export const all = createDualImpl(
  * any(vec2b(false, true)) // returns true
  * any(vec3b(false, false, false)) // returns false
  */
-export const any = createDualImpl(
-  // CPU implementation
-  (value: AnyBooleanVecInstance) => !all(not(value)),
-  // GPU implementation
-  (value) => snip(stitch`any(${value})`, bool),
-  'any',
-);
+export const any = createDualImpl({
+  name: 'any',
+  // NORMAL
+  normalImpl: (value: AnyBooleanVecInstance) => !all(not(value)),
+  // CODEGEN
+  codegenImpl: (value) => snip(stitch`any(${value})`, bool),
+});
 
 // other
 
@@ -252,9 +265,10 @@ export const any = createDualImpl(
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-export const isCloseTo = createDualImpl(
+export const isCloseTo = createDualImpl({
+  name: 'isCloseTo',
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(
+  normalImpl: <T extends AnyFloatVecInstance | number>(
     lhs: T,
     rhs: T,
     precision = 0.01,
@@ -271,7 +285,7 @@ export const isCloseTo = createDualImpl(
     return false;
   },
   // GPU implementation
-  (lhs, rhs, precision = snip(0.01, f32)) => {
+  codegenImpl: (lhs, rhs, precision = snip(0.01, f32)) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return snip(
         stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`,
@@ -288,8 +302,7 @@ export const isCloseTo = createDualImpl(
     }
     return snip('false', bool);
   },
-  'isCloseTo',
-);
+});
 
 export type SelectOverload = {
   <T extends number | boolean | AnyVecInstance>(f: T, t: T, cond: boolean): T;
@@ -311,9 +324,10 @@ export type SelectOverload = {
  * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
  * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
  */
-export const select: SelectOverload = createDualImpl(
+export const select: SelectOverload = createDualImpl({
+  name: 'select',
   // CPU implementation
-  <T extends number | boolean | AnyVecInstance>(
+  normalImpl: <T extends number | boolean | AnyVecInstance>(
     f: T,
     t: T,
     cond: AnyBooleanVecInstance | boolean,
@@ -328,6 +342,6 @@ export const select: SelectOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (f, t, cond) => snip(stitch`select(${f}, ${t}, ${cond})`, f.dataType),
-  'select',
-);
+  codegenImpl: (f, t, cond) =>
+    snip(stitch`select(${f}, ${t}, ${cond})`, f.dataType),
+});

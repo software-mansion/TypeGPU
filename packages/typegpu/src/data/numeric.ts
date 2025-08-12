@@ -23,9 +23,9 @@ export const abstractFloat = {
   type: 'abstractFloat',
 } as AbstractFloat;
 
-const boolCast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const boolCast = createDualImpl({
+  name: 'boolCast',
+  normalImpl: (v?: number | boolean) => {
     if (v === undefined) {
       return false;
     }
@@ -34,10 +34,8 @@ const boolCast = createDualImpl(
     }
     return !!v;
   },
-  // GPU implementation
-  (v) => snip(stitch`bool(${v})`, bool),
-  'boolCast',
-);
+  codegenImpl: (v) => snip(stitch`bool(${v})`, bool),
+});
 
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
@@ -57,9 +55,9 @@ export const bool: Bool = Object.assign(boolCast, {
   type: 'bool',
 }) as unknown as Bool;
 
-const u32Cast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const u32Cast = createDualImpl({
+  name: 'u32Cast',
+  normalImpl: (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -68,10 +66,8 @@ const u32Cast = createDualImpl(
     }
     return (v & 0xffffffff) >>> 0;
   },
-  // GPU implementation
-  (v) => snip(stitch`u32(${v})`, u32),
-  'u32Cast',
-);
+  codegenImpl: (v) => snip(stitch`u32(${v})`, u32),
+});
 
 /**
  * A schema that represents an unsigned 32-bit integer value. (equivalent to `u32` in WGSL)
@@ -93,9 +89,9 @@ export const u32: U32 = Object.assign(u32Cast, {
   type: 'u32',
 }) as unknown as U32;
 
-const i32Cast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const i32Cast = createDualImpl({
+  name: 'i32Cast',
+  normalImpl: (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -105,9 +101,8 @@ const i32Cast = createDualImpl(
     return v | 0;
   },
   // GPU implementation
-  (v) => snip(stitch`i32(${v})`, i32),
-  'i32Cast',
-);
+  codegenImpl: (v) => snip(stitch`i32(${v})`, i32),
+});
 
 export const u16: U16 = {
   [$internal]: true,
@@ -132,9 +127,9 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
-const f32Cast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const f32Cast = createDualImpl({
+  name: 'f32Cast',
+  normalImpl: (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -143,10 +138,8 @@ const f32Cast = createDualImpl(
     }
     return Math.fround(v);
   },
-  // GPU implementation
-  (v) => snip(stitch`f32(${v})`, f32),
-  'f32Cast',
-);
+  codegenImpl: (v) => snip(stitch`f32(${v})`, f32),
+});
 
 /**
  * A schema that represents a 32-bit float value. (equivalent to `f32` in WGSL)
@@ -254,9 +247,9 @@ function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 
-const f16Cast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const f16Cast = createDualImpl({
+  name: 'f16Cast',
+  normalImpl: (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -265,11 +258,9 @@ const f16Cast = createDualImpl(
     }
     return roundToF16(v);
   },
-  // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => snip(stitch`f16(${v})`, f16),
-  'f16Cast',
-);
+  codegenImpl: (v) => snip(stitch`f16(${v})`, f16),
+});
 
 /**
  * A schema that represents a 16-bit float value. (equivalent to `f16` in WGSL)

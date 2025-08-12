@@ -18,6 +18,14 @@ export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
  */
 export const $providing = Symbol(`typegpu:${version}:$providing`);
 
+/**
+ * Marks objects that represent values at runtime GPU execution time), and don't have an inherent value
+ * at comp-time (resolution time).
+ * @example
+ * readonly [$runtimeResource]: true
+ */
+export const $runtimeResource = Symbol(`typegpu:${version}:$runtimeResource`);
+
 //
 // Type tokens
 //
