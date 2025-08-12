@@ -14,3 +14,8 @@ export const uniformAddLayout = tgpu.bindGroupLayout({
 });
 export const operatorSlot = tgpu.slot<TgpuFn>();
 export const identitySlot = tgpu.slot<number>();
+
+export interface BinaryOp {
+  op: (x: number, y: number) => number;
+  identity: number;
+}

@@ -1,4 +1,4 @@
-import { concurrentScan } from '@typegpu/concurrent-sum';
+import { prefixScan } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
@@ -30,18 +30,15 @@ export async function performCalculationsWithTime(
   const jsTime = performance.now() - jsStartTime;
 
   // GPU Version
-  console.log('Starting GPU calculations...');
   const gpuStartTime = performance.now();
   let resolveTime: ((value: number) => void) | undefined;
   const timePromise = new Promise<number>((resolve, reject) => {
     resolveTime = resolve;
   });
-  const calcResult = concurrentScan(
+  const calcResult = prefixScan(
     root,
     inputBuffer,
-    std.add,
-    0,
-    false,
+    { op: std.add, identity: 0 },
     async (timeTgpuQuery) => {
       const timestamps = await timeTgpuQuery.read();
       const timeNs = timestamps[1] - timestamps[0];
@@ -57,10 +54,7 @@ export async function performCalculationsWithTime(
   // Compare results
   const gpuResult = await calcResult.read();
   const gpuShaderTime = await timePromise;
-  console.log(`GPU shader time: ${gpuShaderTime}ms`);
-  // console.log(`GPU result: ${gpuResult}`);
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
-  console.log(gpuTime, gpuShaderTime, jsTime);
   if (!isEqual) {
     return {
       success: false,

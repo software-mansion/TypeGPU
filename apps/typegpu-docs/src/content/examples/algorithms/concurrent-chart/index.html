@@ -88,7 +88,7 @@
     display: grid;
     grid-template-rows: 1fr auto;
     justify-items: center;
-    gap: 0.5rem;
+    margin-right: 2rem;
   }
 
   .bars-row {
@@ -104,7 +104,7 @@
     justify-items: center;
     position: relative;
     height: 15.25rem;
-    width: 2rem;
+    width: 1rem;
     background: linear-gradient(to right, transparent, #e6e6f2);
     border-radius: 9999px;
     cursor: pointer;
@@ -197,14 +197,14 @@
   }
 
   /* Make the second bar in each pair yellow (GPU) */
-  .bars-row .bar:nth-child(2)::after {
+  .bars-row .bar:nth-child(1)::after {
     background-image: none;
     background-color: #ffd54a;
   }
 
   /* Make the third bar in each pair a different color */
-  .bars-row .bar:nth-child(3)::after {
+  .bars-row .bar:nth-child(2)::after {
     background-image: none;
-    background-color: #4ade80;
+    background-color: #18b6d5;
   }
 </style>

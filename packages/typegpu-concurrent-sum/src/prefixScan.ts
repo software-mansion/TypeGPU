@@ -8,6 +8,7 @@ import type {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
+  type BinaryOp,
   identitySlot,
   operatorSlot,
   scanLayout,
@@ -18,7 +19,7 @@ import { scanBlock } from './compute/scan.ts';
 import { uniformAdd } from './compute/applySums.ts';
 import { scanGreatestBlock } from './compute/singleScan.ts';
 
-let computer: PrefixScanComputer | null = null;
+const cache = new WeakMap<TgpuRoot, WeakMap<BinaryOp, PrefixScanComputer>>();
 
 export class PrefixScanComputer {
   private scanPipeline?: TgpuComputePipeline;
@@ -32,8 +33,7 @@ export class PrefixScanComputer {
 
   constructor(
     private root: TgpuRoot,
-    private operatorFn: (x: number, y: number) => number,
-    private identity: number,
+    private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
     private timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
   ) {
@@ -45,8 +45,8 @@ export class PrefixScanComputer {
     if (!this.scanPipeline) {
       this.scanPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.operatorFn as unknown as TgpuFn,
-      ).with(identitySlot, this.identity)
+        this.binaryOp.op as unknown as TgpuFn,
+      ).with(identitySlot, this.binaryOp.identity)
         .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
         .createPipeline();
     }
@@ -57,7 +57,7 @@ export class PrefixScanComputer {
     if (!this.addPipeline) {
       this.addPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.operatorFn as unknown as TgpuFn,
+        this.binaryOp.op as unknown as TgpuFn,
       ).withCompute(uniformAdd)
         .createPipeline();
     }
@@ -167,31 +167,58 @@ export class PrefixScanComputer {
   }
 }
 
-export function initConcurrentSum(
-  root: TgpuRoot,
-  operatorFn: (x: number, y: number) => number,
-  identity: number,
-): void {
-  // allocate all resources ahead of demand
-  computer = new PrefixScanComputer(root, operatorFn, identity, false);
-}
-
-export function concurrentScan(
+export function prefixScan(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-  operatorFn: (x: number, y: number) => number,
-  identity: number,
-  onlyGreatestElement = false,
+  binaryOp: BinaryOp,
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  computer ??= new PrefixScanComputer(
-    root,
-    operatorFn,
-    identity,
-    onlyGreatestElement,
-    timeCallback,
-  );
-  const result = computer.compute(buffer);
+  let computer = cache.get(root)?.get(binaryOp);
 
+  if (!computer) {
+    computer = new PrefixScanComputer(
+      root,
+      binaryOp,
+      false,
+      timeCallback,
+    );
+
+    if (!cache.has(root)) {
+      cache.set(root, new WeakMap());
+    }
+    cache.get(root).set(binaryOp, computer);
+  }
+
+  const result = computer.compute(buffer);
   return result;
 }
+
+export function scan(
+  root: TgpuRoot,
+  binaryOp: BinaryOp,
+  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  let computer = cache.get(root)?.get(binaryOp);
+
+  if (!computer) {
+    computer = new PrefixScanComputer(
+      root,
+      binaryOp,
+      true,
+      timeCallback,
+    );
+
+    if (!cache.has(root)) {
+      cache.set(root, new WeakMap());
+    }
+    cache.get(root).set(binaryOp, computer);
+  }
+
+  const result = computer.compute(buffer);
+  return result;
+}
+
+// too much is being cached
+// new values need to be passed to function not class
+// create weak map

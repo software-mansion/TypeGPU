@@ -48,11 +48,10 @@ async function initCalc() {
         root,
         onesArray,
       );
-    // console.log('dupa', gpuShaderTime)
     if (success && jsTime !== undefined && gpuTime !== undefined) {
       lengthMap[onesArray.length].jsTime = jsTime;
       lengthMap[onesArray.length].gpuTime = gpuTime;
-      lengthMap[onesArray.length].gpuShaderTime = 0.7;
+      lengthMap[onesArray.length].gpuShaderTime = gpuShaderTime;
     }
   }
   return inputArrays;
@@ -66,14 +65,13 @@ function drawCharts() {
     const value = lengthMap[keys[i]];
     console.log(value);
     speedupLabels[i].textContent = `${
-      (Number(value.jsTime) / Number(value.gpuTime)).toFixed(1)
+      (Number(value.jsTime) / Number(value.gpuShaderTime)).toFixed(1)
     }x`;
 
     // CPU
-
     bars[3 * i].style.setProperty(
       '--bar-height',
-      `${std.min(value.jsTime / 50, 1)}`,
+      `${std.min(value.jsTime / 30, 1)}`,
     );
     bars[3 * i].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i].textContent = `JS time: ${
@@ -83,17 +81,17 @@ function drawCharts() {
     // GPU
     bars[3 * i + 1].style.setProperty(
       '--bar-height',
-      `${std.min(value.gpuTime / 50, 1)}`,
+      `${std.min(value.gpuTime / 30, 1)}`,
     );
     bars[3 * i + 1].style.setProperty('--highlight-opacity', '1');
-    tooltips[3 * i + 1].textContent = `GPU time: ${
+    tooltips[3 * i + 1].textContent = `Total GPU time: ${
       Number(value.gpuTime).toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
 
     // GPU shader
     bars[3 * i + 2].style.setProperty(
       '--bar-height',
-      `${std.min(value.gpuTime / 50, 1)}`,
+      `${std.min(value.gpuShaderTime / 30, 1)}`,
     );
     bars[3 * i + 2].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i + 2].textContent = `GPU shader time: ${
