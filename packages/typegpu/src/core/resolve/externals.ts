@@ -87,22 +87,21 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
+    const externalRegex = identifierRegex(externalName);
     if (
       wgsl &&
       externalName !== 'Out' &&
       externalName !== 'In' &&
-      !wgsl.includes(externalName)
+      !externalRegex.test(wgsl)
     ) {
       console.warn(
-        `During resolution, the external '${externalName}' was unused.`,
+        `The external '${externalName}' was unused in the resolved template.`,
       );
+      // continue anyway, we still might need to resolve the external
     }
 
     if (isWgsl(external) || isLooseData(external)) {
-      return acc.replaceAll(
-        identifierRegex(externalName),
-        ctx.resolve(external),
-      );
+      return acc.replaceAll(externalRegex, ctx.resolve(external));
     }
 
     if (external !== null && typeof external === 'object') {

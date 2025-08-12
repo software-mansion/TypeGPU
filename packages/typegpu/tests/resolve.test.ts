@@ -546,10 +546,10 @@ describe('tgpu resolveWithContext', () => {
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `During resolution, the external 'ArraySchema' was unused.`,
+      "The external 'ArraySchema' was unused in the resolved template.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `During resolution, the external 'JavaScriptObject' was unused.`,
+      "The external 'JavaScriptObject' was unused in the resolved template.",
     );
   });
 
