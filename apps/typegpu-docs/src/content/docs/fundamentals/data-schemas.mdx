@@ -345,7 +345,7 @@ const AtomicI32 = d.atomic(d.i32);
 
 To create a schema corresponding to a pointer data type, wrap the inner schema with a pointer constructor corresponding to the appropriate address space.
 
-For address spaces `function`, `private`, `workgroup`, `storage`, `uniform`, `handle`, use `d.ptrFn`, `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage`, `d.ptrUniform`, `d.ptrHandle` respectively.
+For address spaces `function`, `private`, `workgroup`, `storage` and `uniform`, use `d.ptrFn`, `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage` and `d.ptrUniform` respectively.
 
 ```ts twoslash
 import * as d from 'typegpu/data';
@@ -353,10 +353,16 @@ import * as d from 'typegpu/data';
 const VecPtrFn = d.ptrFn(d.vec3f);
 //    ^?
 
-const VecPtrUniform = d.ptrUniform(d.vec2f);
+const VecPtrPrivate = d.ptrPrivate(d.vec2f);
 //    ^?
 ```
 
+:::note
+In order to use `workgroup`, `storage` and `uniform` pointers as function parameters, 
+WGSL needs the `unrestricted_pointer_parameters` extension.
+
+This extension is enabled automatically when available.
+:::
 
 ## Copy constructors
 

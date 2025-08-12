@@ -1,5 +1,3 @@
-import type { TgpuSampler } from '../core/sampler/sampler.ts';
-import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -1341,7 +1339,7 @@ export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
-  TInner extends StorableData = StorableData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TInner extends StorableData = StorableData,
   TAccess extends Access = Access,
 > extends BaseData {
   readonly type: 'ptr';
@@ -1551,9 +1549,7 @@ export type StorableData =
   | MatData
   | Atomic
   | WgslArray
-  | WgslStruct
-  | TgpuTexture
-  | TgpuSampler;
+  | WgslStruct;
 
 export type AnyWgslData =
   | Bool
@@ -1724,8 +1720,9 @@ export function isWgslStruct<T extends WgslStruct>(
  * Checks whether passed in value is a pointer schema.
  *
  * @example
- * isPtrFn(d.ptrFn(d.f32)) // true
- * isPtrFn(d.f32) // false
+ * isPtr(d.ptrFn(d.f32)) // true
+ * isPtr(d.ptrPrivate(d.f32)) // true
+ * isPtr(d.f32) // false
  */
 export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
   return (schema as T)?.[$internal] && (schema as T)?.type === 'ptr';
