@@ -589,7 +589,7 @@ describe('tgpu resolveWithContext', () => {
       names: 'strict',
     });
 
-    expect(consoleWarnSpy).toBeCalledTimes(0);
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 
   it('does not resolve the same nested property twice', () => {
@@ -612,6 +612,6 @@ describe('tgpu resolveWithContext', () => {
         return 100 + 100;
       }`));
 
-    expect(consoleWarnSpy).toBeCalledTimes(0);
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });
