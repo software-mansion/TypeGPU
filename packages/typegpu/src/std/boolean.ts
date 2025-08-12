@@ -154,6 +154,13 @@ export const ge = createDualImpl(
 
 // logical ops
 
+const cpuNot = <T extends AnyBooleanVecInstance | boolean>(value: T): T => {
+  if (typeof value === 'boolean') {
+    return (!value) as T;
+  }
+  return (VectorOps.neg[value.kind](value)) as T;
+};
+
 /**
  * Returns **component-wise** `!value`.
  * @example
@@ -161,11 +168,16 @@ export const ge = createDualImpl(
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
  */
 export const not = createDualImpl(
-  // CPU implementation
-  <T extends AnyBooleanVecInstance>(value: T): T =>
-    VectorOps.neg[value.kind](value),
-  // GPU implementation
-  (value) => snip(stitch`!(${value})`, value.dataType),
+  // NORMAL
+  cpuNot,
+  // CODEGEN
+  (arg) => {
+    if (typeof arg.value === 'boolean' || isVecInstance(arg.value)) {
+      // Precomputing...
+      return snip(cpuNot(arg.value as never), arg.dataType);
+    }
+    return snip(stitch`!(${arg})`, arg.dataType);
+  },
   'not',
 );
 

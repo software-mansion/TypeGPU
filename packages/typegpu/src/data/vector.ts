@@ -327,7 +327,9 @@ function makeVecSchema<TValue, S extends number | boolean>(
     (...args) => {
       if (
         args.every((arg) =>
-          typeof arg.value === 'number' || isVecInstance(arg.value)
+          typeof arg.value === 'number' ||
+          typeof arg.value === 'boolean' ||
+          isVecInstance(arg.value)
         )
       ) {
         // Return an actual vector at resolution time
