@@ -33,4 +33,3 @@ export function compareArrayWithBuffer(
   }
   return true;
 }
-

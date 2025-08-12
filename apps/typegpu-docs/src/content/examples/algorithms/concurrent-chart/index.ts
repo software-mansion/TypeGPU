@@ -2,13 +2,16 @@ import tgpu from 'typegpu';
 import * as std from 'typegpu/std';
 import { performCalculationsWithTime } from './calculator.ts';
 
-
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
-const labels = Array.from(bars, bar => bar.querySelector<HTMLDivElement>('.label'));
-
+const speedupLabels = Array.from(
+  document.querySelectorAll<HTMLDivElement>('.speedup-label'),
+);
+const tooltips = Array.from(
+  document.querySelectorAll<HTMLDivElement>('.bar-tooltip'),
+);
 
 const root = await tgpu.init({
   device: {
@@ -23,12 +26,15 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const lengthMap: Record<string, { jsTime: number; gpuTime: number }> = {
-  '65536': { jsTime: 0, gpuTime: 0 },
-  '131072': { jsTime: 0, gpuTime: 0 },
-  '1048576': { jsTime: 0, gpuTime: 0 },
-  '4194304': { jsTime: 0, gpuTime: 0 },
-  '8388608': { jsTime: 0, gpuTime: 0 },
+const lengthMap: Record<
+  string,
+  { jsTime: number; gpuTime: number; gpuShaderTime: number }
+> = {
+  '65536': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
+  '131072': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
+  '1048576': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
+  '4194304': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
+  '8388608': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
 };
 async function initCalc() {
   const inputArrays: number[][] = [];
@@ -37,13 +43,16 @@ async function initCalc() {
     const arrayLength = Number.parseInt(length);
     const onesArray = Array(arrayLength).fill(1);
     inputArrays.push(onesArray);
-    const { success, jsTime, gpuTime } = await performCalculationsWithTime(
-      root,
-      onesArray,
-    );
+    const { success, jsTime, gpuTime, gpuShaderTime } =
+      await performCalculationsWithTime(
+        root,
+        onesArray,
+      );
+    // console.log('dupa', gpuShaderTime)
     if (success && jsTime !== undefined && gpuTime !== undefined) {
       lengthMap[onesArray.length].jsTime = jsTime;
       lengthMap[onesArray.length].gpuTime = gpuTime;
+      lengthMap[onesArray.length].gpuShaderTime = 0.7;
     }
   }
   return inputArrays;
@@ -51,15 +60,45 @@ async function initCalc() {
 
 function drawCharts() {
   const keys = Object.keys(lengthMap);
-  for (let i = 0; i < bars.length / 2; i++) {
+  console.log('bars length:', bars.length);
+  for (let i = 0; i < bars.length / 3; i++) {
+    console.log('i:', i, 'keys.length:', keys.length);
     const value = lengthMap[keys[i]];
-    bars[2 * i].style.setProperty('--bar-height', `${std.min(value.jsTime / 50, 1)}`);
-    bars[2 * i].style.setProperty('--highlight-opacity', '1');
-    labels[2 * i]!.textContent = `${(Number(value.jsTime) / Number(value.gpuTime)).toFixed(1)}x`;
+    console.log(value);
+    speedupLabels[i].textContent = `${
+      (Number(value.jsTime) / Number(value.gpuTime)).toFixed(1)
+    }x`;
 
-    bars[2 * i + 1].style.setProperty('--bar-height', `${std.min(value.gpuTime / 50, 1)}`);
-    bars[2 * i + 1].style.setProperty('--highlight-opacity', '1');
-    // labels[2 * i + 1]!.textContent = `size: ${keys[i]}`;
+    // CPU
+
+    bars[3 * i].style.setProperty(
+      '--bar-height',
+      `${std.min(value.jsTime / 50, 1)}`,
+    );
+    bars[3 * i].style.setProperty('--highlight-opacity', '1');
+    tooltips[3 * i].textContent = `JS time: ${
+      Number(value.jsTime).toFixed(2)
+    }ms  |  Array size: ${keys[i]}`;
+
+    // GPU
+    bars[3 * i + 1].style.setProperty(
+      '--bar-height',
+      `${std.min(value.gpuTime / 50, 1)}`,
+    );
+    bars[3 * i + 1].style.setProperty('--highlight-opacity', '1');
+    tooltips[3 * i + 1].textContent = `GPU time: ${
+      Number(value.gpuTime).toFixed(2)
+    }ms  |  Array size: ${keys[i]}`;
+
+    // GPU shader
+    bars[3 * i + 2].style.setProperty(
+      '--bar-height',
+      `${std.min(value.gpuTime / 50, 1)}`,
+    );
+    bars[3 * i + 2].style.setProperty('--highlight-opacity', '1');
+    tooltips[3 * i + 2].textContent = `GPU shader time: ${
+      Number(value.gpuShaderTime).toFixed(2)
+    }ms  |  Array size: ${keys[i]}`;
   }
 }
 
@@ -75,8 +114,10 @@ function resetDrawing() {
 
   for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0.2');
-    const label = bar.querySelector<HTMLDivElement>('.label');
-    if (label) label.textContent = 'Duap';
+  }
+
+  for (const label of speedupLabels) {
+    label.textContent = '';
   }
 }
 
@@ -86,5 +127,12 @@ export const controls = {
   },
   Draw: {
     onButtonClick: drawCharts,
+  },
+  Calculate: {
+    onButtonClick: async () => {
+      await initCalc();
+      // wait 3s
+      drawCharts();
+    },
   },
 };
