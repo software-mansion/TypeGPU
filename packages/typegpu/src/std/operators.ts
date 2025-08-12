@@ -33,7 +33,7 @@ function tryUnify<T extends Snippet[]>(
     concretizeTypes,
     verbose,
   });
-  return converted ? (converted as T) : values;
+  return converted ?? values;
 }
 
 type NumVec = AnyNumericVecInstance;
