@@ -4,16 +4,32 @@ import * as std from 'typegpu/std';
 
 const SimpleStruct = d.struct({ vec: d.vec2f });
 
-const modifyNum = tgpu.fn([d.ptrFn(d.u32)])((ptr) => {
+const modifyNumFn = tgpu.fn([d.ptrFn(d.u32)])((ptr) => {
   // biome-ignore lint/style/noParameterAssign: it's just a test
   ptr += 1;
 });
 
-const modifyVec = tgpu.fn([d.ptrFn(d.vec2f)])((ptr) => {
+const modifyVecFn = tgpu.fn([d.ptrFn(d.vec2f)])((ptr) => {
   ptr.x += 1;
 });
 
-const modifyStruct = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
+const modifyStructFn = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
+  ptr.vec.x += 1;
+});
+
+const privateNum = tgpu['~unstable'].privateVar(d.u32);
+const modifyNumPrivate = tgpu.fn([d.ptrPrivate(d.u32)])((ptr) => {
+  // biome-ignore lint/style/noParameterAssign: it's just a test
+  ptr += 1;
+});
+
+const privateVec = tgpu['~unstable'].privateVar(d.vec2f);
+const modifyVecPrivate = tgpu.fn([d.ptrPrivate(d.vec2f)])((ptr) => {
+  ptr.x += 1;
+});
+
+const privateStruct = tgpu['~unstable'].privateVar(SimpleStruct);
+const modifyStructPrivate = tgpu.fn([d.ptrPrivate(SimpleStruct)])((ptr) => {
   ptr.vec.x += 1;
 });
 
@@ -21,17 +37,28 @@ const modifyStruct = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
 export const pointersTest = tgpu.fn([], d.bool)(() => {
   let s = true;
 
-  const num = d.u32(0);
-  modifyNum(num);
+  // function pointers
+  const num = d.u32();
+  modifyNumFn(num);
   s = s && (num === 1);
 
-  const vec = d.vec2f(1, 2);
-  modifyVec(vec);
-  s = s && std.allEq(vec, d.vec2f(2, 2));
+  const vec = d.vec2f();
+  modifyVecFn(vec);
+  s = s && std.allEq(vec, d.vec2f(1, 0));
 
-  const myStruct = SimpleStruct({ vec: d.vec2f(3, 4) });
-  modifyStruct(myStruct);
-  s = s && std.allEq(myStruct.vec, d.vec2f(4, 4));
+  const myStruct = SimpleStruct();
+  modifyStructFn(myStruct);
+  s = s && std.allEq(myStruct.vec, d.vec2f(1, 0));
+
+  // private pointers
+  modifyNumPrivate(privateNum.$);
+  s = s && (privateNum.$ === 1);
+
+  modifyVecPrivate(privateVec.$);
+  s = s && std.allEq(privateVec.$, d.vec2f(1, 0));
+
+  modifyStructPrivate(privateStruct.$);
+  s = s && std.allEq(privateStruct.$.vec, d.vec2f(1, 0));
 
   return s;
 });
