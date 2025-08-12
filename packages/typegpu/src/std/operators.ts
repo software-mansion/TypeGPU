@@ -225,7 +225,6 @@ function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): T; // mixed div
 function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
-    console.log('Div: scalar / scalar');
     return lhs / rhs;
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
@@ -248,15 +247,11 @@ export const div = createDualImpl(
   // CODEGEN implementation
   (lhs, rhs) => {
     const [convLhs, convRhs] = tryUnify([lhs, rhs], [f32, f16], true);
-    console.log(
-      `Pre: ${lhs.value}(${lhs.dataType.type}), ${rhs.value}(${rhs.dataType.type})\nPost: ${convLhs.value}(${convLhs.dataType.type}), ${convRhs.value}(${convRhs.dataType.type})`,
-    );
 
     if (
       (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&
       (typeof rhs.value === 'number' || isVecInstance(rhs.value))
     ) {
-      console.log('PRECOMPUTING');
       // Precomputing
       return snip(
         cpuDiv(lhs.value as never, rhs.value as never),
