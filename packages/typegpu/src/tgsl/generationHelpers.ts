@@ -54,7 +54,9 @@ import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { undecorate } from '../data/decorateUtils.ts';
-import { isNumericSchema } from '../std/operators.ts';
+import { isNumericSchema } from '../data/wgslTypes.ts';
+import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -187,33 +189,25 @@ export function getTypeForIndexAccess(
   return UnknownData;
 }
 
-export function numericLiteralToSnippet(value: string): Snippet | undefined {
+export function parseNumericString(str: string): number {
   // Hex literals
-  if (/^0x[0-9a-f]+$/i.test(value)) {
-    return snip(value, abstractInt);
+  if (/^0x[0-9a-f]+$/i.test(str)) {
+    return Number.parseInt(str);
   }
 
   // Binary literals
-  if (/^0b[01]+$/i.test(value)) {
-    return snip(`${Number.parseInt(value.slice(2), 2)}`, abstractInt);
+  if (/^0b[01]+$/i.test(str)) {
+    return Number.parseInt(str.slice(2), 2);
   }
 
-  // Floating point literals
-  if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
+  return Number.parseFloat(str);
+}
 
-  // Floating point literals with scientific notation
-  if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
-
-  // Integer literals
-  if (/^-?\d+$/i.test(value)) {
+export function numericLiteralToSnippet(value: number): Snippet {
+  if (Number.isInteger(value) && value >= MIN_INT32 && value <= MAX_INT32) {
     return snip(value, abstractInt);
   }
-
-  return undefined;
+  return snip(value, abstractFloat);
 }
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
@@ -482,7 +476,6 @@ export type GenerationCtx = ResolutionCtx & {
   readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
-  withResetIndentLevel<T>(callback: () => T): T;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;
@@ -490,7 +483,7 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 function applyActionToSnippet(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   value: Snippet,
   action: ConversionResultAction,
   targetType: AnyData,
@@ -499,15 +492,13 @@ function applyActionToSnippet(
     return snip(value.value, targetType);
   }
 
-  const resolvedValue = ctx.resolve(value.value);
-
   switch (action.action) {
     case 'ref':
-      return snip(`&${resolvedValue}`, targetType);
+      return snip(stitch`&${value}`, targetType);
     case 'deref':
-      return snip(`*${resolvedValue}`, targetType);
+      return snip(stitch`*${value}`, targetType);
     case 'cast': {
-      return snip(`${ctx.resolve(targetType)}(${resolvedValue})`, targetType);
+      return snip(stitch`${ctx.resolve(targetType)}(${value})`, targetType);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
@@ -516,7 +507,7 @@ function applyActionToSnippet(
 }
 
 export type ConvertToCommonTypeOptions = {
-  ctx: GenerationCtx;
+  ctx: ResolutionCtx;
   values: Snippet[];
   restrictTo?: AnyData[] | undefined;
   concretizeTypes?: boolean | undefined;
@@ -570,7 +561,7 @@ Consider using explicit conversions instead.`,
 }
 
 export function tryConvertSnippet(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   snippet: Snippet,
   targetDataType: AnyData,
 ): Snippet {
@@ -599,7 +590,7 @@ export function tryConvertSnippet(
 }
 
 export function convertStructValues(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
@@ -645,11 +636,8 @@ export function coerceToSnippet(value: unknown): Snippet {
     return snip(value, UnknownData);
   }
 
-  if (typeof value === 'number' || typeof value === 'bigint') {
-    return snip(
-      value,
-      numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
-    );
+  if (typeof value === 'number') {
+    return numericLiteralToSnippet(value);
   }
 
   if (typeof value === 'boolean') {
