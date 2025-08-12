@@ -27,6 +27,26 @@ describe('tgpu resolve', () => {
     );
   });
 
+  it('should resolve a nested external JS struct', () => {
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var g = _EXT_.constants.n; }',
+      externals: {
+        _EXT_: {
+          constants: {
+            n: 1000,
+          },
+        },
+      },
+      names: 'strict',
+    });
+    expect(parse(resolved)).toBe(
+      parse(`
+          fn foo() { 
+            var g = 1000; 
+          }`),
+    );
+  });
+
   it('should deduplicate dependencies', () => {
     const intensity = {
       [$internal]: true,
@@ -518,32 +538,18 @@ describe('tgpu resolveWithContext', () => {
             return;
           }
         `,
-      externals: { ArraySchema: d.arrayOf(d.u32, 4) },
+      externals: {
+        ArraySchema: d.arrayOf(d.u32, 4),
+        JavaScriptObject: { field: d.vec2f() },
+      },
       names: 'strict',
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'During resolution, the external ArraySchema was unused.',
+      `During resolution, the external 'ArraySchema' was unused.`,
     );
-  });
-
-  it('should warn when external JS is not used', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
-
-    tgpu.resolveWithContext({
-      template: `
-          fn testFn() {
-            return;
-          }
-        `,
-      externals: { JavaScriptObject: { field: d.vec2f() } },
-      names: 'strict',
-    });
-
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'During resolution, the external JavaScriptObject was unused.',
+      `During resolution, the external 'JavaScriptObject' was unused.`,
     );
   });
 
@@ -564,7 +570,48 @@ describe('tgpu resolveWithContext', () => {
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'During resolution, the external identity has been omitted. Only primitives, TGPU objects and plain JS objects can be used as externals.',
+      `During resolution, the external 'identity' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
     );
+  });
+
+  it('should not warn when In/Out are unused', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: `
+          fn testFn() {
+            return;
+          }
+        `,
+      externals: {},
+      names: 'strict',
+    });
+
+    expect(consoleWarnSpy).toBeCalledTimes(0);
+  });
+
+  it('does not resolve the same nested property twice', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const resolved = tgpu.resolveWithContext({
+      template: `
+        fn testFn() {
+          return _EXT_.n + _EXT_.n;
+        }
+      `,
+      externals: { _EXT_: { n: 100 } },
+      names: 'strict',
+    });
+
+    expect(parse(resolved.code)).toBe(parse(`
+      fn testFn() {
+        return 100 + 100;
+      }`));
+
+    expect(consoleWarnSpy).toBeCalledTimes(0);
   });
 });
