@@ -1059,10 +1059,8 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:bar
-      - foo: Resolution of the following tree failed:
       - call:foo
       - fn:foo
-      - bar: Resolution of the following tree failed:
       - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
       `);
   });
