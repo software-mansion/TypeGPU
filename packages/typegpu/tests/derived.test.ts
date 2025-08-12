@@ -8,21 +8,19 @@ import { parse, parseResolved } from './utils/parseResolved.ts';
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
     const foo = tgpu.slot<number>(1);
-    const computeDouble = vi.fn(() => {
-      return foo.value * 2;
-    });
+    const computeDouble = vi.fn(() => foo.$ * 2);
     const double = tgpu['~unstable'].derived(computeDouble);
-    const a = tgpu['~unstable'].derived(() => double.value + 1);
-    const b = tgpu['~unstable'].derived(() => double.value + 2);
+    const a = tgpu['~unstable'].derived(() => double.$ + 1);
+    const b = tgpu['~unstable'].derived(() => double.$ + 2);
 
     const main = tgpu.fn([], d.f32)(() => {
-      return a.value + b.value;
+      return a.$ + b.$;
     });
 
     expect(parseResolved({ main })).toBe(
       parse(`
       fn main() -> f32 {
-        return (3 + 4);
+        return 7;
       }
     `),
     );

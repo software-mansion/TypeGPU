@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { snip } from '../data/snippet.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
@@ -16,7 +17,7 @@ export const arrayLength = createDualImpl(
     ) {
       return snip(String(a.dataType.inner.elementCount), abstractInt);
     }
-    return snip(`arrayLength(${a.value})`, u32);
+    return snip(stitch`arrayLength(${a})`, u32);
   },
   'arrayLength',
   (a) => [ptrFn(a.dataType as AnyWgslData)],

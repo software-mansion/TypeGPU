@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import { snip } from './snippet.ts';
@@ -34,7 +35,7 @@ const boolCast = createDualImpl(
     return !!v;
   },
   // GPU implementation
-  (v) => snip(`bool(${v?.value ?? ''})`, bool),
+  (v) => snip(stitch`bool(${v})`, bool),
   'boolCast',
 );
 
@@ -68,7 +69,7 @@ const u32Cast = createDualImpl(
     return (v & 0xffffffff) >>> 0;
   },
   // GPU implementation
-  (v) => snip(`u32(${v?.value ?? ''})`, u32),
+  (v) => snip(stitch`u32(${v})`, u32),
   'u32Cast',
 );
 
@@ -104,7 +105,7 @@ const i32Cast = createDualImpl(
     return v | 0;
   },
   // GPU implementation
-  (v) => snip(`i32(${v?.value ?? ''})`, i32),
+  (v) => snip(stitch`i32(${v})`, i32),
   'i32Cast',
 );
 
@@ -143,7 +144,7 @@ const f32Cast = createDualImpl(
     return Math.fround(v);
   },
   // GPU implementation
-  (v) => snip(`f32(${v?.value ?? ''})`, f32),
+  (v) => snip(stitch`f32(${v})`, f32),
   'f32Cast',
 );
 
@@ -266,7 +267,7 @@ const f16Cast = createDualImpl(
   },
   // GPU implementation
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  (v) => snip(`f16(${v?.value ?? ''})`, f16),
+  (v) => snip(stitch`f16(${v})`, f16),
   'f16Cast',
 );
 

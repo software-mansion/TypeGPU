@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
@@ -40,7 +41,8 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes.ts';
-import { isDecorated, isVec } from './wgslTypes.ts';
+import { isDecorated, isVec, isVecInstance } from './wgslTypes.ts';
+import type { AnyData } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -297,34 +299,46 @@ function makeVecSchema<TValue, S extends number | boolean>(
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
-  const construct = createDualImpl(
-    (...args: (S | AnyVecInstance)[]): TValue => {
-      const values = new Array(args.length);
+  const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
+    const values = new Array(args.length);
 
-      let j = 0;
-      for (const arg of args) {
-        if (typeof arg === 'number' || typeof arg === 'boolean') {
-          values[j++] = arg;
-        } else {
-          for (let c = 0; c < arg.length; ++c) {
-            values[j++] = arg[c];
-          }
+    let j = 0;
+    for (const arg of args) {
+      if (typeof arg === 'number' || typeof arg === 'boolean') {
+        values[j++] = arg;
+      } else {
+        for (let c = 0; c < arg.length; ++c) {
+          values[j++] = arg[c];
         }
       }
+    }
 
-      if (values.length <= 1 || values.length === componentCount) {
-        return new VecImpl(...values) as TValue;
+    if (values.length <= 1 || values.length === componentCount) {
+      return new VecImpl(...values) as TValue;
+    }
+
+    throw new Error(
+      `'${type}' constructor called with invalid number of arguments.`,
+    );
+  };
+
+  const construct = createDualImpl(
+    cpuConstruct,
+    (...args) => {
+      if (
+        args.every((arg) =>
+          typeof arg.value === 'number' || isVecInstance(arg.value)
+        )
+      ) {
+        // Return an actual vector at resolution time
+        const knownParams = args.map((arg) => arg.value);
+        return snip(
+          cpuConstruct(...(knownParams as never[])),
+          schema as AnyData,
+        );
       }
-
-      throw new Error(
-        `'${type}' constructor called with invalid number of arguments.`,
-      );
+      return snip(stitch`${type}(${args})`, schema as AnyData);
     },
-    (...args) =>
-      snip(
-        `${type}(${args.map((v) => v.value).join(', ')})`,
-        vecTypeToConstructor[type],
-      ),
     type,
     (...args) =>
       args.map((arg) => {
@@ -337,8 +351,12 @@ function makeVecSchema<TValue, S extends number | boolean>(
       }),
   );
 
-  return Object.assign(construct, {
-    type,
-    [$repr]: undefined as TValue,
-  });
+  const schema:
+    & VecSchemaBase<TValue>
+    & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+      type,
+      [$repr]: undefined as TValue,
+    });
+
+  return schema;
 }

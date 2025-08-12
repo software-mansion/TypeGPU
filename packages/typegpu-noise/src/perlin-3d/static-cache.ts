@@ -5,7 +5,7 @@ import {
   getJunctionGradientSlot,
 } from './algorithm.ts';
 
-const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
+const MemorySchema = d.arrayOf(d.vec3f);
 
 export interface StaticPerlin3DCache {
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
@@ -18,7 +18,7 @@ export interface StaticPerlin3DCache {
  * A statically-sized cache for perlin noise generation, which reduces the amount of redundant calculations
  * if sampling is done more than once. If you'd like to change the size of the cache at runtime, see `perlin3d.dynamicCacheConfig`.
  *
- * ### Basic usage
+ * --- Basic usage
  * @example
  * ```ts
  * const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => {
@@ -35,7 +35,8 @@ export interface StaticPerlin3DCache {
  *   .createPipeline();
  * ```
  *
- * ### Wrapped coordinates
+ * --- Wrapped coordinates
+ *
  * If the noise generator samples outside of the bounds of this cache, the space is wrapped around.
  * @example
  * ```ts
