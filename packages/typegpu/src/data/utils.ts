@@ -1,31 +1,28 @@
+import type { AnyData } from './index.ts';
+import { formatToWGSLType } from './vertexFormatData.ts';
+
 /**
- * A wrapper for `schema(item)` call.
+ * A wrapper for `schema(item)` or `schema()` call.
+ * If the schema is a TgpuVertexFormatData, it instead calls the corresponding constructible schema.
  * Throws an error if the schema is not callable.
  */
-export function schemaCloneWrapper<T>(schema: unknown, item: T): T {
+export function schemaCallWrapper<T>(schema: AnyData, item?: T): T {
+  const maybeType = (schema as { type: string })?.type;
+
   try {
-    return (schema as unknown as ((item: T) => T))(item);
-  } catch {
-    const maybeType = (schema as { type: string })?.type;
+    // TgpuVertexFormatData are not callable
+    const callSchema = (maybeType in formatToWGSLType
+      ? formatToWGSLType[maybeType as keyof typeof formatToWGSLType]
+      : schema) as unknown as ((item?: T) => T);
+    if (item === undefined) {
+      return callSchema();
+    }
+    return callSchema(item);
+  } catch (e) {
     throw new Error(
       `Schema of type ${
         maybeType ?? '<unknown>'
       } is not callable or was called with invalid arguments.`,
-    );
-  }
-}
-
-/**
- * A wrapper for `schema()` call.
- * Throws an error if the schema is not callable.
- */
-export function schemaDefaultWrapper<T>(schema: unknown): T {
-  try {
-    return (schema as unknown as (() => T))();
-  } catch {
-    const maybeType = (schema as { type: string })?.type;
-    throw new Error(
-      `Schema of type ${maybeType ?? '<unknown>'} is not callable.`,
     );
   }
 }

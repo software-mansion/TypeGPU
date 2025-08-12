@@ -656,6 +656,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     // This is a value that comes from the outside, maybe we can coerce it
+    if (typeof item === 'number') {
+      if (
+        schema?.type === 'abstractInt' ||
+        schema?.type === 'u32' ||
+        schema?.type === 'i32'
+      ) {
+        return String(item);
+      }
+
+      // Just picking the shorter one
+      const exp = item.toExponential();
+      const decimal = String(item);
+      return exp.length < decimal.length ? exp : decimal;
+    }
+
     if (typeof item !== 'object' && typeof item !== 'function') {
       return String(item);
     }
