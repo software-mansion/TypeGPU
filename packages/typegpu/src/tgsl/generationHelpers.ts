@@ -506,21 +506,21 @@ function applyActionToSnippet(
   }
 }
 
-export type ConvertToCommonTypeOptions = {
+export type ConvertToCommonTypeOptions<T extends Snippet[]> = {
   ctx: ResolutionCtx;
-  values: Snippet[];
+  values: T;
   restrictTo?: AnyData[] | undefined;
   concretizeTypes?: boolean | undefined;
   verbose?: boolean | undefined;
 };
 
-export function convertToCommonType({
+export function convertToCommonType<T extends Snippet[]>({
   ctx,
   values,
   restrictTo,
   concretizeTypes = false,
   verbose = true,
-}: ConvertToCommonTypeOptions): Snippet[] | undefined {
+}: ConvertToCommonTypeOptions<T>): T | undefined {
   const needsConcretization = concretizeTypes &&
     // If we have any concrete type among the values, we don't need to concretize
     !values.some((value) =>
@@ -565,7 +565,7 @@ Consider using explicit conversions instead.`,
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
     return applyActionToSnippet(ctx, value, action, conversion.targetType);
-  });
+  }) as T;
 }
 
 export function tryConvertSnippet(
