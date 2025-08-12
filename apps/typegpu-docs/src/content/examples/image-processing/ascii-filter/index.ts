@@ -260,7 +260,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 function setUVTransformForIOS() {
   const angle = screen.orientation.type;
 
-  let m = d.mat2x2f(1, 0, 0, 1);
+  let m = d.mat2x2f.identity();
   if (angle === 'portrait-primary') {
     m = d.mat2x2f(0, -1, 1, 0);
   } else if (angle === 'portrait-secondary') {
