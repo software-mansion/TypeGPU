@@ -1,77 +1,91 @@
-import * as Plot from '@observablehq/plot';
+import * as MorphCharts from 'morphcharts';
 
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+// Core
+const core = new MorphCharts.Core({
+  container: document.getElementById('scatter') as HTMLElement,
+});
 
-const N = 10000;
+core.config.logLevel = MorphCharts.LogLevel.trace;
+const debug = document.getElementById('debug') as HTMLElement;
+core.updateCallback = () => {
+  debug.innerText = core.debugText.text;
+};
 
-const range = Array.from(
-  { length: Math.round((10 - (-10)) / 0.05) + 1 },
-  (_, i) => -10 + i * 0.05,
+// Renderer
+const main = new MorphCharts.Renderers.Basic.Main();
+main.depthEnabled = true;
+core.renderer = main;
+
+// Data
+const count = 10000;
+const ids = new Uint32Array(count);
+const positionsX = new Float64Array(count);
+const positionsY = new Float64Array(count);
+const positionsZ = new Float64Array(count);
+const sizes = new Float64Array(count);
+const dists = new Float64Array(count);
+for (let i = 0; i < count; i++) {
+  ids[i] = i;
+  positionsX[i] = Math.random();
+  positionsY[i] = Math.random();
+  positionsZ[i] = Math.random();
+  sizes[i] = 0.17;
+  dists[i] = Math.sqrt(
+    (positionsX[i] - 0.5) ** 2 + (positionsY[i] - 0.5) ** 2 +
+      (positionsZ[i] - 0.5) ** 2,
+  );
+}
+
+// Palette
+const palette = MorphCharts.Helpers.PaletteHelper.resample(
+  core.paletteResources.palettes[
+    MorphCharts.PaletteName.blues
+  ].colors,
+  16,
+  false,
 );
 
-const bins = [Number.NEGATIVE_INFINITY, ...range, Number.POSITIVE_INFINITY];
+// Transition buffer
+const transitionBuffer = core.renderer.createTransitionBuffer(ids);
+core.renderer.transitionBuffers = [transitionBuffer];
+transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.sphere;
+transitionBuffer.currentPalette.colors = palette;
 
-const root = await tgpu.init();
-const b = root.createBuffer(d.arrayOf(d.f32, N)).$usage('storage');
-const bView = b.as('mutable');
-
-const f1 = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-  for (let i = d.i32(0); i < d.i32(N); i++) {
-    bView.$[i] = randf.normal(0, 1);
-  }
+// Layout
+const scatter = new MorphCharts.Layouts.Scatter(core);
+scatter.layout(transitionBuffer.currentBuffer, ids, {
+  positionsX: positionsX,
+  positionsY: positionsY,
+  positionsZ: positionsZ,
+});
+scatter.update(transitionBuffer.currentBuffer, ids, {
+  sizes: sizes,
+  sizeScaling: 0.1,
+  colors: dists,
 });
 
-const p1 = root['~unstable'].withCompute(f1).createPipeline();
-p1.dispatchWorkgroups(1);
-const samples1 = (await b.read()).filter((x) => x >= -20 && x <= 20);
+// Axes
+const axes = MorphCharts.Axes.Cartesian3dAxesHelper.create(
+  core,
+  {
+    titleX: 'x',
+    titleY: 'y',
+    titleZ: 'z',
+    labelsX: (value) => {
+      return value.toFixed(1);
+    },
+    labelsY: (value) => {
+      return value.toFixed(1);
+    },
+    labelsZ: (value) => {
+      return value.toFixed(1);
+    },
+  },
+);
+core.renderer.currentAxes = [
+  core.renderer.createCartesian3dAxesVisual(axes),
+];
 
-const plot1 = Plot.plot({
-  title: 'Normal(0, 1): 1 worker samples 10000 values',
-  y: { grid: true },
-  marks: [
-    Plot.rectY(
-      samples1,
-      Plot.binX(
-        { y: 'count' },
-        { x: (d) => d, fill: 'lightblue' } as Plot.BinXInputs<undefined>,
-      ),
-    ),
-    Plot.ruleY([0]),
-  ],
-});
-const div1 = document.getElementById('hist1');
-div1?.append(plot1);
-
-const f2 = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [1],
-})((input) => {
-  randf.seed2(d.vec2f(input.gid.xy));
-  bView.$[input.gid.x * 100 + input.gid.y] = randf.normal(0, 1);
-});
-
-const p2 = root['~unstable'].withCompute(f2).createPipeline();
-p2.dispatchWorkgroups(100, 100);
-const samples2 = (await b.read()).filter((x) => x >= -20 && x <= 20);
-
-console.log(samples1);
-console.log(samples2);
-
-const plot2 = Plot.plot({
-  title: 'Normal(0, 1): 10000 workers, each sampling 1 value with seed2(xy)',
-  y: { grid: true },
-  marks: [
-    Plot.rectY(
-      samples2,
-      Plot.binX(
-        { y: 'count' },
-        { x: (d) => d, fill: 'lightblue' } as Plot.BinXInputs<undefined>,
-      ),
-    ),
-    Plot.ruleY([0]),
-  ],
-});
-const div2 = document.getElementById('hist2');
-div2?.append(plot2);
+// Alt-azimuth camera
+const camera = core.camera;
+camera.setPosition([0, 0, 0.2], false);

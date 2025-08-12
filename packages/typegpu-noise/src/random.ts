@@ -1,6 +1,17 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
-import { clamp, cos, dot, log, mul, sign, sin, sqrt, tan } from 'typegpu/std';
+import {
+  clamp,
+  cos,
+  dot,
+  log,
+  mul,
+  sign,
+  sin,
+  sqrt,
+  step,
+  tan,
+} from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
@@ -98,4 +109,12 @@ export const randCauchy: TgpuFn<(x0: d.F32, gamma: d.F32) => d.F32> = tgpu.fn(
 )((x0, gamma) => {
   const u = randNormal(0, 1);
   return x0 + gamma * (tan(Math.PI * (u - 0.5)));
+});
+
+export const randBernoulli: TgpuFn<(p: d.F32) => d.F32> = tgpu.fn(
+  [d.f32],
+  d.f32,
+)((p) => {
+  const u = randomGeneratorSlot.value.sample();
+  return step(p, u);
 });

@@ -1,4 +1,5 @@
 import {
+  randBernoulli,
   randCauchy,
   randExponential,
   randFloat01,
@@ -22,6 +23,7 @@ export const randf: {
   normal: typeof randNormal;
   exponential: typeof randExponential;
   cauchy: typeof randCauchy;
+  bernoulli: typeof randBernoulli;
   inUnitCircle: typeof randInUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
@@ -35,6 +37,7 @@ export const randf: {
   normal: randNormal,
   exponential: randExponential,
   cauchy: randCauchy,
+  bernoulli: randBernoulli,
   inUnitCircle: randInUnitCircle,
   inUnitCube: randInUnitCube,
   onHemisphere: randOnUnitHemisphere,
