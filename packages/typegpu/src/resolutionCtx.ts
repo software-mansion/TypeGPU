@@ -1,3 +1,4 @@
+import { isTgpuFn } from './core/function/tgpuFn.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable } from './core/root/rootTypes.ts';
@@ -621,7 +622,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: AnyData | undefined): string {
-    if (item && typeof item === 'function') {
+    if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
         !this._memoizedResolves.has(item)
