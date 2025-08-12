@@ -198,6 +198,7 @@ export interface ResolutionCtx {
   readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;
+  withResetIndentLevel<T>(callback: () => T): T;
 
   /**
    * Reserves a bind group number, and returns a placeholder that will be replaced
@@ -228,7 +229,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: unknown, schema?: AnyData | undefined): string;
+  resolve(item: unknown, schema?: AnyData | UnknownData | undefined): string;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;

@@ -25,11 +25,13 @@ import type {
 } from '../shared/symbols.ts';
 import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
+import type { DualFn } from './dualFn.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface BaseData {
-  readonly [$internal]: true | Record<string, unknown>;
+  // biome-ignore lint/suspicious/noExplicitAny: we sometimes house functions on the internal object, so the type needs to be wider
+  readonly [$internal]: true | Record<string, any>;
   readonly type: string;
   readonly [$repr]: unknown;
 }
@@ -770,7 +772,7 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData {
+export interface Bool extends DualFn<(v?: number | boolean) => boolean> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -778,14 +780,12 @@ export interface Bool extends BaseData {
   readonly [$invalidSchemaReason]:
     'Bool is not host-shareable, use U32 or I32 instead';
   // ---
-
-  (v?: number | boolean): boolean;
 }
 
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export interface F32 extends BaseData {
+export interface F32 extends DualFn<(v?: number | boolean) => number> {
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
@@ -794,14 +794,12 @@ export interface F32 extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (v?: number | boolean): number;
 }
 
 /**
  * 16-bit float schema representing a single WGSL f16 value.
  */
-export interface F16 extends BaseData {
+export interface F16 extends DualFn<(v?: number | boolean) => number> {
   readonly type: 'f16';
 
   // Type-tokens, not available at runtime
@@ -810,14 +808,12 @@ export interface F16 extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (v?: number | boolean): number;
 }
 
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export interface I32 extends BaseData {
+export interface I32 extends DualFn<(v?: number | boolean) => number> {
   readonly type: 'i32';
 
   // Type-tokens, not available at runtime
@@ -827,14 +823,12 @@ export interface I32 extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (v?: number | boolean): number;
 }
 
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export interface U32 extends BaseData {
+export interface U32 extends DualFn<(v?: number | boolean) => number> {
   readonly type: 'u32';
 
   // Type-tokens, not available at runtime
@@ -844,8 +838,6 @@ export interface U32 extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (v?: number | boolean): number;
 }
 
 /**
@@ -864,7 +856,13 @@ export interface U16 extends BaseData {
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
-export interface Vec2f extends BaseData {
+export interface Vec2f extends
+  DualFn<
+    & ((x: number, y: number) => v2f)
+    & ((xy: number) => v2f)
+    & (() => v2f)
+    & ((v: AnyNumericVec2Instance) => v2f)
+  > {
   readonly type: 'vec2f';
 
   // Type-tokens, not available at runtime
@@ -873,17 +871,18 @@ export interface Vec2f extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number): v2f;
-  (xy: number): v2f;
-  (): v2f;
-  (v: AnyNumericVec2Instance): v2f;
 }
 
 /**
  * Type of the `d.vec2h` object/function: vector data type schema/constructor
  */
-export interface Vec2h extends BaseData {
+export interface Vec2h extends
+  DualFn<
+    & ((x: number, y: number) => v2h)
+    & ((xy: number) => v2h)
+    & (() => v2h)
+    & ((v: AnyNumericVec2Instance) => v2h)
+  > {
   readonly type: 'vec2h';
 
   // Type-tokens, not available at runtime
@@ -892,17 +891,18 @@ export interface Vec2h extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number): v2h;
-  (xy: number): v2h;
-  (): v2h;
-  (v: AnyNumericVec2Instance): v2h;
 }
 
 /**
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
-export interface Vec2i extends BaseData {
+export interface Vec2i extends
+  DualFn<
+    & ((x: number, y: number) => v2i)
+    & ((xy: number) => v2i)
+    & (() => v2i)
+    & ((v: AnyNumericVec2Instance) => v2i)
+  > {
   readonly type: 'vec2i';
 
   // Type-tokens, not available at runtime
@@ -911,17 +911,18 @@ export interface Vec2i extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number): v2i;
-  (xy: number): v2i;
-  (): v2i;
-  (v: AnyNumericVec2Instance): v2i;
 }
 
 /**
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
-export interface Vec2u extends BaseData {
+export interface Vec2u extends
+  DualFn<
+    & ((x: number, y: number) => v2u)
+    & ((xy: number) => v2u)
+    & (() => v2u)
+    & ((v: AnyNumericVec2Instance) => v2u)
+  > {
   readonly type: 'vec2u';
 
   // Type-tokens, not available at runtime
@@ -930,18 +931,19 @@ export interface Vec2u extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number): v2u;
-  (xy: number): v2u;
-  (): v2u;
-  (v: AnyNumericVec2Instance): v2u;
 }
 
 /**
  * Type of the `d.vec2b` object/function: vector data type schema/constructor
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Vec2b extends BaseData {
+export interface Vec2b extends
+  DualFn<
+    & ((x: boolean, y: boolean) => v2b)
+    & ((xy: boolean) => v2b)
+    & (() => v2b)
+    & ((v: v2b) => v2b)
+  > {
   readonly type: 'vec2<bool>';
 
   // Type-tokens, not available at runtime
@@ -949,17 +951,20 @@ export interface Vec2b extends BaseData {
   readonly [$invalidSchemaReason]:
     'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
-
-  (x: boolean, y: boolean): v2b;
-  (xy: boolean): v2b;
-  (): v2b;
-  (v: v2b): v2b;
 }
 
 /**
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
-export interface Vec3f extends BaseData {
+export interface Vec3f extends
+  DualFn<
+    & ((x: number, y: number, z: number) => v3f)
+    & ((xyz: number) => v3f)
+    & (() => v3f)
+    & ((v: AnyNumericVec3Instance) => v3f)
+    & ((v0: AnyNumericVec2Instance, z: number) => v3f)
+    & ((x: number, v0: AnyNumericVec2Instance) => v3f)
+  > {
   readonly type: 'vec3f';
 
   // Type-tokens, not available at runtime
@@ -968,19 +973,20 @@ export interface Vec3f extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number): v3f;
-  (xyz: number): v3f;
-  (): v3f;
-  (v: AnyNumericVec3Instance): v3f;
-  (v0: AnyNumericVec2Instance, z: number): v3f;
-  (x: number, v0: AnyNumericVec2Instance): v3f;
 }
 
 /**
  * Type of the `d.vec3h` object/function: vector data type schema/constructor
  */
-export interface Vec3h extends BaseData {
+export interface Vec3h extends
+  DualFn<
+    & ((x: number, y: number, z: number) => v3h)
+    & ((xyz: number) => v3h)
+    & (() => v3h)
+    & ((v: AnyNumericVec3Instance) => v3h)
+    & ((v0: AnyNumericVec2Instance, z: number) => v3h)
+    & ((x: number, v0: AnyNumericVec2Instance) => v3h)
+  > {
   readonly type: 'vec3h';
 
   // Type-tokens, not available at runtime
@@ -989,19 +995,20 @@ export interface Vec3h extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number): v3h;
-  (xyz: number): v3h;
-  (): v3h;
-  (v: AnyNumericVec3Instance): v3h;
-  (v0: AnyNumericVec2Instance, z: number): v3h;
-  (x: number, v0: AnyNumericVec2Instance): v3h;
 }
 
 /**
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
-export interface Vec3i extends BaseData {
+export interface Vec3i extends
+  DualFn<
+    & ((x: number, y: number, z: number) => v3i)
+    & ((xyz: number) => v3i)
+    & (() => v3i)
+    & ((v: AnyNumericVec3Instance) => v3i)
+    & ((v0: AnyNumericVec2Instance, z: number) => v3i)
+    & ((x: number, v0: AnyNumericVec2Instance) => v3i)
+  > {
   readonly type: 'vec3i';
 
   // Type-tokens, not available at runtime
@@ -1010,19 +1017,20 @@ export interface Vec3i extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number): v3i;
-  (xyz: number): v3i;
-  (): v3i;
-  (v: AnyNumericVec3Instance): v3i;
-  (v0: AnyNumericVec2Instance, z: number): v3i;
-  (x: number, v0: AnyNumericVec2Instance): v3i;
 }
 
 /**
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
-export interface Vec3u extends BaseData {
+export interface Vec3u extends
+  DualFn<
+    & ((x: number, y: number, z: number) => v3u)
+    & ((xyz: number) => v3u)
+    & (() => v3u)
+    & ((v: AnyNumericVec3Instance) => v3u)
+    & ((v0: AnyNumericVec2Instance, z: number) => v3u)
+    & ((x: number, v0: AnyNumericVec2Instance) => v3u)
+  > {
   readonly type: 'vec3u';
 
   // Type-tokens, not available at runtime
@@ -1031,20 +1039,21 @@ export interface Vec3u extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number): v3u;
-  (xyz: number): v3u;
-  (): v3u;
-  (v: AnyNumericVec3Instance): v3u;
-  (v0: AnyNumericVec2Instance, z: number): v3u;
-  (x: number, v0: AnyNumericVec2Instance): v3u;
 }
 
 /**
  * Type of the `d.vec3b` object/function: vector data type schema/constructor
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Vec3b extends BaseData {
+export interface Vec3b extends
+  DualFn<
+    & ((x: boolean, y: boolean, z: boolean) => v3b)
+    & ((xyz: boolean) => v3b)
+    & (() => v3b)
+    & ((v: v3b) => v3b)
+    & ((v0: v2b, z: boolean) => v3b)
+    & ((x: boolean, v0: v2b) => v3b)
+  > {
   readonly type: 'vec3<bool>';
 
   // Type-tokens, not available at runtime
@@ -1052,19 +1061,24 @@ export interface Vec3b extends BaseData {
   readonly [$invalidSchemaReason]:
     'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
-
-  (x: boolean, y: boolean, z: boolean): v3b;
-  (xyz: boolean): v3b;
-  (): v3b;
-  (v: v3b): v3b;
-  (v0: v2b, z: boolean): v3b;
-  (x: boolean, v0: v2b): v3b;
 }
 
 /**
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
-export interface Vec4f extends BaseData {
+export interface Vec4f extends
+  DualFn<
+    & ((x: number, y: number, z: number, w: number) => v4f)
+    & ((xyzw: number) => v4f)
+    & (() => v4f)
+    & ((v: AnyNumericVec4Instance) => v4f)
+    & ((v0: AnyNumericVec3Instance, w: number) => v4f)
+    & ((x: number, v0: AnyNumericVec3Instance) => v4f)
+    & ((v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance) => v4f)
+    & ((v0: AnyNumericVec2Instance, z: number, w: number) => v4f)
+    & ((x: number, v0: AnyNumericVec2Instance, z: number) => v4f)
+    & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4f)
+  > {
   readonly type: 'vec4f';
 
   // Type-tokens, not available at runtime
@@ -1073,23 +1087,24 @@ export interface Vec4f extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number, w: number): v4f;
-  (xyzw: number): v4f;
-  (): v4f;
-  (v: AnyNumericVec4Instance): v4f;
-  (v0: AnyNumericVec3Instance, w: number): v4f;
-  (x: number, v0: AnyNumericVec3Instance): v4f;
-  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4f;
-  (v0: AnyNumericVec2Instance, z: number, w: number): v4f;
-  (x: number, v0: AnyNumericVec2Instance, z: number): v4f;
-  (x: number, y: number, v0: AnyNumericVec2Instance): v4f;
 }
 
 /**
  * Type of the `d.vec4h` object/function: vector data type schema/constructor
  */
-export interface Vec4h extends BaseData {
+export interface Vec4h extends
+  DualFn<
+    & ((x: number, y: number, z: number, w: number) => v4h)
+    & ((xyzw: number) => v4h)
+    & (() => v4h)
+    & ((v: AnyNumericVec4Instance) => v4h)
+    & ((v0: AnyNumericVec3Instance, w: number) => v4h)
+    & ((x: number, v0: AnyNumericVec3Instance) => v4h)
+    & ((v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance) => v4h)
+    & ((v0: AnyNumericVec2Instance, z: number, w: number) => v4h)
+    & ((x: number, v0: AnyNumericVec2Instance, z: number) => v4h)
+    & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4h)
+  > {
   readonly type: 'vec4h';
 
   // Type-tokens, not available at runtime
@@ -1098,23 +1113,24 @@ export interface Vec4h extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number, w: number): v4h;
-  (xyzw: number): v4h;
-  (): v4h;
-  (v: AnyNumericVec4Instance): v4h;
-  (v0: AnyNumericVec3Instance, w: number): v4h;
-  (x: number, v0: AnyNumericVec3Instance): v4h;
-  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4h;
-  (v0: AnyNumericVec2Instance, z: number, w: number): v4h;
-  (x: number, v0: AnyNumericVec2Instance, z: number): v4h;
-  (x: number, y: number, v0: AnyNumericVec2Instance): v4h;
 }
 
 /**
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
-export interface Vec4i extends BaseData {
+export interface Vec4i extends
+  DualFn<
+    & ((x: number, y: number, z: number, w: number) => v4i)
+    & ((xyzw: number) => v4i)
+    & (() => v4i)
+    & ((v: AnyNumericVec4Instance) => v4i)
+    & ((v0: AnyNumericVec3Instance, w: number) => v4i)
+    & ((x: number, v0: AnyNumericVec3Instance) => v4i)
+    & ((v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance) => v4i)
+    & ((v0: AnyNumericVec2Instance, z: number, w: number) => v4i)
+    & ((x: number, v0: AnyNumericVec2Instance, z: number) => v4i)
+    & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4i)
+  > {
   readonly type: 'vec4i';
 
   // Type-tokens, not available at runtime
@@ -1123,23 +1139,24 @@ export interface Vec4i extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number, w: number): v4i;
-  (xyzw: number): v4i;
-  (): v4i;
-  (v: AnyNumericVec4Instance): v4i;
-  (v0: AnyNumericVec3Instance, w: number): v4i;
-  (x: number, v0: AnyNumericVec3Instance): v4i;
-  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4i;
-  (v0: AnyNumericVec2Instance, z: number, w: number): v4i;
-  (x: number, v0: AnyNumericVec2Instance, z: number): v4i;
-  (x: number, y: number, v0: AnyNumericVec2Instance): v4i;
 }
 
 /**
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
-export interface Vec4u extends BaseData {
+export interface Vec4u extends
+  DualFn<
+    & ((x: number, y: number, z: number, w: number) => v4u)
+    & ((xyzw: number) => v4u)
+    & (() => v4u)
+    & ((v: AnyNumericVec4Instance) => v4u)
+    & ((v0: AnyNumericVec3Instance, w: number) => v4u)
+    & ((x: number, v0: AnyNumericVec3Instance) => v4u)
+    & ((v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance) => v4u)
+    & ((v0: AnyNumericVec2Instance, z: number, w: number) => v4u)
+    & ((x: number, v0: AnyNumericVec2Instance, z: number) => v4u)
+    & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4u)
+  > {
   readonly type: 'vec4u';
 
   // Type-tokens, not available at runtime
@@ -1148,24 +1165,25 @@ export interface Vec4u extends BaseData {
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
   // ---
-
-  (x: number, y: number, z: number, w: number): v4u;
-  (xyzw: number): v4u;
-  (): v4u;
-  (v: AnyNumericVec4Instance): v4u;
-  (v0: AnyNumericVec3Instance, w: number): v4u;
-  (x: number, v0: AnyNumericVec3Instance): v4u;
-  (v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance): v4u;
-  (v0: AnyNumericVec2Instance, z: number, w: number): v4u;
-  (x: number, v0: AnyNumericVec2Instance, z: number): v4u;
-  (x: number, y: number, v0: AnyNumericVec2Instance): v4u;
 }
 
 /**
  * Type of the `d.vec4b` object/function: vector data type schema/constructor
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Vec4b extends BaseData {
+export interface Vec4b extends
+  DualFn<
+    & ((x: boolean, y: boolean, z: boolean, w: boolean) => v4b)
+    & ((xyzw: boolean) => v4b)
+    & (() => v4b)
+    & ((v: v4b) => v4b)
+    & ((v0: v3b, w: boolean) => v4b)
+    & ((x: boolean, v0: v3b) => v4b)
+    & ((v0: v2b, v1: v2b) => v4b)
+    & ((v0: v2b, z: boolean, w: boolean) => v4b)
+    & ((x: boolean, v0: v2b, z: boolean) => v4b)
+    & ((x: boolean, y: boolean, v0: v2b) => v4b)
+  > {
   readonly type: 'vec4<bool>';
 
   // Type-tokens, not available at runtime
@@ -1173,17 +1191,6 @@ export interface Vec4b extends BaseData {
   readonly [$invalidSchemaReason]:
     'Boolean vectors is not host-shareable, use numeric vectors instead';
   // ---
-
-  (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
-  (xyzw: boolean): v4b;
-  (): v4b;
-  (v: v4b): v4b;
-  (v0: v3b, w: boolean): v4b;
-  (x: boolean, v0: v3b): v4b;
-  (v0: v2b, v1: v2b): v4b;
-  (v0: v2b, z: boolean, w: boolean): v4b;
-  (x: boolean, v0: v2b, z: boolean): v4b;
-  (x: boolean, y: boolean, v0: v2b): v4b;
 }
 
 /**
@@ -1591,28 +1598,28 @@ export type AnyWgslData =
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
   return !!v?.[$internal] &&
-    typeof v.kind?.startsWith === 'function' &&
+    typeof v.kind === 'string' &&
     v.kind.startsWith('vec');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
-    v.type.startsWith?.('vec2');
+    typeof v.type === 'string' &&
+    v.type.startsWith('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
+    typeof v.type === 'string' &&
     v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
   return !!v?.[$internal] &&
-    typeof v.type?.startsWith === 'function' &&
+    typeof v.type === 'string' &&
     v.type.startsWith('vec4');
 }
 
@@ -1799,4 +1806,20 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
 
 export function isVoid(value: unknown): value is Void {
   return (value as Void)?.[$internal] && (value as Void).type === 'void';
+}
+
+export function isNumericSchema(
+  schema: unknown,
+): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    !!(schema as BaseData)?.[$internal] &&
+    (type === 'abstractInt' ||
+      type === 'abstractFloat' ||
+      type === 'f32' ||
+      type === 'f16' ||
+      type === 'i32' ||
+      type === 'u32')
+  );
 }

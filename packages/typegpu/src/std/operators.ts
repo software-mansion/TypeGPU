@@ -1,45 +1,22 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import type { AnyData, TgpuDualFn } from '../data/dataTypes.ts';
-import { f32 } from '../data/numeric.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { f16, f32 } from '../data/numeric.ts';
+import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
-  type AbstractFloat,
-  type AbstractInt,
   type AnyMatInstance,
   type AnyNumericVecInstance,
-  type F16,
-  type F32,
-  type I32,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
   type mBaseForVec,
-  type U32,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
+import { convertToCommonType } from '../tgsl/generationHelpers.ts';
+import { getResolutionCtx } from '../execMode.ts';
+import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
-
-export function isNumericSchema(
-  schema: unknown,
-): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
-  const type = (schema as AnyData)?.type;
-
-  return (
-    !!(schema as AnyData)?.[$internal] &&
-    (type === 'abstractInt' ||
-      type === 'abstractFloat' ||
-      type === 'f32' ||
-      type === 'f16' ||
-      type === 'i32' ||
-      type === 'u32')
-  );
-}
-
-export function isSnippetNumeric(snippet: Snippet) {
-  return isNumericSchema(snippet.dataType);
-}
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -79,13 +56,25 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
-  // GPU implementation
-  (lhs, rhs) =>
-    snip(
-      `(${lhs.value} + ${rhs.value})`,
-      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
-    ),
-  'unify',
+  // CODEGEN implementation
+  (lhs, rhs) => {
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
+    }
+
+    return snip(stitch`(${lhs} + ${rhs})`, resultType);
+  },
+  'add',
 );
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -102,20 +91,31 @@ function cpuSub<
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
-  return cpuAdd(lhs, mul(-1, rhs));
+  return cpuAdd(lhs, cpuMul(-1, rhs));
 }
 
 export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
-  // GPU implementation
-  (lhs, rhs) =>
-    snip(
-      `(${lhs.value} - ${rhs.value})`,
-      isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType,
-    ),
+  // CODEGEN implementation
+  (lhs, rhs) => {
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
+    }
+
+    return snip(stitch`(${lhs} - ${rhs})`, resultType);
+  },
   'sub',
-  'unify',
 );
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -178,43 +178,80 @@ export const mul = createDualImpl(
       ? rhs.dataType
       // Matrix * Matrix
       : lhs.dataType;
-    return snip(`(${lhs.value} * ${rhs.value})`, returnType);
+
+    if (
+      (typeof lhs.value === 'number' ||
+        isVecInstance(lhs.value) ||
+        isMatInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' ||
+        isVecInstance(rhs.value) ||
+        isMatInstance(rhs.value))
+    ) {
+      // Precomputing...
+      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
+    }
+
+    return snip(stitch`(${lhs} * ${rhs})`, returnType);
   },
   'mul',
 );
 
-type DivOverload = {
-  (lhs: number, rhs: number): number; // default js division
-  <T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
-  <T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
-  <T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
-};
+function cpuDiv(lhs: number, rhs: number): number; // default js division
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
+function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs / rhs;
+  }
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    const schema = vecTypeToConstructor[rhs.kind][$internal].jsImpl;
+    return VectorOps.div[rhs.kind](schema(lhs), rhs);
+  }
+  if (isVecInstance(lhs) && typeof rhs === 'number') {
+    const schema = vecTypeToConstructor[lhs.kind][$internal].jsImpl;
+    return VectorOps.div[lhs.kind](lhs, schema(rhs));
+  }
+  if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    return VectorOps.div[lhs.kind](lhs, rhs);
+  }
+  throw new Error('Div called with invalid arguments.');
+}
 
-export const div: TgpuDualFn<DivOverload> = createDualImpl(
+export const div = createDualImpl(
   // CPU implementation
-  <T extends NumVec | number>(lhs: T, rhs: T): T => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return (lhs / rhs) as T;
-    }
-    if (typeof lhs === 'number' && isVecInstance(rhs)) {
-      const schema = vecTypeToConstructor[rhs.kind];
-      return VectorOps.div[rhs.kind](schema(lhs), rhs) as T;
-    }
-    if (isVecInstance(lhs) && typeof rhs === 'number') {
-      const schema = vecTypeToConstructor[lhs.kind];
-      return VectorOps.div[lhs.kind](lhs, schema(rhs)) as T;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.div[lhs.kind](lhs, rhs) as T;
-    }
-    throw new Error('Div called with invalid arguments.');
-  },
-  // GPU implementation
+  cpuDiv,
+  // CODEGEN implementation
   (lhs, rhs) => {
+    let conv: [Snippet, Snippet] = [lhs, rhs];
+
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      return snip(`(f32(${lhs.value}) / ${rhs.value})`, f32);
+      const ctx = getResolutionCtx() as ResolutionCtx;
+      const converted = convertToCommonType({
+        ctx,
+        values: [lhs, rhs],
+        restrictTo: [f32, f16],
+        concretizeTypes: true,
+      }) as
+        | [Snippet, Snippet]
+        | undefined;
+      if (converted) {
+        conv = converted;
+      }
     }
-    return snip(`(${lhs.value} / ${rhs.value})`, lhs.dataType);
+
+    const lhsVal = conv[0].value;
+    const rhsVal = conv[1].value;
+
+    if (
+      (typeof lhsVal === 'number' || isVecInstance(lhsVal)) &&
+      (typeof rhsVal === 'number' || isVecInstance(rhsVal))
+    ) {
+      // Precomputing
+      return snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType);
+    }
+
+    return snip(stitch`(${conv[0]} / ${conv[1]})`, conv[0].dataType);
   },
   'div',
 );
@@ -258,7 +295,7 @@ export const mod: ModOverload = createDualImpl(
   // GPU implementation
   (a, b) => {
     const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
-    return snip(`(${a.value} % ${b.value})`, type);
+    return snip(stitch`(${a} % ${b})`, type);
   },
   'mod',
 );
@@ -272,6 +309,6 @@ export const neg = createDualImpl(
     return VectorOps.neg[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => snip(`-(${value.value})`, value.dataType),
+  (value) => snip(stitch`-(${value})`, value.dataType),
   'neg',
 );

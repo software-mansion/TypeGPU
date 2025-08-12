@@ -181,4 +181,38 @@ describe('disarray', () => {
       { vec: d.vec3f() },
     ]);
   });
+
+  it('can be partially called', () => {
+    const DisarrayPartialSchema = d.disarrayOf(d.vec3u);
+
+    const disarray3 = DisarrayPartialSchema(3)([
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
+    ]);
+    expect(disarray3).toStrictEqual([
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
+    ]);
+
+    const disarray7 = DisarrayPartialSchema(7)([
+      d.vec3u(1, 1, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 5, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 1, 1),
+    ]);
+    expect(disarray7).toStrictEqual([
+      d.vec3u(1, 1, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 5, 1),
+      d.vec3u(1, 3, 1),
+      d.vec3u(1, 2, 1),
+      d.vec3u(1, 1, 1),
+    ]);
+  });
 });

@@ -15,7 +15,7 @@ import {
   getJunctionGradientSlot,
 } from './algorithm.ts';
 
-const MemorySchema = (n: number) => d.arrayOf(d.vec3f, n);
+const MemorySchema = d.arrayOf(d.vec3f);
 
 type Layout<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
@@ -72,7 +72,7 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *
  * @param options A set of general options for instances of this cache configuration.
  *
- * ### Basic usage
+ * --- Basic usage
  * @example
  * ```ts
  * const perlinCacheConfig = perlin3d.dynamicCacheConfig();

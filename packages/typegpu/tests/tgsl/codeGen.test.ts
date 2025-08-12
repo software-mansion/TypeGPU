@@ -15,7 +15,7 @@ describe('codeGen', () => {
       });
 
       expect(parseResolved({ main })).toBe(
-        parse('fn main() -> f32 { return ((1 * 2) * 3); }'),
+        parse('fn main() -> f32 { return 6; }'),
       );
     });
 

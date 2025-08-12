@@ -2,3 +2,234 @@
 title: "@typegpu/noise"
 ---
 
+The `@typegpu/noise` package offers a set of pseudo-random utilities for use in TypeGPU and WebGPU projects. At its core, the package provides a
+pseudo-random number generator for uniformly distributed values (same probability for all numbers) in the range `[0, 1)`, as well as higher-level
+utilities built on top.
+
+It also features a [Perlin noise](#perlin-noise) implementation, which is useful for generating smooth, natural-looking variations in visual
+effects, terrains, and other procedural elements.
+
+:::note
+Threads do not share the generator's `State`. As a result, unless you change the seed or provide thread-dependent variables, each thread will produce the same sequence of sampled values.
+:::
+
+## Use with either TypeGPU or WebGPU
+
+Each utility function described in this guide is usable from the context of both TypeGPU and vanilla WebGPU. This makes it really simple to
+leverage the TypeGPU ecosystem in your WebGPU projects, without needing to migrate large parts of your codebase.
+
+### TypeGPU
+
+Calling utility functions from [TypeGPU functions](/TypeGPU/fundamentals/functions/) links them automatically.
+In the example below, resolving `randomVec2f` into a shader will include the code for `randf.sample` and all of its dependencies.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
+
+const randomVec2f = tgpu.fn([], d.vec2f)(() => {
+  const x = randf.sample(); // returns a random float in [0, 1)
+  const y = randf.sample(); // returns the next random float in [0, 1)
+  return d.vec2f(x, y);
+});
+
+// ...
+```
+
+### WebGPU
+
+The `tgpu.resolve` API can be used to inject TypeGPU resources (constants, functions, etc.) into a WGSL shader.
+
+In the example below, the `sample` function is accessed both as a named function, and as part of the `randf` object.
+The resolution mechanism handles deduplication out of the box, as well as omits code that is unused by your shader,
+so only one definition of `sample` will be included in the final shader.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
+// `typegpu` is necessary to inject library code into your custom shader
+import tgpu from 'typegpu';
+
+const shader = tgpu.resolve({
+  template: `
+    fn random_vec2f() -> vec2f {
+      // Accessing the 'sample' function directly
+      let x = sample();
+      // Accessing the 'sample' function as part of the 'randf' object
+      let y = randf.sample();
+      return vec2f(x, y);
+    }
+
+    // ...
+  `,
+  externals: { sample: randf.sample, randf },
+});
+
+// The shader is just a WGSL string
+shader;
+// ^?
+```
+
+Does this mean we allow object access inside of WGSL shaders?... yes, yes we do 🙈. [To learn more about resolution, check our "Resolve" guide](/TypeGPU/fundamentals/resolve/)
+
+## Pseudo-random number generator
+
+The `@typegpu/noise` package provides a pseudo-random number generator (PRNG) that generates uniformly distributed random numbers in the range `[0, 1)`.
+Each call to `randf.sample` returns the next random float in the sequence, allowing for predictable and repeatable results. The seed can be set or reset
+using a set of `randf.seedN` functions, where `N` is the number of components our seed has.
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
+
+const main = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  randf.seed2(pos.xy); // Generate a different sequence for each pixel
+
+  return d.vec4f(
+    randf.sample(), // returns a random float in [0, 1)
+    randf.sample(), // returns the next random float in [0, 1)
+    0.0,
+    1.0
+  );
+});
+```
+
+There are higher-level utilities built on top of `randf.sample`:
+- `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
+- `inUnitCube` - returns a random 3D vector uniformly distributed inside a unit cube
+- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector
+- `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
+
+## Perlin noise
+
+The package exports an implementation for both 2D and 3D Perlin noise, `perlin2d` and `perlin3d`, respectively.
+Using it is as simple as calling the `.sample` function with the desired coordinates, and it returns a value in the range `[-1, 1]`.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+import { perlin2d } from '@typegpu/noise';
+
+const main = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  const noise = perlin2d.sample(pos.xy.mul(0.1)); // Scale the coordinates for smoother noise
+  return d.vec4f(noise, noise, noise, 1); // Use the noise value for RGB channels
+});
+```
+
+This simple usage is enough for most cases, but by default, `perlin.sample` computes the underlying gradients on-demand, per pixel.
+This can be inefficient for large images or when the same noise is sampled multiple times.
+To improve performance, you can precompute the gradients using either a *Static* or a *Dynamic* cache. **In our tests, the efficiency gain can be up to 10x!**
+
+### Static cache
+A static cache presumes that the domain of the noise function is fixed, and cannot change between shader invocations.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+import { perlin3d } from '@typegpu/noise';
+
+const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
+  const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
+});
+
+// ---cut---
+const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
+
+const pipeline = root['~unstable']
+  // Plugging the cache into the pipeline
+  .pipe(cache.inject())
+  // ...
+  .withCompute(main)
+  .createPipeline();
+```
+Or in WebGPU:
+```ts twoslash
+/// <reference types="@webgpu/types" />
+import * as d from 'typegpu/data';
+
+declare const device: GPUDevice;
+import tgpu from 'typegpu';
+import { perlin3d } from '@typegpu/noise';
+
+// ---cut---
+const root = tgpu.initFromDevice({ device });
+const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
+
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+  template: `
+    fn main() {
+      let value = perlin3d.sample(vec3f(0.5, 0., 0.));
+      let wrappedValue = perlin3d.sample(vec3f(10.5, 0., 0.)); // the same as 'value'!
+      // ...
+    }
+
+    // ...
+  `,
+  externals: { perlin3d },
+  config: (cfg) =>
+    cfg.pipe(cache.inject())
+  // Or just:
+  // config: cache.inject()
+});
+```
+
+### Dynamic cache
+
+If you need to change the size of the noise domain at runtime (in between shader invocations)
+without having to recompile the shader, you have to use a dynamic cache. With it comes a more
+complex setup.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { perlin3d } from '@typegpu/noise';
+
+const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
+  const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
+});
+
+const root = await tgpu.init();
+// ---cut---
+const cacheConfig = perlin3d.dynamicCacheConfig();
+// Holds all resources the perlin cache needs access to
+const dynamicLayout = tgpu.bindGroupLayout({ ...cacheConfig.layout });
+
+const pipeline = root['~unstable']
+  // Plugging the cache into the pipeline
+  .pipe(cacheConfig.inject(dynamicLayout.$))
+  // ...
+  .withCompute(main)
+  .createPipeline();
+
+// Instantiating the cache with an initial size.
+const cache = cacheConfig.instance(root, d.vec3u(10, 10, 1));
+
+// A function for updating the size of the cache
+function initBindGroup(size: d.v3u) {
+  cache.size = size;
+  return root.createBindGroup(dynamicLayout, cache.bindings);
+}
+let bindGroup = initBindGroup(d.vec3u(10, 10, 1));
+
+// Dispatching the pipeline
+pipeline
+  .with(dynamicLayout, bindGroup)
+  .dispatchWorkgroups(1);
+
+// Can be called again to reinitialize the cache with
+// a different domain size
+bindGroup = initBindGroup(d.vec3u(5, 5, 1));
+```
