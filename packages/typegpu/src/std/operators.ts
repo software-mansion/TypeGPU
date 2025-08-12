@@ -23,6 +23,7 @@ function tryUnify<T extends Snippet[]>(
   values: T,
   restrictTo?: AnyWgslData[],
   concretizeTypes = false,
+  verbose = true,
 ): T {
   const ctx = getResolutionCtx() as ResolutionCtx;
   const converted = convertToCommonType({
@@ -30,6 +31,7 @@ function tryUnify<T extends Snippet[]>(
     values,
     restrictTo,
     concretizeTypes,
+    verbose,
   });
   return converted ? (converted as T) : values;
 }
@@ -246,7 +248,7 @@ export const div = createDualImpl(
   cpuDiv,
   // CODEGEN implementation
   (lhs, rhs) => {
-    const [convLhs, convRhs] = tryUnify([lhs, rhs], [f32, f16], true);
+    const [convLhs, convRhs] = tryUnify([lhs, rhs], [f32, f16], true, false);
 
     if (
       (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&

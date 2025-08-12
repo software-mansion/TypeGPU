@@ -521,8 +521,16 @@ export function convertToCommonType({
   concretizeTypes = false,
   verbose = true,
 }: ConvertToCommonTypeOptions): Snippet[] | undefined {
+  const needsConcretization = concretizeTypes &&
+    // If we have any concrete type among the values, we don't need to concretize
+    !values.some((value) =>
+      concretize(value.dataType as AnyWgslData) === value.dataType
+    );
+
   const types = values.map((value) =>
-    concretizeTypes ? concretize(value.dataType as AnyWgslData) : value.dataType
+    needsConcretization
+      ? concretize(value.dataType as AnyWgslData)
+      : value.dataType
   );
 
   if (types.some((type) => type === UnknownData)) {
