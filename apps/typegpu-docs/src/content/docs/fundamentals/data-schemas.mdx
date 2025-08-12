@@ -343,19 +343,6 @@ const array = ArrayPartialSchema(2)([1.2, 19.29]);
 //    ^?
 ```
 
-You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use the schema to declare WGSL [runtime-sized arrays](/TypeGPU/fundamentals/bind-groups#runtime-sized-example).
-
-```ts twoslash
-import * as d from 'typegpu/data';
-
-// ---cut---
-const ArrayPartialSchema = d.arrayOf(d.f32);
-//    ^?
-
-const array = ArrayPartialSchema(2)([1.2, 19.29]);
-//    ^?
-```
-
 ## Atomics
 
 To create a schema corresponding to an atomic data type, wrap `d.i32` or `d.u32` with `d.atomic`.
