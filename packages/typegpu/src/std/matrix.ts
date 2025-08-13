@@ -35,14 +35,15 @@ const gpuRotationZ4 = rotationZ4[$internal].gpuImpl;
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} The translated matrix.
  */
-export const translate4 = createDualImpl(
+export const translate4 = createDualImpl({
+  name: 'translate4',
   // CPU implementation
-  (matrix: m4x4f, vector: v3f) => cpuMul(cpuTranslation4(vector), matrix),
+  normalImpl: (matrix: m4x4f, vector: v3f) =>
+    cpuMul(cpuTranslation4(vector), matrix),
   // GPU implementation
-  (matrix, vector) =>
+  codegenImpl: (matrix, vector) =>
     snip(stitch`(${gpuTranslation4(vector)} * ${matrix})`, matrix.dataType),
-  'translate4',
-);
+});
 
 /**
  * Scales the given 4-by-4 matrix in each dimension by an amount given by the corresponding entry in the given vector.
@@ -50,14 +51,15 @@ export const translate4 = createDualImpl(
  * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
  * @returns {m4x4f} The scaled matrix.
  */
-export const scale4 = createDualImpl(
+export const scale4 = createDualImpl({
+  name: 'scale4',
   // CPU implementation
-  (matrix: m4x4f, vector: v3f) => cpuMul(cpuScaling4(vector), matrix),
+  normalImpl: (matrix: m4x4f, vector: v3f) =>
+    cpuMul(cpuScaling4(vector), matrix),
   // GPU implementation
-  (matrix, vector) =>
+  codegenImpl: (matrix, vector) =>
     snip(stitch`(${(gpuScaling4(vector))} * ${matrix})`, matrix.dataType),
-  'scale4',
-);
+});
 
 /**
  * Rotates the given 4-by-4 matrix around the x-axis by the given angle.
@@ -65,14 +67,15 @@ export const scale4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateX4 = createDualImpl(
+export const rotateX4 = createDualImpl({
+  name: 'rotateX4',
   // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationX4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) =>
+    cpuMul(cpuRotationX4(angle), matrix),
   // GPU implementation
-  (matrix, angle) =>
+  codegenImpl: (matrix, angle) =>
     snip(stitch`(${(gpuRotationX4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateX4',
-);
+});
 
 /**
  * Rotates the given 4-by-4 matrix around the y-axis by the given angle.
@@ -80,14 +83,15 @@ export const rotateX4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateY4 = createDualImpl(
+export const rotateY4 = createDualImpl({
+  name: 'rotateY4',
   // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationY4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) =>
+    cpuMul(cpuRotationY4(angle), matrix),
   // GPU implementation
-  (matrix, angle) =>
+  codegenImpl: (matrix, angle) =>
     snip(stitch`(${(gpuRotationY4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateY4',
-);
+});
 
 /**
  * Rotates the given 4-by-4 matrix around the z-axis by the given angle.
@@ -95,11 +99,12 @@ export const rotateY4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateZ4 = createDualImpl(
+export const rotateZ4 = createDualImpl({
+  name: 'rotateZ4',
   // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationZ4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) =>
+    cpuMul(cpuRotationZ4(angle), matrix),
   // GPU implementation
-  (matrix, angle) =>
+  codegenImpl: (matrix, angle) =>
     snip(stitch`(${(gpuRotationZ4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateZ4',
-);
+});

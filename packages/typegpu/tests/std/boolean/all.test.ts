@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
+import { bool, vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
 import { all } from '../../../src/std/boolean.ts';
+import tgpu from '../../../src/index.ts';
+import { parse, parseResolved } from '../../utils/parseResolved.ts';
 
 describe('all', () => {
   it('calculates for 2 element vectors', () => {
@@ -22,5 +24,21 @@ describe('all', () => {
     expect(all(vec4b(true, true, false, false))).toBe(false);
     expect(all(vec4b(true, true, false, true))).toBe(false);
     expect(all(vec4b(true, true, true, true))).toBe(true);
+  });
+
+  describe('in tgsl', () => {
+    it('precomputes vector literals', () => {
+      const externals = {
+        foo: tgpu.fn([], bool)(() => all(vec3b(true, true, true))),
+        bar: tgpu.fn([], bool)(() => all(vec3b(true, false, true))),
+        baz: tgpu.fn([], bool)(() => all(vec4b(true))),
+      };
+
+      expect(parseResolved(externals)).toBe(parse(`
+        fn foo() -> bool { return true; }
+        fn bar() -> bool { return false; }
+        fn baz() -> bool { return true; }
+      `));
+    });
   });
 });

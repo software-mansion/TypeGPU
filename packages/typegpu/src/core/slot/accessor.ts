@@ -6,6 +6,7 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
@@ -70,6 +71,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return new Proxy(
       {
         [$internal]: true,
+        [$runtimeResource]: true,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
         [$wgslDataType]: this.schema,

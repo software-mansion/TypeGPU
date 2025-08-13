@@ -32,7 +32,7 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { coerceToSnippet } from './tgsl/generationHelpers.ts';
+import { coerceToSnippet } from './tgsl/coerceToSnippet.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,

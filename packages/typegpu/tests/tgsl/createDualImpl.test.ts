@@ -4,7 +4,11 @@ import { getName } from '../../src/shared/meta.ts';
 
 describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
-    const dual = createDualImpl((a) => a, (snippet) => snippet, 'myDualImpl');
+    const dual = createDualImpl({
+      name: 'myDualImpl',
+      normalImpl: (a) => a,
+      codegenImpl: (snippet) => snippet,
+    });
     expect(getName(dual)).toBe('myDualImpl');
   });
 });

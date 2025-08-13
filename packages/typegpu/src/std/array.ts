@@ -6,11 +6,12 @@ import type { AnyWgslData } from '../data/wgslTypes.ts';
 import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 
-export const arrayLength = createDualImpl(
+export const arrayLength = createDualImpl({
+  name: 'arrayLength',
   // CPU implementation
-  (a: unknown[]) => a.length,
+  normalImpl: (a: unknown[]) => a.length,
   // GPU implementation
-  (a) => {
+  codegenImpl: (a) => {
     if (
       isPtr(a.dataType) && isWgslArray(a.dataType.inner) &&
       a.dataType.inner.elementCount > 0
@@ -19,6 +20,5 @@ export const arrayLength = createDualImpl(
     }
     return snip(stitch`arrayLength(${a})`, u32);
   },
-  'arrayLength',
-  (a) => [ptrFn(a.dataType as AnyWgslData)],
-);
+  args: (a) => [ptrFn(a.dataType as AnyWgslData)],
+});

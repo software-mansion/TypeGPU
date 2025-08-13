@@ -15,18 +15,23 @@ import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
-  coerceToSnippet,
-  concretize,
   convertStructValues,
   convertToCommonType,
   type GenerationCtx,
-  getTypeForIndexAccess,
-  getTypeForPropAccess,
-  numericLiteralToSnippet,
-  parseNumericString,
   tryConvertSnippet,
 } from './generationHelpers.ts';
+import {
+  getTypeForIndexAccess,
+  getTypeForPropAccess,
+} from './getTypeForAccess.ts';
+import {
+  numericLiteralToSnippet,
+  parseNumericString,
+} from './numericLiteral.ts';
+import { concretize } from './concretize.ts';
+import { coerceToSnippet } from './coerceToSnippet.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -189,7 +194,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return snip(expression ? 'true' : 'false', bool);
+    return snip(expression, bool);
   }
 
   if (
@@ -612,21 +617,29 @@ export function generateStatement(
   }
 
   if (statement[0] === NODE.if) {
-    const [_, cond, cons, alt] = statement;
-    const condition = ctx.resolve(
-      generateTypedExpression(ctx, cond, bool).value,
-    );
+    const [_, condNode, consNode, altNode] = statement;
+    const condition = generateTypedExpression(ctx, condNode, bool);
 
-    const consequent = generateBlock(ctx, blockifySingleStatement(cons));
-    const alternate = alt
-      ? generateBlock(ctx, blockifySingleStatement(alt))
-      : undefined;
+    const consequent = condition.value === false
+      ? undefined
+      : generateBlock(ctx, blockifySingleStatement(consNode));
+    const alternate = condition.value === true || !altNode
+      ? undefined
+      : generateBlock(ctx, blockifySingleStatement(altNode));
 
-    if (!alternate) {
-      return `${ctx.pre}if (${condition}) ${consequent}`;
+    if (condition.value === true) {
+      return consequent as string;
     }
 
-    return `\
+    if (condition.value === false) {
+      return alternate ?? '';
+    }
+
+    if (!alternate) {
+      return stitch`${ctx.pre}if (${condition}) ${consequent}`;
+    }
+
+    return stitch`\
 ${ctx.pre}if (${condition}) ${consequent}
 ${ctx.pre}else ${alternate}`;
   }

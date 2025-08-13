@@ -208,8 +208,9 @@ function createFn<ImplSchema extends AnyFn>(
     },
   } as This;
 
-  const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) =>
+  const call = createDualImpl<InferImplSchema<ImplSchema>>({
+    name: 'tgpuFnCall',
+    normalImpl: (...args) =>
       provideInsideTgpuFn(() => {
         try {
           if (typeof implementation === 'string') {
@@ -230,10 +231,9 @@ function createFn<ImplSchema extends AnyFn>(
           throw new ExecutionError(err, [fn]);
         }
       }),
-    (...args) => snip(new FnCall(fn, args), shell.returnType),
-    'tgpuFnCall',
-    shell.argTypes,
-  );
+    codegenImpl: (...args) => snip(new FnCall(fn, args), shell.returnType),
+    args: shell.argTypes,
+  });
 
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     ImplSchema
@@ -287,12 +287,13 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     },
   };
 
-  const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) => innerFn(...args),
-    (...args) => snip(new FnCall(fn, args), innerFn.shell.returnType),
-    'tgpuFnCall',
-    innerFn.shell.argTypes,
-  );
+  const call = createDualImpl<InferImplSchema<ImplSchema>>({
+    name: 'tgpuFnCall',
+    normalImpl: (...args) => innerFn(...args),
+    codegenImpl: (...args) =>
+      snip(new FnCall(fn, args), innerFn.shell.returnType),
+    args: innerFn.shell.argTypes,
+  });
 
   const fn = Object.assign(call, fnBase) as unknown as TgpuFn<ImplSchema>;
   fn[$internal].implementation = innerFn[$internal].implementation;

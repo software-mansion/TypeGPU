@@ -973,11 +973,11 @@ describe('v4b', () => {
       expect(parseResolved({ main })).toBe(
         parse(`
           fn main() {
-            var vecLocal = vec3<bool>(true, true, true);
+            var vecLocal = vec3<bool>(true);
 
-            var one = vec4<bool>(vec3<bool>(true, false, true), true);
+            var one = vec4<bool>(true, false, true, true);
             var two = vec4<bool>(vecLocal, false);
-            var three = vec4<bool>(vec3<bool>(false, false, true), true);
+            var three = vec4<bool>(false, false, true, true);
           }
         `),
       );

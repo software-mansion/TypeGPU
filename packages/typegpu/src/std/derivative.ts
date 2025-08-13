@@ -3,92 +3,92 @@ import { createDualImpl } from '../core/function/dualImpl.ts';
 import { snip } from '../data/snippet.ts';
 import type { AnyFloat32VecInstance } from '../data/wgslTypes.ts';
 
-export const dpdx = createDualImpl(
+export const dpdx = createDualImpl({
+  name: 'dpdx',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdx(${value})`, value.dataType),
-  'dpdx',
-);
+  codegenImpl: (value) => snip(stitch`dpdx(${value})`, value.dataType),
+});
 
-export const dpdxCoarse = createDualImpl(
+export const dpdxCoarse = createDualImpl({
+  name: 'dpdxCoarse',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdxCoarse(${value})`, value.dataType),
-  'dpdxCoarse',
-);
+  codegenImpl: (value) => snip(stitch`dpdxCoarse(${value})`, value.dataType),
+});
 
-export const dpdxFine = createDualImpl(
+export const dpdxFine = createDualImpl({
+  name: 'dpdxFine',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdxFine(${value})`, value.dataType),
-  'dpdxFine',
-);
+  codegenImpl: (value) => snip(stitch`dpdxFine(${value})`, value.dataType),
+});
 
-export const dpdy = createDualImpl(
+export const dpdy = createDualImpl({
+  name: 'dpdy',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdy(${value})`, value.dataType),
-  'dpdy',
-);
+  codegenImpl: (value) => snip(stitch`dpdy(${value})`, value.dataType),
+});
 
-export const dpdyCoarse = createDualImpl(
+export const dpdyCoarse = createDualImpl({
+  name: 'dpdyCoarse',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdyCoarse(${value})`, value.dataType),
-  'dpdyCoarse',
-);
+  codegenImpl: (value) => snip(stitch`dpdyCoarse(${value})`, value.dataType),
+});
 
-export const dpdyFine = createDualImpl(
+export const dpdyFine = createDualImpl({
+  name: 'dpdyFine',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`dpdyFine(${value})`, value.dataType),
-  'dpdyFine',
-);
+  codegenImpl: (value) => snip(stitch`dpdyFine(${value})`, value.dataType),
+});
 
-export const fwidth = createDualImpl(
+export const fwidth = createDualImpl({
+  name: 'fwidth',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`fwidth(${value})`, value.dataType),
-  'fwidth',
-);
+  codegenImpl: (value) => snip(stitch`fwidth(${value})`, value.dataType),
+});
 
-export const fwidthCoarse = createDualImpl(
+export const fwidthCoarse = createDualImpl({
+  name: 'fwidthCoarse',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`fwidthCoarse(${value})`, value.dataType),
-  'fwidthCoarse',
-);
+  codegenImpl: (value) => snip(stitch`fwidthCoarse(${value})`, value.dataType),
+});
 
-export const fwidthFine = createDualImpl(
+export const fwidthFine = createDualImpl({
+  name: 'fwidthFine',
   // CPU implementation
-  <T extends AnyFloat32VecInstance | number>(value: T): T => {
+  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
     throw new Error('Derivative builtins are not allowed on the cpu');
   },
   // GPU implementation
-  (value) => snip(stitch`fwidthFine(${value})`, value.dataType),
-  'fwidthFine',
-);
+  codegenImpl: (value) => snip(stitch`fwidthFine(${value})`, value.dataType),
+});
