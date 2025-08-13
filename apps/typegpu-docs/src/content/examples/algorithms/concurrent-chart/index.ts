@@ -12,6 +12,9 @@ const speedupLabels = Array.from(
 const tooltips = Array.from(
   document.querySelectorAll<HTMLDivElement>('.bar-tooltip'),
 );
+const xAxisLabels = Array.from(
+  document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
+);
 
 const root = await tgpu.init({
   device: {
@@ -70,6 +73,7 @@ function drawCharts() {
     speedupLabels[i].textContent = `${
       (Number(value.jsTime) / Number(value.gpuShaderTime)).toFixed(1)
     }x`;
+    xAxisLabels[i].textContent = keys[i];
 
     // CPU
     bars[3 * i].style.setProperty(

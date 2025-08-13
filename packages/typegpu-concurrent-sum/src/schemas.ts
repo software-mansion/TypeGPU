@@ -17,5 +17,6 @@ export const identitySlot = tgpu.slot<number>();
 
 export interface BinaryOp {
   operation: (x: number, y: number) => number;
+// call & readonly internal as type for op
   identityElement: number;
 }

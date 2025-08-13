@@ -2,11 +2,11 @@
   <canvas></canvas>
   <div class="predictions-container">
     <div
-      class="bars-container grid grid-flow-col justify-center items-end gap-x-4 gap-y-8 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] pl-4 pb-4 max-lg:w-[calc(100%+8rem)] max-lg:gap-y-[0.1rem]"
+      class="bars-container grid grid-flow-col justify-center pl-2 pb-3 gap-x-4 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] max-lg:w-[calc(100%+8rem)]"
     >
       <!-- Y-axis label -->
       <div
-        class="y-axis-labels absolute left-[-3rem] top-0 h-full flex flex-col justify-between text-sm text-gray-600"
+        class="y-axis-labels absolute left-[-3rem]  h-full flex flex-col justify-between text-sm text-gray-600"
       >
         <span class="transform -translate-y-1/2">40</span>
         <span class="transform -translate-y-1/2">30</span>
@@ -21,8 +21,8 @@
       >
         Time [ms]
       </div>
-      <div class="bar-triplet">
-        <div class="bars-row">
+      <div class="justify-items-center mr-8">
+        <div class="grid grid-cols-3 items-end gap-2">
           <div class="bar">
             <div class="bar-tooltip"></div>
           </div>
@@ -34,10 +34,10 @@
           </div>
         </div>
         <div class="speedup-label"></div>
-        <div class="x-axis-label">65K</div>
+        <div class="x-axis-label">size</div>
       </div>
-      <div class="bar-triplet">
-        <div class="bars-row">
+      <div class="justify-items-center mr-8">
+        <div class="grid grid-cols-3 items-end gap-2">
           <div class="bar">
             <div class="bar-tooltip"></div>
           </div>
@@ -49,10 +49,10 @@
           </div>
         </div>
         <div class="speedup-label"></div>
-        <div class="x-axis-label">131K</div>
+        <div class="x-axis-label">size</div>
       </div>
-      <div class="bar-triplet">
-        <div class="bars-row">
+      <div class="justify-items-center mr-8">
+        <div class="grid grid-cols-3 items-end gap-2">
           <div class="bar">
             <div class="bar-tooltip"></div>
           </div>
@@ -64,10 +64,10 @@
           </div>
         </div>
         <div class="speedup-label"></div>
-        <div class="x-axis-label">1M</div>
+        <div class="x-axis-label">size</div>
       </div>
-      <div class="bar-triplet">
-        <div class="bars-row">
+      <div class="justify-items-center mr-8">
+        <div class="grid grid-cols-3 items-end gap-2">
           <div class="bar">
             <div class="bar-tooltip"></div>
           </div>
@@ -79,10 +79,10 @@
           </div>
         </div>
         <div class="speedup-label"></div>
-        <div class="x-axis-label">4.2M</div>
+        <div class="x-axis-label">size</div>
       </div>
-      <div class="bar-triplet">
-        <div class="bars-row">
+      <div class="justify-items-center mr-8">
+        <div class="grid grid-cols-3 items-end gap-2">
           <div class="bar">
             <div class="bar-tooltip"></div>
           </div>
@@ -94,25 +94,19 @@
           </div>
         </div>
         <div class="speedup-label"></div>
-        <div class="x-axis-label">8.4M</div>
+        <div class="x-axis-label">size</div>
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  .bar-triplet {
-    display: grid;
-    grid-template-rows: 1fr auto auto;
-    justify-items: center;
-    margin-right: 2rem;
-  }
-
-  .bars-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: end;
-    gap: 0.5rem;
+  :root {
+    --axis-color: #e6e6f2;
+    --bar-gradient: linear-gradient(to right, #c464ff, #1d72f0);
+    --bar-color-gpu: #ffd54a;         /* second bar */
+    --bar-color-threads: #18b6d5;     /* third bar */
+    --bar-track-bg: linear-gradient(to right, transparent, var(--axis-color));
   }
 
   .bar {
@@ -122,7 +116,7 @@
     position: relative;
     height: 15.25rem;
     width: 1rem;
-    background: linear-gradient(to right, transparent, #e6e6f2);
+    background: var(--bar-track-bg);
     border-radius: 9999px;
     cursor: pointer;
   }
@@ -143,6 +137,7 @@
     top: 3rem;
   }
 
+  /* tooltip */
   .bar-tooltip {
     position: absolute;
     top: -3rem;
@@ -184,9 +179,9 @@
 
   .bar::after {
     width: 100%;
-    height: calc((100% - 2rem) * var(--bar-height, 0%, 100%));
+    height: calc((100% - 2rem) * clamp(0, var(--bar-height, 0), 1));
     opacity: var(--highlight-opacity, 0);
-    background-image: linear-gradient(to right, #c464ff, #1d72f0);
+    background-image: var(--bar-gradient);
     position: absolute;
     border-radius: 9999px;
     transition: height 0.2s ease-in-out, opacity 0.5s ease-in-out;
@@ -203,7 +198,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 8px solid #e6e6f2;
+    border-bottom: 8px solid var(--axis-color);
     transform: translateX(-5px);
   }
 
@@ -217,19 +212,17 @@
     height: 0;
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
-    border-left: 8px solid #e6e6f2;
+    border-left: 8px solid var(--axis-color);
     transform: translateY(1px);
   }
 
-  /* Make the second bar in each pair yellow (GPU) */
-  .bars-row .bar:nth-child(1)::after {
+  .bars-container .bar:nth-child(1)::after {
     background-image: none;
-    background-color: #ffd54a;
+    background-color: var(--bar-color-gpu);
   }
 
-  /* Make the third bar in each pair a different color */
-  .bars-row .bar:nth-child(2)::after {
+  .bars-container .bar:nth-child(2)::after {
     background-image: none;
-    background-color: #18b6d5;
+    background-color: var(--bar-color-threads);
   }
 </style>
