@@ -265,10 +265,7 @@ describe('convertToCommonType', () => {
   const snippetUnknown = snip('?', UnknownData);
 
   it('converts identical types', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetF32, snippetF32],
-    });
+    const result = convertToCommonType([snippetF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -278,14 +275,11 @@ describe('convertToCommonType', () => {
   });
 
   it('handles abstract types automatically', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [
-        snippetAbsFloat,
-        snippetF32,
-        snippetAbsInt,
-      ],
-    });
+    const result = convertToCommonType([
+      snippetAbsFloat,
+      snippetF32,
+      snippetAbsInt,
+    ]);
     // since WGSL handles all abstract types automatically, this should be basically identity
     expect(result).toBeDefined();
     expect(result?.length).toBe(3);
@@ -298,10 +292,7 @@ describe('convertToCommonType', () => {
   });
 
   it('performs implicit casts and warns', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetI32, snippetF32],
-    });
+    const result = convertToCommonType([snippetI32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -311,10 +302,7 @@ describe('convertToCommonType', () => {
   });
 
   it('performs pointer dereferencing', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetPtrF32, snippetF32],
-    });
+    const result = convertToCommonType([snippetPtrF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -325,34 +313,24 @@ describe('convertToCommonType', () => {
 
   it('returns undefined for incompatible types', () => {
     const snippetVec2f = snip('v2', d.vec2f);
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetF32, snippetVec2f],
-    });
+    const result = convertToCommonType([snippetF32, snippetVec2f]);
     expect(result).toBeUndefined();
   });
 
   it('returns undefined if any type is UnknownData', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetF32, snippetUnknown],
-    });
+    const result = convertToCommonType([snippetF32, snippetUnknown]);
     expect(result).toBeUndefined();
   });
 
   it('returns undefined for empty input', () => {
-    const result = convertToCommonType({ ctx: mockCtx, values: [] });
+    const result = convertToCommonType([]);
     expect(result).toBeUndefined();
   });
 
   it('respects restrictTo types', () => {
     // [abstractInt, i32] -> common type i32
     // Restrict to f32: requires cast for i32
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetAbsInt, snippetI32],
-      restrictTo: [d.f32],
-    });
+    const result = convertToCommonType([snippetAbsInt, snippetI32], [d.f32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -362,39 +340,24 @@ describe('convertToCommonType', () => {
   });
 
   it('can restrict abstractFloat to u32', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetAbsFloat],
-      restrictTo: [d.u32],
-    });
+    const result = convertToCommonType([snippetAbsFloat], [d.u32]);
     expect(result).toBeDefined();
     expect(result?.[0]?.dataType).toBe(d.u32);
     expect(result?.[0]?.value).toBe('u32(1.1)');
   });
 
   it('fails if restrictTo is incompatible', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetAbsInt, snippetI32],
-      restrictTo: [d.vec2f],
-    });
+    const result = convertToCommonType([snippetAbsInt, snippetI32], [d.vec2f]);
     expect(result).toBeUndefined();
   });
 
   it('handles void gracefully', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetF32, snip('void', d.Void)],
-    });
+    const result = convertToCommonType([snippetF32, snip('void', d.Void)]);
     expect(result).toBeUndefined();
   });
 
   it('handles void as target type gracefully', () => {
-    const result = convertToCommonType({
-      ctx: mockCtx,
-      values: [snippetF32],
-      restrictTo: [d.Void],
-    });
+    const result = convertToCommonType([snippetF32], [d.Void]);
     expect(result).toBeUndefined();
   });
 });
@@ -414,7 +377,7 @@ describe('convertStructValues', () => {
       c: snip('vec2f(1.0, 1.0)', d.vec2f),
       d: snip('true', d.bool),
     };
-    const res = convertStructValues(mockCtx, structType, snippets);
+    const res = convertStructValues(structType, snippets);
     expect(res.length).toBe(4);
     expect(res[0]).toEqual(snippets.a);
     expect(res[1]).toEqual(snippets.b);
@@ -429,7 +392,7 @@ describe('convertStructValues', () => {
       c: snip('2.22', d.f32),
       d: snip('true', d.bool),
     };
-    const res = convertStructValues(mockCtx, structType, snippets);
+    const res = convertStructValues(structType, snippets);
     expect(res.length).toBe(4);
     expect(res[0]).toEqual(snip('f32(1)', d.f32)); // Cast applied
     expect(res[1]).toEqual(snip('i32(2)', d.i32)); // Cast applied
@@ -444,7 +407,7 @@ describe('convertStructValues', () => {
       c: snip('vec2f(1.0, 1.0)', d.vec2f),
       d: snip('true', d.bool),
     };
-    expect(() => convertStructValues(mockCtx, structType, snippets)).toThrow(
+    expect(() => convertStructValues(structType, snippets)).toThrow(
       /Missing property b/,
     );
   });

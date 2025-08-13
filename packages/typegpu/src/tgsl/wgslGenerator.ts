@@ -229,11 +229,8 @@ export function generateExpression(
         : [lhsExpr.dataType as AnyData]
       : undefined;
 
-    const [convLhs, convRhs] = convertToCommonType({
-      ctx,
-      values: [lhsExpr, rhsExpr] as const,
-      restrictTo: forcedType,
-    }) ?? [lhsExpr, rhsExpr];
+    const [convLhs, convRhs] =
+      convertToCommonType([lhsExpr, rhsExpr], forcedType) ?? [lhsExpr, rhsExpr];
 
     const lhsStr = ctx.resolve(convLhs.value, convLhs.dataType);
     const rhsStr = ctx.resolve(convRhs.value, convRhs.dataType);
@@ -453,8 +450,7 @@ export function generateExpression(
           convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
-            snippets;
+          convertedArguments = convertToCommonType(snippets) ?? snippets;
         } else {
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
@@ -508,7 +504,7 @@ export function generateExpression(
       }),
     );
 
-    const convertedSnippets = convertStructValues(ctx, structType, entries);
+    const convertedSnippets = convertStructValues(structType, entries);
 
     return snip(
       stitch`${ctx.resolve(structType)}(${convertedSnippets})`,
@@ -547,7 +543,7 @@ export function generateExpression(
         );
       }
 
-      const converted = convertToCommonType({ ctx, values: valuesSnippets });
+      const converted = convertToCommonType(valuesSnippets);
       if (!converted) {
         throw new WgslTypeError(
           'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
@@ -672,22 +668,16 @@ ${ctx.pre}else ${alternate}`;
       .withResetIndentLevel(
         () => [
           init ? generateStatement(ctx, init) : undefined,
-          condition ? generateExpression(ctx, condition) : undefined,
+          condition ? generateTypedExpression(ctx, condition, bool) : undefined,
           update ? generateStatement(ctx, update) : undefined,
         ],
       );
 
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
-
-    const condSnippet = condition
-      ? generateTypedExpression(ctx, condition, bool)
-      : undefined;
-    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
-
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
     const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
-    return `${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
+    return stitch`${ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {

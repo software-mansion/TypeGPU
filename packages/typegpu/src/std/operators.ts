@@ -1,12 +1,11 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
+import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
-  type AnyWgslData,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
@@ -15,26 +14,12 @@ import {
 } from '../data/wgslTypes.ts';
 import { convertToCommonType } from '../tgsl/conversion.ts';
 import { getResolutionCtx } from '../execMode.ts';
-import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import type { GenerationCtx } from '../tgsl/generationHelpers.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
-
-function tryUnify<T extends Snippet[]>(
-  values: T,
-  restrictTo?: AnyWgslData[],
-  verbose = true,
-): T {
-  return convertToCommonType({
-    ctx: getResolutionCtx() as ResolutionCtx,
-    values,
-    restrictTo,
-    verbose,
-  }) ?? values;
-}
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
 function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
@@ -73,7 +58,7 @@ export const add = createDualImpl(
   cpuAdd,
   // CODEGEN implementation
   (...args) => {
-    const [lhs, rhs] = tryUnify(args);
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
@@ -115,7 +100,7 @@ export const sub = createDualImpl(
   cpuSub,
   // CODEGEN implementation
   (...args) => {
-    const [lhs, rhs] = tryUnify(args);
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
@@ -181,7 +166,7 @@ export const mul = createDualImpl(
   cpuMul,
   // GPU implementation
   (...args) => {
-    const [lhs, rhs] = tryUnify(args);
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
@@ -241,7 +226,8 @@ export const div = createDualImpl(
   cpuDiv,
   // CODEGEN implementation
   (...args) => {
-    const [lhs, rhs] = tryUnify(args, [f32, f16, abstractFloat], false);
+    const [lhs, rhs] =
+      convertToCommonType(args, [f32, f16, abstractFloat], false) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
@@ -298,7 +284,7 @@ export const mod: ModOverload = createDualImpl(
   },
   // GPU implementation
   (...args) => {
-    const [lhs, rhs] = tryUnify(args);
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
     return snip(stitch`(${lhs} % ${rhs})`, resultType);
   },

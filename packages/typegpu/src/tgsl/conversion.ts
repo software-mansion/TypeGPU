@@ -282,18 +282,11 @@ function applyActionToSnippet(
   }
 }
 
-export type ConvertToCommonTypeOptions<T extends Snippet[]> = {
-  ctx: ResolutionCtx;
-  values: T;
-  restrictTo?: AnyData[] | undefined;
-  verbose?: boolean | undefined;
-};
-
-export function convertToCommonType<T extends Snippet[]>({
-  values,
-  restrictTo,
+export function convertToCommonType<T extends Snippet[]>(
+  values: T,
+  restrictTo?: AnyData[] | undefined,
   verbose = true,
-}: ConvertToCommonTypeOptions<T>): T | undefined {
+): T | undefined {
   const types = values.map((value) => value.dataType);
 
   if (types.some((type) => type.type === 'unknown')) {
@@ -345,11 +338,7 @@ export function tryConvertSnippet(
     return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
   }
 
-  const converted = convertToCommonType({
-    ctx,
-    values: [snippet],
-    restrictTo: [targetDataType],
-  });
+  const converted = convertToCommonType([snippet], [targetDataType]);
 
   if (!converted) {
     throw new WgslTypeError(
@@ -361,7 +350,6 @@ export function tryConvertSnippet(
 }
 
 export function convertStructValues(
-  ctx: ResolutionCtx,
   structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
@@ -374,11 +362,7 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const converted = convertToCommonType({
-      ctx,
-      values: [val],
-      restrictTo: [targetType as AnyData],
-    });
+    const converted = convertToCommonType([val], [targetType]);
 
     return converted?.[0] ?? val;
   });
