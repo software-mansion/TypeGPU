@@ -222,7 +222,12 @@ function createFn<ImplSchema extends AnyFn>(
             schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
-          return implementation(...castAndCopiedArgs);
+          const result = implementation(...castAndCopiedArgs);
+          // Casting the result to the appropriate schema
+          if (shell.returnType.type === 'void') {
+            return result;
+          }
+          return schemaCallWrapper(shell.returnType, result);
         } catch (err) {
           if (err instanceof ExecutionError) {
             throw err.appendToTrace(fn);

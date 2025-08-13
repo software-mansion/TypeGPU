@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import tgpu from '../../../src/index.ts';
 import * as d from '../../../src/data/index.ts';
 import { div, isCloseTo } from '../../../src/std/index.ts';
-import { parse, parseResolved } from '../../utils/parseResolved.ts';
+import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {
@@ -72,80 +72,130 @@ describe('div', () => {
   });
 
   describe('in tgsl', () => {
-    it('works', () => {
-      const foo = tgpu.fn([], d.f32)(() => 1 / 2);
-      const bar = tgpu.fn([], d.u32)(() => 1 / 2);
+    describe('with f32 return type', () => {
+      it('precomputes operation on literals', () => {
+        const foo = tgpu.fn([], d.f32)(() => 1 / 2);
+        expect(foo()).toBe(0.5);
 
-      expect(parseResolved({ foo, bar })).toBe(parse(`
-        fn foo() -> f32 { return 0.5; }
-        fn bar() -> u32 { return u32(0.5); }
-      `));
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo() -> f32 {
+            return 0.5;
+          }"
+        `);
+      });
+
+      it('resolves correctly for two constants wrapped in u32 casts', () => {
+        const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.u32(2));
+        expect(foo()).toBe(0.5);
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo() -> f32 {
+            return (f32(u32(1)) / f32(u32(2)));
+          }"
+        `);
+      });
+
+      it('resolves correctly for two constants wrapped in i32 casts', () => {
+        const foo = tgpu.fn([], d.f32)(() => d.i32(1) / d.i32(2));
+        expect(foo()).toBe(0.5);
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo() -> f32 {
+            return (f32(i32(1)) / f32(i32(2)));
+          }"
+        `);
+      });
+
+      it('resolves two u32 variables', () => {
+        const foo = tgpu.fn([d.u32, d.u32], d.f32)((a, b) => a / b);
+        expect(foo(1, 2)).toBe(0.5);
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo(a: u32, b: u32) -> f32 {
+            return (f32(a) / f32(b));
+          }"
+        `);
+      });
+
+      it('resolves u32 variable divided by a constant', () => {
+        const foo = tgpu.fn([d.u32], d.f32)((a) => a / 2);
+        expect(foo(1)).toBe(0.5);
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo(a: u32) -> f32 {
+            return (f32(a) / 2f);
+          }"
+        `);
+      });
+
+      it('resolves constant divided by a u32 variable', () => {
+        const foo = tgpu.fn([d.u32], d.f32)((a) => 1 / a);
+        expect(foo(2)).toBe(0.5);
+        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+          "fn foo(a: u32) -> f32 {
+            return (1f / f32(a));
+          }"
+        `);
+      });
     });
 
-    it('resolves correctly for two constants wrapped in u32 casts', () => {
-      const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.u32(2));
-      expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toBe(parse(`
-        fn foo() -> f32 {
-          return (f32(u32(1)) / f32(u32(2)));
-        }
-      `));
-    });
+    describe('with u32 return type', () => {
+      it('precomputes operation on literals', () => {
+        const bar = tgpu.fn([], d.u32)(() => 1 / 2);
+        expect(bar()).toBe(0);
 
-    it('resolves correctly for two constants wrapped in i32 casts', () => {
-      const foo = tgpu.fn([], d.f32)(() => d.i32(1) / d.i32(2));
-      expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
-      );
-    });
-
-    it('tests division operator resolution - f32', () => {
-      const foo = tgpu.fn([], d.f32)(() => d.f32(1) / d.f32(2));
-      expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return 0.5 ; }"`,
-      );
+        expect(asWgsl(bar)).toMatchInlineSnapshot(`
+          "fn bar() -> u32 {
+            return u32(0.5);
+          }"
+        `);
+      });
     });
 
     it('tests division operator resolution - f32 & i32', () => {
       const foo = tgpu.fn([], d.f32)(() => d.f32(1.0) / d.i32(2.0));
       expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( 1f / f32 ( i32 ( 2 ) ) ) ; }"`,
-      );
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> f32 {
+          return (1f / f32(i32(2)));
+        }"
+      `);
     });
 
     it('tests division operator resolution - u32 & i32', () => {
       const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.i32(2));
       expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
-      );
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> f32 {
+          return (f32(u32(1)) / f32(i32(2)));
+        }"
+      `);
     });
 
     it('tests division operator resolution - f16 & f32', () => {
       const foo = tgpu.fn([], d.f32)(() => d.f16(1.0) / d.f32(2.0));
       expect(foo()).toBe(0.5);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 1 ) ) / 2f ) ; }"`,
-      );
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> f32 {
+          return (f32(f16(1)) / 2f);
+        }"
+      `);
     });
 
     it('tests division operator resolution - decimal & f32', () => {
-      const foo = tgpu.fn([], d.f32)(() => d.f16(1 / 2) / d.f32(5.0));
-      expect(foo()).toBe(0.1);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 0.5 ) ) / 5f ) ; }"`,
-      );
+      const foo = tgpu.fn([], d.f32)(() => d.f16(1 / 2) / d.f32(4.0));
+      expect(foo()).toBe(0.125);
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> f32 {
+          return (f32(f16(0.5)) / 4f);
+        }"
+      `);
     });
 
     it('tests division operator resolution - internal sum & f32', () => {
-      const foo = tgpu.fn([], d.f32)(() => (d.u32(1 + 2) / d.f32(5.0)));
-      expect(foo()).toBe(0.6);
-      expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / 5f ) ; }"`,
-      );
+      const foo = tgpu.fn([], d.f32)(() => (d.u32(1 + 9) / d.f32(5)));
+      expect(foo()).toBe(2);
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> f32 {
+          return (f32(u32(10)) / 5f);
+        }"
+      `);
     });
   });
 });
