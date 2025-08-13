@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import { snip, Snippet } from './snippet.ts';
+import { snip, type Snippet } from './snippet.ts';
 import type {
   AbstractFloat,
   AbstractInt,

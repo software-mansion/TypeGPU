@@ -32,7 +32,6 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { tryConvertSnippet } from './tgsl/conversion.ts';
 import {
   coerceToSnippet,
   numericLiteralToSnippet,
