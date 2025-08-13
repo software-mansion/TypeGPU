@@ -1,100 +1,97 @@
 <div class="example">
-  <canvas></canvas>
-  <div class="predictions-container">
+  <div
+    class="bars-container grid grid-flow-col justify-center pl-2 pb-3 gap-x-4 relative border-l-2 border-b-2 border-[#e6e6f2]"
+  >
     <div
-      class="bars-container grid grid-flow-col justify-center pl-2 pb-3 gap-x-4 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] max-lg:w-[calc(100%+8rem)]"
+      class="y-axis-labels absolute left-[-3rem] h-full flex flex-col justify-between text-sm text-gray-600"
     >
-      <div
-        class="y-axis-labels absolute left-[-3rem] h-full flex flex-col justify-between text-sm text-gray-600"
-      >
-        <span class="transform -translate-y-1/2">40</span>
-        <span class="transform -translate-y-1/2">30</span>
-        <span class="transform -translate-y-1/2">20</span>
-        <span class="transform -translate-y-1/2">10</span>
-        <span class="transform -translate-y-1/2">0</span>
-        <span class="transform translate-y-1/2"></span>
-      </div>
+      <span class="transform -translate-y-1/2">40</span>
+      <span class="transform -translate-y-1/2">30</span>
+      <span class="transform -translate-y-1/2">20</span>
+      <span class="transform -translate-y-1/2">10</span>
+      <span class="transform -translate-y-1/2">0</span>
+      <span class="transform translate-y-1/2"></span>
+    </div>
 
-      <div
-        class="predictions-label absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap"
-      >
-        Time [ms]
-      </div>
-      <div class="justify-items-center mr-8">
-        <div class="grid grid-cols-3 items-end gap-2">
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
+    <div
+      class="absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap"
+    >
+      Time [ms]
+    </div>
+    <div class="justify-items-center mr-8">
+      <div class="grid grid-cols-3 items-end gap-2">
+        <div class="bar">
+          <div class="bar-tooltip"></div>
         </div>
-        <div class="speedup-label"></div>
-        <div class="x-axis-label">size</div>
-      </div>
-      <div class="justify-items-center mr-8">
-        <div class="grid grid-cols-3 items-end gap-2">
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
         </div>
-        <div class="speedup-label"></div>
-        <div class="x-axis-label">size</div>
-      </div>
-      <div class="justify-items-center mr-8">
-        <div class="grid grid-cols-3 items-end gap-2">
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
         </div>
-        <div class="speedup-label"></div>
-        <div class="x-axis-label">size</div>
       </div>
-      <div class="justify-items-center mr-8">
-        <div class="grid grid-cols-3 items-end gap-2">
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
+      <div class="speedup-label"></div>
+      <div class="x-axis-label">size</div>
+    </div>
+    <div class="justify-items-center mr-8">
+      <div class="grid grid-cols-3 items-end gap-2">
+        <div class="bar">
+          <div class="bar-tooltip"></div>
         </div>
-        <div class="speedup-label"></div>
-        <div class="x-axis-label">size</div>
-      </div>
-      <div class="justify-items-center mr-8">
-        <div class="grid grid-cols-3 items-end gap-2">
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar">
-            <div class="bar-tooltip"></div>
-          </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
         </div>
-        <div class="speedup-label"></div>
-        <div class="x-axis-label">size</div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
       </div>
+      <div class="speedup-label"></div>
+      <div class="x-axis-label">size</div>
+    </div>
+    <div class="justify-items-center mr-8">
+      <div class="grid grid-cols-3 items-end gap-2">
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+      </div>
+      <div class="speedup-label"></div>
+      <div class="x-axis-label">size</div>
+    </div>
+    <div class="justify-items-center mr-8">
+      <div class="grid grid-cols-3 items-end gap-2">
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+      </div>
+      <div class="speedup-label"></div>
+      <div class="x-axis-label">size</div>
+    </div>
+    <div class="justify-items-center mr-8">
+      <div class="grid grid-cols-3 items-end gap-2">
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+        <div class="bar">
+          <div class="bar-tooltip"></div>
+        </div>
+      </div>
+      <div class="speedup-label"></div>
+      <div class="x-axis-label">size</div>
     </div>
   </div>
 </div>
@@ -113,7 +110,7 @@
     align-items: end;
     justify-items: center;
     position: relative;
-    height: 15.25rem;
+    height: 10rem;
     width: 1rem;
     background: var(--bar-track-bg);
     border-radius: 9999px;

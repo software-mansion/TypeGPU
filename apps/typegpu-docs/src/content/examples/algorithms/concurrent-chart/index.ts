@@ -3,8 +3,6 @@ import * as std from 'typegpu/std';
 import { performCalculationsWithTime } from './calculator.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
 const speedupLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.speedup-label'),
@@ -15,7 +13,7 @@ const tooltips = Array.from(
 const xAxisLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
 );
-let dropdown: string;
+let dropdown = '8388608';
 
 const root = await tgpu.init({
   device: {
@@ -23,11 +21,6 @@ const root = await tgpu.init({
       'timestamp-query',
     ],
   },
-});
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
 });
 
 const lengthMap: Record<
@@ -122,9 +115,7 @@ export const controls = {
   },
   'Array length': {
     initial: '8388608',
-    options: [2 ** 19, 2 ** 20, 2 ** 21, 2 ** 22, 2 ** 23, 2 ** 24].map((x) =>
-      x.toString()
-    ),
+    options: [2 ** 19, 2 ** 21, 2 ** 23, 2 ** 24].map((x) => x.toString()),
     async onSelectChange(value: string) {
       delete lengthMap[dropdown];
       dropdown = value;

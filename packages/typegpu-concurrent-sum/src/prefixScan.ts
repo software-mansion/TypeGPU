@@ -214,7 +214,3 @@ export function scan(
 
   return computer.compute(buffer);
 }
-
-// too much is being cached
-// new values need to be passed to function not class
-// create weak map
