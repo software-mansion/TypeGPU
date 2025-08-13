@@ -30,7 +30,10 @@ export const scanGreatestBlock = tgpu['~unstable'].computeFn({
     if (baseIdx + i < arrayLength) {
       partialSums[i] = scanLayout.$.input[baseIdx + i] as number;
       if (i > 0) {
-        (partialSums[i] as number) = operatorSlot.$((partialSums[i] as number), partialSums[i - 1] as number);
+        (partialSums[i] as number) = operatorSlot.$(
+          partialSums[i] as number,
+          partialSums[i - 1] as number,
+        );
       }
     }
   }

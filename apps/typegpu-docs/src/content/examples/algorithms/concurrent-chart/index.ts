@@ -15,6 +15,7 @@ const tooltips = Array.from(
 const xAxisLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
 );
+let dropdown: string;
 
 const root = await tgpu.init({
   device: {
@@ -62,7 +63,6 @@ async function initCalc() {
   }
   return inputArrays;
 }
-
 function drawCharts() {
   const keys = Object.keys(lengthMap);
   console.log('bars length:', bars.length);
@@ -107,24 +107,6 @@ function drawCharts() {
   }
 }
 
-const uiState = {
-  isDrawing: false,
-  lastPos: null as { x: number; y: number } | null,
-  isBlank: true,
-};
-
-function resetDrawing() {
-  uiState.lastPos = null;
-  uiState.isBlank = true;
-
-  for (const bar of bars) {
-    bar.style.setProperty('--bar-width', '0.2');
-  }
-  for (const label of speedupLabels) {
-    label.textContent = '';
-  }
-}
-
 export const controls = {
   Reset: {
     onButtonClick: initCalc,
@@ -134,6 +116,19 @@ export const controls = {
   },
   Calculate: {
     onButtonClick: async () => {
+      await initCalc();
+      drawCharts();
+    },
+  },
+  'Array length': {
+    initial: '8388608',
+    options: [2 ** 19, 2 ** 20, 2 ** 21, 2 ** 22, 2 ** 23, 2 ** 24].map((x) =>
+      x.toString()
+    ),
+    async onSelectChange(value: string) {
+      delete lengthMap[dropdown];
+      dropdown = value;
+      lengthMap[dropdown] = { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 };
       await initCalc();
       drawCharts();
     },
