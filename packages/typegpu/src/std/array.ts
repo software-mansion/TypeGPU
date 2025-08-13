@@ -1,10 +1,9 @@
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { snip } from '../data/snippet.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
-import type { AnyWgslData } from '../data/wgslTypes.ts';
-import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
+import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 
 export const arrayLength = createDualImpl(
   // CPU implementation
@@ -20,5 +19,5 @@ export const arrayLength = createDualImpl(
     return snip(stitch`arrayLength(${a})`, u32);
   },
   'arrayLength',
-  (a) => [ptrFn(a.dataType as AnyWgslData)],
+  (a) => [ptrFn(a.dataType as StorableData)],
 );
