@@ -87,11 +87,21 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    if (isWgsl(external) || isLooseData(external)) {
-      return acc.replaceAll(
-        identifierRegex(externalName),
-        ctx.resolve(external),
+    const externalRegex = identifierRegex(externalName);
+    if (
+      wgsl &&
+      externalName !== 'Out' &&
+      externalName !== 'In' &&
+      !externalRegex.test(wgsl)
+    ) {
+      console.warn(
+        `The external '${externalName}' was unused in the resolved template.`,
       );
+      // continue anyway, we still might need to resolve the external
+    }
+
+    if (isWgsl(external) || isLooseData(external)) {
+      return acc.replaceAll(externalRegex, ctx.resolve(external));
     }
 
     if (external !== null && typeof external === 'object') {
@@ -104,9 +114,10 @@ export function replaceExternalsInWgsl(
             'g',
           ),
         ),
-      ].map((found) => found[1]) ?? [];
+      ].map((found) => found[1]);
+      const uniqueProperties = [...new Set(foundProperties)];
 
-      return foundProperties.reduce(
+      return uniqueProperties.reduce(
         (innerAcc: string, prop) =>
           prop && prop in external
             ? replaceExternalsInWgsl(
@@ -121,6 +132,10 @@ export function replaceExternalsInWgsl(
         acc,
       );
     }
+
+    console.warn(
+      `During resolution, the external '${externalName}' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+    );
 
     return acc;
   }, wgsl);
