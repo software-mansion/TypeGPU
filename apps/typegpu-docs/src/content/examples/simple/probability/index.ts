@@ -35,7 +35,7 @@ const bView = b.as('mutable');
 
 const f1 = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
   for (let i = d.i32(0); i < d.i32(count); i++) {
-    bView.$[i] = d.vec3f(randf.inUnitSphere());
+    bView.$[i] = randf.onUnitCube();
   }
 });
 
@@ -48,9 +48,7 @@ const f2 = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   randf.seed2(d.vec2f(input.gid.xy));
-  bView.$[input.gid.x * d.u32(sqrt(count)) + input.gid.y] = d.vec3f(
-    randf.onUnitSphere(),
-  );
+  bView.$[input.gid.x * d.u32(sqrt(count)) + input.gid.y] = randf.onUnitCube();
 });
 
 const p2 = root['~unstable'].withCompute(f2).createPipeline();

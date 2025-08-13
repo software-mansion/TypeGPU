@@ -8,6 +8,7 @@ import {
   randInUnitSphere,
   randNormal,
   randOnUnitCircle,
+  randOnUnitCube,
   randOnUnitHemisphere,
   randOnUnitSphere,
   randSeed,
@@ -29,9 +30,10 @@ export const randf: {
   inUnitCircle: typeof randInUnitCircle;
   onUnitCircle: typeof randOnUnitCircle;
   inUnitCube: typeof randInUnitCube;
+  onUnitCube: typeof randOnUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
-  onUnitSphere: typeof randOnUnitSphere;
   inUnitSphere: typeof randInUnitSphere;
+  onUnitSphere: typeof randOnUnitSphere;
 } = {
   seed: randSeed,
   seed2: randSeed2,
@@ -45,9 +47,10 @@ export const randf: {
   inUnitCircle: randInUnitCircle,
   onUnitCircle: randOnUnitCircle,
   inUnitCube: randInUnitCube,
+  onUnitCube: randOnUnitCube,
   onHemisphere: randOnUnitHemisphere,
-  onUnitSphere: randOnUnitSphere,
   inUnitSphere: randInUnitSphere,
+  onUnitSphere: randOnUnitSphere,
 };
 
 export {

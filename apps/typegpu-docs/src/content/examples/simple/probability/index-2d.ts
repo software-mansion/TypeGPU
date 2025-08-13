@@ -17,7 +17,7 @@ const bView = b.as('mutable');
 
 const f1 = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
   for (let i = d.i32(0); i < d.i32(N); i++) {
-    bView.$[i] = randf.bernoulli(0.5);
+    bView.$[i] = randf.cauchy(0, 1);
   }
 });
 
@@ -25,34 +25,33 @@ const p1 = root['~unstable'].withCompute(f1).createPipeline();
 p1.dispatchWorkgroups(1);
 const samples1 = (await b.read()).filter((x) => x >= -20 && x <= 20);
 
-// const plot1 = Plot.plot({
-//   title: 'Bern(0.5): 1 worker samples 10000 values',
-//   y: { grid: true },
-//   marks: [
-//     Plot.rectY(
-//       samples1,
-//       Plot.binX(
-//         { y: 'count' },
-//         { x: (d) => d, fill: 'lightblue' } as Plot.BinXInputs<undefined>,
-//       ),
-//     ),
-//     Plot.ruleY([0]),
-//   ],
-// });
 const plot1 = Plot.plot({
-  title: 'Bern(0.5): 1 worker samples 10000 values',
-  y: {
-    grid: true,
-    percent: true,
-  },
+  title: 'Cauchy(0, 1): 1 worker samples 10000 values',
+  y: { grid: true },
   marks: [
-    Plot.ruleY([0]),
-    Plot.barY(
+    Plot.rectY(
       samples1,
-      Plot.groupX({ y: 'proportion' }, { x: (d) => d, fill: 'lightblue' }),
+      Plot.binX(
+        { y: 'count' },
+        { x: (d) => d, fill: 'lightblue' } as Plot.BinXInputs<undefined>,
+      ),
     ),
+    Plot.ruleY([0]),
   ],
 });
+// const plot1 = Plot.plot({
+//   title: 'Bern(0.5): 1 worker samples 10000 values',
+//   y: {
+//     grid: true,
+//     percent: true,
+//   },
+//   marks: [
+//     Plot.barY(
+//       samples1,
+//       Plot.groupX({ y: 'proportion' }, { x: (d) => d, fill: 'lightblue' }),
+//     ),
+//   ],
+// });
 const div1 = document.getElementById('hist1');
 div1?.append(plot1);
 
@@ -72,7 +71,7 @@ console.log(samples1);
 console.log(samples2);
 
 // const plot2 = Plot.plot({
-//   title: 'Bern(0.5): 10000 workers, each sampling 1 value with seed2(xy)',
+//   title: 'Cauchy(0, 1): 10000 workers, each sampling 1 value with seed2(xy)',
 //   y: { grid: true },
 //   marks: [
 //     Plot.rectY(
@@ -92,7 +91,6 @@ const plot2 = Plot.plot({
     percent: true,
   },
   marks: [
-    Plot.ruleY([0]),
     Plot.barY(
       samples2,
       Plot.groupX({ y: 'proportion' }, { x: (d) => d, fill: 'lightblue' }),
