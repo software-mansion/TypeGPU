@@ -32,7 +32,11 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { coerceToSnippet } from './tgsl/generationHelpers.ts';
+import { tryConvertSnippet } from './tgsl/conversion.ts';
+import {
+  coerceToSnippet,
+  numericLiteralToSnippet,
+} from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
@@ -645,18 +649,25 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
+      const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
+
       if (
-        schema?.type === 'abstractInt' ||
-        schema?.type === 'u32' ||
-        schema?.type === 'i32'
+        realSchema.type === 'abstractInt' ||
+        realSchema.type === 'u32' ||
+        realSchema.type === 'i32'
       ) {
         return String(item);
       }
 
-      // Just picking the shorter one
-      const exp = item.toExponential();
-      const decimal = String(item);
-      return exp.length < decimal.length ? exp : decimal;
+      if (
+        realSchema.type === 'abstractFloat' || realSchema.type === 'f32' ||
+        realSchema.type === 'f16'
+      ) {
+        // Just picking the shorter one
+        const exp = item.toExponential();
+        const decimal = Number.isInteger(item) ? `${item}.` : String(item);
+        return exp.length < decimal.length ? exp : decimal;
+      }
     }
 
     if (typeof item !== 'object' && typeof item !== 'function') {
@@ -678,9 +689,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const elementTypeString = this.resolve(schema.elementType);
       return `array<${elementTypeString}, ${schema.elementCount}>(${
-        item.map((element) =>
-          this.resolve(element, schema.elementType as AnyData)
-        )
+        item.map((element) => {
+          const snippet = coerceToSnippet(element);
+          const converted = tryConvertSnippet(
+            this,
+            snippet,
+            schema.elementType as AnyData,
+          );
+          return this.resolve(converted.value, converted.dataType as AnyData);
+        })
       })`;
     }
 

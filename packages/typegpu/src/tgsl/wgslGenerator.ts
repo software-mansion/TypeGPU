@@ -17,16 +17,18 @@ import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
   concretize,
-  convertStructValues,
-  convertToCommonType,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   numericLiteralToSnippet,
-  parseNumericString,
-  tryConvertSnippet,
 } from './generationHelpers.ts';
+import {
+  convertStructValues,
+  convertToCommonType,
+  tryConvertSnippet,
+} from './conversion.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -113,6 +115,20 @@ function assertExhaustive(value: never): never {
   throw new Error(
     `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
   );
+}
+
+function parseNumericString(str: string): number {
+  // Hex literals
+  if (/^0x[0-9a-f]+$/i.test(str)) {
+    return Number.parseInt(str);
+  }
+
+  // Binary literals
+  if (/^0b[01]+$/i.test(str)) {
+    return Number.parseInt(str.slice(2), 2);
+  }
+
+  return Number.parseFloat(str);
 }
 
 export function generateBlock(
@@ -220,8 +236,8 @@ export function generateExpression(
     });
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
-    const lhsStr = ctx.resolve(convLhs.value);
-    const rhsStr = ctx.resolve(convRhs.value);
+    const lhsStr = ctx.resolve(convLhs.value, convLhs.dataType);
+    const rhsStr = ctx.resolve(convRhs.value, convRhs.dataType);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
     return snip(
@@ -319,8 +335,8 @@ export function generateExpression(
     const [_, targetNode, propertyNode] = expression;
     const target = generateExpression(ctx, targetNode);
     const property = generateExpression(ctx, propertyNode);
-    const targetStr = ctx.resolve(target.value);
-    const propertyStr = ctx.resolve(property.value);
+    const targetStr = ctx.resolve(target.value, target.dataType);
+    const propertyStr = ctx.resolve(property.value, property.dataType);
 
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess
@@ -495,12 +511,10 @@ export function generateExpression(
       }),
     );
 
-    const convertedValues = convertStructValues(ctx, structType, entries);
+    const convertedSnippets = convertStructValues(ctx, structType, entries);
 
     return snip(
-      `${ctx.resolve(structType)}(${
-        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
-      })`,
+      stitch`${ctx.resolve(structType)}(${convertedSnippets})`,
       structType,
     );
   }
@@ -548,14 +562,10 @@ export function generateExpression(
     }
 
     const arrayType = `array<${ctx.resolve(elemType)}, ${values.length}>`;
-    const arrayValues = values.map((sn) => ctx.resolve(sn.value));
 
     return snip(
-      `${arrayType}(${arrayValues.join(', ')})`,
-      arrayOf(
-        elemType as wgsl.AnyWgslData,
-        values.length,
-      ) as wgsl.AnyWgslData,
+      stitch`${arrayType}(${values})`,
+      arrayOf(elemType as wgsl.AnyWgslData, values.length) as wgsl.AnyWgslData,
     );
   }
 
@@ -594,19 +604,16 @@ export function generateStatement(
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
 
-    const returnValue = returnNode !== undefined
-      ? ctx.resolve(
-        generateTypedExpression(
-          ctx,
-          returnNode,
-          ctx.topFunctionReturnType,
-        ).value,
-      )
-      : undefined;
+    if (returnNode) {
+      const returnSnippet = generateTypedExpression(
+        ctx,
+        returnNode,
+        ctx.topFunctionReturnType,
+      );
+      return stitch`${ctx.pre}return ${returnSnippet};`;
+    }
 
-    return returnValue
-      ? `${ctx.pre}return ${returnValue};`
-      : `${ctx.pre}return;`;
+    return `${ctx.pre}return;`;
   }
 
   if (statement[0] === NODE.if) {
@@ -653,8 +660,7 @@ ${ctx.pre}else ${alternate}`;
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
     const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-
-    return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
+    return stitch`${ctx.pre}var ${id} = ${eq};`;
   }
 
   if (statement[0] === NODE.block) {

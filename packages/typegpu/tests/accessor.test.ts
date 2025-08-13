@@ -67,7 +67,7 @@ describe('tgpu.accessor', () => {
     expect(parseResolved({ getColor })).toBe(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
-          return ${RED_RESOLVED} * 2;
+          return ${RED_RESOLVED} * 2.;
         }
     `),
     );
