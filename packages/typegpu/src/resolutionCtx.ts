@@ -670,15 +670,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       ) {
         // Just picking the shorter one
         const exp = item.toExponential();
-        const decimal = Number.isInteger(item) ? `${item}.` : String(item);
-        const base = exp.length < decimal.length ? exp : decimal;
+        let decimal = String(item);
+        if (realSchema.type === 'abstractFloat') {
+          decimal = Number.isInteger(item) ? `${item}.` : decimal;
+          return exp.length < decimal.length ? exp : decimal;
+        }
         if (realSchema.type === 'f32') {
-          return `${base}f`;
+          return `${exp.length < decimal.length ? exp : decimal}f`;
         }
         if (realSchema.type === 'f16') {
-          return `${base}h`;
+          return `${exp.length < decimal.length ? exp : decimal}h`;
         }
-        return base;
       }
     }
 

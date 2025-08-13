@@ -112,7 +112,7 @@ describe('div', () => {
       const foo = tgpu.fn([], d.f32)(() => d.f32(1.0) / d.i32(2.0));
       expect(foo()).toBe(0.5);
       expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( 1.f / f32 ( i32 ( 2 ) ) ) ; }"`,
+        `"fn foo ( ) -> f32 { return ( 1f / f32 ( i32 ( 2 ) ) ) ; }"`,
       );
     });
 
@@ -128,7 +128,7 @@ describe('div', () => {
       const foo = tgpu.fn([], d.f32)(() => d.f16(1.0) / d.f32(2.0));
       expect(foo()).toBe(0.5);
       expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 1 ) ) / 2.f ) ; }"`,
+        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 1 ) ) / 2f ) ; }"`,
       );
     });
 
@@ -136,7 +136,7 @@ describe('div', () => {
       const foo = tgpu.fn([], d.f32)(() => d.f16(1 / 2) / d.f32(5.0));
       expect(foo()).toBe(0.1);
       expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 0.5 ) ) / 5.f ) ; }"`,
+        `"fn foo ( ) -> f32 { return ( f32 ( f16 ( 0.5 ) ) / 5f ) ; }"`,
       );
     });
 
@@ -144,7 +144,7 @@ describe('div', () => {
       const foo = tgpu.fn([], d.f32)(() => (d.u32(1 + 2) / d.f32(5.0)));
       expect(foo()).toBe(0.6);
       expect(parseResolved({ foo })).toMatchInlineSnapshot(
-        `"fn foo ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / 5.f ) ; }"`,
+        `"fn foo ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / 5f ) ; }"`,
       );
     });
   });

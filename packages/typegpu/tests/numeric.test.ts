@@ -73,7 +73,7 @@ describe('TGSL', () => {
     expect(parseResolved({ main })).toBe(
       parse(`
       fn main() {
-        var f = 0.f;
+        var f = 0f;
         var h = f16();
         var i = i32();
         var u = u32();
