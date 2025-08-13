@@ -12,7 +12,7 @@ import {
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
-import { DEV } from '../shared/env.ts';
+import { DEV, TEST } from '../shared/env.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -109,6 +109,15 @@ function getImplicitConversionRank(
       const rank = destPref < srcPref ? 10 : 20;
 
       return { rank: rank, action: 'cast', targetType: trueDst };
+    }
+  }
+
+  if (trueSrc.type === 'abstractFloat') {
+    if (trueDst.type === 'u32') {
+      return { rank: 2, action: 'cast', targetType: trueDst };
+    }
+    if (trueDst.type === 'i32') {
+      return { rank: 1, action: 'cast', targetType: trueDst };
     }
   }
 
@@ -256,7 +265,7 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return snippet;
+    return snip(snippet.value, targetType);
   }
 
   switch (action.action) {
@@ -285,11 +294,17 @@ export function convertToCommonType<T extends Snippet[]>({
   values,
   restrictTo,
   verbose = true,
-}: ConvertToCommonTypeOptions<T>): T | undefined {
+}: ConvertToCommonTypeOptions<T>): {
+  converted: T;
+  commonType: AnyData | undefined;
+} {
   const types = values.map((value) => value.dataType);
 
   if (types.some((type) => type.type === 'unknown')) {
-    return undefined;
+    return {
+      converted: values,
+      commonType: undefined,
+    };
   }
 
   if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
@@ -300,10 +315,13 @@ export function convertToCommonType<T extends Snippet[]>({
 
   const conversion = getBestConversion(types as AnyData[], restrictTo);
   if (!conversion) {
-    return undefined;
+    return {
+      converted: values,
+      commonType: undefined,
+    };
   }
 
-  if (DEV && verbose && conversion.hasImplicitConversions) {
+  if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
     console.warn(
       `Implicit conversions from [\n${
         values
@@ -316,11 +334,14 @@ Consider using explicit conversions instead.`,
     );
   }
 
-  return values.map((value, index) => {
-    const action = conversion.actions[index];
-    invariant(action, 'Action should not be undefined');
-    return applyActionToSnippet(ctx, value, action, conversion.targetType);
-  }) as T;
+  return {
+    converted: values.map((value, index) => {
+      const action = conversion.actions[index];
+      invariant(action, 'Action should not be undefined');
+      return applyActionToSnippet(ctx, value, action, conversion.targetType);
+    }) as T,
+    commonType: conversion.targetType,
+  };
 }
 
 export function tryConvertSnippet(
@@ -337,13 +358,13 @@ export function tryConvertSnippet(
     return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
   }
 
-  const converted = convertToCommonType({
+  const { converted, commonType } = convertToCommonType({
     ctx,
     values: [snippet],
     restrictTo: [targetDataType],
   });
 
-  if (!converted) {
+  if (!commonType) {
     throw new WgslTypeError(
       `Cannot convert value of type '${snippet.dataType.type}' to type '${targetDataType.type}'`,
     );
@@ -366,11 +387,11 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const converted = convertToCommonType({
+    const { converted } = convertToCommonType({
       ctx,
       values: [val],
       restrictTo: [targetType as AnyData],
     });
-    return converted?.[0] ?? val;
+    return converted[0] as Snippet;
   });
 }

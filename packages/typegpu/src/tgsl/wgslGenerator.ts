@@ -229,12 +229,12 @@ export function generateExpression(
         : [lhsExpr.dataType as AnyData]
       : undefined;
 
-    const converted = convertToCommonType({
+    const { converted } = convertToCommonType({
       ctx,
       values: [lhsExpr, rhsExpr] as const,
       restrictTo: forcedType,
     });
-    const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
+    const [convLhs, convRhs] = converted;
 
     const lhsStr = ctx.resolve(convLhs.value, convLhs.dataType);
     const rhsStr = ctx.resolve(convRhs.value, convRhs.dataType);
@@ -396,10 +396,8 @@ export function generateExpression(
 
       // No arguments `Struct()`, resolve struct name and return.
       if (!argNodes[0]) {
-        return snip(
-          `${ctx.resolve(callee.value)}()`,
-          /* the schema becomes the data type */ callee.value,
-        );
+        // the schema becomes the data type
+        return snip(`${ctx.resolve(callee.value)}()`, callee.value);
       }
 
       const arg = generateTypedExpression(ctx, argNodes[0], callee.value);
@@ -456,8 +454,8 @@ export function generateExpression(
           convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
-            snippets;
+          convertedArguments =
+            convertToCommonType({ ctx, values: snippets }).converted;
         } else {
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
@@ -550,14 +548,17 @@ export function generateExpression(
         );
       }
 
-      const maybeValues = convertToCommonType({ ctx, values: valuesSnippets });
-      if (!maybeValues) {
+      const { converted, commonType } = convertToCommonType({
+        ctx,
+        values: valuesSnippets,
+      });
+      if (!commonType) {
         throw new WgslTypeError(
           'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
         );
       }
 
-      values = maybeValues;
+      values = converted;
       elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
     }
 
@@ -660,8 +661,8 @@ ${ctx.pre}else ${alternate}`;
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
     const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-    const dataType = concretize(eq.dataType as wgsl.AnyWgslData);
-    return ctx.withExactType(true, () => stitch`${ctx.pre}var ${id} = ${eq};`);
+    const eqStr = ctx.resolve(eq.value, eq.dataType, /* exact */ true);
+    return `${ctx.pre}var ${id} = ${eqStr};`;
   }
 
   if (statement[0] === NODE.block) {

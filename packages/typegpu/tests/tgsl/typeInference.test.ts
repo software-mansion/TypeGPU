@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { StrictNameRegistry } from '../../src/nameRegistry.ts';
@@ -228,16 +228,21 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
-  it('does not convert float to int', () => {
+  it('converts float to int implicitly with a warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn');
     const myFn = tgpu.fn([], d.u32)(() => {
       return 1.1;
     });
 
-    expect(() => parseResolved({ myFn })).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:myFn: Cannot convert value of type 'abstractFloat' to type 'u32']
-    `);
+    expect(parseResolved({ myFn })).toBe(parse(`
+      fn myFn() -> u32 {
+        return u32(1.1);
+      }
+    `));
+
+    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+      'Implicit conversions from [\n  1.1: abstractFloat\n] to u32 are supported, but not recommended.\nConsider using explicit conversions instead.',
+    );
   });
 
   it('throws when no info about what to coerce to', () => {

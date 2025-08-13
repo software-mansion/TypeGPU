@@ -362,7 +362,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
-  public forcedExactType = false;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
@@ -386,16 +385,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   withResetIndentLevel<T>(callback: () => T): T {
     return this._indentController.withResetLevel(callback);
-  }
-
-  withExactType<T>(forced: boolean, cb: () => T): T {
-    const prev = this.forcedExactType;
-    this.forcedExactType = forced;
-    try {
-      return cb();
-    } finally {
-      this.forcedExactType = prev;
-    }
   }
 
   getById(id: string): Snippet | null {
@@ -634,7 +623,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown, schema?: AnyData | undefined): string {
+  resolve(item: unknown, schema?: AnyData | undefined, exact = false): string {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -660,16 +649,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
+      const reinterpretedType = numericLiteralToSnippet(item).dataType;
+      const realSchema = exact
+        ? schema ?? reinterpretedType
+        : reinterpretedType;
 
       if (realSchema.type === 'abstractInt') {
         return String(item);
       }
       if (realSchema.type === 'u32') {
-        return this.forcedExactType ? `${item}u` : String(item);
+        return `${item}u`;
       }
       if (realSchema.type === 'i32') {
-        return this.forcedExactType ? `${item}i` : String(item);
+        return `${item}i`;
       }
 
       if (
@@ -680,10 +672,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         const exp = item.toExponential();
         const decimal = Number.isInteger(item) ? `${item}.` : String(item);
         const base = exp.length < decimal.length ? exp : decimal;
-        if (this.forcedExactType && realSchema.type === 'f32') {
+        if (realSchema.type === 'f32') {
           return `${base}f`;
         }
-        if (this.forcedExactType && realSchema.type === 'f16') {
+        if (realSchema.type === 'f16') {
           return `${base}h`;
         }
         return base;
