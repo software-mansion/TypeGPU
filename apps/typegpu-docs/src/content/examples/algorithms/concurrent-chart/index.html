@@ -4,10 +4,22 @@
     <div
       class="bars-container grid grid-flow-col justify-center items-end gap-x-4 gap-y-8 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] pl-4 pb-4 max-lg:w-[calc(100%+8rem)] max-lg:gap-y-[0.1rem]"
     >
+      <!-- Y-axis label -->
+      <div
+        class="y-axis-labels absolute left-[-3rem] top-0 h-full flex flex-col justify-between text-sm text-gray-600"
+      >
+        <span class="transform -translate-y-1/2">40</span>
+        <span class="transform -translate-y-1/2">30</span>
+        <span class="transform -translate-y-1/2">20</span>
+        <span class="transform -translate-y-1/2">10</span>
+        <span class="transform -translate-y-1/2">0</span>
+        <span class="transform translate-y-1/2"></span>
+      </div>
+
       <div
         class="predictions-label absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap max-lg:text-base max-lg:left-[-2.5rem]"
       >
-        Time
+        Time [ms]
       </div>
       <div class="bar-triplet">
         <div class="bars-row">
@@ -22,6 +34,7 @@
           </div>
         </div>
         <div class="speedup-label"></div>
+        <div class="x-axis-label">65K</div>
       </div>
       <div class="bar-triplet">
         <div class="bars-row">
@@ -36,6 +49,7 @@
           </div>
         </div>
         <div class="speedup-label"></div>
+        <div class="x-axis-label">131K</div>
       </div>
       <div class="bar-triplet">
         <div class="bars-row">
@@ -50,6 +64,7 @@
           </div>
         </div>
         <div class="speedup-label"></div>
+        <div class="x-axis-label">1M</div>
       </div>
       <div class="bar-triplet">
         <div class="bars-row">
@@ -64,6 +79,7 @@
           </div>
         </div>
         <div class="speedup-label"></div>
+        <div class="x-axis-label">4.2M</div>
       </div>
       <div class="bar-triplet">
         <div class="bars-row">
@@ -78,6 +94,7 @@
           </div>
         </div>
         <div class="speedup-label"></div>
+        <div class="x-axis-label">8.4M</div>
       </div>
     </div>
   </div>
@@ -86,7 +103,7 @@
 <style>
   .bar-triplet {
     display: grid;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr auto auto;
     justify-items: center;
     margin-right: 2rem;
   }
@@ -113,9 +130,17 @@
   .speedup-label {
     text-align: center;
     font-weight: 600;
-    padding-top: 1rem;
+    padding-top: 0.5rem;
     font-size: 1rem;
     color: #333;
+  }
+
+  .x-axis-label {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #666;
+    position: relative;
+    top: 3rem;
   }
 
   .bar-tooltip {

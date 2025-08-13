@@ -38,7 +38,7 @@ export async function performCalculationsWithTime(
   const calcResult = prefixScan(
     root,
     inputBuffer,
-    { op: std.add, identity: 0 },
+    { operation: std.add, identityElement: 0 },
     async (timeTgpuQuery) => {
       const timestamps = await timeTgpuQuery.read();
       const timeNs = timestamps[1] - timestamps[0];

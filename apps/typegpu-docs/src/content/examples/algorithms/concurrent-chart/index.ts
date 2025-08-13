@@ -48,7 +48,10 @@ async function initCalc() {
         root,
         onesArray,
       );
-    if (success && jsTime !== undefined && gpuTime !== undefined) {
+    if (
+      success && jsTime !== undefined && gpuTime !== undefined &&
+      gpuShaderTime !== undefined
+    ) {
       lengthMap[onesArray.length].jsTime = jsTime;
       lengthMap[onesArray.length].gpuTime = gpuTime;
       lengthMap[onesArray.length].gpuShaderTime = gpuShaderTime;
@@ -71,7 +74,7 @@ function drawCharts() {
     // CPU
     bars[3 * i].style.setProperty(
       '--bar-height',
-      `${std.min(value.jsTime / 30, 1)}`,
+      `${std.min(value.jsTime / 30, 1.15)}`,
     );
     bars[3 * i].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i].textContent = `JS time: ${
@@ -113,7 +116,6 @@ function resetDrawing() {
   for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0.2');
   }
-
   for (const label of speedupLabels) {
     label.textContent = '';
   }
@@ -129,7 +131,6 @@ export const controls = {
   Calculate: {
     onButtonClick: async () => {
       await initCalc();
-      // wait 3s
       drawCharts();
     },
   },
