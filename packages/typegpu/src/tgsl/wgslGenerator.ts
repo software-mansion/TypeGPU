@@ -229,12 +229,11 @@ export function generateExpression(
         : [lhsExpr.dataType as AnyData]
       : undefined;
 
-    const { converted } = convertToCommonType({
+    const [convLhs, convRhs] = convertToCommonType({
       ctx,
       values: [lhsExpr, rhsExpr] as const,
       restrictTo: forcedType,
-    });
-    const [convLhs, convRhs] = converted;
+    }) ?? [lhsExpr, rhsExpr];
 
     const lhsStr = ctx.resolve(convLhs.value, convLhs.dataType);
     const rhsStr = ctx.resolve(convRhs.value, convRhs.dataType);
@@ -454,8 +453,8 @@ export function generateExpression(
           convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments =
-            convertToCommonType({ ctx, values: snippets }).converted;
+          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
+            snippets;
         } else {
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
@@ -548,11 +547,8 @@ export function generateExpression(
         );
       }
 
-      const { converted, commonType } = convertToCommonType({
-        ctx,
-        values: valuesSnippets,
-      });
-      if (!commonType) {
+      const converted = convertToCommonType({ ctx, values: valuesSnippets });
+      if (!converted) {
         throw new WgslTypeError(
           'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
         );

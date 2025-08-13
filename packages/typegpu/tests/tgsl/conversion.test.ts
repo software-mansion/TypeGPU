@@ -269,12 +269,12 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetF32, snippetF32],
     });
-    expect(result.commonType).toBe(d.f32);
-    expect(result.converted.length).toBe(2);
-    expect(result.converted[0]?.dataType).toBe(d.f32);
-    expect(result.converted[0]?.value).toBe('2.22');
-    expect(result.converted[1]?.dataType).toBe(d.f32);
-    expect(result.converted[1]?.value).toBe('2.22');
+    expect(result).toBeDefined();
+    expect(result?.length).toBe(2);
+    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.value).toBe('2.22');
+    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.value).toBe('2.22');
   });
 
   it('handles abstract types automatically', () => {
@@ -287,14 +287,14 @@ describe('convertToCommonType', () => {
       ],
     });
     // since WGSL handles all abstract types automatically, this should be basically identity
-    expect(result.commonType).toBe(d.f32);
-    expect(result.converted.length).toBe(3);
-    expect(result.converted[0]?.dataType).toBe(d.f32);
-    expect(result.converted[0]?.value).toBe('1.1');
-    expect(result.converted[1]?.dataType).toBe(d.f32);
-    expect(result.converted[1]?.value).toBe('2.22');
-    expect(result.converted[2]?.dataType).toBe(d.f32);
-    expect(result.converted[2]?.value).toBe('1');
+    expect(result).toBeDefined();
+    expect(result?.length).toBe(3);
+    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.value).toBe('1.1');
+    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.value).toBe('2.22');
+    expect(result?.[2]?.dataType).toBe(d.f32);
+    expect(result?.[2]?.value).toBe('1');
   });
 
   it('performs implicit casts and warns', () => {
@@ -302,12 +302,12 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetI32, snippetF32],
     });
-    expect(result.commonType).toBe(d.f32);
-    expect(result.converted.length).toBe(2);
-    expect(result.converted[0]?.dataType).toBe(d.f32);
-    expect(result.converted[0]?.value).toBe('f32(-12)'); // Cast applied
-    expect(result.converted[1]?.dataType).toBe(d.f32);
-    expect(result.converted[1]?.value).toBe('2.22');
+    expect(result).toBeDefined();
+    expect(result?.length).toBe(2);
+    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.value).toBe('f32(-12)'); // Cast applied
+    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.value).toBe('2.22');
   });
 
   it('performs pointer dereferencing', () => {
@@ -315,12 +315,12 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetPtrF32, snippetF32],
     });
-    expect(result.commonType).toBe(d.f32);
-    expect(result.converted.length).toBe(2);
-    expect(result.converted[0]?.dataType).toBe(d.f32);
-    expect(result.converted[0]?.value).toBe('*ptr_f32'); // Deref applied
-    expect(result.converted[1]?.dataType).toBe(d.f32);
-    expect(result.converted[1]?.value).toBe('2.22');
+    expect(result).toBeDefined();
+    expect(result?.length).toBe(2);
+    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.value).toBe('*ptr_f32'); // Deref applied
+    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.value).toBe('2.22');
   });
 
   it('returns undefined for incompatible types', () => {
@@ -329,7 +329,7 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetF32, snippetVec2f],
     });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 
   it('returns undefined if any type is UnknownData', () => {
@@ -337,12 +337,12 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetF32, snippetUnknown],
     });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 
   it('returns undefined for empty input', () => {
     const result = convertToCommonType({ ctx: mockCtx, values: [] });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 
   it('respects restrictTo types', () => {
@@ -353,12 +353,12 @@ describe('convertToCommonType', () => {
       values: [snippetAbsInt, snippetI32],
       restrictTo: [d.f32],
     });
-    expect(result.commonType).toBe(d.f32);
-    expect(result.converted.length).toBe(2);
-    expect(result.converted[0]?.dataType).toBe(d.f32);
-    expect(result.converted[0]?.value).toBe('1');
-    expect(result.converted[1]?.dataType).toBe(d.f32);
-    expect(result.converted[1]?.value).toBe('f32(-12)'); // Cast applied
+    expect(result).toBeDefined();
+    expect(result?.length).toBe(2);
+    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.value).toBe('1');
+    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.value).toBe('f32(-12)'); // Cast applied
   });
 
   it('can restrict abstractFloat to u32', () => {
@@ -367,9 +367,9 @@ describe('convertToCommonType', () => {
       values: [snippetAbsFloat],
       restrictTo: [d.u32],
     });
-    expect(result.commonType).toBe(d.u32);
-    expect(result.converted[0]?.dataType).toBe(d.u32);
-    expect(result.converted[0]?.value).toBe('u32(1.1)');
+    expect(result).toBeDefined();
+    expect(result?.[0]?.dataType).toBe(d.u32);
+    expect(result?.[0]?.value).toBe('u32(1.1)');
   });
 
   it('fails if restrictTo is incompatible', () => {
@@ -378,7 +378,7 @@ describe('convertToCommonType', () => {
       values: [snippetAbsInt, snippetI32],
       restrictTo: [d.vec2f],
     });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 
   it('handles void gracefully', () => {
@@ -386,7 +386,7 @@ describe('convertToCommonType', () => {
       ctx: mockCtx,
       values: [snippetF32, snip('void', d.Void)],
     });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 
   it('handles void as target type gracefully', () => {
@@ -395,7 +395,7 @@ describe('convertToCommonType', () => {
       values: [snippetF32],
       restrictTo: [d.Void],
     });
-    expect(result.commonType).toBeUndefined();
+    expect(result).toBeUndefined();
   });
 });
 

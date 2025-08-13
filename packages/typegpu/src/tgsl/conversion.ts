@@ -259,7 +259,6 @@ export function convertType(
 }
 
 function applyActionToSnippet(
-  ctx: ResolutionCtx,
   snippet: Snippet,
   action: ConversionResultAction,
   targetType: AnyData,
@@ -274,7 +273,8 @@ function applyActionToSnippet(
     case 'deref':
       return snip(stitch`*${snippet}`, targetType);
     case 'cast': {
-      return snip(stitch`${ctx.resolve(targetType)}(${snippet})`, targetType);
+      // Casting means calling the schema with the snippet as an argument.
+      return (targetType as unknown as (val: Snippet) => Snippet)(snippet);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
@@ -290,24 +290,17 @@ export type ConvertToCommonTypeOptions<T extends Snippet[]> = {
 };
 
 export function convertToCommonType<T extends Snippet[]>({
-  ctx,
   values,
   restrictTo,
   verbose = true,
-}: ConvertToCommonTypeOptions<T>): {
-  converted: T;
-  commonType: AnyData | undefined;
-} {
+}: ConvertToCommonTypeOptions<T>): T | undefined {
   const types = values.map((value) => value.dataType);
 
   if (types.some((type) => type.type === 'unknown')) {
-    return {
-      converted: values,
-      commonType: undefined,
-    };
+    return undefined;
   }
 
-  if (DEV && verbose && Array.isArray(restrictTo) && restrictTo.length === 0) {
+  if (DEV && Array.isArray(restrictTo) && restrictTo.length === 0) {
     console.warn(
       'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
     );
@@ -315,10 +308,7 @@ export function convertToCommonType<T extends Snippet[]>({
 
   const conversion = getBestConversion(types as AnyData[], restrictTo);
   if (!conversion) {
-    return {
-      converted: values,
-      commonType: undefined,
-    };
+    return undefined;
   }
 
   if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
@@ -334,14 +324,11 @@ Consider using explicit conversions instead.`,
     );
   }
 
-  return {
-    converted: values.map((value, index) => {
-      const action = conversion.actions[index];
-      invariant(action, 'Action should not be undefined');
-      return applyActionToSnippet(ctx, value, action, conversion.targetType);
-    }) as T,
-    commonType: conversion.targetType,
-  };
+  return values.map((value, index) => {
+    const action = conversion.actions[index];
+    invariant(action, 'Action should not be undefined');
+    return applyActionToSnippet(value, action, conversion.targetType);
+  }) as T;
 }
 
 export function tryConvertSnippet(
@@ -358,13 +345,13 @@ export function tryConvertSnippet(
     return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
   }
 
-  const { converted, commonType } = convertToCommonType({
+  const converted = convertToCommonType({
     ctx,
     values: [snippet],
     restrictTo: [targetDataType],
   });
 
-  if (!commonType) {
+  if (!converted) {
     throw new WgslTypeError(
       `Cannot convert value of type '${snippet.dataType.type}' to type '${targetDataType.type}'`,
     );
@@ -387,11 +374,12 @@ export function convertStructValues(
     }
 
     const targetType = structType.propTypes[key];
-    const { converted } = convertToCommonType({
+    const converted = convertToCommonType({
       ctx,
       values: [val],
       restrictTo: [targetType as AnyData],
     });
-    return converted[0] as Snippet;
+
+    return converted?.[0] ?? val;
   });
 }
