@@ -650,9 +650,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
       const reinterpretedType = numericLiteralToSnippet(item).dataType;
-      const realSchema = exact
-        ? schema ?? reinterpretedType
-        : reinterpretedType;
+      const realSchema = exact ? schema : reinterpretedType;
+      invariant(realSchema, 'Schema has to be defined for resolving numbers');
 
       if (realSchema.type === 'abstractInt') {
         return `${item}`;
@@ -700,15 +699,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const elementTypeString = this.resolve(schema.elementType);
       return `array<${elementTypeString}, ${schema.elementCount}>(${
-        item.map((element) => {
-          const snippet = coerceToSnippet(element);
-          const converted = tryConvertSnippet(
-            this,
-            snippet,
-            schema.elementType as AnyData,
-          );
-          return this.resolve(converted.value, converted.dataType as AnyData);
-        })
+        item.map((element) =>
+          this.resolve(element, schema.elementType as AnyData)
+        )
       })`;
     }
 

@@ -1,11 +1,12 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, snip } from '../data/snippet.ts';
+import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type AnyWgslData,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
@@ -17,10 +18,23 @@ import { getResolutionCtx } from '../execMode.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
-import { GenerationCtx } from '../tgsl/generationHelpers.ts';
+import type { GenerationCtx } from '../tgsl/generationHelpers.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
+
+function unify<T extends Snippet[]>(
+  values: T,
+  restrictTo?: AnyWgslData[],
+  verbose = true,
+): T {
+  return convertToCommonType({
+    ctx: getResolutionCtx() as ResolutionCtx,
+    values,
+    restrictTo,
+    verbose,
+  }).converted;
+}
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
 function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
@@ -59,15 +73,8 @@ export const add = createDualImpl(
   cpuAdd,
   // CODEGEN implementation
   (...args) => {
-    const ctx = getResolutionCtx() as ResolutionCtx;
-    const { converted, commonType } = convertToCommonType({
-      ctx,
-      values: args,
-    });
-    const [lhs, rhs] = converted;
-    const resultType = commonType ?? isSnippetNumeric(lhs)
-      ? rhs.dataType
-      : lhs.dataType;
+    const [lhs, rhs] = unify(args);
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
       (typeof lhs.value === 'number' ||
@@ -108,15 +115,8 @@ export const sub = createDualImpl(
   cpuSub,
   // CODEGEN implementation
   (...args) => {
-    const ctx = getResolutionCtx() as ResolutionCtx;
-    const { converted, commonType } = convertToCommonType({
-      ctx,
-      values: args,
-    });
-    const [lhs, rhs] = converted;
-    const resultType = commonType ?? isSnippetNumeric(lhs)
-      ? rhs.dataType
-      : lhs.dataType;
+    const [lhs, rhs] = unify(args);
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
       (typeof lhs.value === 'number' ||
@@ -181,13 +181,8 @@ export const mul = createDualImpl(
   cpuMul,
   // GPU implementation
   (...args) => {
-    const ctx = getResolutionCtx() as ResolutionCtx;
-    const { converted, commonType } = convertToCommonType({
-      ctx,
-      values: args,
-    });
-    const [lhs, rhs] = converted;
-    const returnType = commonType ?? isSnippetNumeric(lhs)
+    const [lhs, rhs] = unify(args);
+    const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
       : isSnippetNumeric(rhs)
@@ -246,24 +241,8 @@ export const div = createDualImpl(
   cpuDiv,
   // CODEGEN implementation
   (...args) => {
-    const ctx = getResolutionCtx() as GenerationCtx;
-    const { converted, commonType } = convertToCommonType({
-      ctx,
-      values: args,
-      restrictTo: [f32, f16, abstractFloat],
-      verbose: false,
-    });
-    let [lhs, rhs] = converted;
-    if (lhs.dataType.type === 'abstractInt') {
-      lhs = snip(lhs.value, abstractFloat);
-    }
-    if (rhs.dataType.type === 'abstractInt') {
-      rhs = snip(rhs.value, abstractFloat);
-    }
-
-    const resultType = commonType ?? isSnippetNumeric(lhs)
-      ? rhs.dataType
-      : lhs.dataType;
+    const [lhs, rhs] = unify(args, [f32, f16, abstractFloat], false);
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
       (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&
@@ -273,6 +252,7 @@ export const div = createDualImpl(
       return snip(cpuDiv(lhs.value as never, rhs.value as never), resultType);
     }
 
+    const ctx = getResolutionCtx() as GenerationCtx;
     const lhsStr = ctx.resolve(lhs.value, lhs.dataType, true);
     const rhsStr = ctx.resolve(rhs.value, rhs.dataType, true);
     return snip(`(${lhsStr} / ${rhsStr})`, resultType);
