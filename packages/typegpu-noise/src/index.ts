@@ -5,6 +5,7 @@ import {
   randFloat01,
   randInUnitCircle,
   randInUnitCube,
+  randInUnitHemisphere,
   randInUnitSphere,
   randNormal,
   randOnUnitCircle,
@@ -31,6 +32,7 @@ export const randf: {
   onUnitCircle: typeof randOnUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onUnitCube: typeof randOnUnitCube;
+  inHemisphere: typeof randInUnitHemisphere;
   onHemisphere: typeof randOnUnitHemisphere;
   inUnitSphere: typeof randInUnitSphere;
   onUnitSphere: typeof randOnUnitSphere;
@@ -48,6 +50,7 @@ export const randf: {
   onUnitCircle: randOnUnitCircle,
   inUnitCube: randInUnitCube,
   onUnitCube: randOnUnitCube,
+  inHemisphere: randInUnitHemisphere,
   onHemisphere: randOnUnitHemisphere,
   inUnitSphere: randInUnitSphere,
   onUnitSphere: randOnUnitSphere,

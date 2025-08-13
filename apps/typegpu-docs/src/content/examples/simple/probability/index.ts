@@ -35,7 +35,7 @@ const bView = b.as('mutable');
 
 const f1 = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
   for (let i = d.i32(0); i < d.i32(count); i++) {
-    bView.$[i] = randf.onUnitCube();
+    bView.$[i] = randf.inHemisphere(d.vec3f(sqrt(2), sqrt(2), 0));
   }
 });
 
@@ -48,7 +48,10 @@ const f2 = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   randf.seed2(d.vec2f(input.gid.xy));
-  bView.$[input.gid.x * d.u32(sqrt(count)) + input.gid.y] = randf.onUnitCube();
+  bView.$[input.gid.x * d.u32(sqrt(count)) + input.gid.y] = randf
+    .inHemisphere(
+      d.vec3f(sqrt(2), sqrt(2), 0),
+    );
 });
 
 const p2 = root['~unstable'].withCompute(f2).createPipeline();
@@ -64,7 +67,8 @@ for (let i = 0; i < count; i++) {
   positionsZ[i] = buffer[i].z;
   sizes[i] = 0.17;
   dists[i] = Math.sqrt(
-    (positionsX[i]) ** 2 + (positionsY[i]) ** 2 + (positionsZ[i] ** 2),
+    (positionsX[i]) ** 2 + (positionsY[i]) ** 2 +
+      (positionsZ[i]) ** 2,
   );
 }
 
