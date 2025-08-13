@@ -2,6 +2,7 @@
 title: "@typegpu/noise"
 ---
 
+
 The `@typegpu/noise` package offers a set of pseudo-random utilities for use in TypeGPU and WebGPU projects. At its core, the package provides a
 pseudo-random number generator for uniformly distributed values (same probability for all numbers) in the range `[0, 1)`, as well as higher-level
 utilities built on top.
@@ -101,9 +102,23 @@ const main = tgpu['~unstable'].fragmentFn({
 ```
 
 There are higher-level utilities built on top of `randf.sample`:
+
+### Discrete
+- `bernoulli` - returns 1 with probability `p`, 0 otherwise. You can think of it as a flip of a biased coin. `p` has to be in range `[0, 1]`
+
+### Continuous
+- `exponential` - returns a number using the exponential distribution with given `rate`. `rate` has to be `> 0`. Commonly used for modeling time until an event
+- `normal` - returns a number using the normal (Gaussian) distribution with given mean (`mu`) and standard devation (`sigma`). `sigma` has to be `>= 0`
+- `cauchy` - returns a number using the Cauchy distribution with given origin point (`x0`, `gamma`). `gamma` has to `>=0`
+
+### Geometric
 - `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
+- `onUnitCircle` - returns a random 2D vector uniformly distributed on the perimeter of a unit circle
 - `inUnitCube` - returns a random 3D vector uniformly distributed inside a unit cube
-- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector
+- `onUnitCube` - returns a random 3D vector uniformly distributed on the surface of the a cube
+- `inHemisphere` - returns a random 3D vector uniformly distributed inside an upper hemisphere oriented accordingly to given normal vector
+- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of an upper hemisphere oriented accordingly to given normal vector
+- `inUnitSphere` - returns a random 3D vector uniformly distributed inside a unit sphere
 - `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
 
 ## Perlin noise

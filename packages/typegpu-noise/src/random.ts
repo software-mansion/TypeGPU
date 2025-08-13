@@ -46,9 +46,9 @@ export const randFloat01: TgpuFn<() => d.F32> = tgpu
 export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() =>
     d.vec3f(
-      randomGeneratorSlot.value.sample() * 2 - 1,
-      randomGeneratorSlot.value.sample() * 2 - 1,
-      randomGeneratorSlot.value.sample() * 2 - 1,
+      randomGeneratorSlot.value.sample(),
+      randomGeneratorSlot.value.sample(),
+      randomGeneratorSlot.value.sample(),
     )
   );
 
