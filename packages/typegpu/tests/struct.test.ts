@@ -388,8 +388,6 @@ describe('abstruct', () => {
       return result.exp;
     });
 
-    console.log(tgpu.resolve({ externals: { testFn } }));
-
     expect(parseResolved({ testFn })).toBe(
       parse(`
         fn testFn(x: f32) -> f32 {
