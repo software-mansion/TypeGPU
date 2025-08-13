@@ -660,7 +660,8 @@ ${ctx.pre}else ${alternate}`;
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
     const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-    return stitch`${ctx.pre}var ${id} = ${eq};`;
+    const dataType = concretize(eq.dataType as wgsl.AnyWgslData);
+    return ctx.withExactType(true, () => stitch`${ctx.pre}var ${id} = ${eq};`);
   }
 
   if (statement[0] === NODE.block) {

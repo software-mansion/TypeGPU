@@ -206,6 +206,7 @@ export type GenerationCtx = ResolutionCtx & {
    * It is modified exclusively by `generateTypedExpression` function.
    */
   expectedType: AnyData | undefined;
+  forcedExactType: boolean;
 
   readonly topFunctionReturnType: AnyData;
   indent(): string;
@@ -215,7 +216,7 @@ export type GenerationCtx = ResolutionCtx & {
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 
-  withForcedType<T>(dataType: AnyData, cb: () => T): T;
+  withExactType<T>(forced: boolean, cb: () => T): T;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {

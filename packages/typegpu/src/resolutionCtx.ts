@@ -362,6 +362,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
+  public forcedExactType = false;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
@@ -385,6 +386,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   withResetIndentLevel<T>(callback: () => T): T {
     return this._indentController.withResetLevel(callback);
+  }
+
+  withExactType<T>(forced: boolean, cb: () => T): T {
+    const prev = this.forcedExactType;
+    this.forcedExactType = forced;
+    try {
+      return cb();
+    } finally {
+      this.forcedExactType = prev;
+    }
   }
 
   getById(id: string): Snippet | null {
@@ -651,12 +662,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (typeof item === 'number') {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
 
-      if (
-        realSchema.type === 'abstractInt' ||
-        realSchema.type === 'u32' ||
-        realSchema.type === 'i32'
-      ) {
+      if (realSchema.type === 'abstractInt') {
         return String(item);
+      }
+      if (realSchema.type === 'u32') {
+        return this.forcedExactType ? `${item}u` : String(item);
+      }
+      if (realSchema.type === 'i32') {
+        return this.forcedExactType ? `${item}i` : String(item);
       }
 
       if (
@@ -666,7 +679,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         // Just picking the shorter one
         const exp = item.toExponential();
         const decimal = Number.isInteger(item) ? `${item}.` : String(item);
-        return exp.length < decimal.length ? exp : decimal;
+        const base = exp.length < decimal.length ? exp : decimal;
+        if (this.forcedExactType && realSchema.type === 'f32') {
+          return `${base}f`;
+        }
+        if (this.forcedExactType && realSchema.type === 'f16') {
+          return `${base}h`;
+        }
+        return base;
       }
     }
 

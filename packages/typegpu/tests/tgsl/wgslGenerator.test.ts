@@ -575,7 +575,7 @@ describe('wgslGenerator', () => {
       parse(`
       fn testFn() -> u32 {
         var a = u32(12);
-        var b = f32(2.5);
+        var b = 2.5f;
         a = u32(b);
         return a;
       }`),

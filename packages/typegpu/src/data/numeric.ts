@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import { snip } from './snippet.ts';
+import { snip, Snippet } from './snippet.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -134,7 +134,7 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = createDualImpl(
   // CPU implementation
-  (v?: number | boolean) => {
+  (v?: number | boolean | undefined) => {
     if (v === undefined) {
       return 0;
     }
@@ -144,7 +144,14 @@ const f32Cast = createDualImpl(
     return Math.fround(v);
   },
   // GPU implementation
-  (v) => snip(stitch`f32(${v})`, f32),
+  (arg): Snippet => {
+    if (!arg) return snip(0, f32);
+    if (typeof arg.value === 'number' || typeof arg.value === 'boolean') {
+      // Precomputing...
+      return snip(f32Cast[$internal].jsImpl(arg.value), f32);
+    }
+    return snip(stitch`f32(${arg})`, f32);
+  },
   'f32Cast',
 );
 
