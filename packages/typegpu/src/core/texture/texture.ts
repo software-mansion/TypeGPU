@@ -213,6 +213,18 @@ export interface TgpuSampledTexture<
   readonly channelDataType: TData;
 }
 
+/**
+ * A texture accessed as depth on the GPU.
+ */
+export interface TgpuDepthTexture<
+  TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
+> {
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType: 'texture-depth-view';
+  readonly dimension: TDimension;
+  readonly channelDataType: F32;
+}
+
 export function INTERNAL_createTexture(
   props: TextureProps,
   branch: ExperimentalTgpuRoot,
@@ -244,11 +256,21 @@ export function isSampledTextureView<T extends TgpuSampledTexture>(
   );
 }
 
+export function isDepthTextureView<T extends TgpuDepthTexture>(
+  value: unknown | T,
+): value is T {
+  return (
+    (value as T)?.resourceType === 'texture-depth-view' &&
+    !!(value as T)[$internal]
+  );
+}
+
 export type TgpuAnyTextureView =
   | TgpuReadonlyTexture
   | TgpuWriteonlyTexture
   | TgpuMutableTexture
-  | TgpuSampledTexture;
+  | TgpuSampledTexture
+  | TgpuDepthTexture;
 
 // --------------
 // Implementation
@@ -266,6 +288,7 @@ class TgpuTextureImpl implements TgpuTexture {
   public usableAsSampled = false;
   public usableAsStorage = false;
   public usableAsRender = false;
+  public usableAsDepth = false;
 
   private _destroyed = false;
   private _flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;

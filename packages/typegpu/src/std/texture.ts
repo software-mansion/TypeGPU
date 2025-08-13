@@ -356,3 +356,93 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   },
   'textureDimensions',
 );
+
+type TextureSampleCompareOverload = {
+  <T extends TgpuSampledTexture<'depth-2d'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuSampledTexture<'depth-2d'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuSampledTexture<'depth-2d-array'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+  <T extends TgpuSampledTexture<'depth-2d-array'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuSampledTexture<'depth-cube'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v3f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuSampledTexture<'depth-cube-array'>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v3f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+};
+
+export const textureSampleCompare: TextureSampleCompareOverload =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuSampledTexture,
+      _sampler: TgpuSampler,
+      _coords: v2f | v3f,
+      _depthRefOrArrayIndex: number,
+      _depthRefOrOffset?: number | v2i,
+      _maybeOffset?: v2i,
+    ) => {
+      throw new Error(
+        'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
+      );
+    },
+    // CODEGEN implementation
+    (
+      texture,
+      sampler,
+      coords,
+      depthRefOrArrayIndex,
+      depthRefOrOffset,
+      maybeOffset,
+    ) => {
+      const args = [texture, sampler, coords];
+
+      if (depthRefOrArrayIndex !== undefined) {
+        args.push(depthRefOrArrayIndex);
+      }
+
+      if (depthRefOrOffset !== undefined) {
+        args.push(depthRefOrOffset);
+      }
+
+      if (maybeOffset !== undefined) {
+        args.push(maybeOffset);
+      }
+
+      return snip(
+        `textureSampleCompare(${args.map((v) => v.value).join(', ')})`,
+        f32,
+      );
+    },
+    'textureSampleCompare',
+  );
