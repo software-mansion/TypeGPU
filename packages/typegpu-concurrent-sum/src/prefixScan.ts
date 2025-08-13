@@ -192,8 +192,8 @@ export function prefixScan(
 
 export function scan(
   root: TgpuRoot,
-  binaryOp: BinaryOp,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  binaryOp: BinaryOp,
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   let computer = cache.get(root)?.get(binaryOp);
