@@ -82,7 +82,7 @@ type FunctionScopeLayer = {
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyData | UnknownData>;
+  declarations: Map<string, Snippet>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -159,7 +159,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
-      declarations: new Map<string, AnyData | UnknownData>(),
+      declarations: new Map(),
     });
   }
 
@@ -230,9 +230,9 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const declarationType = layer.declarations.get(id);
-        if (declarationType !== undefined) {
-          return snip(id, declarationType);
+        const snippet = layer.declarations.get(id);
+        if (snippet !== undefined) {
+          return snippet;
         }
       } else {
         // Skip
@@ -251,7 +251,7 @@ class ItemStateStackImpl implements ItemStateStack {
       const layer = this._stack[i];
 
       if (layer?.type === 'blockScope') {
-        layer.declarations.set(id, type);
+        layer.declarations.set(id, snip(id, type));
 
         return snip(id, type);
       }
@@ -660,6 +660,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (typeof item !== 'object' && typeof item !== 'function') {
+      console.log('BBB', item);
       return String(item);
     }
 
