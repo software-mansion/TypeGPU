@@ -997,7 +997,7 @@ describe('wgslGenerator division operator', () => {
     });
     expect(div()).toBe(0.1);
     expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( f16 ( ( f32 ( 1 ) / f32 ( 2 ) ) ) ) / f32 ( 5 ) ) ; }"`,
+      `"fn div ( ) -> f32 { return ( f32 ( f16 ( 0.5 ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 

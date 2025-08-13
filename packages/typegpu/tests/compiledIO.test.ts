@@ -6,7 +6,6 @@ import {
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import { it } from './utils/extendedIt.ts';
-import tgpu from '../src/index.ts';
 
 describe('buildWriter', () => {
   it('should compile a writer for a struct', () => {
@@ -292,8 +291,6 @@ describe('createCompileInstructions', () => {
       a: d.f32,
       b: d.align(64, d.arrayOf(d.f32, 2)),
     });
-
-    console.log(tgpu.resolve({ externals: { schema } }));
 
     const builtWriter = buildWriter(schema, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
