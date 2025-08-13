@@ -4,7 +4,6 @@
     <div
       class="bars-container grid grid-flow-col justify-center pl-2 pb-3 gap-x-4 relative w-full min-h-[17rem] border-l-2 border-b-2 border-[#e6e6f2] max-lg:w-[calc(100%+8rem)]"
     >
-      <!-- Y-axis label -->
       <div
         class="y-axis-labels absolute left-[-3rem]  h-full flex flex-col justify-between text-sm text-gray-600"
       >
@@ -17,7 +16,7 @@
       </div>
 
       <div
-        class="predictions-label absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap max-lg:text-base max-lg:left-[-2.5rem]"
+        class="predictions-label absolute left-[-5rem] top-[30%] z-20 text-xl -rotate-90 -translate-x-1/2 origin-center whitespace-nowrap "
       >
         Time [ms]
       </div>
@@ -104,8 +103,8 @@
   :root {
     --axis-color: #e6e6f2;
     --bar-gradient: linear-gradient(to right, #c464ff, #1d72f0);
-    --bar-color-gpu: #ffd54a;         /* second bar */
-    --bar-color-threads: #18b6d5;     /* third bar */
+    --bar-color-gpu: #ffd54a;   
+    --bar-color-threads: #18b6d5;  
     --bar-track-bg: linear-gradient(to right, transparent, var(--axis-color));
   }
 
