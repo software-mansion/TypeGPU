@@ -7,12 +7,13 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
@@ -26,7 +27,6 @@ import {
   parseNumericString,
   tryConvertSnippet,
 } from './generationHelpers.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -139,7 +139,9 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Snippet {
-  return ctx.defineVariable(id, dataType);
+  const snippet = snip(id, dataType);
+  ctx.defineVariable(id, snippet);
+  return snippet;
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
@@ -652,7 +654,7 @@ ${ctx.pre}else ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
+    const id = generateIdentifier(ctx, rawId).value;
 
     return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
   }
