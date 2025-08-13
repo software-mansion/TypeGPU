@@ -1,23 +1,19 @@
-import tgpu, {
-  type Render,
-  type Sampled,
-  type TgpuBindGroup,
-  type TgpuTexture,
-} from 'typegpu';
+import tgpu, { type TgpuBindGroup } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
-const device = root.device;
 
 const layout = tgpu.bindGroupLayout({
-  inputTexture: { texture: 'float' },
+  externalTexture: { externalTexture: {} },
 });
 
 const charsetExtended = root.createUniform(d.u32);
 const displayMode = root.createUniform(d.u32);
 const gammaCorrection = root.createUniform(d.f32);
 const glyphSize = root.createUniform(d.u32, 8);
+const uvTransformBuffer = root
+  .createUniform(d.mat2x2f, d.mat2x2f.identity());
 
 const shaderSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
@@ -36,7 +32,7 @@ const displayModes = {
  */
 const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   // Transform texture coordinates to character bitmap coordinates (5x5 grid)
-  const pos = std.floor(std.add(std.mul(p, d.vec2f(-4, 4)), 2.5));
+  const pos = std.floor(p.mul(d.vec2f(-4, 4)).add(2.5));
 
   // Check if position is outside the 5x5 character bitmap bounds
   if (pos.x < 0 || pos.x > 4 || pos.y < 0 || pos.y > 4) {
@@ -44,12 +40,9 @@ const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   }
 
   // Convert 2D bitmap position to 1D bit index (row-major order)
-  const a = d.u32(std.add(pos.x, std.mul(5, pos.y)));
+  const a = d.u32(pos.x + 5 * pos.y);
   // Extract the bit at position 'a' from the character bitmap 'n'
-  if ((n >> a) & 1) {
-    return 1;
-  }
-  return 0;
+  return (n >> a) & 1;
 });
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -57,7 +50,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 0), d.vec2f(2, 0), d.vec2f(0, 2)];
+  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0, 1),
@@ -70,23 +63,21 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
  * https://www.shadertoy.com/view/lssGDj
  */
 const fragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const textureSize = d.vec2f(std.textureDimensions(layout.$.inputTexture));
-  const pix = std.mul(input.uv, textureSize);
+  const uv2 = std.mul(uvTransformBuffer.$, input.uv.sub(0.5)).add(0.5);
+  const textureSize = d.vec2f(std.textureDimensions(layout.$.externalTexture));
+  const pix = uv2.mul(textureSize);
 
   const cellSize = d.f32(glyphSize.$);
-  const halfCell = std.mul(cellSize, 0.5);
+  const halfCell = cellSize * 0.5;
 
-  const blockCoord = std.div(
-    std.mul(std.floor(std.div(pix, cellSize)), cellSize),
-    textureSize,
-  );
-  const color = std.textureSample(
-    layout.bound.inputTexture,
+  const blockCoord = std.floor(pix.div(cellSize))
+    .mul(cellSize).div(textureSize);
+
+  const color = std.textureSampleBaseClampToEdge(
+    layout.$.externalTexture,
     shaderSampler,
     blockCoord,
   );
@@ -158,15 +149,15 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   let resultColor = d.vec3f(1);
   // Color mode
   if (displayMode.$ === displayModes.color) {
-    resultColor = d.vec3f(std.mul(color, charValue).xyz);
+    resultColor = color.mul(charValue).xyz;
   }
   // Grayscale mode
   if (displayMode.$ === displayModes.grayscale) {
-    resultColor = d.vec3f(std.mul(d.vec3f(gray), charValue));
+    resultColor = d.vec3f(gray * charValue);
   }
   // White mode
   if (displayMode.$ === displayModes.white) {
-    resultColor = d.vec3f(std.mul(d.vec3f(1), charValue));
+    resultColor = d.vec3f(charValue);
   }
   return d.vec4f(resultColor, 1.0);
 });
@@ -192,99 +183,101 @@ const pipeline = root['~unstable']
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
-    video: true,
+    video: {
+      facingMode: 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60 },
+    },
   });
 }
-
-let renderTexture:
-  | (
-    & TgpuTexture<{
-      size: [number, number];
-      format: 'rgba8unorm' | 'bgra8unorm';
-    }>
-    & Sampled
-    & Render
-  )
-  | undefined;
 
 let bindGroup:
   | TgpuBindGroup<{
-    inputTexture: {
-      texture: 'float';
-    };
+    externalTexture: { externalTexture: Record<string, never> };
   }>
   | undefined;
 
-let ready = true;
-let animationFrame: number;
-function run() {
-  if (!(video.currentTime > 0) || video.readyState < 2 || !ready) {
-    animationFrame = requestAnimationFrame(run);
+let videoFrameCallbackId: number | undefined;
+let lastFrameSize: { width: number; height: number } | undefined = undefined;
+
+function processVideoFrame(
+  _: number,
+  metadata: VideoFrameCallbackMetadata,
+) {
+  if (video.readyState < 2) {
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
-  renderTexture ??= root['~unstable'].createTexture({
-    size: [video.videoWidth, video.videoHeight],
-    format: presentationFormat as 'rgba8unorm' | 'bgra8unorm',
-  }).$usage('render', 'sampled');
+  const frameWidth = metadata.width;
+  const frameHeight = metadata.height;
 
-  bindGroup ??= root.createBindGroup(layout, {
-    inputTexture: renderTexture,
+  if (
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
+  ) {
+    lastFrameSize = { width: frameWidth, height: frameHeight };
+
+    updateVideoDisplay(frameWidth, frameHeight);
+  }
+
+  bindGroup = root.createBindGroup(layout, {
+    externalTexture: root.device.importExternalTexture({ source: video }),
   });
+  if (!bindGroup) {
+    console.warn('Bind group is not ready yet.');
 
-  try {
-    device.queue.copyExternalImageToTexture(
-      { source: video, flipY: true },
-      { texture: root.unwrap(renderTexture) },
-      [video.videoWidth, video.videoHeight],
-    );
-  } catch (error) {
-    console.error('Failed to copy video frame to texture:', error);
-    animationFrame = requestAnimationFrame(run);
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
-  pipeline.withColorAttachment({
-    loadOp: 'clear',
-    storeOp: 'store',
-    view: context.getCurrentTexture().createView(),
-  }).with(layout, bindGroup).draw(3);
+  pipeline
+    .with(layout, bindGroup)
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: context.getCurrentTexture().createView(),
+    })
+    .draw(3);
 
   spinner.style.display = 'none';
-  animationFrame = requestAnimationFrame(run);
+
+  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 
-function resizeVideo() {
-  ready = false;
-  if (video.videoHeight === 0) {
-    return;
-  }
-
-  renderTexture?.destroy();
-  renderTexture = root['~unstable'].createTexture({
-    size: [video.videoWidth, video.videoHeight],
-    format: presentationFormat as 'rgba8unorm' | 'bgra8unorm',
-  }).$usage('render', 'sampled');
-  bindGroup = root.createBindGroup(layout, {
-    inputTexture: renderTexture,
-  });
-
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
+function updateVideoDisplay(frameWidth: number, frameHeight: number) {
+  const aspectRatio = frameWidth / frameHeight;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-
-  ready = true;
 }
 
-const videoSizeObserver = new ResizeObserver(resizeVideo);
-videoSizeObserver.observe(video);
-video.addEventListener('resize', resizeVideo);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function setUVTransformForIOS() {
+  const angle = screen.orientation.type;
 
-animationFrame = requestAnimationFrame(run);
+  let m = d.mat2x2f.identity();
+  if (angle === 'portrait-primary') {
+    m = d.mat2x2f(0, -1, 1, 0);
+  } else if (angle === 'portrait-secondary') {
+    m = d.mat2x2f(0, 1, -1, 0);
+  } else if (angle === 'landscape-primary') {
+    m = d.mat2x2f(-1, 0, 0, -1);
+  }
+
+  uvTransformBuffer.write(m);
+}
+
+if (isIOS) {
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
+}
+
+videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 export const controls = {
   'use extended characters': {
@@ -306,7 +299,7 @@ export const controls = {
     onSliderChange: (value: number) => gammaCorrection.write(value),
   },
   'glyph size (px)': {
-    initial: 8,
+    initial: 20,
     min: 4,
     max: 32,
     step: 2,
@@ -315,7 +308,9 @@ export const controls = {
 };
 
 export function onCleanup() {
-  cancelAnimationFrame(animationFrame);
+  if (videoFrameCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(videoFrameCallbackId);
+  }
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -323,5 +318,4 @@ export function onCleanup() {
   }
 
   root.destroy();
-  videoSizeObserver.disconnect();
 }

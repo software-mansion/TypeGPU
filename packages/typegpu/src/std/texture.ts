@@ -1,5 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import type { TgpuSampler } from '../core/sampler/sampler.ts';
+import type { TgpuExternalTexture } from '../core/texture/externalTexture.ts';
 import type {
   TgpuSampledTexture,
   TgpuStorageTexture,
@@ -10,6 +11,7 @@ import { snip } from '../data/snippet.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
+  type F32,
   type v2f,
   type v2i,
   type v2u,
@@ -319,8 +321,11 @@ type TextureDimensionsOverload = {
       | TgpuSampledTexture<'cube'>
       | TgpuSampledTexture<'cube-array'>
       | TgpuStorageTexture<'2d'>
-      | TgpuStorageTexture<'2d-array'>,
-  >(texture: T): v2u;
+      | TgpuStorageTexture<'2d-array'>
+      | TgpuExternalTexture,
+  >(
+    texture: T,
+  ): v2u;
   <
     T extends
       | TgpuSampledTexture<'2d'>
@@ -337,22 +342,56 @@ type TextureDimensionsOverload = {
 
 export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   // CPU implementation
-  (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
+  (
+    _texture: TgpuSampledTexture | TgpuStorageTexture | TgpuExternalTexture,
+    _level?: number,
+  ) => {
     throw new Error(
       '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
   // CODEGEN implementation
-  (...args) => {
-    const textureInfo = args[0].dataType as unknown as
+  (texture, level) => {
+    const resourceType = (texture as unknown as
       | TgpuSampledTexture
-      | TgpuStorageTexture;
-    const dim = textureInfo.dimension;
+      | TgpuStorageTexture
+      | TgpuExternalTexture).resourceType;
+
+    const dim = resourceType === 'external-texture' ? '2d' : (
+      texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture
+    ).dimension;
 
     return snip(
-      stitch`textureDimensions(${args})`,
+      stitch`textureDimensions(${[texture, level]})`,
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     );
   },
   'textureDimensions',
 );
+
+type TextureSampleBaseClampToEdge = (
+  texture: TgpuSampledTexture<'2d', F32> | TgpuExternalTexture,
+  sampler: TgpuSampler,
+  coords: v2f,
+) => v4f;
+
+export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuSampledTexture | TgpuExternalTexture,
+      _sampler: TgpuSampler,
+      _coords: v2f,
+    ) => {
+      throw new Error(
+        'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
+      );
+    },
+    // GPU implementation
+    (...args) =>
+      snip(
+        stitch`textureSampleBaseClampToEdge(${args})`,
+        vec4f,
+      ),
+    'textureSampleBaseClampToEdge',
+  );

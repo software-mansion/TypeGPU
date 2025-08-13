@@ -1,14 +1,12 @@
+import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-
-if (typeof MediaStreamTrackProcessor === 'undefined') {
-  throw new Error('MediaStreamTrackProcessor is not supported in this browser');
-}
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   color: { uniform: d.vec3f },
   threshold: { uniform: d.f32 },
+  uvTransform: { uniform: d.mat2x2f },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
@@ -49,16 +47,10 @@ fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
   return output;
 }
 
-const rgbToYcbcrMatrix = mat3x3f(
-  0.299,     0.587,     0.114,
- -0.168736, -0.331264,  0.5,
-  0.5,      -0.418688, -0.081312,
-);
-
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
-
+  let uv2 = uvTransform * (uv - vec2f(0.5)) + vec2f(0.5);
+  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv2);
   let ycbcr = col.rgb * rgbToYcbcrMatrix;
   let colycbcr = color * rgbToYcbcrMatrix;
 
@@ -78,33 +70,22 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
     ...rareLayout.bound,
     ...frequentLayout.bound,
     VertexOutput,
+    rgbToYcbcrMatrix,
   },
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 
-video.addEventListener('resize', () => {
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-});
-
-const width = video.width;
-const height = video.height;
-
-let stream: MediaStream;
-
 if (navigator.mediaDevices.getUserMedia) {
-  stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: true,
+  video.srcObject = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60 },
+    },
   });
-  video.srcObject = stream;
 } else {
   throw new Error('getUserMedia not supported');
 }
@@ -121,24 +102,14 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const samplingCanvas = document.createElement('canvas');
-const samplingContext = samplingCanvas.getContext('2d');
-samplingCanvas.width = width;
-samplingCanvas.height = height;
-
-if (!samplingContext) {
-  throw new Error('Could not get 2d context');
-}
-
-const mediaProcessor = new MediaStreamTrackProcessor({
-  track: stream.getVideoTracks()[0],
-});
-const reader = mediaProcessor.readable.getReader();
-
 const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
 
 const colorBuffer = root
   .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
+  .$usage('uniform');
+
+const uvTransformBuffer = root
+  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
   .$usage('uniform');
 
 const sampler = device.createSampler({
@@ -150,6 +121,7 @@ const rareBindGroup = root.createBindGroup(rareLayout, {
   color: colorBuffer,
   sampling: sampler,
   threshold: thresholdBuffer,
+  uvTransform: uvTransformBuffer,
 });
 
 const shaderModule = device.createShaderModule({
@@ -169,9 +141,35 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
-async function getFrame() {
-  const { value: frame } = await reader.read();
-  return frame;
+function onVideoChange(size: { width: number; height: number }) {
+  const aspectRatio = size.width / size.height;
+  video.style.height = `${video.clientWidth / aspectRatio}px`;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+}
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function setUVTransformForIOS() {
+  const angle = screen.orientation.type;
+
+  let m = d.mat2x2f(1, 0, 0, 1);
+  if (angle === 'portrait-primary') {
+    m = d.mat2x2f(0, -1, 1, 0);
+  } else if (angle === 'portrait-secondary') {
+    m = d.mat2x2f(0, 1, -1, 0);
+  } else if (angle === 'landscape-primary') {
+    m = d.mat2x2f(-1, 0, 0, -1);
+  }
+
+  uvTransformBuffer.write(m);
+}
+
+if (isIOS) {
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
 }
 
 const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -185,13 +183,30 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
   ],
 };
 
-async function drawFrame() {
-  const frame = await getFrame();
-  if (!frame) {
+let videoFrameCallbackId: number | undefined;
+let lastFrameSize: { width: number; height: number } | undefined = undefined;
+
+function processVideoFrame(
+  _: number,
+  metadata: VideoFrameCallbackMetadata,
+) {
+  if (video.readyState < 2) {
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
-  // Updating the target render texture
+  const frameWidth = metadata.width;
+  const frameHeight = metadata.height;
+
+  if (
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
+  ) {
+    lastFrameSize = { width: frameWidth, height: frameHeight };
+    onVideoChange(lastFrameSize);
+  }
+
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
   )[0].view = context.getCurrentTexture().createView();
@@ -205,7 +220,7 @@ async function drawFrame() {
     1,
     root.unwrap(
       root.createBindGroup(frequentLayout, {
-        inputTexture: device.importExternalTexture({ source: frame }),
+        inputTexture: device.importExternalTexture({ source: video }),
       }),
     ),
   );
@@ -213,18 +228,11 @@ async function drawFrame() {
   pass.end();
 
   device.queue.submit([encoder.finish()]);
-  frame.close();
+
+  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 
-let frameRequest = requestAnimationFrame(run);
-
-function run() {
-  frameRequest = requestAnimationFrame(run);
-
-  if (video.currentTime > 0) {
-    drawFrame();
-  }
-}
+videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
@@ -245,13 +253,15 @@ export const controls = {
 };
 
 export function onCleanup() {
-  cancelAnimationFrame(frameRequest);
-
-  for (const track of stream.getTracks()) {
-    track.stop();
+  if (videoFrameCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(videoFrameCallbackId);
   }
-
-  reader.cancel();
+  if (video.srcObject) {
+    for (const track of (video.srcObject as MediaStream).getTracks()) {
+      track.stop();
+    }
+  }
+  root.destroy();
 }
 
 // #endregion
