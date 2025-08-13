@@ -7,6 +7,7 @@ import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type AnyWgslData,
   isFloat32VecInstance,
   isMatInstance,
   isVecInstance,
@@ -17,6 +18,7 @@ import { convertToCommonType } from '../tgsl/generationHelpers.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
+import { concretize } from '../tgsl/concretize.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -232,7 +234,6 @@ export const div = createDualImpl({
         ctx,
         values: [lhs, rhs],
         restrictTo: [f32, f16],
-        concretizeTypes: true,
       }) as
         | [Snippet, Snippet]
         | undefined;

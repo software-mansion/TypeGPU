@@ -15,17 +15,21 @@ import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
-  coerceToSnippet,
-  concretize,
   convertStructValues,
   convertToCommonType,
   type GenerationCtx,
-  getTypeForIndexAccess,
-  getTypeForPropAccess,
-  numericLiteralToSnippet,
-  parseNumericString,
   tryConvertSnippet,
 } from './generationHelpers.ts';
+import {
+  getTypeForIndexAccess,
+  getTypeForPropAccess,
+} from './getTypeForAccess.ts';
+import {
+  numericLiteralToSnippet,
+  parseNumericString,
+} from './numericLiteral.ts';
+import { concretize } from './concretize.ts';
+import { coerceToSnippet } from './coerceToSnippet.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 

@@ -12,6 +12,7 @@ import type {
   U16,
   U32,
 } from './wgslTypes.ts';
+import { dualImpl } from '../tgsl/generationHelpers.ts';
 
 export const abstractInt = {
   [$internal]: true,
@@ -127,9 +128,9 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
-const f32Cast = createDualImpl({
+const f32Cast = dualImpl({
   name: 'f32Cast',
-  normalImpl: (v?: number | boolean) => {
+  normal: (v?: number | boolean) => {
     if (v === undefined) {
       return 0;
     }
@@ -138,7 +139,10 @@ const f32Cast = createDualImpl({
     }
     return Math.fround(v);
   },
-  codegenImpl: (v) => snip(stitch`f32(${v})`, f32),
+  codegen: (v) => stitch`f32(${v})`,
+  overloads: () => [
+    { argTypes: [f32], returnType: f32 },
+  ],
 });
 
 /**

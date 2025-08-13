@@ -73,3 +73,8 @@ export const $validVertexSchema = Symbol(
 export const $invalidSchemaReason = Symbol(
   `typegpu:${version}:$invalidSchemaReason`,
 );
+
+export function isRuntimeResource(value: unknown): boolean {
+  return !!(value as { readonly [$runtimeResource]?: boolean | undefined })
+    ?.[$runtimeResource];
+}
