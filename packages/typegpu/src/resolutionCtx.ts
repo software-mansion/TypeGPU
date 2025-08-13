@@ -655,7 +655,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         : reinterpretedType;
 
       if (realSchema.type === 'abstractInt') {
-        return String(item);
+        return `${item}`;
       }
       if (realSchema.type === 'u32') {
         return `${item}u`;
@@ -664,24 +664,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         return `${item}i`;
       }
 
-      if (
-        realSchema.type === 'abstractFloat' || realSchema.type === 'f32' ||
-        realSchema.type === 'f16'
-      ) {
-        // Just picking the shorter one
-        const exp = item.toExponential();
-        let decimal = String(item);
-        if (realSchema.type === 'abstractFloat') {
-          decimal = Number.isInteger(item) ? `${item}.` : decimal;
-          return exp.length < decimal.length ? exp : decimal;
-        }
-        if (realSchema.type === 'f32') {
-          return `${exp.length < decimal.length ? exp : decimal}f`;
-        }
-        if (realSchema.type === 'f16') {
-          return `${exp.length < decimal.length ? exp : decimal}h`;
-        }
+      const exp = item.toExponential();
+      const decimal =
+        realSchema.type === 'abstractFloat' && Number.isInteger(item)
+          ? `${item}.`
+          : `${item}`;
+
+      // Just picking the shorter one
+      const base = exp.length < decimal.length ? exp : decimal;
+      if (realSchema.type === 'f32') {
+        return `${base}f`;
       }
+      if (realSchema.type === 'f16') {
+        return `${base}h`;
+      }
+      return base;
     }
 
     if (typeof item !== 'object' && typeof item !== 'function') {
