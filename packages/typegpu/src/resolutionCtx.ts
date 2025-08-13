@@ -1,4 +1,5 @@
 import { resolveData } from './core/resolve/resolveData.ts';
+import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable } from './core/root/rootTypes.ts';
 import {
@@ -705,13 +706,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (Array.isArray(item)) {
-      return `array(${item.map((element) => this.resolve(element))})`;
+      return stitch`array(${item.map((element) => this.resolve(element))})`;
     }
 
     if (schema && isWgslStruct(schema)) {
-      return `${this.resolve(schema)}(${
-        Object.entries(schema.propTypes).map(([key, type_]) =>
-          this.resolve((item as Infer<typeof schema>)[key], type_ as AnyData)
+      return stitch`${this.resolve(schema)}(${
+        Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType as AnyData)
         )
       })`;
     }
