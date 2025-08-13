@@ -215,11 +215,9 @@ export function generateExpression(
 
     const converted = convertToCommonType({
       ctx,
-      values: [lhsExpr, rhsExpr],
+      values: [lhsExpr, rhsExpr] as const,
       restrictTo: forcedType,
-    }) as
-      | [Snippet, Snippet]
-      | undefined;
+    });
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
     const lhsStr = ctx.resolve(convLhs.value);
