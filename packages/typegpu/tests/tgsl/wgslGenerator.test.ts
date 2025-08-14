@@ -945,6 +945,21 @@ describe('wgslGenerator', () => {
     }`),
     );
   });
+
+  it('does not cause identifier clashes when renaming variables', () => {
+    const main = tgpu.fn([])(() => {
+      const mut = 1;
+      const mut_1 = 2;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+    fn main_0() {
+      var mut_1 = 1;
+      var mut_1_2 = 2;
+    }`),
+    );
+  });
 });
 
 describe('wgslGenerator division operator', () => {

@@ -8,14 +8,29 @@ export interface NameRegistry {
 
   /**
    * Creates a valid WGSL identifier.
-   * If the parameter is a WGSL reserved word or a WGSL keyword, returns `makeUnique(primer)`,
+   * If the parameter could be a WGSL reserved word (with potential suffix) returns `makeUnique(primer)`,
    * otherwise returns `primer`.
    * @param primer Used in the generation process.
+   *
+   * @example
+   * makeValid("notAKeyword"); // "notAKeyword"
+   * makeValid("struct"); // makeUnique("struct")
+   * makeValid("struct_1"); // makeUnique("struct_1")
    */
   makeValid(primer: string): string;
 }
 
-export class RandomNameRegistry implements NameRegistry {
+abstract class NameRegistryImpl implements NameRegistry {
+  abstract makeUnique(primer?: string): string;
+
+  makeValid(primer: string): string {
+    return keywordsAndReservedTokens.has(primer.split('_')[0] as string)
+      ? this.makeUnique(primer)
+      : primer;
+  }
+}
+
+export class RandomNameRegistry extends NameRegistryImpl {
   private lastUniqueId = 0;
 
   makeUnique(primer?: string | undefined): string {
@@ -30,15 +45,9 @@ export class RandomNameRegistry implements NameRegistry {
 
     return `${label}_${this.lastUniqueId++}`;
   }
-
-  makeValid(primer: string): string {
-    return keywordsAndReservedTokens.has(primer)
-      ? this.makeUnique(primer)
-      : primer;
-  }
 }
 
-export class StrictNameRegistry implements NameRegistry {
+export class StrictNameRegistry extends NameRegistryImpl {
   /**
    * Allows to provide a good fallback for instances of the
    * same function that are bound to different slot values.
@@ -59,12 +68,6 @@ export class StrictNameRegistry implements NameRegistry {
 
     this._usedNames.add(unusedName);
     return unusedName;
-  }
-
-  makeValid(primer: string): string {
-    return keywordsAndReservedTokens.has(primer)
-      ? this.makeUnique(primer)
-      : primer;
   }
 }
 
