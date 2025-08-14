@@ -1,5 +1,5 @@
 {
   "title": "Concurrent Chart",
   "category": "algorithms",
-  "tags": ["ai", "compute", "inference", "timestamp query"]
+  "tags": ["compute", "concurrent", "timestamp query"]
 }
