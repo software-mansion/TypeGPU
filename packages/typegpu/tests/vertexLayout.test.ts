@@ -169,7 +169,7 @@ describe('tgpu.vertexLayout', () => {
 describe('connectAttributesToShader', () => {
   it('connects a single f32 attribute', () => {
     const shaderInputLayout = d.f32;
-    const layout = tgpu.vertexLayout((n: number) => d.arrayOf(d.f32, n));
+    const layout = tgpu.vertexLayout(d.arrayOf(d.f32));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
@@ -286,7 +286,7 @@ describe('connectAttributesToShader', () => {
       )
     );
 
-    const gammaLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.u32, n));
+    const gammaLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
 
     const result = connectAttributesToShader(shaderInputLayout, {
       // purposefully out of order, which should be controlled by the shader input.
@@ -416,7 +416,7 @@ describe('connectAttributesToShader', () => {
   });
 
   it('throws when trying to use type that has no attribute representation', () => {
-    expect(() => tgpu.vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)))
+    expect(() => tgpu.vertexLayout(d.disarrayOf(d.vec3h)))
       .toThrow();
   });
 });

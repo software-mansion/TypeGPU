@@ -165,9 +165,9 @@ const colorPaletteBuffer = root
   .createBuffer(d.vec3f, colorPresets.jeans)
   .$usage('uniform');
 
-const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
+const TriangleDataArray = d.arrayOf(TriangleData);
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.vec2f, n));
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root['~unstable']

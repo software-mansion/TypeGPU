@@ -2,7 +2,6 @@ import tgpu from 'typegpu';
 import * as std from 'typegpu/std';
 import { performCalculationsWithTime } from './calculator.ts';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
 const speedupLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.speedup-label'),

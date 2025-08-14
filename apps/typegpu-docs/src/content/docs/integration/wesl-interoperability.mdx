@@ -119,7 +119,7 @@ const Fish = d.struct({
 });
 // ---cut-end---
 
-const FishArray = (n: number) => d.arrayOf(Fish, n);
+const FishArray = d.arrayOf(Fish);
 
 const buffer = root.createBuffer(FishArray(512)).$usage('storage');
 //    ^?

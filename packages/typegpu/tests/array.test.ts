@@ -99,7 +99,7 @@ describe('array', () => {
     expectTypeOf(obj).toEqualTypeOf<number[]>();
   });
 
-  it('cannot be called with invalid properties', () => {
+  it('cannot be called with invalid elements', () => {
     const ArraySchema = d.arrayOf(d.u32, 4);
 
     // @ts-expect-error
@@ -131,10 +131,10 @@ describe('array', () => {
     const ArraySchema = d.arrayOf(d.u32, 2);
 
     expect(() => ArraySchema([1])).toThrowErrorMatchingInlineSnapshot(
-      '[Error: Array schema of 2 elements of type u32 called with 1 arguments.]',
+      '[Error: Array schema of 2 elements of type u32 called with 1 argument(s).]',
     );
     expect(() => ArraySchema([1, 2, 3])).toThrowErrorMatchingInlineSnapshot(
-      '[Error: Array schema of 2 elements of type u32 called with 3 arguments.]',
+      '[Error: Array schema of 2 elements of type u32 called with 3 argument(s).]',
     );
   });
 
@@ -156,6 +156,16 @@ describe('array', () => {
       { vec: d.vec3f() },
       { vec: d.vec3f() },
     ]);
+  });
+
+  it('can be partially called', () => {
+    const ArrayPartialSchema = d.arrayOf(d.f32);
+
+    const array3 = ArrayPartialSchema(3)();
+    expect(array3).toStrictEqual([d.f32(), d.f32(), d.f32()]);
+
+    const array7 = ArrayPartialSchema(7)([1, 2, 1, 9, 2, 9, 7]);
+    expect(array7).toStrictEqual([1, 2, 1, 9, 2, 9, 7]);
   });
 
   it('generates correct code when Array default constructor is used', () => {
@@ -207,13 +217,23 @@ describe('array', () => {
           }`),
     );
   });
+
+  it('generates correct code when array is partially called', () => {
+    const testLayout = tgpu.bindGroupLayout({
+      testArray: { storage: d.arrayOf(d.u32) },
+    });
+
+    expect(parseResolved({ ...testLayout.bound })).toBe(parse(`
+      @group(0) @binding(0) var<storage, read> testArray: array<u32>;
+      `));
+  });
 });
 
 describe('array.length', () => {
   it('works for dynamically-sized arrays in TGSL', () => {
     const layout = tgpu.bindGroupLayout({
       values: {
-        storage: (n: number) => d.arrayOf(d.f32, n),
+        storage: d.arrayOf(d.f32),
         access: 'mutable',
       },
     });
@@ -298,7 +318,7 @@ describe('array.length', () => {
     });
 
     it('returns the length of a dynamic array', () => {
-      const dynamicArray = d.arrayOf(d.f32, 0);
+      const dynamicArray = d.arrayOf(d.f32);
       const layout = tgpu.bindGroupLayout({
         values: {
           storage: dynamicArray,

@@ -7,8 +7,8 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
-import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -23,6 +23,7 @@ import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
   numericLiteralToSnippet,
+  parseNumericString,
   tryConvertSnippet,
 } from './generationHelpers.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
@@ -170,6 +171,15 @@ export function generateTypedExpression(
   }
 }
 
+const opCodeToCodegen = {
+  '+': add[$internal].gpuImpl,
+  '-': sub[$internal].gpuImpl,
+  '*': mul[$internal].gpuImpl,
+  '/': div[$internal].gpuImpl,
+} satisfies Partial<
+  Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
+>;
+
 export function generateExpression(
   ctx: GenerationCtx,
   expression: tinyest.Expression,
@@ -192,6 +202,11 @@ export function generateExpression(
     const lhsExpr = generateExpression(ctx, lhs);
     const rhsExpr = generateExpression(ctx, rhs);
 
+    const codegen = opCodeToCodegen[op as keyof typeof opCodeToCodegen];
+    if (codegen) {
+      return codegen(lhsExpr, rhsExpr);
+    }
+
     const forcedType = expression[0] === NODE.assignmentExpr
       ? lhsExpr.dataType.type === 'ptr'
         ? [lhsExpr.dataType.inner as AnyData]
@@ -200,13 +215,9 @@ export function generateExpression(
 
     const converted = convertToCommonType({
       ctx,
-      values: [lhsExpr, rhsExpr],
-      restrictTo: op === '/' ? [f32, f16] : forcedType,
-      concretizeTypes: op === '/',
-      verbose: op !== '/',
-    }) as
-      | [Snippet, Snippet]
-      | undefined;
+      values: [lhsExpr, rhsExpr] as const,
+      restrictTo: forcedType,
+    });
     const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
 
     const lhsStr = ctx.resolve(convLhs.value);
@@ -345,7 +356,9 @@ export function generateExpression(
 
   if (expression[0] === NODE.numericLiteral) {
     // Numeric Literal
-    const type = numericLiteralToSnippet(expression[1]);
+    const type = typeof expression[1] === 'string'
+      ? numericLiteralToSnippet(parseNumericString(expression[1]))
+      : numericLiteralToSnippet(expression[1]);
     if (!type) {
       throw new Error(`Invalid numeric literal ${expression[1]}`);
     }
@@ -387,10 +400,8 @@ export function generateExpression(
           `An infix operator '${callee.value.name}' was called without any arguments`,
         );
       }
-      return callee.value.operator(
-        callee.value.lhs,
-        generateExpression(ctx, argNodes[0]),
-      );
+      const rhs = generateExpression(ctx, argNodes[0]);
+      return callee.value.operator(callee.value.lhs, rhs);
     }
 
     if (!isMarkedInternal(callee.value)) {
@@ -422,22 +433,19 @@ export function generateExpression(
           return generateTypedExpression(ctx, arg, argType);
         });
       } else {
-        const resolvedSnippets = argNodes
-          .map((arg) => generateExpression(ctx, arg))
-          .map((res) => snip(ctx.resolve(res.value), res.dataType));
+        const snippets = argNodes.map((arg) => generateExpression(ctx, arg));
 
         if (argConversionHint === 'keep') {
           // The hint tells us to do nothing.
-          convertedArguments = resolvedSnippets;
+          convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments =
-            convertToCommonType({ ctx, values: resolvedSnippets }) ??
-              resolvedSnippets;
+          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
+            snippets;
         } else {
           // The hint is a function that converts the arguments.
-          convertedArguments = argConversionHint(...resolvedSnippets)
-            .map((type, i) => [type, resolvedSnippets[i] as Snippet] as const)
+          convertedArguments = argConversionHint(...snippets)
+            .map((type, i) => [type, snippets[i] as Snippet] as const)
             .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
         }
       }
@@ -445,12 +453,14 @@ export function generateExpression(
       const fnRes =
         (callee.value as unknown as (...args: unknown[]) => unknown)(
           ...convertedArguments,
-        ) as Snippet;
-      // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-      return snip(
-        ctx.withResetIndentLevel(() => ctx.resolve(fnRes.value)),
-        fnRes.dataType,
-      );
+        );
+
+      if (!isSnippet(fnRes)) {
+        throw new Error(
+          'Functions running in codegen mode must return snippets',
+        );
+      }
+      return fnRes;
     } catch (error) {
       throw new ResolutionError(error, [{
         toString: () => getName(callee.value),
