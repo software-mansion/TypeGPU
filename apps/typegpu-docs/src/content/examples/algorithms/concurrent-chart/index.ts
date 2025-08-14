@@ -97,12 +97,6 @@ function drawCharts() {
 }
 
 export const controls = {
-  Reset: {
-    onButtonClick: initCalc,
-  },
-  Draw: {
-    onButtonClick: drawCharts,
-  },
   Calculate: {
     onButtonClick: async () => {
       await initCalc();
