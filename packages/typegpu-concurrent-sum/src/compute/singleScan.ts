@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { operatorSlot, scanLayout, workgroupSize } from '../schemas.ts';
+import { calculateIndex, operatorSlot, scanLayout, workgroupSize } from '../schemas.ts';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -16,8 +16,8 @@ export const scanGreatestBlock = tgpu['~unstable'].computeFn({
     wid: d.builtin.workgroupId,
   },
 })(({ gid, lid, nwg, wid }) => {
-  const globalIdx = gid.x + gid.y * nwg.x + gid.z * nwg.x * nwg.y;
-  const globalWid = wid.x + wid.y * nwg.x + wid.z * nwg.x * nwg.y;
+  const globalIdx = calculateIndex(gid, nwg);
+  const globalWid = calculateIndex(wid, nwg);
   const localIdx = lid.x;
   const arrayLength = scanLayout.$.input.length;
   let offset = d.u32(1);

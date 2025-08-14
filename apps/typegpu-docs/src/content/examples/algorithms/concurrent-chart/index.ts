@@ -26,7 +26,7 @@ const lengthMap: Record<
   string,
   { jsTime: number; gpuTime: number; gpuShaderTime: number }
 > = {
-  '65536': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
+  '21037': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
   '131072': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
   '1048576': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
   '4194304': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
