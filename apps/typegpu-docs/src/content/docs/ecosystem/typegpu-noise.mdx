@@ -101,9 +101,23 @@ const main = tgpu['~unstable'].fragmentFn({
 ```
 
 There are higher-level utilities built on top of `randf.sample`:
+
+### Discrete
+- `bernoulli` - returns 1 with probability `p`, and 0 otherwise. You can think of it as the flip of a biased coin. `p` must be in the range `[0, 1]`
+
+### Continuous
+- `exponential` - returns a number based on the exponential distribution with a given `rate`. The `rate` must be greater than 0. It is commonly used for modeling the time until an event occurs
+- `normal` - returns a number based on the normal (Gaussian) distribution with a given mean (`mu`) and standard deviation (`sigma`). `sigma` must be `>= 0`
+- `cauchy` - returns a number based on the Cauchy distribution with a given origin point (`x0`, `gamma`). `gamma` must be `>= 0`
+
+### Geometric
 - `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
+- `onUnitCircle` - returns a random 2D vector uniformly distributed on the perimeter of a unit circle
 - `inUnitCube` - returns a random 3D vector uniformly distributed inside a unit cube
-- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector
+- `onUnitCube` - returns a random 3D vector uniformly distributed on the surface of a unit cube
+- `inHemisphere` - returns a random 3D vector uniformly distributed inside an upper hemisphere oriented according to a given normal vector
+- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of an upper hemisphere oriented according to a given normal vector
+- `inUnitSphere` - returns a random 3D vector uniformly distributed inside a unit sphere
 - `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
 
 ## Perlin noise
