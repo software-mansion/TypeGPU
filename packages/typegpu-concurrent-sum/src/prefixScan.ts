@@ -8,6 +8,7 @@ import type {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
+  type BinaryOp,
   identitySlot,
   operatorSlot,
   scanLayout,
@@ -18,49 +19,48 @@ import { scanBlock } from './compute/scan.ts';
 import { uniformAdd } from './compute/applySums.ts';
 import { scanGreatestBlock } from './compute/singleScan.ts';
 
-let computer: PrefixScanComputer | null = null;
+const cache = new WeakMap<TgpuRoot, WeakMap<BinaryOp, PrefixScanComputer>>();
 
-export class PrefixScanComputer {
-  private scanPipeline?: TgpuComputePipeline;
-  private addPipeline?: TgpuComputePipeline;
+class PrefixScanComputer {
+  private _scanPipeline?: TgpuComputePipeline;
+  private _addPipeline?: TgpuComputePipeline;
   private scratchBuffers: Map<
     number,
     TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag
   > = new Map();
-  private qs: TgpuQuerySet<'timestamp'> | null = null;
+  private querySet: TgpuQuerySet<'timestamp'> | null = null;
   private first = true;
 
   constructor(
     private root: TgpuRoot,
-    private operatorFn: (x: number, y: number) => number,
-    private identity: number,
+    private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
+    private timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
   ) {
-    this.root = root;
-    this.qs = root.createQuerySet('timestamp', 2);
+    this.querySet = root.createQuerySet('timestamp', 2);
   }
 
-  private get ScanPipeline(): TgpuComputePipeline {
-    if (!this.scanPipeline) {
-      this.scanPipeline = this.root['~unstable'].with(
+  private get scanPipeline(): TgpuComputePipeline {
+    if (!this._scanPipeline) {
+      this._scanPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.operatorFn as unknown as TgpuFn,
-      ).with(identitySlot, this.identity)
+        this.binaryOp.operation as unknown as TgpuFn,
+      ).with(identitySlot, this.binaryOp.identityElement)
         .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
         .createPipeline();
     }
-    return this.scanPipeline;
+    return this._scanPipeline;
   }
 
-  private get AddPipeline(): TgpuComputePipeline {
-    if (!this.addPipeline) {
-      this.addPipeline = this.root['~unstable'].with(
+  private get addPipeline(): TgpuComputePipeline {
+    if (!this._addPipeline) {
+      this._addPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.operatorFn as unknown as TgpuFn,
+        this.binaryOp.operation as unknown as TgpuFn,
       ).withCompute(uniformAdd)
         .createPipeline();
     }
-    return this.addPipeline;
+    return this._addPipeline;
   }
 
   private getScratchBuffer(
@@ -93,8 +93,8 @@ export class PrefixScanComputer {
         input: buffer,
         sums: dummySums,
       });
-      this.ScanPipeline.with(scanLayout, bg).withTimestampWrites({
-        querySet: this.qs as TgpuQuerySet<'timestamp'>,
+      this.scanPipeline.with(scanLayout, bg).withTimestampWrites({
+        querySet: this.querySet as TgpuQuerySet<'timestamp'>,
         beginningOfPassWriteIndex: this.first
           ? 0
           : undefined as unknown as number,
@@ -115,15 +115,15 @@ export class PrefixScanComputer {
       sums: sumsBuffer,
     });
     if (this.first) {
-      this.ScanPipeline.with(scanLayout, scanBg).withTimestampWrites({
-        querySet: this.qs as TgpuQuerySet<'timestamp'>,
+      this.scanPipeline.with(scanLayout, scanBg).withTimestampWrites({
+        querySet: this.querySet as TgpuQuerySet<'timestamp'>,
         beginningOfPassWriteIndex: 0,
       }).dispatchWorkgroups(
         numWorkgroups,
       );
       this.first = false;
     } else {
-      this.ScanPipeline.with(scanLayout, scanBg).dispatchWorkgroups(
+      this.scanPipeline.with(scanLayout, scanBg).dispatchWorkgroups(
         numWorkgroups,
       );
     }
@@ -139,8 +139,8 @@ export class PrefixScanComputer {
       input: buffer,
       sums: sumsBuffer,
     });
-    this.AddPipeline.with(uniformAddLayout, addBg).withTimestampWrites({
-      querySet: this.qs as TgpuQuerySet<'timestamp'>,
+    this.addPipeline.with(uniformAddLayout, addBg).withTimestampWrites({
+      querySet: this.querySet as TgpuQuerySet<'timestamp'>,
       endOfPassWriteIndex: 1,
     }).dispatchWorkgroups(
       numWorkgroups,
@@ -158,40 +158,62 @@ export class PrefixScanComputer {
     const result = this.recursiveScan(buffer, buffer.dataType.elementCount);
     this.root['~unstable'].flush();
 
-    this.qs?.resolve();
-    this.qs?.read().then((timestamps) => {
-      if (timestamps[0] !== undefined && timestamps[1] !== undefined) {
-        const diff = Number(timestamps[1] - timestamps[0]) / 1_000_000;
-        console.log(`Prefix sum computed in ${diff} ms`);
-      }
-    });
+    this.querySet?.resolve();
+    if (this.timeCallback && this.querySet) {
+      this.timeCallback(this.querySet);
+    }
     return result;
   }
 }
 
-export function initConcurrentSum(
-  root: TgpuRoot,
-  operatorFn: (x: number, y: number) => number,
-  identity: number,
-): void {
-  // allocate all resources ahead of demand
-  computer = new PrefixScanComputer(root, operatorFn, identity, false);
-}
-
-export function concurrentScan(
+export function prefixScan(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-  operatorFn: (x: number, y: number) => number,
-  identity: number,
-  onlyGreatestElement = false,
+  binaryOp: BinaryOp,
+  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  computer ??= new PrefixScanComputer(
-    root,
-    operatorFn,
-    identity,
-    onlyGreatestElement,
-  );
-  const result = computer.compute(buffer);
+  let computer = cache.get(root)?.get(binaryOp);
 
-  return result;
+  if (!computer) {
+    computer = new PrefixScanComputer(
+      root,
+      binaryOp,
+      false,
+      timeCallback,
+    );
+    let rootCache = cache.get(root);
+    if (!rootCache) {
+      rootCache = new WeakMap();
+      cache.set(root, rootCache);
+    }
+    rootCache.set(binaryOp, computer);
+  }
+  return computer.compute(buffer);
+}
+
+export function scan(
+  root: TgpuRoot,
+  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  binaryOp: BinaryOp,
+  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  let computer = cache.get(root)?.get(binaryOp);
+
+  if (!computer) {
+    computer = new PrefixScanComputer(
+      root,
+      binaryOp,
+      true,
+      timeCallback,
+    );
+
+    let rootCache = cache.get(root);
+    if (!rootCache) {
+      rootCache = new WeakMap();
+      cache.set(root, rootCache);
+    }
+    rootCache.set(binaryOp, computer);
+  }
+
+  return computer.compute(buffer);
 }

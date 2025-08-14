@@ -14,3 +14,8 @@ export const uniformAddLayout = tgpu.bindGroupLayout({
 });
 export const operatorSlot = tgpu.slot<TgpuFn>();
 export const identitySlot = tgpu.slot<number>();
+
+export interface BinaryOp {
+  operation: d.TgpuCallable<(a: d.F32, b: d.F32) => d.F32>;
+  identityElement: number;
+}

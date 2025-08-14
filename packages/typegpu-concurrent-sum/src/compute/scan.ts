@@ -35,7 +35,10 @@ export const scanBlock = tgpu['~unstable'].computeFn({
     if (baseIdx + i < arrayLength) {
       partialSums[i] = scanLayout.$.input[baseIdx + i] as number;
       if (i > 0) {
-        (partialSums[i] as number) += partialSums[i - 1] as number;
+        (partialSums[i] as number) = operatorSlot.$(
+          partialSums[i] as number,
+          partialSums[i - 1] as number,
+        );
       }
     }
   }
@@ -85,8 +88,10 @@ export const scanBlock = tgpu['~unstable'].computeFn({
       if (i === 0) {
         scanLayout.$.input[baseIdx + i] = scannedSum;
       } else {
-        scanLayout.$.input[baseIdx + i] = scannedSum +
-          (partialSums[i - 1] as number);
+        scanLayout.$.input[baseIdx + i] = operatorSlot.$(
+          scannedSum,
+          partialSums[i - 1] as number,
+        );
       }
     }
   }
