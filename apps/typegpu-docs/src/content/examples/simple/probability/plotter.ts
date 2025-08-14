@@ -1,12 +1,13 @@
 import * as MorphCharts from 'morphcharts';
+import type * as d from 'typegpu/data';
+
 import { PlotType } from './types.ts';
 import type { PlotData } from './types.ts';
-import type * as d from 'typegpu/data';
+import * as c from './constants.ts';
 
 export class Plotter {
   readonly #core;
   readonly #palette;
-  readonly #title: HTMLElement;
 
   constructor() {
     this.#core = new MorphCharts.Core({
@@ -15,15 +16,14 @@ export class Plotter {
     this.#core.renderer = new MorphCharts.Renderers.Basic.Main();
     this.#palette = MorphCharts.Helpers.PaletteHelper.resample(
       this.#core.paletteResources.palettes[
-        MorphCharts.PaletteName.blues
+        MorphCharts.PaletteName.purples
       ].colors,
-      16,
+      64,
       false,
     );
-    this.#title = document.getElementById('title') as HTMLElement;
   }
 
-  plot(samples: d.v3f[], type: PlotType, origin: d.v3f, title: string) {
+  plot(samples: d.v3f[], type: PlotType, origin: d.v3f) {
     const count = samples.length;
     const data: PlotData = {
       count,
@@ -51,19 +51,22 @@ export class Plotter {
     switch (type) {
       case PlotType.GEOMETRIC:
         this.#plotGeomteric(data, this.#core);
-        this.#title.innerText = title;
         break;
       default:
         throw new Error(`Unsupported plot type: ${type}`);
     }
 
     const camera = this.#core.camera;
-    camera.setPosition([0, 0, 0.2], false);
+    camera.setPosition(c.initialCameraPosition, true);
+  }
+
+  resetRotation() {
+    this.#core.reset(true);
   }
 
   resetCamera() {
     const camera = this.#core.camera;
-    camera.setPosition([0, 0, 0.2], false);
+    camera.setPosition(c.initialCameraPosition, true);
   }
 
   #plotGeomteric(data: PlotData, core: MorphCharts.Core) {

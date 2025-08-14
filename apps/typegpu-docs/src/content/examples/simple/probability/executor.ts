@@ -12,7 +12,7 @@ import { randf } from '@typegpu/noise';
 
 export class Executor {
   readonly #root: TgpuRoot;
-  // max count 50000
+  // max count 65000 for convenience
   #count: number;
   #sampleBuffer:
     & TgpuBuffer<d.WgslArray<d.Vec3f>>
