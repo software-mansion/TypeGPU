@@ -2,7 +2,7 @@ import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { undecorate } from '../../data/decorateUtils.ts';
-import { snip, Snippet } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import {
   isWgslData,
   isWgslStruct,
@@ -170,8 +170,7 @@ export function createFnCore(
         const args: Snippet[] = [];
         const argAliases: [string, Snippet][] = [];
 
-        for (var i = 0; i < argTypes.length; i++) {
-          const argType = argTypes[i] as AnyData;
+        argTypes.forEach((argType, i) => {
           const astParam = ast.params[i];
 
           if (astParam?.type === FuncParameterType.identifier) {
@@ -196,7 +195,7 @@ export function createFnCore(
           } else {
             args.push(snip(`_arg_${i}`, argType));
           }
-        }
+        });
 
         const { head, body } = ctx.fnToWgsl({
           args,

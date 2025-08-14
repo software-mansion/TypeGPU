@@ -12,7 +12,7 @@ import {
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData } from './data/dataTypes.ts';
-import { type Snippet } from './data/snippet.ts';
+import type { Snippet } from './data/snippet.ts';
 import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
   invariant,

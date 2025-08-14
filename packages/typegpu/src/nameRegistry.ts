@@ -33,6 +33,9 @@ abstract class NameRegistryImpl implements NameRegistry {
 export class RandomNameRegistry extends NameRegistryImpl {
   private lastUniqueId = 0;
 
+  /**
+   * This implementation assumes that `primer` is a prefix of the result of `makeUnique(primer)`.
+   */
   makeUnique(primer?: string | undefined): string {
     let label: string;
     if (primer) {
@@ -72,6 +75,7 @@ export class StrictNameRegistry extends NameRegistryImpl {
 }
 
 const keywordsAndReservedTokens = new Set([
+  // keywords
   'alias',
   'break',
   'case',
@@ -98,6 +102,7 @@ const keywordsAndReservedTokens = new Set([
   'true',
   'var',
   'while',
+  // reserved words
   'NULL',
   'Self',
   'abstract',
