@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -926,6 +926,83 @@ describe('wgslGenerator', () => {
       fn increment(val: ptr<function, f32>) {
         *val += 1;
       }`),
+    );
+  });
+
+  it('renames variables that would result in invalid WGSL', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      const notAKeyword = 0;
+      const struct = 1;
+      return struct;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0() -> i32 {
+          var notAKeyword = 0;
+          var struct_1 = 1;
+          return struct_1;
+        }`),
+    );
+  });
+
+  it('renames parameters that would result in invalid WGSL', () => {
+    const main = tgpu.fn([d.i32, d.i32], d.i32)((n, macro) => {
+      return n + macro;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0(n: i32, macro_1: i32) -> i32 {
+          return (n + macro_1);
+        }`),
+    );
+  });
+
+  it('throws when struct prop uses a reserved word', () => {
+    const TestStruct = d.struct({ struct: d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => tgpu.resolve({ externals: { main }, names: 'random' }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Property 'struct' of struct 'TestStruct' is a reserved WGSL word. Choose a different name.]
+      `);
+  });
+
+  it('renames underscores', () => {
+    const main = tgpu.fn([])(() => {
+      const _ = 1;
+      const A_ = 2;
+      const AA_ = 3;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0() {
+          var A_ = 1;
+          var AA_ = 2;
+          var AAA_ = 3;
+        }`),
+    );
+  });
+
+  it('does not cause identifier clashes when renaming variables', () => {
+    const main = tgpu.fn([])(() => {
+      const mut = 1;
+      const mut_1 = 2;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0() {
+          var mut_1 = 1;
+          var mut_1_2 = 2;
+        }`),
     );
   });
 });

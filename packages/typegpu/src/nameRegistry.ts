@@ -5,11 +5,40 @@ export interface NameRegistry {
    * @param primer Used in the generation process, makes the identifier more recognizable.
    */
   makeUnique(primer?: string): string;
+
+  /**
+   * Creates a valid WGSL identifier.
+   * If the parameter could be a WGSL reserved word (with potential suffix) returns `makeUnique(primer)`,
+   * otherwise returns `primer`.
+   * @param primer Used in the generation process.
+   *
+   * @example
+   * makeValid("notAKeyword"); // "notAKeyword"
+   * makeValid("struct"); // makeUnique("struct")
+   * makeValid("struct_1"); // makeUnique("struct_1")
+   */
+  makeValid(primer: string): string;
 }
 
-export class RandomNameRegistry implements NameRegistry {
+abstract class NameRegistryImpl implements NameRegistry {
+  abstract makeUnique(primer?: string): string;
+
+  makeValid(primer: string): string {
+    if (primer.startsWith('_') || primer.startsWith('A')) {
+      return `A${primer}`;
+    }
+    return keywordsAndReservedTokens.has(primer.split('_')[0] as string)
+      ? this.makeUnique(primer)
+      : primer;
+  }
+}
+
+export class RandomNameRegistry extends NameRegistryImpl {
   private lastUniqueId = 0;
 
+  /**
+   * This implementation assumes that `primer` is a prefix of the result of `makeUnique(primer)`.
+   */
   makeUnique(primer?: string | undefined): string {
     let label: string;
     if (primer) {
@@ -24,7 +53,7 @@ export class RandomNameRegistry implements NameRegistry {
   }
 }
 
-export class StrictNameRegistry implements NameRegistry {
+export class StrictNameRegistry extends NameRegistryImpl {
   /**
    * Allows to provide a good fallback for instances of the
    * same function that are bound to different slot values.
@@ -47,3 +76,180 @@ export class StrictNameRegistry implements NameRegistry {
     return unusedName;
   }
 }
+
+const keywordsAndReservedTokens = new Set([
+  // keywords
+  'alias',
+  'break',
+  'case',
+  'const',
+  'const_assert',
+  'continue',
+  'continuing',
+  'default',
+  'diagnostic',
+  'discard',
+  'else',
+  'enable',
+  'false',
+  'fn',
+  'for',
+  'if',
+  'let',
+  'loop',
+  'override',
+  'requires',
+  'return',
+  'struct',
+  'switch',
+  'true',
+  'var',
+  'while',
+  // reserved words
+  'NULL',
+  'Self',
+  'abstract',
+  'active',
+  'alignas',
+  'alignof',
+  'as',
+  'asm',
+  'asm_fragment',
+  'async',
+  'attribute',
+  'auto',
+  'await',
+  'become',
+  'cast',
+  'catch',
+  'class',
+  'co_await',
+  'co_return',
+  'co_yield',
+  'coherent',
+  'column_major',
+  'common',
+  'compile',
+  'compile_fragment',
+  'concept',
+  'const_cast',
+  'consteval',
+  'constexpr',
+  'constinit',
+  'crate',
+  'debugger',
+  'decltype',
+  'delete',
+  'demote',
+  'demote_to_helper',
+  'do',
+  'dynamic_cast',
+  'enum',
+  'explicit',
+  'export',
+  'extends',
+  'extern',
+  'external',
+  'fallthrough',
+  'filter',
+  'final',
+  'finally',
+  'friend',
+  'from',
+  'fxgroup',
+  'get',
+  'goto',
+  'groupshared',
+  'highp',
+  'impl',
+  'implements',
+  'import',
+  'inline',
+  'instanceof',
+  'interface',
+  'layout',
+  'lowp',
+  'macro',
+  'macro_rules',
+  'match',
+  'mediump',
+  'meta',
+  'mod',
+  'module',
+  'move',
+  'mut',
+  'mutable',
+  'namespace',
+  'new',
+  'nil',
+  'noexcept',
+  'noinline',
+  'nointerpolation',
+  'non_coherent',
+  'noncoherent',
+  'noperspective',
+  'null',
+  'nullptr',
+  'of',
+  'operator',
+  'package',
+  'packoffset',
+  'partition',
+  'pass',
+  'patch',
+  'pixelfragment',
+  'precise',
+  'precision',
+  'premerge',
+  'priv',
+  'protected',
+  'pub',
+  'public',
+  'readonly',
+  'ref',
+  'regardless',
+  'register',
+  'reinterpret_cast',
+  'require',
+  'resource',
+  'restrict',
+  'self',
+  'set',
+  'shared',
+  'sizeof',
+  'smooth',
+  'snorm',
+  'static',
+  'static_assert',
+  'static_cast',
+  'std',
+  'subroutine',
+  'super',
+  'target',
+  'template',
+  'this',
+  'thread_local',
+  'throw',
+  'trait',
+  'try',
+  'type',
+  'typedef',
+  'typeid',
+  'typename',
+  'typeof',
+  'union',
+  'unless',
+  'unorm',
+  'unsafe',
+  'unsized',
+  'use',
+  'using',
+  'varying',
+  'virtual',
+  'volatile',
+  'wgsl',
+  'where',
+  'with',
+  'writeonly',
+  'yield',
+]);

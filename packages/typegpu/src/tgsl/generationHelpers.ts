@@ -1,10 +1,11 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import {
   type AnyData,
   isDisarray,
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { undecorate } from '../data/decorateUtils.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -15,6 +16,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -41,6 +43,7 @@ import {
   type I32,
   isMat,
   isMatInstance,
+  isNumericSchema,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -49,14 +52,11 @@ import {
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
+import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
 import { DEV } from '../shared/env.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { undecorate } from '../data/decorateUtils.ts';
-import { isNumericSchema } from '../data/wgslTypes.ts';
-import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -479,7 +479,7 @@ export type GenerationCtx = ResolutionCtx & {
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
+  defineVariable(id: string, snippet: Snippet): void;
 };
 
 function applyActionToSnippet(

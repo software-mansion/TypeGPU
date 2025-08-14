@@ -106,7 +106,7 @@ export interface ItemStateStack {
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
+  defineBlockVariable(id: string, snippet: Snippet): void;
 }
 
 /**
