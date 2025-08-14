@@ -16,7 +16,6 @@ export const operatorSlot = tgpu.slot<TgpuFn>();
 export const identitySlot = tgpu.slot<number>();
 
 export interface BinaryOp {
-  operation: (x: number, y: number) => number;
-  // call & readonly internal as type for op
+  operation: d.TgpuCallable<(a: d.F32, b: d.F32) => d.F32>;
   identityElement: number;
 }

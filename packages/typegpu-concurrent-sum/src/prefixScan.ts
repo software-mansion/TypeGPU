@@ -181,11 +181,12 @@ export function prefixScan(
       false,
       timeCallback,
     );
-
-    if (!cache.has(root)) {
-      cache.set(root, new WeakMap());
+    let rootCache = cache.get(root);
+    if (!rootCache) {
+      rootCache = new WeakMap();
+      cache.set(root, rootCache);
     }
-    cache.get(root).set(binaryOp, computer);
+    rootCache.set(binaryOp, computer);
   }
   return computer.compute(buffer);
 }
@@ -206,10 +207,12 @@ export function scan(
       timeCallback,
     );
 
-    if (!cache.has(root)) {
-      cache.set(root, new WeakMap());
+    let rootCache = cache.get(root);
+    if (!rootCache) {
+      rootCache = new WeakMap();
+      cache.set(root, rootCache);
     }
-    cache.get(root).set(binaryOp, computer);
+    rootCache.set(binaryOp, computer);
   }
 
   return computer.compute(buffer);
