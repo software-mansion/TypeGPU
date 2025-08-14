@@ -24,6 +24,11 @@ abstract class NameRegistryImpl implements NameRegistry {
   abstract makeUnique(primer?: string): string;
 
   makeValid(primer: string): string {
+    if (primer === '_' || primer.startsWith('__')) {
+      throw new Error(
+        `Variable identifiers must not be '_' or start with '__'. Choose a different name for variable '${primer}'.`,
+      );
+    }
     return keywordsAndReservedTokens.has(primer.split('_')[0] as string)
       ? this.makeUnique(primer)
       : primer;
