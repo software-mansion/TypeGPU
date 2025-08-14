@@ -1,6 +1,6 @@
 <div align="center">
 
-# @typegpu/concurrent-sum
+# @typegpu/concurrent-scan
 
 </div>
 

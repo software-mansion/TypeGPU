@@ -1,8 +1,8 @@
 {
-  "name": "@typegpu/concurrent-sum",
+  "name": "@typegpu/concurrent-scan",
   "type": "module",
   "version": "0.0.8",
-  "description": "A concurrent sum module.",
+  "description": "A concurrent scan module.",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
