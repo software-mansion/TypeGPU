@@ -44,7 +44,7 @@ class PrefixScanComputer {
     if (!this._scanPipeline) {
       this._scanPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.binaryOp.operation as unknown as TgpuFn,
+        this.binaryOp.operation as d.TgpuCallable,
       ).with(identitySlot, this.binaryOp.identityElement)
         .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
         .createPipeline();
@@ -56,7 +56,7 @@ class PrefixScanComputer {
     if (!this._addPipeline) {
       this._addPipeline = this.root['~unstable'].with(
         operatorSlot,
-        this.binaryOp.operation as unknown as TgpuFn,
+        this.binaryOp.operation as d.TgpuCallable,
       ).withCompute(uniformAdd)
         .createPipeline();
     }
