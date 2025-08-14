@@ -139,7 +139,7 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Snippet {
-  const snippet = snip(id, dataType);
+  const snippet = snip(ctx.names.makeValid(id), dataType);
   ctx.defineVariable(id, snippet);
   return snippet;
 }
@@ -649,14 +649,13 @@ ${ctx.pre}else ${alternate}`;
       );
     }
 
-    registerBlockVariable(
+    const snippet = registerBlockVariable(
       ctx,
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = generateIdentifier(ctx, rawId).value;
 
-    return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
+    return `${ctx.pre}var ${snippet.value} = ${ctx.resolve(eq.value)};`;
   }
 
   if (statement[0] === NODE.block) {

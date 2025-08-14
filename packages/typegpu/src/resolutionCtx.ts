@@ -659,7 +659,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (typeof item !== 'object' && typeof item !== 'function') {
-      console.log('BBB', item);
       return String(item);
     }
 

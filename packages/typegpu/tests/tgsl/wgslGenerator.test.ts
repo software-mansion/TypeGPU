@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -926,6 +926,23 @@ describe('wgslGenerator', () => {
       fn increment(val: ptr<function, f32>) {
         *val += 1;
       }`),
+    );
+  });
+
+  it('renames variables that would result in invalid WGSL', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      const notAKeyword = 0;
+      const struct = 1;
+      return struct;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+    fn main_0() -> i32 {
+      var notAKeyword = 0;
+      var struct_1 = 1;
+      return struct_1;
+    }`),
     );
   });
 });
