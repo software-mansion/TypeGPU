@@ -58,11 +58,8 @@ async function initCalc() {
 }
 function drawCharts() {
   const keys = Object.keys(lengthMap);
-  console.log('bars length:', bars.length);
   for (let i = 0; i < bars.length / 3; i++) {
-    console.log('i:', i, 'keys.length:', keys.length);
     const value = lengthMap[keys[i]];
-    console.log(value);
     speedupLabels[i].textContent = `${
       (Number(value.jsTime) / Number(value.gpuShaderTime)).toFixed(1)
     }x`;
