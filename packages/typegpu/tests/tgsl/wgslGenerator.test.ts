@@ -959,6 +959,21 @@ describe('wgslGenerator', () => {
     );
   });
 
+  it('throws when struct prop uses a reserved word', () => {
+    const TestStruct = d.struct({ struct: d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => tgpu.resolve({ externals: { main }, names: 'random' }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Property 'struct' of struct 'TestStruct' is a reserved WGSL word. Choose a different name.]
+      `);
+  });
+
   it('does not cause identifier clashes when renaming variables', () => {
     const main = tgpu.fn([])(() => {
       const mut = 1;
