@@ -150,6 +150,7 @@ export {
   textureDimensions,
   textureLoad,
   textureSample,
+  textureSampleCompare,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';

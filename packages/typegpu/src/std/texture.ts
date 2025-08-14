@@ -1,13 +1,17 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { TgpuSampler } from '../core/sampler/sampler.ts';
 import type {
+  TgpuComparisonSampler,
+  TgpuSampler,
+} from '../core/sampler/sampler.ts';
+import type {
+  TgpuDepthTexture,
   TgpuSampledTexture,
   TgpuStorageTexture,
 } from '../core/texture/texture.ts';
 import type { ChannelData, TexelData } from '../core/texture/texture.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { snip } from '../data/snippet.ts';
-import { u32 } from '../data/numeric.ts';
+import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
   type v2f,
@@ -358,43 +362,43 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
 );
 
 type TextureSampleCompareOverload = {
-  <T extends TgpuSampledTexture<'depth-2d'>>(
+  <T extends TgpuDepthTexture<'2d'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v2f,
     depthRef: number,
   ): number;
-  <T extends TgpuSampledTexture<'depth-2d'>>(
+  <T extends TgpuDepthTexture<'2d'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v2f,
     depthRef: number,
     offset: v2i,
   ): number;
-  <T extends TgpuSampledTexture<'depth-2d-array'>>(
+  <T extends TgpuDepthTexture<'2d-array'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v2f,
     arrayIndex: number,
     depthRef: number,
   ): number;
-  <T extends TgpuSampledTexture<'depth-2d-array'>>(
+  <T extends TgpuDepthTexture<'2d-array'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v2f,
     arrayIndex: number,
     depthRef: number,
     offset: v2i,
   ): number;
-  <T extends TgpuSampledTexture<'depth-cube'>>(
+  <T extends TgpuDepthTexture<'cube'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v3f,
     depthRef: number,
   ): number;
-  <T extends TgpuSampledTexture<'depth-cube-array'>>(
+  <T extends TgpuDepthTexture<'cube-array'>>(
     texture: T,
-    sampler: TgpuSampler,
+    sampler: TgpuComparisonSampler,
     coords: v3f,
     arrayIndex: number,
     depthRef: number,
@@ -405,8 +409,8 @@ export const textureSampleCompare: TextureSampleCompareOverload =
   createDualImpl(
     // CPU implementation
     (
-      _texture: TgpuSampledTexture,
-      _sampler: TgpuSampler,
+      _texture: TgpuDepthTexture,
+      _sampler: TgpuComparisonSampler,
       _coords: v2f | v3f,
       _depthRefOrArrayIndex: number,
       _depthRefOrOffset?: number | v2i,
@@ -417,30 +421,9 @@ export const textureSampleCompare: TextureSampleCompareOverload =
       );
     },
     // CODEGEN implementation
-    (
-      texture,
-      sampler,
-      coords,
-      depthRefOrArrayIndex,
-      depthRefOrOffset,
-      maybeOffset,
-    ) => {
-      const args = [texture, sampler, coords];
-
-      if (depthRefOrArrayIndex !== undefined) {
-        args.push(depthRefOrArrayIndex);
-      }
-
-      if (depthRefOrOffset !== undefined) {
-        args.push(depthRefOrOffset);
-      }
-
-      if (maybeOffset !== undefined) {
-        args.push(maybeOffset);
-      }
-
+    (...args) => {
       return snip(
-        `textureSampleCompare(${args.map((v) => v.value).join(', ')})`,
+        stitch`textureSampleCompare(${args})`,
         f32,
       );
     },

@@ -88,3 +88,52 @@ export function createPlaneGeometry(color: d.v4f, normal: d.v3f): {
 
   return { vertices, indices };
 }
+
+// Create a UV sphere geometry (used for light marker)
+export function createUvSphereGeometry(
+  color: d.v4f,
+  segments = 16,
+  rings = 12,
+): {
+  vertices: d.Infer<VertexInfo>[];
+  indices: number[];
+} {
+  const vertices: d.Infer<VertexInfo>[] = [];
+  const indices: number[] = [];
+
+  for (let y = 0; y <= rings; y++) {
+    const v = y / rings;
+    const theta = v * Math.PI; // 0..PI
+
+    for (let x = 0; x <= segments; x++) {
+      const u = x / segments;
+      const phi = u * Math.PI * 2; // 0..2PI
+
+      const sx = Math.sin(theta) * Math.cos(phi);
+      const sy = Math.cos(theta);
+      const sz = Math.sin(theta) * Math.sin(phi);
+
+      vertices.push({
+        position: d.vec4f(sx, sy, sz, 1),
+        normal: d.vec4f(sx, sy, sz, 0),
+        color,
+      });
+    }
+  }
+
+  const stride = segments + 1;
+  for (let y = 0; y < rings; y++) {
+    for (let x = 0; x < segments; x++) {
+      const a = y * stride + x;
+      const b = (y + 1) * stride + x;
+      const c = b + 1;
+      const dIdx = a + 1;
+
+      // two triangles per quad
+      indices.push(a, b, dIdx);
+      indices.push(b, c, dIdx);
+    }
+  }
+
+  return { vertices, indices };
+}

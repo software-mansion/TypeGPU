@@ -24,6 +24,7 @@ import {
   isStorageTextureView,
   isTexture,
   type StorageTextureDimension,
+  type TgpuDepthTexture,
   TgpuLaidOutSampledTextureImpl,
   TgpuLaidOutStorageTextureImpl,
   type TgpuMutableTexture,
@@ -344,7 +345,11 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? TgpuSampledTexture<
+  : T extends TgpuLayoutTexture
+    ? T['texture'] extends 'depth' ? TgpuDepthTexture<
+        Default<T['viewDimension'], '2d'>
+      >
+    : TgpuSampledTexture<
       Default<T['viewDimension'], '2d'>,
       ChannelFormatToSchema[T['texture']]
     >
@@ -719,7 +724,12 @@ export class TgpuBindGroupImpl<
               }
 
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & Sampled).createView('sampled'),
+                (value as TgpuTexture & Sampled).createView(
+                  'sampled',
+                  {
+                    dimension: entry.viewDimension ?? '2d',
+                  },
+                ),
               );
             } else if (isSampledTextureView(value)) {
               resource = unwrapper.unwrap(value);

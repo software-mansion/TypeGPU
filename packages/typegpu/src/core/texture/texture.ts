@@ -25,6 +25,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
   channelFormatToSchema,
   channelKindToFormat,
+  depthTextureFormats,
   type SampledFormatOptions,
   type StorageFormatOptions,
   type StorageTextureTexelFormat,
@@ -155,7 +156,7 @@ export type TextureViewParams<
   aspect?: GPUTextureAspect;
   baseMipLevel?: number;
   mipLevelCount?: number;
-  baseArrayLayout?: number;
+  baseArrayLayer?: number;
   arrayLayerCount?: number;
 };
 
@@ -425,7 +426,7 @@ class TgpuTextureImpl implements TgpuTexture {
     const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
 
     if (!type) {
-      throw new Error(`Unsupported storage texture format: ${format}`);
+      throw new Error(`Unsupported sampled texture format: ${format}`);
     }
 
     return new TgpuFixedSampledTextureImpl(params, this);
@@ -623,6 +624,8 @@ class TgpuFixedSampledTextureImpl
 
     const type = multisampled
       ? 'texture_multisampled_2d'
+      : this._format in depthTextureFormats
+      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
       : `texture_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
@@ -647,7 +650,7 @@ export class TgpuLaidOutSampledTextureImpl
   public readonly channelDataType: ChannelData;
 
   constructor(
-    sampleType: GPUTextureSampleType,
+    private readonly sampleType: GPUTextureSampleType,
     public readonly dimension: GPUTextureViewDimension,
     private readonly _multisampled: boolean,
     private readonly _membership: LayoutMembership,
@@ -666,7 +669,17 @@ export class TgpuLaidOutSampledTextureImpl
 
     const type = this._multisampled
       ? 'texture_multisampled_2d'
+      : this.sampleType === 'depth'
+      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
       : `texture_${dimensionToCodeMap[this.dimension]}`;
+
+    if (this.sampleType === 'depth') {
+      ctx.addDeclaration(
+        `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type};`,
+      );
+
+      return id;
+    }
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${
