@@ -974,17 +974,21 @@ describe('wgslGenerator', () => {
       `);
   });
 
-  it('throws when naming variable an underscore', () => {
+  it('renames underscores', () => {
     const main = tgpu.fn([])(() => {
       const _ = 1;
+      const A_ = 2;
+      const AA_ = 3;
     });
 
-    expect(() => tgpu.resolve({ externals: { main }, names: 'random' }))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main: Variable identifiers must not be '_' or start with '__'. Choose a different name for variable '_'.]
-      `);
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0() {
+          var A_ = 1;
+          var AA_ = 2;
+          var AAA_ = 3;
+        }`),
+    );
   });
 
   it('does not cause identifier clashes when renaming variables', () => {
