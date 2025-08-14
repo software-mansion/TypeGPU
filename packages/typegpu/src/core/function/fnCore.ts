@@ -1,8 +1,8 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import { undecorate } from '../../data/decorateUtils.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import { snip } from '../../data/snippet.ts';
+import { undecorate } from '../../data/decorateUtils.ts';
+import { snip, Snippet } from '../../data/snippet.ts';
 import {
   isWgslData,
   isWgslStruct,
@@ -166,29 +166,41 @@ export function createFnCore(
         }
 
         // generate wgsl string
+
+        const args: Snippet[] = [];
+        const argAliases: [string, Snippet][] = [];
+
+        for (var i = 0; i < argTypes.length; i++) {
+          const argType = argTypes[i] as AnyData;
+          const astParam = ast.params[i];
+
+          if (astParam?.type === FuncParameterType.identifier) {
+            const rawName = astParam.name;
+            const snippet = snip(ctx.names.makeValid(rawName), argType);
+            args.push(snippet);
+            if (snippet.value !== rawName) {
+              argAliases.push([rawName, snippet]);
+            }
+          } else if (astParam?.type === FuncParameterType.destructuredObject) {
+            args.push(snip(`_arg_${i}`, argType));
+            argAliases.push(...astParam.props.map(({ name, alias }) =>
+              [
+                alias,
+                snip(
+                  `_arg_${i}.${name}`,
+                  (argTypes[i] as WgslStruct)
+                    .propTypes[name],
+                ),
+              ] as [string, Snippet]
+            ));
+          } else {
+            args.push(snip(`_arg_${i}`, argType));
+          }
+        }
+
         const { head, body } = ctx.fnToWgsl({
-          args: argTypes.map((arg, i) =>
-            snip(
-              ast.params[i]?.type === FuncParameterType.identifier
-                ? ast.params[i].name
-                : `_arg_${i}`,
-              arg,
-            )
-          ),
-          argAliases: Object.fromEntries(
-            ast.params.flatMap((param, i) =>
-              param.type === FuncParameterType.destructuredObject
-                ? param.props.map(({ name, alias }) => [
-                  alias,
-                  snip(
-                    `_arg_${i}.${name}`,
-                    (argTypes[i] as WgslStruct)
-                      .propTypes[name],
-                  ),
-                ])
-                : []
-            ),
-          ),
+          args,
+          argAliases: Object.fromEntries(argAliases),
           returnType,
           body: ast.body,
           externalMap,

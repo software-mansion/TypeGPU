@@ -4,8 +4,8 @@ import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {

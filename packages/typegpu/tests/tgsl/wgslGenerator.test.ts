@@ -938,11 +938,24 @@ describe('wgslGenerator', () => {
 
     expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
       parse(`
-    fn main_0() -> i32 {
-      var notAKeyword = 0;
-      var struct_1 = 1;
-      return struct_1;
-    }`),
+        fn main_0() -> i32 {
+          var notAKeyword = 0;
+          var struct_1 = 1;
+          return struct_1;
+        }`),
+    );
+  });
+
+  it('renames parameters that would result in invalid WGSL', () => {
+    const main = tgpu.fn([d.i32, d.i32], d.i32)((n, macro) => {
+      return n + macro;
+    });
+
+    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+      parse(`
+        fn main_0(n: i32, macro_1: i32) -> i32 {
+          return (n + macro_1);
+        }`),
     );
   });
 
@@ -954,10 +967,10 @@ describe('wgslGenerator', () => {
 
     expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
       parse(`
-    fn main_0() {
-      var mut_1 = 1;
-      var mut_1_2 = 2;
-    }`),
+        fn main_0() {
+          var mut_1 = 1;
+          var mut_1_2 = 2;
+        }`),
     );
   });
 });
