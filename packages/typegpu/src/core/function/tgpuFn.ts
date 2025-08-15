@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
-import { schemaCallWrapper } from '../../data/utils.ts';
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
@@ -222,7 +222,9 @@ function createFn<ImplSchema extends AnyFn>(
             schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
-          return implementation(...castAndCopiedArgs);
+          const result = implementation(...castAndCopiedArgs);
+          // Casting the result to the appropriate schema
+          return schemaCallWrapper(shell.returnType, result);
         } catch (err) {
           if (err instanceof ExecutionError) {
             throw err.appendToTrace(fn);

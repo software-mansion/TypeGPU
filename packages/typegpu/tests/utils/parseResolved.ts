@@ -36,3 +36,14 @@ export function parseResolved(
     );
   }
 }
+
+/**
+ * Just a shorthand for tgpu.resolve
+ */
+export function asWgsl(...values: unknown[]): string {
+  return tgpu.resolve({
+    // Arrays are objects with numeric keys if you thing about it hard enough
+    externals: values as unknown as Record<string, object>,
+    names: 'strict',
+  });
+}

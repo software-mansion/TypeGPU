@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { schemaCallWrapper } from '../../data/utils.ts';
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';

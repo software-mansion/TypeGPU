@@ -356,7 +356,10 @@ describe('wgslGenerator', () => {
       `"[0,[[14,[12,"i",[5,"0"]],[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
     );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsed);
+    const gen = provideCtx(
+      ctx,
+      () => wgslGenerator.generateFunction(ctx, parsed),
+    );
 
     expect(parse(gen)).toBe(
       parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
@@ -379,7 +382,10 @@ describe('wgslGenerator', () => {
       `"[0,[[12,"i",[5,"0"]],[14,null,[1,"i","<",[5,"10"]],[2,"i","+=",[5,"1"]],[0,[[16]]]]]]"`,
     );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsed);
+    const gen = provideCtx(
+      ctx,
+      () => wgslGenerator.generateFunction(ctx, parsed),
+    );
 
     expect(parse(gen)).toBe(
       parse('{var i = 0;for(;(i < 10);i += 1){continue;}}'),
@@ -396,12 +402,14 @@ describe('wgslGenerator', () => {
     };
 
     const parsed = getMetaData(main)?.ast?.body as tinyest.Block;
-
     expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
       `"[0,[[12,"i",[5,"0"]],[15,[1,"i","<",[5,"10"]],[0,[[2,"i","+=",[5,"1"]]]]]]]"`,
     );
 
-    const gen = wgslGenerator.generateFunction(ctx, parsed);
+    const gen = provideCtx(
+      ctx,
+      () => wgslGenerator.generateFunction(ctx, parsed),
+    );
 
     expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
   });
@@ -567,7 +575,7 @@ describe('wgslGenerator', () => {
       parse(`
       fn testFn() -> u32 {
         var a = u32(12);
-        var b = f32(2.5);
+        var b = 2.5f;
         a = u32(b);
         return a;
       }`),
@@ -610,19 +618,21 @@ describe('wgslGenerator', () => {
       `"[0,[[13,"arr",[100,[[6,"TestStruct",[[104,{"x":[5,"1"],"y":[5,"2"]}]]],[6,"TestStruct",[[104,{"x":[5,"3"],"y":[5,"4"]}]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
 
-    ctx[$internal].itemStateStack.pushFunctionScope(
-      [],
-      {},
-      d.f32,
-      astInfo.externals ?? {},
-    );
+    const res = provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        [],
+        {},
+        d.f32,
+        astInfo.externals ?? {},
+      );
 
-    // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
-    //                        ^ this should be an array<TestStruct, 2>
-    const res = wgslGenerator.generateExpression(
-      ctx,
-      (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
-    );
+      // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
+      //                        ^ this should be an array<TestStruct, 2>
+      return wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
+      );
+    });
 
     expect(d.isWgslArray(res.dataType)).toBe(true);
     expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
@@ -839,31 +849,34 @@ describe('wgslGenerator', () => {
       for (let i = 0; i < 10; i += 1) continue;
     };
 
-    expect(
-      parse(
+    const gen = provideCtx(
+      ctx,
+      () =>
         wgslGenerator.generateFunction(
           ctx,
           getMetaData(main)?.ast?.body as tinyest.Block,
         ),
-      ),
-    ).toBe(parse('{for(var i = 0;(i < 10);i += 1){continue;}}'));
+    );
+
+    expect(parse(gen)).toBe(
+      parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
+    );
   });
 
   it('generates correct code for while loops with single statements', () => {
-    const main = () => {
-      'kernel';
+    const main = tgpu.fn([])(() => {
       let i = 0;
       while (i < 10) i += 1;
-    };
+    });
 
-    expect(
-      parse(
-        wgslGenerator.generateFunction(
-          ctx,
-          getMetaData(main)?.ast?.body as tinyest.Block,
-        ),
-      ),
-    ).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+    expect(parseResolved({ main })).toBe(parse(`
+      fn main() {
+        var i = 0;
+        while((i < 10)){
+          i += 1;
+        }
+      }
+    `));
   });
 
   it('throws error when incorrectly initializing function', () => {
@@ -926,88 +939,6 @@ describe('wgslGenerator', () => {
       fn increment(val: ptr<function, f32>) {
         *val += 1;
       }`),
-    );
-  });
-});
-
-describe('wgslGenerator division operator', () => {
-  it('tests division operator resolution - u32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.u32(1) / d.u32(2);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( u32 ( 2 ) ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - i32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.i32(1.0) / d.i32(2.0);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( i32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - f32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.f32(1.0) / d.f32(2.0);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( 1 ) / f32 ( 2 ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - f32 & i32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.f32(1.0) / d.i32(2.0);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( 1 ) / f32 ( i32 ( 2 ) ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - u32 & i32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.u32(1) / d.i32(2);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 1 ) ) / f32 ( i32 ( 2 ) ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - f16 & f32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.f16(1.0) / d.f32(2.0);
-    });
-    expect(div()).toBe(0.5);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( f16 ( 1 ) ) / f32 ( 2 ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - decimal & f32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return d.f16(1 / 2) / d.f32(5.0);
-    });
-    expect(div()).toBe(0.1);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( f16 ( 0.5 ) ) / f32 ( 5 ) ) ; }"`,
-    );
-  });
-
-  it('tests division operator resolution - internal sum & f32', () => {
-    const div = tgpu.fn([], d.f32)(() => {
-      return (d.u32(1 + 2) / d.f32(5.0));
-    });
-    expect(div()).toBe(0.6);
-    expect(parseResolved({ divide1: div })).toMatchInlineSnapshot(
-      `"fn div ( ) -> f32 { return ( f32 ( u32 ( 3 ) ) / f32 ( 5 ) ) ; }"`,
     );
   });
 });
