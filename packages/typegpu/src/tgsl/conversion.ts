@@ -1,8 +1,9 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
+import type { AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/decorateUtils.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
+  type AnyWgslData,
   type F16,
   type F32,
   type I32,
@@ -245,6 +246,24 @@ function applyActionToSnippet(
       assertExhaustive(action.action, 'applyActionToSnippet');
     }
   }
+}
+
+export function unify<T extends (AnyData | UnknownData)[]>(
+  inTypes: T,
+  restrictTo?: AnyData[] | undefined,
+): { [K in keyof T]: AnyWgslData } | undefined {
+  if (inTypes.some((type) => type.type === 'unknown')) {
+    return undefined;
+  }
+
+  const conversion = getBestConversion(inTypes as AnyData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map(() => conversion.targetType) as {
+    [K in keyof T]: AnyWgslData;
+  };
 }
 
 export function convertToCommonType<T extends Snippet[]>(
