@@ -411,7 +411,7 @@ describe('indents', () => {
             var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
           }
           else {
-            while (all(vec2f(1, 2) == vec2f(1, 2))) {
+            while (true) {
               var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0)) {
                 var evenNewer = (newPos + input.position);

@@ -76,7 +76,7 @@ describe('TGSL', () => {
         var h = 0h;
         var i = 0i;
         var u = 0u;
-        var b = bool();
+        var b = false;
       }"
     `);
   });

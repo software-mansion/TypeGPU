@@ -132,43 +132,29 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   throw new Error('Mul called with invalid arguments.');
 }
 
-export const mul = createDualImpl(
-  // CPU implementation
-  cpuMul,
-  // GPU implementation
-  (lhs, rhs) => {
-    const returnType = isSnippetNumeric(lhs)
+export const mul = dualImpl({
+  name: 'mul',
+  signature: (lhs, rhs) => {
+    const returnType = isNumericSchema(lhs)
       // Scalar * Scalar/Vector/Matrix
-      ? rhs.dataType
-      : isSnippetNumeric(rhs)
+      ? rhs
+      : isNumericSchema(rhs)
       // Vector/Matrix * Scalar
-      ? lhs.dataType
-      : lhs.dataType.type.startsWith('vec')
+      ? lhs
+      : lhs.type.startsWith('vec')
       // Vector * Vector/Matrix
-      ? lhs.dataType
-      : rhs.dataType.type.startsWith('vec')
+      ? lhs
+      : rhs.type.startsWith('vec')
       // Matrix * Vector
-      ? rhs.dataType
+      ? rhs
       // Matrix * Matrix
-      : lhs.dataType;
+      : lhs;
 
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
-    }
-
-    return snip(stitch`(${lhs} * ${rhs})`, returnType);
+    return ({ argTypes: unify([lhs, rhs]) ?? [lhs, rhs], returnType });
   },
-  'mul',
-  'unify',
-);
+  normalImpl: cpuMul,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} * ${rhs})`,
+});
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
 function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
@@ -192,30 +178,24 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   throw new Error('Div called with invalid arguments.');
 }
 
-export const div = createDualImpl(
-  // CPU implementation
-  cpuDiv,
-  // CODEGEN implementation
-  (...args) => {
-    const [lhs, rhs] =
-      convertToCommonType(args, [f32, f16, abstractFloat], false) ?? args;
-    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
-
-    if (
-      (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' || isVecInstance(rhs.value))
-    ) {
-      // Precomputing
-      return snip(cpuDiv(lhs.value as never, rhs.value as never), resultType);
-    }
-
+export const div = dualImpl({
+  name: 'div',
+  signature: (...args) => {
+    const unified = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return ({
+      argTypes: unified,
+      returnType: isNumericSchema(unified[0]) ? unified[1] : unified[0],
+    });
+  },
+  normalImpl: cpuDiv,
+  codegenImpl: (lhs, rhs) => {
     const ctx = getResolutionCtx() as GenerationCtx;
     const lhsStr = ctx.resolve(lhs.value, lhs.dataType, /* exact */ true);
     const rhsStr = ctx.resolve(rhs.value, rhs.dataType, /* exact */ true);
-    return snip(`(${lhsStr} / ${rhsStr})`, resultType);
+    return `(${lhsStr} / ${rhsStr})`;
   },
-  'div',
-);
+  ignoreImplicitCastWarning: true,
+});
 
 type ModOverload = {
   (a: number, b: number): number;
