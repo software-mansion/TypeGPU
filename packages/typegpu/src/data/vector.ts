@@ -1,8 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
-import { snip } from './snippet.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -23,9 +22,7 @@ import {
 } from './vectorImpl.ts';
 import type {
   AnyVecInstance,
-  AnyWgslData,
   Bool,
-  Decorated,
   F16,
   F32,
   I32,
@@ -46,8 +43,9 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes.ts';
-import { isDecorated, isVec, isVecInstance } from './wgslTypes.ts';
+import { isVec } from './wgslTypes.ts';
 import type { AnyData } from './dataTypes.ts';
+import { undecorate } from './decorateUtils.ts';
 
 // ----------
 // Public API
@@ -310,34 +308,18 @@ function makeVecSchema<TValue, S extends number | boolean>(
     );
   };
 
-  const construct = createDualImpl(
-    cpuConstruct,
-    (...args) => {
-      if (
-        args.every((arg) =>
-          typeof arg.value === 'number' || isVecInstance(arg.value)
-        )
-      ) {
-        // Return an actual vector at resolution time
-        const knownParams = args.map((arg) => arg.value);
-        return snip(
-          cpuConstruct(...(knownParams as never[])),
-          schema as AnyData,
-        );
-      }
-      return snip(stitch`${type}(${args})`, schema as AnyData);
-    },
-    type,
-    (...args) =>
-      args.map((arg) => {
-        let argType = arg.dataType;
-        if (isDecorated(argType)) {
-          argType = (argType as Decorated).inner as AnyWgslData;
-        }
-
+  const construct = dualImpl({
+    name: type,
+    signature: (...args) => ({
+      argTypes: args.map((arg) => {
+        const argType = undecorate(arg);
         return isVec(argType) ? argType : primitive;
       }),
-  );
+      returnType: schema as AnyData,
+    }),
+    normalImpl: cpuConstruct,
+    codegenImpl: (...args) => stitch`${type}(${args})`,
+  });
 
   const schema:
     & VecSchemaBase<TValue>

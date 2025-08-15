@@ -2,7 +2,11 @@ import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
-import { $internal, $wgslDataType } from '../src/shared/symbols.ts';
+import {
+  $internal,
+  $runtimeResource,
+  $wgslDataType,
+} from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { parse } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
@@ -34,6 +38,7 @@ describe('tgpu resolve', () => {
       get value(): number {
         return {
           [$internal]: true,
+          [$runtimeResource]: true,
           [$wgslDataType]: d.f32,
           '~resolve'(ctx: ResolutionCtx) {
             return ctx.resolve(intensity);
