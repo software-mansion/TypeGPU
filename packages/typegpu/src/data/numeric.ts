@@ -268,7 +268,7 @@ function roundToF16(x: number): number {
 const f16Cast = dualImpl({
   name: 'f16Cast',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
-  normalImpl(v?: number | boolean | undefined) {
+  normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
     }
