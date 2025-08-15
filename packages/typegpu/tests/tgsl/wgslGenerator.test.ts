@@ -14,7 +14,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
-import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -499,13 +499,12 @@ describe('wgslGenerator', () => {
       return arr[1] as number;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> u32 {
-        var arr = array<u32, 3>(u32(1), 2, 3);
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var arr = array<u32, 3>(1, 2, 3);
         return arr[1];
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -571,15 +570,14 @@ describe('wgslGenerator', () => {
       return a;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> u32 {
-        var a = u32(12);
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var a = 12u;
         var b = 2.5f;
         a = u32(b);
         return a;
-      }`),
-    );
+      }"
+    `);
   });
 
   it('generates correct code for array expressions with struct elements', () => {

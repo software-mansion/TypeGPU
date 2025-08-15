@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -8,11 +8,12 @@ import {
   type AnyNumericVecInstance,
   isFloat32VecInstance,
   isMatInstance,
+  isNumericSchema,
   isVecInstance,
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { convertToCommonType } from '../tgsl/conversion.ts';
+import { convertToCommonType, unify } from '../tgsl/conversion.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { $internal } from '../shared/symbols.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
@@ -53,30 +54,15 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   throw new Error('Add/Sub called with invalid arguments.');
 }
 
-export const add = createDualImpl(
-  // CPU implementation
-  cpuAdd,
-  // CODEGEN implementation
-  (...args) => {
-    const [lhs, rhs] = convertToCommonType(args) ?? args;
-    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
-
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
-    }
-
-    return snip(stitch`(${lhs} + ${rhs})`, resultType);
-  },
-  'add',
-);
+export const add = dualImpl({
+  name: 'add',
+  signature: (...args) => ({
+    argTypes: unify(args) ?? args,
+    returnType: isNumericSchema(args[0]) ? args[1] : args[0],
+  }),
+  normalImpl: cpuAdd,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} + ${rhs})`,
+});
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
 function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
@@ -95,30 +81,15 @@ function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   return cpuAdd(lhs, cpuMul(-1, rhs));
 }
 
-export const sub = createDualImpl(
-  // CPU implementation
-  cpuSub,
-  // CODEGEN implementation
-  (...args) => {
-    const [lhs, rhs] = convertToCommonType(args) ?? args;
-    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
-
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
-    }
-
-    return snip(stitch`(${lhs} - ${rhs})`, resultType);
-  },
-  'sub',
-);
+export const sub = dualImpl({
+  name: 'sub',
+  signature: (...args) => ({
+    argTypes: unify(args) ?? args,
+    returnType: isNumericSchema(args[0]) ? args[1] : args[0],
+  }),
+  normalImpl: cpuSub,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} - ${rhs})`,
+});
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
 function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
@@ -165,8 +136,7 @@ export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
   // GPU implementation
-  (...args) => {
-    const [lhs, rhs] = convertToCommonType(args) ?? args;
+  (lhs, rhs) => {
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
@@ -197,6 +167,7 @@ export const mul = createDualImpl(
     return snip(stitch`(${lhs} * ${rhs})`, returnType);
   },
   'mul',
+  'unify',
 );
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
