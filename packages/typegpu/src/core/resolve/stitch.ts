@@ -36,7 +36,7 @@ function internalStitch(
 
   function resolveSnippet(maybeSnippet: Snippet | string | number) {
     return typeof maybeSnippet === 'object'
-      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType)
+      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType, exact)
       : maybeSnippet;
   }
 
