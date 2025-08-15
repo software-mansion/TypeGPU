@@ -48,6 +48,7 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
     ) => { argTypes: AnyWgslData[]; returnType: AnyWgslData });
+  readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
 export function dualImpl<T extends (...args: never[]) => unknown>(
@@ -62,10 +63,11 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
     const converted = argSnippets.map((s, idx) =>
-      (convertToCommonType(
+      convertToCommonType(
         [s],
         [argTypes[idx] as AnyWgslData],
-      ) as [Snippet])[0]
+        !options.ignoreImplicitCastWarning,
+      )?.[0] ?? s
     ) as MapValueToSnippet<Parameters<T>>;
 
     if (
