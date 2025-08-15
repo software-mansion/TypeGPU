@@ -226,31 +226,6 @@ export function getBestConversion(
   return undefined;
 }
 
-export function convertType(
-  sourceType: AnyData,
-  targetType: AnyData,
-  allowImplicit = true,
-): ConversionResult | undefined {
-  const conversion = getConversionRank(sourceType, targetType, allowImplicit);
-
-  if (conversion.rank < Number.POSITIVE_INFINITY) {
-    const actionDetail: ConversionResultAction = {
-      sourceIndex: 0,
-      action: conversion.action,
-    };
-    if (conversion.action === 'cast') {
-      actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
-    }
-    return {
-      targetType: undecorate(targetType),
-      actions: [actionDetail],
-      hasImplicitConversions: conversion.action === 'cast',
-    };
-  }
-
-  return undefined;
-}
-
 function applyActionToSnippet(
   snippet: Snippet,
   action: ConversionResultAction,

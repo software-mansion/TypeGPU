@@ -5,7 +5,6 @@ import { snip, type Snippet } from '../../src/data/snippet.ts';
 import {
   convertStructValues,
   convertToCommonType,
-  convertType,
   getBestConversion,
 } from '../../src/tgsl/conversion.ts';
 import { it } from '../utils/extendedIt.ts';
@@ -192,63 +191,6 @@ describe('getBestConversion', () => {
   //   ]);
   //   expect(res?.hasImplicitConversions).toBe(true);
   // });
-});
-
-describe('convertType', () => {
-  const ptrF32 = d.ptrPrivate(d.f32);
-
-  it('allows identical types (none)', () => {
-    const res = convertType(d.f32, d.f32);
-    expect(res?.targetType).toBe(d.f32);
-    expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'none' }]);
-    expect(res?.hasImplicitConversions).toBeFalsy();
-  });
-
-  it('allows abstract types (none)', () => {
-    const res = convertType(abstractFloat, d.f32);
-    expect(res?.targetType).toBe(d.f32);
-    expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'none' }]);
-    expect(res?.hasImplicitConversions).toBeFalsy();
-
-    const res2 = convertType(abstractInt, d.f16);
-    expect(res2?.targetType).toBe(d.f16);
-    expect(res2?.actions).toEqual([{ sourceIndex: 0, action: 'none' }]);
-    expect(res2?.hasImplicitConversions).toBeFalsy();
-  });
-
-  it('allows implicit casts (cast)', () => {
-    const res = convertType(d.i32, d.f32);
-    expect(res?.targetType).toBe(d.f32);
-    expect(res?.actions).toEqual([
-      { sourceIndex: 0, action: 'cast', targetType: d.f32 },
-    ]);
-    expect(res?.hasImplicitConversions).toBe(true);
-  });
-
-  it('disallows implicit casts when specified', () => {
-    const res = convertType(d.i32, d.f32, false);
-    expect(res).toBeUndefined();
-  });
-
-  it('allows pointer dereferencing (deref)', () => {
-    const res = convertType(ptrF32, d.f32);
-    expect(res?.targetType).toBe(d.f32);
-    expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'deref' }]);
-    expect(res?.hasImplicitConversions).toBeFalsy();
-  });
-
-  it('allows pointer referencing (ref)', () => {
-    const res = convertType(d.f32, ptrF32);
-    expect(res?.targetType).toBe(ptrF32); // Target type should be the pointer type
-    expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'ref' }]);
-    expect(res?.hasImplicitConversions).toBeFalsy();
-  });
-
-  it('returns undefined for incompatible types', () => {
-    expect(convertType(d.vec2f, d.f32)).toBeUndefined();
-    expect(convertType(d.f32, d.vec2f)).toBeUndefined();
-    expect(convertType(ptrF32, d.i32)).toBeUndefined(); // Deref ok, but f32 != i32 (needs cast)
-  });
 });
 
 describe('convertToCommonType', () => {
