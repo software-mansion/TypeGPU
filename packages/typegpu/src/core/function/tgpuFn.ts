@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
-import { schemaCallWrapper } from '../../data/utils.ts';
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
@@ -224,9 +224,6 @@ function createFn<ImplSchema extends AnyFn>(
 
           const result = implementation(...castAndCopiedArgs);
           // Casting the result to the appropriate schema
-          if (shell.returnType.type === 'void') {
-            return result;
-          }
           return schemaCallWrapper(shell.returnType, result);
         } catch (err) {
           if (err instanceof ExecutionError) {

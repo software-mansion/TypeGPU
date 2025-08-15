@@ -156,54 +156,48 @@ function findBestType(
   uniqueTypes: AnyData[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
-  let bestType: AnyData | undefined;
-  let minSum = Number.POSITIVE_INFINITY;
-  const conversionDetails = new Map<AnyData, ConversionRankInfo[]>();
+  let bestResult:
+    | { type: AnyData; details: ConversionRankInfo[]; sum: number }
+    | undefined;
 
   for (const targetType of uniqueTypes) {
-    let currentSum = 0;
-    const currentDetails: ConversionRankInfo[] = [];
-    let possible = true;
-
+    const details: ConversionRankInfo[] = [];
+    let sum = 0;
     for (const sourceType of types) {
       const conversion = getConversionRank(
         sourceType,
         targetType,
         allowImplicit,
       );
+      sum += conversion.rank;
       if (conversion.rank === Number.POSITIVE_INFINITY) {
-        possible = false;
         break;
       }
-      currentSum += conversion.rank;
-      currentDetails.push(conversion);
+      details.push(conversion);
     }
-
-    if (possible && currentSum < minSum) {
-      minSum = currentSum;
-      bestType = targetType;
-      conversionDetails.set(bestType, currentDetails);
+    if (sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY)) {
+      bestResult = { type: targetType, details, sum };
     }
   }
-
-  if (!bestType) {
+  if (!bestResult) {
     return undefined;
   }
-
-  const bestDetails = conversionDetails.get(bestType) as ConversionRankInfo[];
-  const actions: ConversionResultAction[] = bestDetails.map(
-    (detail, index) => ({
-      sourceIndex: index,
-      action: detail.action,
-      ...(detail.action === 'cast' && {
-        targetType: detail.targetType as U32 | F32 | I32 | F16,
-      }),
+  const actions: ConversionResultAction[] = bestResult.details.map((
+    detail,
+    index,
+  ) => ({
+    sourceIndex: index,
+    action: detail.action,
+    ...(detail.action === 'cast' && {
+      targetType: detail.targetType as U32 | F32 | I32 | F16,
     }),
-  );
+  }));
 
-  const hasCasts = actions.some((action) => action.action === 'cast');
-
-  return { targetType: bestType, actions, hasImplicitConversions: hasCasts };
+  return {
+    targetType: bestResult.type,
+    actions,
+    hasImplicitConversions: actions.some((action) => action.action === 'cast'),
+  };
 }
 
 export function getBestConversion(

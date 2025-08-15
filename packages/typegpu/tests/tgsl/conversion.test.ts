@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+import { beforeAll, describe, expect, vi } from 'vitest';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import * as d from '../../src/data/index.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
