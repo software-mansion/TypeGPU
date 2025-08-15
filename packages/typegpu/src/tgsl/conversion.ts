@@ -206,10 +206,9 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTypes = [...new Set(types.map(undecorate))];
-  const uniqueTargetTypes = targetTypes
-    ? [...new Set(targetTypes.map(undecorate))]
-    : uniqueTypes;
+  const uniqueTargetTypes = [
+    ...new Set((targetTypes || types).map(undecorate)),
+  ];
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
   if (explicitResult) {
