@@ -1,7 +1,10 @@
 import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { UndecorateRecord } from '../../data/decorateUtils.ts';
+import type {
+  AnyData,
+  Disarray,
+  UndecorateRecord,
+} from '../../data/dataTypes.ts';
 import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type {

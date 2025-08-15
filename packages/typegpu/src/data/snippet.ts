@@ -1,4 +1,4 @@
-import { undecorate } from './decorateUtils.ts';
+import { undecorate } from './dataTypes.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { isNumericSchema } from './wgslTypes.ts';
