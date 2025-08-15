@@ -28,7 +28,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { stitch } from '../core/resolve/stitch.ts';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -652,9 +652,8 @@ ${ctx.pre}else ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-    const eqStr = ctx.resolve(eq.value, eq.dataType, /* exact */ true);
-    return `${ctx.pre}var ${id} = ${eqStr};`;
+    const id = generateIdentifier(ctx, rawId);
+    return stitchWithExactTypes`${ctx.pre}var ${id} = ${eq};`;
   }
 
   if (statement[0] === NODE.block) {
