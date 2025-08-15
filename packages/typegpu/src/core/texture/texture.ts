@@ -13,6 +13,7 @@ import { getName, setName } from '../../shared/meta.ts';
 import {
   $getNameForward,
   $internal,
+  $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import type {
@@ -428,12 +429,13 @@ const dimensionToCodeMap = {
 
 class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly [$getNameForward]: TgpuTexture<TextureProps>;
-  public readonly resourceType = 'texture-storage-view';
-  public readonly texelDataType: TexelData;
-  public readonly dimension: StorageTextureDimension;
+  readonly [$runtimeResource] = true;
+  readonly [$wgslDataType]: AnyData;
+  readonly [$internal]: TextureViewInternals;
+  readonly [$getNameForward]: TgpuTexture<TextureProps>;
+  readonly resourceType = 'texture-storage-view';
+  readonly texelDataType: TexelData;
+  readonly dimension: StorageTextureDimension;
 
   private _view: GPUTextureView | undefined;
   private readonly _format: StorageTextureTexelFormat;
@@ -502,10 +504,11 @@ class TgpuFixedStorageTextureImpl
 
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly resourceType = 'texture-storage-view';
-  public readonly texelDataType: TexelData;
+  readonly [$runtimeResource] = true;
+  readonly [$wgslDataType]: AnyData;
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType = 'texture-storage-view';
+  readonly texelDataType: TexelData;
 
   constructor(
     private readonly _format: StorageTextureTexelFormat,

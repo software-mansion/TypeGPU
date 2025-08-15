@@ -1,7 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import { snip } from './snippet.ts';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -23,9 +22,10 @@ export const abstractFloat = {
   type: 'abstractFloat',
 } as AbstractFloat;
 
-const boolCast = createDualImpl(
-  // CPU implementation
-  (v?: number | boolean) => {
+const boolCast = dualImpl({
+  name: 'boolCast',
+  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
+  normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return false;
     }
@@ -34,10 +34,8 @@ const boolCast = createDualImpl(
     }
     return !!v;
   },
-  // GPU implementation
-  (v) => snip(stitch`bool(${v})`, bool),
-  'boolCast',
-);
+  codegenImpl: (v) => stitch`bool(${v})`,
+});
 
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
@@ -133,7 +131,7 @@ export const i32: I32 = Object.assign(i32Cast, {
 const f32Cast = dualImpl({
   name: 'f32Cast',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
-  normalImpl: (v?: number | boolean) => {
+  normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
     }
@@ -254,7 +252,7 @@ function roundToF16(x: number): number {
 const f16Cast = dualImpl({
   name: 'f16Cast',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
-  normalImpl: (v?: number | boolean | undefined) => {
+  normalImpl(v?: number | boolean | undefined) {
     if (v === undefined) {
       return 0;
     }
