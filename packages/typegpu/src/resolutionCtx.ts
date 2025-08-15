@@ -698,10 +698,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       const elementTypeString = this.resolve(schema.elementType);
-      return `array<${elementTypeString}, ${schema.elementCount}>(${
-        item.map((element) =>
-          this.resolve(element, schema.elementType as AnyData)
-        )
+      return stitch`array<${elementTypeString}, ${schema.elementCount}>(${
+        item.map((element) => snip(element, schema.elementType as AnyData))
       })`;
     }
 

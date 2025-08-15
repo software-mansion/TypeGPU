@@ -337,7 +337,7 @@ describe('wgsl generator js type inference', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 3>(1,2,3);
+        var result = array<f32, 3>(1, 2, 3);
       }"
     `);
   });
@@ -457,10 +457,10 @@ describe('wgsl generator js type inference', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() {
-        var myArrayF32 = array<f32, 2>(1,2);
-        var myArrayF16 = array<f16, 2>(3,4);
-        var myArrayI32 = array<i32, 2>(5,6);
-        var myArrayU32 = array<u32, 2>(7,8);
+        var myArrayF32 = array<f32, 2>(1, 2);
+        var myArrayF16 = array<f16, 2>(3, 4);
+        var myArrayI32 = array<i32, 2>(5, 6);
+        var myArrayU32 = array<u32, 2>(7, 8);
       }"
     `);
   });
@@ -498,7 +498,7 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn myFn() {
-        var myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)),Struct(vec2f(3, 4)));
+        var myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
       }"
     `);
   });
