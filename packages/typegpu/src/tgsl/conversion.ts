@@ -1,6 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyData, UnknownData } from '../data/dataTypes.ts';
-import { undecorate } from '../data/decorateUtils.ts';
+import { undecorate } from '../data/dataTypes.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,

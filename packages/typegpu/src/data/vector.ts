@@ -44,8 +44,7 @@ import type {
   Vec4u,
 } from './wgslTypes.ts';
 import { isVec } from './wgslTypes.ts';
-import type { AnyData } from './dataTypes.ts';
-import { undecorate } from './decorateUtils.ts';
+import { type AnyData, undecorate } from './dataTypes.ts';
 
 // ----------
 // Public API
