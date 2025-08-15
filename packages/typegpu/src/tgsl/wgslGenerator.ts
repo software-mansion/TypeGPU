@@ -181,7 +181,7 @@ export function generateTypedExpression(
 
   try {
     const result = generateExpression(ctx, expression);
-    return tryConvertSnippet(ctx, result, expectedType);
+    return tryConvertSnippet(result, expectedType);
   } finally {
     ctx.expectedType = prevExpectedType;
   }
@@ -455,7 +455,7 @@ export function generateExpression(
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
             .map((type, i) => [type, snippets[i] as Snippet] as const)
-            .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
+            .map(([type, sn]) => tryConvertSnippet(sn, type));
         }
       }
       // Assuming that `callee` is callable

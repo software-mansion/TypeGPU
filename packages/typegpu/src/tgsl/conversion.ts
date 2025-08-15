@@ -15,7 +15,6 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import type { ResolutionCtx } from '../types.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -309,9 +308,9 @@ Consider using explicit conversions instead.`,
 }
 
 export function tryConvertSnippet(
-  ctx: ResolutionCtx,
   snippet: Snippet,
   targetDataType: AnyData,
+  verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
     return snippet;
@@ -319,10 +318,10 @@ export function tryConvertSnippet(
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
+    return snip(stitch`${snip(snippet.value, targetDataType)}`, targetDataType);
   }
 
-  const converted = convertToCommonType([snippet], [targetDataType]);
+  const converted = convertToCommonType([snippet], [targetDataType], verbose);
 
   if (!converted) {
     throw new WgslTypeError(

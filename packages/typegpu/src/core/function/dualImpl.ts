@@ -8,8 +8,8 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { FnArgsConversionHint } from '../../types.ts';
 import { setName } from '../../shared/meta.ts';
 import { $internal, isRuntimeResource } from '../../shared/symbols.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { convertToCommonType } from '../../tgsl/conversion.ts';
+import { tryConvertSnippet } from '../../tgsl/conversion.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -37,17 +37,17 @@ export function createDualImpl<T extends (...args: never[]) => unknown>(
   return impl as DualFn<T>;
 }
 
-type MapValueToDataType<T> = { [K in keyof T]: AnyWgslData };
+type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
 interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly name: string;
   readonly normalImpl: T;
   readonly codegenImpl: (...args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
-    | { argTypes: AnyWgslData[]; returnType: AnyWgslData }
+    | { argTypes: AnyData[]; returnType: AnyData }
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
-    ) => { argTypes: AnyWgslData[]; returnType: AnyWgslData });
+    ) => { argTypes: AnyData[]; returnType: AnyData });
   readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
@@ -63,11 +63,11 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
     const converted = argSnippets.map((s, idx) =>
-      convertToCommonType(
-        [s],
-        [argTypes[idx] as AnyWgslData],
+      tryConvertSnippet(
+        s,
+        argTypes[idx] as AnyData,
         !options.ignoreImplicitCastWarning,
-      )?.[0] ?? s
+      )
     ) as MapValueToSnippet<Parameters<T>>;
 
     if (
