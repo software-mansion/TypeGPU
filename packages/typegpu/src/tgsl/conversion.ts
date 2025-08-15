@@ -217,9 +217,6 @@ export function getBestConversion(
 
   const implicitResult = findBestType(types, uniqueTargetTypes, true);
   if (implicitResult) {
-    implicitResult.hasImplicitConversions = implicitResult.actions.some(
-      (action) => action.action === 'cast',
-    );
     return implicitResult;
   }
 
