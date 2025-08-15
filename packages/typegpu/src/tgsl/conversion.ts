@@ -313,7 +313,7 @@ export function tryConvertSnippet(
   verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
-    return snippet;
+    return snip(snippet.value, targetDataType);
   }
 
   if (snippet.dataType.type === 'unknown') {
