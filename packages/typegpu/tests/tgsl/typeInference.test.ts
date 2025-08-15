@@ -474,13 +474,11 @@ describe('wgsl generator js type inference', () => {
       const myStructArray = StructArray(arrayValue);
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(
-      `
+    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot create value of type 'arrayOf(struct:Struct, 2)' from an array of length: 1]
-    `,
-    );
+    `);
   });
 
   it('infers correct type inside of an array', () => {
