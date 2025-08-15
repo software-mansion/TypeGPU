@@ -1,10 +1,30 @@
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { AnyData, Disarray } from './dataTypes.ts';
+import { type AnyData, type Disarray, UnknownData } from './dataTypes.ts';
+import { snip, type Snippet } from './snippet.ts';
 import { schemaCallWrapper } from './utils.ts';
+import type { AnyWgslData } from './wgslTypes.ts';
 
 // ----------
 // Public API
 // ----------
+
+interface DisarrayConstructor {
+  <TElement extends AnyData>(
+    elementType: TElement,
+    elementCount: number,
+  ): Disarray<TElement>;
+
+  <TElement extends AnyData>(
+    elementType: TElement,
+    elementCount?: undefined,
+  ): (elementCount: number) => Disarray<TElement>;
+
+  <TElement extends AnyData>(
+    elementType: TElement,
+    elementCount?: number | undefined,
+  ): Disarray<TElement> | ((elementCount: number) => Disarray<TElement>);
+}
 
 /**
  * Creates an array schema that can be used to construct vertex buffers.
@@ -28,23 +48,43 @@ import { schemaCallWrapper } from './utils.ts';
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export function disarrayOf<TElement extends AnyData>(
+export const disarrayOf = createDualImpl(
+  // JS implementation
+  ((elementType, elementCount) => {
+    if (elementCount === undefined) {
+      return (count: number) => cpu_disarrayOf(elementType, count);
+    }
+    return cpu_disarrayOf(elementType, elementCount);
+  }) as DisarrayConstructor,
+  // CODEGEN implementation
+  (elementType, elementCount) => {
+    if (elementCount === undefined || elementCount.value === undefined) {
+      const partial = (count: Snippet) =>
+        disarrayOf[$internal].gpuImpl(elementType, count);
+      // Marking so the WGSL generator lets this function through
+      partial[$internal] = true;
+
+      return snip(partial, UnknownData);
+    }
+
+    if (typeof elementCount.value !== 'number') {
+      throw new Error(
+        `Cannot create disarray schema with count unknown at compile-time: '${elementCount.value}'`,
+      );
+    }
+
+    return snip(
+      cpu_disarrayOf(elementType.value as AnyWgslData, elementCount.value),
+      elementType.value as AnyWgslData,
+    );
+  },
+  'disarrayOf',
+);
+
+export function cpu_disarrayOf<TElement extends AnyData>(
   elementType: TElement,
   elementCount: number,
-): Disarray<TElement>;
-
-export function disarrayOf<TElement extends AnyData>(
-  elementType: TElement,
-  elementCount?: undefined,
-): (elementCount: number) => Disarray<TElement>;
-
-export function disarrayOf<TElement extends AnyData>(
-  elementType: TElement,
-  elementCount?: number | undefined,
-): Disarray<TElement> | ((elementCount: number) => Disarray<TElement>) {
-  if (elementCount === undefined) {
-    return (n: number) => disarrayOf(elementType, n);
-  }
+): Disarray<TElement> {
   // In the schema call, create and return a deep copy
   // by wrapping all the values in `elementType` schema calls.
   const disarraySchema = (elements?: TElement[]) => {

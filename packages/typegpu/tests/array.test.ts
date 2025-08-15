@@ -87,7 +87,10 @@ describe('array', () => {
   });
 
   it('throws when trying to nest runtime sized arrays', () => {
-    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0)).toThrow();
+    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0))
+      .toThrowErrorMatchingInlineSnapshot(
+        '[Error: Cannot nest runtime sized arrays.]',
+      );
   });
 
   it('can be called to create an array', () => {
@@ -216,6 +219,43 @@ describe('array', () => {
             return;
           }`),
     );
+  });
+
+  it('can be immediately-invoked in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32, 4)();
+    });
+
+    expect(parseResolved({ foo })).toBe(parse(`
+      fn foo() {
+        var result = array<f32, 4>();
+      }
+    `));
+  });
+
+  it('can be immediately-partially-invoked in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32)(4)();
+    });
+
+    expect(parseResolved({ foo })).toBe(parse(`
+      fn foo() {
+        var result = array<f32, 4>();
+      }
+    `));
+  });
+
+  it('throws when creating schema with runtime-known count', () => {
+    const foo = tgpu.fn([d.u32])((count) => {
+      const result = d.arrayOf(d.f32, count)();
+    });
+
+    expect(() => parseResolved({ foo })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo
+      - arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
+    `);
   });
 
   it('generates correct code when array is partially called', () => {
