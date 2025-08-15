@@ -1,6 +1,5 @@
 import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
-import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, snip } from '../data/snippet.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -13,7 +12,7 @@ import {
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { convertToCommonType, unify } from '../tgsl/conversion.ts';
+import { unify } from '../tgsl/conversion.ts';
 import { $internal } from '../shared/symbols.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 
