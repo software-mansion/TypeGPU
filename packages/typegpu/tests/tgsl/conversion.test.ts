@@ -35,12 +35,8 @@ const mockCtx = {
   pre: '',
 } as unknown as GenerationCtx;
 
-beforeEach(() => {
+beforeAll(() => {
   INTERNAL_setCtx(mockCtx);
-});
-
-afterEach(() => {
-  INTERNAL_setCtx(undefined);
 });
 
 describe('getBestConversion', () => {
