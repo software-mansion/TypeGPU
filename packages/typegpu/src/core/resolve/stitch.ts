@@ -22,14 +22,14 @@ export function stitch(
  */
 export function stitchWithExactTypes(
   strings: TemplateStringsArray,
-  ...snippets: ValueOrArray<Snippet | string | undefined>[]
+  ...snippets: ValueOrArray<Snippet | string | number | undefined>[]
 ) {
   return internalStitch(strings, snippets, true);
 }
 
 function internalStitch(
   strings: TemplateStringsArray,
-  snippets: ValueOrArray<Snippet | string | undefined>[],
+  snippets: ValueOrArray<Snippet | string | number | undefined>[],
   exact: boolean,
 ) {
   const ctx = getResolutionCtx() as ResolutionCtx;
