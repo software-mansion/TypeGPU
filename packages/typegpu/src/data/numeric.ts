@@ -140,7 +140,11 @@ const f32Cast = dualImpl({
     }
     return Math.fround(v);
   },
-  codegenImpl: (arg) => stitch`f32(${arg})`,
+  codegenImpl: (arg) =>
+    arg.dataType.type === 'f32'
+      // Already of type f32
+      ? stitch`${arg}`
+      : stitch`f32(${arg})`,
 });
 
 /**
