@@ -34,7 +34,11 @@ const boolCast = dualImpl({
     }
     return !!v;
   },
-  codegenImpl: (v) => stitch`bool(${v})`,
+  codegenImpl: (arg) =>
+    arg.dataType.type === 'bool'
+      // Already of type bool
+      ? stitch`${arg}`
+      : stitch`bool(${arg})`,
 });
 
 /**
@@ -67,7 +71,11 @@ const u32Cast = dualImpl({
     }
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (v) => stitch`u32(${v})`,
+  codegenImpl: (arg) =>
+    arg.dataType.type === 'u32'
+      // Already of type u32
+      ? stitch`${arg}`
+      : stitch`u32(${arg})`,
 });
 
 /**
@@ -102,7 +110,11 @@ const i32Cast = dualImpl({
     }
     return v | 0;
   },
-  codegenImpl: (v) => stitch`i32(${v})`,
+  codegenImpl: (arg) =>
+    arg.dataType.type === 'i32'
+      // Already of type i32
+      ? stitch`${arg}`
+      : stitch`i32(${arg})`,
 });
 
 export const u16: U16 = {
@@ -266,7 +278,11 @@ const f16Cast = dualImpl({
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (v) => stitch`f16(${v})`,
+  codegenImpl: (arg) =>
+    arg.dataType.type === 'f16'
+      // Already of type f16
+      ? stitch`${arg}`
+      : stitch`f16(${arg})`,
 });
 
 /**
