@@ -8,7 +8,7 @@ import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -191,12 +191,13 @@ describe('array', () => {
       return;
     });
 
-    expect(parseResolved({ testFn })).toBe(parse(`
-      fn testFn() {
-        var myArray = array<u32, 1>(u32(10));
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var myArray = array<u32, 1>(10);
         var myClone = myArray;
         return;
-      }`));
+      }"
+    `);
   });
 
   it('generates correct code when complex array clone is used', () => {
@@ -246,19 +247,17 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var <storage, read_write> values: array<f32>;
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
-        fn foo() {
-          var acc = 1f;
-          for (var i = u32(0); (i < arrayLength(&values)); i++) {
-            values[i] = acc;
-            acc *= 2;
-          }
+      fn foo() {
+        var acc = 1f;
+        for (var i = 0u; (i < arrayLength(&values)); i++) {
+          values[i] = acc;
+          acc *= 2;
         }
-      `),
-    );
+      }"
+    `);
   });
 
   it('works for statically-sized arrays in TGSL', () => {

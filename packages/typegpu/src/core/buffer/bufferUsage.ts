@@ -12,6 +12,7 @@ import {
   $gpuValueOf,
   $internal,
   $repr,
+  $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
@@ -136,9 +137,10 @@ class TgpuFixedBufferImpl<
     return new Proxy(
       {
         [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.buffer.dataType,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$wgslDataType]: this.buffer.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
@@ -252,9 +254,10 @@ export class TgpuLaidOutBufferImpl<
     return new Proxy(
       {
         [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.dataType,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$wgslDataType]: this.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
