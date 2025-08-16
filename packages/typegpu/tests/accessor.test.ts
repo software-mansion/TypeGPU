@@ -11,7 +11,8 @@ describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
     const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
 
-    const red = tgpu.fn([], d.vec3f)(`() { return ${RED}; }`).$uses({ RED });
+    const red = tgpu.fn([], d.vec3f)`() { return RED; }`
+      .$uses({ RED });
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess })
