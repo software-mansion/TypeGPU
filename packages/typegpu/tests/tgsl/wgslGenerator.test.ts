@@ -773,71 +773,64 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for conditional with single statement', () => {
-    const main0 = tgpu.fn([], d.u32)(() => {
-      'kernel';
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) return 0;
+    const main0 = tgpu.fn([d.bool], d.u32)((cond) => {
+      if (cond) return 0;
       return 1;
     });
 
-    expect(parseResolved({ main0 })).toBe(
-      parse(`
-    fn main0() -> u32 {
-      if (true) {
-        return 0;
-      }
-      return 1;
-    }`),
-    );
+    expect(asWgsl(main0)).toMatchInlineSnapshot(`
+      "fn main0(cond: bool) -> u32 {
+        if (cond) {
+          return 0;
+        }
+        return 1;
+      }"
+    `);
   });
 
   it('generates correct code for conditional with else', () => {
-    const main1 = tgpu.fn([], d.i32)(() => {
-      'kernel';
+    const main1 = tgpu.fn([d.bool], d.i32)((cond) => {
       let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) y = 1;
+      if (cond) y = 1;
       else y = 2;
       return y;
     });
 
-    expect(parseResolved({ main1 })).toBe(
-      parse(`
-    fn main1() -> i32 {
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
+    expect(asWgsl(main1)).toMatchInlineSnapshot(`
+      "fn main1(cond: bool) -> i32 {
+        var y = 0;
+        if (cond) {
+          y = 1;
+        }
+        else {
+          y = 2;
+        }
+        return y;
+      }"
+    `);
   });
 
   it('generates correct code for conditionals block', () => {
-    const main2 = tgpu.fn([], d.i32)(() => {
-      'kernel';
+    const main2 = tgpu.fn([d.bool], d.i32)((cond) => {
       let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) {
+      if (cond) {
         y = 1;
       } else y = 2;
       return y;
     });
 
-    expect(parseResolved({ main2 })).toBe(
-      parse(`
-    fn main2() -> i32 {
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
+    expect(asWgsl(main2)).toMatchInlineSnapshot(`
+      "fn main2(cond: bool) -> i32 {
+        var y = 0;
+        if (cond) {
+          y = 1;
+        }
+        else {
+          y = 2;
+        }
+        return y;
+      }"
+    `);
   });
 
   it('generates correct code for for loops with single statements', () => {
