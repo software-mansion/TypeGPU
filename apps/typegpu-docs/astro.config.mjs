@@ -26,6 +26,12 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
+    define: {
+      'process.env.NODE_DEBUG_NATIVE': '""',
+    },
+    optimizeDeps: {
+      exclude: ['@rolldown/browser'],
+    },
     // Allowing query params, for invalidation
     plugins: [
       wasm(),
