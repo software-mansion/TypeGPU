@@ -15,4 +15,12 @@ export interface PlotData {
   dists: Float64Array;
 }
 
-export type Distributions = 'onUnitSphere' | 'inUnitSphere';
+export enum ExecutionMode {
+  SINGLE = 'single',
+  PARALLEL = 'parallel',
+}
+
+export enum Distribution {
+  ON_UNIT_SPHERE = 'onUnitSphere',
+  IN_UNIT_SPHERE = 'inUnitSphere',
+}

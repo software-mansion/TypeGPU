@@ -57,7 +57,7 @@ export class Plotter {
     }
 
     const camera = this.#core.camera;
-    camera.setPosition(c.initialCameraPosition, true);
+    // camera.setPosition(c.initialCameraPosition, true);
   }
 
   resetRotation() {
