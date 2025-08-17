@@ -13,7 +13,6 @@ import { randf } from '@typegpu/noise';
 export class Executor {
   readonly #root: TgpuRoot;
   // max `count` 65000 for convenience
-  // initial `count` cannot be 0
   #count: number;
   #sampleBuffer:
     & TgpuBuffer<d.WgslArray<d.Vec3f>>
@@ -25,16 +24,21 @@ export class Executor {
   readonly #sampleBufferSlot;
 
   constructor(root: TgpuRoot, count: number) {
+    if (count === 0) {
+      throw new Error('Count cannot be 0. Cannot create buffer of size 0');
+    }
     this.#root = root;
     this.#count = count;
     this.#sampleBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, count))
       .$usage(
         'storage',
       );
+
     const sampleBufferSlotTempAlias = tgpu.slot(
       this.#sampleBuffer.as('mutable'),
     );
     const distributionSlotTempAlias = tgpu.slot<TgpuFn<() => d.Vec3f>>();
+
     this.#sampleBufferSlot = sampleBufferSlotTempAlias;
     this.#distributionSlot = distributionSlotTempAlias;
 
@@ -58,7 +62,6 @@ export class Executor {
 
   set count(value: number) {
     this.#count = value;
-    if (value === 0) return;
 
     this.#sampleBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value))
       .$usage(
@@ -69,10 +72,6 @@ export class Executor {
   async executeSingleWorker(
     distribution: TgpuFn<() => d.Vec3f>,
   ): Promise<d.v3f[]> {
-    if (this.#count === 0) {
-      return [];
-    }
-
     const pipeline = this.#root['~unstable']
       .with(this.#sampleBufferSlot, this.#sampleBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)
@@ -87,10 +86,6 @@ export class Executor {
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
   ): Promise<d.v3f[]> {
-    if (this.#count === 0) {
-      return [];
-    }
-
     const pipeline = this.#root['~unstable']
       .with(this.#sampleBufferSlot, this.#sampleBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)

@@ -1,13 +1,11 @@
 import { Distribution } from './types.ts';
 import { randf } from '@typegpu/noise';
 
+const distributionPRNGs = {
+  [Distribution.ON_UNIT_SPHERE]: randf.onUnitSphere,
+  [Distribution.IN_UNIT_SPHERE]: randf.inUnitSphere,
+} as const;
+
 export function getPRNG(distribution: Distribution) {
-  switch (distribution) {
-    case Distribution.ON_UNIT_SPHERE: {
-      return randf.onUnitSphere;
-    }
-    case Distribution.IN_UNIT_SPHERE: {
-      return randf.inUnitSphere;
-    }
-  }
+  return distributionPRNGs[distribution];
 }

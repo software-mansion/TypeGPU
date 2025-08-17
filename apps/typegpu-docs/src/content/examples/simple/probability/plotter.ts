@@ -52,12 +52,7 @@ export class Plotter {
       case PlotType.GEOMETRIC:
         this.#plotGeomteric(data, this.#core);
         break;
-      default:
-        throw new Error(`Unsupported plot type: ${type}`);
     }
-
-    const camera = this.#core.camera;
-    // camera.setPosition(c.initialCameraPosition, true);
   }
 
   resetRotation() {

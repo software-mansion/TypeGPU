@@ -38,9 +38,6 @@ const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
 // #region Example controls & Cleanup
 
 export const controls = {
-  'Reset': {
-    // camera with num of samples
-  },
   'Reset Camera': {
     onButtonClick: () => {
       plotter.resetRotation();
@@ -69,7 +66,7 @@ export const controls = {
   },
   'Number of samples': {
     initial: c.initialNumSamples,
-    min: 0,
+    min: 100,
     max: 65000,
     step: 100,
     onSliderChange: async (value: number) => {
