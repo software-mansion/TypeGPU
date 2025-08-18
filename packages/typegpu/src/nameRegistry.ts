@@ -25,7 +25,7 @@ abstract class NameRegistryImpl implements NameRegistry {
   makeValid(primer: string): string {
     if (
       primer.startsWith('_') || primer.startsWith('A') ||
-      keywordsAndReservedTokens.has(primer.slice(primer.lastIndexOf('A') + 1))
+      keywordsAndReservedTokens.has(primer)
     ) {
       return `A${primer}`;
     }
