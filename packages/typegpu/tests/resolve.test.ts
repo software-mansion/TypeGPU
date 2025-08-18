@@ -39,11 +39,8 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(parse(resolved)).toBe(
-      parse(`
-          fn foo() { 
-            var g = 1000; 
-          }`),
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn foo() { var g = 1000; }"`,
     );
   });
 
@@ -533,23 +530,18 @@ describe('tgpu resolveWithContext', () => {
       .mockImplementation(() => {});
 
     tgpu.resolveWithContext({
-      template: `
-          fn testFn() {
-            return;
-          }
-        `,
+      template: 'fn testFn() { return; }',
       externals: {
         ArraySchema: d.arrayOf(d.u32, 4),
         JavaScriptObject: { field: d.vec2f() },
       },
-      names: 'strict',
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'ArraySchema' was unused in the resolved template.",
+      "The external 'ArraySchema' wasn't used in the resolved template.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'JavaScriptObject' was unused in the resolved template.",
+      "The external 'JavaScriptObject' wasn't used in the resolved template.",
     );
   });
 
@@ -558,15 +550,9 @@ describe('tgpu resolveWithContext', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    tgpu.resolveWithContext({
-      template: `
-          fn testFn() {
-            var a = identity(1);
-            return;
-          }
-        `,
+    tgpu.resolve({
+      template: 'fn testFn() { var a = identity(1); return; }',
       externals: { identity: (a: number) => a },
-      names: 'strict',
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -579,14 +565,9 @@ describe('tgpu resolveWithContext', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    tgpu.resolveWithContext({
-      template: `
-          fn testFn() {
-            return;
-          }
-        `,
+    tgpu.resolve({
+      template: 'fn testFn() { return; }',
       externals: {},
-      names: 'strict',
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
@@ -597,20 +578,14 @@ describe('tgpu resolveWithContext', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const resolved = tgpu.resolveWithContext({
-      template: `
-        fn testFn() {
-          return _EXT_.n + _EXT_.n;
-        }
-      `,
+    const resolved = tgpu.resolve({
+      template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
       externals: { _EXT_: { n: 100 } },
-      names: 'strict',
     });
 
-    expect(parse(resolved.code)).toBe(parse(`
-      fn testFn() {
-        return 100 + 100;
-      }`));
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn testFn() { return 100 + 100; }"`,
+    );
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
