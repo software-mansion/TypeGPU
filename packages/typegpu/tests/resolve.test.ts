@@ -530,7 +530,7 @@ describe('tgpu resolveWithContext', () => {
       .mockImplementation(() => {});
 
     tgpu.resolveWithContext({
-      template: `fn testFn() { return; }`,
+      template: 'fn testFn() { return; }',
       externals: {
         ArraySchema: d.arrayOf(d.u32, 4),
         JavaScriptObject: { field: d.vec2f() },
@@ -551,7 +551,7 @@ describe('tgpu resolveWithContext', () => {
       .mockImplementation(() => {});
 
     tgpu.resolve({
-      template: `fn testFn() { var a = identity(1); return; }`,
+      template: 'fn testFn() { var a = identity(1); return; }',
       externals: { identity: (a: number) => a },
     });
 
@@ -566,7 +566,7 @@ describe('tgpu resolveWithContext', () => {
       .mockImplementation(() => {});
 
     tgpu.resolve({
-      template: `fn testFn() { return; }`,
+      template: 'fn testFn() { return; }',
       externals: {},
     });
 
@@ -579,7 +579,7 @@ describe('tgpu resolveWithContext', () => {
       .mockImplementation(() => {});
 
     const resolved = tgpu.resolve({
-      template: `fn testFn() { return _EXT_.n + _EXT_.n; }`,
+      template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
       externals: { _EXT_: { n: 100 } },
     });
 
