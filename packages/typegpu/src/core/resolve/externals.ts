@@ -95,7 +95,7 @@ export function replaceExternalsInWgsl(
       !externalRegex.test(wgsl)
     ) {
       console.warn(
-        `The external '${externalName}' was unused in the resolved template.`,
+        `The external '${externalName}' wasn't used in the resolved template.`,
       );
       // continue anyway, we still might need to resolve the external
     }
