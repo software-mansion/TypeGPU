@@ -1,3 +1,4 @@
+import { isTgpuFn } from './core/function/tgpuFn.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -336,6 +337,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
+  readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -624,6 +626,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: AnyData | undefined, exact = false): string {
+    if (isTgpuFn(item)) {
+      if (
+        this.#currentlyResolvedItems.has(item) &&
+        !this._memoizedResolves.has(item)
+      ) {
+        throw new Error(
+          `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
+        );
+      }
+      this.#currentlyResolvedItems.add(item as object);
+    }
+
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -637,7 +651,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
