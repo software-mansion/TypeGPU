@@ -1,7 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
-import { f16, f32 } from '../data/numeric.ts';
-import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
+import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -13,10 +12,11 @@ import {
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { convertToCommonType } from '../tgsl/generationHelpers.ts';
+import { convertToCommonType } from '../tgsl/conversion.ts';
 import { getResolutionCtx } from '../execMode.ts';
-import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
+import { abstractFloat, f16, f32 } from '../data/numeric.ts';
+import type { GenerationCtx } from '../tgsl/generationHelpers.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -57,7 +57,8 @@ export const add = createDualImpl(
   // CPU implementation
   cpuAdd,
   // CODEGEN implementation
-  (lhs, rhs) => {
+  (...args) => {
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
@@ -98,7 +99,8 @@ export const sub = createDualImpl(
   // CPU implementation
   cpuSub,
   // CODEGEN implementation
-  (lhs, rhs) => {
+  (...args) => {
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
@@ -163,7 +165,8 @@ export const mul = createDualImpl(
   // CPU implementation
   cpuMul,
   // GPU implementation
-  (lhs, rhs) => {
+  (...args) => {
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
     const returnType = isSnippetNumeric(lhs)
       // Scalar * Scalar/Vector/Matrix
       ? rhs.dataType
@@ -222,36 +225,23 @@ export const div = createDualImpl(
   // CPU implementation
   cpuDiv,
   // CODEGEN implementation
-  (lhs, rhs) => {
-    let conv: [Snippet, Snippet] = [lhs, rhs];
-
-    if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
-      const ctx = getResolutionCtx() as ResolutionCtx;
-      const converted = convertToCommonType({
-        ctx,
-        values: [lhs, rhs],
-        restrictTo: [f32, f16],
-        concretizeTypes: true,
-      }) as
-        | [Snippet, Snippet]
-        | undefined;
-      if (converted) {
-        conv = converted;
-      }
-    }
-
-    const lhsVal = conv[0].value;
-    const rhsVal = conv[1].value;
+  (...args) => {
+    const [lhs, rhs] =
+      convertToCommonType(args, [f32, f16, abstractFloat], false) ?? args;
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
 
     if (
-      (typeof lhsVal === 'number' || isVecInstance(lhsVal)) &&
-      (typeof rhsVal === 'number' || isVecInstance(rhsVal))
+      (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&
+      (typeof rhs.value === 'number' || isVecInstance(rhs.value))
     ) {
       // Precomputing
-      return snip(cpuDiv(lhsVal as never, rhsVal as never), conv[0].dataType);
+      return snip(cpuDiv(lhs.value as never, rhs.value as never), resultType);
     }
 
-    return snip(stitch`(${conv[0]} / ${conv[1]})`, conv[0].dataType);
+    const ctx = getResolutionCtx() as GenerationCtx;
+    const lhsStr = ctx.resolve(lhs.value, lhs.dataType, /* exact */ true);
+    const rhsStr = ctx.resolve(rhs.value, rhs.dataType, /* exact */ true);
+    return snip(`(${lhsStr} / ${rhsStr})`, resultType);
   },
   'div',
 );
@@ -293,9 +283,10 @@ export const mod: ModOverload = createDualImpl(
     );
   },
   // GPU implementation
-  (a, b) => {
-    const type = isSnippetNumeric(a) ? b.dataType : a.dataType;
-    return snip(stitch`(${a} % ${b})`, type);
+  (...args) => {
+    const [lhs, rhs] = convertToCommonType(args) ?? args;
+    const resultType = isSnippetNumeric(lhs) ? rhs.dataType : lhs.dataType;
+    return snip(stitch`(${lhs} % ${rhs})`, resultType);
   },
   'mod',
 );

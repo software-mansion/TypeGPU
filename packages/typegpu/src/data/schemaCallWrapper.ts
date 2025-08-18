@@ -1,6 +1,5 @@
 import type { AnyData } from './dataTypes.ts';
 import { formatToWGSLType } from './vertexFormatData.ts';
-import { isPtr } from './wgslTypes.ts';
 
 /**
  * A wrapper for `schema(item)` or `schema()` call on JS side.
@@ -12,23 +11,16 @@ import { isPtr } from './wgslTypes.ts';
 export function schemaCallWrapper<T>(schema: AnyData, item?: T): T {
   const maybeType = (schema as { type: string })?.type;
 
-  try {
-    if (item !== undefined && isPtr(schema)) {
-      return item;
-    }
-    // TgpuVertexFormatData are not callable
-    const callSchema = (maybeType in formatToWGSLType
+  // TgpuVertexFormatData are not callable
+  const callSchema =
+    (maybeType in formatToWGSLType
       ? formatToWGSLType[maybeType as keyof typeof formatToWGSLType]
       : schema) as unknown as ((item?: T) => T);
-    if (item === undefined) {
-      return callSchema();
-    }
-    return callSchema(item);
-  } catch (e) {
-    throw new Error(
-      `Schema of type ${
-        maybeType ?? '<unknown>'
-      } is not callable or was called with invalid arguments.`,
-    );
+
+  if (typeof callSchema !== 'function') {
+    // Not callable
+    return item as T;
   }
+
+  return item === undefined ? callSchema() : callSchema(item);
 }
