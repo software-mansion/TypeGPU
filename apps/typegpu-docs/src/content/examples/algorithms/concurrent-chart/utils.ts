@@ -1,5 +1,5 @@
 export function concurrentSumOnJS(arr: number[]) {
-  for (let i = 1; i < arr.length; i++){ 
+  for (let i = 1; i < arr.length; i++) {
     arr[i] += arr[i - 1];
   }
   return arr;
