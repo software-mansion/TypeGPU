@@ -4,20 +4,38 @@ import type * as d from 'typegpu/data';
 export const PlotType = {
   GEOMETRIC: 0,
   HISTOGRAM: 1,
-  BAR: 2,
+  DISCRETE: 2,
 } as const;
 
 export type PlotType = typeof PlotType[keyof typeof PlotType];
 
-export interface PlotData {
+export interface BaseData {
   count: number;
   ids: Uint32Array;
+}
+
+export interface GeometricData extends BaseData {
   positionsX: Float64Array;
   positionsY: Float64Array;
   positionsZ: Float64Array;
-  sizes: Float64Array;
   dists: Float64Array;
+  sizes: Float64Array;
 }
+
+export interface HistogramData extends BaseData {
+  binIdsX: Uint32Array;
+  binIdsZ: Uint32Array;
+  values: Float64Array;
+  binsX: number;
+  binsZ: number;
+  sizeX: number;
+  sizeZ: number;
+  binsWidth: number;
+  minX: number;
+  maxX: number;
+}
+
+export type PlotData = GeometricData | HistogramData;
 
 export const ExecutionMode = {
   SINGLE: 'single',
@@ -37,20 +55,23 @@ export const Distribution = {
   ON_HEMISPHERE: 'onHemisphere',
   // BERNOULLI: 'bernoulli',
 
-  // SAMPLE: 'sample',
-  // SAMPLE_EXCLUSIVE: 'sampleExclusive',
-  // EXPONENTIAL: 'exponential',
-  // NORMAL: 'normal',
-  // CAUCHY: 'cauchy',
+  SAMPLE: 'sample',
+  EXPONENTIAL: 'exponential',
+  NORMAL: 'normal',
+  CAUCHY: 'cauchy',
 } as const;
 
 export type Distribution = typeof Distribution[keyof typeof Distribution];
 
 export type PRNG =
   & { plotType: PlotType }
-  & (GeometricPRNG);
+  & (GeometricPRNG | ContinuousPRNG);
 
 export interface GeometricPRNG {
   prng: TgpuFn<() => d.Vec3f>;
   origin: d.v3f;
+}
+
+export interface ContinuousPRNG {
+  prng: TgpuFn<() => d.Vec3f>;
 }

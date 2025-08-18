@@ -50,10 +50,22 @@ const distributionPRNGs = {
   },
   // [Distribution.BERNOULLI]: randf.bernoulli,
 
-  // [Distribution.SAMPLE_EXCLUSIVE]: randf.sampleExclusive,
-  // [Distribution.EXPONENTIAL]: randf.exponential,
-  // [Distribution.NORMAL]: randf.normal,
-  // [Distribution.CAUCHY]: randf.cauchy,
+  [Distribution.SAMPLE]: {
+    plotType: PlotType.HISTOGRAM,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.sample())),
+  },
+  [Distribution.EXPONENTIAL]: {
+    plotType: PlotType.HISTOGRAM,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.exponential(0.5))),
+  },
+  [Distribution.NORMAL]: {
+    plotType: PlotType.HISTOGRAM,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.normal(0, 1))),
+  },
+  [Distribution.CAUCHY]: {
+    plotType: PlotType.HISTOGRAM,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.cauchy(0, 0.5))),
+  },
 } as const;
 
 export function getPRNG(distribution: Distribution): PRNG {

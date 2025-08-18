@@ -31,7 +31,7 @@ const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
   }
 
   samples = await verdict(prng.prng);
-  plotter.plot(samples, prng.plotType, prng.origin);
+  plotter.plot(samples, prng);
 };
 
 // #region Example controls & Cleanup
@@ -62,9 +62,9 @@ export const controls = {
   },
   'Number of samples': {
     initial: c.initialNumSamples,
-    min: 100,
-    max: 65000,
-    step: 100,
+    min: c.minNumSamples,
+    max: c.maxNumSamples,
+    step: c.step,
     onSliderChange: async (value: number) => {
       executor.count = value;
       await replot(currentDistribution, currentExecutionMode);
