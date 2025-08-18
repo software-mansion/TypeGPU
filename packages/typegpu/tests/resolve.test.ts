@@ -4,14 +4,14 @@ import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
 import { $internal, $wgslDataType } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
-import { parse } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
     const resolved = tgpu.resolve({
       template: 'fn foo() { var g: Gradient; }',
@@ -22,7 +22,7 @@ describe('tgpu resolve', () => {
     });
     expect(parse(resolved)).toBe(
       parse(
-        'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
+        'struct Gradient { start: vec3f, end: vec3f, } fn foo() { var g: Gradient; }',
       ),
     );
   });
@@ -408,14 +408,14 @@ describe('tgpu resolve', () => {
 describe('tgpu resolveWithContext', () => {
   it('should resolve a template with external values', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
 
     const { code } = tgpu.resolveWithContext({
       template: `
         fn getGradientAngle(gradient: Gradient) -> f32 {
-          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+          return atan(gradient.end.y - gradient.start.y, gradient.end.x - gradient.start.x);
         }
       `,
       externals: { Gradient },
@@ -425,11 +425,11 @@ describe('tgpu resolveWithContext', () => {
     expect(parse(code)).toBe(
       parse(`
         struct Gradient {
-          from: vec3f,
-          to: vec3f,
+          start: vec3f,
+          end: vec3f,
         }
         fn getGradientAngle(gradient: Gradient) -> f32 {
-          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+          return atan(gradient.end.y - gradient.start.y, gradient.end.x - gradient.start.x);
         }
       `),
     );

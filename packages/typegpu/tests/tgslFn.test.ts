@@ -68,20 +68,20 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves structs', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
 
     const createGradient = tgpu.fn([], Gradient)(() => {
-      return Gradient({ to: d.vec3f(1, 2, 3), from: d.vec3f(4, 5, 6) });
+      return Gradient({ end: d.vec3f(1, 2, 3), start: d.vec3f(4, 5, 6) });
     });
 
     const actual = parseResolved({ createGradient });
 
     const expected = parse(`
       struct Gradient {
-        from: vec3f,
-        to: vec3f,
+        start: vec3f,
+        end: vec3f,
       }
 
       fn createGradient() -> Gradient {

@@ -8,14 +8,13 @@ export interface NameRegistry {
 
   /**
    * Creates a valid WGSL identifier.
-   * If the parameter could be a WGSL reserved word (with potential suffix) returns `makeUnique(primer)`,
-   * otherwise returns `primer`.
+   * Renames identifiers that are WGSL reserved words.
    * @param primer Used in the generation process.
    *
    * @example
    * makeValid("notAKeyword"); // "notAKeyword"
-   * makeValid("struct"); // makeUnique("struct")
-   * makeValid("struct_1"); // makeUnique("struct_1")
+   * makeValid("struct"); // "Astruct"
+   * makeValid("Astruct"); // "AAstruct" (to avoid potential name collisions)
    */
   makeValid(primer: string): string;
 }
@@ -24,12 +23,13 @@ abstract class NameRegistryImpl implements NameRegistry {
   abstract makeUnique(primer?: string): string;
 
   makeValid(primer: string): string {
-    if (primer.startsWith('_') || primer.startsWith('A')) {
+    if (
+      primer.startsWith('_') || primer.startsWith('A') ||
+      keywordsAndReservedTokens.has(primer.slice(primer.lastIndexOf('A') + 1))
+    ) {
       return `A${primer}`;
     }
-    return keywordsAndReservedTokens.has(primer.split('_')[0] as string)
-      ? this.makeUnique(primer)
-      : primer;
+    return primer;
   }
 }
 
@@ -77,6 +77,7 @@ export class StrictNameRegistry extends NameRegistryImpl {
   }
 }
 
+// Observation: none of these contain the capital "A"
 const keywordsAndReservedTokens = new Set([
   // keywords
   'alias',

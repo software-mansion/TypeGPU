@@ -936,12 +936,12 @@ describe('wgslGenerator', () => {
       return struct;
     });
 
-    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+    expect(parseResolved({ main })).toBe(
       parse(`
-        fn main_0() -> i32 {
+        fn main() -> i32 {
           var notAKeyword = 0;
-          var struct_1 = 1;
-          return struct_1;
+          var Astruct = 1;
+          return Astruct;
         }`),
     );
   });
@@ -951,10 +951,10 @@ describe('wgslGenerator', () => {
       return n + macro;
     });
 
-    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+    expect(parseResolved({ main })).toBe(
       parse(`
-        fn main_0(n: i32, macro_1: i32) -> i32 {
-          return (n + macro_1);
+        fn main(n: i32, Amacro: i32) -> i32 {
+          return (n + Amacro);
         }`),
     );
   });
@@ -965,7 +965,7 @@ describe('wgslGenerator', () => {
       const instance = TestStruct();
     });
 
-    expect(() => tgpu.resolve({ externals: { main }, names: 'random' }))
+    expect(() => parseResolved({ main }))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -981,9 +981,9 @@ describe('wgslGenerator', () => {
       const AA_ = 3;
     });
 
-    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+    expect(parseResolved({ main })).toBe(
       parse(`
-        fn main_0() {
+        fn main() {
           var A_ = 1;
           var AA_ = 2;
           var AAA_ = 3;
@@ -994,14 +994,14 @@ describe('wgslGenerator', () => {
   it('does not cause identifier clashes when renaming variables', () => {
     const main = tgpu.fn([])(() => {
       const mut = 1;
-      const mut_1 = 2;
+      const Amut = 2;
     });
 
-    expect(parse(tgpu.resolve({ externals: { main }, names: 'random' }))).toBe(
+    expect(parseResolved({ main })).toBe(
       parse(`
-        fn main_0() {
-          var mut_1 = 1;
-          var mut_1_2 = 2;
+        fn main() {
+          var Amut = 1;
+          var AAmut = 2;
         }`),
     );
   });
