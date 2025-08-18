@@ -4,6 +4,7 @@ import {
   clamp,
   cos,
   dot,
+  length,
   log,
   mul,
   normalize,
@@ -18,7 +19,7 @@ import {
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
-const EPS = 1e-6;
+const EPS = 1e-9;
 
 export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
   .fn([d.f32])((seed) => {
@@ -79,14 +80,23 @@ export const randOnUnitCircle: TgpuFn<() => d.Vec2f> = tgpu
     return d.vec2f(cos(angle), sin(angle));
   });
 
+const safeNormalize: TgpuFn<(v: d.Vec3f) => d.Vec3f> = tgpu
+  .fn([d.vec3f], d.vec3f)((v) => {
+    let vNonZero = v;
+    if (length(v) === 0) {
+      vNonZero = v.add(EPS);
+    }
+    return normalize(vNonZero);
+  });
+
 export const randInUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() => {
     const u = randomGeneratorSlot.value.sample();
-    const v = normalize(
-      d.vec3f(randNormal(0, 1), randNormal(0, 1), randNormal(0, 1)).add(EPS),
-    );
+    const v = d.vec3f(randNormal(0, 1), randNormal(0, 1), randNormal(0, 1));
 
-    return v.mul(pow(u, 1 / 3));
+    const vNorm = safeNormalize(v);
+
+    return vNorm.mul(pow(u, 1 / 3));
   });
 
 export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
@@ -116,7 +126,7 @@ export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
     return mul(sign(alignment), value);
   });
 
-const randUniformExclusive: TgpuFn<() => d.F32> = tgpu
+export const randUniformExclusive: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => {
     // Our generator currently operates on the range [0, 1),
     // so clamping with 1 - EPS isn't necessary.

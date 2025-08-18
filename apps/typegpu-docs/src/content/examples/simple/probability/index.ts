@@ -1,9 +1,8 @@
 import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
 
 import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';
-import { type Distribution, ExecutionMode, PlotType } from './types.ts';
+import { type Distribution, ExecutionMode } from './types.ts';
 import * as c from './constants.ts';
 import { getPRNG } from './helpers.ts';
 
@@ -31,8 +30,8 @@ const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
     }
   }
 
-  samples = await verdict(prng);
-  plotter.plot(samples, PlotType.GEOMETRIC, d.vec3f());
+  samples = await verdict(prng.prng);
+  plotter.plot(samples, prng.plotType, prng.origin);
 };
 
 // #region Example controls & Cleanup
@@ -40,8 +39,7 @@ const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
 export const controls = {
   'Reset Camera': {
     onButtonClick: () => {
-      plotter.resetRotation();
-      plotter.resetCamera();
+      plotter.resetView();
     },
   },
   'Execution Mode': {
@@ -50,8 +48,7 @@ export const controls = {
     onSelectChange: async (value: ExecutionMode) => {
       currentExecutionMode = value;
       await replot(currentDistribution, currentExecutionMode);
-      plotter.resetRotation();
-      plotter.resetCamera();
+      plotter.resetView();
     },
   },
   'Distribution': {
@@ -60,8 +57,7 @@ export const controls = {
     onSelectChange: async (value: Distribution) => {
       currentDistribution = value;
       await replot(currentDistribution, currentExecutionMode);
-      plotter.resetRotation();
-      plotter.resetCamera();
+      plotter.resetView();
     },
   },
   'Number of samples': {

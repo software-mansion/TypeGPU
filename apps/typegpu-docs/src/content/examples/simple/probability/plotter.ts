@@ -1,8 +1,7 @@
 import * as MorphCharts from 'morphcharts';
 import type * as d from 'typegpu/data';
 
-import { PlotType } from './types.ts';
-import type { PlotData } from './types.ts';
+import { type PlotData, PlotType } from './types.ts';
 import * as c from './constants.ts';
 
 export class Plotter {
@@ -53,6 +52,11 @@ export class Plotter {
         this.#plotGeomteric(data, this.#core);
         break;
     }
+  }
+
+  resetView() {
+    this.resetRotation();
+    this.resetCamera();
   }
 
   resetRotation() {

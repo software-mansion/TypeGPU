@@ -106,6 +106,7 @@ There are higher-level utilities built on top of `randf.sample`:
 - `bernoulli` - returns 1 with probability `p`, and 0 otherwise. You can think of it as the flip of a biased coin. `p` must be in the range `[0, 1]`
 
 ### Continuous
+- `sampleExclusive` - works the same as `sample`, but returns a value strictly between 0 and 1
 - `exponential` - returns a number based on the exponential distribution with a given `rate`. The `rate` must be greater than 0. It is commonly used for modeling the time until an event occurs
 - `normal` - returns a number based on the normal (Gaussian) distribution with a given mean (`mu`) and standard deviation (`sigma`). `sigma` must be `>= 0`
 - `cauchy` - returns a number based on the Cauchy distribution with a given origin point (`x0`, `gamma`). `gamma` must be `>= 0`
