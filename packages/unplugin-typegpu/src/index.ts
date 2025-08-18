@@ -6,79 +6,20 @@ import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { createUnplugin, type UnpluginInstance } from 'unplugin';
 import {
+  assignMetadata,
+  containsKernelDirective,
   type Context,
   defaultOptions,
   earlyPruneRegex,
   embedJSON,
+  type FunctionNode,
   gatherTgpuAliases,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  removeKernelDirective,
+  wrapInAutoName,
 } from './common.ts';
-
-type FunctionNode =
-  | acorn.FunctionDeclaration
-  | acorn.AnonymousFunctionDeclaration
-  | acorn.FunctionExpression
-  | acorn.ArrowFunctionExpression;
-
-function containsKernelDirective(node: FunctionNode): boolean {
-  if (node.body.type === 'BlockStatement') {
-    for (const statement of node.body.body) {
-      if (
-        statement.type === 'ExpressionStatement' &&
-        statement.directive === kernelDirective
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function removeKernelDirective(node: FunctionNode) {
-  const cloned = structuredClone(node);
-
-  if (cloned.body.type === 'BlockStatement') {
-    cloned.body.body = cloned.body.body.filter(
-      (statement) =>
-        !(
-          statement.type === 'ExpressionStatement' &&
-          statement.directive === kernelDirective
-        ),
-    );
-  }
-
-  return cloned;
-}
-
-function assignMetadata(
-  magicString: MagicStringAST,
-  node: acorn.AnyNode,
-  metadata: string,
-) {
-  magicString.prependLeft(
-    node.start,
-    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
-  ).appendRight(
-    node.end,
-    `), ${metadata}) && $.f)({}))`,
-  );
-}
-
-function wrapInAutoName(
-  magicString: MagicStringAST,
-  node: acorn.Node,
-  name: string,
-) {
-  magicString
-    .prependLeft(
-      node.start,
-      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
-    )
-    .appendRight(node.end, `, "${name}"))`);
-}
 
 const typegpu: UnpluginInstance<Options, false> = createUnplugin(
   (rawOptions) => {

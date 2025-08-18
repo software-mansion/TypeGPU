@@ -35,7 +35,6 @@ if (typeof window === 'undefined') {
 
   self.addEventListener('fetch', (event) => {
     const r = event.request;
-    console.log('SERVICE: Intercepting request...', r);
     if (r.cache === 'only-if-cached' && r.mode !== 'same-origin') {
       return;
     }

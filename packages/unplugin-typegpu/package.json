@@ -26,6 +26,7 @@
     "./esbuild": "./src/esbuild.ts",
     "./farm": "./src/farm.ts",
     "./rolldown": "./src/rolldown.ts",
+    "./rolldown-browser": "./src/rolldown-browser.ts",
     "./rspack": "./src/rspack.ts",
     "./vite": "./src/vite.ts",
     "./webpack": "./src/webpack.ts"
@@ -78,6 +79,12 @@
         "module": "./dist/rolldown.js",
         "import": "./dist/rolldown.js",
         "default": "./dist/rolldown.cjs"
+      },
+      "./rolldown-browser": {
+        "types": "./dist/rolldown-browser.d.ts",
+        "module": "./dist/rolldown-browser.js",
+        "import": "./dist/rolldown-browser.js",
+        "default": "./dist/rolldown-browser.cjs"
       },
       "./rspack": {
         "types": "./dist/rspack.d.ts",
@@ -138,6 +145,7 @@
     "@types/bun": "^1.2.19",
     "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
+    "rolldown": "1.0.0-beta.33",
     "rollup": "~4.37.0",
     "tsup": "catalog:build",
     "typescript": "catalog:types"

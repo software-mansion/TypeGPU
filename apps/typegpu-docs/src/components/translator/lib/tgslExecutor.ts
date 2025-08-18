@@ -1,17 +1,5 @@
-import * as Babel from '@babel/standalone';
-import plugin from 'unplugin-typegpu/babel';
+import rolldownPlugin from 'unplugin-typegpu/rolldown-browser';
 import { bundle } from './rolldown.ts';
-
-function translateTGSL(
-  code: string,
-): string {
-  const result = Babel.transform(code, {
-    'presets': ['typescript'],
-    'filename': 'example.ts',
-    plugins: [plugin],
-  }).code;
-  return result || '';
-}
 
 const moduleImports = {
   'typegpu': 'https://esm.sh/typegpu@latest/?bundle=false',
@@ -22,19 +10,24 @@ const moduleImports = {
 type TgslModule = Record<string, unknown>;
 
 async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
-  const translatedCode = translateTGSL(tgslCode);
-
-  const { output } = await bundle(
+  const result = await bundle(
     {
-      '/utils.ts':
-        'export function add(a: number, b: number): number { return a + b; }',
-      '/index.ts':
-        `import {add} from './utils.ts'; console.log('Hello, World!');`,
+      '/shader.js': tgslCode,
+      '/index.ts': `
+        import tgpu from 'typegpu';
+        import * as exports from './shader.js';
+
+        const shaderCode = tgpu.resolve({ externals: exports });
+        export default shaderCode;
+      `,
     },
     ['./index.ts'],
+    {
+      plugins: [rolldownPlugin({})],
+    },
   );
 
-  console.log(output);
+  const output = result.output['index.js'];
 
   const importMap = { imports: moduleImports };
 
@@ -44,7 +37,7 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   document.head.appendChild(importMapScript);
 
   try {
-    const userBlob = new Blob([translatedCode], { type: 'text/javascript' });
+    const userBlob = new Blob([output], { type: 'text/javascript' });
     const userModuleUrl = URL.createObjectURL(userBlob);
 
     const module = await import(userModuleUrl);
@@ -58,16 +51,8 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
 
 export async function executeTgslCode(tgslCode: string): Promise<string> {
   try {
-    const exports = await executeTgslModule(tgslCode);
-
-    const tgpuModule = await import(
-      //@ts-expect-error
-      'https://esm.sh/typegpu@latest?bundle=false'
-    );
-
-    return tgpuModule.default.resolve({
-      externals: exports as Record<string, object>,
-    });
+    const shaderCode = await executeTgslModule(tgslCode);
+    return shaderCode.default as string;
   } catch (error) {
     throw new Error(
       `Failed to execute TGSL code: ${
