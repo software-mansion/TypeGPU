@@ -597,7 +597,7 @@ export function generateStatement(
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
 
-    if (returnNode) {
+    if (returnNode !== undefined) {
       const returnSnippet = generateTypedExpression(
         ctx,
         returnNode,
