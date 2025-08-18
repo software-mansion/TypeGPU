@@ -14,6 +14,7 @@ import * as c from './constants.ts';
 const defaultColorSpread = 32;
 const defaultMinValue = -10;
 const defaultMaxValue = 10;
+const heightToBase = 7;
 
 // geometric
 const defaultSize = 0.17;
@@ -87,7 +88,7 @@ export class Plotter {
             },
           );
 
-          const optimalBinCount = 2 * Math.ceil(Math.log2(count)) + 1;
+          const optimalBinCount = Math.ceil(Math.log2(count)) + 1;
           const binXWidth = (maxSample - minSample) / optimalBinCount;
 
           const data: HistogramData = {
@@ -126,7 +127,9 @@ export class Plotter {
             data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
           }
 
-          const guessedBinXZSize = Math.floor((maxBinCount / 7) ** (1 / 3));
+          const guessedBinXZSize = Math.floor(
+            (maxBinCount / heightToBase) ** (1 / 3),
+          );
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
@@ -184,7 +187,9 @@ export class Plotter {
               dominantFreq;
           }
 
-          const guessedBinXZSize = Math.floor((dominantFreq / 11) ** (1 / 3));
+          const guessedBinXZSize = Math.floor(
+            (dominantFreq / heightToBase) ** (1 / 3),
+          );
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
