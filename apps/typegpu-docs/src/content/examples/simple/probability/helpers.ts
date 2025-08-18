@@ -48,23 +48,25 @@ const distributionPRNGs = {
     prng: tgpu.fn([], d.vec3f)(() => randf.onHemisphere(normal)),
     origin: d.vec3f(),
   },
-  // [Distribution.BERNOULLI]: randf.bernoulli,
-
+  [Distribution.BERNOULLI]: {
+    plotType: PlotType.DISCRETE,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.bernoulli(0.5))),
+  },
   [Distribution.SAMPLE]: {
-    plotType: PlotType.HISTOGRAM,
+    plotType: PlotType.CONTINUOUS,
     prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.sample())),
   },
   [Distribution.EXPONENTIAL]: {
-    plotType: PlotType.HISTOGRAM,
-    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.exponential(0.5))),
+    plotType: PlotType.CONTINUOUS,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.exponential(1))),
   },
   [Distribution.NORMAL]: {
-    plotType: PlotType.HISTOGRAM,
+    plotType: PlotType.CONTINUOUS,
     prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.normal(0, 1))),
   },
   [Distribution.CAUCHY]: {
-    plotType: PlotType.HISTOGRAM,
-    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.cauchy(0, 0.5))),
+    plotType: PlotType.CONTINUOUS,
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.cauchy(0, 1))),
   },
 } as const;
 

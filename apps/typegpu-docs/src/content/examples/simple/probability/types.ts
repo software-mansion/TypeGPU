@@ -3,7 +3,7 @@ import type * as d from 'typegpu/data';
 
 export const PlotType = {
   GEOMETRIC: 0,
-  HISTOGRAM: 1,
+  CONTINUOUS: 1,
   DISCRETE: 2,
 } as const;
 
@@ -53,7 +53,8 @@ export const Distribution = {
   ON_UNIT_CUBE: 'onUnitCube',
   IN_HEMISPHERE: 'inHemisphere',
   ON_HEMISPHERE: 'onHemisphere',
-  // BERNOULLI: 'bernoulli',
+
+  BERNOULLI: 'bernoulli',
 
   SAMPLE: 'sample',
   EXPONENTIAL: 'exponential',

@@ -11,16 +11,12 @@ import {
 import * as c from './constants.ts';
 
 // general
-const defaultColorSpread = 16;
+const defaultColorSpread = 32;
 const defaultMinValue = -10;
 const defaultMaxValue = 10;
 
 // geometric
 const defaultSize = 0.17;
-
-// histogram
-const defaultSizeX = 5;
-const defaultSizeZ = 5;
 
 export class Plotter {
   readonly #core;
@@ -73,23 +69,25 @@ export class Plotter {
           this.#plotGeometric(data, this.#core);
         }
         break;
-      case PlotType.HISTOGRAM:
+      case PlotType.CONTINUOUS:
         {
           const samplesFiltered = samples.filter((sample) =>
             sample.x >= defaultMinValue && sample.x <= defaultMaxValue
           );
           const count = samplesFiltered.length;
 
-          const minSample = samplesFiltered.reduce(
-            (a, b) => Math.min(a, b.x),
-            Number.POSITIVE_INFINITY,
-          );
-          const maxSample = samplesFiltered.reduce(
-            (a, b) => Math.max(a, b.x),
-            Number.NEGATIVE_INFINITY,
+          const { minSample, maxSample } = samplesFiltered.reduce(
+            (acc, sample) => ({
+              minSample: Math.min(acc.minSample, sample.x),
+              maxSample: Math.max(acc.maxSample, sample.x),
+            }),
+            {
+              minSample: Number.POSITIVE_INFINITY,
+              maxSample: Number.NEGATIVE_INFINITY,
+            },
           );
 
-          const optimalBinCount = Math.ceil(Math.log2(count)) + 1;
+          const optimalBinCount = 2 * Math.ceil(Math.log2(count)) + 1;
           const binXWidth = (maxSample - minSample) / optimalBinCount;
 
           const data: HistogramData = {
@@ -101,8 +99,8 @@ export class Plotter {
             binsX: optimalBinCount,
             binsZ: 1,
             binsWidth: binXWidth,
-            sizeX: defaultSizeX,
-            sizeZ: defaultSizeZ,
+            sizeX: 1,
+            sizeZ: 1,
             minX: minSample,
             maxX: maxSample,
           };
@@ -120,12 +118,77 @@ export class Plotter {
             binSizes[data.binIdsX[i]]++;
           }
 
-          const maxBinCount = binSizes.reduce((a, b) => Math.max(a, b), 0);
+          const maxBinCount = binSizes.reduce(
+            (acc, size) => Math.max(acc, size),
+            0,
+          );
           for (let i = 0; i < count; i++) {
             data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
           }
 
-          this.#plotHistogram(data, this.#core);
+          const guessedBinXZSize = Math.floor((maxBinCount / 7) ** (1 / 3));
+          data.sizeX = guessedBinXZSize;
+          data.sizeZ = guessedBinXZSize;
+
+          this.#plotHistogram(data, this.#core, false);
+        }
+        break;
+      case PlotType.DISCRETE:
+        {
+          const count = samples.length;
+          const samplesRounded = samples.map((sample) => Math.round(sample.x));
+
+          const uniqueValues = samplesRounded.reduce((map, value) => {
+            map.set(value, (map.get(value) || 0) + 1);
+            return map;
+          }, new Map());
+
+          const { minValue, maxValue } = [...uniqueValues.keys()].reduce(
+            (acc, value) => ({
+              minValue: Math.min(acc.minValue, value),
+              maxValue: Math.max(acc.maxValue, value),
+            }),
+            {
+              minValue: Number.POSITIVE_INFINITY,
+              maxValue: Number.NEGATIVE_INFINITY,
+            },
+          );
+
+          const uniqueRange = maxValue - minValue + 1;
+
+          const data: HistogramData = {
+            count,
+            ids: new Uint32Array(count),
+            binIdsX: new Uint32Array(count),
+            binIdsZ: new Uint32Array(count),
+            values: new Float64Array(count),
+            binsX: uniqueRange,
+            binsZ: 1,
+            binsWidth: 1,
+            sizeX: 1,
+            sizeZ: 1,
+            minX: minValue,
+            maxX: maxValue,
+          };
+
+          const dominantFreq = uniqueValues.values().reduce(
+            (acc, freq) => Math.max(acc, freq),
+            0,
+          );
+
+          for (let i = 0; i < count; i++) {
+            data.ids[i] = i;
+            data.binIdsZ[i] = 0;
+            data.binIdsX[i] = samplesRounded[i] - minValue;
+            data.values[i] = (uniqueValues.get(samplesRounded[i]) as number) /
+              dominantFreq;
+          }
+
+          const guessedBinXZSize = Math.floor((dominantFreq / 11) ** (1 / 3));
+          data.sizeX = guessedBinXZSize;
+          data.sizeZ = guessedBinXZSize;
+
+          this.#plotHistogram(data, this.#core, true);
         }
         break;
     }
@@ -156,6 +219,7 @@ export class Plotter {
     this.#core.renderer.transitionBuffers = [transitionBuffer];
     transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.sphere;
     transitionBuffer.currentPalette.colors = this.#palette;
+
     const scatter = new MorphCharts.Layouts.Scatter(this.#core);
     scatter.layout(transitionBuffer.currentBuffer, data.ids, {
       positionsX: data.positionsX,
@@ -167,6 +231,7 @@ export class Plotter {
       sizeScaling: 0.1,
       colors: data.dists,
     });
+
     const axes = MorphCharts.Axes.Cartesian3dAxesHelper.create(core, {
       titleX: 'x',
       titleY: 'y',
@@ -186,7 +251,11 @@ export class Plotter {
     ];
   }
 
-  #plotHistogram(data: HistogramData, core: MorphCharts.Core) {
+  #plotHistogram(
+    data: HistogramData,
+    core: MorphCharts.Core,
+    isDiscreteX: boolean,
+  ) {
     const transitionBuffer = core.renderer.createTransitionBuffer(data.ids);
     core.renderer.transitionBuffers = [transitionBuffer];
     transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.block;
@@ -222,11 +291,13 @@ export class Plotter {
       minValueZ: 0,
       maxValueZ: data.binsZ - 1,
       titleX: 'x',
-      titleY: 'y',
-      titleZ: 'z',
+      titleY: 'count',
+      titleZ: '',
+      isDiscreteX,
       isDiscreteZ: true,
       labelsX: (value) => {
-        return (value * data.binsWidth + data.minX).toFixed(1).toString();
+        return (value * data.binsWidth + data.minX).toFixed(isDiscreteX ? 0 : 1)
+          .toString();
       },
       labelsY: (value) => {
         return Math.round(value).toString();
@@ -235,7 +306,6 @@ export class Plotter {
         return value.toString();
       },
     });
-
     axes.zero[0] = -1;
     axes.zero[2] = -1;
     core.renderer.currentAxes = [
