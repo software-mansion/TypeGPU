@@ -31,7 +31,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "arktype": "catalog:",
-    "astro": "^5.12.3",
+    "astro": "^5.12.8",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.5.3",
     "fuse.js": "catalog:frontend",
