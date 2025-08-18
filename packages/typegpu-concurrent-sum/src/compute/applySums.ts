@@ -1,6 +1,11 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { operatorSlot, uniformAddLayout, workgroupSize } from '../schemas.ts';
+import {
+  calculateIndex,
+  operatorSlot,
+  uniformAddLayout,
+  workgroupSize,
+} from '../schemas.ts';
 
 export const uniformAdd = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
@@ -10,8 +15,8 @@ export const uniformAdd = tgpu['~unstable'].computeFn({
     wid: d.builtin.workgroupId,
   },
 })(({ gid, nwg, wid }) => {
-  const globalIdx = gid.x + gid.y * nwg.x + gid.z * nwg.x * nwg.y;
-  const workgroupId = wid.x + wid.y * nwg.x + wid.z * nwg.x * nwg.y;
+  const globalIdx = calculateIndex(gid, nwg);
+  const workgroupId = calculateIndex(wid, nwg);
   const baseIdx = globalIdx * 8;
   const sumValue = uniformAddLayout.$.sums[workgroupId];
 
