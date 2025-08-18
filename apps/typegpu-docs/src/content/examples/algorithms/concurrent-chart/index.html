@@ -18,84 +18,84 @@
       <div class="data-group">
         <div class="bars">
           <div class="bar bar-gpu">
-            <div class="bar-tooltip">GPU: 12ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-threads">
-            <div class="bar-tooltip">Threads: 8ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-sequential">
-            <div class="bar-tooltip">Sequential: 25ms</div>
+            <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">3.1x</div>
-        <div class="x-axis-label">1K</div>
+        <div class="speedup-label">0.7x</div>
+        <div class="x-axis-label">10K</div>
       </div>
 
       <!-- Data group 2 -->
       <div class="data-group">
         <div class="bars">
           <div class="bar bar-gpu">
-            <div class="bar-tooltip">GPU: 15ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-threads">
-            <div class="bar-tooltip">Threads: 12ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-sequential">
-            <div class="bar-tooltip">Sequential: 38ms</div>
+            <div class="bar-tooltip"></div>
           </div>
         </div>
         <div class="speedup-label">2.5x</div>
-        <div class="x-axis-label">10K</div>
+        <div class="x-axis-label">50K</div>
       </div>
 
       <!-- Data group 3 -->
       <div class="data-group">
         <div class="bars">
           <div class="bar bar-gpu">
-            <div class="bar-tooltip">GPU: 18ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-threads">
-            <div class="bar-tooltip">Threads: 22ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-sequential">
-            <div class="bar-tooltip">Sequential: 45ms</div>
+            <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">2.0x</div>
-        <div class="x-axis-label">100K</div>
+        <div class="speedup-label">3.0x</div>
+        <div class="x-axis-label">1M</div>
       </div>
 
       <!-- Data group 4 -->
       <div class="data-group">
         <div class="bars">
           <div class="bar bar-gpu">
-            <div class="bar-tooltip">GPU: 22ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-threads">
-            <div class="bar-tooltip">Threads: 35ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-sequential">
-            <div class="bar-tooltip">Sequential: 68ms</div>
+            <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">1.6x</div>
-        <div class="x-axis-label">1M</div>
+        <div class="speedup-label">4x</div>
+        <div class="x-axis-label">5M</div>
       </div>
 
       <!-- Data group 5 -->
       <div class="data-group">
         <div class="bars">
           <div class="bar bar-gpu">
-            <div class="bar-tooltip">GPU: 28ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-threads">
-            <div class="bar-tooltip">Threads: 48ms</div>
+            <div class="bar-tooltip"></div>
           </div>
           <div class="bar bar-sequential">
-            <div class="bar-tooltip">Sequential: 92ms</div>
+            <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">1.7x</div>
+        <div class="speedup-label">6x</div>
         <div class="x-axis-label">10M</div>
       </div>
     </div>
@@ -209,17 +209,14 @@
   /* Bar colors */
   .bar-gpu::after {
     background-color: var(--bar-color-gpu);
-    --bar-height: 0.3;
   }
 
   .bar-threads::after {
     background-color: var(--bar-color-threads);
-    --bar-height: 0.2;
   }
 
   .bar-sequential::after {
     background-image: var(--bar-gradient);
-    --bar-height: 0.6;
   }
 
   /* Speedup labels */
