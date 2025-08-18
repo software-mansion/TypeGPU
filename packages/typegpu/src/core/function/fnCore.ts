@@ -173,27 +173,32 @@ export function createFnCore(
         argTypes.forEach((argType, i) => {
           const astParam = ast.params[i];
 
-          if (astParam?.type === FuncParameterType.identifier) {
-            const rawName = astParam.name;
-            const snippet = snip(ctx.names.makeValid(rawName), argType);
-            args.push(snippet);
-            if (snippet.value !== rawName) {
-              argAliases.push([rawName, snippet]);
+          switch (astParam?.type) {
+            case FuncParameterType.identifier: {
+              const rawName = astParam.name;
+              const snippet = snip(ctx.names.makeValid(rawName), argType);
+              args.push(snippet);
+              if (snippet.value !== rawName) {
+                argAliases.push([rawName, snippet]);
+              }
+              break;
             }
-          } else if (astParam?.type === FuncParameterType.destructuredObject) {
-            args.push(snip(`_arg_${i}`, argType));
-            argAliases.push(...astParam.props.map(({ name, alias }) =>
-              [
-                alias,
-                snip(
-                  `_arg_${i}.${name}`,
-                  (argTypes[i] as WgslStruct)
-                    .propTypes[name],
-                ),
-              ] as [string, Snippet]
-            ));
-          } else {
-            args.push(snip(`_arg_${i}`, argType));
+            case FuncParameterType.destructuredObject: {
+              args.push(snip(`_arg_${i}`, argType));
+              argAliases.push(...astParam.props.map(({ name, alias }) =>
+                [
+                  alias,
+                  snip(
+                    `_arg_${i}.${name}`,
+                    (argTypes[i] as WgslStruct)
+                      .propTypes[name],
+                  ),
+                ] as [string, Snippet]
+              ));
+              break;
+            }
+            default:
+              args.push(snip(`_arg_${i}`, argType));
           }
         });
 

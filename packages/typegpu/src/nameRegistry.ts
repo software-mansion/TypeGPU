@@ -36,9 +36,6 @@ abstract class NameRegistryImpl implements NameRegistry {
 export class RandomNameRegistry extends NameRegistryImpl {
   private lastUniqueId = 0;
 
-  /**
-   * This implementation assumes that `primer` is a prefix of the result of `makeUnique(primer)`.
-   */
   makeUnique(primer?: string | undefined): string {
     let label: string;
     if (primer) {

@@ -1005,6 +1005,17 @@ describe('wgslGenerator', () => {
         }`),
     );
   });
+
+  it('does not cause identifier clashes when renaming parameters', () => {
+    const main = tgpu.fn([d.u32, d.u32])((extern, Aextern) => {
+    });
+
+    expect(parseResolved({ main })).toBe(
+      parse(`
+        fn main(Aextern: u32, AAextern: u32) {
+        }`),
+    );
+  });
 });
 
 describe('wgslGenerator division operator', () => {
