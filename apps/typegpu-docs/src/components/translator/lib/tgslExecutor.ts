@@ -1,5 +1,6 @@
 import * as Babel from '@babel/standalone';
 import plugin from 'unplugin-typegpu/babel';
+import { bundle } from './rolldown.ts';
 
 function translateTGSL(
   code: string,
@@ -22,6 +23,18 @@ type TgslModule = Record<string, unknown>;
 
 async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   const translatedCode = translateTGSL(tgslCode);
+
+  const { output } = await bundle(
+    {
+      '/utils.ts':
+        'export function add(a: number, b: number): number { return a + b; }',
+      '/index.ts':
+        `import {add} from './utils.ts'; console.log('Hello, World!');`,
+    },
+    ['./index.ts'],
+  );
+
+  console.log(output);
 
   const importMap = { imports: moduleImports };
 

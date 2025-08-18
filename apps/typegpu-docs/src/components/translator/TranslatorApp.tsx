@@ -19,7 +19,6 @@ import {
   wgslCodeAtom,
 } from './lib/translatorStore.ts';
 import { useAutoCompile } from './lib/useAutoCompile.ts';
-import { main } from './lib/rolldown.ts';
 
 interface EditorSectionProps {
   id: string;
@@ -84,16 +83,6 @@ export default function TranslatorApp() {
   useEffect(() => {
     initialize();
   }, [initialize]);
-
-  useEffect(() => {
-    (async () => {
-      const result = await main({
-        'index.ts': `console.log('Bruh')`,
-      }, ['index.ts']);
-
-      console.log(result);
-    })();
-  }, []);
 
   const handleEditorLoaded = () => setEditorLoaded(false);
 

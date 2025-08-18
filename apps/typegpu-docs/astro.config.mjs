@@ -32,6 +32,11 @@ export default defineConfig({
     optimizeDeps: {
       exclude: ['@rolldown/browser'],
     },
+    server: {
+      fs: {
+        allow: ['..']
+      }
+    },
     // Allowing query params, for invalidation
     plugins: [
       wasm(),
@@ -48,6 +53,7 @@ export default defineConfig({
     ssr: {
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
+        '@rolldown/browser',
       ],
     },
   },

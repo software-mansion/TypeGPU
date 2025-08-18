@@ -1,5 +1,5 @@
-import { resolve } from 'pathe';
 import type { InputOptions, OutputOptions } from '@rolldown/browser';
+import { resolve } from 'pathe';
 
 export interface BundleResult {
   output: Record<string, string | Uint8Array>;
@@ -14,7 +14,7 @@ export interface SourceFile {
 
 export type FileMap = Record<string, string>;
 
-export async function main(
+export async function bundle(
   files: FileMap,
   entries: string[],
   config: InputOptions & { output?: OutputOptions | undefined } = {},
@@ -39,14 +39,18 @@ export async function main(
       {
         name: 'virtual-fs',
         resolveId(source, importer) {
-          if (source[0] === '/' || source[0] === '.') {
+          if (source[0] === '/') {
+            // Absolute import
+            return source;
+          }
+          if (source[0] === '.') {
+            // Relative import
             return resolve(importer || '/', '..', source);
           }
         },
         load(id) {
           if (id[0] !== '/') return;
-          const filename = id.slice(1);
-          return files[filename];
+          return files[id];
         },
       },
       ...(Array.isArray(config?.plugins)
