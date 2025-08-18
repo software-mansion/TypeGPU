@@ -1,5 +1,10 @@
 import tgpu from 'typegpu';
-import { calculateIndex, operatorSlot, scanLayout, workgroupSize } from '../schemas.ts';
+import {
+  calculateIndex,
+  operatorSlot,
+  scanLayout,
+  workgroupSize,
+} from '../schemas.ts';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 

@@ -2,7 +2,6 @@ import type {
   StorageFlag,
   TgpuBuffer,
   TgpuComputePipeline,
-  TgpuFn,
   TgpuQuerySet,
   TgpuRoot,
 } from 'typegpu';
