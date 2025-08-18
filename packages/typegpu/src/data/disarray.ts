@@ -1,6 +1,6 @@
 import { $internal } from '../shared/symbols.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
-import { schemaCallWrapper } from './utils.ts';
+import { schemaCallWrapper } from './schemaCallWrapper.ts';
 
 // ----------
 // Public API
