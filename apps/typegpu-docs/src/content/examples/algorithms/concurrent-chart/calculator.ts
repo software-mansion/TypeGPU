@@ -9,7 +9,6 @@ type SumResult = {
   jsTime?: number;
   gpuTime?: number;
   gpuShaderTime?: number;
-  expectedSum?: number;
 };
 
 export async function performCalculationsWithTime(
@@ -32,44 +31,27 @@ export async function performCalculationsWithTime(
   // GPU Version
   initCache(root, { operation: std.add, identityElement: 0 }, true);
   const gpuStartTime = performance.now();
-  let resolveTime: ((value: number) => void) | undefined;
-  const timePromise = new Promise<number>((resolve, reject) => {
-    resolveTime = resolve;
-  });
+  let timestampPromise: Promise<bigint[]> = Promise.resolve([]);
   const calcResult = prefixScan(
     root,
     inputBuffer,
     { operation: std.add, identityElement: 0 },
-    async (timeTgpuQuery) => {
-      const timestamps = await timeTgpuQuery.read();
-      const timeNs = timestamps[1] - timestamps[0];
-      const gpuShaderTime = Number(timeNs) / 1000000;
-      if (resolveTime) resolveTime(gpuShaderTime);
+    (timeTgpuQuery) => {
+      timestampPromise = timeTgpuQuery.read();
     },
   );
-
   root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
   const gpuTime = performance.now() - gpuStartTime;
-
   // Compare results
   const gpuResult = await calcResult.read();
-  const gpuShaderTime = await timePromise;
+  const timestamps = await timestampPromise;
+  const gpuShaderTime = Number(timestamps[1] - timestamps[0]) / 1_000_000;
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
-  if (!isEqual) {
-    return {
-      success: false,
-      jsTime,
-      gpuTime,
-      gpuShaderTime,
-    };
-  }
-
   return {
-    success: true,
+    success: isEqual,
     jsTime,
     gpuTime,
     gpuShaderTime,
-    expectedSum: jsResult[jsResult.length - 1],
   };
 }
