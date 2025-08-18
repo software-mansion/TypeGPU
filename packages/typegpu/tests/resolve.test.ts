@@ -40,7 +40,7 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
     expect(resolved).toMatchInlineSnapshot(
-      `"fn foo ( ) { var g = 1000 ; }"`,
+      `"fn foo() { var g = 1000; }"`,
     );
   });
 
@@ -584,7 +584,7 @@ describe('tgpu resolveWithContext', () => {
     });
 
     expect(resolved).toMatchInlineSnapshot(
-      `"fn testFn ( ) { return 100 + 100 ; }"`,
+      `"fn testFn() { return 100 + 100; }"`,
     );
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
