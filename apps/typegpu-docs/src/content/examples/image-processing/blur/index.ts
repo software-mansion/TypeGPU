@@ -182,7 +182,6 @@ const computePipeline = device.createComputePipeline({
       code: tgpu.resolve({
         template: computeShaderCode,
         externals: {
-          Settings,
           ...uniformLayout.bound,
           ...ioLayout.bound,
         },
