@@ -1,4 +1,4 @@
-import { prefixScan } from '@typegpu/concurrent-sum';
+import { initCache, prefixScan } from '@typegpu/concurrent-sum';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
@@ -30,6 +30,7 @@ export async function performCalculationsWithTime(
   const jsTime = performance.now() - jsStartTime;
 
   // GPU Version
+  initCache(root, { operation: std.add, identityElement: 0 }, true);
   const gpuStartTime = performance.now();
   let resolveTime: ((value: number) => void) | undefined;
   const timePromise = new Promise<number>((resolve, reject) => {

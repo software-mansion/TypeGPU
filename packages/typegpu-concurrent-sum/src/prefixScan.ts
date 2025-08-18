@@ -29,14 +29,24 @@ class PrefixScanComputer {
   > = new Map();
   private querySet: TgpuQuerySet<'timestamp'> | null = null;
   private first = true;
+  private _timeCallback?:
+    | ((timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void)
+    | undefined;
 
   constructor(
     private root: TgpuRoot,
     private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
-    private timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+    timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
   ) {
+    this._timeCallback = timeCallback;
     this.querySet = root.createQuerySet('timestamp', 2);
+  }
+
+  updateTimeCallback(
+    timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+  ): void {
+    this._timeCallback = timeCallback;
   }
 
   private get scanPipeline(): TgpuComputePipeline {
@@ -158,8 +168,8 @@ class PrefixScanComputer {
     this.root['~unstable'].flush();
 
     this.querySet?.resolve();
-    if (this.timeCallback && this.querySet) {
-      this.timeCallback(this.querySet);
+    if (this._timeCallback && this.querySet) {
+      this._timeCallback(this.querySet);
     }
     return result;
   }
@@ -172,21 +182,14 @@ export function prefixScan(
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   let computer = cache.get(root)?.get(binaryOp);
-
   if (!computer) {
-    computer = new PrefixScanComputer(
-      root,
-      binaryOp,
-      false,
-      timeCallback,
-    );
-    let rootCache = cache.get(root);
-    if (!rootCache) {
-      rootCache = new WeakMap();
-      cache.set(root, rootCache);
-    }
-    rootCache.set(binaryOp, computer);
+    computer = initCache(root, binaryOp, false);
   }
+
+  if (timeCallback) {
+    (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
+  }
+
   return computer.compute(buffer);
 }
 
@@ -197,22 +200,32 @@ export function scan(
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   let computer = cache.get(root)?.get(binaryOp);
-
   if (!computer) {
-    computer = new PrefixScanComputer(
-      root,
-      binaryOp,
-      true,
-      timeCallback,
-    );
+    computer = initCache(root, binaryOp, true);
+  }
 
-    let rootCache = cache.get(root);
-    if (!rootCache) {
-      rootCache = new WeakMap();
-      cache.set(root, rootCache);
-    }
-    rootCache.set(binaryOp, computer);
+  if (timeCallback) {
+    (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
   }
 
   return computer.compute(buffer);
+}
+
+export function initCache(
+  root: TgpuRoot,
+  binaryOp: BinaryOp,
+  onlyGreatestElement = false,
+): PrefixScanComputer {
+  let rootCache = cache.get(root);
+  if (!rootCache) {
+    rootCache = new WeakMap();
+    cache.set(root, rootCache);
+  }
+  if (!rootCache.has(binaryOp)) {
+    rootCache.set(
+      binaryOp,
+      new PrefixScanComputer(root, binaryOp, onlyGreatestElement),
+    );
+  }
+  return rootCache.get(binaryOp) as PrefixScanComputer;
 }
