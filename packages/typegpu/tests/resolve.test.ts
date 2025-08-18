@@ -39,7 +39,7 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(parse(resolved)).toMatchInlineSnapshot(
+    expect(resolved).toMatchInlineSnapshot(
       `"fn foo ( ) { var g = 1000 ; }"`,
     );
   });
@@ -583,7 +583,7 @@ describe('tgpu resolveWithContext', () => {
       externals: { _EXT_: { n: 100 } },
     });
 
-    expect(parse(resolved)).toMatchInlineSnapshot(
+    expect(resolved).toMatchInlineSnapshot(
       `"fn testFn ( ) { return 100 + 100 ; }"`,
     );
 
