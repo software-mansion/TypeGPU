@@ -354,6 +354,23 @@ const AtomicI32 = d.atomic(d.i32);
 //    ^?
 ```
 
+:::tip
+The `std` module provides functions for manipulating atomic data.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+// ---cut---
+const count = tgpu['~unstable'].workgroupVar(d.atomic(d.u32));
+
+const incrementAndGet = tgpu.fn([], d.u32)(() => {
+  return std.atomicAdd(count.$, 1);
+});
+```
+
+:::
+
 ## Pointers
 
 To create a schema corresponding to a pointer data type, wrap the inner schema with a pointer constructor corresponding to the appropriate address space.
