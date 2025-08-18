@@ -25,17 +25,18 @@ const DEV = import.meta.env.DEV;
 export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
+  server: {
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
   vite: {
     define: {
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
     optimizeDeps: {
       exclude: ['@rolldown/browser'],
-    },
-    server: {
-      fs: {
-        allow: ['..']
-      }
     },
     // Allowing query params, for invalidation
     plugins: [
