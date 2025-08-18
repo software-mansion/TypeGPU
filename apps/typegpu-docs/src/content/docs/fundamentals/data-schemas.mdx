@@ -355,7 +355,7 @@ const AtomicI32 = d.atomic(d.i32);
 ```
 
 :::tip
-The `std` module provides functions for manipulating atomic data.
+The `std` module provides functions for manipulating atomic data in TGSL.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -380,10 +380,10 @@ For address spaces `function`, `private`, `workgroup`, `storage` and `uniform`, 
 ```ts twoslash
 import * as d from 'typegpu/data';
 // ---cut---
-const VecPtrFn = d.ptrFn(d.vec3f);
+const vecPtrFn = d.ptrFn(d.vec3f);
 //    ^?
 
-const VecPtrPrivate = d.ptrPrivate(d.vec2f);
+const vecPtrPrivate = d.ptrPrivate(d.vec2f);
 //    ^?
 ```
 
