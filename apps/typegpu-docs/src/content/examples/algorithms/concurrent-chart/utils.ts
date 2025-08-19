@@ -31,3 +31,16 @@ export function compareArrayWithBuffer(
   }
   return true;
 }
+
+export function getNiceYAxisLabels(maxValue: number): number[] {
+  if (maxValue <= 0) {
+    return [0, 0, 0, 0, 0];
+  }
+
+  const labels: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    labels.push((i / 4) * maxValue);
+  }
+
+  return labels;
+}

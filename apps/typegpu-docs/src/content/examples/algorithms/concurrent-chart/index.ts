@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
-import * as std from 'typegpu/std';
 import { performCalculationsWithTime } from './calculator.ts';
+import { getNiceYAxisLabels } from './utils.ts';
 
 const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
 const speedupLabels = Array.from(
@@ -12,6 +12,9 @@ const tooltips = Array.from(
 const xAxisLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
 );
+const yAxisLabels = Array.from(
+  document.querySelectorAll<HTMLSpanElement>('.y-axis-labels span'),
+);
 let dropdown = '8388608';
 
 const root = await tgpu.init({
@@ -21,6 +24,8 @@ const root = await tgpu.init({
     ],
   },
 });
+
+let yAxisTicks: number[] = [];
 
 const lengthMap: Record<
   string,
@@ -56,6 +61,22 @@ async function initCalc() {
   return inputArrays;
 }
 function drawCharts() {
+  const maxJsTime = Math.max(...Object.values(lengthMap).map((x) => x.jsTime));
+  const maxGpuTime = Math.max(
+    ...Object.values(lengthMap).map((x) => x.gpuTime),
+  );
+  const maxGpuShaderTime = Math.max(
+    ...Object.values(lengthMap).map((x) => x.gpuShaderTime),
+  );
+  const overallMax = Math.max(maxJsTime, maxGpuTime, maxGpuShaderTime);
+
+  yAxisTicks = getNiceYAxisLabels(overallMax);
+  const reversedLabels = yAxisLabels.slice().reverse();
+  for (let index = 0; index < reversedLabels.length; index++) {
+    const label = reversedLabels[index];
+    label.textContent = yAxisTicks[index].toFixed(1);
+  }
+
   const keys = Object.keys(lengthMap);
   for (let i = 0; i < bars.length / 3; i++) {
     const value = lengthMap[keys[i]];
@@ -65,9 +86,10 @@ function drawCharts() {
     xAxisLabels[i].textContent = keys[i];
 
     // CPU
+    const normalizedJsHeight = maxJsTime > 0 ? value.jsTime / overallMax : 0;
     bars[3 * i].style.setProperty(
       '--bar-height',
-      `${std.min(value.jsTime / 30, 1.15)}`,
+      `${normalizedJsHeight}`,
     );
     bars[3 * i].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i].textContent = `JS time: ${
@@ -75,9 +97,10 @@ function drawCharts() {
     }ms  |  Array size: ${keys[i]}`;
 
     // GPU
+    const normalizedGpuHeight = maxGpuTime > 0 ? value.gpuTime / overallMax : 0;
     bars[3 * i + 1].style.setProperty(
       '--bar-height',
-      `${std.min(value.gpuTime / 30, 1)}`,
+      `${normalizedGpuHeight}`,
     );
     bars[3 * i + 1].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i + 1].textContent = `Total GPU time: ${
@@ -85,9 +108,12 @@ function drawCharts() {
     }ms  |  Array size: ${keys[i]}`;
 
     // GPU shader
+    const normalizedGpuShaderHeight = maxGpuShaderTime > 0
+      ? value.gpuShaderTime / overallMax
+      : 0;
     bars[3 * i + 2].style.setProperty(
       '--bar-height',
-      `${std.min(value.gpuShaderTime / 30, 1)}`,
+      `${normalizedGpuShaderHeight}`,
     );
     bars[3 * i + 2].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i + 2].textContent = `GPU shader time: ${

@@ -22,11 +22,8 @@ const calcResult = scan(
   root,
   inputBuffer,
   { operation: std.mul, identityElement: 1 },
-  async (timeTgpuQuery) => {
-    const timestamps = await timeTgpuQuery.read();
-    const timeNs = timestamps[1] - timestamps[0];
-    const gpuShaderTime = Number(timeNs) / 1000000;
-    if (resolveTime) resolveTime(gpuShaderTime);
+  (timeTgpuQuery) => {
+    timestampPromise = timeTgpuQuery.read();
   },
 );
 ```
