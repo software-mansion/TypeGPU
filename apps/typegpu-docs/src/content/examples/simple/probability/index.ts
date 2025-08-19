@@ -36,7 +36,7 @@ const replot = async (
   }
 
   samples = await verdict(prng.prng, forceReExec);
-  plotter.plot(samples, prng);
+  plotter.plot(samples, prng, animate);
 };
 
 await replot(currentDistribution, currentExecutionMode);
@@ -75,7 +75,7 @@ export const controls = {
       await replot(
         currentDistribution,
         currentExecutionMode,
-        true,
+        false,
         true,
       );
       plotter.resetView(getCameraPosition(currentDistribution));

@@ -91,6 +91,11 @@ export class Executor {
       return this.#samples.slice(0, this.#count);
     }
 
+    if (forceReExec) {
+      this.#maxCount = 0;
+      this.count = this.#count;
+    }
+
     const pipeline = this.#root['~unstable']
       .with(this.#sampleBufferSlot, this.#samplesBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)

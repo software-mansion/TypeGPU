@@ -15,6 +15,8 @@ const defaultColorSpread = 32;
 const defaultMinValue = -10;
 const defaultMaxValue = 10;
 const heightToBase = 7;
+const transitionTime = 1000; // milliseconds
+const defaultStaggering = 1;
 
 // geometric
 const defaultSize = 0.17;
@@ -35,9 +37,11 @@ export class Plotter {
       defaultColorSpread,
       false,
     );
+    this.#core.config.transitionStaggering = defaultStaggering;
+    this.#core.renderer.transitionTime = 1;
   }
 
-  plot(samples: d.v3f[], prng: PRNG) {
+  async plot(samples: d.v3f[], prng: PRNG, animate = false) {
     switch (prng.plotType) {
       case PlotType.GEOMETRIC:
         {
@@ -67,7 +71,15 @@ export class Plotter {
             );
           }
 
+          if (animate) {
+            this.makeRoomForNewPlot();
+          }
+
           this.#plotGeometric(data, this.#core);
+
+          if (animate) {
+            await this.distributionsTransition();
+          }
         }
         break;
       case PlotType.CONTINUOUS:
@@ -133,7 +145,15 @@ export class Plotter {
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
+          if (animate) {
+            this.makeRoomForNewPlot();
+          }
+
           this.#plotHistogram(data, this.#core, false);
+
+          if (animate) {
+            await this.distributionsTransition();
+          }
         }
         break;
       case PlotType.DISCRETE:
@@ -193,7 +213,15 @@ export class Plotter {
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
+          if (animate) {
+            this.makeRoomForNewPlot();
+          }
+
           this.#plotHistogram(data, this.#core, true);
+
+          if (animate) {
+            await this.distributionsTransition();
+          }
         }
         break;
     }
@@ -215,6 +243,30 @@ export class Plotter {
 
   resetCamera(cameraPos: number[]) {
     this.#core.camera.setPosition(cameraPos, true);
+  }
+
+  makeRoomForNewPlot() {
+    this.#core.renderer.transitionBuffers[0].swap();
+    this.#core.renderer.transitionTime = 0;
+  }
+
+  distributionsTransition(): Promise<void> {
+    const start = performance.now();
+
+    return new Promise((resolve) => {
+      const animateTransition = (time: number) => {
+        const duration = Math.max(time - start, 0);
+
+        this.#core.renderer.transitionTime = duration / transitionTime;
+
+        if (duration < transitionTime) {
+          requestAnimationFrame(animateTransition);
+        } else {
+          resolve();
+        }
+      };
+      requestAnimationFrame(animateTransition);
+    });
   }
 
   #plotGeometric(data: GeometricData, core: MorphCharts.Core) {
