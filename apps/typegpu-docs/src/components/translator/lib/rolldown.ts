@@ -46,10 +46,6 @@ export async function bundle(
       {
         name: 'virtual-fs',
         resolveId(source, importer) {
-          if (source.includes('typegpu') || importer?.includes('typegpu')) {
-            debug = true;
-          }
-
           const id = source[0] === '.'
             ? join(importer || '/', '..', source)
             : source;
