@@ -451,7 +451,7 @@ canvas.addEventListener('touchmove', (event) => {
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
   handleDrawing(x, y);
-});
+}, { passive: false });
 
 export const controls = {
   Reset: {

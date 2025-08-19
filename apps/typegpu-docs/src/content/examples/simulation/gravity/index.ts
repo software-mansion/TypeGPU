@@ -365,7 +365,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 
   cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
   updateCameraPosition();
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
@@ -379,7 +379,7 @@ canvas.addEventListener('touchstart', (event) => {
     prevX = event.touches[0].clientX;
     prevY = event.touches[0].clientY;
   }
-});
+}, { passive: true });
 
 const mouseUpEventListener = () => {
   isDragging = false;
@@ -423,7 +423,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export function onCleanup() {

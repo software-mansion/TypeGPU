@@ -455,7 +455,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export const controls = {

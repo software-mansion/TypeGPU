@@ -494,7 +494,7 @@ canvas.addEventListener('wheel', (event) => {
     [scale, scale, 1],
     properties.transformation,
   );
-});
+}, { passive: false });
 
 // Touch interaction
 
@@ -503,7 +503,7 @@ canvas.addEventListener('touchstart', (event) => {
   if (event.touches.length === 1) {
     lastPos = [event.touches[0].clientX, event.touches[0].clientY];
   }
-});
+}, { passive: false });
 
 const touchMoveEventListener = (event: TouchEvent) => {
   if (lastPos === null || event.touches.length !== 1) {

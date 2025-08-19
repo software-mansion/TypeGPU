@@ -386,7 +386,7 @@ canvas.addEventListener('mouseout', () => {
 // handle mobile devices
 canvas.addEventListener('touchstart', () => {
   helpInfo.style.opacity = '0';
-});
+}, { passive: true });
 canvas.addEventListener('touchend', () => {
   helpInfo.style.opacity = '1';
 });
@@ -406,7 +406,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.mat4x4f(),
   );
   cameraBuffer.writePartial({ view: newView });
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
@@ -453,7 +453,7 @@ canvas.addEventListener('touchstart', (event: TouchEvent) => {
   // Use the first touch for rotation.
   prevX = event.touches[0].clientX;
   prevY = event.touches[0].clientY;
-});
+}, { passive: false });
 
 canvas.addEventListener('touchmove', (event: TouchEvent) => {
   event.preventDefault();
@@ -469,7 +469,7 @@ canvas.addEventListener('touchmove', (event: TouchEvent) => {
   if (isRightDragging && event.touches.length === 2) {
     updateCubesRotation(dx, dy);
   }
-});
+}, { passive: false });
 
 const touchEndEventListener = (event: TouchEvent) => {
   event.preventDefault();

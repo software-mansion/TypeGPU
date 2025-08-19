@@ -455,7 +455,7 @@ canvas.addEventListener('touchstart', async (event) => {
     updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
     controlsPopup.style.opacity = '0';
   }
-});
+}, { passive: false });
 
 const touchMoveEventListener = (event: TouchEvent) => {
   if (event.touches.length === 1) {

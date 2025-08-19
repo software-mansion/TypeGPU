@@ -389,7 +389,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.mat4x4f(),
   );
   cameraBuffer.writePartial({ view: newView, position: newCameraPos });
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
@@ -403,7 +403,7 @@ canvas.addEventListener('touchstart', (event) => {
     prevX = event.touches[0].clientX;
     prevY = event.touches[0].clientY;
   }
-});
+}, { passive: true });
 
 canvas.addEventListener('mouseup', () => {
   isDragging = false;
@@ -434,7 +434,7 @@ canvas.addEventListener('touchmove', (event) => {
 
     updateCameraOrbit(dx, dy);
   }
-});
+}, { passive: false });
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -443,7 +443,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export const controls = {
