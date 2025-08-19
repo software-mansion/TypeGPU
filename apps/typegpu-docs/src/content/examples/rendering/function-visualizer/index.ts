@@ -454,7 +454,7 @@ canvas.addEventListener('mousedown', (event) => {
   lastPos = [event.clientX, event.clientY];
 });
 
-window.addEventListener('mousemove', (event) => {
+const mouseMoveEventListener = (event: MouseEvent) => {
   if (lastPos === null) {
     return;
   }
@@ -475,11 +475,13 @@ window.addEventListener('mousemove', (event) => {
   );
 
   lastPos = currentPos;
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-window.addEventListener('mouseup', (_) => {
+const mouseUpEventListener = () => {
   lastPos = null;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
@@ -494,7 +496,7 @@ canvas.addEventListener('wheel', (event) => {
   );
 });
 
-// Mouse interaction
+// Touch interaction
 
 canvas.addEventListener('touchstart', (event) => {
   event.preventDefault();
@@ -503,7 +505,7 @@ canvas.addEventListener('touchstart', (event) => {
   }
 });
 
-window.addEventListener('touchmove', (event) => {
+const touchMoveEventListener = (event: TouchEvent) => {
   if (lastPos === null || event.touches.length !== 1) {
     return;
   }
@@ -521,11 +523,13 @@ window.addEventListener('touchmove', (event) => {
   );
 
   lastPos = currentPos;
-});
+};
+window.addEventListener('touchmove', touchMoveEventListener);
 
-window.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   lastPos = null;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 // Resize observer and cleanup
 
@@ -614,6 +618,10 @@ export const controls = {
 
 export function onCleanup() {
   destroyed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

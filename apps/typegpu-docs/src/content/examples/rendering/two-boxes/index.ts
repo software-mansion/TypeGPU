@@ -420,10 +420,11 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   isRightDragging = false;
   isDragging = false;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
 canvas.addEventListener('mousemove', (event) => {
   const dx = event.clientX - prevX;
@@ -470,13 +471,14 @@ canvas.addEventListener('touchmove', (event: TouchEvent) => {
   }
 });
 
-canvas.addEventListener('touchend', (event: TouchEvent) => {
+const touchEndEventListener = (event: TouchEvent) => {
   event.preventDefault();
   if (event.touches.length === 0) {
     isRightDragging = false;
     isDragging = false;
   }
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 const resizeObserver = new ResizeObserver(() => {
   createDepthAndMsaaTextures();
@@ -485,6 +487,8 @@ resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

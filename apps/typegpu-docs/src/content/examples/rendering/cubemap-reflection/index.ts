@@ -405,11 +405,11 @@ canvas.addEventListener('touchstart', (event) => {
   }
 });
 
-window.addEventListener('mouseup', () => {
+canvas.addEventListener('mouseup', () => {
   isDragging = false;
 });
 
-window.addEventListener('touchend', () => {
+canvas.addEventListener('touchend', () => {
   isDragging = false;
 });
 
@@ -443,7 +443,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  window.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true });
 }
 
 export const controls = {
