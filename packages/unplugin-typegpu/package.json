@@ -138,7 +138,7 @@
     "@types/bun": "^1.2.19",
     "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
-    "rollup": "~4.37.0",
+    "rollup": "~4.46.3",
     "tsup": "catalog:build",
     "typescript": "catalog:types"
   }
