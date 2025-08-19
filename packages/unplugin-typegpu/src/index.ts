@@ -4,7 +4,11 @@ import { type Node, walk } from 'estree-walker';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
-import { createUnplugin, type UnpluginInstance } from 'unplugin';
+import {
+  createUnplugin,
+  type UnpluginFactory,
+  type UnpluginInstance,
+} from 'unplugin';
 import {
   assignMetadata,
   containsKernelDirective,
@@ -21,7 +25,24 @@ import {
   wrapInAutoName,
 } from './common.ts';
 
-const typegpu: UnpluginInstance<Options, false> = createUnplugin(
+export const createUberPlugin = (
+  factory: UnpluginFactory<Options, false>,
+): UnpluginInstance<Options, false> => {
+  const standardPlugins = createUnplugin(factory);
+
+  return {
+    ...standardPlugins,
+    rolldownBrowser: ((options: Options) => {
+      // The unplugin API is based on the rollup/rolldonw APIs, so it
+      // should just be a compatible rolldown plugin.
+      return factory(options, {
+        framework: 'rolldown',
+      });
+    }),
+  };
+};
+
+const typegpu = createUberPlugin(
   (rawOptions) => {
     const options = defu(rawOptions, defaultOptions);
 
@@ -164,6 +185,7 @@ export default typegpu;
 export const vitePlugin = typegpu.vite;
 export const rollupPlugin = typegpu.rollup;
 export const rolldownPlugin = typegpu.rolldown;
+export const rolldownBrowserPlugin = typegpu.rolldownBrowser;
 export const webpackPlugin = typegpu.webpack;
 export const rspackPlugin = typegpu.rspack;
 export const esbuildPlugin = typegpu.esbuild;
