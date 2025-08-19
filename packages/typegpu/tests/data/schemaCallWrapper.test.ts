@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../../src/data/index.ts';
-import { schemaCallWrapper } from '../../src/data/utils.ts';
+import { schemaCallWrapper } from '../../src/data/schemaCallWrapper.ts';
 
 describe('schemaCallWrapper', () => {
-  it('throws when the schema is not callable', () => {
-    expect(() => schemaCallWrapper(d.Void))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Schema of type void is not callable or was called with invalid arguments.]',
-      );
+  it('returns identity when schema is not callable', () => {
+    expect(schemaCallWrapper(d.Void)).toBe(undefined);
   });
 
   it('calls schema without arguments', () => {

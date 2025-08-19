@@ -869,6 +869,7 @@ export interface Vec2f extends
     & ((v: AnyNumericVec2Instance) => v2f)
   > {
   readonly type: 'vec2f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
@@ -889,6 +890,7 @@ export interface Vec2h extends
     & ((v: AnyNumericVec2Instance) => v2h)
   > {
   readonly type: 'vec2h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
@@ -909,6 +911,7 @@ export interface Vec2i extends
     & ((v: AnyNumericVec2Instance) => v2i)
   > {
   readonly type: 'vec2i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
@@ -929,6 +932,7 @@ export interface Vec2u extends
     & ((v: AnyNumericVec2Instance) => v2u)
   > {
   readonly type: 'vec2u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
@@ -950,6 +954,7 @@ export interface Vec2b extends
     & ((v: v2b) => v2b)
   > {
   readonly type: 'vec2<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2b;
@@ -971,6 +976,7 @@ export interface Vec3f extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3f)
   > {
   readonly type: 'vec3f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
@@ -993,6 +999,7 @@ export interface Vec3h extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3h)
   > {
   readonly type: 'vec3h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
@@ -1015,6 +1022,7 @@ export interface Vec3i extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3i)
   > {
   readonly type: 'vec3i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
@@ -1037,6 +1045,7 @@ export interface Vec3u extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3u)
   > {
   readonly type: 'vec3u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
@@ -1060,6 +1069,7 @@ export interface Vec3b extends
     & ((x: boolean, v0: v2b) => v3b)
   > {
   readonly type: 'vec3<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3b;
@@ -1085,6 +1095,7 @@ export interface Vec4f extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4f)
   > {
   readonly type: 'vec4f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
@@ -1111,6 +1122,7 @@ export interface Vec4h extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4h)
   > {
   readonly type: 'vec4h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
@@ -1137,6 +1149,7 @@ export interface Vec4i extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4i)
   > {
   readonly type: 'vec4i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
@@ -1163,6 +1176,7 @@ export interface Vec4u extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4u)
   > {
   readonly type: 'vec4u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
@@ -1190,6 +1204,7 @@ export interface Vec4b extends
     & ((x: boolean, y: boolean, v0: v2b) => v4b)
   > {
   readonly type: 'vec4<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4b;
