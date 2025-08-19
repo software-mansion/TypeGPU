@@ -1,5 +1,5 @@
 import type { InputOptions, OutputOptions } from '@rolldown/browser';
-import { resolve } from 'pathe';
+import { join } from 'pathe';
 
 export interface BundleResult {
   output: Record<string, string | Uint8Array>;
@@ -12,7 +12,14 @@ export interface SourceFile {
   isEntry?: boolean;
 }
 
-export type FileMap = Record<string, string>;
+export type FileMap = Record<
+  string,
+  {
+    content: string;
+  } | {
+    reroute: string;
+  } | undefined
+>;
 
 export async function bundle(
   files: FileMap,
@@ -39,18 +46,32 @@ export async function bundle(
       {
         name: 'virtual-fs',
         resolveId(source, importer) {
-          if (source[0] === '/') {
-            // Absolute import
-            return source;
+          if (source.includes('typegpu') || importer?.includes('typegpu')) {
+            debug = true;
           }
-          if (source[0] === '.') {
-            // Relative import
-            return resolve(importer || '/', '..', source);
+
+          const id = source[0] === '.'
+            ? join(importer || '/', '..', source)
+            : source;
+
+          if (files[id] && 'reroute' in files[id]) {
+            // Rerouting
+            return files[id].reroute;
           }
+
+          return id;
         },
         load(id) {
-          if (id[0] !== '/') return;
-          return files[id];
+          if (!files[id]) {
+            return;
+          }
+
+          if ('reroute' in files[id]) {
+            // Reroutes are supposed to be resolved in `resolveId`
+            throw new Error(`Unresolved reroute for ${id}`);
+          }
+
+          return files[id].content;
         },
       },
       ...(Array.isArray(config?.plugins)
