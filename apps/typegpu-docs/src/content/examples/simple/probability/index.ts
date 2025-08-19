@@ -55,7 +55,6 @@ export const controls = {
     options: c.executionModes,
     onSelectChange: async (value: ExecutionMode) => {
       if (currentExecutionMode === value) {
-        console.log(1);
         return;
       }
 
@@ -69,7 +68,6 @@ export const controls = {
     options: c.distributions,
     onSelectChange: async (value: Distribution) => {
       if (currentDistribution === value) {
-        console.log(2);
         return;
       }
 
@@ -88,7 +86,6 @@ export const controls = {
     options: c.numSamplesOptions,
     onSelectChange: async (value: number) => {
       if (value === executor.count) {
-        console.log(3);
         return;
       }
 
