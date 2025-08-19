@@ -1,5 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
+import type { MagicStringAST } from 'magic-string-ast';
 import type { FilterPattern } from 'unplugin';
 
 export type Context = {
@@ -241,6 +242,69 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
   ) {
     namingCallback(node.value as ExpressionFor<T>, node.key.name);
   }
+}
+
+export type FunctionNode =
+  | acorn.FunctionDeclaration
+  | acorn.AnonymousFunctionDeclaration
+  | acorn.FunctionExpression
+  | acorn.ArrowFunctionExpression;
+
+export function containsKernelDirective(node: FunctionNode): boolean {
+  if (node.body.type === 'BlockStatement') {
+    for (const statement of node.body.body) {
+      if (
+        statement.type === 'ExpressionStatement' &&
+        statement.directive === kernelDirective
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function removeKernelDirective(node: FunctionNode) {
+  const cloned = structuredClone(node);
+
+  if (cloned.body.type === 'BlockStatement') {
+    cloned.body.body = cloned.body.body.filter(
+      (statement) =>
+        !(
+          statement.type === 'ExpressionStatement' &&
+          statement.directive === kernelDirective
+        ),
+    );
+  }
+
+  return cloned;
+}
+
+export function assignMetadata(
+  magicString: MagicStringAST,
+  node: acorn.AnyNode,
+  metadata: string,
+) {
+  magicString.prependLeft(
+    node.start,
+    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
+  ).appendRight(
+    node.end,
+    `), ${metadata}) && $.f)({}))`,
+  );
+}
+
+export function wrapInAutoName(
+  magicString: MagicStringAST,
+  node: acorn.Node,
+  name: string,
+) {
+  magicString
+    .prependLeft(
+      node.start,
+      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
+    )
+    .appendRight(node.end, `, "${name}"))`);
 }
 
 export const kernelDirective = 'kernel';
