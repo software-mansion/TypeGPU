@@ -353,7 +353,7 @@ window.addEventListener('mouseup', mouseUpEventListener);
 const touchEndEventListener = () => {
   uiState.lastPos = null;
 };
-canvas.addEventListener('touchend', touchEndEventListener);
+window.addEventListener('touchend', touchEndEventListener);
 
 function centerImage(data: number[]) {
   const mass = data.reduce((acc, value) => acc + value, 0);
