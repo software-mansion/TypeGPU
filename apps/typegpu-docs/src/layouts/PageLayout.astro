@@ -7,7 +7,7 @@ const { title, theme = 'light' } = Astro.props;
 
 <html data-theme={theme}>
   <head>
-    <title>{title ?? "TypeGPU"}</title>
+    <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/TypeGPU/favicon.svg" />
@@ -29,7 +29,7 @@ const { title, theme = 'light' } = Astro.props;
       @reference "../tailwind.css";
       @layer base {
         h1 {
-        @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
+          @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
         }
 
         h2 {
@@ -53,20 +53,20 @@ const { title, theme = 'light' } = Astro.props;
         margin: 0;
       }
 
-      [data-theme="dark"] body {
+      [data-theme='dark'] body {
         background-color: #171724;
         color: white;
       }
 
-      [data-theme="light"] body {
+      [data-theme='light'] body {
         background-color: white;
       }
 
-      input[type="color"]::-webkit-color-swatch {
+      input[type='color']::-webkit-color-swatch {
         border: none;
       }
 
-      input[type="color"]::-moz-color-swatch {
+      input[type='color']::-moz-color-swatch {
         border: none;
       }
     </style>
