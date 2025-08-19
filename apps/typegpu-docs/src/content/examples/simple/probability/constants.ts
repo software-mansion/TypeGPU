@@ -1,8 +1,10 @@
 import { Distribution, ExecutionMode } from './types.ts';
 
-export const initialCameraPosition = [0, 0, 0.4];
+export const cameraPositionGeo = [0, 0, 0.5];
+export const cameraPositionHist = [0, 0, 0.2];
 export const initialCameraAngle = 15;
 export const initialNumSamples = 5000;
+export const numSamplesOptions = [100, 500, 1000, 5000, 10000, 50000];
 export const initialDistribution: Distribution = Distribution.SAMPLE;
 export const distributions: Distribution[] = Object.values(Distribution);
 export const initialExecutionMode: ExecutionMode = ExecutionMode.SINGLE;

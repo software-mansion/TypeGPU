@@ -88,7 +88,7 @@ export class Plotter {
             },
           );
 
-          const optimalBinCount = Math.ceil(Math.log2(count)) + 1;
+          const optimalBinCount = 2 * Math.ceil(Math.log2(count)) + 1; // always odd
           const binXWidth = (maxSample - minSample) / optimalBinCount;
 
           const data: HistogramData = {
@@ -199,9 +199,9 @@ export class Plotter {
     }
   }
 
-  resetView() {
+  resetView(cameraPos: number[]) {
     this.resetRotation();
-    this.resetCamera();
+    this.resetCamera(cameraPos);
   }
 
   resetRotation() {
@@ -213,8 +213,8 @@ export class Plotter {
     );
   }
 
-  resetCamera() {
-    this.#core.camera.setPosition(c.initialCameraPosition, true);
+  resetCamera(cameraPos: number[]) {
+    this.#core.camera.setPosition(cameraPos, true);
   }
 
   #plotGeometric(data: GeometricData, core: MorphCharts.Core) {

@@ -4,7 +4,7 @@ import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';
 import { type Distribution, ExecutionMode } from './types.ts';
 import * as c from './constants.ts';
-import { getPRNG } from './helpers.ts';
+import { getCameraPosition, getPRNG } from './helpers.ts';
 
 const root = await tgpu.init();
 
@@ -14,10 +14,15 @@ const plotter = new Plotter();
 let currentDistribution = c.initialDistribution;
 let currentExecutionMode = c.initialExecutionMode;
 
-const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
+const replot = async (
+  currentDistribution: Distribution,
+  execMod: ExecutionMode,
+  animate = false,
+  forceReExec = false,
+) => {
   let samples = undefined;
   let verdict = undefined;
-  const prng = getPRNG(distribution);
+  const prng = getPRNG(currentDistribution);
 
   switch (execMod) {
     case ExecutionMode.SINGLE: {
@@ -30,44 +35,68 @@ const replot = async (distribution: Distribution, execMod: ExecutionMode) => {
     }
   }
 
-  samples = await verdict(prng.prng);
+  samples = await verdict(prng.prng, forceReExec);
   plotter.plot(samples, prng);
 };
+
+await replot(currentDistribution, currentExecutionMode);
+plotter.resetView(getCameraPosition(currentDistribution));
 
 // #region Example controls & Cleanup
 
 export const controls = {
   'Reset Camera': {
     onButtonClick: () => {
-      plotter.resetView();
+      plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
   'Execution Mode': {
     initial: c.initialExecutionMode,
     options: c.executionModes,
     onSelectChange: async (value: ExecutionMode) => {
+      if (currentExecutionMode === value) {
+        console.log(1);
+        return;
+      }
+
       currentExecutionMode = value;
-      await replot(currentDistribution, currentExecutionMode);
-      plotter.resetView();
+      await replot(currentDistribution, currentExecutionMode, false, true);
+      plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
   'Distribution': {
     initial: c.initialDistribution,
     options: c.distributions,
     onSelectChange: async (value: Distribution) => {
+      if (currentDistribution === value) {
+        console.log(2);
+        return;
+      }
+
       currentDistribution = value;
-      await replot(currentDistribution, currentExecutionMode);
-      plotter.resetView();
+      await replot(
+        currentDistribution,
+        currentExecutionMode,
+        true,
+        true,
+      );
+      plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
   'Number of samples': {
     initial: c.initialNumSamples,
-    min: c.minNumSamples,
-    max: c.maxNumSamples,
-    step: c.step,
-    onSliderChange: async (value: number) => {
+    options: c.numSamplesOptions,
+    onSelectChange: async (value: number) => {
+      if (value === executor.count) {
+        console.log(3);
+        return;
+      }
+
       executor.count = value;
-      await replot(currentDistribution, currentExecutionMode);
+      await replot(
+        currentDistribution,
+        currentExecutionMode,
+      );
     },
   },
 };

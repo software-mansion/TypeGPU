@@ -3,6 +3,7 @@ import { randf } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 
 import { Distribution, PlotType, type PRNG } from './types.ts';
+import * as c from './constants.ts';
 
 const normal = d.vec3f(1.41, 1.41, 0);
 const z2D = 0.5;
@@ -72,4 +73,26 @@ const distributionPRNGs = {
 
 export function getPRNG(distribution: Distribution): PRNG {
   return distributionPRNGs[distribution];
+}
+
+const distributionCameras = {
+  [Distribution.IN_UNIT_SPHERE]: c.cameraPositionGeo,
+  [Distribution.ON_UNIT_SPHERE]: c.cameraPositionGeo,
+  [Distribution.IN_UNIT_CIRCLE]: c.cameraPositionGeo,
+  [Distribution.ON_UNIT_CIRCLE]: c.cameraPositionGeo,
+  [Distribution.IN_UNIT_CUBE]: c.cameraPositionGeo,
+  [Distribution.ON_UNIT_CUBE]: c.cameraPositionGeo,
+  [Distribution.IN_HEMISPHERE]: c.cameraPositionGeo,
+  [Distribution.ON_HEMISPHERE]: c.cameraPositionGeo,
+
+  [Distribution.BERNOULLI]: c.cameraPositionHist,
+
+  [Distribution.SAMPLE]: c.cameraPositionHist,
+  [Distribution.EXPONENTIAL]: c.cameraPositionHist,
+  [Distribution.NORMAL]: c.cameraPositionHist,
+  [Distribution.CAUCHY]: c.cameraPositionHist,
+} as const;
+
+export function getCameraPosition(distribution: Distribution): number[] {
+  return distributionCameras[distribution];
 }

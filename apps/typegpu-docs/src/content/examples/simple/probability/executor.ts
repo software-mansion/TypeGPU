@@ -12,30 +12,34 @@ import { randf } from '@typegpu/noise';
 
 export class Executor {
   readonly #root: TgpuRoot;
-  // max `count` 65000 for convenience
+  // don't exceed max workgroup grid X dimension size
   #count: number;
-  #sampleBuffer:
+  #maxCount: number;
+  #samplesBuffer:
     & TgpuBuffer<d.WgslArray<d.Vec3f>>
     & StorageFlag;
+  #samples: d.v3f[];
   readonly #dataSingleWorkerFunc: TgpuComputeFn;
   readonly #dataMoreWorkersFunc: TgpuComputeFn;
   readonly #distributionSlot: TgpuSlot<TgpuFn<() => d.Vec3f>>;
-  // inaccessible type
   readonly #sampleBufferSlot;
 
   constructor(root: TgpuRoot, count: number) {
-    if (count === 0) {
-      throw new Error('Count cannot be 0. Cannot create buffer of size 0');
-    }
+    console.assert(
+      count > 0,
+      'Count cannot be 0. Cannot create buffer of size 0',
+    );
     this.#root = root;
     this.#count = count;
-    this.#sampleBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, count))
+    this.#maxCount = count;
+    this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, count))
       .$usage(
         'storage',
       );
+    this.#samples = [];
 
     const sampleBufferSlotTempAlias = tgpu.slot(
-      this.#sampleBuffer.as('mutable'),
+      this.#samplesBuffer.as('mutable'),
     );
     const distributionSlotTempAlias = tgpu.slot<TgpuFn<() => d.Vec3f>>();
 
@@ -63,37 +67,61 @@ export class Executor {
   set count(value: number) {
     this.#count = value;
 
-    this.#sampleBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value))
+    if (value <= this.#maxCount) {
+      return;
+    }
+
+    this.#maxCount = value;
+    this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value))
       .$usage(
         'storage',
       );
+    this.#samples = [];
+  }
+
+  get count() {
+    return this.#count;
   }
 
   async executeSingleWorker(
     distribution: TgpuFn<() => d.Vec3f>,
+    forceReExec = false,
   ): Promise<d.v3f[]> {
+    if (this.#samples.length !== 0 && !forceReExec) {
+      return this.#samples.slice(0, this.#count);
+    }
+
+    console.log('running pipeline');
+
     const pipeline = this.#root['~unstable']
-      .with(this.#sampleBufferSlot, this.#sampleBuffer.as('mutable'))
+      .with(this.#sampleBufferSlot, this.#samplesBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)
       .withCompute(this.#dataSingleWorkerFunc as TgpuComputeFn)
       .createPipeline();
 
     pipeline.dispatchWorkgroups(1);
 
-    return await this.#sampleBuffer.read();
+    this.#samples = await this.#samplesBuffer.read();
+    return this.#samples;
   }
 
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
+    forceReExec = false,
   ): Promise<d.v3f[]> {
+    if (this.#samples.length !== 0 && !forceReExec) {
+      return this.#samples.slice(0, this.#count);
+    }
+
     const pipeline = this.#root['~unstable']
-      .with(this.#sampleBufferSlot, this.#sampleBuffer.as('mutable'))
+      .with(this.#sampleBufferSlot, this.#samplesBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)
       .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
       .createPipeline();
 
     pipeline.dispatchWorkgroups(this.#count);
 
-    return await this.#sampleBuffer.read();
+    this.#samples = await this.#samplesBuffer.read();
+    return this.#samples;
   }
 }
