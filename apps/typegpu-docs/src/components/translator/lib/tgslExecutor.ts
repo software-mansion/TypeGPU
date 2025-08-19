@@ -13,11 +13,11 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   const result = await bundle(
     {
       ...pipe(SANDBOX_MODULES, mapValues((val) => val.import)),
-      '/shader.js': { content: tgslCode },
+      '/shader.ts': { content: tgslCode },
       '/index.ts': {
         content: `
           import tgpu from 'typegpu';
-          import * as exports from './shader.js';
+          import * as exports from './shader.ts';
 
           const shaderCode = tgpu.resolve({ externals: exports });
           export default shaderCode;
@@ -31,17 +31,16 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
     },
   );
 
-  const output = result.output['index.js'];
+  const translatedCode = result.output['index.js'];
 
   const importMap = { imports: moduleImports };
-
   const importMapScript = document.createElement('script');
   importMapScript.type = 'importmap';
   importMapScript.textContent = JSON.stringify(importMap);
   document.head.appendChild(importMapScript);
 
   try {
-    const userBlob = new Blob([output], { type: 'text/javascript' });
+    const userBlob = new Blob([translatedCode], { type: 'text/javascript' });
     const userModuleUrl = URL.createObjectURL(userBlob);
 
     const module = await import(/* @vite-ignore */ userModuleUrl);
