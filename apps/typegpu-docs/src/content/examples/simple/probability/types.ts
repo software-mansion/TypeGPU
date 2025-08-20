@@ -64,15 +64,15 @@ export const Distribution = {
 
 export type Distribution = typeof Distribution[keyof typeof Distribution];
 
-export type PRNG =
-  & { plotType: PlotType }
-  & (GeometricPRNG | ContinuousPRNG);
+export type PRNG = GeometricPRNG | SimplePRNG;
 
 export interface GeometricPRNG {
+  plotType: PlotType;
   prng: TgpuFn<() => d.Vec3f>;
   origin: d.v3f;
 }
 
-export interface ContinuousPRNG {
+export interface SimplePRNG {
+  plotType: PlotType;
   prng: TgpuFn<() => d.Vec3f>;
 }

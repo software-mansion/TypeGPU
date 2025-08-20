@@ -29,6 +29,7 @@ export class Executor {
       count > 0,
       'Count cannot be 0. Cannot create buffer of size 0',
     );
+
     this.#root = root;
     this.#count = count;
     this.#maxCount = count;

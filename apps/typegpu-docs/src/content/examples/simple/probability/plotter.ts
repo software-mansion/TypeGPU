@@ -56,190 +56,56 @@ export class Plotter {
     switch (prng.plotType) {
       case PlotType.GEOMETRIC:
         {
-          const data: GeometricData = {
-            count: this.#count,
-            ids: new Uint32Array(this.#count),
-            positionsX: new Float64Array(this.#count),
-            positionsY: new Float64Array(this.#count),
-            positionsZ: new Float64Array(this.#count),
-            sizes: new Float64Array(this.#count),
-            dists: new Float64Array(this.#count),
-          };
+          const data = this.#prepareGeometricData(
+            samples,
+            prng as GeometricPRNG,
+          );
 
-          const origin = (prng as GeometricPRNG).origin;
-
-          for (let i = 0; i < this.#count; i++) {
-            data.ids[i] = i;
-            data.positionsX[i] = samples[i].x;
-            data.positionsY[i] = samples[i].y;
-            data.positionsZ[i] = samples[i].z;
-            data.sizes[i] = defaultSize;
-            data.dists[i] = Math.sqrt(
-              (data.positionsX[i] - origin.x) ** 2 +
-                (data.positionsY[i] - origin.y) ** 2 +
-                (data.positionsZ[i] - origin.z) ** 2,
-            );
-          }
-
-          if (animate && !needNewBuffer) {
-            this.makeRoomForNewPlot();
-          }
-
-          this.#plotGeometric(data, this.#core, needNewBuffer);
-
-          if (animate && !needNewBuffer) {
-            await this.distributionsTransition();
-          }
+          await this.#handlePlotting(
+            () => this.#plotGeometric(data, this.#core, needNewBuffer),
+            animate,
+            needNewBuffer,
+          );
         }
         break;
       case PlotType.CONTINUOUS:
         {
-          // if we want to animate the transition between the old and new plots,
-          // we need to have the same number of samples,
-          // that's why I clamp them instead of filtering
-          const samplesFiltered = samples.map((sample) => ({
-            ...sample,
-            x: sample.x < defaultMinValue
-              ? defaultMinValue
-              : sample.x > defaultMaxValue
-              ? defaultMaxValue
-              : sample.x,
-          }));
+          const data = this.#prepareContinuousData(samples);
 
-          const { minSample, maxSample } = samplesFiltered.reduce(
-            (acc, sample) => ({
-              minSample: Math.min(acc.minSample, sample.x),
-              maxSample: Math.max(acc.maxSample, sample.x),
-            }),
-            {
-              minSample: Number.POSITIVE_INFINITY,
-              maxSample: Number.NEGATIVE_INFINITY,
-            },
+          await this.#handlePlotting(
+            () => this.#plotHistogram(data, this.#core, false, needNewBuffer),
+            animate,
+            needNewBuffer,
           );
-
-          const optimalBinCount = 2 * Math.ceil(Math.log2(this.#count)) + 1; // always odd
-          const binXWidth = (maxSample - minSample) / optimalBinCount;
-
-          const data: HistogramData = {
-            count: this.#count,
-            ids: new Uint32Array(this.#count),
-            binIdsX: new Uint32Array(this.#count),
-            binIdsZ: new Uint32Array(this.#count),
-            values: new Float64Array(this.#count),
-            binsX: optimalBinCount,
-            binsZ: 1,
-            binsWidth: binXWidth,
-            sizeX: 1,
-            sizeZ: 1,
-            minX: minSample,
-            maxX: maxSample,
-          };
-
-          const binSizes = new Uint32Array(optimalBinCount);
-          binSizes.fill(0);
-
-          for (let i = 0; i < this.#count; i++) {
-            data.ids[i] = i;
-            data.binIdsZ[i] = 0;
-            data.binIdsX[i] = Math.min(
-              Math.floor((samplesFiltered[i].x - minSample) / binXWidth),
-              optimalBinCount - 1,
-            );
-            binSizes[data.binIdsX[i]]++;
-          }
-
-          const maxBinCount = binSizes.reduce(
-            (acc, size) => Math.max(acc, size),
-            0,
-          );
-          for (let i = 0; i < this.#count; i++) {
-            data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
-          }
-
-          const guessedBinXZSize = Math.floor(
-            (maxBinCount / heightToBase) ** (1 / 3),
-          );
-          data.sizeX = guessedBinXZSize;
-          data.sizeZ = guessedBinXZSize;
-
-          if (animate && !needNewBuffer) {
-            this.makeRoomForNewPlot();
-          }
-
-          this.#plotHistogram(data, this.#core, false, needNewBuffer);
-
-          if (animate && !needNewBuffer) {
-            await this.distributionsTransition();
-          }
         }
         break;
       case PlotType.DISCRETE:
         {
-          const samplesRounded = samples.map((sample) => Math.round(sample.x));
+          const data = this.#prepareDiscreteData(samples);
 
-          const uniqueValues = samplesRounded.reduce((map, value) => {
-            map.set(value, (map.get(value) || 0) + 1);
-            return map;
-          }, new Map());
-
-          const { minValue, maxValue } = [...uniqueValues.keys()].reduce(
-            (acc, value) => ({
-              minValue: Math.min(acc.minValue, value),
-              maxValue: Math.max(acc.maxValue, value),
-            }),
-            {
-              minValue: Number.POSITIVE_INFINITY,
-              maxValue: Number.NEGATIVE_INFINITY,
-            },
+          await this.#handlePlotting(
+            () => this.#plotHistogram(data, this.#core, true, needNewBuffer),
+            animate,
+            needNewBuffer,
           );
-
-          const uniqueRange = maxValue - minValue + 1;
-
-          const data: HistogramData = {
-            count: this.#count,
-            ids: new Uint32Array(this.#count),
-            binIdsX: new Uint32Array(this.#count),
-            binIdsZ: new Uint32Array(this.#count),
-            values: new Float64Array(this.#count),
-            binsX: uniqueRange,
-            binsZ: 1,
-            binsWidth: 1,
-            sizeX: 1,
-            sizeZ: 1,
-            minX: minValue,
-            maxX: maxValue,
-          };
-
-          const dominantFreq = uniqueValues.values().reduce(
-            (acc, freq) => Math.max(acc, freq),
-            0,
-          );
-
-          for (let i = 0; i < this.#count; i++) {
-            data.ids[i] = i;
-            data.binIdsZ[i] = 0;
-            data.binIdsX[i] = samplesRounded[i] - minValue;
-            data.values[i] = (uniqueValues.get(samplesRounded[i]) as number) /
-              dominantFreq;
-          }
-
-          const guessedBinXZSize = Math.floor(
-            (dominantFreq / heightToBase) ** (1 / 3),
-          );
-          data.sizeX = guessedBinXZSize;
-          data.sizeZ = guessedBinXZSize;
-
-          if (animate && !needNewBuffer) {
-            this.makeRoomForNewPlot();
-          }
-
-          this.#plotHistogram(data, this.#core, true, needNewBuffer);
-
-          if (animate && !needNewBuffer) {
-            await this.distributionsTransition();
-          }
         }
         break;
+    }
+  }
+
+  async #handlePlotting(
+    subplotter: () => void,
+    animate: boolean,
+    needNewBuffer: boolean,
+  ) {
+    if (animate && !needNewBuffer) {
+      this.#makeRoomForNewPlot();
+    }
+
+    subplotter();
+
+    if (animate && !needNewBuffer) {
+      await this.#distributionsTransition();
     }
   }
 
@@ -261,13 +127,13 @@ export class Plotter {
     this.#core.camera.setPosition(cameraPos, true);
   }
 
-  makeRoomForNewPlot() {
+  #makeRoomForNewPlot() {
     (this.#transitionBuffer as MorphCharts.ITransitionBufferVisual).swap();
     this.#core.renderer.transitionTime = 0; // it is number from [0, 1] indicating the state of the animation - 0 means previous
     this.#core.renderer.axesVisibility = MorphCharts.AxesVisibility.none;
   }
 
-  distributionsTransition(): Promise<void> {
+  #distributionsTransition(): Promise<void> {
     const start = performance.now();
 
     return new Promise((resolve) => {
@@ -293,6 +159,35 @@ export class Plotter {
       };
       requestAnimationFrame(animateTransition);
     });
+  }
+
+  #prepareGeometricData(samples: d.v3f[], prng: GeometricPRNG): GeometricData {
+    const data: GeometricData = {
+      count: this.#count,
+      ids: new Uint32Array(this.#count),
+      positionsX: new Float64Array(this.#count),
+      positionsY: new Float64Array(this.#count),
+      positionsZ: new Float64Array(this.#count),
+      sizes: new Float64Array(this.#count),
+      dists: new Float64Array(this.#count),
+    };
+
+    const origin = prng.origin;
+
+    for (let i = 0; i < this.#count; i++) {
+      data.ids[i] = i;
+      data.positionsX[i] = samples[i].x;
+      data.positionsY[i] = samples[i].y;
+      data.positionsZ[i] = samples[i].z;
+      data.sizes[i] = defaultSize;
+      data.dists[i] = Math.sqrt(
+        (data.positionsX[i] - origin.x) ** 2 +
+          (data.positionsY[i] - origin.y) ** 2 +
+          (data.positionsZ[i] - origin.z) ** 2,
+      );
+    }
+
+    return data;
   }
 
   #plotGeometric(
@@ -339,6 +234,136 @@ export class Plotter {
     core.renderer.currentAxes = [
       core.renderer.createCartesian3dAxesVisual(axes),
     ];
+  }
+
+  #prepareContinuousData(samples: d.v3f[]): HistogramData {
+    // if we want to animate the transition between the old and new plots,
+    // we need to have the same number of samples,
+    // that's why I clamp them instead of filtering
+    const samplesFiltered = samples.map((sample) => ({
+      ...sample,
+      x: sample.x < defaultMinValue
+        ? defaultMinValue
+        : sample.x > defaultMaxValue
+        ? defaultMaxValue
+        : sample.x,
+    }));
+
+    const { minSample, maxSample } = samplesFiltered.reduce(
+      (acc, sample) => ({
+        minSample: Math.min(acc.minSample, sample.x),
+        maxSample: Math.max(acc.maxSample, sample.x),
+      }),
+      {
+        minSample: Number.POSITIVE_INFINITY,
+        maxSample: Number.NEGATIVE_INFINITY,
+      },
+    );
+
+    const optimalBinCount = 2 * Math.ceil(Math.log2(this.#count)) + 1; // always odd
+    const binXWidth = (maxSample - minSample) / optimalBinCount;
+
+    const data: HistogramData = {
+      count: this.#count,
+      ids: new Uint32Array(this.#count),
+      binIdsX: new Uint32Array(this.#count),
+      binIdsZ: new Uint32Array(this.#count),
+      values: new Float64Array(this.#count),
+      binsX: optimalBinCount,
+      binsZ: 1,
+      binsWidth: binXWidth,
+      sizeX: 1,
+      sizeZ: 1,
+      minX: minSample,
+      maxX: maxSample,
+    };
+
+    const binSizes = new Uint32Array(optimalBinCount);
+    binSizes.fill(0);
+
+    for (let i = 0; i < this.#count; i++) {
+      data.ids[i] = i;
+      data.binIdsZ[i] = 0;
+      data.binIdsX[i] = Math.min(
+        Math.floor((samplesFiltered[i].x - minSample) / binXWidth),
+        optimalBinCount - 1,
+      );
+      binSizes[data.binIdsX[i]]++;
+    }
+
+    const maxBinCount = binSizes.reduce(
+      (acc, size) => Math.max(acc, size),
+      0,
+    );
+    for (let i = 0; i < this.#count; i++) {
+      data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
+    }
+
+    const guessedBinXZSize = Math.floor(
+      (maxBinCount / heightToBase) ** (1 / 3),
+    );
+    data.sizeX = guessedBinXZSize;
+    data.sizeZ = guessedBinXZSize;
+
+    return data;
+  }
+
+  #prepareDiscreteData(samples: d.v3f[]): HistogramData {
+    const samplesRounded = samples.map((sample) => Math.round(sample.x));
+
+    const uniqueValues = samplesRounded.reduce((map, value) => {
+      map.set(value, (map.get(value) || 0) + 1);
+      return map;
+    }, new Map());
+
+    const { minValue, maxValue } = [...uniqueValues.keys()].reduce(
+      (acc, value) => ({
+        minValue: Math.min(acc.minValue, value),
+        maxValue: Math.max(acc.maxValue, value),
+      }),
+      {
+        minValue: Number.POSITIVE_INFINITY,
+        maxValue: Number.NEGATIVE_INFINITY,
+      },
+    );
+
+    const uniqueRange = maxValue - minValue + 1;
+
+    const data: HistogramData = {
+      count: this.#count,
+      ids: new Uint32Array(this.#count),
+      binIdsX: new Uint32Array(this.#count),
+      binIdsZ: new Uint32Array(this.#count),
+      values: new Float64Array(this.#count),
+      binsX: uniqueRange,
+      binsZ: 1,
+      binsWidth: 1,
+      sizeX: 1,
+      sizeZ: 1,
+      minX: minValue,
+      maxX: maxValue,
+    };
+
+    const dominantFreq = uniqueValues.values().reduce(
+      (acc, freq) => Math.max(acc, freq),
+      0,
+    );
+
+    for (let i = 0; i < this.#count; i++) {
+      data.ids[i] = i;
+      data.binIdsZ[i] = 0;
+      data.binIdsX[i] = samplesRounded[i] - minValue;
+      data.values[i] = (uniqueValues.get(samplesRounded[i]) as number) /
+        dominantFreq;
+    }
+
+    const guessedBinXZSize = Math.floor(
+      (dominantFreq / heightToBase) ** (1 / 3),
+    );
+    data.sizeX = guessedBinXZSize;
+    data.sizeZ = guessedBinXZSize;
+
+    return data;
   }
 
   #plotHistogram(
