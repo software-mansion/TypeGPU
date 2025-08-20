@@ -330,10 +330,10 @@ export function generateExpression(
   if (expression[0] === NODE.indexAccess) {
     // Index Access
     const [_, targetNode, propertyNode] = expression;
+    const target = generateExpression(ctx, targetNode);
     const property = generateExpression(ctx, propertyNode);
     const propertyStr = ctx.resolve(property.value, property.dataType);
 
-    const target = generateExpression(ctx, targetNode);
     if (target.value instanceof MatrixColumnsAccess) {
       return snip(
         stitch`${target.value.matrix}[${propertyStr}]`,
