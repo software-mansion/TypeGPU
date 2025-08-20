@@ -431,7 +431,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        // Delegate function body generation to the configured shader generator.
         body: this._shaderGenerator.functionDefinition(
           this as unknown as GenerationCtx,
           options.body,
