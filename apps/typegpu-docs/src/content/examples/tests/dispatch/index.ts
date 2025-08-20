@@ -57,10 +57,21 @@ async function test3d() {
   ]);
 }
 
+async function testWorkgroupSize() {
+  const mutable = root.createMutable(d.arrayOf(d.u32, 12));
+  dispatch(root, [5], (x) => {
+    'kernel';
+    mutable.$[x] = x;
+  }, [3]);
+  const filled = await mutable.read();
+  assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
+}
+
 async function runTests() {
   await test1d();
   await test2d();
   await test3d();
+  await testWorkgroupSize();
 }
 
 // #region Example controls and cleanup
