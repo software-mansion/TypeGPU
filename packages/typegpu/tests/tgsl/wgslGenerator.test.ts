@@ -15,6 +15,7 @@ import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { generateFunction } from '../../src/tgsl/wgslGenerator.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -31,7 +32,7 @@ describe('wgslGenerator', () => {
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
-    });
+    }, { functionDefinition: generateFunction });
     ctx.pushMode(new CodegenState());
   });
 

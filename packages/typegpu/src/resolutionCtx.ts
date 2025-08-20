@@ -38,8 +38,7 @@ import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import { generateFunction } from './tgsl/wgslGenerator.ts';
-import type { GenerationCtx } from './tgsl/index.ts';
+import { generateFunction } from './tgsl/index.ts';
 import type {
   ExecMode,
   ExecState,
@@ -367,15 +366,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
 
-  private readonly _shaderGenerator: ShaderGenerator;
-
   constructor(
     opts: ResolutionCtxImplOptions,
-    unstableShaderGenerator?: ShaderGenerator,
+    private readonly _shaderGenerator: ShaderGenerator,
   ) {
     this.names = opts.names;
-    this._shaderGenerator = unstableShaderGenerator ??
-      { functionDefinition: generateFunction };
   }
 
   get pre(): string {
@@ -782,7 +777,10 @@ export function resolve(
   unstable_ShaderGenerator?: ShaderGenerator,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options, unstable_ShaderGenerator); // w tym unstable_ShaderGenerator
+  const ctx = new ResolutionCtxImpl(
+    options,
+    unstable_ShaderGenerator ?? { functionDefinition: generateFunction },
+  );
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,

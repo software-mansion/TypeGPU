@@ -5,6 +5,7 @@ import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
+import { generateFunction } from '../../src/tgsl/index.ts';
 
 describe('wgsl generator type inference', () => {
   let ctx: ResolutionCtxImpl;
@@ -12,7 +13,7 @@ describe('wgsl generator type inference', () => {
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
-    });
+    }, { functionDefinition: generateFunction });
     ctx.pushMode(new CodegenState());
   });
 
@@ -323,7 +324,7 @@ describe('wgsl generator js type inference', () => {
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
-    });
+    }, { functionDefinition: generateFunction });
     ctx.pushMode(new CodegenState());
   });
 
