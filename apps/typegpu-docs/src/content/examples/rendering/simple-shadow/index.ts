@@ -66,9 +66,7 @@ const shadowSampleLayout = tgpu.bindGroupLayout({
   shadowMap: { texture: 'depth' },
 });
 
-// Light and camera setup
-let currentLightDirection = d.vec3f(0, -1, -1);
-
+// Utility functions
 function makeLightViewProj(
   lightDir: d.v3f,
   center: d.v3f = d.vec3f(),
@@ -80,40 +78,6 @@ function makeLightViewProj(
   const proj = m.mat4.ortho(-2, 2, -2, 2, 0.1, 30, d.mat4x4f());
   return m.mat4.mul(proj, view, d.mat4x4f());
 }
-
-const camera = Camera({
-  projection: m.mat4.perspective(
-    Math.PI / 4,
-    canvas.width / canvas.height,
-    0.1,
-    100,
-    d.mat4x4f(),
-  ),
-  view: m.mat4.lookAt([0, 2, 5], [0, 0, 0], [0, 1, 0], d.mat4x4f()),
-  position: d.vec3f(0, 2, 5),
-});
-
-const cameraUniform = root.createUniform(Camera, camera);
-const paramsUniform = root.createUniform(VisParams, {
-  shadowOnly: 0,
-  lightDepth: 0,
-});
-
-const light = root.createUniform(DirectionalLight, {
-  direction: d.vec3f(
-    currentLightDirection[0],
-    currentLightDirection[1],
-    currentLightDirection[2],
-  ),
-  color: d.vec3f(1, 1, 1),
-});
-
-const lightViewProj = makeLightViewProj(currentLightDirection);
-const lightSpaceUniform = root.createUniform(LightSpace, {
-  viewProj: lightViewProj,
-});
-
-let currentShadowMapSize = 2048;
 
 function createCanvasTextures() {
   return {
@@ -143,68 +107,32 @@ function createShadowTextures(size: number) {
   return { shadowMap, shadowBindGroup };
 }
 
-// Textures and samplers
-let canvasTextures = createCanvasTextures();
-let shadowTextures = createShadowTextures(currentShadowMapSize);
-
-const comparisonSampler = tgpu['~unstable'].comparisonSampler({
-  compare: 'less',
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
-
-const resizeObserver = new ResizeObserver(() => {
-  canvasTextures = createCanvasTextures();
-
-  const newProjection = m.mat4.perspective(
-    Math.PI / 4,
-    canvas.width / canvas.height,
-    0.1,
-    100,
-    d.mat4x4f(),
-  );
-  cameraUniform.writePartial({
-    projection: newProjection,
-  });
-});
-resizeObserver.observe(canvas);
-
-// Materials
-const planeMaterial = Material({
-  ambient: d.vec3f(0.1, 0.1, 0.1),
-  diffuse: d.vec3f(0.8, 0.7, 0.7),
-  specular: d.vec3f(1.0, 1.0, 1.0),
-  shininess: 32.0,
-});
-
-const floorMaterial = Material({
-  ambient: d.vec3f(0.1, 0.1, 0.1),
-  diffuse: d.vec3f(0.5, 0.4, 0.7),
-  specular: d.vec3f(0.3, 0.8, 0.1),
-  shininess: 16.0,
-});
-
 // Geometry creation function
-function createPlane(
+function createPlane({
   material = Material({
     ambient: d.vec3f(0.1, 0.1, 0.1),
     diffuse: d.vec3f(0.7, 0.7, 0.7),
     specular: d.vec3f(1.0, 1.0, 1.0),
     shininess: 32.0,
   }),
-  width = 1,
-  height = 1,
+  size = d.vec2f(1),
   position = d.vec3f(0, 0, 0),
   rotation = d.vec3f(0, 0, 0),
-): {
+}: {
+  material?: d.Infer<typeof Material>;
+  size?: [number, number];
+  position?: d.v3f;
+  rotation?: d.v3f;
+} = {}): {
   vertexBuffer: TgpuBuffer<d.WgslArray<typeof VertexInfo>> & VertexFlag;
   indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
   instanceInfo: TgpuBindGroup<{
     instanceInfo: { uniform: typeof InstanceInfo };
   }>;
+  indexCount: 6;
 } {
-  const w = width / 2;
-  const h = height / 2;
+  const w = size[0] / 2;
+  const h = size[1] / 2;
 
   const vertices = [
     VertexInfo({ position: d.vec4f(-w, h, 0, 1), normal: d.vec4f(0, 0, 1, 0) }),
@@ -244,34 +172,84 @@ function createPlane(
     }).$usage('uniform'),
   });
 
-  return { vertexBuffer, indexBuffer, instanceInfo: bindGroup };
+  return { vertexBuffer, indexBuffer, instanceInfo: bindGroup, indexCount: 6 };
 }
 
+// Light and camera setup
+let currentLightDirection = d.vec3f(0, -1, -1);
+
+const camera = Camera({
+  projection: m.mat4.perspective(
+    Math.PI / 4,
+    canvas.width / canvas.height,
+    0.1,
+    100,
+    d.mat4x4f(),
+  ),
+  view: m.mat4.lookAt([0, 2, 5], [0, 0, 0], [0, 1, 0], d.mat4x4f()),
+  position: d.vec3f(0, 2, 5),
+});
+
+const cameraUniform = root.createUniform(Camera, camera);
+const paramsUniform = root.createUniform(VisParams, {
+  shadowOnly: 0,
+  lightDepth: 0,
+});
+
+const light = root.createUniform(DirectionalLight, {
+  direction: currentLightDirection,
+  color: d.vec3f(1),
+});
+
+const lightViewProj = makeLightViewProj(currentLightDirection);
+const lightSpaceUniform = root.createUniform(LightSpace, {
+  viewProj: lightViewProj,
+});
+
+let currentShadowMapSize = 2048;
+
+// Textures and samplers
+let canvasTextures = createCanvasTextures();
+let shadowTextures = createShadowTextures(currentShadowMapSize);
+
+const comparisonSampler = tgpu['~unstable'].comparisonSampler({
+  compare: 'less-equal',
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+// Materials
+const planeMaterial = Material({
+  ambient: d.vec3f(0.1, 0.1, 0.1),
+  diffuse: d.vec3f(0.8, 0.7, 0.7),
+  specular: d.vec3f(1.0, 1.0, 1.0),
+  shininess: 32.0,
+});
+
+const floorMaterial = Material({
+  ambient: d.vec3f(0.1, 0.1, 0.1),
+  diffuse: d.vec3f(0.5, 0.4, 0.7),
+  specular: d.vec3f(0.8, 0.5, 0.1),
+  shininess: 16.0,
+});
+
 // Scene geometry
-const planeGeometry = createPlane(
-  planeMaterial,
-  1,
-  1,
-  d.vec3f(0, 0.5, 0),
-  d.vec3f(0, 0, 0),
-);
-const floorGeometry = createPlane(
-  floorMaterial,
-  5,
-  5,
-  d.vec3f(0, 0, 0),
-  d.vec3f(Math.PI / 2, 0, 0),
-);
+const planeGeometry = createPlane({
+  material: planeMaterial,
+  size: [1, 1],
+  position: d.vec3f(0, 0.5, 0),
+  rotation: d.vec3f(0, 0, 0),
+});
+const floorGeometry = createPlane({
+  material: floorMaterial,
+  size: [5, 5],
+  position: d.vec3f(0, 0, 0),
+  rotation: d.vec3f(Math.PI / 2, 0, 0),
+});
 
 const geometries = [
-  {
-    ...planeGeometry,
-    indexCount: 6,
-  },
-  {
-    ...floorGeometry,
-    indexCount: 6,
-  },
+  planeGeometry,
+  floorGeometry,
 ];
 
 // Shaders
@@ -414,8 +392,9 @@ function updateLightDirection(dir: d.v3f) {
 }
 
 // Render loop
+let frameId: number | null = null;
 function render() {
-  requestAnimationFrame(render);
+  frameId = requestAnimationFrame(render);
 
   root['~unstable'].beginRenderPass(
     {
@@ -471,8 +450,23 @@ function render() {
   );
   root['~unstable'].flush();
 }
+frameId = requestAnimationFrame(render);
 
-render();
+const resizeObserver = new ResizeObserver(() => {
+  canvasTextures = createCanvasTextures();
+
+  const newProjection = m.mat4.perspective(
+    Math.PI / 4,
+    canvas.width / canvas.height,
+    0.1,
+    100,
+    d.mat4x4f(),
+  );
+  cameraUniform.writePartial({
+    projection: newProjection,
+  });
+});
+resizeObserver.observe(canvas);
 
 export const controls = {
   'camera X': {
@@ -543,6 +537,9 @@ export const controls = {
 };
 
 export function onCleanup() {
+  if (frameId !== null) {
+    cancelAnimationFrame(frameId);
+  }
   resizeObserver.disconnect();
   root.destroy();
 }
