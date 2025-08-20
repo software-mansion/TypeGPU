@@ -229,7 +229,19 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: unknown, schema?: AnyData | UnknownData | undefined): string;
+  /**
+   * Returns the WGSL code representing `item`.
+   *
+   * @param item The value to resolve
+   * @param schema Additional information about the item's data type
+   * @param exact Should the inferred value of the resulting code be typed exactly as `schema` (true),
+   *              or is being assignable to `schema` enough (false). Default is false.
+   */
+  resolve(
+    item: unknown,
+    schema?: AnyData | UnknownData | undefined,
+    exact?: boolean | undefined,
+  ): string;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;

@@ -150,6 +150,7 @@ export {
   textureDimensions,
   textureLoad,
   textureSample,
+  textureSampleBaseClampToEdge,
   textureSampleCompare,
   textureSampleLevel,
   textureStore,
