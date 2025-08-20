@@ -14,9 +14,9 @@ const startTime = performance.now();
 
 // --- Minimal debug controls (set to true only while diagnosing) ---
 const DEBUG_USE_GE_COMPARE = false; // Switch comparison op (less-equal vs greater-equal)
-const DEBUG_SHOW_FACE_ID = false; // Colorize selected cubemap face
+const DEBUG_SHOW_FACE_ID = true; // Colorize selected cubemap face
 const DEBUG_SHOW_SHADOW_TERM = false; // Visualize shadow compare result (grayscale)
-const DEBUG_INVERT_Y_FACES = true; // If true, swap +Y / -Y face forward vectors (diagnose flipped up/down shadows)
+const DEBUG_INVERT_Y_FACES = false; // If true, swap +Y / -Y face forward vectors (diagnose flipped up/down shadows)
 const DEBUG_BIAS = d.f32(0.0008); // Extra ref depth bias (prefer depthBias in shadow pass)
 
 import { Object3D, VertexInfo } from './object3d.ts';
