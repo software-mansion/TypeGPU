@@ -45,6 +45,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import type { GenerationCtx } from './tgsl/generationHelpers.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -328,4 +329,8 @@ export function isMarkedInternal(
   value: unknown,
 ): value is { [$internal]: Record<string, unknown> } {
   return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
+}
+
+export interface ShaderGenerator {
+  functionDefinition(ctx: GenerationCtx, body: Block): string;
 }

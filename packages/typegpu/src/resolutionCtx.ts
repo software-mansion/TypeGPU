@@ -39,6 +39,7 @@ import {
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
+import type { GenerationCtx } from './tgsl/index.ts';
 import type {
   ExecMode,
   ExecState,
@@ -46,6 +47,7 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  ShaderGenerator,
   Wgsl,
 } from './types.ts';
 import {
@@ -365,8 +367,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
 
-  constructor(opts: ResolutionCtxImplOptions) {
+  private readonly _shaderGenerator: ShaderGenerator;
+
+  constructor(
+    opts: ResolutionCtxImplOptions,
+    unstableShaderGenerator?: ShaderGenerator,
+  ) {
     this.names = opts.names;
+    this._shaderGenerator = unstableShaderGenerator ??
+      { functionDefinition: generateFunction };
   }
 
   get pre(): string {
@@ -422,7 +431,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: generateFunction(this, options.body),
+        // Delegate function body generation to the configured shader generator.
+        body: this._shaderGenerator.functionDefinition(
+          this as unknown as GenerationCtx,
+          options.body,
+        ),
       };
     } finally {
       this._itemStateStack.popFunctionScope();
@@ -767,9 +780,10 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
+  unstable_ShaderGenerator?: ShaderGenerator,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options);
+  const ctx = new ResolutionCtxImpl(options, unstable_ShaderGenerator); // w tym unstable_ShaderGenerator
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,

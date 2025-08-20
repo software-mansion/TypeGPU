@@ -4,7 +4,7 @@ import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
-import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { SelfResolvable, ShaderGenerator, Wgsl } from '../../types.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 
@@ -27,6 +27,11 @@ export interface TgpuResolveOptions {
    * A function to configure the resolution context.
    */
   config?: ((cfg: Configurable) => Configurable) | undefined;
+  /**
+   * A custom shader generator to use for generating function definitions.
+   * If not provided, the default generator will be used.
+   */
+  unstable_ShaderGenerator?: ShaderGenerator | undefined;
 }
 
 /**
@@ -64,11 +69,13 @@ export interface TgpuResolveOptions {
  * // }
  * ```
  */
+
 export function resolveWithContext(
   options: TgpuResolveOptions,
 ): ResolutionResult {
   const {
     externals,
+    unstable_ShaderGenerator,
     template,
     names,
     config,
@@ -86,11 +93,16 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
-  return resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
-  }, config);
+  return resolveImpl(
+    resolutionObj,
+    {
+      names: names === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry(),
+    },
+    unstable_ShaderGenerator as ShaderGenerator,
+    config,
+  );
 }
 
 /**
