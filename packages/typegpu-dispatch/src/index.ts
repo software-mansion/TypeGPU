@@ -1,1 +1,1 @@
-export { dispatch2d } from './dispatch.ts';
+export { dispatch } from './dispatch.ts';
