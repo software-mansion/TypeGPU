@@ -51,7 +51,7 @@ const distributionPRNGs = {
   },
   [Distribution.BERNOULLI]: {
     plotType: PlotType.DISCRETE,
-    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.bernoulli(0.5))),
+    prng: tgpu.fn([], d.vec3f)(() => d.vec3f(randf.bernoulli(0.7))),
   },
   [Distribution.SAMPLE]: {
     plotType: PlotType.CONTINUOUS,

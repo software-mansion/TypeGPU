@@ -105,16 +105,30 @@ const main = tgpu['~unstable'].fragmentFn({
 Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
 :::
 
-There are higher-level utilities built on top of `randf.sample`:
+There are higher-level utilities built on top of `randf.sample`. Most of the distributions can be derived from the fact that cumulative distribution functions (CDFs) are uniformly distributed on`[0, 1]` and can be easily inverted to generate random variables. We provide insights for probability enthusiasts. Let's assume $U \sim \mathrm{Uniform}[0, 1) \sim \mathrm{randf.sample}$ :
 
 ### Discrete
 - `bernoulli` - returns 1 with probability `p`, and 0 otherwise. You can think of it as the flip of a biased coin. `p` must be in the range `[0, 1]`
+$$
+\mathrm{Bernoulli}(p) = \begin{cases}
+1 & \text{if } U \leq p \\
+0 & \text{otherwise}
+\end{cases}
+$$
 
 ### Continuous
 - `sampleExclusive` - works the same as `sample`, but returns a value strictly between 0 and 1
 - `exponential` - returns a number based on the exponential distribution with a given `rate`. The `rate` must be greater than 0. It is commonly used for modeling the time until an event occurs
-- `normal` - returns a number based on the normal (Gaussian) distribution with a given mean (`mu`) and standard deviation (`sigma`). `sigma` must be `>= 0`
-- `cauchy` - returns a number based on the Cauchy distribution with a given origin point (`x0`, `gamma`). `gamma` must be `>= 0`
+$$
+\mathrm{Exponential}(\lambda) = -\frac{1}{\lambda} \ln(1 - U)
+$$
+
+- `normal` - returns a number based on the normal (Gaussian) distribution with a given mean (`mu`) and standard deviation (`sigma`). `sigma` must be `> 0`. Following transformation is called Box-Muller transform
+$$
+\mathrm{Normal}(\mu, \sigma) = \mu + \sigma \sin(2 \pi U_1) \sqrt{-2 \ln(U_2)}
+$$
+
+- `cauchy` - returns a number based on the Cauchy distribution with a given origin point (`x0`, `gamma`). `gamma` must be `> 0`. It can be interpreted as the probability distribution of the x-intercept of a light ray from the origin.
 
 ### Geometric
 - `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
@@ -123,7 +137,7 @@ There are higher-level utilities built on top of `randf.sample`:
 - `onUnitCube` - returns a random 3D vector uniformly distributed on the surface of a unit cube
 - `inHemisphere` - returns a random 3D vector uniformly distributed inside an upper hemisphere oriented according to a given normal vector
 - `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of an upper hemisphere oriented according to a given normal vector
-- `inUnitSphere` - returns a random 3D vector uniformly distributed inside a unit sphere
+- `inUnitSphere` - returns a random 3D vector uniformly distributed inside a unit sphere. Thanks to the nature of the normal distribution, we can derive this distribution by sampling three coordinates from the $\mathrm{Normal}(0, 1)$ and normalizing the result (this gives us a direction vector). Finally, we choose the radius as $\sqrt[3]{U}$
 - `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
 
 ## Perlin noise
