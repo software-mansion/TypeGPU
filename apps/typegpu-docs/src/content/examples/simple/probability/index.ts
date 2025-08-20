@@ -59,7 +59,7 @@ export const controls = {
       }
 
       currentExecutionMode = value;
-      await replot(currentDistribution, currentExecutionMode, true, true);
+      await replot(currentDistribution, currentExecutionMode, false, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -75,7 +75,7 @@ export const controls = {
       await replot(
         currentDistribution,
         currentExecutionMode,
-        false,
+        true,
         true,
       );
       plotter.resetView(getCameraPosition(currentDistribution));
