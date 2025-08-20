@@ -18,7 +18,10 @@ import {
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
 } from './core/sampler/sampler.ts';
-import { TgpuExternalTextureImpl } from './core/texture/externalTexture.ts';
+import {
+  type TgpuExternalTexture,
+  TgpuExternalTextureImpl,
+} from './core/texture/externalTexture.ts';
 import {
   isSampledTextureView,
   isStorageTextureView,
@@ -337,6 +340,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
@@ -349,6 +353,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
 export type ExtractBindGroupInputFromLayout<
