@@ -161,9 +161,9 @@ importers:
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
-      '@typegpu/concurrent-sum':
+      '@typegpu/concurrent-scan':
         specifier: workspace:*
-        version: link:../../packages/typegpu-concurrent-sum
+        version: link:../../packages/typegpu-concurrent-scan
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
@@ -487,7 +487,7 @@ importers:
         version: link:../unplugin-typegpu
     publishDirectory: dist
 
-  packages/typegpu-concurrent-sum:
+  packages/typegpu-concurrent-scan:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
