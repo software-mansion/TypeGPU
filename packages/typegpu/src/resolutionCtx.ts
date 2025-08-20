@@ -432,7 +432,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
         body: this._shaderGenerator.functionDefinition(
-          this as unknown as GenerationCtx,
+          this,
           options.body,
         ),
       };
