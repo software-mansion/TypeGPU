@@ -1,5 +1,6 @@
 import * as MorphCharts from 'morphcharts';
 import type * as d from 'typegpu/data';
+import { clamp } from 'typegpu/std';
 
 import {
   type GeometricData,
@@ -15,8 +16,9 @@ const defaultColorSpread = 32;
 const defaultMinValue = -10;
 const defaultMaxValue = 10;
 const heightToBase = 7;
-const transitionTime = 1000; // milliseconds
-const defaultStaggering = 1;
+const transitionTime = 500; // milliseconds
+const defaultStaggering = 0.7;
+const defaultAxesSwapMoment = 1;
 
 // geometric
 const defaultSize = 0.17;
@@ -24,6 +26,9 @@ const defaultSize = 0.17;
 export class Plotter {
   readonly #core;
   readonly #palette;
+  #transitionBuffer: MorphCharts.ITransitionBufferVisual | undefined =
+    undefined;
+  #count = 0;
 
   constructor() {
     this.#core = new MorphCharts.Core({
@@ -38,27 +43,32 @@ export class Plotter {
       false,
     );
     this.#core.config.transitionStaggering = defaultStaggering;
-    this.#core.renderer.transitionTime = 1;
+    this.#core.renderer.transitionTime = 1; // it is number from [0, 1] indicating the state of the animation - 1 means current
   }
 
   async plot(samples: d.v3f[], prng: PRNG, animate = false) {
+    let needNewBuffer = false;
+    if (samples.length !== this.#count) {
+      needNewBuffer = true;
+      this.#count = samples.length;
+    }
+
     switch (prng.plotType) {
       case PlotType.GEOMETRIC:
         {
-          const count = samples.length;
           const data: GeometricData = {
-            count,
-            ids: new Uint32Array(count),
-            positionsX: new Float64Array(count),
-            positionsY: new Float64Array(count),
-            positionsZ: new Float64Array(count),
-            sizes: new Float64Array(count),
-            dists: new Float64Array(count),
+            count: this.#count,
+            ids: new Uint32Array(this.#count),
+            positionsX: new Float64Array(this.#count),
+            positionsY: new Float64Array(this.#count),
+            positionsZ: new Float64Array(this.#count),
+            sizes: new Float64Array(this.#count),
+            dists: new Float64Array(this.#count),
           };
 
           const origin = (prng as GeometricPRNG).origin;
 
-          for (let i = 0; i < count; i++) {
+          for (let i = 0; i < this.#count; i++) {
             data.ids[i] = i;
             data.positionsX[i] = samples[i].x;
             data.positionsY[i] = samples[i].y;
@@ -71,23 +81,30 @@ export class Plotter {
             );
           }
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             this.makeRoomForNewPlot();
           }
 
-          this.#plotGeometric(data, this.#core);
+          this.#plotGeometric(data, this.#core, needNewBuffer);
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             await this.distributionsTransition();
           }
         }
         break;
       case PlotType.CONTINUOUS:
         {
-          const samplesFiltered = samples.filter((sample) =>
-            sample.x >= defaultMinValue && sample.x <= defaultMaxValue
-          );
-          const count = samplesFiltered.length;
+          // if we want to animate the transition between the old and new plots,
+          // we need to have the same number of samples,
+          // that's why I clamp them instead of filtering
+          const samplesFiltered = samples.map((sample) => ({
+            ...sample,
+            x: sample.x < defaultMinValue
+              ? defaultMinValue
+              : sample.x > defaultMaxValue
+              ? defaultMaxValue
+              : sample.x,
+          }));
 
           const { minSample, maxSample } = samplesFiltered.reduce(
             (acc, sample) => ({
@@ -100,15 +117,15 @@ export class Plotter {
             },
           );
 
-          const optimalBinCount = 2 * Math.ceil(Math.log2(count)) + 1; // always odd
+          const optimalBinCount = 2 * Math.ceil(Math.log2(this.#count)) + 1; // always odd
           const binXWidth = (maxSample - minSample) / optimalBinCount;
 
           const data: HistogramData = {
-            count,
-            ids: new Uint32Array(count),
-            binIdsX: new Uint32Array(count),
-            binIdsZ: new Uint32Array(count),
-            values: new Float64Array(count),
+            count: this.#count,
+            ids: new Uint32Array(this.#count),
+            binIdsX: new Uint32Array(this.#count),
+            binIdsZ: new Uint32Array(this.#count),
+            values: new Float64Array(this.#count),
             binsX: optimalBinCount,
             binsZ: 1,
             binsWidth: binXWidth,
@@ -121,7 +138,7 @@ export class Plotter {
           const binSizes = new Uint32Array(optimalBinCount);
           binSizes.fill(0);
 
-          for (let i = 0; i < count; i++) {
+          for (let i = 0; i < this.#count; i++) {
             data.ids[i] = i;
             data.binIdsZ[i] = 0;
             data.binIdsX[i] = Math.min(
@@ -135,7 +152,7 @@ export class Plotter {
             (acc, size) => Math.max(acc, size),
             0,
           );
-          for (let i = 0; i < count; i++) {
+          for (let i = 0; i < this.#count; i++) {
             data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
           }
 
@@ -145,20 +162,19 @@ export class Plotter {
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             this.makeRoomForNewPlot();
           }
 
-          this.#plotHistogram(data, this.#core, false);
+          this.#plotHistogram(data, this.#core, false, needNewBuffer);
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             await this.distributionsTransition();
           }
         }
         break;
       case PlotType.DISCRETE:
         {
-          const count = samples.length;
           const samplesRounded = samples.map((sample) => Math.round(sample.x));
 
           const uniqueValues = samplesRounded.reduce((map, value) => {
@@ -180,11 +196,11 @@ export class Plotter {
           const uniqueRange = maxValue - minValue + 1;
 
           const data: HistogramData = {
-            count,
-            ids: new Uint32Array(count),
-            binIdsX: new Uint32Array(count),
-            binIdsZ: new Uint32Array(count),
-            values: new Float64Array(count),
+            count: this.#count,
+            ids: new Uint32Array(this.#count),
+            binIdsX: new Uint32Array(this.#count),
+            binIdsZ: new Uint32Array(this.#count),
+            values: new Float64Array(this.#count),
             binsX: uniqueRange,
             binsZ: 1,
             binsWidth: 1,
@@ -199,7 +215,7 @@ export class Plotter {
             0,
           );
 
-          for (let i = 0; i < count; i++) {
+          for (let i = 0; i < this.#count; i++) {
             data.ids[i] = i;
             data.binIdsZ[i] = 0;
             data.binIdsX[i] = samplesRounded[i] - minValue;
@@ -213,13 +229,13 @@ export class Plotter {
           data.sizeX = guessedBinXZSize;
           data.sizeZ = guessedBinXZSize;
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             this.makeRoomForNewPlot();
           }
 
-          this.#plotHistogram(data, this.#core, true);
+          this.#plotHistogram(data, this.#core, true, needNewBuffer);
 
-          if (animate) {
+          if (animate && !needNewBuffer) {
             await this.distributionsTransition();
           }
         }
@@ -246,8 +262,9 @@ export class Plotter {
   }
 
   makeRoomForNewPlot() {
-    this.#core.renderer.transitionBuffers[0].swap();
-    this.#core.renderer.transitionTime = 0;
+    (this.#transitionBuffer as MorphCharts.ITransitionBufferVisual).swap();
+    this.#core.renderer.transitionTime = 0; // it is number from [0, 1] indicating the state of the animation - 0 means previous
+    this.#core.renderer.axesVisibility = MorphCharts.AxesVisibility.none;
   }
 
   distributionsTransition(): Promise<void> {
@@ -255,9 +272,18 @@ export class Plotter {
 
     return new Promise((resolve) => {
       const animateTransition = (time: number) => {
-        const duration = Math.max(time - start, 0);
+        const duration = time - start;
 
-        this.#core.renderer.transitionTime = duration / transitionTime;
+        this.#core.renderer.transitionTime = clamp(
+          duration / transitionTime,
+          0,
+          1,
+        );
+
+        this.#core.renderer.axesVisibility =
+          this.#core.renderer.transitionTime < defaultAxesSwapMoment
+            ? MorphCharts.AxesVisibility.none
+            : MorphCharts.AxesVisibility.current;
 
         if (duration < transitionTime) {
           requestAnimationFrame(animateTransition);
@@ -269,21 +295,28 @@ export class Plotter {
     });
   }
 
-  #plotGeometric(data: GeometricData, core: MorphCharts.Core) {
-    const transitionBuffer = this.#core.renderer.createTransitionBuffer(
-      data.ids,
-    );
-    this.#core.renderer.transitionBuffers = [transitionBuffer];
-    transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.sphere;
-    transitionBuffer.currentPalette.colors = this.#palette;
+  #plotGeometric(
+    data: GeometricData,
+    core: MorphCharts.Core,
+    needNewBuffer: boolean,
+  ) {
+    if (this.#transitionBuffer === undefined || needNewBuffer) {
+      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(
+        data.ids,
+      );
+    }
+
+    this.#core.renderer.transitionBuffers = [this.#transitionBuffer];
+    this.#transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.sphere;
+    this.#transitionBuffer.currentPalette.colors = this.#palette;
 
     const scatter = new MorphCharts.Layouts.Scatter(this.#core);
-    scatter.layout(transitionBuffer.currentBuffer, data.ids, {
+    scatter.layout(this.#transitionBuffer.currentBuffer, data.ids, {
       positionsX: data.positionsX,
       positionsY: data.positionsY,
       positionsZ: data.positionsZ,
     });
-    scatter.update(transitionBuffer.currentBuffer, data.ids, {
+    scatter.update(this.#transitionBuffer.currentBuffer, data.ids, {
       sizes: data.sizes,
       sizeScaling: 0.1,
       colors: data.dists,
@@ -312,14 +345,20 @@ export class Plotter {
     data: HistogramData,
     core: MorphCharts.Core,
     isDiscreteX: boolean,
+    needNewBuffer: boolean,
   ) {
-    const transitionBuffer = core.renderer.createTransitionBuffer(data.ids);
-    core.renderer.transitionBuffers = [transitionBuffer];
-    transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.block;
-    transitionBuffer.currentPalette.colors = this.#palette;
+    if (this.#transitionBuffer === undefined || needNewBuffer) {
+      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(
+        data.ids,
+      );
+    }
+
+    core.renderer.transitionBuffers = [this.#transitionBuffer];
+    this.#transitionBuffer.currentBuffer.unitType = MorphCharts.UnitType.block;
+    this.#transitionBuffer.currentPalette.colors = this.#palette;
 
     const stack = new MorphCharts.Layouts.Stack(core);
-    stack.layout(transitionBuffer.currentBuffer, data.ids, {
+    stack.layout(this.#transitionBuffer.currentBuffer, data.ids, {
       binsX: data.binsX,
       binsZ: data.binsZ,
       binIdsX: data.binIdsX,
@@ -329,7 +368,7 @@ export class Plotter {
       spacingX: 1,
       spacingZ: 1,
     });
-    stack.update(transitionBuffer.currentBuffer, data.ids, {
+    stack.update(this.#transitionBuffer.currentBuffer, data.ids, {
       colors: data.values,
       padding: 0.025,
     });
