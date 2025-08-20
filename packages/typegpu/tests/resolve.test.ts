@@ -8,8 +8,8 @@ import {
   $wgslDataType,
 } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
-import { parse } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -28,6 +28,23 @@ describe('tgpu resolve', () => {
       parse(
         'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
       ),
+    );
+  });
+
+  it('should resolve a nested external JS struct', () => {
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var g = _EXT_.constants.n; }',
+      externals: {
+        _EXT_: {
+          constants: {
+            n: 1000,
+          },
+        },
+      },
+      names: 'strict',
+    });
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn foo() { var g = 1000; }"`,
     );
   });
 
@@ -510,5 +527,71 @@ describe('tgpu resolveWithContext', () => {
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
       [[colorSlot, v]],
     );
+  });
+
+  it('should warn when external WGSL is not used', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: 'fn testFn() { return; }',
+      externals: {
+        ArraySchema: d.arrayOf(d.u32, 4),
+        JavaScriptObject: { field: d.vec2f() },
+      },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'ArraySchema' wasn't used in the resolved template.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'JavaScriptObject' wasn't used in the resolved template.",
+    );
+  });
+
+  it('should warn when external is neither wgsl nor an object', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { var a = identity(1); return; }',
+      externals: { identity: (a: number) => a },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `During resolution, the external 'identity' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+    );
+  });
+
+  it('should not warn when In/Out are unused', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { return; }',
+      externals: {},
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not resolve the same nested property twice', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const resolved = tgpu.resolve({
+      template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
+      externals: { _EXT_: { n: 100 } },
+    });
+
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn testFn() { return 100 + 100; }"`,
+    );
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });
