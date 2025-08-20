@@ -18,7 +18,7 @@ const replot = async (
   currentDistribution: Distribution,
   execMod: ExecutionMode,
   animate = false,
-  forceReExec = false,
+  forceReexec = false,
 ) => {
   let samples = undefined;
   let verdict = undefined;
@@ -35,7 +35,7 @@ const replot = async (
     }
   }
 
-  samples = await verdict(prng.prng, forceReExec);
+  samples = await verdict(prng.prng, forceReexec);
   plotter.plot(samples, prng, animate);
 };
 

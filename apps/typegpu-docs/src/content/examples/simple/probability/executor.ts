@@ -85,13 +85,13 @@ export class Executor {
 
   async executeSingleWorker(
     distribution: TgpuFn<() => d.Vec3f>,
-    forceReExec = false,
+    forceReexec = false,
   ): Promise<d.v3f[]> {
-    if (this.#samples.length !== 0 && !forceReExec) {
+    if (this.#samples.length !== 0 && !forceReexec) {
       return this.#samples.slice(0, this.#count);
     }
 
-    if (forceReExec) {
+    if (forceReexec) {
       this.#maxCount = 0;
       this.count = this.#count;
     }
@@ -110,10 +110,15 @@ export class Executor {
 
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
-    forceReExec = false,
+    forceReexec = false,
   ): Promise<d.v3f[]> {
-    if (this.#samples.length !== 0 && !forceReExec) {
+    if (this.#samples.length !== 0 && !forceReexec) {
       return this.#samples.slice(0, this.#count);
+    }
+
+    if (forceReexec) {
+      this.#maxCount = 0;
+      this.count = this.#count;
     }
 
     const pipeline = this.#root['~unstable']
