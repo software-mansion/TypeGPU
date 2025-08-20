@@ -80,6 +80,7 @@ Does this mean we allow object access inside of WGSL shaders?... yes, yes we do 
 The `@typegpu/noise` package provides a pseudo-random number generator (PRNG) that generates uniformly distributed random numbers in the range `[0, 1)`.
 Each call to `randf.sample` returns the next random float in the sequence, allowing for predictable and repeatable results. The seed can be set or reset
 using a set of `randf.seedN` functions, where `N` is the number of components our seed has.
+
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -99,6 +100,10 @@ const main = tgpu['~unstable'].fragmentFn({
   );
 });
 ```
+
+:::tip
+Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
+:::
 
 There are higher-level utilities built on top of `randf.sample`:
 
