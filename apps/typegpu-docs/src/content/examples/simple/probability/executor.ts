@@ -55,11 +55,11 @@ export class Executor {
     });
 
     this.#dataMoreWorkersFunc = tgpu['~unstable'].computeFn({
-      in: { gid: d.builtin.globalInvocationId },
+      in: { gid: d.builtin.globalInvocationId, count: d.builtin.numWorkgroups },
       workgroupSize: [1],
     })((input) => {
       const gid = input.gid;
-      randf.seed(d.f32(gid.x));
+      randf.seed(d.f32(gid.x) / input.count.x);
       sampleBufferSlotTempAlias.$[gid.x] = distributionSlotTempAlias.$();
     });
   }
