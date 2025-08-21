@@ -122,3 +122,7 @@ export function onCleanup() {
 }
 
 // #endregion
+
+import { HybridTaus, randf } from '@typegpu/noise';
+console.log(tgpu.resolve({ externals: { 'f': HybridTaus.sample } }));
+console.log(tgpu.resolve({ externals: { 'x': randf.seed } }));

@@ -21,23 +21,23 @@ import { randomGeneratorSlot } from './generator.ts';
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-9;
 
-export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
-  .fn([d.f32])((seed) => {
+export const randSeed: TgpuFn<(seed: d.U32) => d.Void> = tgpu
+  .fn([d.u32])((seed) => {
     randomGeneratorSlot.value.seed(seed);
   });
 
-export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = tgpu
-  .fn([d.vec2f])((seed) => {
+export const randSeed2: TgpuFn<(seed: d.Vec2u) => d.Void> = tgpu
+  .fn([d.vec2u])((seed) => {
     randomGeneratorSlot.value.seed2(seed);
   });
 
-export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = tgpu
-  .fn([d.vec3f])((seed) => {
+export const randSeed3: TgpuFn<(seed: d.Vec3u) => d.Void> = tgpu
+  .fn([d.vec3u])((seed) => {
     randomGeneratorSlot.value.seed3(seed);
   });
 
-export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
-  .fn([d.vec4f])((seed) => {
+export const randSeed4: TgpuFn<(seed: d.Vec4u) => d.Void> = tgpu
+  .fn([d.vec4u])((seed) => {
     randomGeneratorSlot.value.seed4(seed);
   });
 

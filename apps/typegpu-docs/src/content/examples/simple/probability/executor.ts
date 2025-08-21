@@ -60,7 +60,7 @@ export class Executor {
       workgroupSize: [1],
     })((input) => {
       const gid = input.gid;
-      randf.seed(d.f32(gid.x) / input.count.x);
+      randf.seed(gid.x);
       sampleBufferSlotTempAlias.$[gid.x] = distributionSlotTempAlias.$();
     });
   }

@@ -65,6 +65,7 @@ export {
   // ---
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
+  HybridTaus,
   // ---
   randomGeneratorShell,
   randomGeneratorSlot,
