@@ -32,7 +32,7 @@ export class Plotter {
 
   constructor() {
     this.#core = new MorphCharts.Core({
-      container: document.getElementById('canvas') as HTMLElement,
+      container: document.getElementById('canvas') as HTMLDivElement,
     });
     this.#core.renderer = new MorphCharts.Renderers.Basic.Main();
     this.#palette = MorphCharts.Helpers.PaletteHelper.resample(

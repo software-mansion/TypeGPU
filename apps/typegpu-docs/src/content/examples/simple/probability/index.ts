@@ -43,6 +43,25 @@ await replot(currentDistribution, currentExecutionMode);
 plotter.resetView(getCameraPosition(currentDistribution));
 
 // #region Example controls & Cleanup
+const canvas = document.getElementById('canvas') as HTMLDivElement;
+const helpInfo = document.getElementById('help') as HTMLDivElement;
+
+canvas.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+canvas.addEventListener('mouseover', () => {
+  helpInfo.style.opacity = '0';
+});
+canvas.addEventListener('mouseout', () => {
+  helpInfo.style.opacity = '1';
+});
+// handle mobile devices
+canvas.addEventListener('touchstart', () => {
+  helpInfo.style.opacity = '0';
+});
+canvas.addEventListener('touchend', () => {
+  helpInfo.style.opacity = '1';
+});
 
 export const controls = {
   'Reset Camera': {
