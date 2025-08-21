@@ -1,1 +1,3 @@
-export { dispatch } from './dispatch.ts';
+import { dispatch } from './dispatch.ts';
+
+export default dispatch;
