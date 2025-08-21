@@ -13,18 +13,12 @@ import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 interface WgslArrayConstructor {
   <TElement extends AnyWgslData>(
     elementType: TElement,
-    elementCount: number,
-  ): WgslArray<TElement>;
-
-  <TElement extends AnyWgslData>(
-    elementType: TElement,
-    elementCount?: undefined,
   ): (elementCount: number) => WgslArray<TElement>;
 
   <TElement extends AnyWgslData>(
     elementType: TElement,
-    elementCount?: number | undefined,
-  ): WgslArray<TElement> | ((elementCount: number) => WgslArray<TElement>);
+    elementCount: number,
+  ): WgslArray<TElement>;
 }
 
 /**
