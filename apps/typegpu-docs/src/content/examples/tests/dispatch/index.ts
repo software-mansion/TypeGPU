@@ -1,4 +1,3 @@
-import dispatch from '@typegpu/dispatch';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -17,7 +16,7 @@ function assertEqual(e1: unknown, e2: unknown) {
 async function test1d() {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
-  dispatch(root, size, (x) => {
+  root['~unstable'].dispatch(size, (x) => {
     'kernel';
     mutable.$[x] = x;
   });
@@ -30,7 +29,7 @@ async function test2d() {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
-  dispatch(root, size, (x, y) => {
+  root['~unstable'].dispatch(size, (x, y) => {
     'kernel';
     mutable.$[x][y] = d.vec2u(x, y);
   });
@@ -46,7 +45,7 @@ async function test3d() {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.arrayOf(d.vec3u, size[2]), size[1]), size[0]),
   );
-  dispatch(root, size, (x, y, z) => {
+  root['~unstable'].dispatch(size, (x, y, z) => {
     'kernel';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
   });
@@ -59,7 +58,7 @@ async function test3d() {
 
 async function testWorkgroupSize() {
   const mutable = root.createMutable(d.arrayOf(d.u32, 12));
-  dispatch(root, [5], (x) => {
+  root['~unstable'].dispatch([5], (x) => {
     'kernel';
     mutable.$[x] = x;
   }, [3]);

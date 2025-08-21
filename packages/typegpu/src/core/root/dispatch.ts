@@ -1,6 +1,8 @@
-import tgpu, { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import * as d from '../../data/index.ts';
+import * as std from '../../std/index.ts';
+import { computeFn } from '../function/tgpuComputeFn.ts';
+import { fn } from '../function/tgpuFn.ts';
+import { TgpuRoot } from './rootTypes.ts';
 
 /**
  * Changes the given array to an array of 3 numbers, filling missing values with 1.
@@ -19,24 +21,6 @@ function sanitizeArray(arr: readonly number[]): [number, number, number] {
  */
 export function dispatch(
   root: TgpuRoot,
-  size: readonly [number],
-  callback: (x: number) => void,
-  workgroupSize?: readonly [number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly [number, number],
-  callback: (x: number, y: number) => void,
-  workgroupSize?: readonly [number, number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly [number, number, number],
-  callback: (x: number, y: number, z: number) => void,
-  workgroupSize?: readonly [number, number, number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
   size: readonly number[],
   callback: (x: number, y: number, z: number) => void,
   workgroupSize?: readonly number[],
@@ -50,12 +34,13 @@ export function dispatch(
     Math.ceil(checkedSize[2] / checkedWorkgroupSize[2]),
   ] as const;
 
-  const wrappedCallback = tgpu.fn([d.u32, d.u32, d.u32])(callback);
+  const wrappedCallback = fn([d.u32, d.u32, d.u32])(callback);
 
-  const mainCompute = tgpu['~unstable'].computeFn({
+  const mainCompute = computeFn({
     workgroupSize: checkedWorkgroupSize,
     in: { id: d.builtin.globalInvocationId },
   })(({ id }) => {
+    'kernel';
     if (std.any(std.ge(id, d.vec3u(checkedSizeVec)))) {
       return;
     }

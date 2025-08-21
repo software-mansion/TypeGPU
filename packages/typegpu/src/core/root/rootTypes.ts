@@ -24,6 +24,12 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type {
+  TgpuBufferShorthand,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -47,12 +53,6 @@ import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type {
-  TgpuBufferShorthand,
-  TgpuMutable,
-  TgpuReadonly,
-  TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -641,4 +641,26 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * submitted to the GPU.
    */
   flush(): void;
+
+  /**
+   * Dispatch a single-shot compute pipeline.
+   * @param size A 3d (or shorter) array holding the total number of threads to run.
+   * @param callback A TGSL function body that is run on GPU. Its arguments are the global invocation ids of the call.
+   * @param workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
+   */
+  dispatch(
+    size: readonly [number],
+    callback: (x: number) => void,
+    workgroupSize?: readonly [number],
+  ): void;
+  dispatch(
+    size: readonly [number, number],
+    callback: (x: number, y: number) => void,
+    workgroupSize?: readonly [number, number],
+  ): void;
+  dispatch(
+    size: readonly [number, number, number],
+    callback: (x: number, y: number, z: number) => void,
+    workgroupSize?: readonly [number, number, number],
+  ): void;
 }
