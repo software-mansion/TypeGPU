@@ -571,7 +571,7 @@ let paused = false;
 let animationFrame: number;
 let lastTime = performance.now();
 function run(timestamp: number) {
-  const dt = Math.abs(timestamp - lastTime);
+  const dt = timestamp - lastTime;
   lastTime = timestamp;
   msSinceLastTick += dt;
 
