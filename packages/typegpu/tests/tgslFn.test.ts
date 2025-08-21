@@ -4,7 +4,7 @@ import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TGSL tgpu.fn function', () => {
@@ -236,10 +236,8 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    const actual = parseResolved({ vertexFn });
-
-    const expected = parse(`
-      struct vertex_fn_Input {
+    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      "struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
@@ -251,11 +249,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(f32(_arg_0.color.w), f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(f32(_arg_0.color.w), f32(_arg_0.vi)));
-      }
+        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
+      }"
     `);
-
-    expect(actual).toBe(expected);
   });
 
   it('allows access to output struct as second argument in vertexFn', () => {
@@ -285,9 +281,8 @@ describe('TGSL tgpu.fn function', () => {
       .$name('vertex_fn');
 
     expect(getName(vertexFn)).toBe('vertex_fn');
-    const actual = parseResolved({ vertexFn });
-    expect(actual).toBe(parse(`
-      struct vertex_fn_Input {
+    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      "struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
@@ -299,10 +294,10 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(f32(input.color.w), f32(input.ii), f32(input.vi), 1), vec2f(f32(input.color.w), f32(input.vi)));
+        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1), vec2f(input.color.w, f32(input.vi)));
         return myOutput;
-      }
-    `));
+      }"
+    `);
   });
 
   it('resolves computeFn', () => {
