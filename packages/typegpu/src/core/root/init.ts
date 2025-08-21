@@ -107,6 +107,7 @@ import {
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
 import { ConfigurableImpl } from './configurableImpl.ts';
+import type { ShaderGenerator } from '../../types.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -252,6 +253,7 @@ class TgpuRootImpl extends WithBindingImpl
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
+    public readonly unstable_shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
@@ -663,6 +665,11 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * Custom shader generator used for producing function bodies during resolution.
+   * @experimental
+   */
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -672,6 +679,11 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * Custom shader generator used for producing function bodies during resolution.
+   * @experimental
+   */
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -735,6 +747,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
+    options?.unstable_shaderGenerator,
   );
 }
 
@@ -757,5 +770,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
+    options?.unstable_shaderGenerator,
   );
 }

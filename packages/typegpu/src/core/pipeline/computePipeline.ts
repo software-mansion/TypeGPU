@@ -236,14 +236,14 @@ class ComputePipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
-        });
+        }, this.branch.unstable_shaderGenerator);
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
-        });
+        }, this.branch.unstable_shaderGenerator);
       }
 
       const { code, usedBindGroupLayouts, catchall } = resolutionResult;
