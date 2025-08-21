@@ -18,7 +18,7 @@ For the TGSL functions to work, you need to use the dedicated build plugin -- [u
 ## Usage
 
 Instead of using a WGSL code string, you can pass TGSL to the tgpu function shell as an argument instead.
-Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier, [etc.](https://github.com/software-mansion/TypeGPU/blob/release/packages/typegpu/src/std/index.ts)*) are accessible through the `typegpu/std` endpoint.
+Functions from the WGSL standard library (*distance, arrayLength, workgroupBarrier, [etc.](https://github.com/software-mansion/TypeGPU/blob/release/packages/typegpu/src/std/index.ts)*) are accessible through the `typegpu/std` entrypoint.
 The package also includes functions for vector and matrix operators (*add, eq, lt...*).
 
 ```ts
