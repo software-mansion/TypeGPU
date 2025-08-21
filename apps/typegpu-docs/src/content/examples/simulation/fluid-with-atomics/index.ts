@@ -563,6 +563,7 @@ const createSampleScene = () => {
   }
 };
 
+resetGameData();
 // #region UI
 
 let paused = false;
@@ -570,7 +571,7 @@ let paused = false;
 let animationFrame: number;
 let lastTime = performance.now();
 function run(timestamp: number) {
-  const dt = timestamp - lastTime;
+  const dt = Math.abs(timestamp - lastTime);
   lastTime = timestamp;
   msSinceLastTick += dt;
 
