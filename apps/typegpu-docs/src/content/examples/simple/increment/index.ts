@@ -5,6 +5,16 @@ const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
 });
 
+const test = tgpu.fn([d.u32], d.u32)((x) => {
+  return x + 1;
+});
+
+const someFn = tgpu.fn([])(() => {
+  const xd = test(d.u32(4294967294));
+});
+
+console.log(tgpu.resolve({ externals: { someFn } }));
+
 const shaderCode = tgpu.resolve({
   template: /* wgsl */ `
     @compute @workgroup_size(1)

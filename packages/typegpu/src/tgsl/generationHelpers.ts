@@ -44,7 +44,7 @@ import {
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
-import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
+import { MAX_INT64, MIN_INT64 } from '../shared/constants.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -178,7 +178,8 @@ export function getTypeForIndexAccess(
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
-  if (Number.isInteger(value) && value >= MIN_INT32 && value <= MAX_INT32) {
+  // WGSL AbstractInt is a 64-bit two's complement integer
+  if (Number.isInteger(value) && value >= MIN_INT64 && value <= MAX_INT64) {
     return snip(value, abstractInt);
   }
   return snip(value, abstractFloat);

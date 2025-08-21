@@ -1,2 +1,2 @@
-export const MIN_INT32 = -(2 ** 31);
-export const MAX_INT32 = 2 ** 31 - 1;
+export const MIN_INT64 = -(2n ** 63n);
+export const MAX_INT64 = 2n ** 63n - 1n;
