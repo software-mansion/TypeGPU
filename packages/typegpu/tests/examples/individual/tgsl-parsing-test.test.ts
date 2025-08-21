@@ -36,28 +36,28 @@ describe('tgsl parsing test example', () => {
 
       fn logicalExpressionTests_1() -> bool {
         var s = true;
-        s = (s && ((vec2i(1, 3) == vec2i(1, 3)).x == true));
-        s = (s && ((vec2i(1, 3) == vec2i(1, 3)).y == true));
-        s = (s && ((vec2i(1, 3) == vec2i(1, 2)).x == true));
-        s = (s && ((vec2i(1, 3) == vec2i(1, 2)).y == false));
-        s = (s && all(vec4<bool>(true, true, true, true)));
-        s = (s && !all(vec4<bool>(true, false, true, true)));
-        s = (s && any(vec4<bool>(false, false, true, false)));
-        s = (s && !any(vec4<bool>(false, false, false, false)));
-        s = (s && all(vec2i(1, 3) == vec2i(1, 3)));
-        s = (s && !all(vec2i(1, 3) == vec2i(1, 2)));
-        s = (s && all((vec3i(1, 2, 3) != vec3i(1, 2, 4)) == vec3<bool>(false, false, true)));
+        s = (s && (true == true));
+        s = (s && (true == true));
+        s = (s && (true == true));
+        s = (s && (false == false));
+        s = (s && true);
+        s = (s && !false);
+        s = (s && true);
+        s = (s && !false);
+        s = (s && true);
+        s = (s && !false);
+        s = (s && true);
         s = (s && all((vec3f(1, -1, 0) < vec3f(1, 1, -1)) == vec3<bool>(false, true, false)));
         s = (s && all((vec3f(1, -1, 0) <= vec3f(1, 1, -1)) == vec3<bool>(true, true, false)));
         s = (s && all((vec3f(1, -1, 0) > vec3f(1, 1, -1)) == vec3<bool>(false, false, true)));
         s = (s && all((vec3f(1, -1, 0) >= vec3f(1, 1, -1)) == vec3<bool>(true, false, true)));
-        s = (s && all(!(vec2<bool>(false, true)) == vec2<bool>(true, false)));
-        s = (s && all((vec4<bool>(true, true, false, false) | vec4<bool>(true, false, true, false)) == vec4<bool>(true, true, true, false)));
-        s = (s && all((vec4<bool>(true, true, false, false) & vec4<bool>(true, false, true, false)) == vec4<bool>(true, false, false, false)));
-        s = (s && all(abs(vec3f(1) - vec3f(0.9990000128746033, 1, 1.0010000467300415)) <= (vec3f(1) - vec3f(1)) + 0.01));
-        s = (s && !all(abs(vec3f(1) - vec3f(0.8999999761581421, 1, 1.100000023841858)) <= (vec3f(1) - vec3f(1)) + 0.01));
-        s = (s && all(abs(vec3f(1) - vec3f(0.8999999761581421, 1, 1.100000023841858)) <= (vec3f(1) - vec3f(1)) + 0.2));
-        s = (s && !all(abs(vec3f(1) - vec3f(0.699999988079071, 1, 1.2999999523162842)) <= (vec3f(1) - vec3f(1)) + 0.2));
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && !false);
+        s = (s && true);
+        s = (s && !false);
         s = (s && all(select(vec2i(-1, -2), vec2i(1, 2), true) == vec2i(1, 2)));
         s = (s && all(select(vec4i(-1, -2, -3, -4), vec4i(1, 2, 3, 4), vec4<bool>(true, true, false, false)) == vec4i(1, 2, -3, -4)));
         var vec = vec3<bool>(true, false, true);
@@ -97,19 +97,19 @@ describe('tgsl parsing test example', () => {
 
       fn infixOperatorsTests_6() -> bool {
         var s = true;
-        s = (s && all(abs(vec2f(2, 4) - vec2f(2, 4)) <= (vec2f(2, 4) - vec2f(2, 4)) + 0.01));
-        s = (s && all(vec3u(6, 9, 12) == vec3u(6, 9, 12)));
-        s = (s && all(vec4i(12, 16, 20, 24) == vec4i(12, 16, 20, 24)));
-        s = (s && all(vec2i(3, 8) == vec2i(3, 8)));
-        s = (s && all(vec2u(6, 12) == vec2u(6, 12)));
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
         s = (s && all(abs(((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10)) - vec2f(62, 84)) <= (((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10)) - ((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10))) + 0.01));
         s = (s && all(abs(((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1) - vec2f(-21, -43)) <= (((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1) - ((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1)) + 0.01));
         s = (s && all(abs(((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4)) - vec2f(-21, -43)) <= (((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4)) - ((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4))) + 0.01));
         s = (s && all((((((vec3f(1, 10, 100) * mat3x3f(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5)) * -1) * mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9)) * -1) * mat3x3f(2, 0, 0, 0, 2, 0, 0, 0, 2)) == vec3f(321, 654, 987)));
         s = (s && all((getVec_7() * getVec_7()) == vec3f(1, 4, 9)));
-        s = (s && all(vec3f(12, 13, 14) == vec3f(12, 13, 14)));
-        s = (s && all(vec3f(5, 4, 3) == vec3f(5, 4, 3)));
-        s = (s && all(vec3f(15, 10, 6) == vec3f(15, 10, 6)));
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
         return s;
       }
 

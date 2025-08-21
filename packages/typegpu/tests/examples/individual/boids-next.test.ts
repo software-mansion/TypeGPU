@@ -49,7 +49,7 @@ describe('boids next example', () => {
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = u32(0); (i < arrayLength(&currentTrianglePos_2)); i++) {
+        for (var i = 0u; (i < arrayLength(&currentTrianglePos_2)); i++) {
           if ((i == index)) {
             continue;
           }

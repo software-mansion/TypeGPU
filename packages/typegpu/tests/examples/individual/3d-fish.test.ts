@@ -137,7 +137,7 @@ describe('3d fish example', () => {
         fishData.direction = (fishData.direction + (1e-4 * wallRepulsion));
         fishData.direction = (fishData.direction + (5e-4 * rayRepulsion));
         fishData.direction = (clamp(length(fishData.direction), 0, 0.01) * normalize(fishData.direction));
-        var translation = ((f32(min(999, timePassed_10)) / 8f) * fishData.direction);
+        var translation = ((min(999, timePassed_10) / 8f) * fishData.direction);
         fishData.position = (fishData.position + translation);
         nextFishData_11[fishIndex] = fishData;
       }
@@ -246,7 +246,7 @@ describe('3d fish example', () => {
         var b = rgb.z;
         var maxC = max(r, max(g, b));
         var minC = min(r, min(g, b));
-        var delta = f32((maxC - minC));
+        var delta = (maxC - minC);
         var h = 0f;
         var s = 0f;
         if ((maxC == 0)) {

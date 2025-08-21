@@ -88,7 +88,7 @@ describe('stable-fluid example', () => {
         var viscosity = simParams_11.viscosity;
         var diffuseRate = (viscosity * timeStep);
         var blendFactor = (1f / (4 + diffuseRate));
-        var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (f32(diffuseRate) * centerVal)));
+        var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (diffuseRate * centerVal)));
         textureStore(out_13, pixelPos, diffusedVal);
       }
 

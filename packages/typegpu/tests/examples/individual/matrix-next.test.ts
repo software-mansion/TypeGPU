@@ -59,7 +59,7 @@ describe('matrix(next) example', () => {
         var localCol = input.lid.y;
         var tileIdx = getTileIndex_4(localRow, localCol);
         var accumulatedResult = 0;
-        for (var tileIndex = u32(0); (tileIndex < numTiles); tileIndex++) {
+        for (var tileIndex = 0u; (tileIndex < numTiles); tileIndex++) {
           var matrixACol = ((tileIndex * 16) + localCol);
           var valueA = 0;
           if (((globalRow < dimensions.firstRowCount) && (matrixACol < dimensions.firstColumnCount))) {
@@ -76,7 +76,7 @@ describe('matrix(next) example', () => {
           tileB_9[tileIdx] = valueB;
           workgroupBarrier();
           var effectiveTileSize = min(16, (dimensions.firstColumnCount - (tileIndex * 16)));
-          for (var k = u32(0); (k < effectiveTileSize); k++) {
+          for (var k = 0u; (k < effectiveTileSize); k++) {
             var tileA_element = tileA_7[getTileIndex_4(localRow, k)];
             var tileB_element = tileB_9[getTileIndex_4(k, localCol)];
             accumulatedResult += (tileA_element * tileB_element);

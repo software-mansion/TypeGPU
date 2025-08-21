@@ -133,7 +133,7 @@ describe('box raytracing example', () => {
       }
 
       @fragment fn fragmentFunction_5(input: fragmentFunction_Input_6) -> @location(0) vec4f {
-        var boxSize3 = vec3f(f32(uniforms_3.boxSize));
+        var boxSize3 = vec3f(uniforms_3.boxSize);
         var halfBoxSize3 = (0.5 * boxSize3);
         var halfCanvasDims = (0.5 * uniforms_3.canvasDims);
         var minDim = min(uniforms_3.canvasDims.x, uniforms_3.canvasDims.y);

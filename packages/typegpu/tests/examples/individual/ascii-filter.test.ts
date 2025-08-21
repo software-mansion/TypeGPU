@@ -69,7 +69,7 @@ describe('ascii filter example', () => {
         var color = textureSampleBaseClampToEdge(externalTexture_6, shaderSampler_8, blockCoord);
         var rawGray = (((0.3 * color.x) + (0.59 * color.y)) + (0.11 * color.z));
         var gray = pow(rawGray, gammaCorrection_9);
-        var n = u32(4096);
+        var n = 4096u;
         if ((charsetExtended_10 == 0)) {
           if ((gray > 0.2)) {
             n = 65600;

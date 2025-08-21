@@ -75,7 +75,7 @@ describe('fluid double buffering example', () => {
           value = vec4f();
         }
         else {
-          if ((y < i32(128))) {
+          if ((y < 128)) {
             var depth = (1 - (f32(y) / 128f));
             value = vec4f(0, 0, (10 + (depth * 10)), 0);
           }
