@@ -1,5 +1,7 @@
-import * as d from '../../data/index.ts';
-import * as std from '../../std/index.ts';
+import { builtin } from '../../builtin.ts';
+import { u32 } from '../../data/numeric.ts';
+import { vec3u } from '../../data/vector.ts';
+import { any, ge } from '../../std/boolean.ts';
 import { computeFn } from '../function/tgpuComputeFn.ts';
 import { fn } from '../function/tgpuFn.ts';
 import type { TgpuRoot } from './rootTypes.ts';
@@ -26,7 +28,7 @@ export function dispatch(
   workgroupSize?: readonly number[],
 ): void {
   const checkedSize = sanitizeArray(size);
-  const checkedSizeVec = d.vec3u(...checkedSize);
+  const checkedSizeVec = vec3u(...checkedSize);
   const checkedWorkgroupSize = sanitizeArray(workgroupSize ?? []);
   const workgroupCount = [
     Math.ceil(checkedSize[0] / checkedWorkgroupSize[0]),
@@ -34,14 +36,14 @@ export function dispatch(
     Math.ceil(checkedSize[2] / checkedWorkgroupSize[2]),
   ] as const;
 
-  const wrappedCallback = fn([d.u32, d.u32, d.u32])(callback);
+  const wrappedCallback = fn([u32, u32, u32])(callback);
 
   const mainCompute = computeFn({
     workgroupSize: checkedWorkgroupSize,
-    in: { id: d.builtin.globalInvocationId },
+    in: { id: builtin.globalInvocationId },
   })(({ id }) => {
     'kernel';
-    if (std.any(std.ge(id, d.vec3u(checkedSizeVec)))) {
+    if (any(ge(id, checkedSizeVec))) {
       return;
     }
     wrappedCallback(id.x, id.y, id.z);
