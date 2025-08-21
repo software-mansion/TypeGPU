@@ -2,7 +2,7 @@ import * as d from '../../data/index.ts';
 import * as std from '../../std/index.ts';
 import { computeFn } from '../function/tgpuComputeFn.ts';
 import { fn } from '../function/tgpuFn.ts';
-import { TgpuRoot } from './rootTypes.ts';
+import type { TgpuRoot } from './rootTypes.ts';
 
 /**
  * Changes the given array to an array of 3 numbers, filling missing values with 1.
