@@ -651,6 +651,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
 
 export type AnyFloat32VecInstance = v2f | v3f | v4f;
 
+export type AnyFloat16VecInstance = v2h | v3h | v4h;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -1572,6 +1574,10 @@ export type StorableData =
   | Atomic
   | WgslArray
   | WgslStruct;
+
+export type AnyFloat32VecData = Vec2f | Vec3f | Vec4f;
+
+export type AnyFloat16VecData = Vec2h | Vec3h | Vec4h;
 
 export type AnyWgslData =
   | Bool

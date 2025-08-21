@@ -31,7 +31,7 @@ export default defineConfig({
       wasm(),
       tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
-      /** @type {any} */ imagetools(),
+      imagetools(),
       {
         ...basicSsl(),
         apply(_, { mode }) {

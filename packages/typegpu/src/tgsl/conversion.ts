@@ -1,8 +1,9 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
-import { undecorate } from '../data/decorateUtils.ts';
+import type { AnyData, UnknownData } from '../data/dataTypes.ts';
+import { undecorate } from '../data/dataTypes.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
+  type AnyWgslData,
   type F16,
   type F32,
   type I32,
@@ -14,7 +15,6 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import type { ResolutionCtx } from '../types.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -247,6 +247,24 @@ function applyActionToSnippet(
   }
 }
 
+export function unify<T extends (AnyData | UnknownData)[]>(
+  inTypes: T,
+  restrictTo?: AnyData[] | undefined,
+): { [K in keyof T]: AnyWgslData } | undefined {
+  if (inTypes.some((type) => type.type === 'unknown')) {
+    return undefined;
+  }
+
+  const conversion = getBestConversion(inTypes as AnyData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map(() => conversion.targetType) as {
+    [K in keyof T]: AnyWgslData;
+  };
+}
+
 export function convertToCommonType<T extends Snippet[]>(
   values: T,
   restrictTo?: AnyData[] | undefined,
@@ -290,20 +308,20 @@ Consider using explicit conversions instead.`,
 }
 
 export function tryConvertSnippet(
-  ctx: ResolutionCtx,
   snippet: Snippet,
   targetDataType: AnyData,
+  verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
-    return snippet;
+    return snip(snippet.value, targetDataType);
   }
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(ctx.resolve(snippet.value, targetDataType), targetDataType);
+    return snip(stitch`${snip(snippet.value, targetDataType)}`, targetDataType);
   }
 
-  const converted = convertToCommonType([snippet], [targetDataType]);
+  const converted = convertToCommonType([snippet], [targetDataType], verbose);
 
   if (!converted) {
     throw new WgslTypeError(
