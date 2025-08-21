@@ -1,3 +1,5 @@
+import type { AnyFn } from '../core/function/fnTypes.ts';
+import type { TgpuFn } from '../core/function/tgpuFn.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -769,6 +771,9 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
 // #endregion
 
 // #region WGSL Schema Types
+export type TgpuCallable<
+  ImplSchema extends AnyFn = (...args: never[]) => unknown,
+> = TgpuFn<ImplSchema> | DualFn<ImplSchema>;
 
 /**
  * Boolean schema representing a single WGSL bool value.

@@ -1,0 +1,7 @@
+{
+  "exclude": ["."],
+  "fmt": {
+    "exclude": ["!."],
+    "singleQuote": true
+  }
+}
