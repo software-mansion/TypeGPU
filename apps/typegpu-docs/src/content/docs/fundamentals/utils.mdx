@@ -1,28 +1,19 @@
-<div align="center">
+---
+title: Utilities
+description: A list of various utilities provided by TypeGPU.
+---
 
-# @typegpu/dispatch
+## Dispatch
 
-🚧 **Under Construction** 🚧
+The `root['~unstable'].dispatch` function simplifies running one-and-done computations on the GPU. 
+Behind the scenes, `dispatch` wraps the callback into a `TgpuFn`, then it creates a compute pipeline and runs it a single time.
 
-</div>
+This might help omit the serialization overhead for filling out buffers with initial data.
 
-This package contains a utility `dispatch` function for use in WebGPU apps.
-Requires [unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) to
-work.
-
-`dispatch` simplifies running one-and-done computations on the GPU. Behind the
-scenes, `dispatch` transpiles the given function to WGSL, compiles it into a
-compute shader module, creates a pipeline and runs it, all while making sure
-that all referenced resources are bound in automatically created bind groups.
-
-Example usage would include filling out buffers with initial data to omit the
-serialization overhead.
-
-```ts
-import dispatch from '@typegpu/dispatch';
+```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-
+// ---cut---
 const root = await tgpu.init();
 
 const Boid = d.struct({
@@ -33,7 +24,7 @@ const Boid = d.struct({
 // buffer of 2048 Boids
 const boidsMutable = root.createMutable(d.arrayOf(Boid, 2048));
 
-dispatch(root, [2048], (x) => {
+root['~unstable'].dispatch([2048], (x) => {
   // TGSL function body to run 2048 times on the GPU
   'kernel';
   const boidData = Boid({ index: x, pos: d.vec3f() });
@@ -44,14 +35,14 @@ dispatch(root, [2048], (x) => {
 await root.device.queue.onSubmittedWorkDone();
 ```
 
-Buffer initialization commonly uses random number generators. For that, you can
-use the `@typegpu/noise` library.
+Buffer initialization commonly uses random number generators. 
+For that, you can use the `@typegpu/noise` library.
 
-```ts
-import dispatch from '@typegpu/dispatch';
-import { randf } from '@typegpu/noise';
+```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
 
 const root = await tgpu.init();
 
@@ -60,7 +51,7 @@ const waterLevelMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.f32, 1024), 1024),
 );
 
-dispatch(root, [1024, 1024], (x, y) => {
+root['~unstable'].dispatch([1024, 1024], (x, y) => {
   'kernel';
   randf.seed((x * 1024 + y) / 1024 ** 2);
   waterLevelMutable.$[x][y] = randf.sample();
@@ -70,7 +61,7 @@ dispatch(root, [1024, 1024], (x, y) => {
 console.log(await waterLevelMutable.read());
 ```
 
-Do NOT use this package for:
+It is highly not recommended to use `dispatch` for:
 
 - Kernel calls that occur multiple times, for example on every frame. Every
   `dispatch` call recreates the pipeline, which may impact the performance of
