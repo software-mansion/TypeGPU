@@ -558,7 +558,10 @@ export function generateExpression(
 
     return snip(
       stitch`${arrayType}(${values})`,
-      arrayOf[$internal].jsImpl(elemType as wgsl.AnyWgslData, values.length) as wgsl.AnyWgslData,
+      arrayOf[$internal].jsImpl(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      ) as wgsl.AnyWgslData,
     );
   }
 

@@ -267,6 +267,66 @@ describe('array', () => {
       @group(0) @binding(0) var<storage, read> testArray: array<u32>;
       `));
   });
+
+  it('can be immediately-invoked and initialized in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32, 4)([1, 2, 3, 4]);
+    });
+
+    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
+      "fn foo_0() {
+        var result = array<f32, 4>(1, 2, 3, 4);
+      }"
+    `);
+  });
+
+  it('can be immediately-partially-invoked and initialized in TGSL', () => {
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32)(4)([4, 3, 2, 1]);
+    });
+
+    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
+      "fn foo_0() {
+        var result = array<f32, 4>(4, 3, 2, 1);
+      }"
+    `);
+  });
+
+  it('can be immediately-invoked and initialized in TGSL in combination with slots', () => {
+    const arraySizeSlot = tgpu.slot(4);
+
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32, arraySizeSlot.$)([4, 3, 2, 1]);
+    });
+
+    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
+      "fn foo_0() {
+        var result = array<f32, 4>(4, 3, 2, 1);
+      }"
+    `);
+  });
+
+  it('can be immediately-invoked and initialized in TGSL in combination with slots and derived', () => {
+    const arraySizeSlot = tgpu.slot(4);
+    const derivedArraySizeSlot = tgpu['~unstable'].derived(() =>
+      arraySizeSlot.$ * 2
+    );
+    const derivedInitializer = tgpu['~unstable'].derived(
+      () => [...Array(derivedArraySizeSlot.$).keys()],
+    );
+
+    const foo = tgpu.fn([])(() => {
+      const result = d.arrayOf(d.f32, derivedArraySizeSlot.$)(
+        derivedInitializer.$,
+      );
+    });
+
+    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
+      "fn foo_0() {
+        var result = array<f32, 8>(0, 1, 2, 3, 4, 5, 6, 7);
+      }"
+    `);
+  });
 });
 
 describe('array.length', () => {

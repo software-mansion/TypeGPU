@@ -1,6 +1,6 @@
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import { type AnyData, type Disarray, UnknownData } from './dataTypes.ts';
+import { UnknownData } from './dataTypes.ts';
 import { snip, type Snippet } from './snippet.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
