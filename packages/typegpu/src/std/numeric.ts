@@ -24,7 +24,7 @@ import type {
   v4i,
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
 import { abstruct } from '../data/struct.ts';
 import { mul, sub } from './operators.ts';
 import {
@@ -342,14 +342,13 @@ export const distance = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#dot-builtin
  */
-export const dot = createDualImpl(
-  // CPU implementation
-  <T extends NumVec>(lhs: T, rhs: T): number =>
+export const dot = dualImpl({
+  name: 'dot',
+  signature: (...argTypes) => ({ argTypes, returnType: f32 }),
+  normalImpl: <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
-  // GPU implementation
-  (lhs, rhs) => snip(stitch`dot(${lhs}, ${rhs})`, f32),
-  'dot',
-);
+  codegenImpl: (lhs, rhs) => stitch`dot(${lhs}, ${rhs})`,
+});
 
 export const dot4U8Packed = createDualImpl(
   // CPU implementation
@@ -469,18 +468,17 @@ export const firstTrailingBit = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#floor-builtin
  */
-export const floor = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
+export const floor = dualImpl({
+  name: 'floor',
+  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  normalImpl<T extends AnyFloatVecInstance | number>(value: T): T {
     if (typeof value === 'number') {
       return Math.floor(value) as T;
     }
     return VectorOps.floor[value.kind](value) as T;
   },
-  // GPU implementation
-  (value) => snip(stitch`floor(${value})`, value.dataType),
-  'floor',
-);
+  codegenImpl: (arg) => stitch`floor(${arg})`,
+});
 
 export const fma = createDualImpl(
   // CPU implementation
@@ -497,18 +495,17 @@ export const fma = createDualImpl(
   'fma',
 );
 
-export const fract = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(a: T): T => {
+export const fract = dualImpl({
+  name: 'fract',
+  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  normalImpl<T extends AnyFloatVecInstance | number>(a: T): T {
     if (typeof a === 'number') {
       return (a - Math.floor(a)) as T;
     }
     return VectorOps.fract[a.kind](a) as T;
   },
-  // GPU implementation
-  (a) => snip(stitch`fract(${a})`, a.dataType),
-  'fract',
-);
+  codegenImpl: (a) => stitch`fract(${a})`,
+});
 
 const FrexpResults = {
   f32: abstruct({ fract: f32, exp: i32 }),
@@ -646,18 +643,17 @@ export const ldexp: LdexpOverload = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#length-builtin
  */
-export const length = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): number => {
-    if (typeof value === 'number') {
-      return Math.abs(value);
+export const length = dualImpl({
+  name: 'length',
+  signature: (...argTypes) => ({ argTypes, returnType: f32 }),
+  normalImpl<T extends AnyFloatVecInstance | number>(arg: T): number {
+    if (typeof arg === 'number') {
+      return Math.abs(arg);
     }
-    return VectorOps.length[value.kind](value);
+    return VectorOps.length[arg.kind](arg);
   },
-  // GPU implementation
-  (value) => snip(stitch`length(${value})`, f32),
-  'length',
-);
+  codegenImpl: (arg) => stitch`length(${arg})`,
+});
 
 /**
  * @privateRemarks

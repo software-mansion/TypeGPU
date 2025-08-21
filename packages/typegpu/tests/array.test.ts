@@ -197,7 +197,7 @@ describe('array', () => {
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
-        var myArray = array<u32, 1>(u32(10));
+        var myArray = array<u32, 1>(10);
         var myClone = myArray;
         return;
       }"
@@ -354,7 +354,7 @@ describe('array.length', () => {
 
       fn foo() {
         var acc = 1f;
-        for (var i = u32(0); (i < arrayLength(&values)); i++) {
+        for (var i = 0u; (i < arrayLength(&values)); i++) {
           values[i] = acc;
           acc *= 2;
         }
