@@ -18,7 +18,7 @@ function sanitizeArray(arr: readonly number[]): [number, number, number] {
  * Dispatch a single-shot compute pipeline.
  * @param root A TgpuRoot.
  * @param size A 3d (or shorter) array holding the total number of threads to run.
- * @param callback A function that is parsed to WGSL and run on GPU. It's arguments are the global invocation ids of the call.
+ * @param callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
  * @param workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
  */
 export function dispatch(
