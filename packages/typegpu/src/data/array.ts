@@ -47,7 +47,7 @@ export const arrayOf = createDualImpl(
   }) as WgslArrayConstructor,
   // CODEGEN implementation
   (elementType, elementCount) => {
-    if (elementCount === undefined || elementCount.value === undefined) {
+    if (elementCount?.value === undefined) {
       const partial = (count: Snippet) =>
         arrayOf[$internal].gpuImpl(elementType, count);
       // Marking so the WGSL generator lets this function through
