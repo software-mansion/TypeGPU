@@ -5,10 +5,10 @@ import { add, cos, dot, fract } from 'typegpu/std';
 const U32_MAX = d.u32(4294967295);
 
 export interface StatefulGenerator {
-  seed: TgpuFn<(seed: d.U32) => d.Void>;
-  // seed2: TgpuFn<(seed: d.Vec2u) => d.Void>;
-  // seed3: TgpuFn<(seed: d.Vec3u) => d.Void>;
-  // seed4: TgpuFn<(seed: d.Vec4u) => d.Void>;
+  seed: TgpuFn<(seed: d.F32) => d.Void>;
+  seed2: TgpuFn<(seed: d.Vec2f) => d.Void>;
+  seed3: TgpuFn<(seed: d.Vec3f) => d.Void>;
+  seed4: TgpuFn<(seed: d.Vec4f) => d.Void>;
   sample: TgpuFn<() => d.F32>;
 }
 
@@ -22,22 +22,20 @@ export const BPETER: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(d.vec2f);
 
   return {
-    seed: tgpu.fn([d.u32])((value) => {
-      seed.value = d.vec2f(d.f32(value / U32_MAX), 0);
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.value = d.vec2f(value, 0);
     }),
 
-    seed2: tgpu.fn([d.vec2u])((value) => {
-      seed.value = d.vec2f(d.f32(value.x / U32_MAX), d.f32(value.y / U32_MAX));
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      seed.value = value;
     }),
 
-    seed3: tgpu.fn([d.vec3u])((value) => {
-      const v = add(value.xy, d.vec2u(value.z));
-      seed.value = d.vec2f(d.f32(v.x / U32_MAX), d.f32(v.y / U32_MAX));
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      seed.value = add(value.xy, d.vec2f(value.z));
     }),
 
-    seed4: tgpu.fn([d.vec4u])((value) => {
-      const v = add(value.xy, value.zw);
-      seed.value = d.vec2f(d.f32(v.x / U32_MAX), d.f32(v.y / U32_MAX));
+    seed4: tgpu.fn([d.vec4f])((value) => {
+      seed.value = add(value.xy, value.zw);
     }),
 
     sample: randomGeneratorShell(() => {
@@ -78,12 +76,34 @@ export const HybridTaus: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(d.arrayOf(d.u32, 4));
 
   return {
-    seed: tgpu.fn([d.u32])((value) => {
-      seed.$[0] = value + 128;
-      seed.$[1] = value + 128;
-      seed.$[2] = value + 128;
-      seed.$[3] = value + 128;
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.$[0] = value * U32_MAX + 128;
+      seed.$[1] = value * U32_MAX + 256;
+      seed.$[2] = value * U32_MAX + 512;
+      seed.$[3] = value * U32_MAX + 1024;
     }),
+
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      seed.$[0] = value.x * U32_MAX + 128;
+      seed.$[1] = value.x * U32_MAX + 256;
+      seed.$[2] = value.y * U32_MAX + 512;
+      seed.$[3] = value.y * U32_MAX + 1024;
+    }),
+
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      seed.$[0] = value.x * U32_MAX + 128;
+      seed.$[1] = value.x * U32_MAX + 256;
+      seed.$[2] = value.y * U32_MAX + 512;
+      seed.$[3] = value.z * U32_MAX + 1024;
+    }),
+
+    seed4: tgpu.fn([d.vec4f])((value) => {
+      seed.$[0] = value.x * U32_MAX + 128;
+      seed.$[1] = value.y * U32_MAX + 256;
+      seed.$[2] = value.z * U32_MAX + 512;
+      seed.$[3] = value.w * U32_MAX + 1024;
+    }),
+
     sample: randomGeneratorShell(() => {
       'kernel';
       return 2.3283064e-10 *
