@@ -291,7 +291,7 @@ describe('array.length', () => {
         @group(0) @binding(0) var <storage, read_write> values: array<f32>;
 
         fn foo() {
-          var acc = f32(1);
+          var acc = 1f;
           for (var i = u32(0); (i < arrayLength(&values)); i++) {
             values[i] = acc;
             acc *= 2;
@@ -322,7 +322,7 @@ describe('array.length', () => {
         @group(0) @binding(0) var <storage, read_write> values: array<f32, 128>;
 
         fn foo() {
-          var acc = f32(1);
+          var acc = 1f;
           for (var i = 0; (i < 128); i++) {
             values[i] = acc;
             acc *= 2;

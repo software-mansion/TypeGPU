@@ -3,7 +3,7 @@ import { $internal } from '../shared/symbols.ts';
 import { UnknownData } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
 import { snip, type Snippet } from './snippet.ts';
-import { schemaCallWrapper } from './utils.ts';
+import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------

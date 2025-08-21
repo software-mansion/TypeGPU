@@ -17,16 +17,18 @@ import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   coerceToSnippet,
   concretize,
-  convertStructValues,
-  convertToCommonType,
   type GenerationCtx,
   getTypeForIndexAccess,
   getTypeForPropAccess,
   numericLiteralToSnippet,
-  parseNumericString,
-  tryConvertSnippet,
 } from './generationHelpers.ts';
+import {
+  convertStructValues,
+  convertToCommonType,
+  tryConvertSnippet,
+} from './conversion.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -113,6 +115,20 @@ function assertExhaustive(value: never): never {
   throw new Error(
     `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
   );
+}
+
+function parseNumericString(str: string): number {
+  // Hex literals
+  if (/^0x[0-9a-f]+$/i.test(str)) {
+    return Number.parseInt(str);
+  }
+
+  // Binary literals
+  if (/^0b[01]+$/i.test(str)) {
+    return Number.parseInt(str.slice(2), 2);
+  }
+
+  return Number.parseFloat(str);
 }
 
 export function generateBlock(
@@ -213,15 +229,11 @@ export function generateExpression(
         : [lhsExpr.dataType as AnyData]
       : undefined;
 
-    const converted = convertToCommonType({
-      ctx,
-      values: [lhsExpr, rhsExpr] as const,
-      restrictTo: forcedType,
-    });
-    const [convLhs, convRhs] = converted || [lhsExpr, rhsExpr];
+    const [convLhs, convRhs] =
+      convertToCommonType([lhsExpr, rhsExpr], forcedType) ?? [lhsExpr, rhsExpr];
 
-    const lhsStr = ctx.resolve(convLhs.value);
-    const rhsStr = ctx.resolve(convRhs.value);
+    const lhsStr = ctx.resolve(convLhs.value, convLhs.dataType);
+    const rhsStr = ctx.resolve(convRhs.value, convRhs.dataType);
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
     return snip(
@@ -319,8 +331,8 @@ export function generateExpression(
     const [_, targetNode, propertyNode] = expression;
     const target = generateExpression(ctx, targetNode);
     const property = generateExpression(ctx, propertyNode);
-    const targetStr = ctx.resolve(target.value);
-    const propertyStr = ctx.resolve(property.value);
+    const targetStr = ctx.resolve(target.value, target.dataType);
+    const propertyStr = ctx.resolve(property.value, property.dataType);
 
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess
@@ -380,10 +392,8 @@ export function generateExpression(
 
       // No arguments `Struct()`, resolve struct name and return.
       if (!argNodes[0]) {
-        return snip(
-          `${ctx.resolve(callee.value)}()`,
-          /* the schema becomes the data type */ callee.value,
-        );
+        // the schema becomes the data type
+        return snip(`${ctx.resolve(callee.value)}()`, callee.value);
       }
 
       const arg = generateTypedExpression(ctx, argNodes[0], callee.value);
@@ -440,8 +450,7 @@ export function generateExpression(
           convertedArguments = snippets;
         } else if (argConversionHint === 'unify') {
           // The hint tells us to unify the types.
-          convertedArguments = convertToCommonType({ ctx, values: snippets }) ??
-            snippets;
+          convertedArguments = convertToCommonType(snippets) ?? snippets;
         } else {
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
@@ -495,12 +504,10 @@ export function generateExpression(
       }),
     );
 
-    const convertedValues = convertStructValues(ctx, structType, entries);
+    const convertedSnippets = convertStructValues(structType, entries);
 
     return snip(
-      `${ctx.resolve(structType)}(${
-        convertedValues.map((v) => ctx.resolve(v.value)).join(', ')
-      })`,
+      stitch`${ctx.resolve(structType)}(${convertedSnippets})`,
       structType,
     );
   }
@@ -536,23 +543,22 @@ export function generateExpression(
         );
       }
 
-      const maybeValues = convertToCommonType({ ctx, values: valuesSnippets });
-      if (!maybeValues) {
+      const converted = convertToCommonType(valuesSnippets);
+      if (!converted) {
         throw new WgslTypeError(
           'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
         );
       }
 
-      values = maybeValues;
+      values = converted;
       elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
     }
 
     const arrayType = `array<${ctx.resolve(elemType)}, ${values.length}>`;
-    const arrayValues = values.map((sn) => ctx.resolve(sn.value));
 
     return snip(
-      `${arrayType}(${arrayValues.join(', ')})`,
-      arrayOf[$internal].jsImpl(elemType as wgsl.AnyWgslData, values.length),
+      stitch`${arrayType}(${values})`,
+      arrayOf[$internal].jsImpl(elemType as wgsl.AnyWgslData, values.length) as wgsl.AnyWgslData,
     );
   }
 
@@ -591,19 +597,16 @@ export function generateStatement(
   if (statement[0] === NODE.return) {
     const returnNode = statement[1];
 
-    const returnValue = returnNode !== undefined
-      ? ctx.resolve(
-        generateTypedExpression(
-          ctx,
-          returnNode,
-          ctx.topFunctionReturnType,
-        ).value,
-      )
-      : undefined;
+    if (returnNode !== undefined) {
+      const returnSnippet = generateTypedExpression(
+        ctx,
+        returnNode,
+        ctx.topFunctionReturnType,
+      );
+      return stitch`${ctx.pre}return ${returnSnippet};`;
+    }
 
-    return returnValue
-      ? `${ctx.pre}return ${returnValue};`
-      : `${ctx.pre}return;`;
+    return `${ctx.pre}return;`;
   }
 
   if (statement[0] === NODE.if) {
@@ -650,8 +653,8 @@ ${ctx.pre}else ${alternate}`;
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
     const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-
-    return `${ctx.pre}var ${id} = ${ctx.resolve(eq.value)};`;
+    const eqStr = ctx.resolve(eq.value, eq.dataType, /* exact */ true);
+    return `${ctx.pre}var ${id} = ${eqStr};`;
   }
 
   if (statement[0] === NODE.block) {
@@ -665,22 +668,16 @@ ${ctx.pre}else ${alternate}`;
       .withResetIndentLevel(
         () => [
           init ? generateStatement(ctx, init) : undefined,
-          condition ? generateExpression(ctx, condition) : undefined,
+          condition ? generateTypedExpression(ctx, condition, bool) : undefined,
           update ? generateStatement(ctx, update) : undefined,
         ],
       );
 
     const initStr = initStatement ? initStatement.slice(0, -1) : '';
-
-    const condSnippet = condition
-      ? generateTypedExpression(ctx, condition, bool)
-      : undefined;
-    const conditionStr = condSnippet ? ctx.resolve(condSnippet.value) : '';
-
     const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
     const bodyStr = generateBlock(ctx, blockifySingleStatement(body));
-    return `${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr}) ${bodyStr}`;
+    return stitch`${ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
   }
 
   if (statement[0] === NODE.while) {
