@@ -13,18 +13,12 @@ import type { AnyWgslData } from './wgslTypes.ts';
 interface DisarrayConstructor {
   <TElement extends AnyData>(
     elementType: TElement,
-    elementCount: number,
-  ): Disarray<TElement>;
-
-  <TElement extends AnyData>(
-    elementType: TElement,
-    elementCount?: undefined,
   ): (elementCount: number) => Disarray<TElement>;
 
   <TElement extends AnyData>(
     elementType: TElement,
-    elementCount?: number | undefined,
-  ): Disarray<TElement> | ((elementCount: number) => Disarray<TElement>);
+    elementCount: number,
+  ): Disarray<TElement>;
 }
 
 /**
