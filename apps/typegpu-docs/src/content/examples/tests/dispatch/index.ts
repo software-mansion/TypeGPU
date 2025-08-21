@@ -74,15 +74,18 @@ async function runTests() {
   await testWorkgroupSize();
 }
 
-// #region Example controls and cleanup
+const table = document.querySelector<HTMLDivElement>('.result');
+if (!table) {
+  throw new Error('Nowhere to display the results');
+}
+runTests().then(() => {
+  table.innerText = 'Tests succeeded!';
+}).catch((e) => {
+  table.innerText = 'Tests failed.';
+  console.log(e);
+});
 
-export const controls = {
-  'Run tests': {
-    async onButtonClick() {
-      runTests();
-    },
-  },
-};
+// #region Example controls and cleanup
 
 export function onCleanup() {
   root.destroy();
