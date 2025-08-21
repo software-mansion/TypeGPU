@@ -8,7 +8,7 @@ import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -179,10 +179,11 @@ describe('array', () => {
       const defaultValue = Outer();
     });
 
-    expect(parseResolved({ testFunction })).toBe(parse(`
-      fn testFunction() {
+    expect(asWgsl(testFunction)).toMatchInlineSnapshot(`
+      "fn testFunction() {
         var defaultValue = array<array<f32, 1>, 2>();
-      }`));
+      }"
+    `);
   });
 
   it('generates correct code when array clone is used', () => {
@@ -194,12 +195,13 @@ describe('array', () => {
       return;
     });
 
-    expect(parseResolved({ testFn })).toBe(parse(`
-      fn testFn() {
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
         var myArray = array<u32, 1>(u32(10));
         var myClone = myArray;
         return;
-      }`));
+      }"
+    `);
   });
 
   it('generates correct code when complex array clone is used', () => {
@@ -211,14 +213,13 @@ describe('array', () => {
       return;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-          fn testFn() {
-            var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10));
-            var myClone = myArrays[0];
-            return;
-          }`),
-    );
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10));
+        var myClone = myArrays[0];
+        return;
+      }"
+    `);
   });
 
   it('can be immediately-invoked in TGSL', () => {
@@ -226,11 +227,11 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)();
     });
 
-    expect(parseResolved({ foo })).toBe(parse(`
-      fn foo() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 4>();
-      }
-    `));
+      }"
+    `);
   });
 
   it('can be immediately-partially-invoked in TGSL', () => {
@@ -238,11 +239,11 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)();
     });
 
-    expect(parseResolved({ foo })).toBe(parse(`
-      fn foo() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 4>();
-      }
-    `));
+      }"
+    `);
   });
 
   it('throws when creating schema with runtime-known count', () => {
@@ -250,7 +251,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, count)();
     });
 
-    expect(() => parseResolved({ foo })).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
@@ -263,9 +264,11 @@ describe('array', () => {
       testArray: { storage: d.arrayOf(d.u32) },
     });
 
-    expect(parseResolved({ ...testLayout.bound })).toBe(parse(`
-      @group(0) @binding(0) var<storage, read> testArray: array<u32>;
-      `));
+    expect(
+      tgpu.resolve({ externals: { ...testLayout.bound }, names: 'strict' }),
+    ).toMatchInlineSnapshot(
+      `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
+    );
   });
 
   it('can be immediately-invoked and initialized in TGSL', () => {
@@ -273,8 +276,8 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)([1, 2, 3, 4]);
     });
 
-    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
-      "fn foo_0() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 4>(1, 2, 3, 4);
       }"
     `);
@@ -285,8 +288,8 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)([4, 3, 2, 1]);
     });
 
-    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
-      "fn foo_0() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 4>(4, 3, 2, 1);
       }"
     `);
@@ -299,8 +302,8 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, arraySizeSlot.$)([4, 3, 2, 1]);
     });
 
-    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
-      "fn foo_0() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 4>(4, 3, 2, 1);
       }"
     `);
@@ -321,8 +324,8 @@ describe('array', () => {
       );
     });
 
-    expect(tgpu.resolve({ externals: { foo } })).toMatchInlineSnapshot(`
-      "fn foo_0() {
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "fn foo() {
         var result = array<f32, 8>(0, 1, 2, 3, 4, 5, 6, 7);
       }"
     `);
@@ -346,19 +349,17 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var <storage, read_write> values: array<f32>;
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
-        fn foo() {
-          var acc = 1f;
-          for (var i = u32(0); (i < arrayLength(&values)); i++) {
-            values[i] = acc;
-            acc *= 2;
-          }
+      fn foo() {
+        var acc = 1f;
+        for (var i = u32(0); (i < arrayLength(&values)); i++) {
+          values[i] = acc;
+          acc *= 2;
         }
-      `),
-    );
+      }"
+    `);
   });
 
   it('works for statically-sized arrays in TGSL', () => {
@@ -377,19 +378,17 @@ describe('array.length', () => {
       }
     });
 
-    expect(parseResolved({ foo })).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var <storage, read_write> values: array<f32, 128>;
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> values: array<f32, 128>;
 
-        fn foo() {
-          var acc = 1f;
-          for (var i = 0; (i < 128); i++) {
-            values[i] = acc;
-            acc *= 2;
-          }
+      fn foo() {
+        var acc = 1f;
+        for (var i = 0; (i < 128); i++) {
+          values[i] = acc;
+          acc *= 2;
         }
-      `),
-    );
+      }"
+    `);
   });
 
   describe('arrayLength', () => {
@@ -406,15 +405,13 @@ describe('array.length', () => {
         return arrayLength(layout.$.values);
       });
 
-      expect(parseResolved({ testFn })).toBe(
-        parse(/* wgsl */ `
-          @group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
+      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+        "@group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
 
-          fn testFn() -> i32 {
-            return 5;
-          }
-        `),
-      );
+        fn testFn() -> i32 {
+          return 5;
+        }"
+      `);
     });
 
     it('returns the length of a dynamic array', () => {
@@ -430,15 +427,13 @@ describe('array.length', () => {
         return arrayLength(layout.bound.values.value);
       });
 
-      expect(parseResolved({ testFn })).toBe(
-        parse(/* wgsl */ `
-          @group(0) @binding(0) var<storage, read_write> values: array<f32>;
+      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+        "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
-          fn testFn() -> u32 {
-            return arrayLength(&values);
-          }
-        `),
-      );
+        fn testFn() -> u32 {
+          return arrayLength(&values);
+        }"
+      `);
     });
   });
 });
