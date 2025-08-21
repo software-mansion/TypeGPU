@@ -107,7 +107,7 @@ import {
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
 import { ConfigurableImpl } from './configurableImpl.ts';
-import type { ShaderGenerator } from '../../types.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -253,7 +253,7 @@ class TgpuRootImpl extends WithBindingImpl
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
-    public readonly unstable_shaderGenerator?: ShaderGenerator,
+    public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
@@ -666,10 +666,10 @@ export type InitOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * Custom shader generator used for producing function bodies during resolution.
-   * @experimental
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
    */
-  unstable_shaderGenerator?: ShaderGenerator | undefined;
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -680,10 +680,10 @@ export type InitFromDeviceOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * Custom shader generator used for producing function bodies during resolution.
-   * @experimental
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
    */
-  unstable_shaderGenerator?: ShaderGenerator | undefined;
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -747,7 +747,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
-    options?.unstable_shaderGenerator,
+    options?.shaderGenerator,
   );
 }
 
@@ -770,6 +770,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
-    options?.unstable_shaderGenerator,
+    options?.shaderGenerator,
   );
 }

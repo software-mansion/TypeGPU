@@ -53,6 +53,7 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 // ----------
 // Public API
@@ -593,8 +594,8 @@ export interface TgpuRoot extends Unwrapper {
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly nameRegistry: NameRegistry;
   /** Experimental: custom shader generator used for function bodies during resolution */
-  readonly unstable_shaderGenerator?:
-    | import('../../types').ShaderGenerator
+  readonly shaderGenerator?:
+    | ShaderGenerator
     | undefined;
   /**
    * The current command encoder. This property will

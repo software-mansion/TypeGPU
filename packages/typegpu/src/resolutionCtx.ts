@@ -39,6 +39,7 @@ import {
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/index.ts';
+import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type {
   ExecMode,
   ExecState,
@@ -46,7 +47,6 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  ShaderGenerator,
   Wgsl,
 } from './types.ts';
 import {
@@ -774,12 +774,12 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
-  unstable_ShaderGenerator?: ShaderGenerator,
+  shaderGenerator?: ShaderGenerator,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(
     options,
-    unstable_ShaderGenerator ?? { functionDefinition: generateFunction },
+    shaderGenerator ?? { functionDefinition: generateFunction },
   );
   let code = config
     ? ctx.withSlots(
