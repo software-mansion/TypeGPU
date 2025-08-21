@@ -116,8 +116,9 @@ describe('generationHelpers', () => {
   });
 
   describe('getTypeForIndexAccess', () => {
+    const arr = arrayOf(f32, 2);
+
     it('returns element type for arrays', () => {
-      const arr = arrayOf(f32, 2);
       expect(getTypeForIndexAccess(arr)).toBe(f32);
     });
 
@@ -138,6 +139,8 @@ describe('generationHelpers', () => {
   });
 
   describe('coerceToSnippet', () => {
+    const arr = arrayOf(f32, 2);
+
     it('coerces JS numbers', () => {
       expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
       expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
@@ -153,7 +156,6 @@ describe('generationHelpers', () => {
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
       expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
       expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
-      const arr = arrayOf(f32, 2);
       expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
