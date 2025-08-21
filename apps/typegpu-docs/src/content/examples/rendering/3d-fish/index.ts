@@ -1,4 +1,3 @@
-import { dispatch } from '@typegpu/dispatch';
 import { randf } from '@typegpu/noise';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -100,7 +99,7 @@ const randomizeFishPositions = () => {
   const buffer0mutable = fishDataBuffers[0].as('mutable');
   const buffer1mutable = fishDataBuffers[1].as('mutable');
   const now = performance.now();
-  dispatch(root, [p.fishAmount], (x) => {
+  root['~unstable'].dispatch([p.fishAmount], (x) => {
     'kernel';
     randf.seed(d.f32(x) + now);
     const data = ModelData({

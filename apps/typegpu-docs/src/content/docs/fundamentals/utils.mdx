@@ -61,7 +61,7 @@ root['~unstable'].dispatch([1024, 1024], (x, y) => {
 console.log(await waterLevelMutable.read());
 ```
 
-It is highly not recommended to use `dispatch` for:
+It is highly recommended NOT to use `dispatch` for:
 
 - Kernel calls that occur multiple times, for example on every frame. Every
   `dispatch` call recreates the pipeline, which may impact the performance of
