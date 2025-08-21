@@ -100,7 +100,7 @@ export function resolveWithContext(
         ? new StrictNameRegistry()
         : new RandomNameRegistry(),
     },
-    unstable_ShaderGenerator as ShaderGenerator,
+    unstable_ShaderGenerator,
     config,
   );
 }
