@@ -292,7 +292,7 @@ function resetDrawing() {
 let disposed = false;
 
 function run() {
-  if (disposed || !context) {
+  if (disposed) {
     return;
   }
 
