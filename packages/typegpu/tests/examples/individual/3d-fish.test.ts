@@ -21,7 +21,7 @@ describe('3d fish example', () => {
         mockResizeObserver();
         mock3DModelLoading();
       },
-      waitForAsync: true,
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

@@ -88,6 +88,7 @@ export function mockImageLoading() {
 export function mockMnistWeights() {
   vi.stubGlobal('fetch', async (url: string) => {
     if (url.startsWith('/TypeGPU/assets/mnist-weights/')) {
+      // https://numpy.org/devdocs/reference/generated/numpy.lib.format.html
       const mockHeader =
         "{'descr': '<f4', 'fortran_order': False, 'shape': (0, 0)}";
       const headerBuffer = new TextEncoder().encode(mockHeader);
@@ -104,64 +105,13 @@ export function mock3DModelLoading() {
     load: vi.fn(async () => ({
       attributes: {
         POSITION: {
-          value: new Float32Array([
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            1,
-            1,
-            0,
-            0,
-            0,
-            1,
-            1,
-            0,
-            1,
-          ]),
+          value: new Float32Array(),
         },
         NORMAL: {
-          value: new Float32Array([
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-          ]),
+          value: new Float32Array(),
         },
         TEXCOORD_0: {
-          value: new Float32Array([
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            1,
-            1,
-            0,
-            0,
-            1,
-            0,
-          ]),
+          value: new Float32Array(),
         },
       },
     })),
@@ -173,24 +123,7 @@ export function mock3DModelLoading() {
 
   vi.stubGlobal('fetch', async (url: string) => {
     if (url.includes('.jpg') || url.includes('.png')) {
-      const mockImage = new Uint8Array([
-        255,
-        0,
-        0,
-        255,
-        0,
-        255,
-        0,
-        255,
-        0,
-        0,
-        255,
-        255,
-        255,
-        255,
-        255,
-        255,
-      ]);
+      const mockImage = new Uint8Array();
       return new Response(mockImage, {
         headers: {
           'Content-Type': 'image/png',
@@ -198,19 +131,7 @@ export function mock3DModelLoading() {
       });
     }
     if (url.includes('.obj')) {
-      const mockObjData = `
-v 0.0 0.0 0.0
-v 1.0 0.0 0.0
-v 0.0 1.0 0.0
-vn 0.0 0.0 1.0
-vn 0.0 0.0 1.0
-vn 0.0 0.0 1.0
-vt 0.0 0.0
-vt 1.0 0.0
-vt 0.0 1.0
-f 1/1/1 2/2/2 3/3/3
-`;
-      return new Response(mockObjData, {
+      return new Response('', {
         headers: {
           'Content-Type': 'text/plain',
         },

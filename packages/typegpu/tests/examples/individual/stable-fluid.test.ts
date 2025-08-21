@@ -15,6 +15,7 @@ describe('stable-fluid example', () => {
       category: 'simulation',
       name: 'stable-fluid',
       setupMocks: mockImageLoading,
+      expectedCalls: 7,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

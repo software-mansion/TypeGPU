@@ -18,7 +18,7 @@ describe('cubemap reflection example', () => {
         mockImageLoading();
         mockResizeObserver();
       },
-      waitForAsync: true,
+      expectedCalls: 3,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

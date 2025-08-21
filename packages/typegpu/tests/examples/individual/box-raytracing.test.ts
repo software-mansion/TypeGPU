@@ -13,7 +13,7 @@ describe('box raytracing example', () => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'box-raytracing',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

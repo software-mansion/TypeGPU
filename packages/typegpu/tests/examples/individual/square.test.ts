@@ -13,6 +13,7 @@ describe('square example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'square',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

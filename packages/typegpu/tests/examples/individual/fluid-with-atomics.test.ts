@@ -13,7 +13,7 @@ describe('fluid with atomics example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'fluid-with-atomics',
-      waitForAsync: true,
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

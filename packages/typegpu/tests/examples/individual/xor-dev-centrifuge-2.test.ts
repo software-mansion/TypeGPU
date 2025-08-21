@@ -13,7 +13,7 @@ describe('xor dev centrifuge example', () => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'xor-dev-centrifuge-2',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

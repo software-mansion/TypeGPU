@@ -49,14 +49,18 @@ export async function testExampleShaderGeneration(
   return example;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: we testing here
-export function extractShaderCodes(device: any): string {
+export function extractShaderCodes(
+  // biome-ignore lint/suspicious/noExplicitAny: we testing here
+  device: any,
+  expectedCalls?: number,
+): string {
   const calls = device.mock.createShaderModule.mock.calls as unknown as Array<
     [GPUShaderModuleDescriptor, { label?: string }]
   >;
+  if (expectedCalls !== undefined && calls.length !== expectedCalls) {
+    console.warn(
+      `Expected ${expectedCalls} shader module creation calls, but got ${calls.length}.`,
+    );
+  }
   return calls.map(([descriptor]) => descriptor.code).join('\n\n');
-}
-
-export async function waitForAsyncOperations(ms = 100): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

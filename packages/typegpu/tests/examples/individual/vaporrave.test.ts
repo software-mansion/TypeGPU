@@ -13,7 +13,7 @@ describe('vaporrave example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'vaporrave',
-      waitForAsync: true,
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

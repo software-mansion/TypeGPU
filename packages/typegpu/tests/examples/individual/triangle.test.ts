@@ -13,7 +13,7 @@ describe('triangle example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'triangle',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

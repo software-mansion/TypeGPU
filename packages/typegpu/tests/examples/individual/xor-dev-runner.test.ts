@@ -6,14 +6,14 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 
-describe('perlin noise example', () => {
+describe('xor dev runner example', () => {
   setupCommonMocks();
 
-  it('xor dev runner example valid code', async ({ device }) => {
+  it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'xor-dev-runner',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

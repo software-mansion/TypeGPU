@@ -13,7 +13,7 @@ describe('ray-marching example', () => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'ray-marching',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

@@ -13,7 +13,7 @@ describe('confetti example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'confetti',
-      waitForAsync: true,
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

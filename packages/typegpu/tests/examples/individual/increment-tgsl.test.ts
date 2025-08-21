@@ -14,6 +14,7 @@ describe('increment tgsl example', () => {
       category: 'simple',
       name: 'increment-tgsl',
       controlTriggers: ['Increment'],
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

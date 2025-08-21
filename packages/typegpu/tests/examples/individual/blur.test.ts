@@ -15,6 +15,7 @@ describe('blur example', () => {
       category: 'image-processing',
       name: 'blur',
       setupMocks: mockImageLoading,
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

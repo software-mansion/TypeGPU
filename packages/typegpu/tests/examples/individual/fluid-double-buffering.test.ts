@@ -13,7 +13,7 @@ describe('fluid double buffering example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'fluid-double-buffering',
-      waitForAsync: true,
+      expectedCalls: 3,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

@@ -15,6 +15,7 @@ describe('two boxes example', () => {
       category: 'rendering',
       name: 'two-boxes',
       setupMocks: mockResizeObserver,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

@@ -6,13 +6,14 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 
-describe('square example', () => {
+describe('copy error example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
       category: 'tests',
       name: 'copy-error',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

@@ -14,6 +14,7 @@ describe('tgsl parsing test example', () => {
       category: 'tests',
       name: 'tgsl-parsing-test',
       controlTriggers: ['Run tests'],
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

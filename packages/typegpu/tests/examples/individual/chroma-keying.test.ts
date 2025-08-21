@@ -13,6 +13,7 @@ describe('chroma keying example', () => {
     const shaderCodes = await runExampleTest({
       category: 'image-processing',
       name: 'chroma-keying',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

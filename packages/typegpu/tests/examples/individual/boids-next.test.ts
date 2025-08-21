@@ -13,6 +13,7 @@ describe('boids next example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'boids-next',
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

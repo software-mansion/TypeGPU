@@ -15,6 +15,7 @@ describe('mnist inference example', () => {
       category: 'algorithms',
       name: 'mnist-inference',
       setupMocks: mockMnistWeights,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

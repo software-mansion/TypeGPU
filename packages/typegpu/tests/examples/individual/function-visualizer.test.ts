@@ -15,6 +15,7 @@ describe('function visualizer example', () => {
       category: 'rendering',
       name: 'function-visualizer',
       setupMocks: mockResizeObserver,
+      expectedCalls: 5,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
@@ -40,7 +41,7 @@ describe('function visualizer example', () => {
         let result = properties_1.inverseTransformation * vec4f(pointX, pointY, 0, 1);
         lineVertices_0[id.x] = result.xy;
       }
-        
+
 
       @group(0) @binding(0) var<storage, read_write> lineVertices_0: array<vec2f>;
 
@@ -64,7 +65,7 @@ describe('function visualizer example', () => {
         let result = properties_1.inverseTransformation * vec4f(pointX, pointY, 0, 1);
         lineVertices_0[id.x] = result.xy;
       }
-        
+
 
       @group(0) @binding(0) var<storage, read_write> lineVertices_0: array<vec2f>;
 
@@ -88,7 +89,7 @@ describe('function visualizer example', () => {
         let result = properties_1.inverseTransformation * vec4f(pointX, pointY, 0, 1);
         lineVertices_0[id.x] = result.xy;
       }
-        
+
 
       struct Properties_1 {
         transformation: mat4x4f,

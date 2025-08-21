@@ -6,13 +6,14 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 
-describe('perlin noise example', () => {
+describe('boids example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'boids',
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

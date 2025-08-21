@@ -13,7 +13,7 @@ describe('oklab example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'oklab',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

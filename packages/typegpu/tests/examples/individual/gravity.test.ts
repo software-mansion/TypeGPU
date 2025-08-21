@@ -23,7 +23,7 @@ describe('gravity example', () => {
         mock3DModelLoading();
         mockResizeObserver();
       },
-      waitForAsync: true,
+      expectedCalls: 4,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

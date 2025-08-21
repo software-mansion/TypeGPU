@@ -13,6 +13,7 @@ describe('gradient tiles example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'gradient-tiles',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

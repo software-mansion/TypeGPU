@@ -13,7 +13,7 @@ describe('caustics example', () => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'caustics',
-      waitForAsync: true,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

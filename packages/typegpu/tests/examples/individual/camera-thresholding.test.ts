@@ -13,6 +13,7 @@ describe('camera thresholding example', () => {
     const shaderCodes = await runExampleTest({
       category: 'image-processing',
       name: 'camera-thresholding',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

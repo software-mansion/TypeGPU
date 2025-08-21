@@ -15,6 +15,7 @@ describe('image tuning example', () => {
       category: 'image-processing',
       name: 'image-tuning',
       setupMocks: mockImageLoading,
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

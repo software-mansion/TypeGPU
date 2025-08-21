@@ -13,6 +13,7 @@ describe('ascii filter example', () => {
     const shaderCodes = await runExampleTest({
       category: 'image-processing',
       name: 'ascii-filter',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

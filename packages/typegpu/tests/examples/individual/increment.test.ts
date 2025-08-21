@@ -13,6 +13,7 @@ describe('increment example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simple',
       name: 'increment',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

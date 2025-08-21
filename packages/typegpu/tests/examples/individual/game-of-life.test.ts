@@ -13,6 +13,7 @@ describe('game of life example', () => {
     const shaderCodes = await runExampleTest({
       category: 'simulation',
       name: 'game-of-life',
+      expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

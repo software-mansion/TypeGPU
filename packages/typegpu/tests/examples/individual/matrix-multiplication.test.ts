@@ -13,6 +13,7 @@ describe('matrix multiplication example', () => {
     const shaderCodes = await runExampleTest({
       category: 'algorithms',
       name: 'matrix-multiplication',
+      expectedCalls: 1,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
