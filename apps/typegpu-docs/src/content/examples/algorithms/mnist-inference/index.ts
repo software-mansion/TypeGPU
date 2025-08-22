@@ -182,10 +182,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       querySet.resolve();
       const results = await querySet.read();
       const timeInMs = Number(results[1] - results[0]) / 1_000_000;
-      const formattedTimeInMs = timeInMs.toLocaleString('en-US', {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
-      });
+      const formattedTimeInMs = timeInMs.toFixed(2);
       const predictionLabel = document.querySelector<HTMLDivElement>(
         '.predictions-label',
       );
