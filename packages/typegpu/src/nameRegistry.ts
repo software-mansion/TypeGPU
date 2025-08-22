@@ -2,6 +2,7 @@ export interface NameRegistry {
   /**
    * Creates a valid WGSL identifier, each guaranteed to be unique
    * in the lifetime of a single resolution process.
+   * Should append "_" to primer, followed by some id.
    * @param primer Used in the generation process, makes the identifier more recognizable.
    */
   makeUnique(primer?: string): string;
@@ -13,8 +14,9 @@ export interface NameRegistry {
    *
    * @example
    * makeValid("notAKeyword"); // "notAKeyword"
-   * makeValid("struct"); // "Astruct"
-   * makeValid("Astruct"); // "AAstruct" (to avoid potential name collisions)
+   * makeValid("struct"); // makeUnique("struct")
+   * makeValid("struct_1"); // makeUnique("struct_1") (to avoid potential name collisions)
+   * makeValid("_"); // ERROR (too difficult to make valid to care)
    */
   makeValid(primer: string): string;
 }
@@ -91,7 +93,6 @@ export class StrictNameRegistry extends NameRegistryImpl {
   }
 }
 
-// Observation: none of these contain the capital "A"
 const bannedTokens = new Set([
   // keywords
   'alias',
