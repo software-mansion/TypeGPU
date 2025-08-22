@@ -5,16 +5,6 @@ export function concurrentSumOnJS(arr: number[]) {
   return arr;
 }
 
-export function concurrentMultiplyOnJS(arr: number[]) {
-  arr.reduce((accumulator, currentValue, index) => {
-    if (index > 0) {
-      arr[index] = arr[index - 1] * currentValue;
-    }
-    return arr[index];
-  }, 1);
-  return arr;
-}
-
 export function compareArrayWithBuffer(
   arr1: number[],
   arr2: number[],
@@ -30,17 +20,4 @@ export function compareArrayWithBuffer(
     }
   }
   return true;
-}
-
-export function getNiceYAxisLabels(maxValue: number): number[] {
-  if (maxValue <= 0) {
-    return [0, 0, 0, 0, 0];
-  }
-
-  const labels: number[] = [];
-  for (let i = 0; i < 5; i++) {
-    labels.push((i / 4) * maxValue);
-  }
-
-  return labels;
 }

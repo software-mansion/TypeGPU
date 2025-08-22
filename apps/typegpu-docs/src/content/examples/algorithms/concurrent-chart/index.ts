@@ -1,6 +1,5 @@
 import tgpu from 'typegpu';
 import { performCalculationsWithTime } from './calculator.ts';
-import { getNiceYAxisLabels } from './utils.ts';
 
 const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
 const speedupLabels = Array.from(
@@ -70,7 +69,10 @@ function drawCharts() {
   );
   const overallMax = Math.max(maxJsTime, maxGpuTime, maxGpuShaderTime);
 
-  yAxisTicks = getNiceYAxisLabels(overallMax);
+  yAxisTicks = overallMax <= 0
+  ? [0, 0, 0, 0, 0]
+  : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
+
   const reversedLabels = yAxisLabels.slice().reverse();
   for (let index = 0; index < reversedLabels.length; index++) {
     const label = reversedLabels[index];
