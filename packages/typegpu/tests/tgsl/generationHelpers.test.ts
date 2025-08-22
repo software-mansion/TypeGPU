@@ -72,7 +72,7 @@ describe('generationHelpers', () => {
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractFloat),
+        snip(1e10, abstractInt),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
