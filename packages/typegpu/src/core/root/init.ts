@@ -192,6 +192,37 @@ class WithVertexImpl implements WithVertex {
       targets,
     });
   }
+
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, primitiveState });
+  }
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, depthStencilState });
+  }
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, multisampleState });
+  }
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline({
+      ...this._options,
+      fragmentFn: null,
+      targets: null,
+    });
+  }
 }
 
 class WithFragmentImpl implements WithFragment {
