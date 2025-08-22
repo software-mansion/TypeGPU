@@ -398,22 +398,25 @@ canvas.addEventListener('mousedown', (event) => {
 });
 
 canvas.addEventListener('touchstart', (event) => {
+  event.preventDefault();
   if (event.touches.length === 1) {
     isDragging = true;
     prevX = event.touches[0].clientX;
     prevY = event.touches[0].clientY;
   }
-}, { passive: true });
+}, { passive: false });
 
-canvas.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
-canvas.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
-canvas.addEventListener('mousemove', (event) => {
+const mouseMoveEventListener = (event: MouseEvent) => {
   const dx = event.clientX - prevX;
   const dy = event.clientY - prevY;
   prevX = event.clientX;
@@ -422,9 +425,10 @@ canvas.addEventListener('mousemove', (event) => {
   if (isDragging) {
     updateCameraOrbit(dx, dy);
   }
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-canvas.addEventListener('touchmove', (event) => {
+const touchMoveEventListener = (event: TouchEvent) => {
   if (isDragging && event.touches.length === 1) {
     event.preventDefault();
     const dx = event.touches[0].clientX - prevX;
@@ -434,7 +438,10 @@ canvas.addEventListener('touchmove', (event) => {
 
     updateCameraOrbit(dx, dy);
   }
-}, { passive: false });
+};
+window.addEventListener('touchmove', touchMoveEventListener, {
+  passive: false,
+});
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -544,6 +551,10 @@ export const controls = {
 
 export function onCleanup() {
   exampleDestroyed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.unobserve(canvas);
   icosphereGenerator.destroy();
   cubemapTexture.destroy();
