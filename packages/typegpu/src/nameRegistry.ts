@@ -19,17 +19,34 @@ export interface NameRegistry {
   makeValid(primer: string): string;
 }
 
+/**
+ * A function for checking whether an identifier needs renaming.
+ * Throws if provided with an invalid identifier that cannot be easily renamed.
+ * @example
+ * isValidIdentifier("ident"); // true
+ * isValidIdentifier("struct"); // false
+ * isValidIdentifier("struct_1"); // false
+ * isValidIdentifier("_"); // ERROR
+ * isValidIdentifier("my variable"); // ERROR
+ */
+export function isValidIdentifier(ident: string): boolean {
+  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
+    throw new Error(
+      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
+    );
+  }
+  const prefix = ident.split('_')[0] as string;
+  return !bannedTokens.has(prefix);
+}
+
 abstract class NameRegistryImpl implements NameRegistry {
   abstract makeUnique(primer?: string): string;
 
   makeValid(primer: string): string {
-    if (
-      primer.startsWith('_') || primer.startsWith('A') ||
-      keywordsAndReservedTokens.has(primer)
-    ) {
-      return `A${primer}`;
+    if (isValidIdentifier(primer)) {
+      return primer;
     }
-    return primer;
+    return this.makeUnique(primer);
   }
 }
 
@@ -75,7 +92,7 @@ export class StrictNameRegistry extends NameRegistryImpl {
 }
 
 // Observation: none of these contain the capital "A"
-const keywordsAndReservedTokens = new Set([
+const bannedTokens = new Set([
   // keywords
   'alias',
   'break',

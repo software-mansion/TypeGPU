@@ -936,14 +936,13 @@ describe('wgslGenerator', () => {
       return struct;
     });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-        fn main() -> i32 {
-          var notAKeyword = 0;
-          var Astruct = 1;
-          return Astruct;
-        }`),
-    );
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0() -> i32 {
+        var notAKeyword = 0;
+        var struct_1 = 1;
+        return struct_1;
+      }"
+    `);
   });
 
   it('renames parameters that would result in invalid WGSL', () => {
@@ -951,12 +950,26 @@ describe('wgslGenerator', () => {
       return n + macro;
     });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-        fn main(n: i32, Amacro: i32) -> i32 {
-          return (n + Amacro);
-        }`),
-    );
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0(n: i32, macro_1: i32) -> i32 {
+        return (n + macro_1);
+      }"
+    `);
+  });
+
+  it('throws when struct prop has whitespace in name', () => {
+    const TestStruct = d.struct({ 'my prop': d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => parseResolved({ main }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
+      `);
   });
 
   it('throws when struct prop uses a reserved word', () => {
@@ -974,46 +987,51 @@ describe('wgslGenerator', () => {
       `);
   });
 
-  it('renames underscores', () => {
-    const main = tgpu.fn([])(() => {
+  it('throws when an identifier starts with underscores', () => {
+    const main1 = tgpu.fn([])(() => {
       const _ = 1;
-      const A_ = 2;
-      const AA_ = 3;
     });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-        fn main() {
-          var A_ = 1;
-          var AA_ = 2;
-          var AAA_ = 3;
-        }`),
-    );
+    const main2 = tgpu.fn([])(() => {
+      const __my_var = 1;
+    });
+
+    expect(() => tgpu.resolve({ externals: { main1 } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+    expect(() => tgpu.resolve({ externals: { main2 } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
+      `);
   });
 
   it('does not cause identifier clashes when renaming variables', () => {
     const main = tgpu.fn([])(() => {
       const mut = 1;
-      const Amut = 2;
+      const mut_1 = 2;
+      const mut_1_2 = 2;
     });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-        fn main() {
-          var Amut = 1;
-          var AAmut = 2;
-        }`),
-    );
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0() {
+        var mut_1 = 1;
+        var mut_1_2 = 2;
+        var mut_1_2_3 = 2;
+      }"
+    `);
   });
 
   it('does not cause identifier clashes when renaming parameters', () => {
-    const main = tgpu.fn([d.u32, d.u32])((extern, Aextern) => {
+    const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {
     });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-        fn main(Aextern: u32, AAextern: u32) {
-        }`),
+    expect(parseResolved({ main })).toMatchInlineSnapshot(
+      `"fn main ( extern : u32 , extern_1 : u32 ) { }"`,
     );
   });
 });

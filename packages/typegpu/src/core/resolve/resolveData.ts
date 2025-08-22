@@ -35,6 +35,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { isValidIdentifier } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
@@ -114,7 +115,7 @@ function resolveStructProperty(
   [key, property]: [string, BaseData],
   structName: string,
 ) {
-  if (key !== ctx.names.makeValid(key)) {
+  if (!isValidIdentifier(key)) {
     throw new Error(
       `Property '${key}' of struct '${structName}' is a reserved WGSL word. Choose a different name.`,
     );
