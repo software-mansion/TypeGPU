@@ -196,7 +196,7 @@ export function createFnCore(
               ));
               break;
             }
-            default:
+            case undefined:
               args.push(snip(`_arg_${i}`, argType));
           }
         });
