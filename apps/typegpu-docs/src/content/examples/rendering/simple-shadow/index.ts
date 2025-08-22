@@ -1,48 +1,18 @@
-import tgpu, {
-  type IndexFlag,
-  type TgpuBindGroup,
-  type TgpuBuffer,
-  type VertexFlag,
-} from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-
-// Data structures
-const Material = d.struct({
-  ambient: d.vec3f,
-  diffuse: d.vec3f,
-  specular: d.vec3f,
-  shininess: d.f32,
-});
-
-const VertexInfo = d.struct({
-  position: d.vec4f,
-  normal: d.vec4f,
-});
-
-const InstanceInfo = d.struct({
-  modelMatrix: d.mat4x4f,
-  material: Material,
-});
-
-const Camera = d.struct({
-  projection: d.mat4x4f,
-  view: d.mat4x4f,
-  position: d.vec3f,
-});
-
-const DirectionalLight = d.struct({
-  direction: d.vec3f,
-  color: d.vec3f,
-});
-
-const VisParams = d.struct({
-  shadowOnly: d.f32,
-  lightDepth: d.f32,
-});
-
-const LightSpace = d.struct({ viewProj: d.mat4x4f });
+import { createCuboid, createPlane } from './geometry.ts';
+import {
+  bindGroupLayout,
+  Camera,
+  DirectionalLight,
+  LightSpace,
+  Material,
+  shadowSampleLayout,
+  VertexInfo,
+  VisParams,
+} from './schema.ts';
 
 // WebGPU setup
 const root = await tgpu.init();
@@ -55,15 +25,6 @@ context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
-});
-
-// Bind group layouts
-const bindGroupLayout = tgpu.bindGroupLayout({
-  instanceInfo: { uniform: InstanceInfo },
-});
-
-const shadowSampleLayout = tgpu.bindGroupLayout({
-  shadowMap: { texture: 'depth' },
 });
 
 // Utility functions
@@ -94,85 +55,28 @@ function createCanvasTextures() {
   };
 }
 
-function createShadowTextures(size: number) {
+function createShadowTextures(
+  size: number,
+  sampleCompare: 'less-equal' | 'greater' = 'less-equal',
+  pcf = true,
+) {
   const shadowMap = root['~unstable'].createTexture({
     size: [size, size],
     format: 'depth32float',
   }).$usage('render', 'sampled');
 
+  const comparisonSampler = tgpu['~unstable'].comparisonSampler({
+    compare: sampleCompare,
+    magFilter: pcf ? 'linear' : 'nearest',
+    minFilter: pcf ? 'linear' : 'nearest',
+  });
+
   const shadowBindGroup = root.createBindGroup(shadowSampleLayout, {
     shadowMap: shadowMap,
+    comparisonSampler: comparisonSampler,
   });
 
   return { shadowMap, shadowBindGroup };
-}
-
-// Geometry creation function
-function createPlane({
-  material = Material({
-    ambient: d.vec3f(0.1, 0.1, 0.1),
-    diffuse: d.vec3f(0.7, 0.7, 0.7),
-    specular: d.vec3f(1.0, 1.0, 1.0),
-    shininess: 32.0,
-  }),
-  size = d.vec2f(1),
-  position = d.vec3f(0, 0, 0),
-  rotation = d.vec3f(0, 0, 0),
-}: {
-  material?: d.Infer<typeof Material>;
-  size?: [number, number];
-  position?: d.v3f;
-  rotation?: d.v3f;
-} = {}): {
-  vertexBuffer: TgpuBuffer<d.WgslArray<typeof VertexInfo>> & VertexFlag;
-  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
-  instanceInfo: TgpuBindGroup<{
-    instanceInfo: { uniform: typeof InstanceInfo };
-  }>;
-  indexCount: 6;
-} {
-  const w = size[0] / 2;
-  const h = size[1] / 2;
-
-  const vertices = [
-    VertexInfo({ position: d.vec4f(-w, h, 0, 1), normal: d.vec4f(0, 0, 1, 0) }),
-    VertexInfo({
-      position: d.vec4f(-w, -h, 0, 1),
-      normal: d.vec4f(0, 0, 1, 0),
-    }),
-    VertexInfo({ position: d.vec4f(w, -h, 0, 1), normal: d.vec4f(0, 0, 1, 0) }),
-    VertexInfo({ position: d.vec4f(w, h, 0, 1), normal: d.vec4f(0, 0, 1, 0) }),
-  ];
-
-  const indices = [0, 1, 3, 1, 2, 3];
-
-  const vertexBuffer = root.createBuffer(d.arrayOf(VertexInfo, 4), vertices)
-    .$usage('vertex');
-  const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6), indices).$usage(
-    'index',
-  );
-
-  let modelMatrix = d.mat4x4f.identity();
-
-  if (rotation[0] !== 0) {
-    modelMatrix = m.mat4.rotateX(modelMatrix, rotation[0], d.mat4x4f());
-  }
-  if (rotation[1] !== 0) {
-    modelMatrix = m.mat4.rotateY(modelMatrix, rotation[1], d.mat4x4f());
-  }
-  if (rotation[2] !== 0) {
-    modelMatrix = m.mat4.rotateZ(modelMatrix, rotation[2], d.mat4x4f());
-  }
-  modelMatrix = m.mat4.translate(modelMatrix, position, d.mat4x4f());
-
-  const bindGroup = root.createBindGroup(bindGroupLayout, {
-    instanceInfo: root.createBuffer(InstanceInfo, {
-      modelMatrix,
-      material,
-    }).$usage('uniform'),
-  });
-
-  return { vertexBuffer, indexBuffer, instanceInfo: bindGroup, indexCount: 6 };
 }
 
 // Light and camera setup
@@ -207,16 +111,12 @@ const lightSpaceUniform = root.createUniform(LightSpace, {
 });
 
 let currentShadowMapSize = 2048;
+let currentSampleCompare: 'less-equal' | 'greater' = 'less-equal';
+let pcf = true;
 
 // Textures and samplers
 let canvasTextures = createCanvasTextures();
 let shadowTextures = createShadowTextures(currentShadowMapSize);
-
-const comparisonSampler = tgpu['~unstable'].comparisonSampler({
-  compare: 'less-equal',
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
 
 // Materials
 const planeMaterial = Material({
@@ -234,23 +134,25 @@ const floorMaterial = Material({
 });
 
 // Scene geometry
-const planeGeometry = createPlane({
+const cubeGeometry = createCuboid({
+  root,
   material: planeMaterial,
-  size: [1, 1],
+  size: [1, 1, 0.3],
   position: d.vec3f(0, 0.5, 0),
   rotation: d.vec3f(0, 0, 0),
 });
 const floorGeometry = createPlane({
+  root,
   material: floorMaterial,
   size: [5, 5],
   position: d.vec3f(0, 0, 0),
-  rotation: d.vec3f(Math.PI / 2, 0, 0),
+  rotation: d.vec3f(-Math.PI / 2, 0, 0),
 });
 
-const geometries = [
-  planeGeometry,
-  floorGeometry,
-];
+const geometries = {
+  cuboid: cubeGeometry,
+  floor: floorGeometry,
+};
 
 // Shaders
 const shadowVert = tgpu['~unstable'].vertexFn({
@@ -290,15 +192,11 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   in: {
     normal: d.vec4f,
     worldPos: d.vec3f,
-    frontFacing: d.builtin.frontFacing,
   },
   out: d.vec4f,
-})(({ normal, worldPos, frontFacing }) => {
+})(({ normal, worldPos }) => {
   const instanceInfo = bindGroupLayout.$.instanceInfo;
-  let N = std.normalize(normal.xyz);
-  if (!frontFacing) {
-    N = std.neg(N);
-  }
+  const N = std.normalize(normal.xyz);
   const L = std.normalize(std.neg(light.$.direction));
   const V = std.normalize(cameraUniform.$.position.sub(worldPos));
   const R = std.reflect(std.neg(L), N);
@@ -314,7 +212,7 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 
   let shadowFactor = std.textureSampleCompare(
     shadowSampleLayout.$.shadowMap,
-    comparisonSampler,
+    shadowSampleLayout.$.comparisonSampler,
     uv,
     currentDepth,
   );
@@ -364,6 +262,9 @@ const pipeline = root['~unstable']
   .withMultisample({
     count: 4,
   })
+  .withPrimitive({
+    cullMode: 'back',
+  })
   .createPipeline();
 
 const shadowPipeline = root['~unstable']
@@ -372,9 +273,12 @@ const shadowPipeline = root['~unstable']
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
-    depthBias: 0,
-    depthBiasSlopeScale: 2,
+    depthBias: 1,
+    depthBiasSlopeScale: 4,
     depthBiasClamp: 0,
+  })
+  .withPrimitive({
+    cullMode: 'back',
   })
   .createPipeline();
 
@@ -408,7 +312,7 @@ function render() {
     },
     (pass) => {
       pass.setPipeline(shadowPipeline);
-      for (const geometry of geometries) {
+      for (const geometry of Object.values(geometries)) {
         pass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
         pass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
         pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
@@ -439,7 +343,7 @@ function render() {
       pass.setPipeline(pipeline);
       pass.setBindGroup(shadowSampleLayout, shadowTextures.shadowBindGroup);
 
-      for (const geometry of geometries) {
+      for (const geometry of Object.values(geometries)) {
         pass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
         pass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
         pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
@@ -499,7 +403,7 @@ export const controls = {
   'light Y': {
     initial: -0.7,
     min: -4,
-    max: 0,
+    max: -0.1,
     step: 0.01,
     onSliderChange: (value: number) => {
       updateLightDirection(
@@ -516,6 +420,22 @@ export const controls = {
       updateLightDirection(d.vec3f(currentLightDirection.xy, value));
     },
   },
+  'cuboid thickness': {
+    initial: 0.3,
+    min: 0.01,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      const newCuboid = createCuboid({
+        root,
+        material: planeMaterial,
+        size: [1, 1, value],
+        position: d.vec3f(0, 0.5, 0),
+        rotation: d.vec3f(0, 0, 0),
+      });
+      geometries.cuboid = newCuboid;
+    },
+  },
   'shadow map size': {
     initial: '2048',
     options: ['512', '1024', '2048', '4096', '8192'],
@@ -524,14 +444,33 @@ export const controls = {
       shadowTextures = createShadowTextures(currentShadowMapSize);
     },
   },
+  'shadow map filtering': {
+    initial: true,
+    onToggleChange: (value: boolean) => {
+      pcf = value;
+      shadowTextures = createShadowTextures(
+        currentShadowMapSize,
+        currentSampleCompare,
+        pcf,
+      );
+    },
+  },
   'display mode': {
     initial: 'color',
-    options: ['color', 'shadow', 'light depth'],
+    options: ['color', 'shadow', 'light depth', 'inverse shadow'],
     onSelectChange: (value: string) => {
       paramsUniform.write({
-        shadowOnly: value === 'shadow' ? 1 : 0,
+        shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
         lightDepth: value === 'light depth' ? 1 : 0,
       });
+      currentSampleCompare = value === 'inverse shadow'
+        ? 'greater'
+        : 'less-equal';
+      shadowTextures = createShadowTextures(
+        currentShadowMapSize,
+        currentSampleCompare,
+        pcf,
+      );
     },
   },
 };
