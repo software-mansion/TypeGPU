@@ -967,7 +967,7 @@ describe('wgslGenerator', () => {
       const instance = TestStruct();
     });
 
-    expect(() => parseResolved({ main }))
+    expect(() => tgpu.resolve({ externals: { main } }))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -982,7 +982,7 @@ describe('wgslGenerator', () => {
       const instance = TestStruct();
     });
 
-    expect(() => parseResolved({ main }))
+    expect(() => tgpu.resolve({ externals: { main } }))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -1034,8 +1034,10 @@ describe('wgslGenerator', () => {
     const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {
     });
 
-    expect(parseResolved({ main })).toMatchInlineSnapshot(
-      `"fn main ( extern : u32 , extern_1 : u32 ) { }"`,
-    );
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0(extern_1: u32, extern_1_2: u32) {
+
+      }"
+    `);
   });
 });
