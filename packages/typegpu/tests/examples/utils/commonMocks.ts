@@ -15,6 +15,9 @@ export function setupCommonMocks() {
       },
     );
 
+    // jsdom will sometimes throw css related errors which we don't care about
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
     let callbackInvoked = false;
 
     Object.defineProperty(
