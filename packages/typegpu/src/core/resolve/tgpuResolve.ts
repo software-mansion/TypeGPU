@@ -76,7 +76,7 @@ export function resolveWithContext(
 ): ResolutionResult {
   const {
     externals,
-    shaderGenerator: shaderGenerator,
+    shaderGenerator,
     template,
     names,
     config,
