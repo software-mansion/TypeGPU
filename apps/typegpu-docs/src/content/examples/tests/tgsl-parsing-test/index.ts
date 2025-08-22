@@ -4,6 +4,7 @@ import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.
 import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
+import { pointersTest } from './pointers.ts';
 
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
@@ -15,6 +16,7 @@ const computeRunTests = tgpu['~unstable']
     s = s && matrixOpsTests();
     s = s && infixOperatorsTests();
     s = s && arrayAndStructConstructorsTest();
+    s = s && pointersTest();
 
     if (s) {
       result.value = 1;

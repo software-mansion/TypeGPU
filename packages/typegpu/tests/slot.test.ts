@@ -1,8 +1,9 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
+import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -303,12 +304,10 @@ describe('tgpu.slot', () => {
 
   it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
     const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      })
-      .$name('Boid');
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = buffer.as('uniform');
@@ -331,35 +330,64 @@ describe('tgpu.slot', () => {
       const color = colorAccessSlot.value;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<uniform> boid: Boid;
 
-        @group(0) @binding(0) var<uniform> boid: Boid;
-
-        fn getColor() -> vec3f {
+      fn getColor() -> vec3f {
           return vec3f(1, 2, 3);
         }
 
-        fn func(){
-          var pos = vec3f(1, 2, 3);
-          var posX = 1;
-          var vel = boid.vel;
-          var velX = boid.vel.x;
+      fn func() {
+        var pos = vec3f(1, 2, 3);
+        var posX = 1;
+        var vel = boid.vel;
+        var velX = boid.vel.x;
+        var vel_ = boid.vel;
+        var velX_ = boid.vel.x;
+        var color = getColor();
+      }"
+    `);
+  });
 
-          var vel_ = boid.vel;
-          var velX_ = boid.vel.x;
+  it('participates in constant folding', () => {
+    // User-configurable
+    const gammaCorrectionSlot = tgpu.slot(false);
+    // ---
 
-          var color = getColor();
-        }`),
-    );
+    // Core shader
+    const main = tgpu.fn([d.vec2f], d.vec3f)((uv) => {
+      let color = d.vec3f(1, 0, 1);
+
+      if (gammaCorrectionSlot.$) {
+        color = std.pow(color, d.vec3f(1 / 2.2));
+      }
+
+      return color;
+    });
+
+    // Gamma Correction: OFF
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main(uv: vec2f) -> vec3f {
+        var color = vec3f(1, 0, 1);
+
+        return color;
+      }"
+    `);
+
+    // Gamma Correction: ON
+    expect(asWgsl(main.with(gammaCorrectionSlot, true))).toMatchInlineSnapshot(`
+      "fn main(uv: vec2f) -> vec3f {
+        var color = vec3f(1, 0, 1);
+        {
+          color = pow(color, vec3f(0.4545454680919647));
+        }
+        return color;
+      }"
+    `);
   });
 });
