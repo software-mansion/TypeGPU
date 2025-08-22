@@ -38,7 +38,7 @@ import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import { generateFunction } from './tgsl/index.ts';
+import { wgslGenerator } from './tgsl/wgslGenerator.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type {
   ExecMode,
@@ -69,6 +69,7 @@ const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
+  readonly shaderGenerator?: ShaderGenerator | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -365,12 +366,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
+  private readonly _shaderGenerator: ShaderGenerator;
 
   constructor(
     opts: ResolutionCtxImplOptions,
-    private readonly _shaderGenerator: ShaderGenerator,
   ) {
     this.names = opts.names;
+    this._shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
   }
 
   get pre(): string {
@@ -774,12 +776,10 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
-  shaderGenerator?: ShaderGenerator,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(
     options,
-    shaderGenerator ?? { functionDefinition: generateFunction },
   );
   let code = config
     ? ctx.withSlots(

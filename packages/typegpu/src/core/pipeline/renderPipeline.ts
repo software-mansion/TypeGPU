@@ -685,14 +685,16 @@ class RenderPipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
-        }, branch.shaderGenerator);
+          shaderGenerator: branch.shaderGenerator,
+        });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
-        }, branch.shaderGenerator);
+          shaderGenerator: branch.shaderGenerator,
+        });
       }
 
       const { code, usedBindGroupLayouts, catchall } = resolutionResult;

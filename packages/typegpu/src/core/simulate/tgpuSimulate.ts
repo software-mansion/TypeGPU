@@ -2,7 +2,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getResolutionCtx, provideCtx } from '../../execMode.ts';
 import { StrictNameRegistry } from '../../nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../resolutionCtx.ts';
-import { generateFunction } from '../../tgsl/index.ts';
+import { wgslGenerator } from '../../tgsl/wgslGenerator.ts';
 import { SimulationState } from '../../types.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuVar } from '../variable/tgpuVariable.ts';
@@ -44,7 +44,8 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
   const ctx = getResolutionCtx() ?? new ResolutionCtxImpl({
     // Not relevant
     names: new StrictNameRegistry(),
-  }, { functionDefinition: generateFunction });
+    shaderGenerator: wgslGenerator,
+  });
 
   // Statically locked to one "thread" for now
   const workgroups: readonly [number, number, number] = [1, 1, 1];

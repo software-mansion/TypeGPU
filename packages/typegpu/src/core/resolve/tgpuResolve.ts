@@ -100,8 +100,8 @@ export function resolveWithContext(
       names: names === 'strict'
         ? new StrictNameRegistry()
         : new RandomNameRegistry(),
+      shaderGenerator,
     },
-    shaderGenerator,
     config,
   );
 }
