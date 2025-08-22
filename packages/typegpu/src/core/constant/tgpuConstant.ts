@@ -3,7 +3,12 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $wgslDataType } from '../../shared/symbols.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $runtimeResource,
+  $wgslDataType,
+} from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
@@ -72,9 +77,10 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy(
       {
         [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.dataType,
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-        [$wgslDataType]: this.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TDataType>;

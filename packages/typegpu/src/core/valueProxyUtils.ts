@@ -5,13 +5,18 @@ import {
   type GpuValueGetter,
 } from '../extractGpuValueGetter.ts';
 import { getName } from '../shared/meta.ts';
-import { $internal, $providing, $wgslDataType } from '../shared/symbols.ts';
+import {
+  $internal,
+  $providing,
+  $runtimeResource,
+  $wgslDataType,
+} from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 
 export const valueProxyHandler: ProxyHandler<
   & SelfResolvable
-  & { readonly [$wgslDataType]: BaseData }
+  & { readonly [$wgslDataType]: BaseData; readonly [$runtimeResource]: true }
 > = {
   get(target, prop) {
     if (prop in target) {
@@ -33,6 +38,7 @@ export const valueProxyHandler: ProxyHandler<
     return new Proxy(
       {
         [$internal]: true,
+        [$runtimeResource]: true,
 
         '~resolve': (ctx: ResolutionCtx) =>
           `${ctx.resolve(target)}.${String(prop)}`,
