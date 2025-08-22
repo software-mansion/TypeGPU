@@ -4,13 +4,13 @@ import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
-import basicSsl from '@vitejs/plugin-basic-ssl';
 
 /**
  * @template T
@@ -147,6 +147,11 @@ export default defineConfig({
             {
               label: 'Slots',
               slug: 'fundamentals/slots',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Utilities',
+              slug: 'fundamentals/utils',
               badge: { text: 'new' },
             },
             // {

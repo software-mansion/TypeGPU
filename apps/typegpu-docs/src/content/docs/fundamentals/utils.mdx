@@ -1,0 +1,72 @@
+---
+title: Utilities
+description: A list of various utilities provided by TypeGPU.
+---
+
+## Dispatch
+
+The `root['~unstable'].dispatch` function simplifies running one-and-done computations on the GPU. 
+Behind the scenes, `dispatch` wraps the callback into a `TgpuFn`, then it creates a compute pipeline and runs it a single time.
+
+This might help omit the serialization overhead for filling out buffers with initial data.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const root = await tgpu.init();
+
+const Boid = d.struct({
+  index: d.u32,
+  pos: d.vec3f,
+});
+
+// buffer of 2048 Boids
+const boidsMutable = root.createMutable(d.arrayOf(Boid, 2048));
+
+root['~unstable'].dispatch([2048], (x) => {
+  // TGSL function body to run 2048 times on the GPU
+  'kernel';
+  const boidData = Boid({ index: x, pos: d.vec3f() });
+  boidsMutable.$[x] = boidData;
+});
+
+// (optional) wait for the dispatch to finish
+await root.device.queue.onSubmittedWorkDone();
+```
+
+Buffer initialization commonly uses random number generators. 
+For that, you can use the `@typegpu/noise` library.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
+
+const root = await tgpu.init();
+
+// buffer of 1024x1024 floats
+const waterLevelMutable = root.createMutable(
+  d.arrayOf(d.arrayOf(d.f32, 1024), 1024),
+);
+
+root['~unstable'].dispatch([1024, 1024], (x, y) => {
+  'kernel';
+  randf.seed((x * 1024 + y) / 1024 ** 2);
+  waterLevelMutable.$[x][y] = randf.sample();
+}, [16, 16]);
+
+// (optional) read values in JS
+console.log(await waterLevelMutable.read());
+```
+
+It is highly recommended NOT to use `dispatch` for:
+
+- Kernel calls that occur multiple times, for example on every frame. Every
+  `dispatch` call recreates the pipeline, which may impact the performance of
+  your app significantly. Create and reuse a pipeline instead.
+
+- Avoidable small calls. For example, small buffers can be initialized with
+  `buffer.write()` method, or (when using TgpuBuffers) by passing the data to
+  the constructor.
