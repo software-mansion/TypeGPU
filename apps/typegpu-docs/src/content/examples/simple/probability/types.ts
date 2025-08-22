@@ -37,6 +37,13 @@ export interface HistogramData extends BaseData {
 
 export type PlotData = GeometricData | HistogramData;
 
+export const Generator = {
+  BPETER: 'bpeter',
+  HybridTaus: 'hybridTaus',
+};
+
+export type Generator = typeof Generator[keyof typeof Generator];
+
 export const ExecutionMode = {
   SINGLE: 'single',
   PARALLEL: 'parallel',

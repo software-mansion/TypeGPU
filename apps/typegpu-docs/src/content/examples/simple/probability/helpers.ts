@@ -1,12 +1,21 @@
 import tgpu from 'typegpu';
-import { randf } from '@typegpu/noise';
+import { BPETER, HybridTaus, randf } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 
-import { Distribution, PlotType, type PRNG } from './types.ts';
+import { Distribution, Generator, PlotType, type PRNG } from './types.ts';
 import * as c from './constants.ts';
 
 const normal = d.vec3f(1.41, 1.41, 0);
 const z2D = 0.5;
+
+const generators = {
+  [Generator.BPETER]: BPETER,
+  [Generator.HybridTaus]: HybridTaus,
+};
+
+export const getGenerator = (generator: Generator) => {
+  return generators[generator];
+};
 
 const distributionPRNGs = {
   [Distribution.IN_UNIT_SPHERE]: {
@@ -71,9 +80,9 @@ const distributionPRNGs = {
   },
 } as const;
 
-export function getPRNG(distribution: Distribution): PRNG {
+export const getPRNG = (distribution: Distribution): PRNG => {
   return distributionPRNGs[distribution];
-}
+};
 
 const distributionCameras = {
   [Distribution.IN_UNIT_SPHERE]: c.cameraPositionGeo,
@@ -93,6 +102,6 @@ const distributionCameras = {
   [Distribution.CAUCHY]: c.cameraPositionHist,
 } as const;
 
-export function getCameraPosition(distribution: Distribution): number[] {
+export const getCameraPosition = (distribution: Distribution): number[] => {
   return distributionCameras[distribution];
-}
+};

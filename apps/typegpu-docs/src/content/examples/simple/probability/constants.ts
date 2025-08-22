@@ -1,4 +1,4 @@
-import { Distribution, ExecutionMode } from './types.ts';
+import { Distribution, ExecutionMode, Generator } from './types.ts';
 
 export const cameraPositionGeo = [0, 0, 0.5];
 export const cameraPositionHist = [0, 0, 0.2];
@@ -14,6 +14,8 @@ export const numSamplesOptions = [
   10000,
   50000,
 ];
+export const initialGenerator = Generator.BPETER;
+export const generators: Generator[] = Object.values(Generator);
 export const initialDistribution: Distribution = Distribution.SAMPLE;
 export const distributions: Distribution[] = Object.values(Distribution);
 export const initialExecutionMode: ExecutionMode = ExecutionMode.SINGLE;

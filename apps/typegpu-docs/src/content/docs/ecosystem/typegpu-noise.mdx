@@ -102,7 +102,7 @@ const main = tgpu['~unstable'].fragmentFn({
 ```
 
 :::tip
-Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
+Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`. You can achieve this by either dividing thread's `id` by the total number of threads or by using a seed generated on the CPU, which is the most common method for dealing with it.
 :::
 
 There are higher-level utilities built on top of `randf.sample`. Most of the distributions can be derived from the fact that cumulative distribution functions (CDFs) are uniformly distributed on`[0, 1]` and can be easily inverted to generate random variables. We provide insights for probability enthusiasts. Let's assume $U \sim \mathrm{Uniform}[0, 1) \sim \mathrm{randf.sample}$ :
@@ -267,3 +267,5 @@ pipeline
 // a different domain size
 bindGroup = initBindGroup(d.vec3u(5, 5, 1));
 ```
+
+## Generators

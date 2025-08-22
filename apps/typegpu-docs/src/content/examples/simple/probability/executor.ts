@@ -8,7 +8,11 @@ import type {
   TgpuSlot,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+import {
+  randf,
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
 
 export class Executor {
   readonly #root: TgpuRoot;
@@ -86,6 +90,7 @@ export class Executor {
 
   async executeSingleWorker(
     distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
     forceReexec = false,
   ): Promise<d.v3f[]> {
     if (this.#samples.length !== 0 && !forceReexec) {
@@ -98,6 +103,7 @@ export class Executor {
     }
 
     const pipeline = this.#root['~unstable']
+      .with(randomGeneratorSlot, generator)
       .with(this.#sampleBufferSlot, this.#samplesBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)
       .withCompute(this.#dataSingleWorkerFunc as TgpuComputeFn)
@@ -111,6 +117,7 @@ export class Executor {
 
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
     forceReexec = false,
   ): Promise<d.v3f[]> {
     if (this.#samples.length !== 0 && !forceReexec) {
@@ -123,6 +130,7 @@ export class Executor {
     }
 
     const pipeline = this.#root['~unstable']
+      .with(randomGeneratorSlot, generator)
       .with(this.#sampleBufferSlot, this.#samplesBuffer.as('mutable'))
       .with(this.#distributionSlot, distribution)
       .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)

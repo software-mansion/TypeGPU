@@ -49,16 +49,13 @@ export const BPETER: StatefulGenerator = (() => {
   };
 })();
 
-/** HybridTaus PRNG from:
- * https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
- */
 const TausStep = tgpu.fn(
   [d.ptrPrivate(d.u32), d.u32, d.u32, d.u32, d.u32],
   d.u32,
 )(
   (z, S1, S2, S3, M) => {
     const b = ((z << S1) ^ z) >> S2;
-    // biome-ignore lint/style/noParameterAssign: it is a pointer
+    // biome-ignore lint/style/noParameterAssign: z is a pointer
     z = ((z & M) << S3) ^ b;
     return z;
   },
@@ -66,12 +63,15 @@ const TausStep = tgpu.fn(
 
 const LCGStep = tgpu.fn([d.ptrPrivate(d.u32), d.u32, d.u32], d.u32)(
   (z, A, C) => {
-    // biome-ignore lint/style/noParameterAssign: it is a pointer
+    // biome-ignore lint/style/noParameterAssign: z is a pointer
     z = A * z + C;
     return z;
   },
 );
 
+/** HybridTaus PRNG from:
+ * https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
+ */
 export const HybridTaus: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(d.arrayOf(d.u32, 4));
 
@@ -118,7 +118,7 @@ export const HybridTaus: StatefulGenerator = (() => {
 })();
 
 // The default (Can change between releases to improve uniformity).
-export const DefaultGenerator: StatefulGenerator = HybridTaus;
+export const DefaultGenerator: StatefulGenerator = BPETER;
 
 export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
   DefaultGenerator,

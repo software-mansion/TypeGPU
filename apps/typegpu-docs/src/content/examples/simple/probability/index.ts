@@ -2,9 +2,9 @@ import tgpu from 'typegpu';
 
 import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';
-import { type Distribution, ExecutionMode } from './types.ts';
+import { type Distribution, ExecutionMode, type Generator } from './types.ts';
 import * as c from './constants.ts';
-import { getCameraPosition, getPRNG } from './helpers.ts';
+import { getCameraPosition, getGenerator, getPRNG } from './helpers.ts';
 
 const root = await tgpu.init();
 
@@ -13,9 +13,11 @@ const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
 let currentExecutionMode = c.initialExecutionMode;
+let currentGenerator = c.initialGenerator;
 
 const replot = async (
   currentDistribution: Distribution,
+  currentGenerator: Generator,
   execMod: ExecutionMode,
   animate = false,
   forceReexec = false,
@@ -35,11 +37,15 @@ const replot = async (
     }
   }
 
-  samples = await verdict(prng.prng, forceReexec);
+  samples = await verdict(
+    prng.prng,
+    getGenerator(currentGenerator),
+    forceReexec,
+  );
   plotter.plot(samples, prng, animate);
 };
 
-await replot(currentDistribution, currentExecutionMode);
+await replot(currentDistribution, currentGenerator, currentExecutionMode);
 plotter.resetView(getCameraPosition(currentDistribution));
 
 // #region Example controls & Cleanup
@@ -69,6 +75,25 @@ export const controls = {
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
+  'Generator': {
+    initial: c.initialGenerator,
+    options: c.generators,
+    onSelectChange: async (value: Generator) => {
+      if (currentGenerator === value) {
+        return;
+      }
+      currentGenerator = value;
+
+      await replot(
+        currentDistribution,
+        currentGenerator,
+        currentExecutionMode,
+        false,
+        true,
+      );
+      plotter.resetView(getCameraPosition(currentDistribution));
+    },
+  },
   'Execution Mode': {
     initial: c.initialExecutionMode,
     options: c.executionModes,
@@ -78,7 +103,13 @@ export const controls = {
       }
 
       currentExecutionMode = value;
-      await replot(currentDistribution, currentExecutionMode, false, true);
+      await replot(
+        currentDistribution,
+        currentGenerator,
+        currentExecutionMode,
+        false,
+        true,
+      );
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -93,6 +124,7 @@ export const controls = {
       currentDistribution = value;
       await replot(
         currentDistribution,
+        currentGenerator,
         currentExecutionMode,
         true,
         true,
@@ -111,6 +143,7 @@ export const controls = {
       executor.count = value;
       await replot(
         currentDistribution,
+        currentGenerator,
         currentExecutionMode,
       );
     },
@@ -122,7 +155,3 @@ export function onCleanup() {
 }
 
 // #endregion
-
-import { HybridTaus, randf } from '@typegpu/noise';
-console.log(tgpu.resolve({ externals: { 'f': HybridTaus.sample } }));
-console.log(tgpu.resolve({ externals: { 'x': randf.seed } }));
