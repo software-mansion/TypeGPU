@@ -1,4 +1,5 @@
 import * as tinyest from 'tinyest';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -7,13 +8,19 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import {
+  convertStructValues,
+  convertToCommonType,
+  tryConvertSnippet,
+} from './conversion.ts';
 import {
   coerceToSnippet,
   concretize,
@@ -22,13 +29,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import {
-  convertStructValues,
-  convertToCommonType,
-  tryConvertSnippet,
-} from './conversion.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -155,7 +155,9 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Snippet {
-  return ctx.defineVariable(id, dataType);
+  const snippet = snip(ctx.names.makeValid(id), dataType);
+  ctx.defineVariable(id, snippet);
+  return snippet;
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
@@ -658,13 +660,13 @@ ${ctx.pre}else ${alternate}`;
       );
     }
 
-    registerBlockVariable(
+    const snippet = registerBlockVariable(
       ctx,
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = generateIdentifier(ctx, rawId);
-    return stitchWithExactTypes`${ctx.pre}var ${id} = ${eq};`;
+    return stitchWithExactTypes`${ctx.pre}var ${snippet
+      .value as string} = ${eq};`;
   }
 
   if (statement[0] === NODE.block) {

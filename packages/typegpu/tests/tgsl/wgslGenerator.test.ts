@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -931,5 +931,113 @@ describe('wgslGenerator', () => {
         *val += 1;
       }`),
     );
+  });
+
+  it('renames variables that would result in invalid WGSL', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      const notAKeyword = 0;
+      const struct = 1;
+      return struct;
+    });
+
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0() -> i32 {
+        var notAKeyword = 0;
+        var struct_1 = 1;
+        return struct_1;
+      }"
+    `);
+  });
+
+  it('renames parameters that would result in invalid WGSL', () => {
+    const main = tgpu.fn([d.i32, d.i32], d.i32)((n, macro) => {
+      return n + macro;
+    });
+
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0(n: i32, macro_1: i32) -> i32 {
+        return (n + macro_1);
+      }"
+    `);
+  });
+
+  it('throws when struct prop has whitespace in name', () => {
+    const TestStruct = d.struct({ 'my prop': d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => tgpu.resolve({ externals: { main } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+  });
+
+  it('throws when struct prop uses a reserved word', () => {
+    const TestStruct = d.struct({ struct: d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => tgpu.resolve({ externals: { main } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Property 'struct' of struct 'TestStruct' is a reserved WGSL word. Choose a different name.]
+      `);
+  });
+
+  it('throws when an identifier starts with underscores', () => {
+    const main1 = tgpu.fn([])(() => {
+      const _ = 1;
+    });
+
+    const main2 = tgpu.fn([])(() => {
+      const __my_var = 1;
+    });
+
+    expect(() => tgpu.resolve({ externals: { main1 } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+    expect(() => tgpu.resolve({ externals: { main2 } }))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+  });
+
+  it('does not cause identifier clashes when renaming variables', () => {
+    const main = tgpu.fn([])(() => {
+      const mut = 1;
+      const mut_1 = 2;
+      const mut_1_2 = 2;
+    });
+
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0() {
+        var mut_1 = 1;
+        var mut_1_2 = 2;
+        var mut_1_2_3 = 2;
+      }"
+    `);
+  });
+
+  it('does not cause identifier clashes when renaming parameters', () => {
+    const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {
+    });
+
+    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+      "fn main_0(extern_1: u32, extern_1_2: u32) {
+
+      }"
+    `);
   });
 });
