@@ -44,7 +44,6 @@ import {
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
-import { MAX_INT64, MIN_INT64 } from '../shared/constants.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -179,7 +178,14 @@ export function getTypeForIndexAccess(
 
 export function numericLiteralToSnippet(value: number): Snippet {
   // WGSL AbstractInt is a 64-bit two's complement integer
-  if (Number.isInteger(value) && value >= MIN_INT64 && value <= MAX_INT64) {
+  // Since JS number inly represents safe integers in the range of -(2^53 - 1) to 2^53 - 1,
+  // we warn the user if they exceed that range
+  if (Number.isInteger(value)) {
+    if (!Number.isSafeInteger(value)) {
+      console.warn(
+        `The integer ${value} exceeds the safe integer range and may have lost precision.`,
+      );
+    }
     return snip(value, abstractInt);
   }
   return snip(value, abstractFloat);
