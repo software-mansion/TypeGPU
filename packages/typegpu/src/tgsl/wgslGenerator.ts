@@ -28,6 +28,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
+import type { ShaderGenerator } from './shaderGenerator.ts';
 import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -716,3 +717,7 @@ export function generateFunction(
 ): string {
   return generateBlock(ctx, body);
 }
+
+export const wgslGenerator: ShaderGenerator = {
+  functionDefinition: generateFunction,
+};

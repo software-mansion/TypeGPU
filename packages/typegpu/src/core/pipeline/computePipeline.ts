@@ -236,6 +236,7 @@ class ComputePipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
+          shaderGenerator: this.branch.shaderGenerator,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -243,6 +244,7 @@ class ComputePipelineCore implements SelfResolvable {
       } else {
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
+          shaderGenerator: this.branch.shaderGenerator,
         });
       }
 

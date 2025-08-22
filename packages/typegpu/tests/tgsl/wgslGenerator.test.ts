@@ -31,6 +31,7 @@ describe('wgslGenerator', () => {
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
+      shaderGenerator: wgslGenerator.wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
   });
