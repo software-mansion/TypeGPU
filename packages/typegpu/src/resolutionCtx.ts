@@ -368,9 +368,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public expectedType: AnyData | undefined;
   private readonly _shaderGenerator: ShaderGenerator;
 
-  constructor(
-    opts: ResolutionCtxImplOptions,
-  ) {
+  constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
     this._shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
   }
@@ -778,9 +776,7 @@ export function resolve(
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(
-    options,
-  );
+  const ctx = new ResolutionCtxImpl(options);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,
