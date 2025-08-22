@@ -1,7 +1,4 @@
-import {
-  initCache,
-  prefixScan,
-} from '../../../../../../../packages/typegpu-concurrent-scan/src/index.ts';
+import { initCache, prefixScan } from '@typegpu/concurrent-scan';
 import { compareArrayWithBuffer, concurrentSumOnJS } from './utils.ts';
 import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
