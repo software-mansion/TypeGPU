@@ -1,4 +1,6 @@
+import { isTgpuFn } from './core/function/tgpuFn.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
+import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable } from './core/root/rootTypes.ts';
 import {
@@ -12,7 +14,7 @@ import {
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData } from './data/dataTypes.ts';
-import type { Snippet } from './data/snippet.ts';
+import { snip, type Snippet } from './data/snippet.ts';
 import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
   invariant,
@@ -32,7 +34,10 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { coerceToSnippet } from './tgsl/generationHelpers.ts';
+import {
+  coerceToSnippet,
+  numericLiteralToSnippet,
+} from './tgsl/generationHelpers.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
@@ -331,6 +336,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
+  readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -618,7 +624,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown, schema?: AnyData | undefined): string {
+  resolve(item: unknown, schema?: AnyData | undefined, exact = false): string {
+    if (isTgpuFn(item)) {
+      if (
+        this.#currentlyResolvedItems.has(item) &&
+        !this._memoizedResolves.has(item)
+      ) {
+        throw new Error(
+          `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
+        );
+      }
+      this.#currentlyResolvedItems.add(item as object);
+    }
+
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
@@ -632,7 +650,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
-
           return `${[...this._declarations].join('\n\n')}${result}`;
         } finally {
           this.popMode('codegen');
@@ -644,18 +661,35 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      if (
-        schema?.type === 'abstractInt' ||
-        schema?.type === 'u32' ||
-        schema?.type === 'i32'
-      ) {
-        return String(item);
+      const reinterpretedType = numericLiteralToSnippet(item).dataType;
+      const realSchema = exact ? schema : reinterpretedType;
+      invariant(realSchema, 'Schema has to be defined for resolving numbers');
+
+      if (realSchema.type === 'abstractInt') {
+        return `${item}`;
+      }
+      if (realSchema.type === 'u32') {
+        return `${item}u`;
+      }
+      if (realSchema.type === 'i32') {
+        return `${item}i`;
       }
 
-      // Just picking the shorter one
       const exp = item.toExponential();
-      const decimal = String(item);
-      return exp.length < decimal.length ? exp : decimal;
+      const decimal =
+        realSchema.type === 'abstractFloat' && Number.isInteger(item)
+          ? `${item}.`
+          : `${item}`;
+
+      // Just picking the shorter one
+      const base = exp.length < decimal.length ? exp : decimal;
+      if (realSchema.type === 'f32') {
+        return `${base}f`;
+      }
+      if (realSchema.type === 'f16') {
+        return `${base}h`;
+      }
+      return base;
     }
 
     if (typeof item !== 'object' && typeof item !== 'function') {
@@ -676,21 +710,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       const elementTypeString = this.resolve(schema.elementType);
-      return `array<${elementTypeString}, ${schema.elementCount}>(${
-        item.map((element) =>
-          this.resolve(element, schema.elementType as AnyData)
-        )
+      return stitch`array<${elementTypeString}, ${schema.elementCount}>(${
+        item.map((element) => snip(element, schema.elementType as AnyData))
       })`;
     }
 
     if (Array.isArray(item)) {
-      return `array(${item.map((element) => this.resolve(element))})`;
+      return stitch`array(${item.map((element) => this.resolve(element))})`;
     }
 
     if (schema && isWgslStruct(schema)) {
-      return `${this.resolve(schema)}(${
-        Object.entries(schema.propTypes).map(([key, type_]) =>
-          this.resolve((item as Infer<typeof schema>)[key], type_ as AnyData)
+      return stitch`${this.resolve(schema)}(${
+        Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType as AnyData)
         )
       })`;
     }

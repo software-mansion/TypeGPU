@@ -98,7 +98,6 @@ if (!table) {
   throw new Error('Nowhere to display the results');
 }
 
-console.log(input, result);
 table.innerText = (input.getUint32(12) === result.getUint32(12))
   ? 'The bug DOES NOT occur on this device.'
   : 'The bug DOES occur on this device.';

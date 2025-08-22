@@ -1,7 +1,6 @@
 import { FuncParameterType } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
-import { undecorate } from '../../data/decorateUtils.ts';
+import { type AnyData, undecorate } from '../../data/dataTypes.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import {
   isWgslData,

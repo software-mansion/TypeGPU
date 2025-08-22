@@ -2,10 +2,10 @@ import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -236,10 +236,8 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    const actual = parseResolved({ vertexFn });
-
-    const expected = parse(`
-      struct vertex_fn_Input {
+    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      "struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
@@ -251,11 +249,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(f32(_arg_0.color.w), f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(f32(_arg_0.color.w), f32(_arg_0.vi)));
-      }
+        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
+      }"
     `);
-
-    expect(actual).toBe(expected);
   });
 
   it('allows access to output struct as second argument in vertexFn', () => {
@@ -285,9 +281,8 @@ describe('TGSL tgpu.fn function', () => {
       .$name('vertex_fn');
 
     expect(getName(vertexFn)).toBe('vertex_fn');
-    const actual = parseResolved({ vertexFn });
-    expect(actual).toBe(parse(`
-      struct vertex_fn_Input {
+    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      "struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
@@ -299,10 +294,10 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(f32(input.color.w), f32(input.ii), f32(input.vi), 1), vec2f(f32(input.color.w), f32(input.vi)));
+        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1), vec2f(input.color.w, f32(input.vi)));
         return myOutput;
-      }
-    `));
+      }"
+    `);
   });
 
   it('resolves computeFn', () => {
@@ -328,7 +323,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24)
       fn compute_fn(input: compute_fn_Input) {
         var index = input.gid.x;
-        var iterationF = f32(0);
+        var iterationF = 0f;
         var sign = 0;
         var change = vec4f();
       }
@@ -360,7 +355,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24)
       fn compute_fn(_arg_0: compute_fn_Input) {
         var index = _arg_0.gid.x;
-        var iterationF = f32(0);
+        var iterationF = 0f;
         var sign = 0;
         var change = vec4f();
       }
@@ -1047,13 +1042,88 @@ describe('tgsl fn when using plugin', () => {
     );
   });
 
-  // TODO: throw an error when cyclic dependency is detected
-  // it('throws when it detects a cyclic dependency', () => {
-  //   let bar: TgpuFn;
-  //   let foo: TgpuFn;
-  //   bar = tgpu.fn([], d.f32)(() => foo() + 2);
-  //   foo = tgpu.fn([], d.f32)(() => bar() - 2);
+  it('throws when it detects a cyclic dependency (recursion)', () => {
+    // biome-ignore lint/style/useConst: bar has to be assigned later
+    let bar: TgpuFn;
+    // biome-ignore lint/style/useConst: foo has to be assigned later
+    let foo: TgpuFn;
+    bar = tgpu.fn([], d.f32)(() => foo() + 2);
+    foo = tgpu.fn([], d.f32)(() => bar() - 2);
 
-  //   expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(``);
-  // });
+    expect(() => parseResolved({ bar })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:bar
+      - call:foo
+      - fn:foo
+      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+      `);
+  });
+
+  it('throws when it detects a cyclic dependency (when using slots)', () => {
+    // biome-ignore lint/style/useConst: one has to be assigned later
+    let one: TgpuFn;
+    // biome-ignore lint/style/useConst: fnSlot has to be assigned later
+    let fnSlot: TgpuSlot<TgpuFn<() => d.F32>>;
+    // biome-ignore lint/style/useConst: three has to be assigned later
+    let three: TgpuFn;
+    // biome-ignore lint/style/useConst: two has to be assigned later
+    let two: TgpuFn;
+    one = tgpu.fn([], d.f32)(() => two() + 2);
+    fnSlot = tgpu.slot(tgpu.fn([], d.f32)(() => one() + 2).$name('inner'));
+    three = tgpu.fn([], d.f32)(() => fnSlot.$() + 1);
+    two = tgpu.fn([], d.f32)(() => three() + 2);
+    expect(() => parseResolved({ one })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:one
+      - call:two
+      - fn:two
+      - call:three
+      - fn:three
+      - call:inner
+      - fn:inner
+      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
+  it('throws when it detects a cyclic dependency (when using derived)', () => {
+    // biome-ignore lint/style/useConst: one has to be assigned later
+    let one: TgpuFn;
+
+    const flagSlot = tgpu.slot(false);
+    const fnSlot = tgpu.slot<TgpuFn<() => d.F32>>();
+    const mainFn = tgpu.fn([], d.f32)(() => 1000);
+    const fallbackFn = tgpu.fn([], d.f32)(() => one());
+
+    const derivedFn = tgpu['~unstable'].derived(() => {
+      if (flagSlot.$) {
+        return fnSlot.$;
+      }
+      return fallbackFn;
+    }).with(fnSlot, mainFn);
+
+    one = tgpu.fn([], d.f32)(() => derivedFn.$() + 2);
+
+    expect(() => parseResolved({ one })).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:one
+      - call:fallbackFn
+      - fn:fallbackFn
+      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const boundOne = one.with(flagSlot, true);
+
+    expect(tgpu.resolve({ externals: { boundOne } })).toMatchInlineSnapshot(`
+      "fn mainFn_1() -> f32 {
+        return 1000;
+      }
+
+      fn one_0() -> f32 {
+        return (mainFn_1() + 2);
+      }"
+    `);
+  });
 });

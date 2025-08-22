@@ -651,6 +651,8 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
 
 export type AnyFloat32VecInstance = v2f | v3f | v4f;
 
+export type AnyFloat16VecInstance = v2h | v3h | v4h;
+
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
@@ -864,6 +866,7 @@ export interface Vec2f extends
     & ((v: AnyNumericVec2Instance) => v2f)
   > {
   readonly type: 'vec2f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
@@ -884,6 +887,7 @@ export interface Vec2h extends
     & ((v: AnyNumericVec2Instance) => v2h)
   > {
   readonly type: 'vec2h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
@@ -904,6 +908,7 @@ export interface Vec2i extends
     & ((v: AnyNumericVec2Instance) => v2i)
   > {
   readonly type: 'vec2i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
@@ -924,6 +929,7 @@ export interface Vec2u extends
     & ((v: AnyNumericVec2Instance) => v2u)
   > {
   readonly type: 'vec2u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
@@ -945,6 +951,7 @@ export interface Vec2b extends
     & ((v: v2b) => v2b)
   > {
   readonly type: 'vec2<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2b;
@@ -966,6 +973,7 @@ export interface Vec3f extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3f)
   > {
   readonly type: 'vec3f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
@@ -988,6 +996,7 @@ export interface Vec3h extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3h)
   > {
   readonly type: 'vec3h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
@@ -1010,6 +1019,7 @@ export interface Vec3i extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3i)
   > {
   readonly type: 'vec3i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
@@ -1032,6 +1042,7 @@ export interface Vec3u extends
     & ((x: number, v0: AnyNumericVec2Instance) => v3u)
   > {
   readonly type: 'vec3u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
@@ -1055,6 +1066,7 @@ export interface Vec3b extends
     & ((x: boolean, v0: v2b) => v3b)
   > {
   readonly type: 'vec3<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3b;
@@ -1080,6 +1092,7 @@ export interface Vec4f extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4f)
   > {
   readonly type: 'vec4f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
@@ -1106,6 +1119,7 @@ export interface Vec4h extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4h)
   > {
   readonly type: 'vec4h';
+  readonly primitive: F16;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
@@ -1132,6 +1146,7 @@ export interface Vec4i extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4i)
   > {
   readonly type: 'vec4i';
+  readonly primitive: I32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
@@ -1158,6 +1173,7 @@ export interface Vec4u extends
     & ((x: number, y: number, v0: AnyNumericVec2Instance) => v4u)
   > {
   readonly type: 'vec4u';
+  readonly primitive: U32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
@@ -1185,6 +1201,7 @@ export interface Vec4b extends
     & ((x: boolean, y: boolean, v0: v2b) => v4b)
   > {
   readonly type: 'vec4<bool>';
+  readonly primitive: Bool;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4b;
@@ -1346,7 +1363,7 @@ export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
-  TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TInner extends StorableData = StorableData,
   TAccess extends Access = Access,
 > extends BaseData {
   readonly type: 'ptr';
@@ -1528,6 +1545,40 @@ export type ScalarData =
   | AbstractInt
   | AbstractFloat;
 
+export type VecData =
+  | Vec2f
+  | Vec2h
+  | Vec2i
+  | Vec2u
+  | Vec2b
+  | Vec3f
+  | Vec3h
+  | Vec3i
+  | Vec3u
+  | Vec3b
+  | Vec4f
+  | Vec4h
+  | Vec4i
+  | Vec4u
+  | Vec4b;
+
+export type MatData =
+  | Mat2x2f
+  | Mat3x3f
+  | Mat4x4f;
+
+export type StorableData =
+  | ScalarData
+  | VecData
+  | MatData
+  | Atomic
+  | WgslArray
+  | WgslStruct;
+
+export type AnyFloat32VecData = Vec2f | Vec3f | Vec4f;
+
+export type AnyFloat16VecData = Vec2h | Vec3h | Vec4h;
+
 export type AnyWgslData =
   | Bool
   | F32
@@ -1694,11 +1745,12 @@ export function isWgslStruct<T extends WgslStruct>(
 }
 
 /**
- * Checks whether passed in value is a pointer ('function' scope) schema.
+ * Checks whether passed in value is a pointer schema.
  *
  * @example
- * isPtrFn(d.ptrFn(d.f32)) // true
- * isPtrFn(d.f32) // false
+ * isPtr(d.ptrFn(d.f32)) // true
+ * isPtr(d.ptrPrivate(d.f32)) // true
+ * isPtr(d.f32) // false
  */
 export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
   return (schema as T)?.[$internal] && (schema as T)?.type === 'ptr';

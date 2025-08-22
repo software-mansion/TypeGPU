@@ -1,10 +1,14 @@
-import { undecorate } from './decorateUtils.ts';
+import { undecorate } from './dataTypes.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { isNumericSchema } from './wgslTypes.ts';
 
 export interface Snippet {
   readonly value: unknown;
+  /**
+   * The type that `value` is assignable to (not necessary exactly inferred as).
+   * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
+   */
   readonly dataType: AnyData | UnknownData;
 }
 

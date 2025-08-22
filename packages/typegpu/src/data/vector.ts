@@ -1,8 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
-import { snip } from './snippet.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -23,8 +22,11 @@ import {
 } from './vectorImpl.ts';
 import type {
   AnyVecInstance,
-  AnyWgslData,
-  Decorated,
+  Bool,
+  F16,
+  F32,
+  I32,
+  U32,
   Vec2b,
   Vec2f,
   Vec2h,
@@ -41,8 +43,8 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes.ts';
-import { isDecorated, isVec, isVecInstance } from './wgslTypes.ts';
-import type { AnyData } from './dataTypes.ts';
+import { isVec } from './wgslTypes.ts';
+import { type AnyData, undecorate } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -60,7 +62,7 @@ import type { AnyData } from './dataTypes.ts';
  * @example
  * const buffer = root.createBuffer(d.vec2f, d.vec2f(0, 1)); // buffer holding a d.vec2f value, with an initial value of vec2f(0, 1);
  */
-export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
+export const vec2f = makeVecSchema(Vec2fImpl, f32) as Vec2f;
 
 /**
  * Schema representing vec2h - a vector with 2 elements of type f16.
@@ -74,7 +76,7 @@ export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
  * @example
  * const buffer = root.createBuffer(d.vec2h, d.vec2h(0, 1)); // buffer holding a d.vec2h value, with an initial value of vec2h(0, 1);
  */
-export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
+export const vec2h = makeVecSchema(Vec2hImpl, f16) as Vec2h;
 
 /**
  * Schema representing vec2i - a vector with 2 elements of type i32.
@@ -88,7 +90,7 @@ export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
  * @example
  * const buffer = root.createBuffer(d.vec2i, d.vec2i(0, 1)); // buffer holding a d.vec2i value, with an initial value of vec2i(0, 1);
  */
-export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
+export const vec2i = makeVecSchema(Vec2iImpl, i32) as Vec2i;
 
 /**
  * Schema representing vec2u - a vector with 2 elements of type u32.
@@ -102,7 +104,7 @@ export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
  * @example
  * const buffer = root.createBuffer(d.vec2u, d.vec2u(0, 1)); // buffer holding a d.vec2u value, with an initial value of vec2u(0, 1);
  */
-export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
+export const vec2u = makeVecSchema(Vec2uImpl, u32) as Vec2u;
 
 /**
  * Schema representing `vec2<bool>` - a vector with 2 elements of type `bool`.
@@ -113,7 +115,7 @@ export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
  * const vector = d.vec2b(true); // (true, true)
  * const vector = d.vec2b(false, true); // (false, true)
  */
-export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
+export const vec2b = makeVecSchema(Vec2bImpl, bool) as Vec2b;
 
 /**
  * Schema representing vec3f - a vector with 3 elements of type f32.
@@ -127,7 +129,7 @@ export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
  * @example
  * const buffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 2)); // buffer holding a d.vec3f value, with an initial value of vec3f(0, 1, 2);
  */
-export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
+export const vec3f = makeVecSchema(Vec3fImpl, f32) as Vec3f;
 
 /**
  * Schema representing vec3h - a vector with 3 elements of type f16.
@@ -141,7 +143,7 @@ export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
  * @example
  * const buffer = root.createBuffer(d.vec3h, d.vec3h(0, 1, 2)); // buffer holding a d.vec3h value, with an initial value of vec3h(0, 1, 2);
  */
-export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
+export const vec3h = makeVecSchema(Vec3hImpl, f16) as Vec3h;
 
 /**
  * Schema representing vec3i - a vector with 3 elements of type i32.
@@ -155,7 +157,7 @@ export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
  * @example
  * const buffer = root.createBuffer(d.vec3i, d.vec3i(0, 1, 2)); // buffer holding a d.vec3i value, with an initial value of vec3i(0, 1, 2);
  */
-export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
+export const vec3i = makeVecSchema(Vec3iImpl, i32) as Vec3i;
 
 /**
  * Schema representing vec3u - a vector with 3 elements of type u32.
@@ -169,7 +171,7 @@ export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
  * @example
  * const buffer = root.createBuffer(d.vec3u, d.vec3u(0, 1, 2)); // buffer holding a d.vec3u value, with an initial value of vec3u(0, 1, 2);
  */
-export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
+export const vec3u = makeVecSchema(Vec3uImpl, u32) as Vec3u;
 
 /**
  * Schema representing `vec3<bool>` - a vector with 3 elements of type `bool`.
@@ -180,7 +182,7 @@ export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
  * const vector = d.vec3b(true); // (true, true, true)
  * const vector = d.vec3b(false, true, false); // (false, true, false)
  */
-export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
+export const vec3b = makeVecSchema(Vec3bImpl, bool) as Vec3b;
 
 /**
  * Schema representing vec4f - a vector with 4 elements of type f32.
@@ -194,7 +196,7 @@ export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
  * @example
  * const buffer = root.createBuffer(d.vec4f, d.vec4f(0, 1, 2, 3)); // buffer holding a d.vec4f value, with an initial value of vec4f(0, 1, 2, 3);
  */
-export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
+export const vec4f = makeVecSchema(Vec4fImpl, f32) as Vec4f;
 
 /**
  * Schema representing vec4h - a vector with 4 elements of type f16.
@@ -208,7 +210,7 @@ export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
  * @example
  * const buffer = root.createBuffer(d.vec4h, d.vec4h(0, 1, 2, 3)); // buffer holding a d.vec4h value, with an initial value of vec4h(0, 1, 2, 3);
  */
-export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
+export const vec4h = makeVecSchema(Vec4hImpl, f16) as Vec4h;
 
 /**
  * Schema representing vec4i - a vector with 4 elements of type i32.
@@ -222,7 +224,7 @@ export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
  * @example
  * const buffer = root.createBuffer(d.vec4i, d.vec4i(0, 1, 2, 3)); // buffer holding a d.vec4i value, with an initial value of vec4i(0, 1, 2, 3);
  */
-export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
+export const vec4i = makeVecSchema(Vec4iImpl, i32) as Vec4i;
 
 /**
  * Schema representing vec4u - a vector with 4 elements of type u32.
@@ -236,7 +238,7 @@ export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
  * @example
  * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
  */
-export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
+export const vec4u = makeVecSchema(Vec4uImpl, u32) as Vec4u;
 
 /**
  * Schema representing `vec4<bool>` - a vector with 4 elements of type `bool`.
@@ -247,7 +249,7 @@ export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
  * const vector = d.vec4b(true); // (true, true, true, true)
  * const vector = d.vec4b(false, true, false, true); // (false, true, false, true)
  */
-export const vec4b = makeVecSchema(Vec4bImpl) as Vec4b;
+export const vec4b = makeVecSchema(Vec4bImpl, bool) as Vec4b;
 
 // --------------
 // Implementation
@@ -271,24 +273,6 @@ export const vecTypeToConstructor = {
   'vec4<bool>': vec4b,
 } as const;
 
-export const vecTypeToPrimitive = {
-  vec2f: f32,
-  vec2h: f16,
-  vec2i: i32,
-  vec2u: u32,
-  'vec2<bool>': bool,
-  vec3f: f32,
-  vec3h: f16,
-  vec3i: i32,
-  vec3u: u32,
-  'vec3<bool>': bool,
-  vec4f: f32,
-  vec4h: f16,
-  vec4i: i32,
-  vec4u: u32,
-  'vec4<bool>': bool,
-} as const;
-
 type VecSchemaBase<TValue> = {
   readonly type: string;
   readonly [$repr]: TValue;
@@ -296,6 +280,7 @@ type VecSchemaBase<TValue> = {
 
 function makeVecSchema<TValue, S extends number | boolean>(
   VecImpl: new (...args: S[]) => VecBase<S>,
+  primitive: F32 | F16 | I32 | U32 | Bool,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
@@ -322,39 +307,24 @@ function makeVecSchema<TValue, S extends number | boolean>(
     );
   };
 
-  const construct = createDualImpl(
-    cpuConstruct,
-    (...args) => {
-      if (
-        args.every((arg) =>
-          typeof arg.value === 'number' || isVecInstance(arg.value)
-        )
-      ) {
-        // Return an actual vector at resolution time
-        const knownParams = args.map((arg) => arg.value);
-        return snip(
-          cpuConstruct(...(knownParams as never[])),
-          schema as AnyData,
-        );
-      }
-      return snip(stitch`${type}(${args})`, schema as AnyData);
-    },
-    type,
-    (...args) =>
-      args.map((arg) => {
-        let argType = arg.dataType;
-        if (isDecorated(argType)) {
-          argType = (argType as Decorated).inner as AnyWgslData;
-        }
-
-        return isVec(argType) ? argType : vecTypeToPrimitive[type];
+  const construct = dualImpl({
+    name: type,
+    signature: (...args) => ({
+      argTypes: args.map((arg) => {
+        const argType = undecorate(arg);
+        return isVec(argType) ? argType : primitive;
       }),
-  );
+      returnType: schema as AnyData,
+    }),
+    normalImpl: cpuConstruct,
+    codegenImpl: (...args) => stitch`${type}(${args})`,
+  });
 
   const schema:
     & VecSchemaBase<TValue>
     & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
       type,
+      primitive,
       [$repr]: undefined as TValue,
     });
 
