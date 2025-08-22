@@ -31,20 +31,18 @@ export const scanGreatestBlock = tgpu['~unstable'].computeFn({
   // 8 elements per thread
   const baseIdx = globalIdx * 8;
 
-  const partialSums = [d.f32(), identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$];
+  const partialSums = [d.f32(), identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$];
+  let lastIdx = d.u32(0);
   for (let i = d.u32(); i < 8; i++) {
     if (baseIdx + i < arrayLength) {
-      partialSums[i] = scanLayout.$.input[baseIdx + i] as number;
-      if (i > 0) {
-        (partialSums[i] as number) = operatorSlot.$(
+        partialSums[i] = operatorSlot.$(
           partialSums[i - 1] as number,
-          partialSums[i] as number
+          scanLayout.$.input[baseIdx + i] as number
         );
-      }
+      lastIdx = i;
     }
   }
-  // copy to shared memory
-  workgroupMemory.$[localIdx] = partialSums[7] as number;
+  workgroupMemory.$[localIdx] = partialSums[lastIdx] as number;
 
   // Upsweep
   for (let d_val = d.u32(workgroupSize / 2); d_val > 0; d_val >>= 1) {
