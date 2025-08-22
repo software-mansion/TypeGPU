@@ -31,14 +31,24 @@ export const scanGreatestBlock = tgpu['~unstable'].computeFn({
   // 8 elements per thread
   const baseIdx = globalIdx * 8;
 
-  const partialSums = [d.f32(), identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$, identitySlot.$];
+  const partialSums = [
+    d.f32(),
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+    identitySlot.$,
+  ];
   let lastIdx = d.u32(0);
   for (let i = d.u32(); i < 8; i++) {
     if (baseIdx + i < arrayLength) {
-        partialSums[i] = operatorSlot.$(
-          partialSums[i - 1] as number,
-          scanLayout.$.input[baseIdx + i] as number
-        );
+      partialSums[i] = operatorSlot.$(
+        partialSums[i - 1] as number,
+        scanLayout.$.input[baseIdx + i] as number,
+      );
       lastIdx = i;
     }
   }
