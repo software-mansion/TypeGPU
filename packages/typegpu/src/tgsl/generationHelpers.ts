@@ -177,9 +177,8 @@ export function getTypeForIndexAccess(
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
-  // WGSL AbstractInt is a 64-bit two's complement integer
-  // Since JS number inly represents safe integers in the range of -(2^53 - 1) to 2^53 - 1,
-  // we warn the user if they exceed that range
+  // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
+  // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
     if (!Number.isSafeInteger(value)) {
       console.warn(
