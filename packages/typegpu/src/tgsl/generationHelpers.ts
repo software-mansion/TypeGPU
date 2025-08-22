@@ -179,13 +179,13 @@ export function getTypeForIndexAccess(
 export function numericLiteralToSnippet(value: number): Snippet {
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
-  if (Number.isInteger(value)) {
-    if (!Number.isSafeInteger(value)) {
-      console.warn(
-        `The integer ${value} exceeds the safe integer range and may have lost precision.`,
-      );
-    }
+  if (Number.isSafeInteger(value)) {
     return snip(value, abstractInt);
+  }
+  if (value > Number.MAX_SAFE_INTEGER) {
+    console.warn(
+      `The value ${value} exceeds the safe integer range and may have lost precision.`,
+    );
   }
   return snip(value, abstractFloat);
 }
