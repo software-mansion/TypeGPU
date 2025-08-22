@@ -98,7 +98,6 @@ describe('simple shadow example', () => {
       struct mainFrag_Input_17 {
         @location(0) normal: vec4f,
         @location(1) worldPos: vec3f,
-        @builtin(front_facing) frontFacing: bool,
       }
 
       struct DirectionalLight_19 {
@@ -116,21 +115,18 @@ describe('simple shadow example', () => {
 
       @group(2) @binding(0) var shadowMap_22: texture_depth_2d;
 
-      @group(0) @binding(3) var comparisonSampler_23: sampler_comparison;
+      @group(2) @binding(1) var comparisonSampler_23: sampler_comparison;
 
       struct VisParams_25 {
         shadowOnly: f32,
         lightDepth: f32,
       }
 
-      @group(0) @binding(4) var<uniform> paramsUniform_24: VisParams_25;
+      @group(0) @binding(3) var<uniform> paramsUniform_24: VisParams_25;
 
       @fragment fn mainFrag_16(_arg_0: mainFrag_Input_17) -> @location(0) vec4f {
         var instanceInfo = instanceInfo_11;
         var N = normalize(_arg_0.normal.xyz);
-        if (!_arg_0.frontFacing) {
-          N = -(N);
-        }
         var L = normalize(-(light_18.direction));
         var V = normalize((cameraUniform_14.position - _arg_0.worldPos));
         var R = reflect(-(L), N);
