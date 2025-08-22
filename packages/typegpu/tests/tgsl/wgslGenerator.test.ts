@@ -81,12 +81,12 @@ describe('wgslGenerator', () => {
       floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
       scientificLiteral: {
         value: '12e10',
-        wgsl: '12e10',
+        wgsl: '120000000000',
         dataType: abstractInt,
       },
       scientificNegativeExponentLiteral: {
         value: '12e-4',
-        wgsl: '12e-4',
+        wgsl: '0.0012',
         dataType: abstractFloat,
       },
     } as const;
@@ -103,10 +103,10 @@ describe('wgslGenerator', () => {
 
     expect(parsedBody).toStrictEqual([
       NODE.block,
-      Object.entries(literals).map(([key, { value }]) => [
+      Object.entries(literals).map(([key, { wgsl }]) => [
         NODE.const,
         key,
-        [NODE.numericLiteral, value],
+        [NODE.numericLiteral, wgsl],
       ]),
     ]);
 
