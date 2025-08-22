@@ -32,7 +32,7 @@ export interface TgpuResolveOptions {
    * A custom shader code generator, used when resolving TGSL.
    * If not provided, the default WGSL generator will be used.
    */
-  ShaderGenerator?: ShaderGenerator | undefined;
+  shaderGenerator?: ShaderGenerator | undefined;
 }
 
 /**
@@ -76,7 +76,7 @@ export function resolveWithContext(
 ): ResolutionResult {
   const {
     externals,
-    ShaderGenerator: shaderGenerator,
+    shaderGenerator: shaderGenerator,
     template,
     names,
     config,
