@@ -31,7 +31,7 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.value = add(value.xy, d.vec2f(value.z));
+      seed.value = value.xy.add(d.vec2f(value.z));
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
@@ -77,31 +77,31 @@ export const HybridTaus: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$[0] = value * U32_MAX + 128;
-      seed.$[1] = value * U32_MAX + 256;
-      seed.$[2] = value * U32_MAX + 512;
-      seed.$[3] = value * U32_MAX + 1024;
+      seed.$[0] = d.u32(value * U32_MAX) + 128;
+      seed.$[1] = d.u32(value * U32_MAX) + 256;
+      seed.$[2] = d.u32(value * U32_MAX) + 512;
+      seed.$[3] = d.u32(value * U32_MAX) + 1024;
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$[0] = value.x * U32_MAX + 128;
-      seed.$[1] = value.x * U32_MAX + 256;
-      seed.$[2] = value.y * U32_MAX + 512;
-      seed.$[3] = value.y * U32_MAX + 1024;
+      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
+      seed.$[1] = d.u32(value.x * U32_MAX) + 256;
+      seed.$[2] = d.u32(value.y * U32_MAX) + 512;
+      seed.$[3] = d.u32(value.y * U32_MAX) + 1024;
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$[0] = value.x * U32_MAX + 128;
-      seed.$[1] = value.x * U32_MAX + 256;
-      seed.$[2] = value.y * U32_MAX + 512;
-      seed.$[3] = value.z * U32_MAX + 1024;
+      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
+      seed.$[1] = d.u32(value.x * U32_MAX) + 256;
+      seed.$[2] = d.u32(value.y * U32_MAX) + 512;
+      seed.$[3] = d.u32(value.z * U32_MAX) + 1024;
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$[0] = value.x * U32_MAX + 128;
-      seed.$[1] = value.y * U32_MAX + 256;
-      seed.$[2] = value.z * U32_MAX + 512;
-      seed.$[3] = value.w * U32_MAX + 1024;
+      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
+      seed.$[1] = d.u32(value.y * U32_MAX) + 256;
+      seed.$[2] = d.u32(value.z * U32_MAX) + 512;
+      seed.$[3] = d.u32(value.w * U32_MAX) + 1024;
     }),
 
     sample: randomGeneratorShell(() => {
@@ -118,7 +118,7 @@ export const HybridTaus: StatefulGenerator = (() => {
 })();
 
 // The default (Can change between releases to improve uniformity).
-export const DefaultGenerator: StatefulGenerator = BPETER;
+export const DefaultGenerator: StatefulGenerator = HybridTaus;
 
 export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
   DefaultGenerator,
