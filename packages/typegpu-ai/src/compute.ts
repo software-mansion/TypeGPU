@@ -1,10 +1,10 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { ioLayout, weightsBiasesLayout } from './schemas.ts';
-import { calculateIndex, workgroupSize } from './schemas.ts';
+import tgpu from "typegpu";
+import * as d from "typegpu/data";
+import * as std from "typegpu/std";
+import { ioLayout, weightsBiasesLayout } from "./schemas.ts";
+import { calculateIndex, workgroupSize } from "./schemas.ts";
 
-export const nnCompute = tgpu['~unstable'].computeFn({
+export const nnCompute = tgpu["~unstable"].computeFn({
   workgroupSize: [workgroupSize],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -22,7 +22,8 @@ export const nnCompute = tgpu['~unstable'].computeFn({
   let sum = 0.0;
 
   for (let j = d.u32(0); j < inputSize; j = j + 1) {
-    sum = sum +
+    sum =
+      sum +
       (ioLayout.$.input[j] as number) *
         (weightsBiasesLayout.$.weights[weightsOffset + j] as number);
   }
@@ -33,7 +34,10 @@ export const nnCompute = tgpu['~unstable'].computeFn({
 
 const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0.0, x));
 const sigmoid = tgpu.fn([d.f32], d.f32)((x) => 1.0 / (1.0 + std.exp(-x)));
-const tanh = tgpu.fn([d.f32], d.f32)((x) => {
+const tanh = tgpu.fn(
+  [d.f32],
+  d.f32,
+)((x) => {
   const e2x = std.exp(2.0 * x);
   return (e2x - 1.0) / (e2x + 1.0);
 });
