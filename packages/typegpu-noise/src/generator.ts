@@ -2,7 +2,7 @@ import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, cos, dot, fract } from 'typegpu/std';
 
-const U32_MAX = d.u32(4294967295);
+const I32_MAX = d.i32(2147483647);
 
 export interface StatefulGenerator {
   seed: TgpuFn<(seed: d.F32) => d.Void>;
@@ -77,36 +77,36 @@ export const HybridTaus: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$[0] = d.u32(value * U32_MAX) + 128;
-      seed.$[1] = d.u32(value * U32_MAX) + 256;
-      seed.$[2] = d.u32(value * U32_MAX) + 512;
-      seed.$[3] = d.u32(value * U32_MAX) + 1024;
+      seed.$[0] = d.u32(value * I32_MAX) + I32_MAX;
+      seed.$[1] = d.u32(value * I32_MAX) + I32_MAX;
+      seed.$[2] = d.u32(value * I32_MAX) + I32_MAX;
+      seed.$[3] = d.u32(value * I32_MAX) + I32_MAX;
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
-      seed.$[1] = d.u32(value.x * U32_MAX) + 256;
-      seed.$[2] = d.u32(value.y * U32_MAX) + 512;
-      seed.$[3] = d.u32(value.y * U32_MAX) + 1024;
+      seed.$[0] = d.u32(value.x * I32_MAX) + I32_MAX;
+      seed.$[1] = d.u32(value.y * I32_MAX) + I32_MAX;
+      seed.$[2] = d.u32(value.x * I32_MAX) + I32_MAX;
+      seed.$[3] = d.u32(value.y * I32_MAX) + I32_MAX;
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
-      seed.$[1] = d.u32(value.x * U32_MAX) + 256;
-      seed.$[2] = d.u32(value.y * U32_MAX) + 512;
-      seed.$[3] = d.u32(value.z * U32_MAX) + 1024;
+      seed.$[0] = d.u32(value.x * I32_MAX) + I32_MAX;
+      seed.$[1] = d.u32(value.y * I32_MAX) + I32_MAX;
+      seed.$[2] = d.u32(value.y * I32_MAX) + I32_MAX;
+      seed.$[3] = d.u32(value.z * I32_MAX) + I32_MAX;
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$[0] = d.u32(value.x * U32_MAX) + 128;
-      seed.$[1] = d.u32(value.y * U32_MAX) + 256;
-      seed.$[2] = d.u32(value.z * U32_MAX) + 512;
-      seed.$[3] = d.u32(value.w * U32_MAX) + 1024;
+      seed.$[0] = d.u32(value.x * I32_MAX) + I32_MAX;
+      seed.$[1] = d.u32(value.y * I32_MAX) + I32_MAX;
+      seed.$[2] = d.u32(value.z * I32_MAX) + I32_MAX;
+      seed.$[3] = d.u32(value.w * I32_MAX) + I32_MAX;
     }),
 
     sample: randomGeneratorShell(() => {
       'kernel';
-      return 2.3283064e-10 *
+      return d.f32(2.3283064e-10) *
         d.f32(
           TausStep(seed.$[0] as number, 13, 19, 12, d.u32(4294967294)) ^
             TausStep(seed.$[1] as number, 2, 25, 4, d.u32(4294967288)) ^
@@ -118,7 +118,7 @@ export const HybridTaus: StatefulGenerator = (() => {
 })();
 
 // The default (Can change between releases to improve uniformity).
-export const DefaultGenerator: StatefulGenerator = HybridTaus;
+export const DefaultGenerator: StatefulGenerator = BPETER;
 
 export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
   DefaultGenerator,
