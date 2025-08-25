@@ -37,14 +37,16 @@ const Params = d.struct({
   chromaticStrength: d.f32,
   refractionStrength: d.f32,
 });
-const paramsUniform = root.createUniform(Params, {
+const defaultParams: d.Infer<typeof Params> = {
   rectDims: d.vec2f(0.13, 0.01),
   radius: 0.003,
   start: 0.05,
   end: 0.1,
   chromaticStrength: 0.02,
   refractionStrength: 0.1,
-});
+};
+
+const paramsUniform = root.createUniform(Params, defaultParams);
 
 context.configure({
   device,
@@ -159,7 +161,7 @@ frameId = requestAnimationFrame(render);
 
 export const controls = {
   'Rectangle dims': {
-    initial: d.vec2f(0.13, 0.01),
+    initial: defaultParams.rectDims,
     min: d.vec2f(0.01, 0.01),
     max: d.vec2f(0.5, 0.5),
     step: d.vec2f(0.01, 0.01),
@@ -170,7 +172,7 @@ export const controls = {
     },
   },
   'Corner radius': {
-    initial: 0.003,
+    initial: defaultParams.radius,
     min: 0.0,
     max: 0.05,
     step: 0.001,
@@ -181,7 +183,7 @@ export const controls = {
     },
   },
   'Edge start': {
-    initial: 0.05,
+    initial: defaultParams.start,
     min: 0.0,
     max: 0.1,
     step: 0.001,
@@ -192,7 +194,7 @@ export const controls = {
     },
   },
   'Edge end': {
-    initial: 0.1,
+    initial: defaultParams.end,
     min: 0.0,
     max: 0.2,
     step: 0.001,
@@ -203,7 +205,7 @@ export const controls = {
     },
   },
   'Chromatic strength': {
-    initial: 0.02,
+    initial: defaultParams.chromaticStrength,
     min: 0.0,
     max: 0.1,
     step: 0.001,
@@ -214,7 +216,7 @@ export const controls = {
     },
   },
   'Refraction strength': {
-    initial: 0.1,
+    initial: defaultParams.refractionStrength,
     min: 0.0,
     max: 0.2,
     step: 0.001,
