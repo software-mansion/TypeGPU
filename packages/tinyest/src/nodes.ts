@@ -131,7 +131,8 @@ export type BinaryOperator =
   | '%'
   | '|'
   | '^'
-  | '&';
+  | '&'
+  | '**';
 
 export type BinaryExpression = readonly [
   type: NodeTypeCatalog['binaryExpr'],

@@ -1,4 +1,5 @@
 import * as tinyest from 'tinyest';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -7,13 +8,19 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
-import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import {
+  convertStructValues,
+  convertToCommonType,
+  tryConvertSnippet,
+} from './conversion.ts';
 import {
   coerceToSnippet,
   concretize,
@@ -22,13 +29,6 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import {
-  convertStructValues,
-  convertToCommonType,
-  tryConvertSnippet,
-} from './conversion.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -192,6 +192,11 @@ const opCodeToCodegen = {
   '-': sub[$internal].gpuImpl,
   '*': mul[$internal].gpuImpl,
   '/': div[$internal].gpuImpl,
+  '**': (lhsExpr: Snippet, rhsExpr: Snippet) => {
+    const [convLhs, convRhs] =
+      convertToCommonType([lhsExpr, rhsExpr], [f32, f16]) ?? [lhsExpr, rhsExpr];
+    return snip(stitch`pow(${convLhs}, ${convRhs})`, convLhs.dataType);
+  },
 } satisfies Partial<
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
