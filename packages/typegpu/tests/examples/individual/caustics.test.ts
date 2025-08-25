@@ -68,9 +68,9 @@ describe('caustics example', () => {
       fn randOnUnitSphere_15() -> vec3f {
         var z = ((2 * item_16()) - 1);
         var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = ((6.283185307179586 * item_16()) - 3.141592653589793);
-        var x = (sin(theta) * oneMinusZSq);
-        var y = (cos(theta) * oneMinusZSq);
+        var theta = (6.283185307179586 * item_16());
+        var x = (cos(theta) * oneMinusZSq);
+        var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 

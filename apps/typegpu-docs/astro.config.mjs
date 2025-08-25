@@ -11,6 +11,8 @@ import typegpu from 'unplugin-typegpu/rollup';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import rehypeMathJax from 'rehype-mathjax';
+import remarkMath from 'remark-math';
 
 /**
  * @template T
@@ -25,6 +27,10 @@ const DEV = import.meta.env.DEV;
 export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
+  markdown: {
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeMathJax],
+  },
   vite: {
     // Allowing query params, for invalidation
     plugins: [
@@ -48,7 +54,11 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'TypeGPU',
-      customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
+      customCss: [
+        './src/tailwind.css',
+        './src/fonts/font-face.css',
+        './src/mathjax.css',
+      ],
       plugins: stripFalsy([
         starlightBlog({
           navigation: 'none',
