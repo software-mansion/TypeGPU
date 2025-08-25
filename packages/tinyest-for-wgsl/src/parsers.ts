@@ -81,7 +81,9 @@ const ASSIGNMENT_OP_MAP = {
   '|=': '|=',
   '^=': '^=',
   '&=': '&=',
-  '**=': '**=',
+  get '**='(): never {
+    throw new Error('The `**=` operator is unsupported in TGSL.');
+  },
   '||=': '||=',
   '&&=': '&&=',
   get '??='(): never {
