@@ -52,12 +52,7 @@ const BINARY_OP_MAP = {
   get instanceof(): never {
     throw new Error('The `instanceof` operator is unsupported in TGSL.');
   },
-  get '**'(): never {
-    // TODO: Translate 'a ** b' into 'pow(a, b)'.
-    throw new Error(
-      'The `**` operator is unsupported in TGSL. Use std.pow() instead.',
-    );
-  },
+  '**': '**',
   get '|>'(): never {
     throw new Error('The `|>` operator is unsupported in TGSL.');
   },

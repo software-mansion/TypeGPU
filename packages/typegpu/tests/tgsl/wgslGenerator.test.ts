@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -931,5 +931,34 @@ describe('wgslGenerator', () => {
         *val += 1;
       }`),
     );
+  });
+
+  it('generates correct code for pow expression', () => {
+    const four = 4;
+    const power = tgpu.fn([])(() => {
+      const n = 2 ** four;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var n = pow(2, 4);
+      }"
+    `);
+  });
+
+  it('casts in pow expression when necessary', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.u32(3);
+      const b = d.i32(5);
+      const m = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 3u;
+        var b = 5i;
+        var m = pow(f32(a), f32(b));
+      }"
+    `);
   });
 });
