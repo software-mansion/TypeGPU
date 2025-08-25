@@ -77,7 +77,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   let contrastColor = (exposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
   let contrastLuminance = (exposureLuminance - 0.5) * adjustments.contrast + 0.5;
   let contrastColorLuminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
-  
+
   let highlightShift = adjustments.highlights - 1.0;
   let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments.highlights >= 1.0);
   let highlightFactor = 1.0 + highlightBiased * 0.5 * contrastColorLuminance;

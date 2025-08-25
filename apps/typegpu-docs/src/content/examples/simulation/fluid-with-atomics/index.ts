@@ -563,6 +563,7 @@ const createSampleScene = () => {
   }
 };
 
+resetGameData();
 // #region UI
 
 let paused = false;
