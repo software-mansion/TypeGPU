@@ -67,12 +67,15 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampleWithChromaticAberration = tgpu.fn([d.vec2f, d.f32], d.vec3f)(
-  (uv, offset) => {
+const sampleWithChromaticAberration = tgpu.fn(
+  [d.vec2f, d.f32, d.vec2f],
+  d.vec3f,
+)(
+  (uv, offset, dir) => {
     const red = std.textureSampleLevel(
       sampledView,
       sampler,
-      uv.add(d.vec2f(offset, 0)),
+      uv.add(dir.mul(offset)),
       0,
     );
     const green = std.textureSampleLevel(
@@ -84,7 +87,7 @@ const sampleWithChromaticAberration = tgpu.fn([d.vec2f, d.f32], d.vec3f)(
     const blue = std.textureSampleLevel(
       sampledView,
       sampler,
-      uv.sub(d.vec2f(offset, 0)),
+      uv.sub(dir.mul(offset)),
       0,
     );
     return d.vec3f(red.x, green.y, blue.z);
@@ -120,6 +123,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const refractedColor = sampleWithChromaticAberration(
     uv.add(dir.mul(refractionStrength * normalizedDist)),
     chromaticOffset,
+    dir,
   );
 
   return d.vec4f(refractedColor, 1.0);
