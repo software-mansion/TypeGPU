@@ -34,7 +34,7 @@
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.5.3",
     "fuse.js": "catalog:frontend",
-    "jotai": "^2.12.5",
+    "jotai": "^2.13.1",
     "jotai-location": "^0.6.1",
     "lucide-react": "^0.536.0",
     "lz-string": "^1.5.0",
