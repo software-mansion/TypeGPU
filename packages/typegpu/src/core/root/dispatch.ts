@@ -16,7 +16,9 @@ function sanitizeArray(arr: readonly number[]): v3u {
 }
 
 /**
- * Dispatch a single-shot compute pipeline.
+ * Create a dispatch function for a compute pipeline.
+ * Call the returned function to run the GPU computations.
+ * The returned function can be called multiple times.
  * @param options.root A TgpuRoot.
  * @param options.callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
  * @param options.threads A 3d (or shorter) array holding the total number of threads to run.
@@ -29,25 +31,25 @@ export function prepareDispatch(options: {
   threads: readonly [number];
   callback: (x: number) => void;
   workgroupSize?: readonly [number];
-}): () => void;
+}): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number];
   callback: (x: number, y: number) => void;
   workgroupSize?: readonly [number, number];
-}): () => void;
+}): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number, number];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly [number, number, number];
-}): () => void;
+}): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly number[];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly number[];
-}): () => void {
+}): () => Promise<undefined> {
   const threads = sanitizeArray(options.threads);
   const workgroupSize = sanitizeArray(options.workgroupSize ?? []);
   const workgroupCount = ceil(vec3f(threads).div(vec3f(workgroupSize)));
@@ -69,10 +71,13 @@ export function prepareDispatch(options: {
     .withCompute(mainCompute)
     .createPipeline();
 
-  return () =>
+  return () => {
     pipeline.dispatchWorkgroups(
       workgroupCount.x,
       workgroupCount.y,
       workgroupCount.z,
     );
+    options.root['~unstable'].flush();
+    return options.root.device.queue.onSubmittedWorkDone();
+  };
 }
