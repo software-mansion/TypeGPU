@@ -1,12 +1,12 @@
-import { builtin } from '../../builtin.ts';
-import { u32 } from '../../data/numeric.ts';
-import { vec3f, vec3u } from '../../data/vector.ts';
-import { v3u } from '../../data/wgslTypes.ts';
-import { any, ge } from '../../std/boolean.ts';
-import { ceil } from '../../std/numeric.ts';
-import { computeFn } from '../function/tgpuComputeFn.ts';
-import { fn } from '../function/tgpuFn.ts';
-import type { TgpuRoot } from './rootTypes.ts';
+import { builtin } from './builtin.ts';
+import { computeFn } from './core/function/tgpuComputeFn.ts';
+import { fn } from './core/function/tgpuFn.ts';
+import type { TgpuRoot } from './core/root/rootTypes.ts';
+import { u32 } from './data/numeric.ts';
+import { vec3f, vec3u } from './data/vector.ts';
+import { v3u } from './data/wgslTypes.ts';
+import { any, ge } from './std/boolean.ts';
+import { ceil } from './std/numeric.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
