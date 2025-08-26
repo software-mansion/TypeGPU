@@ -3,17 +3,14 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 
-function assertEqual(e1: unknown, e2: unknown) {
+function assertEqual(e1: unknown, e2: unknown): boolean {
   if (Array.isArray(e1) && Array.isArray(e2)) {
-    e1.forEach((elem, i) => assertEqual(elem, e2[i]));
-    return;
+    return e1.every((elem, i) => assertEqual(elem, e2[i]));
   }
-  if (e1 !== e2) {
-    throw new Error(`${e1} and ${e2} are not equal.`);
-  }
+  return e1 === e2;
 }
 
-async function test1d() {
+async function test1d(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
   prepareDispatch({
@@ -25,10 +22,10 @@ async function test1d() {
     },
   })();
   const filled = await mutable.read();
-  assertEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
+  return assertEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
 }
 
-async function test2d() {
+async function test2d(): Promise<boolean> {
   const size = [2, 3] as const;
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
@@ -42,13 +39,13 @@ async function test2d() {
     },
   })();
   const filled = await mutable.read();
-  assertEqual(filled, [
+  return assertEqual(filled, [
     [d.vec2u(0, 0), d.vec2u(0, 1), d.vec2u(0, 2)],
     [d.vec2u(1, 0), d.vec2u(1, 1), d.vec2u(1, 2)],
   ]);
 }
 
-async function test3d() {
+async function test3d(): Promise<boolean> {
   const size = [2, 1, 2] as const;
   const mutable = root.createMutable(
     d.arrayOf(
@@ -65,13 +62,13 @@ async function test3d() {
     },
   })();
   const filled = await mutable.read();
-  assertEqual(filled, [
+  return assertEqual(filled, [
     [[d.vec3u(0, 0, 0), d.vec3u(0, 0, 1)]],
     [[d.vec3u(1, 0, 0), d.vec3u(1, 0, 1)]],
   ]);
 }
 
-async function testWorkgroupSize() {
+async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.arrayOf(d.u32, 12));
   prepareDispatch({
     root,
@@ -83,10 +80,10 @@ async function testWorkgroupSize() {
     workgroupSize: [3],
   })();
   const filled = await mutable.read();
-  assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
+  return assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
 }
 
-async function testMultipleDispatches() {
+async function testMultipleDispatches(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
@@ -102,26 +99,29 @@ async function testMultipleDispatches() {
   dispatch();
   dispatch();
   const filled = await mutable.read();
-  assertEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
+  return assertEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
 }
 
-async function runTests() {
-  await test1d();
-  await test2d();
-  await test3d();
-  await testWorkgroupSize();
-  await testMultipleDispatches();
+async function runTests(): Promise<boolean> {
+  let result = true;
+  result &&= await test1d();
+  result &&= await test2d();
+  result &&= await test3d();
+  result &&= await testWorkgroupSize();
+  result &&= await testMultipleDispatches();
+  return result;
 }
 
 const table = document.querySelector<HTMLDivElement>('.result');
 if (!table) {
   throw new Error('Nowhere to display the results');
 }
-runTests().then(() => {
-  table.innerText = 'Tests succeeded!';
-}).catch((e) => {
-  table.innerText = 'Tests failed.';
-  console.log(e);
+runTests().then((result) => {
+  if (result) {
+    table.innerText = 'Tests succeeded!';
+  } else {
+    table.innerText = 'Tests failed.';
+  }
 });
 
 // #region Example controls and cleanup
