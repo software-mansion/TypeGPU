@@ -1,4 +1,4 @@
-import tgpu, { dispatch } from 'typegpu';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
@@ -16,7 +16,7 @@ function assertEqual(e1: unknown, e2: unknown) {
 async function test1d() {
   const threads = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, threads[0]));
-  dispatch({
+  prepareDispatch({
     root,
     threads,
     callback: (x: number) => {
@@ -33,7 +33,7 @@ async function test2d() {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, threads[1]), threads[0]),
   );
-  dispatch({
+  prepareDispatch({
     root,
     threads,
     callback: (x, y) => {
@@ -56,7 +56,7 @@ async function test3d() {
       threads[0],
     ),
   );
-  dispatch({
+  prepareDispatch({
     root,
     threads,
     callback: (x, y, z) => {
@@ -73,7 +73,7 @@ async function test3d() {
 
 async function testWorkgroupSize() {
   const mutable = root.createMutable(d.arrayOf(d.u32, 12));
-  dispatch({
+  prepareDispatch({
     root,
     threads: [5],
     callback: (x) => {
@@ -90,7 +90,7 @@ async function testMultipleDispatches() {
   const threads = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, threads[0]), [0, 1, 2, 3, 4, 5, 6]);
-  const dispatchAAA = dispatch({
+  const dispatch = prepareDispatch({
     root,
     threads,
     callback: (x: number) => {
@@ -98,9 +98,9 @@ async function testMultipleDispatches() {
       mutable.$[x] *= 2;
     },
   });
-  dispatchAAA();
-  dispatchAAA();
-  dispatchAAA();
+  dispatch();
+  dispatch();
+  dispatch();
   const filled = await mutable.read();
   assertEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
 }

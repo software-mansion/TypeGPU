@@ -24,25 +24,25 @@ function sanitizeArray(arr: readonly number[]): v3u {
  * [1, 1, 1] by default. Setting this to bigger values might speed up the computation due to better caching.
  * The callback is not called when the gid would exceed option.threads.
  */
-export function dispatch(options: {
+export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly [number];
   callback: (x: number) => void;
   workgroupSize?: readonly [number];
 }): () => void;
-export function dispatch(options: {
+export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number];
   callback: (x: number, y: number) => void;
   workgroupSize?: readonly [number, number];
 }): () => void;
-export function dispatch(options: {
+export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number, number];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly [number, number, number];
 }): () => void;
-export function dispatch(options: {
+export function prepareDispatch(options: {
   root: TgpuRoot;
   threads: readonly number[];
   callback: (x: number, y: number, z: number) => void;
