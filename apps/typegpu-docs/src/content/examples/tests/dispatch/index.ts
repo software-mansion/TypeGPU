@@ -3,9 +3,9 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 
-function assertEqual(e1: unknown, e2: unknown): boolean {
+function isEqual(e1: unknown, e2: unknown): boolean {
   if (Array.isArray(e1) && Array.isArray(e2)) {
-    return e1.every((elem, i) => assertEqual(elem, e2[i]));
+    return e1.every((elem, i) => isEqual(elem, e2[i]));
   }
   return e1 === e2;
 }
@@ -22,7 +22,7 @@ async function test1d(): Promise<boolean> {
     },
   })();
   const filled = await mutable.read();
-  return assertEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
+  return isEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
 }
 
 async function test2d(): Promise<boolean> {
@@ -39,7 +39,7 @@ async function test2d(): Promise<boolean> {
     },
   })();
   const filled = await mutable.read();
-  return assertEqual(filled, [
+  return isEqual(filled, [
     [d.vec2u(0, 0), d.vec2u(0, 1), d.vec2u(0, 2)],
     [d.vec2u(1, 0), d.vec2u(1, 1), d.vec2u(1, 2)],
   ]);
@@ -62,7 +62,7 @@ async function test3d(): Promise<boolean> {
     },
   })();
   const filled = await mutable.read();
-  return assertEqual(filled, [
+  return isEqual(filled, [
     [[d.vec3u(0, 0, 0), d.vec3u(0, 0, 1)]],
     [[d.vec3u(1, 0, 0), d.vec3u(1, 0, 1)]],
   ]);
@@ -80,7 +80,7 @@ async function testWorkgroupSize(): Promise<boolean> {
     workgroupSize: [3],
   })();
   const filled = await mutable.read();
-  return assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
+  return isEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
 }
 
 async function testMultipleDispatches(): Promise<boolean> {
@@ -99,16 +99,16 @@ async function testMultipleDispatches(): Promise<boolean> {
   dispatch();
   dispatch();
   const filled = await mutable.read();
-  return assertEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
+  return isEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
 }
 
 async function runTests(): Promise<boolean> {
   let result = true;
-  result &&= await test1d();
-  result &&= await test2d();
-  result &&= await test3d();
-  result &&= await testWorkgroupSize();
-  result &&= await testMultipleDispatches();
+  result = await test1d() && result;
+  result = await test2d() && result;
+  result = await test3d() && result;
+  result = await testWorkgroupSize() && result;
+  result = await testMultipleDispatches() && result;
   return result;
 }
 
