@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch } from '../core/resolve/stitch.ts';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -182,7 +182,7 @@ export function generateTypedExpression(
 
   try {
     const result = generateExpression(ctx, expression);
-    return tryConvertSnippet(ctx, result, expectedType);
+    return tryConvertSnippet(result, expectedType);
   } finally {
     ctx.expectedType = prevExpectedType;
   }
@@ -206,7 +206,7 @@ export function generateExpression(
   }
 
   if (typeof expression === 'boolean') {
-    return snip(expression ? 'true' : 'false', bool);
+    return snip(expression, bool);
   }
 
   if (
@@ -469,7 +469,7 @@ export function generateExpression(
           // The hint is a function that converts the arguments.
           convertedArguments = argConversionHint(...snippets)
             .map((type, i) => [type, snippets[i] as Snippet] as const)
-            .map(([type, sn]) => tryConvertSnippet(ctx, sn, type));
+            .map(([type, sn]) => tryConvertSnippet(sn, type));
         }
       }
       // Assuming that `callee` is callable
@@ -572,7 +572,10 @@ export function generateExpression(
 
     return snip(
       stitch`${arrayType}(${values})`,
-      arrayOf(elemType as wgsl.AnyWgslData, values.length) as wgsl.AnyWgslData,
+      arrayOf[$internal].jsImpl(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      ) as wgsl.AnyWgslData,
     );
   }
 
@@ -624,21 +627,29 @@ export function generateStatement(
   }
 
   if (statement[0] === NODE.if) {
-    const [_, cond, cons, alt] = statement;
-    const condition = ctx.resolve(
-      generateTypedExpression(ctx, cond, bool).value,
-    );
+    const [_, condNode, consNode, altNode] = statement;
+    const condition = generateTypedExpression(ctx, condNode, bool);
 
-    const consequent = generateBlock(ctx, blockifySingleStatement(cons));
-    const alternate = alt
-      ? generateBlock(ctx, blockifySingleStatement(alt))
-      : undefined;
+    const consequent = condition.value === false
+      ? undefined
+      : generateBlock(ctx, blockifySingleStatement(consNode));
+    const alternate = condition.value === true || !altNode
+      ? undefined
+      : generateBlock(ctx, blockifySingleStatement(altNode));
 
-    if (!alternate) {
-      return `${ctx.pre}if (${condition}) ${consequent}`;
+    if (condition.value === true) {
+      return `${ctx.pre}${consequent}`;
     }
 
-    return `\
+    if (condition.value === false) {
+      return alternate ? `${ctx.pre}${alternate}` : '';
+    }
+
+    if (!alternate) {
+      return stitch`${ctx.pre}if (${condition}) ${consequent}`;
+    }
+
+    return stitch`\
 ${ctx.pre}if (${condition}) ${consequent}
 ${ctx.pre}else ${alternate}`;
   }
@@ -666,9 +677,8 @@ ${ctx.pre}else ${alternate}`;
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = ctx.resolve(generateIdentifier(ctx, rawId).value);
-    const eqStr = ctx.resolve(eq.value, eq.dataType, /* exact */ true);
-    return `${ctx.pre}var ${id} = ${eqStr};`;
+    const id = generateIdentifier(ctx, rawId);
+    return stitchWithExactTypes`${ctx.pre}var ${id} = ${eq};`;
   }
 
   if (statement[0] === NODE.block) {

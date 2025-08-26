@@ -233,7 +233,7 @@ describe('wgsl generator type inference', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() -> u32 {
-        return u32(1.1);
+        return 1;
       }"
     `);
 
