@@ -38,6 +38,10 @@ const dispatch = prepareDispatch({
 dispatch().then(() => console.log("Dispatch finished!"));
 ```
 
+:::note
+Remember to mark the callback with `'kernel'` directive to let TypeGPU know that this function is TGSL.
+:::
+
 The returned dispatch function can be called multiple times.
 The pipeline is reused, so there is no extra overhead of successive calls.
 
@@ -104,5 +108,6 @@ It is highly recommended NOT to use `dispatch` for:
 When using `dispatch`, it is impossible to switch bind groups or to dispatch the pipeline with varying sizes.
 For such cases, a manually created pipeline would be more suitable.
 
-- Small calls, due to the overhead of creating the pipeline.
-For example, small buffers can be more efficiently initialized with `buffer.write()` method.
+- Small calls.
+Usually, for small data the shader creation and dispatch is more costly than serialization.
+Small buffers can be more efficiently initialized with `buffer.write()` method.
