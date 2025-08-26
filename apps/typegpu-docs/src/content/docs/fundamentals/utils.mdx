@@ -5,8 +5,8 @@ description: A list of various utilities provided by TypeGPU.
 
 ## Dispatch
 
-The `root['~unstable'].dispatch` function simplifies running one-and-done computations on the GPU. 
-Behind the scenes, `dispatch` wraps the callback into a `TgpuFn`, then it creates a compute pipeline and runs it a single time.
+The `prepareDispatch` function simplifies running simple computations on the GPU.
+Behind the scenes, `prepareDispatch` wraps the callback into a `TgpuFn`, then it creates a compute pipeline and returns a dispatch function that runs the pipeline.
 
 This might help omit the serialization overhead for filling out buffers with initial data.
 

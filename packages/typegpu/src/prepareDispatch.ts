@@ -4,7 +4,7 @@ import { fn } from './core/function/tgpuFn.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
-import { v3u } from './data/wgslTypes.ts';
+import type { v3u } from './data/wgslTypes.ts';
 import { any, ge } from './std/boolean.ts';
 import { ceil } from './std/numeric.ts';
 
@@ -16,7 +16,7 @@ function sanitizeArray(arr: readonly number[]): v3u {
 }
 
 /**
- * Create a dispatch function for a compute pipeline.
+ * Creates a dispatch function for a compute pipeline.
  * Call the returned dispatch function to run the GPU computations.
  * The returned dispatch function can be called multiple times.
  * The returned dispatch function returns a promise that resolves when the device queue finishes its jobs.
@@ -29,26 +29,26 @@ function sanitizeArray(arr: readonly number[]): v3u {
  */
 export function prepareDispatch(options: {
   root: TgpuRoot;
-  size: readonly [number];
   callback: (x: number) => void;
+  size: readonly [number];
   workgroupSize?: readonly [number];
 }): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
-  size: readonly [number, number];
   callback: (x: number, y: number) => void;
+  size: readonly [number, number];
   workgroupSize?: readonly [number, number];
 }): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
-  size: readonly [number, number, number];
   callback: (x: number, y: number, z: number) => void;
+  size: readonly [number, number, number];
   workgroupSize?: readonly [number, number, number];
 }): () => Promise<undefined>;
 export function prepareDispatch(options: {
   root: TgpuRoot;
-  size: readonly number[];
   callback: (x: number, y: number, z: number) => void;
+  size: readonly number[];
   workgroupSize?: readonly number[];
 }): () => Promise<undefined> {
   const size = sanitizeArray(options.size);
