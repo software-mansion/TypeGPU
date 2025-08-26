@@ -16,9 +16,13 @@ function assertEqual(e1: unknown, e2: unknown) {
 async function test1d() {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
-  dispatch(root, size, (x) => {
-    'kernel';
-    mutable.$[x] = x;
+  dispatch({
+    root,
+    size,
+    callback: (x: number) => {
+      'kernel';
+      mutable.$[x] = x;
+    },
   });
   const filled = await mutable.read();
   assertEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
@@ -29,9 +33,13 @@ async function test2d() {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
-  dispatch(root, size, (x, y) => {
-    'kernel';
-    mutable.$[x][y] = d.vec2u(x, y);
+  dispatch({
+    root,
+    size,
+    callback: (x, y) => {
+      'kernel';
+      mutable.$[x][y] = d.vec2u(x, y);
+    },
   });
   const filled = await mutable.read();
   assertEqual(filled, [
@@ -45,9 +53,13 @@ async function test3d() {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.arrayOf(d.vec3u, size[2]), size[1]), size[0]),
   );
-  dispatch(root, size, (x, y, z) => {
-    'kernel';
-    mutable.$[x][y][z] = d.vec3u(x, y, z);
+  dispatch({
+    root,
+    size,
+    callback: (x, y, z) => {
+      'kernel';
+      mutable.$[x][y][z] = d.vec3u(x, y, z);
+    },
   });
   const filled = await mutable.read();
   assertEqual(filled, [
@@ -58,10 +70,15 @@ async function test3d() {
 
 async function testWorkgroupSize() {
   const mutable = root.createMutable(d.arrayOf(d.u32, 12));
-  dispatch(root, [5], (x) => {
-    'kernel';
-    mutable.$[x] = x;
-  }, [3]);
+  dispatch({
+    root,
+    size: [5],
+    callback: (x) => {
+      'kernel';
+      mutable.$[x] = x;
+    },
+    workgroupSize: [3],
+  });
   const filled = await mutable.read();
   assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
 }

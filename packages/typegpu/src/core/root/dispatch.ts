@@ -17,42 +17,42 @@ function sanitizeArray(arr: readonly number[]): v3u {
 
 /**
  * Dispatch a single-shot compute pipeline.
- * @param root A TgpuRoot.
- * @param size A 3d (or shorter) array holding the total number of threads to run.
- * @param callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
- * @param workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
+ * @param options.root A TgpuRoot.
+ * @param options.callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
+ * @param options.size A 3d (or shorter) array holding the total number of threads to run.
+ * @param options.workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
  */
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly [number],
-  callback: (x: number) => void,
-  workgroupSize?: readonly [number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly [number, number],
-  callback: (x: number, y: number) => void,
-  workgroupSize?: readonly [number, number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly [number, number, number],
-  callback: (x: number, y: number, z: number) => void,
-  workgroupSize?: readonly [number, number, number],
-): void;
-export function dispatch(
-  root: TgpuRoot,
-  size: readonly number[],
-  callback: (x: number, y: number, z: number) => void,
-  workgroupSize?: readonly number[],
-): void {
-  const checkedSize = sanitizeArray(size);
-  const checkedWorkgroupSize = sanitizeArray(workgroupSize ?? []);
+export function dispatch(options: {
+  root: TgpuRoot;
+  size: readonly [number];
+  callback: (x: number) => void;
+  workgroupSize?: readonly [number];
+}): void;
+export function dispatch(options: {
+  root: TgpuRoot;
+  size: readonly [number, number];
+  callback: (x: number, y: number) => void;
+  workgroupSize?: readonly [number, number];
+}): void;
+export function dispatch(options: {
+  root: TgpuRoot;
+  size: readonly [number, number, number];
+  callback: (x: number, y: number, z: number) => void;
+  workgroupSize?: readonly [number, number, number];
+}): void;
+export function dispatch(options: {
+  root: TgpuRoot;
+  size: readonly number[];
+  callback: (x: number, y: number, z: number) => void;
+  workgroupSize?: readonly number[];
+}): void {
+  const checkedSize = sanitizeArray(options.size);
+  const checkedWorkgroupSize = sanitizeArray(options.workgroupSize ?? []);
   const workgroupCount = ceil(
     vec3f(checkedSize).div(vec3f(checkedWorkgroupSize)),
   );
 
-  const wrappedCallback = fn([u32, u32, u32])(callback);
+  const wrappedCallback = fn([u32, u32, u32])(options.callback);
 
   const mainCompute = computeFn({
     workgroupSize: checkedWorkgroupSize,
@@ -65,7 +65,7 @@ export function dispatch(
     wrappedCallback(id.x, id.y, id.z);
   });
 
-  root['~unstable']
+  options.root['~unstable']
     .withCompute(mainCompute)
     .createPipeline()
     .dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
