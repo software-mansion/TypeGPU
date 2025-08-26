@@ -1,17 +1,18 @@
 import { builtin } from '../../builtin.ts';
 import { u32 } from '../../data/numeric.ts';
-import { vec3u } from '../../data/vector.ts';
+import { vec3f, vec3u } from '../../data/vector.ts';
+import { v3u } from '../../data/wgslTypes.ts';
 import { any, ge } from '../../std/boolean.ts';
+import { ceil } from '../../std/numeric.ts';
 import { computeFn } from '../function/tgpuComputeFn.ts';
 import { fn } from '../function/tgpuFn.ts';
 import type { TgpuRoot } from './rootTypes.ts';
 
 /**
- * Changes the given array to an array of 3 numbers, filling missing values with 1.
+ * Changes the given array to a vec of 3 numbers, filling missing values with 1.
  */
-function sanitizeArray(arr: readonly number[]): [number, number, number] {
-  return [1, 1, 1]
-    .map((elem, i) => arr?.[i] ?? elem) as [number, number, number];
+function sanitizeArray(arr: readonly number[]): v3u {
+  return vec3u(arr[0] ?? 1, arr[1] ?? 1, arr[2] ?? 1);
 }
 
 /**
@@ -46,13 +47,10 @@ export function dispatch(
   workgroupSize?: readonly number[],
 ): void {
   const checkedSize = sanitizeArray(size);
-  const checkedSizeVec = vec3u(...checkedSize);
   const checkedWorkgroupSize = sanitizeArray(workgroupSize ?? []);
-  const workgroupCount = [
-    Math.ceil(checkedSize[0] / checkedWorkgroupSize[0]),
-    Math.ceil(checkedSize[1] / checkedWorkgroupSize[1]),
-    Math.ceil(checkedSize[2] / checkedWorkgroupSize[2]),
-  ] as const;
+  const workgroupCount = ceil(
+    vec3f(checkedSize).div(vec3f(checkedWorkgroupSize)),
+  );
 
   const wrappedCallback = fn([u32, u32, u32])(callback);
 
@@ -61,7 +59,7 @@ export function dispatch(
     in: { id: builtin.globalInvocationId },
   })(({ id }) => {
     'kernel';
-    if (any(ge(id, checkedSizeVec))) {
+    if (any(ge(id, checkedSize))) {
       return;
     }
     wrappedCallback(id.x, id.y, id.z);
@@ -70,5 +68,5 @@ export function dispatch(
   root['~unstable']
     .withCompute(mainCompute)
     .createPipeline()
-    .dispatchWorkgroups(...workgroupCount);
+    .dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
 }
