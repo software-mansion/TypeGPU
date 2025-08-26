@@ -98,7 +98,7 @@ function enqueuePresetChanges() {
 const randomizeFishPositions = () => {
   const buffer0mutable = fishDataBuffers[0].as('mutable');
   const buffer1mutable = fishDataBuffers[1].as('mutable');
-  const now = performance.now();
+  const now = performance.now() % 10000;
   root['~unstable'].dispatch([p.fishAmount], (x) => {
     'kernel';
     randf.seed(d.f32(x) + now);
