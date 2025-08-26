@@ -180,6 +180,7 @@ export function externalTexture(): WgslExternalTexture {
     [$internal]: true,
     [$repr]: undefined as unknown as WgslExternalTexture,
     type: 'texture_external',
+    dimension: '2d',
   };
 }
 
@@ -212,6 +213,10 @@ export interface WgslStorageTexture<
 export interface WgslExternalTexture extends BaseData {
   readonly [$repr]: this;
   readonly type: 'texture_external';
+
+  // External textures are always 2d
+  // This props allows for easier type narrowing
+  readonly dimension: '2d';
 }
 
 export function isWgslSampledTexture(

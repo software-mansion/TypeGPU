@@ -38,6 +38,7 @@ import {
 import type { AnyData } from './data/dataTypes.ts';
 import {
   isWgslSampledTexture,
+  type WgslExternalTexture,
   type WgslSampledTexture,
   type WgslStorageTexture,
 } from './data/texture.ts';
@@ -106,7 +107,7 @@ export type TgpuLayoutTexture<
 };
 
 export type TgpuLayoutExternalTexture = TgpuLayoutEntryBase & {
-  externalTexture: Record<string, never>;
+  externalTexture: WgslExternalTexture;
 };
 
 export type TgpuLayoutEntry =
@@ -365,7 +366,10 @@ class TgpuBindGroupLayoutImpl<
 
       if ('externalTexture' in entry) {
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuExternalTextureImpl(membership);
+        (this.bound[key] as any) = new TgpuExternalTextureImpl(
+          entry.externalTexture,
+          membership,
+        );
       }
 
       if ('sampler' in entry) {
@@ -458,9 +462,8 @@ class TgpuBindGroupLayoutImpl<
               type: entry.sampler,
             };
           } else if ('texture' in entry) {
-            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
-
             if (isWgslSampledTexture(entry.texture)) {
+              visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
               const { sampleType, dimension, multisampled } = entry.texture;
               binding.texture = {
                 sampleType,
@@ -468,6 +471,8 @@ class TgpuBindGroupLayoutImpl<
                 viewDimension: dimension,
               };
             } else {
+              visibility = visibility ??
+                DEFAULT_MUTABLE_VISIBILITY.filter((v) => v !== 'vertex');
               const { access, format, dimension } = entry.texture;
               binding.storageTexture = {
                 access,

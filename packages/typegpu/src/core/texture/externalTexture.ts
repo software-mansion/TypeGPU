@@ -31,7 +31,10 @@ export class TgpuExternalTextureImpl
   readonly resourceType = 'external-texture';
   readonly [$internal] = true;
 
-  constructor(private readonly _membership: LayoutMembership) {
+  constructor(
+    public readonly schema: WgslExternalTexture,
+    private readonly _membership: LayoutMembership,
+  ) {
     setName(this, _membership.key);
   }
 
@@ -41,7 +44,7 @@ export class TgpuExternalTextureImpl
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${
-        ctx.resolve(this)
+        ctx.resolve(this.schema)
       };`,
     );
 

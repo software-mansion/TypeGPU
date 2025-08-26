@@ -126,8 +126,9 @@ export type {
 export {
   sampledTexture,
   storageTexture,
-  WgslSampledTexture,
-  WgslStorageTexture,
+  type WgslExternalTexture,
+  type WgslSampledTexture,
+  type WgslStorageTexture,
 } from './texture.ts';
 export {
   vec2b,

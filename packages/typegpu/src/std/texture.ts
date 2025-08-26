@@ -1,21 +1,19 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { TgpuExternalTexture } from '../core/texture/externalTexture.ts';
 import type {
   TgpuComparisonSampler,
   TgpuSampler,
 } from '../core/sampler/sampler.ts';
 import {
   isWgslSampledTexture,
+  type WgslExternalTexture,
   type WgslSampledTexture,
   type WgslStorageTexture,
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
-import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
-import { snip } from '../data/snippet.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
-  type F32,
   type v2f,
   type v2i,
   type v2u,
@@ -423,7 +421,8 @@ function textureDimensionsCpu<
     | WgslSampledTexture<'cube'>
     | WgslSampledTexture<'cube-array'>
     | WgslStorageTexture<'2d'>
-    | WgslStorageTexture<'2d-array'>,
+    | WgslStorageTexture<'2d-array'>
+    | WgslExternalTexture,
 >(texture: T): v2u;
 function textureDimensionsCpu<
   T extends
@@ -439,7 +438,7 @@ function textureDimensionsCpu<
   T extends WgslSampledTexture<'3d'>,
 >(texture: T, level: number): v3u;
 function textureDimensionsCpu(
-  _texture: WgslSampledTexture | WgslStorageTexture,
+  _texture: WgslSampledTexture | WgslStorageTexture | WgslExternalTexture,
   _level?: number,
 ): number | v2u | v3u {
   throw new Error(
@@ -452,7 +451,9 @@ export const textureDimensions = dualImpl({
   normalImpl: textureDimensionsCpu,
   codegenImpl: (...args) => stitch`textureDimensions(${args})`,
   signature: (...args) => {
-    const dim = (args[0] as WgslSampledTexture | WgslStorageTexture).dimension;
+    const dim =
+      (args[0] as WgslSampledTexture | WgslStorageTexture | WgslExternalTexture)
+        .dimension;
     if (dim === '1d') {
       return {
         argTypes: args,
@@ -472,91 +473,92 @@ export const textureDimensions = dualImpl({
   },
 });
 
-type TextureSampleCompareOverload = {
-  <T extends TgpuDepthTexture<'2d'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v2f,
-    depthRef: number,
-  ): number;
-  <T extends TgpuDepthTexture<'2d'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v2f,
-    depthRef: number,
-    offset: v2i,
-  ): number;
-  <T extends TgpuDepthTexture<'2d-array'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v2f,
-    arrayIndex: number,
-    depthRef: number,
-  ): number;
-  <T extends TgpuDepthTexture<'2d-array'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v2f,
-    arrayIndex: number,
-    depthRef: number,
-    offset: v2i,
-  ): number;
-  <T extends TgpuDepthTexture<'cube'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v3f,
-    depthRef: number,
-  ): number;
-  <T extends TgpuDepthTexture<'cube-array'>>(
-    texture: T,
-    sampler: TgpuComparisonSampler,
-    coords: v3f,
-    arrayIndex: number,
-    depthRef: number,
-  ): number;
-};
-
-export const textureSampleCompare: TextureSampleCompareOverload =
-  createDualImpl(
-    // CPU implementation
-    (
-      _texture: TgpuDepthTexture,
-      _sampler: TgpuComparisonSampler,
-      _coords: v2f | v3f,
-      _depthRefOrArrayIndex: number,
-      _depthRefOrOffset?: number | v2i,
-      _maybeOffset?: v2i,
-    ) => {
-      throw new Error(
-        'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
-      );
-    },
-    // CODEGEN implementation
-    (...args) => {
-      return snip(stitch`textureSampleCompare(${args})`, f32);
-    },
-    'textureSampleCompare',
-  );
-
-type TextureSampleBaseClampToEdge = (
-  texture: TgpuSampledTexture<'2d', F32> | TgpuExternalTexture,
-  sampler: TgpuSampler,
+function textureSampleCompareCpu<T extends WgslSampledTexture<'2d', 'depth'>>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
   coords: v2f,
-) => v4f;
-
-export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
-  createDualImpl(
-    // CPU implementation
-    (
-      _texture: TgpuSampledTexture | TgpuExternalTexture,
-      _sampler: TgpuSampler,
-      _coords: v2f,
-    ) => {
-      throw new Error(
-        'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
-      );
-    },
-    // GPU implementation
-    (...args) => snip(stitch`textureSampleBaseClampToEdge(${args})`, vec4f),
-    'textureSampleBaseClampToEdge',
+  depthRef: number,
+): number;
+function textureSampleCompareCpu<
+  T extends WgslSampledTexture<'2d', 'depth'>,
+>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
+  coords: v2f,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareCpu<
+  T extends WgslSampledTexture<'2d-array', 'depth'>,
+>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareCpu<
+  T extends WgslSampledTexture<'2d-array', 'depth'>,
+>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareCpu<T extends WgslSampledTexture<'cube', 'depth'>>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
+  coords: v3f,
+  depthRef: number,
+): number;
+function textureSampleCompareCpu<
+  T extends WgslSampledTexture<'cube-array', 'depth'>,
+>(
+  texture: T,
+  sampler: TgpuComparisonSampler,
+  coords: v3f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareCpu(
+  _texture: WgslSampledTexture,
+  _sampler: TgpuComparisonSampler,
+  _coords: v2f | v3f,
+  _depthRefOrArrayIndex: number,
+  _depthRefOrOffset?: number | v2i,
+  _maybeOffset?: v2i,
+): number {
+  throw new Error(
+    'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
+}
+
+export const textureSampleCompare = dualImpl({
+  name: 'textureSampleCompare',
+  normalImpl: textureSampleCompareCpu,
+  codegenImpl: (...args) => stitch`textureSampleCompare(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: f32,
+  }),
+});
+
+export const textureSampleBaseClampToEdge = dualImpl({
+  name: 'textureSampleBaseClampToEdge',
+  normalImpl: (
+    _texture: WgslSampledTexture<'2d', 'float'> | WgslExternalTexture,
+    _sampler: TgpuSampler,
+    _coords: v2f,
+  ) => {
+    throw new Error(
+      'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
+    );
+  },
+  codegenImpl: (...args) => stitch`textureSampleBaseClampToEdge(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: vec4f,
+  }),
+});
