@@ -17,14 +17,15 @@ function sanitizeArray(arr: readonly number[]): v3u {
 
 /**
  * Create a dispatch function for a compute pipeline.
- * Call the returned function to run the GPU computations.
- * The returned function can be called multiple times.
+ * Call the returned dispatch function to run the GPU computations.
+ * The returned dispatch function can be called multiple times.
+ * The returned dispatch function returns a promise that resolves when the device queue finishes its jobs.
  * @param options.root A TgpuRoot.
  * @param options.callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
  * @param options.size A 3d (or shorter) array holding the total number of threads to run.
  * @param options.workgroupSize (optional) A 3d (or shorter) array holding the sizes of the groups of threads.
  * [1, 1, 1] by default. Setting this to bigger values might speed up the computation due to better caching.
- * The callback is not called when the gid would exceed option.threads.
+ * The callback is not called when the gid would exceed option.size.
  */
 export function prepareDispatch(options: {
   root: TgpuRoot;

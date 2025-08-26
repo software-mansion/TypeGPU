@@ -11,9 +11,9 @@ Behind the scenes, `dispatch` wraps the callback into a `TgpuFn`, then it create
 This might help omit the serialization overhead for filling out buffers with initial data.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
-// ---cut---
+
 const root = await tgpu.init();
 
 const Boid = d.struct({
@@ -24,22 +24,53 @@ const Boid = d.struct({
 // buffer of 2048 Boids
 const boidsMutable = root.createMutable(d.arrayOf(Boid, 2048));
 
-root['~unstable'].dispatch([2048], (x) => {
-  // TGSL function body to run 2048 times on the GPU
-  'kernel';
-  const boidData = Boid({ index: x, pos: d.vec3f() });
-  boidsMutable.$[x] = boidData;
+const dispatch = prepareDispatch({
+  root,
+  size: [2048] as const,
+  callback: (x) => {
+    // TGSL function body to run 2048 times on the GPU
+    'kernel';
+    const boidData = Boid({ index: x, pos: d.vec3f() });
+    boidsMutable.$[x] = boidData;
+  },
 });
 
-// (optional) wait for the dispatch to finish
-await root.device.queue.onSubmittedWorkDone();
+dispatch().then(() => console.log("Dispatch finished!"));
+```
+
+The returned dispatch function can be called multiple times.
+The pipeline is reused, so there is no extra overhead of successive calls.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
+
+const doubleUp = prepareDispatch({
+  root,
+  size: [8],
+  callback: (x) => {
+    'kernel';
+    data.$[x] *= 2;
+  },
+});
+
+doubleUp();
+doubleUp();
+doubleUp();
+
+// no need to await `doubleUp()` because the command encoder
+// will queue the read after `doubleUp` anyway
+console.log(await data.read());
 ```
 
 Buffer initialization commonly uses random number generators. 
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 // ---cut---
 import { randf } from '@typegpu/noise';
@@ -51,11 +82,17 @@ const waterLevelMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.f32, 1024), 1024),
 );
 
-root['~unstable'].dispatch([1024, 1024], (x, y) => {
-  'kernel';
-  randf.seed((x * 1024 + y) / 1024 ** 2);
-  waterLevelMutable.$[x][y] = randf.sample();
-}, [16, 16]);
+prepareDispatch({
+  root,
+  size: [1024, 1024], 
+  // callback will be called for x in range 0..1023 and y in range 0..1023
+  callback: (x, y) => {
+    'kernel';
+    randf.seed2(d.vec2f(x, y).div(1024));
+    waterLevelMutable.$[x][y] = 10 + randf.sample();
+  },
+  workgroupSize: [16, 16],
+})();
 
 // (optional) read values in JS
 console.log(await waterLevelMutable.read());
@@ -63,10 +100,9 @@ console.log(await waterLevelMutable.read());
 
 It is highly recommended NOT to use `dispatch` for:
 
-- Kernel calls that occur multiple times, for example on every frame. Every
-  `dispatch` call recreates the pipeline, which may impact the performance of
-  your app significantly. Create and reuse a pipeline instead.
+- More complex compute shaders.
+When using `dispatch`, it is impossible to switch bind groups or to dispatch the pipeline with varying sizes.
+For such cases, a manually created pipeline would be more suitable.
 
-- Avoidable small calls. For example, small buffers can be initialized with
-  `buffer.write()` method, or (when using TgpuBuffers) by passing the data to
-  the constructor.
+- Small calls, due to the overhead of creating the pipeline.
+For example, small buffers can be more efficiently initialized with `buffer.write()` method.
