@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu from 'typegpu';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -95,13 +95,15 @@ function enqueuePresetChanges() {
   }, 300);
 }
 
-const randomizeFishPositions = () => {
-  const buffer0mutable = fishDataBuffers[0].as('mutable');
-  const buffer1mutable = fishDataBuffers[1].as('mutable');
-  const now = performance.now() % 10000;
-  root['~unstable'].dispatch([p.fishAmount], (x) => {
+const buffer0mutable = fishDataBuffers[0].as('mutable');
+const buffer1mutable = fishDataBuffers[1].as('mutable');
+const seedUniform = root.createUniform(d.f32);
+const randomizeFishPositionsDispatch = prepareDispatch({
+  root,
+  size: [p.fishAmount],
+  callback: (x) => {
     'kernel';
-    randf.seed(d.f32(x) + now);
+    randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
     const data = ModelData({
       position: d.vec3f(
         randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
@@ -121,7 +123,12 @@ const randomizeFishPositions = () => {
     });
     buffer0mutable.$[x] = data;
     buffer1mutable.$[x] = data;
-  });
+  },
+});
+
+const randomizeFishPositions = () => {
+  seedUniform.write((performance.now() % 10000) / 10000);
+  randomizeFishPositionsDispatch();
   enqueuePresetChanges();
 };
 
