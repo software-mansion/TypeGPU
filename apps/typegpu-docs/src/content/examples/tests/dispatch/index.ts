@@ -14,11 +14,11 @@ function assertEqual(e1: unknown, e2: unknown) {
 }
 
 async function test1d() {
-  const threads = [7] as const;
-  const mutable = root.createMutable(d.arrayOf(d.u32, threads[0]));
+  const size = [7] as const;
+  const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
   prepareDispatch({
     root,
-    threads,
+    size,
     callback: (x: number) => {
       'kernel';
       mutable.$[x] = x;
@@ -29,13 +29,13 @@ async function test1d() {
 }
 
 async function test2d() {
-  const threads = [2, 3] as const;
+  const size = [2, 3] as const;
   const mutable = root.createMutable(
-    d.arrayOf(d.arrayOf(d.vec2u, threads[1]), threads[0]),
+    d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
   prepareDispatch({
     root,
-    threads,
+    size,
     callback: (x, y) => {
       'kernel';
       mutable.$[x][y] = d.vec2u(x, y);
@@ -49,16 +49,16 @@ async function test2d() {
 }
 
 async function test3d() {
-  const threads = [2, 1, 2] as const;
+  const size = [2, 1, 2] as const;
   const mutable = root.createMutable(
     d.arrayOf(
-      d.arrayOf(d.arrayOf(d.vec3u, threads[2]), threads[1]),
-      threads[0],
+      d.arrayOf(d.arrayOf(d.vec3u, size[2]), size[1]),
+      size[0],
     ),
   );
   prepareDispatch({
     root,
-    threads,
+    size,
     callback: (x, y, z) => {
       'kernel';
       mutable.$[x][y][z] = d.vec3u(x, y, z);
@@ -75,7 +75,7 @@ async function testWorkgroupSize() {
   const mutable = root.createMutable(d.arrayOf(d.u32, 12));
   prepareDispatch({
     root,
-    threads: [5],
+    size: [5],
     callback: (x) => {
       'kernel';
       mutable.$[x] = x;
@@ -87,12 +87,12 @@ async function testWorkgroupSize() {
 }
 
 async function testMultipleDispatches() {
-  const threads = [7] as const;
+  const size = [7] as const;
   const mutable = root
-    .createMutable(d.arrayOf(d.u32, threads[0]), [0, 1, 2, 3, 4, 5, 6]);
+    .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
   const dispatch = prepareDispatch({
     root,
-    threads,
+    size,
     callback: (x: number) => {
       'kernel';
       mutable.$[x] *= 2;
