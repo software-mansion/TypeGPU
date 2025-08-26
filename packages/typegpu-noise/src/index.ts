@@ -27,17 +27,17 @@ export const randf: {
   seed: typeof randSeed;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1)^2 range.
+   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
    */
   seed2: typeof randSeed2;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1)^3 range.
+   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
    */
   seed3: typeof randSeed3;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1)^4 range.
+   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
    */
   seed4: typeof randSeed4;
   /**
