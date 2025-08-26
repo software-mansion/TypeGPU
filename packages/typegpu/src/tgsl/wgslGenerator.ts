@@ -8,12 +8,13 @@ import {
   isLooseData,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f16, f32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
@@ -192,11 +193,7 @@ const opCodeToCodegen = {
   '-': sub[$internal].gpuImpl,
   '*': mul[$internal].gpuImpl,
   '/': div[$internal].gpuImpl,
-  '**': (lhsExpr: Snippet, rhsExpr: Snippet) => {
-    const [convLhs, convRhs] =
-      convertToCommonType([lhsExpr, rhsExpr], [f32, f16]) ?? [lhsExpr, rhsExpr];
-    return snip(stitch`pow(${convLhs}, ${convRhs})`, convLhs.dataType);
-  },
+  '**': pow[$internal].gpuImpl,
 } satisfies Partial<
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;

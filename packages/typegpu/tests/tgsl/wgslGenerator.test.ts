@@ -934,6 +934,22 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for pow expression', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.f32(10);
+      const b = d.f32(3);
+      const n = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 10f;
+        var b = 3f;
+        var n = pow(a, b);
+      }"
+    `);
+  });
+
+  it('calculates pow at comptime when possible', () => {
     const four = 4;
     const power = tgpu.fn([])(() => {
       const n = 2 ** four;
@@ -941,7 +957,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var n = pow(2, 4);
+        var n = 16.;
       }"
     `);
   });
