@@ -124,6 +124,12 @@ export type {
   Unstruct,
 } from './dataTypes.ts';
 export {
+  sampledTexture,
+  storageTexture,
+  WgslSampledTexture,
+  WgslStorageTexture,
+} from './texture.ts';
+export {
   vec2b,
   vec2f,
   vec2h,

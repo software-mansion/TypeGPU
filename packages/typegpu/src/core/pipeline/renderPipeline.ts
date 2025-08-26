@@ -36,7 +36,7 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { isTexture, type TgpuTexture } from '../texture/texture.ts';
-import type { Render } from '../texture/usageExtension.ts';
+import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import {
   isVertexLayout,
@@ -141,7 +141,7 @@ export interface ColorAttachment {
    * A {@link GPUTextureView} describing the texture subresource that will be output to for this
    * color attachment.
    */
-  view: (TgpuTexture & Render) | GPUTextureView;
+  view: (TgpuTexture & RenderFlag) | GPUTextureView;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -177,10 +177,10 @@ export interface ColorAttachment {
 
 export interface DepthStencilAttachment {
   /**
-   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link Render}) describing the texture subresource that will be output to
+   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
-  view: (TgpuTexture & Render) | GPUTextureView;
+  view: (TgpuTexture & RenderFlag) | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
    * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}

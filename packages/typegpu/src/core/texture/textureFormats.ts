@@ -145,14 +145,25 @@ export type ViewDimensionToDimension = {
 /**
  * https://www.w3.org/TR/WGSL/#storage-texel-formats
  */
-export type StorageTextureTexelFormat =
+export type StorageTextureFormats =
   | 'rgba8unorm'
   | 'rgba8snorm'
   | 'rgba8uint'
   | 'rgba8sint'
+  | 'rgba16unorm'
+  | 'rgba16snorm'
   | 'rgba16uint'
   | 'rgba16sint'
   | 'rgba16float'
+  | 'rg8unorm'
+  | 'rg8snorm'
+  | 'rg8uint'
+  | 'rg8sint'
+  | 'rg16unorm'
+  | 'rg16snorm'
+  | 'rg16uint'
+  | 'rg16sint'
+  | 'rg16float'
   | 'r32uint'
   | 'r32sint'
   | 'r32float'
@@ -162,16 +173,39 @@ export type StorageTextureTexelFormat =
   | 'rgba32uint'
   | 'rgba32sint'
   | 'rgba32float'
-  | 'bgra8unorm';
+  | 'bgra8unorm'
+  | 'r8unorm'
+  | 'r8snorm'
+  | 'r8uint'
+  | 'r8sint'
+  | 'r16unorm'
+  | 'r16snorm'
+  | 'r16uint'
+  | 'r16sint'
+  | 'r16float'
+  | 'rgb10a2unorm'
+  | 'rgb10a2uint'
+  | 'rg11b10ufloat';
 
 export const texelFormatToDataType = {
   rgba8unorm: vec4f,
   rgba8snorm: vec4f,
   rgba8uint: vec4u,
   rgba8sint: vec4i,
+  rgba16unorm: vec4f,
+  rgba16snorm: vec4f,
   rgba16uint: vec4u,
   rgba16sint: vec4i,
   rgba16float: vec4f,
+  rg8unorm: vec4f,
+  rg8snorm: vec4f,
+  rg8uint: vec4u,
+  rg8sint: vec4i,
+  rg16unorm: vec4f,
+  rg16snorm: vec4f,
+  rg16uint: vec4u,
+  rg16sint: vec4i,
+  rg16float: vec4f,
   r32uint: vec4u,
   r32sint: vec4i,
   r32float: vec4f,
@@ -182,6 +216,18 @@ export const texelFormatToDataType = {
   rgba32sint: vec4i,
   rgba32float: vec4f,
   bgra8unorm: vec4f,
+  r8unorm: vec4f,
+  r8snorm: vec4f,
+  r8uint: vec4u,
+  r8sint: vec4i,
+  r16unorm: vec4f,
+  r16snorm: vec4f,
+  r16uint: vec4u,
+  r16sint: vec4i,
+  r16float: vec4f,
+  rgb10a2unorm: vec4f,
+  rgb10a2uint: vec4u,
+  rg11b10ufloat: vec4f,
 
   stencil8: vec4u,
   depth16unorm: vec4f,
@@ -225,7 +271,7 @@ export type TexelFormatToDataTypeOrNever<T> = T extends
  */
 export type StorageFormatOptions<TProps extends TextureProps> = Extract<
   TProps['format'] | Default<TProps['viewFormats'], []>[number],
-  StorageTextureTexelFormat
+  StorageTextureFormats
 >;
 
 /**

@@ -26,6 +26,11 @@ import type {
 import { $internal, $wgslDataType } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
+import type {
+  WgslExternalTexture,
+  WgslSampledTexture,
+  WgslStorageTexture,
+} from './texture.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -1503,6 +1508,23 @@ export const wgslTypeLiterals = [
   'abstractInt',
   'abstractFloat',
   'void',
+  'texture_1d',
+  'texture_storage_1d',
+  'texture_2d',
+  'texture_storage_2d',
+  'texture_multisampled_2d',
+  'texture_depth_2d',
+  'texture_depth_multisampled_2d',
+  'texture_2d_array',
+  'texture_storage_2d_array',
+  'texture_depth_2d_array',
+  'texture_cube',
+  'texture_depth_cube',
+  'texture_cube_array',
+  'texture_depth_cube_array',
+  'texture_3d',
+  'texture_storage_3d',
+  'texture_external',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1612,7 +1634,10 @@ export type AnyWgslData =
   | Decorated
   | AbstractInt
   | AbstractFloat
-  | Void;
+  | Void
+  | WgslSampledTexture
+  | WgslStorageTexture
+  | WgslExternalTexture;
 
 // #endregion
 

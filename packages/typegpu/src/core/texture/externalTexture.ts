@@ -1,9 +1,9 @@
-import type { AnyData } from '../../data/dataTypes.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $repr, $runtimeResource } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type { WgslExternalTexture } from '../../data/texture.ts';
 
 // ----------
 // Public API
@@ -25,15 +25,14 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
-  public readonly resourceType = 'external-texture';
-  public readonly [$wgslDataType]: AnyData;
+  readonly [$runtimeResource] = true;
+  readonly [$wgslDataType] = {} as WgslExternalTexture;
+  readonly [$repr] = undefined as unknown as WgslExternalTexture;
+  readonly resourceType = 'external-texture';
   readonly [$internal] = true;
 
   constructor(private readonly _membership: LayoutMembership) {
     setName(this, _membership.key);
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -41,7 +40,9 @@ export class TgpuExternalTextureImpl
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: texture_external;`,
+      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${
+        ctx.resolve(this)
+      };`,
     );
 
     return id;

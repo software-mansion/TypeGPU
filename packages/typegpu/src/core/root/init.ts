@@ -74,14 +74,10 @@ import {
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
-  isSampledTextureView,
-  isStorageTextureView,
   isTexture,
-  type TgpuMutableTexture,
-  type TgpuReadonlyTexture,
-  type TgpuSampledTexture,
+  isTextureView,
   type TgpuTexture,
-  type TgpuWriteonlyTexture,
+  type TgpuTextureView,
 } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
@@ -196,9 +192,9 @@ class WithVertexImpl implements WithVertex {
   withPrimitive(
     primitiveState:
       | GPUPrimitiveState
-      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
         stripIndexFormat?: U32 | U16;
-      }
+      })
       | undefined,
   ): WithFragment {
     return new WithVertexImpl({ ...this._options, primitiveState });
@@ -231,9 +227,9 @@ class WithFragmentImpl implements WithFragment {
   withPrimitive(
     primitiveState:
       | GPUPrimitiveState
-      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
         stripIndexFormat?: U32 | U16;
-      }
+      })
       | undefined,
   ): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
@@ -420,13 +416,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(
-    resource:
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture,
-  ): GPUTextureView;
+  unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
@@ -439,10 +429,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuBindGroup
       | TgpuBuffer<AnyData>
       | TgpuTexture
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture
+      | TgpuTextureView
       | TgpuVertexLayout
       | TgpuSampler
       | TgpuComparisonSampler
@@ -482,18 +469,13 @@ class TgpuRootImpl extends WithBindingImpl
       return resource[$internal].unwrap();
     }
 
-    if (isStorageTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
+    if (isTextureView(resource)) {
+      if (!resource[$internal].unwrap) {
+        throw new Error(
+          'Cannot unwrap laid-out texture view as it has no underlying resource.',
+        );
       }
-      throw new Error('Cannot unwrap laid-out texture view.');
-    }
-
-    if (isSampledTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
-      }
-      throw new Error('Cannot unwrap laid-out texture view.');
+      return resource[$internal].unwrap();
     }
 
     if (isVertexLayout(resource)) {
@@ -690,7 +672,7 @@ class TgpuRootImpl extends WithBindingImpl
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?:
-    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
+    | (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> })
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
@@ -779,10 +761,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
  * ```
  */
 export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
-  const {
-    device,
-    unstable_names: names = 'random',
-  } = options ?? {};
+  const { device, unstable_names: names = 'random' } = options ?? {};
 
   return new TgpuRootImpl(
     device,

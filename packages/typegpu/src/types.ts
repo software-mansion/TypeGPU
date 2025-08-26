@@ -25,10 +25,7 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
-import type {
-  TgpuAnyTextureView,
-  TgpuTexture,
-} from './core/texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
 import type { Snippet } from './data/snippet.ts';
@@ -61,7 +58,7 @@ export type ResolvableObject =
   | TgpuAccessor
   | TgpuExternalTexture
   | TgpuTexture
-  | TgpuAnyTextureView
+  | TgpuTextureView
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance

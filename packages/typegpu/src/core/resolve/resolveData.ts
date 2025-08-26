@@ -5,6 +5,11 @@ import {
   isLooseData,
   type Unstruct,
 } from '../../data/dataTypes.ts';
+import {
+  isWgslSampledTexture,
+  isWgslStorageTexture,
+  type WgslExternalTexture,
+} from '../../data/texture.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
@@ -94,7 +99,8 @@ type IdentityType =
   | Vec4b
   | Mat2x2f
   | Mat3x3f
-  | Mat4x4f;
+  | Mat4x4f
+  | WgslExternalTexture;
 
 function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
@@ -113,7 +119,9 @@ function resolveStructProperty(
   [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData)
+    ctx.resolve(
+      property as AnyWgslData,
+    )
   },\n`;
 }
 
@@ -212,6 +220,20 @@ function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
     : `array<${element}, ${disarray.elementCount}>`;
 }
 
+const sampleTypeToWgslType = {
+  float: 'f32',
+  sint: 'i32',
+  uint: 'u32',
+  depth: 'f32',
+  'unfilterable-float': 'f32',
+} as const;
+
+const accessMap = {
+  'read-write': 'read_write',
+  'read-only': 'read',
+  'write-only': 'write',
+} as const;
+
 /**
  * Resolves a WGSL data-type schema to a string.
  * @param ctx - The resolution context.
@@ -270,10 +292,22 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (
-    data.type === 'abstractInt' || data.type === 'abstractFloat' ||
-    data.type === 'void' || data.type === 'u16'
+    data.type === 'abstractInt' ||
+    data.type === 'abstractFloat' ||
+    data.type === 'void' ||
+    data.type === 'u16'
   ) {
     throw new Error(`${data.type} has no representation in WGSL`);
+  }
+
+  if (isWgslStorageTexture(data)) {
+    return `${data.type}<${data.format}, ${accessMap[data.access]}>`;
+  }
+
+  if (isWgslSampledTexture(data)) {
+    return data.sampleType === 'depth'
+      ? data.type
+      : `${data.type}<${sampleTypeToWgslType[data.sampleType]}>`;
   }
 
   assertExhaustive(data, 'resolveData');

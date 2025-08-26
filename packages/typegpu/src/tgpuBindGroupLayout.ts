@@ -23,34 +23,24 @@ import {
   TgpuExternalTextureImpl,
 } from './core/texture/externalTexture.ts';
 import {
-  isSampledTextureView,
-  isStorageTextureView,
   isTexture,
-  type StorageTextureDimension,
-  type TgpuDepthTexture,
-  TgpuLaidOutSampledTextureImpl,
-  TgpuLaidOutStorageTextureImpl,
-  type TgpuMutableTexture,
-  type TgpuReadonlyTexture,
-  type TgpuSampledTexture,
+  isTextureView,
+  TgpuLaidOutTextureViewImpl,
   type TgpuTexture,
-  type TgpuWriteonlyTexture,
+  type TgpuTextureView,
 } from './core/texture/texture.ts';
-import type {
-  ChannelFormatToSchema,
-  ChannelTypeToLegalFormats,
-  SampleTypeToStringChannelType,
-  StorageTextureTexelFormat,
-  TexelFormatToDataType,
-  ViewDimensionToDimension,
-} from './core/texture/textureFormats.ts';
 import type { TextureProps } from './core/texture/textureProps.ts';
 import {
   isUsableAsSampled,
   NotSampledError,
-  type Sampled,
+  type SampledFlag,
 } from './core/texture/usageExtension.ts';
 import type { AnyData } from './data/dataTypes.ts';
+import {
+  isWgslSampledTexture,
+  type WgslSampledTexture,
+  type WgslStorageTexture,
+} from './data/texture.ts';
 import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
 import { NotUniformError } from './errors.ts';
 import {
@@ -62,11 +52,7 @@ import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
-import type {
-  Default,
-  NullableToOptional,
-  Prettify,
-} from './shared/utilityTypes.ts';
+import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 
@@ -112,34 +98,13 @@ export type TgpuLayoutComparisonSampler = TgpuLayoutEntryBase & {
 };
 
 export type TgpuLayoutTexture<
-  TSampleType extends GPUTextureSampleType = GPUTextureSampleType,
+  TSchema extends WgslSampledTexture | WgslStorageTexture =
+    | WgslSampledTexture
+    | WgslStorageTexture,
 > = TgpuLayoutEntryBase & {
-  /**
-   * - 'float' - f32
-   * - 'unfilterable-float' - f32, cannot be used with filtering samplers
-   * - 'depth' - f32
-   * - 'sint' - i32
-   * - 'uint' - u32
-   */
-  texture: TSampleType;
-  /**
-   * @default '2d'
-   */
-  viewDimension?: GPUTextureViewDimension;
-  /**
-   * @default false
-   */
-  multisampled?: boolean;
+  texture: TSchema;
 };
-export type TgpuLayoutStorageTexture<
-  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
-> = TgpuLayoutEntryBase & {
-  storageTexture: TFormat;
-  /** @default 'writeonly' */
-  access?: 'readonly' | 'writeonly' | 'mutable';
-  /** @default '2d' */
-  viewDimension?: StorageTextureDimension;
-};
+
 export type TgpuLayoutExternalTexture = TgpuLayoutEntryBase & {
   externalTexture: Record<string, never>;
 };
@@ -150,7 +115,6 @@ export type TgpuLayoutEntry =
   | TgpuLayoutSampler
   | TgpuLayoutComparisonSampler
   | TgpuLayoutTexture
-  | TgpuLayoutStorageTexture
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
@@ -222,60 +186,6 @@ type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
     | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
   : TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>; // <- access is undefined, so default to 'readonly';
 
-type GetUsageForStorageTexture<
-  T extends TgpuLayoutStorageTexture,
-  TAccess extends 'readonly' | 'writeonly' | 'mutable',
-> = {
-  mutable: TgpuMutableTexture<
-    Default<GetDimension<T['viewDimension']>, '2d'>,
-    TexelFormatToDataType[T['storageTexture']]
-  >;
-  readonly: TgpuReadonlyTexture<
-    Default<GetDimension<T['viewDimension']>, '2d'>,
-    TexelFormatToDataType[T['storageTexture']]
-  >;
-  writeonly: TgpuWriteonlyTexture<
-    Default<GetDimension<T['viewDimension']>, '2d'>,
-    TexelFormatToDataType[T['storageTexture']]
-  >;
-}[TAccess];
-
-type StorageTextureUsageForEntry<T extends TgpuLayoutStorageTexture> = T extends
-  unknown ? GetUsageForStorageTexture<T, Default<T['access'], 'writeonly'>>
-  : never;
-
-type GetDimension<T extends GPUTextureViewDimension | undefined> = T extends
-  keyof ViewDimensionToDimension ? ViewDimensionToDimension[T]
-  : undefined;
-
-type GetTextureRestriction<T extends TgpuLayoutTexture> = Default<
-  GetDimension<T['viewDimension']>,
-  '2d'
-> extends infer Dimension ? Dimension extends '2d' ? {
-      format:
-        ChannelTypeToLegalFormats[SampleTypeToStringChannelType[T['texture']]];
-      dimension?: Dimension;
-    }
-  : {
-    format:
-      ChannelTypeToLegalFormats[SampleTypeToStringChannelType[T['texture']]];
-    dimension: Dimension;
-  }
-  : never;
-
-type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
-  GetDimension<T['viewDimension']>,
-  '2d'
-> extends infer Dimension ? Dimension extends '2d' ? {
-      format: T['storageTexture'];
-      dimension?: Dimension;
-    }
-  : {
-    format: T['storageTexture'];
-    dimension: Dimension;
-  }
-  : never;
-
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T ?
@@ -286,10 +196,6 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       | TgpuComparisonSampler
       | GPUSampler
       | TgpuTexture
-      | TgpuSampledTexture
-      | TgpuMutableTexture
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
       | GPUTextureView
       | GPUExternalTexture
     // Strict type-checking
@@ -309,25 +215,8 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
     : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
     : T extends TgpuLayoutTexture ?
         | GPUTextureView
-        | (
-          & Sampled
-          & TgpuTexture<
-            Prettify<TextureProps & GetTextureRestriction<T>>
-          >
-        )
-        | TgpuSampledTexture<
-          Default<T['viewDimension'], '2d'>,
-          ChannelFormatToSchema[T['texture']]
-        >
-    : T extends TgpuLayoutStorageTexture ?
-        | GPUTextureView
-        | (
-          & StorageFlag
-          & TgpuTexture<
-            Prettify<TextureProps & GetStorageTextureRestriction<T>>
-          >
-        )
-        | StorageTextureUsageForEntry<T>
+        | (SampledFlag & TgpuTexture<Prettify<TextureProps>>)
+        | TgpuTextureView
     : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
     : never;
 
@@ -336,11 +225,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? StorageUsageForEntry<T>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? TgpuSampledTexture<
-      Default<T['viewDimension'], '2d'>,
-      ChannelFormatToSchema[T['texture']]
-    >
-  : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutTexture ? TgpuTextureView
   : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
@@ -349,23 +234,13 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture
-    ? T['texture'] extends 'depth' ? TgpuDepthTexture<
-        Default<T['viewDimension'], '2d'>
-      >
-    : TgpuSampledTexture<
-      Default<T['viewDimension'], '2d'>,
-      ChannelFormatToSchema[T['texture']]
-    >
-  : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutTexture ? Infer<T['texture']>
   : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
 export type ExtractBindGroupInputFromLayout<
   T extends Record<string, TgpuLayoutEntry | null>,
-> = NullableToOptional<
-  { [K in keyof T]: LayoutEntryToInput<T[K]> }
->;
+> = NullableToOptional<{ [K in keyof T]: LayoutEntryToInput<T[K]> }>;
 
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
@@ -482,20 +357,8 @@ class TgpuBindGroupLayoutImpl<
 
       if ('texture' in entry) {
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutSampledTextureImpl(
+        (this.bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.texture,
-          entry.viewDimension ?? '2d',
-          entry.multisampled ?? false,
-          membership,
-        );
-      }
-
-      if ('storageTexture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutStorageTextureImpl(
-          entry.storageTexture,
-          entry.viewDimension ?? '2d',
-          entry.access ?? 'writeonly',
           membership,
         );
       }
@@ -517,22 +380,21 @@ class TgpuBindGroupLayoutImpl<
         }
       }
 
-      if (
-        'texture' in entry ||
-        'storageTexture' in entry ||
-        'externalTexture' in entry ||
-        'sampler' in entry
-      ) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.value as any)[key] = this.bound[key];
-      } else {
-        Object.defineProperty(this.value, key, {
-          get: () => {
-            // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-            return (this.bound[key] as any).value;
-          },
-        });
-      }
+      // if (
+      //   'texture' in entry ||
+      //   'externalTexture' in entry ||
+      //   'sampler' in entry
+      // ) {
+      //   // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+      //   (this.value as any)[key] = this.bound[key];
+      // } else {
+      //   Object.defineProperty(this.value, key, {
+      //     get: () => {
+      //       // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+      //       return (this.bound[key] as any).value;
+      //     },
+      //   });
+      // }
 
       idx++;
     }
@@ -598,28 +460,21 @@ class TgpuBindGroupLayoutImpl<
           } else if ('texture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
 
-            binding.texture = {
-              sampleType: entry.texture,
-              viewDimension: entry.viewDimension ?? '2d',
-              multisampled: entry.multisampled ?? false,
-            };
-          } else if ('storageTexture' in entry) {
-            const access = entry.access ?? 'writeonly';
-
-            visibility = visibility ??
-              (access === 'readonly'
-                ? DEFAULT_READONLY_VISIBILITY
-                : DEFAULT_MUTABLE_VISIBILITY);
-
-            binding.storageTexture = {
-              format: entry.storageTexture,
-              access: {
-                mutable: 'read-write' as const,
-                readonly: 'read-only' as const,
-                writeonly: 'write-only' as const,
-              }[access],
-              viewDimension: entry.viewDimension ?? '2d',
-            };
+            if (isWgslSampledTexture(entry.texture)) {
+              const { sampleType, dimension, multisampled } = entry.texture;
+              binding.texture = {
+                sampleType,
+                multisampled,
+                viewDimension: dimension,
+              };
+            } else {
+              const { access, format, dimension } = entry.texture;
+              binding.storageTexture = {
+                access,
+                format,
+                viewDimension: dimension,
+              };
+            }
           } else if ('externalTexture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
             binding.externalTexture = {};
@@ -729,47 +584,9 @@ export class TgpuBindGroupImpl<
               }
 
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & Sampled).createView(
-                  'sampled',
-                  {
-                    dimension: entry.viewDimension ?? '2d',
-                  },
-                ),
+                (value as TgpuTexture & SampledFlag).createView(entry.texture),
               );
-            } else if (isSampledTextureView(value)) {
-              resource = unwrapper.unwrap(value);
-            } else {
-              resource = value as GPUTextureView;
-            }
-
-            return {
-              binding: idx,
-              resource,
-            };
-          }
-
-          if ('storageTexture' in entry) {
-            let resource: GPUTextureView;
-
-            if (isTexture(value)) {
-              if (!isUsableAsStorage(value)) {
-                throw new NotStorageError(value);
-              }
-
-              if (entry.access === 'readonly') {
-                resource = unwrapper.unwrap(
-                  (value as TgpuTexture & StorageFlag).createView('readonly'),
-                );
-              } else if (entry.access === 'mutable') {
-                resource = unwrapper.unwrap(
-                  (value as TgpuTexture & StorageFlag).createView('mutable'),
-                );
-              } else {
-                resource = unwrapper.unwrap(
-                  (value as TgpuTexture & StorageFlag).createView('writeonly'),
-                );
-              }
-            } else if (isStorageTextureView(value)) {
+            } else if (isTextureView(value)) {
               resource = unwrapper.unwrap(value);
             } else {
               resource = value as GPUTextureView;
