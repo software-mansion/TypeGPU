@@ -117,7 +117,7 @@
     "@babel/standalone": "^7.27.0",
     "defu": "^6.1.4",
     "estree-walker": "^3.0.3",
-    "magic-string-ast": "^1.0.0",
+    "magic-string-ast": "^1.0.2",
     "pathe": "^2.0.3",
     "picomatch": "^4.0.3",
     "tinyest": "workspace:~0.1.1",
