@@ -23,6 +23,24 @@ function sanitizeArray(arr: readonly number[]): [number, number, number] {
  */
 export function dispatch(
   root: TgpuRoot,
+  size: readonly [number],
+  callback: (x: number) => void,
+  workgroupSize?: readonly [number],
+): void;
+export function dispatch(
+  root: TgpuRoot,
+  size: readonly [number, number],
+  callback: (x: number, y: number) => void,
+  workgroupSize?: readonly [number, number],
+): void;
+export function dispatch(
+  root: TgpuRoot,
+  size: readonly [number, number, number],
+  callback: (x: number, y: number, z: number) => void,
+  workgroupSize?: readonly [number, number, number],
+): void;
+export function dispatch(
+  root: TgpuRoot,
   size: readonly number[],
   callback: (x: number, y: number, z: number) => void,
   workgroupSize?: readonly number[],

@@ -61,6 +61,8 @@ export const tgpu = {
 };
 export default tgpu;
 
+export { dispatch } from './core/root/dispatch.ts';
+
 export {
   MissingBindGroupsError,
   MissingLinksError,

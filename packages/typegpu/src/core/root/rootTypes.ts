@@ -644,26 +644,4 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * submitted to the GPU.
    */
   flush(): void;
-
-  /**
-   * Dispatch a single-shot compute pipeline.
-   * @param size A 3d (or shorter) array holding the total number of threads to run.
-   * @param callback A TGSL function body that is run on GPU. Its arguments are the global invocation ids of the call.
-   * @param workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
-   */
-  dispatch(
-    size: readonly [number],
-    callback: (x: number) => void,
-    workgroupSize?: readonly [number],
-  ): void;
-  dispatch(
-    size: readonly [number, number],
-    callback: (x: number, y: number) => void,
-    workgroupSize?: readonly [number, number],
-  ): void;
-  dispatch(
-    size: readonly [number, number, number],
-    callback: (x: number, y: number, z: number) => void,
-    workgroupSize?: readonly [number, number, number],
-  ): void;
 }

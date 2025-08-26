@@ -95,7 +95,6 @@ import {
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
 import { ConfigurableImpl } from './configurableImpl.ts';
-import { dispatch } from './dispatch.ts';
 import type {
   Configurable,
   CreateTextureOptions,
@@ -651,14 +650,6 @@ class TgpuRootImpl extends WithBindingImpl
 
     this.device.queue.submit([this._commandEncoder.finish()]);
     this._commandEncoder = null;
-  }
-
-  dispatch(
-    size: readonly number[],
-    callback: (x: number, y: number, z: number) => void,
-    workgroupSize?: readonly number[],
-  ) {
-    return dispatch(this, size, callback, workgroupSize);
   }
 }
 
