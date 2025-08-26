@@ -29,25 +29,25 @@ export function dispatch(options: {
   threads: readonly [number];
   callback: (x: number) => void;
   workgroupSize?: readonly [number];
-}): void;
+}): () => void;
 export function dispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number];
   callback: (x: number, y: number) => void;
   workgroupSize?: readonly [number, number];
-}): void;
+}): () => void;
 export function dispatch(options: {
   root: TgpuRoot;
   threads: readonly [number, number, number];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly [number, number, number];
-}): void;
+}): () => void;
 export function dispatch(options: {
   root: TgpuRoot;
   threads: readonly number[];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly number[];
-}): void {
+}): () => void {
   const threads = sanitizeArray(options.threads);
   const workgroupSize = sanitizeArray(options.workgroupSize ?? []);
   const workgroupCount = ceil(vec3f(threads).div(vec3f(workgroupSize)));
@@ -65,8 +65,14 @@ export function dispatch(options: {
     wrappedCallback(id.x, id.y, id.z);
   });
 
-  options.root['~unstable']
+  const pipeline = options.root['~unstable']
     .withCompute(mainCompute)
-    .createPipeline()
-    .dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
+    .createPipeline();
+
+  return () =>
+    pipeline.dispatchWorkgroups(
+      workgroupCount.x,
+      workgroupCount.y,
+      workgroupCount.z,
+    );
 }

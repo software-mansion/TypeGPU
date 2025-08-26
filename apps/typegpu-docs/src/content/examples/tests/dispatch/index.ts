@@ -23,7 +23,7 @@ async function test1d() {
       'kernel';
       mutable.$[x] = x;
     },
-  });
+  })();
   const filled = await mutable.read();
   assertEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
 }
@@ -40,7 +40,7 @@ async function test2d() {
       'kernel';
       mutable.$[x][y] = d.vec2u(x, y);
     },
-  });
+  })();
   const filled = await mutable.read();
   assertEqual(filled, [
     [d.vec2u(0, 0), d.vec2u(0, 1), d.vec2u(0, 2)],
@@ -63,7 +63,7 @@ async function test3d() {
       'kernel';
       mutable.$[x][y][z] = d.vec3u(x, y, z);
     },
-  });
+  })();
   const filled = await mutable.read();
   assertEqual(filled, [
     [[d.vec3u(0, 0, 0), d.vec3u(0, 0, 1)]],
@@ -81,9 +81,28 @@ async function testWorkgroupSize() {
       mutable.$[x] = x;
     },
     workgroupSize: [3],
-  });
+  })();
   const filled = await mutable.read();
   assertEqual(filled, [0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+async function testMultipleDispatches() {
+  const threads = [7] as const;
+  const mutable = root
+    .createMutable(d.arrayOf(d.u32, threads[0]), [0, 1, 2, 3, 4, 5, 6]);
+  const dispatchAAA = dispatch({
+    root,
+    threads,
+    callback: (x: number) => {
+      'kernel';
+      mutable.$[x] *= 2;
+    },
+  });
+  dispatchAAA();
+  dispatchAAA();
+  dispatchAAA();
+  const filled = await mutable.read();
+  assertEqual(filled, [0, 8, 16, 24, 32, 40, 48]);
 }
 
 async function runTests() {
@@ -91,6 +110,7 @@ async function runTests() {
   await test2d();
   await test3d();
   await testWorkgroupSize();
+  await testMultipleDispatches();
 }
 
 const table = document.querySelector<HTMLDivElement>('.result');
