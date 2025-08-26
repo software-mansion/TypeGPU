@@ -19,47 +19,47 @@ function sanitizeArray(arr: readonly number[]): v3u {
  * Dispatch a single-shot compute pipeline.
  * @param options.root A TgpuRoot.
  * @param options.callback A function that is parsed to WGSL and run on GPU. Its arguments are the global invocation ids of the call.
- * @param options.size A 3d (or shorter) array holding the total number of threads to run.
- * @param options.workgroupSize (optional) A 3d (or shorter) array holding the sizes of the workgroups. [1, 1, 1] by default.
+ * @param options.threads A 3d (or shorter) array holding the total number of threads to run.
+ * @param options.workgroupSize (optional) A 3d (or shorter) array holding the sizes of the groups of threads.
+ * [1, 1, 1] by default. Setting this to bigger values might speed up the computation due to better caching.
+ * The callback is not called when the gid would exceed option.threads.
  */
 export function dispatch(options: {
   root: TgpuRoot;
-  size: readonly [number];
+  threads: readonly [number];
   callback: (x: number) => void;
   workgroupSize?: readonly [number];
 }): void;
 export function dispatch(options: {
   root: TgpuRoot;
-  size: readonly [number, number];
+  threads: readonly [number, number];
   callback: (x: number, y: number) => void;
   workgroupSize?: readonly [number, number];
 }): void;
 export function dispatch(options: {
   root: TgpuRoot;
-  size: readonly [number, number, number];
+  threads: readonly [number, number, number];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly [number, number, number];
 }): void;
 export function dispatch(options: {
   root: TgpuRoot;
-  size: readonly number[];
+  threads: readonly number[];
   callback: (x: number, y: number, z: number) => void;
   workgroupSize?: readonly number[];
 }): void {
-  const checkedSize = sanitizeArray(options.size);
-  const checkedWorkgroupSize = sanitizeArray(options.workgroupSize ?? []);
-  const workgroupCount = ceil(
-    vec3f(checkedSize).div(vec3f(checkedWorkgroupSize)),
-  );
+  const threads = sanitizeArray(options.threads);
+  const workgroupSize = sanitizeArray(options.workgroupSize ?? []);
+  const workgroupCount = ceil(vec3f(threads).div(vec3f(workgroupSize)));
 
   const wrappedCallback = fn([u32, u32, u32])(options.callback);
 
   const mainCompute = computeFn({
-    workgroupSize: checkedWorkgroupSize,
+    workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
   })(({ id }) => {
     'kernel';
-    if (any(ge(id, checkedSize))) {
+    if (any(ge(id, threads))) {
       return;
     }
     wrappedCallback(id.x, id.y, id.z);
