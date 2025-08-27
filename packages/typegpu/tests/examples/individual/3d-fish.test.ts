@@ -74,7 +74,7 @@ describe('3d fish example', () => {
         fish_data_1_11[x] = data;
       }
 
-      @compute @workgroup_size(1, 1, 1) fn item_0(_arg_0: item_1) {
+      @compute @workgroup_size(32, 1, 1) fn item_0(_arg_0: item_1) {
         if (any((_arg_0.id >= vec3u(8192, 1, 1)))) {
           return;
         }
