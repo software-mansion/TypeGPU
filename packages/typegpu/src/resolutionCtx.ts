@@ -662,7 +662,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      console.log('resolving number', item, schema, exact);
       const reinterpretedType = numericLiteralToSnippet(item).dataType;
       const realSchema = exact ? schema : reinterpretedType;
       invariant(realSchema, 'Schema has to be defined for resolving numbers');
