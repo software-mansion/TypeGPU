@@ -32,6 +32,7 @@ import {
   type AnySignedVecInstance,
   type AnyWgslData,
   isNumericSchema,
+  isVecInstance,
   type v2i,
   type v3f,
   type v3h,
