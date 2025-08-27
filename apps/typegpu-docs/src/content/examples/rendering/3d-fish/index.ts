@@ -101,6 +101,7 @@ const seedUniform = root.createUniform(d.f32);
 const randomizeFishPositionsDispatch = prepareDispatch({
   root,
   size: [p.fishAmount],
+  workgroupSize: [32],
   callback: (x) => {
     'kernel';
     randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
