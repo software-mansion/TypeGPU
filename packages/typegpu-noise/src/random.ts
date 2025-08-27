@@ -41,6 +41,26 @@ export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
     randomGeneratorSlot.value.seed4(seed);
   });
 
+export const randISeed: TgpuFn<(seed: d.U32) => d.Void> = tgpu
+  .fn([d.u32])((seed) => {
+    randomGeneratorSlot.value.iSeed(seed);
+  });
+
+export const randISeed2: TgpuFn<(seed: d.Vec2u) => d.Void> = tgpu
+  .fn([d.vec2u])((seed) => {
+    randomGeneratorSlot.value.iSeed2(seed);
+  });
+
+export const randISeed3: TgpuFn<(seed: d.Vec3u) => d.Void> = tgpu
+  .fn([d.vec3u])((seed) => {
+    randomGeneratorSlot.value.iSeed3(seed);
+  });
+
+export const randISeed4: TgpuFn<(seed: d.Vec4u) => d.Void> = tgpu
+  .fn([d.vec4u])((seed) => {
+    randomGeneratorSlot.value.iSeed4(seed);
+  });
+
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => randomGeneratorSlot.value.sample());
 

@@ -7,6 +7,10 @@ import {
   randInUnitCube,
   randInUnitHemisphere,
   randInUnitSphere,
+  randISeed,
+  randISeed2,
+  randISeed3,
+  randISeed4,
   randNormal,
   randOnUnitCircle,
   randOnUnitCube,
@@ -22,24 +26,44 @@ import {
 export const randf: {
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
    */
   seed: typeof randSeed;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
    */
   seed2: typeof randSeed2;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
    */
   seed3: typeof randSeed3;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best effect, should be in [0, 1) range.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
    */
   seed4: typeof randSeed4;
+  /**
+   * Sets the private seed of the thread.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
+   */
+  iSeed: typeof randISeed;
+  /**
+   * Sets the private seed of the thread.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
+   */
+  iSeed2: typeof randISeed2;
+  /**
+   * Sets the private seed of the thread.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
+   */
+  iSeed3: typeof randISeed3;
+  /**
+   * Sets the private seed of the thread.
+   * @param seed seed value to set. Check the domains of different generators' seeds at https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.
+   */
+  iSeed4: typeof randISeed4;
   /**
    * Returns a random f32 value in [0, 1) range.
    */
@@ -111,6 +135,10 @@ export const randf: {
   seed2: randSeed2,
   seed3: randSeed3,
   seed4: randSeed4,
+  iSeed: randISeed,
+  iSeed2: randISeed2,
+  iSeed3: randISeed3,
+  iSeed4: randISeed4,
   sample: randFloat01,
   sampleExclusive: randUniformExclusive,
   normal: randNormal,

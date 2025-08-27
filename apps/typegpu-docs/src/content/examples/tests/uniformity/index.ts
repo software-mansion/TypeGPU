@@ -2,7 +2,6 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { BPETER, HybridTaus, randf, randomGeneratorSlot } from '@typegpu/noise';
-import { HittableType } from 'morphcharts/dist/renderers/raytracewebgpu/hittable';
 
 const root = await tgpu.init();
 
@@ -14,19 +13,68 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
 
   return {
     pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: std.mul(0.5, pos[input.vertexIndex]),
+    uv: pos[input.vertexIndex],
   };
 });
+
+const gridSize = 100;
+
+const b1 = root.createBuffer(d.arrayOf(d.u32, gridSize * gridSize)).$usage(
+  'storage',
+);
+const b2 = root.createBuffer(d.arrayOf(d.f32, gridSize * gridSize)).$usage(
+  'storage',
+);
+
+const layout = tgpu.bindGroupLayout({
+  u: {
+    storage: d.arrayOf(d.u32, gridSize * gridSize),
+    access: 'mutable',
+    visibility: ['fragment'],
+  },
+  f: {
+    storage: d.arrayOf(d.f32, gridSize * gridSize),
+    access: 'mutable',
+    visibility: ['fragment'],
+  },
+});
+
+const group = root.createBindGroup(layout, {
+  u: b1,
+  f: b2,
+});
+
+// === LCG ===
+const LCGStep = tgpu.fn([d.u32, d.u32, d.u32], d.u32)(
+  (z, A, C) => {
+    return A * z + C;
+  },
+);
+
+// === Floater ===
+const floater = tgpu.fn([d.u32], d.f32)`(val){
+  let lz: u32 = countLeadingZeros(val);
+  let mantissa: u32 = val & 0x7fffff;
+  let exponent: u32 = 126 - lz;
+  let ufloat: u32 = (exponent << 23) | mantissa;
+  return bitcast<f32>(ufloat);
+}`;
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv = std.abs(input.uv);
-  const grided = d.vec2i(uv.mul(100));
-  randf.seed2(d.vec2f(grided).div(d.f32(std.max(grided.x, grided.y))));
-  // randf.seed2(uv);
-  return d.vec4f(d.vec3f(randf.sample()), 1.0);
+  const uv = input.uv.add(d.f32(1)).div(d.f32(2));
+  const grided = std.floor(uv.mul(gridSize));
+  const id = d.u32(grided.x * gridSize + grided.y);
+  // randf.iSeed(grided.x * gridSize + grided.y);
+  // const sample = randf.sample();
+
+  const sample = LCGStep(id, 1664525, 1013904223);
+  layout.bound.u.$[d.u32(grided.x * gridSize + grided.y)] = sample;
+  layout.bound.f.$[d.u32(grided.x * gridSize + grided.y)] = floater(sample);
+
+  return d.vec4f(d.vec3f(floater(sample)), 1.0);
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -45,6 +93,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 pipeline
+  .with(layout, group)
   .withColorAttachment({
     view: context.getCurrentTexture().createView(),
     loadOp: 'clear',
@@ -52,18 +101,24 @@ pipeline
   })
   .draw(3);
 
+// console.log(tgpu.resolve({ externals: { fullScreenTriangle } }));
+
+console.log('our grid u32', await b1.read());
+console.log('our grid f32', await b2.read());
+
+const b = root.createMutable(d.f32);
+const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })`{
+  b = floater(0xffffffff);
+}`.$uses({ b, floater });
+
+const p = root['~unstable'].withCompute(f)
+  .createPipeline();
+p.dispatchWorkgroups(1);
+
+console.log(tgpu.resolve({ externals: { f } }));
+
+console.log('some tests:', await b.read());
+
 export function onCleanup() {
   root.destroy();
 }
-
-// const b = root.createMutable(d.f32);
-// const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-//   randf.seed2(d.vec2f(1, 0));
-//   b.$ = randf.sample();
-// });
-
-// const p = root['~unstable'].with(randomGeneratorSlot, HybridTaus).withCompute(f)
-//   .createPipeline();
-// p.dispatchWorkgroups(1);
-
-// console.log(await b.read());
