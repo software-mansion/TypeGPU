@@ -33,8 +33,41 @@ const bindGroup = root.createBindGroup(layout, {
   counter: counterBuffer,
 });
 
-const modelLoader = new OnnxModelLoader('/TypeGPU/assets/model.onnx', { backendHint: 'webgpu' });
+// --- ONNX model load test -------------------------------------------------
+// We fully await the loader, then perform some sanity checks to ensure decoding worked.
+async function testModelLoad() {
+  const MODEL_PATH = '/TypeGPU/assets/model.onnx';
+  try {
+    const loader = await OnnxModelLoader.fromPath(MODEL_PATH);
+    // Basic invariants: have original buffer and graph object.
+    const inputNames = loader.getInputNames();
+    const outputNames = loader.getOutputNames();
+    const initNames = loader.listInitializers();
+    if (!loader.buffer?.byteLength) {
+      throw new Error('Empty model buffer');
+    }
+    if (inputNames.length === 0 && initNames.length === 0) {
+      // Not necessarily fatal for all models, but flag as suspicious in this example.
+      console.warn('[AI Example] Model loaded but has no inputs and no initializers.');
+    }
+    console.log('[AI Example] ONNX model loaded OK:', {
+      path: MODEL_PATH,
+      bufferBytes: loader.buffer.byteLength,
+      inputs: inputNames,
+      outputs: outputNames,
+      initializers: initNames.length,
+      firstInitializer: initNames[0],
+    });
+    // Return boolean for potential future UI hook.
+    return true;
+  } catch (err) {
+    console.error('[AI Example] Failed to load ONNX model:', err);
+    return false;
+  }
+}
 
+// Kick off immediately; ignore result for now (but could be surfaced in UI later)
+void testModelLoad();
 const table = document.querySelector('.counter') as HTMLDivElement;
 
 export const controls = {
