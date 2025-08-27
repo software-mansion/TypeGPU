@@ -207,11 +207,28 @@ const Transpilers: Partial<
     if (typeof node.value === 'string') {
       return [NODE.stringLiteral, node.value];
     }
-    return [NODE.numericLiteral, node.raw ?? ''];
+    if (node.regex) {
+      throw new Error(
+        'Regular expression literals are not representable in WGSL.',
+      );
+    }
+    if (node.bigint) {
+      console.warn(
+        'BigInt literals are represented as numbers - loss of precision may occur.',
+      );
+    }
+    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
   },
 
   NumericLiteral(ctx, node) {
     return [NODE.numericLiteral, String(node.value) ?? ''];
+  },
+
+  BigIntLiteral(ctx, node) {
+    console.warn(
+      'BigInt literals are represented as numbers - loss of precision may occur.',
+    );
+    return [NODE.numericLiteral, String(Number.parseInt(node.value))];
   },
 
   BooleanLiteral(ctx, node) {

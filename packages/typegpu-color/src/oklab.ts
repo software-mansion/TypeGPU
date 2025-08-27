@@ -170,7 +170,7 @@ const findGamutIntersection = tgpu.fn(
   [f32, f32, f32, f32, f32, LC],
   f32,
 )((a, b, L1, C1, L0, cusp) => {
-  const FLT_MAX = 3.40282346e38;
+  const FLT_MAX = f32(3.40282346e38);
 
   // Find the intersection for upper and lower half separately
   let t = f32(0);
