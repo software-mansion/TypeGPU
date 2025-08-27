@@ -818,12 +818,7 @@ function powCpu<T extends AnyFloatVecInstance | number>(
   if (typeof base === 'number' && typeof exponent === 'number') {
     return (base ** exponent) as T;
   }
-  if (
-    typeof base === 'object' &&
-    typeof exponent === 'object' &&
-    'kind' in base &&
-    'kind' in exponent
-  ) {
+  if (isVecInstance(base) && isVecInstance(exponent)) {
     return VectorOps.pow[base.kind](base, exponent) as T;
   }
   throw new Error('Invalid arguments to pow()');
