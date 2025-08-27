@@ -15,6 +15,7 @@ import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
@@ -194,6 +195,7 @@ const opCodeToCodegen = {
   '-': sub[$internal].gpuImpl,
   '*': mul[$internal].gpuImpl,
   '/': div[$internal].gpuImpl,
+  '**': pow[$internal].gpuImpl,
 } satisfies Partial<
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
