@@ -14,7 +14,7 @@ import * as std from '../../src/std/index.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
-import { wgslGenerator } from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

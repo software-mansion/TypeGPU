@@ -5,7 +5,7 @@ import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
-import { wgslGenerator } from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
 describe('wgsl generator type inference', () => {
   let ctx: ResolutionCtxImpl;
