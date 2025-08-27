@@ -18,12 +18,11 @@ const uniformLayout = tgpu.bindGroupLayout({
 });
 
 const sampledTexture = d.sampledTexture({
-  dimension: '2d',
+  viewDimension: '2d',
   sampleType: 'float',
-  multisampled: false,
 });
 const storageTexture = d.storageTexture({
-  dimension: '2d',
+  viewDimension: '2d',
   format: 'rgba8unorm',
   access: 'write-only',
 });

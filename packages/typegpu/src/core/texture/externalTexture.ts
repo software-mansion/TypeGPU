@@ -1,9 +1,16 @@
-import { $internal, $repr, $runtimeResource } from '../../shared/symbols.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $repr,
+  $runtimeResource,
+} from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { WgslExternalTexture } from '../../data/texture.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { inCodegenMode } from '../../execMode.ts';
 
 // ----------
 // Public API
@@ -49,6 +56,33 @@ export class TgpuExternalTextureImpl
     );
 
     return id;
+  }
+
+  [$gpuValueOf](): WgslExternalTexture {
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.schema,
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as unknown as WgslExternalTexture;
+  }
+
+  get $(): WgslExternalTexture {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): WgslExternalTexture {
+    return this.$;
   }
 
   toString() {

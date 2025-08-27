@@ -453,7 +453,7 @@ export const textureDimensions = dualImpl({
   signature: (...args) => {
     const dim =
       (args[0] as WgslSampledTexture | WgslStorageTexture | WgslExternalTexture)
-        .dimension;
+        .viewDimension;
     if (dim === '1d') {
       return {
         argTypes: args,
@@ -545,17 +545,21 @@ export const textureSampleCompare = dualImpl({
   }),
 });
 
+function textureSampleBaseClampToEdgeCpu<
+  T extends WgslSampledTexture<'2d', 'float'> | WgslExternalTexture,
+>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: v2f,
+): v4f {
+  throw new Error(
+    'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
+  );
+}
+
 export const textureSampleBaseClampToEdge = dualImpl({
   name: 'textureSampleBaseClampToEdge',
-  normalImpl: (
-    _texture: WgslSampledTexture<'2d', 'float'> | WgslExternalTexture,
-    _sampler: TgpuSampler,
-    _coords: v2f,
-  ) => {
-    throw new Error(
-      'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
-    );
-  },
+  normalImpl: textureSampleBaseClampToEdgeCpu,
   codegenImpl: (...args) => stitch`textureSampleBaseClampToEdge(${args})`,
   signature: (...args) => ({
     argTypes: args,

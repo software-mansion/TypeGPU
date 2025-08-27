@@ -8,13 +8,25 @@ import {
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import type { Configurable } from './rootTypes.ts';
+import type { TgpuTextureView } from '../texture/texture.ts';
+import type { WgslSampledTexture } from '../../data/index.ts';
 
 export class ConfigurableImpl implements Configurable {
   constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}
 
+  with<T extends WgslSampledTexture | WgslSampledTexture>(
+    slot: TgpuSlot<T> | TgpuAccessor<T>,
+    value: T | TgpuTextureView<T> | TgpuFn<() => T> | Infer<T>,
+  ): Configurable;
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
     value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+  ): Configurable;
+  with<T extends AnyWgslData>(
+    slot: TgpuSlot<T> | TgpuAccessor<T>,
+    value: T extends WgslSampledTexture | WgslSampledTexture
+      ? TgpuTextureView<T> | TgpuFn<() => T> | Infer<T>
+      : T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
   ): Configurable {
     return new ConfigurableImpl([
       ...this.bindings,

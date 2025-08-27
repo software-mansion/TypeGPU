@@ -76,7 +76,12 @@ export const renderInstanceLayout = tgpu.vertexLayout(
 
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   modelData: { storage: ModelDataArray },
-  modelTexture: { texture: 'float' },
+  modelTexture: {
+    texture: d.sampledTexture({
+      sampleType: 'float',
+      viewDimension: '2d',
+    }),
+  },
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
   currentTime: { uniform: d.f32 },

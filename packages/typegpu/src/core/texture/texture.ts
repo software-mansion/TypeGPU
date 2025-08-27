@@ -10,19 +10,25 @@ import type {
   Vec4i,
   Vec4u,
 } from '../../data/wgslTypes.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import {
   $getNameForward,
+  $gpuValueOf,
   $internal,
   $repr,
   $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
-import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
+import type {
+  Default,
+  UnionToIntersection,
+} from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
 
@@ -62,6 +68,9 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   createView<T extends WgslSampledTexture | WgslStorageTexture>(
     schema: T,
   ): TgpuTextureView<T>;
+  createView(): TgpuTextureView<
+    WgslSampledTexture<Default<TProps['dimension'], '2d'>>
+  >;
 
   destroy(): void;
 }
@@ -89,6 +98,10 @@ export interface TgpuTextureView<
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+
+  [$gpuValueOf](ctx: ResolutionCtx): TSchema;
+  value: TSchema;
+  $: TSchema;
 }
 
 export function INTERNAL_createTexture(
@@ -179,10 +192,24 @@ class TgpuTextureImpl implements TgpuTexture {
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
+  createView(): TgpuTextureView<
+    WgslSampledTexture<'2d', 'float', false>
+  >;
   createView<T extends WgslSampledTexture | WgslStorageTexture>(
     schema: T,
+  ): TgpuTextureView<T>;
+  createView<T extends WgslSampledTexture | WgslStorageTexture>(
+    schema?: T,
   ): TgpuTextureView<T> {
-    return new TgpuFixedTextureViewImpl(schema, this);
+    return new TgpuFixedTextureViewImpl(
+      schema ??
+        {
+          viewDimension: this.props.dimension ?? '2d',
+          sampleType: 'float',
+          multisampled: (this.props.sampleCount ?? 1) > 1,
+        } as unknown as T,
+      this,
+    );
   }
 
   destroy() {}
@@ -190,11 +217,10 @@ class TgpuTextureImpl implements TgpuTexture {
 
 class TgpuFixedTextureViewImpl<
   T extends WgslSampledTexture | WgslStorageTexture,
-> implements TgpuTextureView<T> {
+> implements TgpuTextureView<T>, SelfResolvable {
   readonly [$internal]: TextureViewInternals;
   readonly [$runtimeResource] = true;
   readonly [$getNameForward]: TgpuTexture;
-  readonly [$wgslDataType]: typeof this.schema;
   readonly [$repr]: T = undefined as unknown as T;
 
   readonly resourceType = 'texture-view';
@@ -213,7 +239,7 @@ class TgpuFixedTextureViewImpl<
           const descriptor: GPUTextureViewDescriptor = {
             label: getName(this) ?? '<unnamed>',
             format: schema.format ?? this.#baseTexture.props.format,
-            dimension: schema.dimension,
+            dimension: schema.viewDimension,
             aspect: schema.aspect,
             baseMipLevel: schema.baseMipLevel,
             baseArrayLayer: schema.baseArrayLayer,
@@ -233,8 +259,34 @@ class TgpuFixedTextureViewImpl<
         return this.#view;
       },
     };
-    this[$wgslDataType] = schema;
     this[$getNameForward] = baseTexture;
+  }
+
+  [$gpuValueOf](): T {
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.schema,
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as unknown as T;
+  }
+
+  get $(): T {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      'Direct access to texture view values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): T {
+    return this.$;
   }
 
   toString() {
@@ -262,10 +314,9 @@ class TgpuFixedTextureViewImpl<
 
 export class TgpuLaidOutTextureViewImpl<
   T extends WgslSampledTexture | WgslStorageTexture,
-> implements TgpuTextureView<T> {
+> implements TgpuTextureView<T>, SelfResolvable {
   readonly [$internal] = { unwrap: undefined };
   readonly [$runtimeResource] = true;
-  readonly [$wgslDataType]: typeof this.schema;
   readonly [$repr]: T = undefined as unknown as T;
 
   readonly resourceType = 'texture-view';
@@ -276,7 +327,6 @@ export class TgpuLaidOutTextureViewImpl<
     private readonly _membership: LayoutMembership,
   ) {
     this.schema = schema;
-    this[$wgslDataType] = schema;
     setName(this, _membership.key);
   }
 
@@ -295,5 +345,32 @@ export class TgpuLaidOutTextureViewImpl<
     );
 
     return id;
+  }
+
+  [$gpuValueOf](): T {
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.schema,
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as unknown as T;
+  }
+
+  get $(): T {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): T {
+    return this.$;
   }
 }

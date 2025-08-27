@@ -1,5 +1,10 @@
 import * as d from 'typegpu/data';
 
+export const cubeTexture = d.sampledTexture({
+  sampleType: 'float',
+  viewDimension: 'cube',
+});
+
 export const Camera = d.struct({
   view: d.mat4x4f,
   projection: d.mat4x4f,

@@ -1,3 +1,14 @@
+import * as d from 'typegpu/data';
+
+export const writeonlyF16Texture = d.storageTexture({
+  viewDimension: '2d',
+  format: 'rgba16float',
+  access: 'write-only',
+});
+export const floatSampledTexture = d.sampledTexture({
+  sampleType: 'float',
+});
+
 export type DisplayMode = 'ink' | 'velocity' | 'image';
 
 export type SimulationParams = {

@@ -46,12 +46,12 @@ function sampledTextureType<
   TSample extends GPUTextureSampleType,
   TMultisampled extends boolean,
 >(
-  dimension: TDimension,
+  viewDimension: TDimension,
   sampleType: TSample,
   multisampled: TMultisampled,
 ): SampledTextureType<TDimension, TSample, TMultisampled> {
   if (multisampled) {
-    if (dimension !== '2d') {
+    if (viewDimension !== '2d') {
       throw new Error(
         'Multisampled textures are only supported for 2d dimension',
       );
@@ -66,19 +66,21 @@ function sampledTextureType<
   }
 
   if (sampleType === 'depth') {
-    if (!['2d', '2d-array', 'cube', 'cube-array'].includes(dimension)) {
+    if (!['2d', '2d-array', 'cube', 'cube-array'].includes(viewDimension)) {
       throw new Error(
-        `Depth textures are not supported for dimension: ${dimension}`,
+        `Depth textures are not supported for dimension: ${viewDimension}`,
       );
     }
-    return `texture_depth_${dashToUnderscore(dimension)}` as SampledTextureType<
+    return `texture_depth_${
+      dashToUnderscore(viewDimension)
+    }` as SampledTextureType<
       TDimension,
       TSample,
       TMultisampled
     >;
   }
 
-  return `texture_${dashToUnderscore(dimension)}` as SampledTextureType<
+  return `texture_${dashToUnderscore(viewDimension)}` as SampledTextureType<
     TDimension,
     TSample,
     TMultisampled
@@ -91,8 +93,10 @@ type StorageTextureType<
 
 function storageTextureType<
   TDimension extends StorageTextureDimension,
->(dimension: TDimension): StorageTextureType<TDimension> {
-  return `texture_storage_${dashToUnderscore(dimension)}` as StorageTextureType<
+>(viewDimension: TDimension): StorageTextureType<TDimension> {
+  return `texture_storage_${
+    dashToUnderscore(viewDimension)
+  }` as StorageTextureType<
     TDimension
   >;
 }
@@ -100,23 +104,25 @@ function storageTextureType<
 type SampledTextureProps<
   TDimension extends GPUTextureViewDimension,
   TSample extends GPUTextureSampleType,
-  TMultisampled extends boolean,
+  TMultisampled extends boolean = false,
 > = {
-  dimension: TDimension;
-  sampleType: TSample;
-  multisampled: TMultisampled;
+  viewDimension?: TDimension;
+  sampleType?: TSample;
+  multisampled?: TMultisampled;
 } & Partial<BaseTextureProps>;
 
 export function sampledTexture<
-  TDimension extends GPUTextureViewDimension,
-  TSample extends GPUTextureSampleType,
-  TMultisampled extends boolean,
+  TDimension extends GPUTextureViewDimension = '2d',
+  TSample extends GPUTextureSampleType = 'float',
+  TMultisampled extends boolean = false,
 >(
   props: SampledTextureProps<TDimension, TSample, TMultisampled>,
 ): WgslSampledTexture<TDimension, TSample, TMultisampled> {
-  const { dimension, sampleType, multisampled } = props;
-
-  const textureType = sampledTextureType(dimension, sampleType, multisampled);
+  const {
+    viewDimension = '2d' as TDimension,
+    sampleType = 'float' as TSample,
+    multisampled = false as TMultisampled,
+  } = props;
 
   return {
     [$internal]: true,
@@ -125,8 +131,12 @@ export function sampledTexture<
       TSample,
       TMultisampled
     >,
-    type: textureType,
-    dimension,
+    type: sampledTextureType(
+      viewDimension,
+      sampleType,
+      multisampled,
+    ),
+    viewDimension,
     sampleType,
     multisampled,
     aspect: props.aspect ?? 'all',
@@ -142,7 +152,7 @@ type StorageTextureProps<
   TFormat extends GPUTextureFormat,
   TAccess extends GPUStorageTextureAccess,
 > = {
-  dimension: TDimension;
+  viewDimension: TDimension;
   format: TFormat;
   access: TAccess;
 } & Partial<Omit<BaseTextureProps, 'format'>>;
@@ -154,7 +164,7 @@ export function storageTexture<
 >(
   props: StorageTextureProps<TDimension, TFormat, TAccess>,
 ): WgslStorageTexture<TDimension, TFormat, TAccess> {
-  const { dimension, format, access } = props;
+  const { viewDimension, format, access } = props;
 
   return {
     [$internal]: true,
@@ -163,9 +173,9 @@ export function storageTexture<
       TFormat,
       TAccess
     >,
-    type: storageTextureType(dimension),
+    type: storageTextureType(viewDimension),
     format,
-    dimension,
+    viewDimension,
     access,
     aspect: props?.aspect ?? 'all',
     baseMipLevel: props?.baseMipLevel ?? 0,
@@ -180,7 +190,7 @@ export function externalTexture(): WgslExternalTexture {
     [$internal]: true,
     [$repr]: undefined as unknown as WgslExternalTexture,
     type: 'texture_external',
-    dimension: '2d',
+    viewDimension: '2d',
   };
 }
 
@@ -193,7 +203,7 @@ export interface WgslSampledTexture<
   readonly type: SampledTextureType<TDimension, TSample, TMultisampled>;
 
   readonly sampleType: TSample;
-  readonly dimension: TDimension;
+  readonly viewDimension: TDimension;
   readonly multisampled: TMultisampled;
 }
 
@@ -206,7 +216,7 @@ export interface WgslStorageTexture<
   readonly type: StorageTextureType<TDimension>;
 
   readonly format: TFormat;
-  readonly dimension: TDimension;
+  readonly viewDimension: TDimension;
   readonly access: TAccess;
 }
 
@@ -216,7 +226,7 @@ export interface WgslExternalTexture extends BaseData {
 
   // External textures are always 2d
   // This props allows for easier type narrowing
-  readonly dimension: '2d';
+  readonly viewDimension: '2d';
 }
 
 export function isWgslSampledTexture(
@@ -233,4 +243,11 @@ export function isWgslStorageTexture(
   return !!(value as WgslStorageTexture)[$internal] &&
     typeof (value as WgslStorageTexture).format === 'string' &&
     typeof (value as WgslStorageTexture).access === 'string';
+}
+
+export function isWgslExternalTexture(
+  value: unknown,
+): value is WgslExternalTexture {
+  return !!(value as WgslExternalTexture)[$internal] &&
+    (value as WgslExternalTexture).type === 'texture_external';
 }

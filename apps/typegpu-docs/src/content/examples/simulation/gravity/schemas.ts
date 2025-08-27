@@ -1,4 +1,4 @@
-import tgpu, { type TgpuSampledTexture, type TgpuSampler } from 'typegpu';
+import tgpu, { type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const Camera = d.struct({
@@ -60,15 +60,22 @@ export const renderSkyBoxVertexLayout = tgpu.vertexLayout(
   d.arrayOf(SkyBoxVertex),
 );
 
+export const atlasTexture = d.sampledTexture({
+  viewDimension: '2d-array',
+});
+export const cubemapTexture = d.sampledTexture({
+  viewDimension: 'cube',
+});
+
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);
 export const filteringSamplerSlot = tgpu.slot<TgpuSampler>();
-export const skyBoxSlot = tgpu.slot<TgpuSampledTexture<'cube', d.F32>>();
 export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
 export const timeAccess = tgpu['~unstable'].accessor(Time);
+export const skyBoxAccess = tgpu['~unstable'].accessor(cubemapTexture);
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
-    celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
+    celestialBodyTextures: { texture: atlasTexture },
     celestialBodies: {
       storage: d.arrayOf(CelestialBody),
       access: 'readonly',

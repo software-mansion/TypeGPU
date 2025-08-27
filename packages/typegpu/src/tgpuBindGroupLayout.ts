@@ -226,7 +226,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? StorageUsageForEntry<T>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? TgpuTextureView
+  : T extends TgpuLayoutTexture ? TgpuTextureView<T['texture']>
   : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
@@ -236,7 +236,7 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
   : T extends TgpuLayoutTexture ? Infer<T['texture']>
-  : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
+  : T extends TgpuLayoutExternalTexture ? Infer<T['externalTexture']>
   : never;
 
 export type ExtractBindGroupInputFromLayout<
@@ -384,21 +384,19 @@ class TgpuBindGroupLayoutImpl<
         }
       }
 
-      // if (
-      //   'texture' in entry ||
-      //   'externalTexture' in entry ||
-      //   'sampler' in entry
-      // ) {
-      //   // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-      //   (this.value as any)[key] = this.bound[key];
-      // } else {
-      //   Object.defineProperty(this.value, key, {
-      //     get: () => {
-      //       // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-      //       return (this.bound[key] as any).value;
-      //     },
-      //   });
-      // }
+      if (
+        'sampler' in entry
+      ) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.value as any)[key] = this.bound[key];
+      } else {
+        Object.defineProperty(this.value, key, {
+          get: () => {
+            // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+            return (this.bound[key] as any).value;
+          },
+        });
+      }
 
       idx++;
     }
@@ -464,20 +462,14 @@ class TgpuBindGroupLayoutImpl<
           } else if ('texture' in entry) {
             if (isWgslSampledTexture(entry.texture)) {
               visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
-              const { sampleType, dimension, multisampled } = entry.texture;
               binding.texture = {
-                sampleType,
-                multisampled,
-                viewDimension: dimension,
+                ...entry.texture,
               };
             } else {
               visibility = visibility ??
                 DEFAULT_MUTABLE_VISIBILITY.filter((v) => v !== 'vertex');
-              const { access, format, dimension } = entry.texture;
               binding.storageTexture = {
-                access,
-                format,
-                viewDimension: dimension,
+                ...entry.texture,
               };
             }
           } else if ('externalTexture' in entry) {

@@ -124,6 +124,7 @@ export type {
   Unstruct,
 } from './dataTypes.ts';
 export {
+  externalTexture,
   sampledTexture,
   storageTexture,
   type WgslExternalTexture,

@@ -52,7 +52,7 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuTexture } from '../texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
@@ -62,6 +62,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  WgslSampledTexture,
+  WgslStorageTexture,
+} from '../../data/index.ts';
 
 // ----------
 // Public API
@@ -157,6 +161,10 @@ export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
+  with<T extends WgslSampledTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): Configurable;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -183,6 +191,10 @@ export interface WithBinding {
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends WgslSampledTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:

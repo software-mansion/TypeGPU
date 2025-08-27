@@ -32,12 +32,13 @@ import {
   cameraAccess,
   CelestialBody,
   computeLayout,
+  cubemapTexture,
   filteringSamplerSlot,
   lightSourceAccess,
   renderBindGroupLayout,
   renderSkyBoxVertexLayout,
   renderVertexLayout,
-  skyBoxSlot,
+  skyBoxAccess,
   SkyBoxVertex,
   Time,
   timeAccess,
@@ -83,7 +84,7 @@ const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
   .$usage('vertex');
 const skyBoxTexture = await loadSkyBox(root);
-const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
+const skyBox = skyBoxTexture.createView(cubemapTexture);
 
 let celestialBodiesCount = 0;
 const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
@@ -125,8 +126,8 @@ const computeGravityPipeline = root['~unstable']
 
 const skyBoxPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
-  .with(skyBoxSlot, skyBox)
   .with(cameraAccess, camera)
+  .with(skyBoxAccess, skyBox)
   .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
   .createPipeline();

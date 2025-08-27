@@ -74,6 +74,7 @@ const identityTypes = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'texture_external',
 ];
 
 type IdentityType =

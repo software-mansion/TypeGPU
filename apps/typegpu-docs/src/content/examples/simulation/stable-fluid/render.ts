@@ -2,10 +2,11 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { SIM_N } from './params.ts';
+import { floatSampledTexture } from './types.ts';
 
 export const renderLayout = tgpu.bindGroupLayout({
-  result: { texture: 'float' },
-  background: { texture: 'float' },
+  result: { texture: floatSampledTexture },
+  background: { texture: floatSampledTexture },
   linSampler: { sampler: 'filtering' },
 });
 

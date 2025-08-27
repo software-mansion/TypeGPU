@@ -9,8 +9,9 @@ const rareLayout = tgpu.bindGroupLayout({
   uvTransform: { uniform: d.mat2x2f },
 });
 
+const videoTexture = d.externalTexture();
 const frequentLayout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: {} },
+  inputTexture: { externalTexture: videoTexture },
 });
 
 const VertexOutput = d.struct({
