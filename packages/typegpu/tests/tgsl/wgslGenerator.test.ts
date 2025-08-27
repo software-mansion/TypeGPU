@@ -11,10 +11,15 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
-import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
+import {
+  generateExpression,
+  generateFunction,
+  registerBlockVariable,
+  wgslGenerator,
+} from '../../src/tgsl/wgslGenerator.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -31,7 +36,7 @@ describe('wgslGenerator', () => {
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
-      shaderGenerator: wgslGenerator.wgslGenerator,
+      shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
   });
@@ -50,7 +55,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      const gen = generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{return true;}'));
     });
   });
@@ -71,7 +76,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      const gen = generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
     });
   });
@@ -115,7 +120,7 @@ describe('wgslGenerator', () => {
       for (const stmt of (parsedBody as tinyest.Block)[1]) {
         const letStatement = stmt as tinyest.Let;
         const [_, name, numLiteral] = letStatement;
-        const generatedExpr = wgslGenerator.generateExpression(
+        const generatedExpr = generateExpression(
           ctx,
           numLiteral as tinyest.Num,
         );
@@ -162,7 +167,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                   ^ this should be a u32
-      const res1 = wgslGenerator.generateExpression(
+      const res1 = generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -176,7 +181,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                                       ^ this should be a u32
-      const res2 = wgslGenerator.generateExpression(
+      const res2 = generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -189,7 +194,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //            ^ this should be a u32
-      const sum = wgslGenerator.generateExpression(
+      const sum = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -230,7 +235,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value[3];
       //                   ^ this should be a u32
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -303,7 +308,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
       //                           ^ this part should be a i32
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Const)[2],
       );
@@ -313,8 +318,8 @@ describe('wgslGenerator', () => {
       // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
-      const res2 = wgslGenerator.generateExpression(
+      registerBlockVariable(ctx, 'value', d.i32);
+      const res2 = generateExpression(
         ctx,
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
@@ -326,12 +331,12 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
-      const res3 = wgslGenerator.generateExpression(
+      registerBlockVariable(ctx, 'vec', d.vec4f);
+      const res3 = generateExpression(
         ctx,
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
-      const res4 = wgslGenerator.generateExpression(
+      const res4 = generateExpression(
         ctx,
         astInfo.ast?.body[1][2] as tinyest.Expression,
       );
@@ -359,7 +364,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -385,7 +390,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -409,7 +414,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
@@ -449,7 +454,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return derivedV4u.value;
       //                      ^ this should be a vec4u
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -485,7 +490,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return derivedV2f.value[idx];
       //                      ^ this should be a f32
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -529,7 +534,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [1, 2, 3]
       //                        ^ this should be an array<u32, 3>
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -627,7 +632,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
       //                        ^ this should be an array<TestStruct, 2>
-      return wgslGenerator.generateExpression(
+      return generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
@@ -717,7 +722,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return fnOne().y.x;
       //                   ^ this should be a f32
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -762,7 +767,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = testSlot.value.value;
       //                  ^ this should be a vec3f
-      const res = wgslGenerator.generateExpression(
+      const res = generateExpression(
         ctx,
         (
           astInfo.ast?.body[1][0] as tinyest.Const
@@ -844,7 +849,7 @@ describe('wgslGenerator', () => {
     const gen = provideCtx(
       ctx,
       () =>
-        wgslGenerator.generateFunction(
+        generateFunction(
           ctx,
           getMetaData(main)?.ast?.body as tinyest.Block,
         ),

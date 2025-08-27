@@ -366,11 +366,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly names: NameRegistry;
   public expectedType: AnyData | undefined;
-  private readonly _shaderGenerator: ShaderGenerator;
+  readonly #shaderGenerator: ShaderGenerator;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
-    this._shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
+    this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
   }
 
   get pre(): string {
@@ -426,7 +426,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: this._shaderGenerator.functionDefinition(
+        body: this.#shaderGenerator.functionDefinition(
           this,
           options.body,
         ),

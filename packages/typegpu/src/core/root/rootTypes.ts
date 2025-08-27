@@ -596,7 +596,6 @@ export interface TgpuRoot extends Unwrapper {
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly nameRegistry: NameRegistry;
-  /** Experimental: custom shader generator used for function bodies during resolution */
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;

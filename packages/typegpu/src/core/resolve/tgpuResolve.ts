@@ -70,7 +70,6 @@ export interface TgpuResolveOptions {
  * // }
  * ```
  */
-
 export function resolveWithContext(
   options: TgpuResolveOptions,
 ): ResolutionResult {
