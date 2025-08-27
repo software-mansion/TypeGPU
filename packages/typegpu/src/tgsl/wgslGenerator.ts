@@ -6,6 +6,7 @@ import {
   InfixDispatch,
   isData,
   isLooseData,
+  MatrixColumnsAccess,
   UnknownData,
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
@@ -311,7 +312,7 @@ export function generateExpression(
     }
 
     if (wgsl.isMat(target.dataType) && property === 'columns') {
-      return snip(target.value, target.dataType);
+      return snip(new MatrixColumnsAccess(target), UnknownData);
     }
 
     if (
@@ -333,8 +334,15 @@ export function generateExpression(
     const [_, targetNode, propertyNode] = expression;
     const target = generateExpression(ctx, targetNode);
     const property = generateExpression(ctx, propertyNode);
-    const targetStr = ctx.resolve(target.value, target.dataType);
     const propertyStr = ctx.resolve(property.value, property.dataType);
+
+    if (target.value instanceof MatrixColumnsAccess) {
+      return snip(
+        stitch`${target.value.matrix}[${propertyStr}]`,
+        getTypeForIndexAccess(target.value.matrix.dataType as AnyData),
+      );
+    }
+    const targetStr = ctx.resolve(target.value, target.dataType);
 
     if (target.dataType.type === 'unknown') {
       // No idea what the type is, so we act on the snippet's value and try to guess
@@ -350,6 +358,12 @@ export function generateExpression(
 
       throw new Error(
         `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+      );
+    }
+
+    if (wgsl.isMat(target.dataType)) {
+      throw new Error(
+        "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
       );
     }
 
