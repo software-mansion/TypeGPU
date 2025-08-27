@@ -30,7 +30,7 @@ import {
   getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import { ShaderGenerator } from './shaderGenerator.ts';
+import type { ShaderGenerator } from './shaderGenerator.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
