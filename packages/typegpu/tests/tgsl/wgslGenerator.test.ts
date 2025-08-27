@@ -931,6 +931,51 @@ describe('wgslGenerator', () => {
     );
   });
 
+  it('generates correct code for pow expression', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.f32(10);
+      const b = d.f32(3);
+      const n = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 10f;
+        var b = 3f;
+        var n = pow(a, b);
+      }"
+    `);
+  });
+
+  it('calculates pow at comptime when possible', () => {
+    const four = 4;
+    const power = tgpu.fn([])(() => {
+      const n = 2 ** four;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var n = 16.;
+      }"
+    `);
+  });
+
+  it('casts in pow expression when necessary', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.u32(3);
+      const b = d.i32(5);
+      const m = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 3u;
+        var b = 5i;
+        var m = pow(f32(a), f32(b));
+      }"
+    `);
+  });
+
   it('throws error when accessing matrix elements directly', () => {
     const testFn = tgpu.fn([])(() => {
       const matrix = d.mat4x4f();
