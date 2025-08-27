@@ -38,8 +38,8 @@ import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import { wgslGenerator } from './tgsl/wgslGenerator.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
   ExecState,
@@ -426,7 +426,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: this.#shaderGenerator.functionDefinition(
+        body: this.#shaderGenerator.generateFunction(
           this,
           options.body,
         ),

@@ -14,12 +14,7 @@ import * as std from '../../src/std/index.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
-import {
-  generateExpression,
-  generateFunction,
-  registerBlockVariable,
-  wgslGenerator,
-} from '../../src/tgsl/wgslGenerator.ts';
+import { wgslGenerator } from '../../src/tgsl/wgslGenerator.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -55,7 +50,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
-      const gen = generateFunction(ctx, parsedBody);
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{return true;}'));
     });
   });
@@ -76,7 +71,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
-      const gen = generateFunction(ctx, parsedBody);
+      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
       expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
     });
   });
@@ -120,7 +115,7 @@ describe('wgslGenerator', () => {
       for (const stmt of (parsedBody as tinyest.Block)[1]) {
         const letStatement = stmt as tinyest.Let;
         const [_, name, numLiteral] = letStatement;
-        const generatedExpr = generateExpression(
+        const generatedExpr = wgslGenerator.generateExpression(
           ctx,
           numLiteral as tinyest.Num,
         );
@@ -167,7 +162,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                   ^ this should be a u32
-      const res1 = generateExpression(
+      const res1 = wgslGenerator.generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -181,7 +176,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                                       ^ this should be a u32
-      const res2 = generateExpression(
+      const res2 = wgslGenerator.generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -194,7 +189,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //            ^ this should be a u32
-      const sum = generateExpression(
+      const sum = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -235,7 +230,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value[3];
       //                   ^ this should be a u32
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -308,7 +303,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
       //                           ^ this part should be a i32
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Const)[2],
       );
@@ -318,8 +313,8 @@ describe('wgslGenerator', () => {
       // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
-      registerBlockVariable(ctx, 'value', d.i32);
-      const res2 = generateExpression(
+      wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
+      const res2 = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
@@ -331,12 +326,12 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      registerBlockVariable(ctx, 'vec', d.vec4f);
-      const res3 = generateExpression(
+      wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
+      const res3 = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
-      const res4 = generateExpression(
+      const res4 = wgslGenerator.generateExpression(
         ctx,
         astInfo.ast?.body[1][2] as tinyest.Expression,
       );
@@ -364,7 +359,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => generateFunction(ctx, parsed),
+      () => wgslGenerator.generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -390,7 +385,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => generateFunction(ctx, parsed),
+      () => wgslGenerator.generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -414,7 +409,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => generateFunction(ctx, parsed),
+      () => wgslGenerator.generateFunction(ctx, parsed),
     );
 
     expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
@@ -454,7 +449,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return derivedV4u.value;
       //                      ^ this should be a vec4u
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -490,7 +485,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return derivedV2f.value[idx];
       //                      ^ this should be a f32
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -534,7 +529,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [1, 2, 3]
       //                        ^ this should be an array<u32, 3>
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         // deno-fmt-ignore: it's better that way
         (
@@ -632,7 +627,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
       //                        ^ this should be an array<TestStruct, 2>
-      return generateExpression(
+      return wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
@@ -722,7 +717,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return fnOne().y.x;
       //                   ^ this should be a f32
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
@@ -767,7 +762,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = testSlot.value.value;
       //                  ^ this should be a vec3f
-      const res = generateExpression(
+      const res = wgslGenerator.generateExpression(
         ctx,
         (
           astInfo.ast?.body[1][0] as tinyest.Const
@@ -849,7 +844,7 @@ describe('wgslGenerator', () => {
     const gen = provideCtx(
       ctx,
       () =>
-        generateFunction(
+        wgslGenerator.generateFunction(
           ctx,
           getMetaData(main)?.ast?.body as tinyest.Block,
         ),

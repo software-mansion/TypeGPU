@@ -133,7 +133,7 @@ function parseNumericString(str: string): number {
   return Number.parseFloat(str);
 }
 
-export function generateBlock(
+function generateBlock(
   ctx: GenerationCtx,
   [_, statements]: tinyest.Block,
 ): string {
@@ -152,7 +152,7 @@ ${ctx.pre}}`;
   }
 }
 
-export function registerBlockVariable(
+function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
@@ -160,7 +160,7 @@ export function registerBlockVariable(
   return ctx.defineVariable(id, dataType);
 }
 
-export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
+function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -173,7 +173,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
  * A wrapper for `generateExpression` that updates `ctx.expectedType`
  * and tries to convert the result when it does not match the expected type.
  */
-export function generateTypedExpression(
+function generateTypedExpression(
   ctx: GenerationCtx,
   expression: tinyest.Expression,
   expectedType: AnyData,
@@ -198,7 +198,7 @@ const opCodeToCodegen = {
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
 
-export function generateExpression(
+function generateExpression(
   ctx: GenerationCtx,
   expression: tinyest.Expression,
 ): Snippet {
@@ -598,7 +598,7 @@ function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
     : statement;
 }
 
-export function generateStatement(
+function generateStatement(
   ctx: GenerationCtx,
   statement: tinyest.Statement,
 ): string {
@@ -725,13 +725,21 @@ ${ctx.pre}else ${alternate}`;
   return `${ctx.pre}${ctx.resolve(generateExpression(ctx, statement).value)};`;
 }
 
-export function generateFunction(
+function generateFunction(
   ctx: GenerationCtx,
   body: tinyest.Block,
 ): string {
   return generateBlock(ctx, body);
 }
 
-export const wgslGenerator: ShaderGenerator = {
-  functionDefinition: generateFunction,
+const wgslGenerator: ShaderGenerator = {
+  generateBlock,
+  registerBlockVariable,
+  generateIdentifier,
+  generateTypedExpression,
+  generateExpression,
+  generateStatement,
+  generateFunction,
 };
+
+export default wgslGenerator;

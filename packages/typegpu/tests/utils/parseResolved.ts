@@ -10,7 +10,7 @@ import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import { CodegenState } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
-import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
 export function parse(code: string): string {
   const stream = new WeslStream(code);
