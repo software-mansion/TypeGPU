@@ -26,6 +26,13 @@ function dashToUnderscore<S extends string>(s: S): DashToUnderscore<S> {
   return s.replace(/-/g, '_') as DashToUnderscore<S>;
 }
 
+// Infer-from-props helpers (non-distributive, avoid unions with undefined)
+type PropOf<T, K extends PropertyKey> = K extends keyof T ? T[K] : undefined;
+type DefaultProp<T, K extends PropertyKey, Expected, D> = [
+  PropOf<T, K>,
+] extends [Expected] ? PropOf<T, K>
+  : D;
+
 type SampledTextureType<
   TDimension extends GPUTextureViewDimension,
   TSample extends GPUTextureSampleType,
@@ -112,71 +119,128 @@ type SampledTextureProps<
 } & Partial<BaseTextureProps>;
 
 export function sampledTexture<
-  TDimension extends GPUTextureViewDimension = '2d',
-  TSample extends GPUTextureSampleType = 'float',
-  TMultisampled extends boolean = false,
+  P extends SampledTextureProps<
+    GPUTextureViewDimension,
+    GPUTextureSampleType,
+    boolean
+  > = Record<string, never>,
 >(
-  props: SampledTextureProps<TDimension, TSample, TMultisampled>,
-): WgslSampledTexture<TDimension, TSample, TMultisampled> {
+  props?: P,
+): WgslSampledTexture<
+  DefaultProp<P, 'viewDimension', GPUTextureViewDimension, '2d'>,
+  DefaultProp<P, 'sampleType', GPUTextureSampleType, 'float'>,
+  DefaultProp<P, 'multisampled', boolean, false>
+> {
   const {
-    viewDimension = '2d' as TDimension,
-    sampleType = 'float' as TSample,
-    multisampled = false as TMultisampled,
-  } = props;
+    viewDimension = '2d' as GPUTextureViewDimension,
+    sampleType = 'float' as GPUTextureSampleType,
+    multisampled = false as boolean,
+  } = (props ?? {}) as SampledTextureProps<
+    GPUTextureViewDimension,
+    GPUTextureSampleType,
+    boolean
+  >;
 
   return {
     [$internal]: true,
     [$repr]: undefined as unknown as WgslSampledTexture<
-      TDimension,
-      TSample,
-      TMultisampled
+      DefaultProp<P, 'viewDimension', GPUTextureViewDimension, '2d'>,
+      DefaultProp<P, 'sampleType', GPUTextureSampleType, 'float'>,
+      DefaultProp<P, 'multisampled', boolean, false>
     >,
     type: sampledTextureType(
       viewDimension,
       sampleType,
       multisampled,
-    ),
-    viewDimension,
-    sampleType,
-    multisampled,
-    aspect: props.aspect ?? 'all',
-    baseMipLevel: props.baseMipLevel ?? 0,
-    mipLevelCount: props.mipLevelCount,
-    baseArrayLayer: props.baseArrayLayer ?? 0,
-    arrayLayerCount: props.arrayLayerCount,
+    ) as SampledTextureType<
+      DefaultProp<P, 'viewDimension', GPUTextureViewDimension, '2d'>,
+      DefaultProp<P, 'sampleType', GPUTextureSampleType, 'float'>,
+      DefaultProp<P, 'multisampled', boolean, false>
+    >,
+    viewDimension: viewDimension as DefaultProp<
+      P,
+      'viewDimension',
+      GPUTextureViewDimension,
+      '2d'
+    >,
+    sampleType: sampleType as DefaultProp<
+      P,
+      'sampleType',
+      GPUTextureSampleType,
+      'float'
+    >,
+    multisampled: multisampled as DefaultProp<
+      P,
+      'multisampled',
+      boolean,
+      false
+    >,
+    aspect: props?.aspect ?? 'all',
+    baseMipLevel: props?.baseMipLevel ?? 0,
+    mipLevelCount: props?.mipLevelCount,
+    baseArrayLayer: props?.baseArrayLayer ?? 0,
+    arrayLayerCount: props?.arrayLayerCount,
   };
 }
 
 type StorageTextureProps<
-  TDimension extends StorageTextureDimension,
   TFormat extends GPUTextureFormat,
-  TAccess extends GPUStorageTextureAccess,
+  TDimension extends StorageTextureDimension = '2d',
+  TAccess extends GPUStorageTextureAccess = 'write-only',
 > = {
-  viewDimension: TDimension;
   format: TFormat;
-  access: TAccess;
+  viewDimension?: TDimension;
+  access?: TAccess;
 } & Partial<Omit<BaseTextureProps, 'format'>>;
 
 export function storageTexture<
-  TDimension extends StorageTextureDimension,
-  TFormat extends StorageTextureFormats,
-  TAccess extends GPUStorageTextureAccess,
+  P extends StorageTextureProps<
+    StorageTextureFormats,
+    StorageTextureDimension,
+    GPUStorageTextureAccess
+  >,
 >(
-  props: StorageTextureProps<TDimension, TFormat, TAccess>,
-): WgslStorageTexture<TDimension, TFormat, TAccess> {
-  const { viewDimension, format, access } = props;
+  props: P,
+): WgslStorageTexture<
+  DefaultProp<P, 'viewDimension', StorageTextureDimension, '2d'>,
+  P['format'],
+  DefaultProp<P, 'access', GPUStorageTextureAccess, 'write-only'>
+> {
+  const {
+    format,
+    viewDimension = '2d' as StorageTextureDimension,
+    access = 'write-only' as GPUStorageTextureAccess,
+  } = props as StorageTextureProps<
+    StorageTextureFormats,
+    StorageTextureDimension,
+    GPUStorageTextureAccess
+  >;
 
   return {
     [$internal]: true,
     [$repr]: undefined as unknown as WgslStorageTexture<
-      TDimension,
-      TFormat,
-      TAccess
+      DefaultProp<P, 'viewDimension', StorageTextureDimension, '2d'>,
+      P['format'],
+      DefaultProp<P, 'access', GPUStorageTextureAccess, 'write-only'>
     >,
-    type: storageTextureType(viewDimension),
-    format,
-    viewDimension,
-    access,
+    type: storageTextureType(
+      viewDimension,
+    ) as StorageTextureType<
+      DefaultProp<P, 'viewDimension', StorageTextureDimension, '2d'>
+    >,
+    format: format as P['format'],
+    viewDimension: viewDimension as DefaultProp<
+      P,
+      'viewDimension',
+      StorageTextureDimension,
+      '2d'
+    >,
+    access: access as DefaultProp<
+      P,
+      'access',
+      GPUStorageTextureAccess,
+      'write-only'
+    >,
     aspect: props?.aspect ?? 'all',
     baseMipLevel: props?.baseMipLevel ?? 0,
     mipLevelCount: props?.mipLevelCount,

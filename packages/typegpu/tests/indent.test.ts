@@ -144,9 +144,11 @@ describe('indents', () => {
     const layout = tgpu.bindGroupLayout({
       systemData: { storage: SystemData },
       densityField: {
-        storageTexture: 'r32float',
-        access: 'readonly',
-        viewDimension: '3d',
+        texture: d.storageTexture({
+          format: 'r32float',
+          viewDimension: '3d',
+          access: 'read-only',
+        }),
       },
       counter: { storage: d.u32 },
     });
@@ -337,8 +339,12 @@ describe('indents', () => {
 
     const layout = tgpu.bindGroupLayout({
       boids: { uniform: UniBoid },
-      myCamera: { externalTexture: {} },
-      smoothRender: { texture: 'float', multisampled: true },
+      myCamera: { externalTexture: d.externalTexture() },
+      smoothRender: {
+        texture: d.sampledTexture({
+          multisampled: true,
+        }),
+      },
       sampler: { sampler: 'filtering', multisampled: true },
     });
 

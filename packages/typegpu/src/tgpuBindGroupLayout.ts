@@ -214,10 +214,15 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         | GPUBuffer
     : T extends TgpuLayoutSampler ? TgpuSampler | GPUSampler
     : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
-    : T extends TgpuLayoutTexture ?
-        | GPUTextureView
-        | (SampledFlag & TgpuTexture<Prettify<TextureProps>>)
-        | TgpuTextureView
+    : T extends TgpuLayoutTexture ? T['texture'] extends WgslSampledTexture ?
+          | GPUTextureView
+          | (SampledFlag & TgpuTexture<Prettify<TextureProps>>)
+          | TgpuTextureView
+      : T['texture'] extends WgslStorageTexture ?
+          | GPUTextureView
+          | (StorageFlag & TgpuTexture<Prettify<TextureProps>>)
+          | TgpuTextureView
+      : never
     : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
     : never;
 
@@ -574,14 +579,21 @@ export class TgpuBindGroupImpl<
 
           if ('texture' in entry) {
             let resource: GPUTextureView;
-
             if (isTexture(value)) {
-              if (!isUsableAsSampled(value)) {
-                throw new NotSampledError(value);
+              if (isWgslSampledTexture(entry.texture)) {
+                if (!isUsableAsSampled(value)) {
+                  throw new NotSampledError(value);
+                }
+              } else {
+                if (!isUsableAsStorage(value)) {
+                  throw new NotStorageError(value);
+                }
               }
 
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & SampledFlag).createView(entry.texture),
+                (value as TgpuTexture & SampledFlag).createView(
+                  entry.texture,
+                ),
               );
             } else if (isTextureView(value)) {
               resource = unwrapper.unwrap(value);

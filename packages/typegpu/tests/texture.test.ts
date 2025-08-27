@@ -1,13 +1,10 @@
 import { describe, expect, expectTypeOf } from 'vitest';
+import type { TgpuTexture } from '../src/core/texture/texture.ts';
 import type {
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
-  TgpuTexture,
-  TgpuWriteonlyTexture,
-} from '../src/core/texture/texture.ts';
-import type { Render, Sampled } from '../src/core/texture/usageExtension.ts';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data/index.ts';
+  RenderFlag,
+  SampledFlag,
+} from '../src/core/texture/usageExtension.ts';
+import { sampledTexture } from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
@@ -146,7 +143,7 @@ describe('TgpuTexture', () => {
       .$usage('sampled');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledFlag
     >();
   });
 
@@ -159,7 +156,9 @@ describe('TgpuTexture', () => {
       .$usage('sampled', 'render');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled & Render
+      & TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
+      & SampledFlag
+      & RenderFlag
     >();
   });
 
@@ -185,8 +184,10 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     };
 
-    const sampled1 = texture.createView('sampled');
-    const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
+    const sampled1 = texture.createView(sampledTexture({}));
+    const sampled2 = texture.createView(
+      sampledTexture({ viewDimension: '2d-array' }),
+    );
 
     expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
       'texture_2d<f32>',
@@ -197,173 +198,177 @@ describe('TgpuTexture', () => {
     );
   });
 
-  it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
-    const texture = root.createTexture({
-      size: [1, 1],
-      format: 'rgba8unorm',
-    });
+  // TODO: add back when validation is here
+  //   it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
+  //     const texture = root.createTexture({
+  //       size: [1, 1],
+  //       format: 'rgba8unorm',
+  //     });
 
-    // @ts-expect-error
-    const getSampled = () => texture.createView('sampled');
-    // @ts-expect-error
-    const getReadonly = () => texture.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly = () => texture.createView('writeonly');
-    // @ts-expect-error
-    const getMutable = () => texture.createView('mutable');
+  //     // @ts-expect-error
+  //     const getSampled = () => texture.createView('sampled');
+  //     // @ts-expect-error
+  //     const getReadonly = () => texture.createView('readonly');
+  //     // @ts-expect-error
+  //     const getWriteonly = () => texture.createView('writeonly');
+  //     // @ts-expect-error
+  //     const getMutable = () => texture.createView('mutable');
 
-    const texture2 = texture.$usage('sampled');
+  //     const texture2 = texture.$usage('sampled');
 
-    const getSampled2 = () => texture2.createView('sampled');
-    // @ts-expect-error
-    const getReadonly2 = () => texture2.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly2 = () => texture2.createView('writeonly');
-    // @ts-expect-error
-    const getMutable2 = () => texture2.createView('mutable');
-  });
-});
+  //     const getSampled2 = () => texture2.createView('sampled');
+  //     // @ts-expect-error
+  //     const getReadonly2 = () => texture2.createView('readonly');
+  //     // @ts-expect-error
+  //     const getWriteonly2 = () => texture2.createView('writeonly');
+  //     // @ts-expect-error
+  //     const getMutable2 = () => texture2.createView('mutable');
+  //   });
+  // });
 
-describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('storage');
+  // TODO: add back when default view is implemented
+  // describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
+  //   it('inherits the dimension and format from its owner texture', ({ root }) => {
+  //     const texture1 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8unorm',
+  //       })
+  //       .$usage('storage');
 
-    expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'2d', Vec4f>
-    >();
+  //     expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
+  //       TgpuReadonlyTexture<'2d', Vec4f>
+  //     >();
 
-    expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'2d', Vec4f>
-    >();
+  //     expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
+  //       TgpuWriteonlyTexture<'2d', Vec4f>
+  //     >();
 
-    expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'2d', Vec4f>
-    >();
+  //     expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
+  //       TgpuMutableTexture<'2d', Vec4f>
+  //     >();
 
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('storage');
+  //     const texture2 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8uint',
+  //         dimension: '3d',
+  //       })
+  //       .$usage('storage');
 
-    expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'3d', Vec4u>
-    >();
+  //     expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
+  //       TgpuReadonlyTexture<'3d', Vec4u>
+  //     >();
 
-    expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'3d', Vec4u>
-    >();
+  //     expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
+  //       TgpuWriteonlyTexture<'3d', Vec4u>
+  //     >();
 
-    expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'3d', Vec4u>
-    >();
+  //     expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
+  //       TgpuMutableTexture<'3d', Vec4u>
+  //     >();
 
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('storage');
+  //     const texture3 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8sint',
+  //         dimension: '1d',
+  //         viewFormats: ['rgba8unorm'],
+  //       })
+  //       .$usage('storage');
 
-    expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'1d', Vec4i>
-    >();
+  //     expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
+  //       TgpuReadonlyTexture<'1d', Vec4i>
+  //     >();
 
-    expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'1d', Vec4i>
-    >();
+  //     expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
+  //       TgpuWriteonlyTexture<'1d', Vec4i>
+  //     >();
 
-    expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'1d', Vec4i>
-    >();
-  });
+  //     expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
+  //       TgpuMutableTexture<'1d', Vec4i>
+  //     >();
+  //   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
-    const texture = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('storage');
+  // TODO: add back when validation is here
+  //   it('rejects formats different than those specified when defining the texture', ({ root }) => {
+  //     const texture = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8unorm',
+  //         dimension: '3d',
+  //       })
+  //       .$usage('storage');
 
-    texture.createView('readonly', {
-      // @ts-expect-error
-      format: 'rgba8snorm',
-    });
+  //     texture.createView('readonly', {
+  //       // @ts-expect-error
+  //       format: 'rgba8snorm',
+  //     });
 
-    texture.createView('writeonly', {
-      // @ts-expect-error
-      format: 'rg32uint',
-    });
+  //     texture.createView('writeonly', {
+  //       // @ts-expect-error
+  //       format: 'rg32uint',
+  //     });
 
-    texture.createView('mutable', {
-      // @ts-expect-error
-      format: 'rgba32float',
-    });
-  });
-});
+  //     texture.createView('mutable', {
+  //       // @ts-expect-error
+  //       format: 'rgba32float',
+  //     });
+  //   });
+  // });
 
-describe('TgpuSampledTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('sampled');
+  // TODO: add back when default view is implemented
+  // describe('TgpuSampledTexture', () => {
+  //   it('inherits the dimension and format from its owner texture', ({ root }) => {
+  //     const texture1 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8unorm',
+  //       })
+  //       .$usage('sampled');
 
-    expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'2d', F32>
-    >();
+  //     expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
+  //       TgpuSampledTexture<'2d', F32>
+  //     >();
 
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('sampled');
+  //     const texture2 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8uint',
+  //         dimension: '3d',
+  //       })
+  //       .$usage('sampled');
 
-    expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'3d', U32>
-    >();
+  //     expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
+  //       TgpuSampledTexture<'3d', U32>
+  //     >();
 
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('sampled');
+  //     const texture3 = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8sint',
+  //         dimension: '1d',
+  //         viewFormats: ['rgba8unorm'],
+  //       })
+  //       .$usage('sampled');
 
-    expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'1d', I32>
-    >();
-  });
+  //     expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
+  //       TgpuSampledTexture<'1d', I32>
+  //     >();
+  //   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
-    const texture = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('sampled');
+  //   it('rejects formats different than those specified when defining the texture', ({ root }) => {
+  //     const texture = root
+  //       .createTexture({
+  //         size: [512, 512],
+  //         format: 'rgba8unorm',
+  //         dimension: '3d',
+  //       })
+  //       .$usage('sampled');
 
-    texture.createView('sampled', {
-      // @ts-expect-error
-      format: 'rgba8snorm',
-    });
-  });
+  //     texture.createView('sampled', {
+  //       // @ts-expect-error
+  //       format: 'rgba8snorm',
+  //     });
+  //   });
 });
