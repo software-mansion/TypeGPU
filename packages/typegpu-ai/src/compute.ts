@@ -1,10 +1,10 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import * as std from "typegpu/std";
-import { ioLayout, weightsBiasesLayout } from "./schemas.ts";
-import { calculateIndex, workgroupSize } from "./schemas.ts";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import { ioLayout, weightsBiasesLayout } from './schemas.ts';
+import { calculateIndex, workgroupSize } from './schemas.ts';
 
-export const nnCompute = tgpu["~unstable"].computeFn({
+export const nnCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -22,8 +22,7 @@ export const nnCompute = tgpu["~unstable"].computeFn({
   let sum = 0.0;
 
   for (let j = d.u32(0); j < inputSize; j = j + 1) {
-    sum =
-      sum +
+    sum = sum +
       (ioLayout.$.input[j] as number) *
         (weightsBiasesLayout.$.weights[weightsOffset + j] as number);
   }

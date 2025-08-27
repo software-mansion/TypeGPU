@@ -158,6 +158,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.11
         version: 4.1.11(vite@6.3.5(@types/node@24.3.0)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.19.3)(yaml@2.8.0))
+      '@typegpu/ai':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-ai
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
@@ -488,32 +491,6 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-color:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@webgpu/types':
-        specifier: catalog:types
-        version: 0.1.63
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: catalog:types
-        version: 5.8.3
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(typescript@5.8.3)
-      unplugin-typegpu:
-        specifier: workspace:*
-        version: link:../unplugin-typegpu
-    publishDirectory: dist
-
-  packages/typegpu-executorch:
-    dependencies:
-      executorch:
-        specifier: ^0.0.7
-        version: 0.0.7
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -3577,9 +3554,6 @@ packages:
   execa@9.6.0:
     resolution: {integrity: sha512-jpWzZ1ZhwUmeWRhS7Qv3mhpOhLfwI+uAX4e5fOcXqwMR7EcJ0pj2kV1CVzHVMX/LphnKWD3LObjZCoJ71lKpHw==}
     engines: {node: ^18.19.0 || >=20.5.0}
-
-  executorch@0.0.7:
-    resolution: {integrity: sha512-BXIoI2M3B8v9u6IqE2khLC1z/AcEQmgLoneRuNM9smKglxdLsDRaqTomyCOOXLVOrWwOK4JrqUcHgECxeHAj0Q==}
 
   exit@0.1.2:
     resolution: {integrity: sha512-Zk/eNKV2zbjpKzrsQ+n1G6poVbErQxJ0LBOJXaKZ1EViLzH+hrLu9cdXI4zw9dBQJslwBEpbQ2P1oS7nDxs6jQ==}
@@ -9394,8 +9368,6 @@ snapshots:
       signal-exit: 4.1.0
       strip-final-newline: 4.0.0
       yoctocolors: 2.1.1
-
-  executorch@0.0.7: {}
 
   exit@0.1.2: {}
 

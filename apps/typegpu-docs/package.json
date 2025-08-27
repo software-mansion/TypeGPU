@@ -24,6 +24,7 @@
     "@radix-ui/react-slider": "^1.3.5",
     "@stackblitz/sdk": "^1.11.0",
     "@tailwindcss/vite": "^4.1.11",
+    "@typegpu/ai": "workspace:*",
     "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/sdf": "workspace:*",

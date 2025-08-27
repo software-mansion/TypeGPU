@@ -78,4 +78,7 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/color': {
     typeDef: { reroute: ['typegpu-color/src/index.ts'] },
   },
+  '@typegpu/ai': {
+    typeDef: { reroute: ['typegpu-ai/src/index.ts'] },
+  },
 };

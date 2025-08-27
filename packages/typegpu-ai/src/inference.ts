@@ -32,14 +32,19 @@ export function modelInference(
   const runner = {
     run: async (data: number[] | Float32Array) => {
       // Basic validation: if inputSize is provided, check length
-      if (neuralNetwork.inputSize && Array.isArray(data) && data.length !== neuralNetwork.inputSize) {
+      if (
+        neuralNetwork.inputSize && Array.isArray(data) &&
+        data.length !== neuralNetwork.inputSize
+      ) {
         throw new Error(
           `modelInference: input length ${data.length} does not match expected inputSize ${neuralNetwork.inputSize}`,
         );
       }
 
       // Forward the call. Keep timing simple — we don't orchestrate GPU timestamp queries here.
-      const result = await neuralNetwork.inference(Array.isArray(data) ? data : Array.from(data));
+      const result = await neuralNetwork.inference(
+        Array.isArray(data) ? data : Array.from(data),
+      );
       return result;
     },
     dispose: () => {
