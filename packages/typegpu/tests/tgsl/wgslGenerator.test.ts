@@ -956,7 +956,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-      "fn testFn_0() {
+      "fn testFn() {
         var matrix = mat4x4f();
         var column = matrix[1];
         var element = column[0];
@@ -974,12 +974,12 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-      "var<workgroup> index_1: u32;
+      "var<workgroup> index: u32;
 
-      var<workgroup> matrix_2: mat4x4f;
+      var<workgroup> matrix: mat4x4f;
 
-      fn testFn_0() {
-        var element = matrix_2[index_1];
+      fn testFn() {
+        var element = matrix[index];
       }"
     `);
   });
