@@ -939,7 +939,7 @@ describe('wgslGenerator', () => {
       const element = matrix[4];
     });
 
-    expect(() => parseResolved({ testFn }))
+    expect(() => asWgsl(testFn))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -955,7 +955,7 @@ describe('wgslGenerator', () => {
       const directElement = matrix.columns[1][0];
     });
 
-    expect(tgpu.resolve({ externals: { testFn } })).toMatchInlineSnapshot(`
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn_0() {
         var matrix = mat4x4f();
         var column = matrix[1];
@@ -973,7 +973,7 @@ describe('wgslGenerator', () => {
       const element = matrix.$.columns[index.$];
     });
 
-    expect(tgpu.resolve({ externals: { testFn } })).toMatchInlineSnapshot(`
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "var<workgroup> index_1: u32;
 
       var<workgroup> matrix_2: mat4x4f;
