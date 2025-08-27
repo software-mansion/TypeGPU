@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -929,5 +929,56 @@ describe('wgslGenerator', () => {
         *val += 1;
       }`),
     );
+  });
+
+  it('throws error when accessing matrix elements directly', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const element = matrix[4];
+    });
+
+    expect(() => asWgsl(testFn))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: The only way of accessing matrix elements in TGSL is through the 'columns' property.]
+      `);
+  });
+
+  it('generates correct code when accessing matrix elements through .columns', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const column = matrix.columns[1];
+      const element = column[0];
+      const directElement = matrix.columns[1][0];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var matrix = mat4x4f();
+        var column = matrix[1];
+        var element = column[0];
+        var directElement = matrix[1][0];
+      }"
+    `);
+  });
+
+  it('resolves when accessing matrix elements through .columns', () => {
+    const matrix = tgpu['~unstable'].workgroupVar(d.mat4x4f);
+    const index = tgpu['~unstable'].workgroupVar(d.u32);
+
+    const testFn = tgpu.fn([])(() => {
+      const element = matrix.$.columns[index.$];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "var<workgroup> index: u32;
+
+      var<workgroup> matrix: mat4x4f;
+
+      fn testFn() {
+        var element = matrix[index];
+      }"
+    `);
   });
 });
