@@ -242,3 +242,5 @@ export class MatrixColumnsAccess {
     readonly matrix: Snippet,
   ) {}
 }
+
+export class ConsoleLog {}

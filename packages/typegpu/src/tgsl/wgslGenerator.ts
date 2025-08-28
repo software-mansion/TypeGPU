@@ -3,6 +3,7 @@ import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
+  ConsoleLog,
   InfixDispatch,
   isData,
   isLooseData,
@@ -271,6 +272,10 @@ export function generateExpression(
     const [_, targetNode, property] = expression;
     const target = generateExpression(ctx, targetNode);
 
+    if (target.value === console) {
+      return snip(new ConsoleLog(), UnknownData);
+    }
+
     if (
       infixKinds.includes(target.dataType.type) &&
       property in infixOperators
@@ -397,6 +402,10 @@ export function generateExpression(
     // Function Call
     const [_, calleeNode, argNodes] = expression;
     const callee = generateExpression(ctx, calleeNode);
+
+    if (callee.value instanceof ConsoleLog) {
+      return snip('/* console.log() */', UnknownData);
+    }
 
     if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
       // Struct/array schema call.
