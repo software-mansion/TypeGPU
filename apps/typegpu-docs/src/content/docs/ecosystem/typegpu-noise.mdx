@@ -79,7 +79,7 @@ Does this mean we allow object access inside of WGSL shaders?... yes, yes we do 
 
 The `@typegpu/noise` package provides a pseudo-random number generator (PRNG) that generates uniformly distributed random numbers in the range `[0, 1)`.
 Each call to `randf.sample` returns the next random float in the sequence, allowing for predictable and repeatable results. The seed can be set or reset
-using a set of `randf.seedN` functions, where `N` is the number of components our seed has.
+using a set of `randf.seedN`, `randf.iSeedN` functions, where `N` is the number of components our seed has. `randf.seedN` functions are designed to work with floating point numbers, while `randf.iSeedN` functions are designed to work with integer numbers. For details, how to get the best results, check the [generators section](/TypeGPU/ecosystem/typegpu-noise/#generators)
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -100,10 +100,6 @@ const main = tgpu['~unstable'].fragmentFn({
   );
 });
 ```
-
-:::tip
-Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`. You can achieve this by either dividing thread's `id` by the total number of threads or by using a seed generated on the CPU, which is the most common method for dealing with it.
-:::
 
 There are higher-level utilities built on top of `randf.sample`. Most of the distributions can be derived from the fact that cumulative distribution functions (CDFs) are uniformly distributed on`[0, 1]` and can be easily inverted to generate random variables. We provide insights for probability enthusiasts. Let's assume $U \sim \mathrm{Uniform}[0, 1) \sim \mathrm{randf.sample}$ :
 
@@ -268,65 +264,13 @@ pipeline
 bindGroup = initBindGroup(d.vec3u(5, 5, 1));
 ```
 
-## Generator Slot
+## Generators
+Seeding generators is hard. The most common method is to generate a seed on the CPU and pass it to the GPU. But we can also make use of thread's `id` to seed the generator. Each generator operates best on different seed domain.
+- 1 bpeter - most robust, foolproof, seed must be in range [0, 100000] and we will be fine
+- 2 hybridtaus -
+- 3
+
+### Generator Slot
 The package provides convenient way to change PRNG as needed.
 You can easily implement your own PRNG and plug it into the pipeline.
 The default PRNG is `HybridTaus`, from [NVIDIA's developer guide](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application).
-
-```ts twoslash
-import { tgpu } from 'typegpu';
-import * as d from 'typegpu/data';
-import { add, cos, dot, fract } from 'typegpu/std';
-import {
-  randf,
-  randomGeneratorShell,
-  randomGeneratorSlot,
-  type StatefulGenerator,
-} from '@typegpu/noise';
-
-const root = await tgpu.init();
-
-const b = root.createMutable(d.arrayOf(d.f32, 10000000));
-const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-  for (let i = 0; i < 10000000; i++) {
-    b.$[i] = randf.sample();
-  }
-});
-
-// ---cut---
-const BPETER: StatefulGenerator = (() => {
-  const seed = tgpu['~unstable'].privateVar(d.vec2f);
-
-  return {
-    seed: tgpu.fn([d.f32])((value) => {
-      seed.value = d.vec2f(value, 0);
-    }),
-
-    seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.value = value;
-    }),
-
-    seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.value = value.xy.add(d.vec2f(value.z));
-    }),
-
-    seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.value = add(value.xy, value.zw);
-    }),
-
-    sample: randomGeneratorShell(() => {
-      'kernel';
-      const a = dot(seed.value, d.vec2f(23.14077926, 232.61690225));
-      const b = dot(seed.value, d.vec2f(54.47856553, 345.84153136));
-      seed.value.x = fract(cos(a) * 136.8168);
-      seed.value.y = fract(cos(b) * 534.7645);
-      return seed.value.y;
-    }),
-  };
-})();
-
-const p = root['~unstable']
-  .with(randomGeneratorSlot, BPETER)
-  .withCompute(f)
-  .createPipeline();
-```

@@ -2,8 +2,9 @@ import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, cos, dot, fract } from 'typegpu/std';
 
-const I32_MAX = d.i32(2147483647);
-const U32_MAX = d.u32(8388608);
+const I32_MAX = d.u32(2147483647);
+const MAX_SAFE_INTEGER_F32 = d.u32(8388608);
+const VIRTUAL_DIM = d.f32(1024);
 
 export interface StatefulGenerator {
   seed: TgpuFn<(seed: d.F32) => d.Void>;
@@ -44,21 +45,20 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     iSeed: tgpu.fn([d.u32])((value) => {
-      seed.value = d.vec2f(d.f32(value), 0).div(I32_MAX);
+      seed.value = d.vec2f(d.f32(value), 0);
     }),
 
     iSeed2: tgpu.fn([d.vec2u])((value) => {
-      seed.value = d.vec2f(value.x, value.y).div(I32_MAX);
+      seed.value = d.vec2f(value.x, value.y);
     }),
 
     iSeed3: tgpu.fn([d.vec3u])((value) => {
       seed.value = d.vec2f(value.x, value.y)
-        .add(d.vec2f(value.z))
-        .div(I32_MAX);
+        .add(d.vec2f(value.z));
     }),
 
     iSeed4: tgpu.fn([d.vec4u])((value) => {
-      seed.value = d.vec2f(add(value.xy, value.zw)).div(I32_MAX);
+      seed.value = d.vec2f(add(value.xy, value.zw));
     }),
 
     sample: randomGeneratorShell(() => {
@@ -92,39 +92,46 @@ const LCGStep = tgpu.fn([d.ptrPrivate(d.u32), d.u32, d.u32], d.u32)(
   },
 );
 
+const floater = tgpu.fn([d.u32], d.f32)`(val){
+  let exponent: u32 = 0x3f800000;
+  let mantissa: u32 = 0x007fffff & val;
+  var ufloat: u32 = (exponent | mantissa);
+  return bitcast<f32>(ufloat) - 1f;
+}`;
+
 /** HybridTaus PRNG from:
  * https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
  */
 export const HybridTaus: StatefulGenerator = (() => {
-  const seed = tgpu['~unstable'].privateVar(d.arrayOf(d.u32, 4));
+  const seed = tgpu['~unstable'].privateVar(d.vec4u, d.vec4u(128));
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$[0] = 129 + d.u32(value * U32_MAX);
-      seed.$[1] = 257 + d.u32(value * U32_MAX);
-      seed.$[2] = 513 + d.u32(value * U32_MAX);
-      seed.$[3] = 1025 + d.u32(value * U32_MAX);
+      seed.$.x = 128 + (d.u32(value * I32_MAX) >> 1);
+      seed.$.y = 128 + (d.u32(value * I32_MAX) >> 2);
+      seed.$.z = 128 + (d.u32(value * I32_MAX) << 3);
+      seed.$.w = 128 + (d.u32(value * I32_MAX) << 5);
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$[0] = 129 + d.u32(value.x * 15 + value.y * 29);
-      seed.$[1] = 257 + d.u32(value.x * 15 + value.y * 29);
-      seed.$[2] = 513 + d.u32(value.x * 15 + value.y * 29);
-      seed.$[3] = 1025 + d.u32(value.x * 100 * value.y * 100);
+      seed.$[0] = 128 + d.u32(value.y * I32_MAX) >> 1;
+      seed.$[1] = 128 + d.u32(value.y * I32_MAX) >> 2;
+      seed.$[2] = 128 + d.u32(value.y * I32_MAX) << 3;
+      seed.$[3] = 128 + d.u32(value.y * I32_MAX) << 5;
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$[0] = 129 + d.u32(value.x * U32_MAX);
-      seed.$[1] = 257 + d.u32(value.y * U32_MAX);
-      seed.$[2] = 513 + d.u32(value.z * U32_MAX);
-      seed.$[3] = 1025;
+      seed.$[0] = 128 + d.u32(value.x * I32_MAX) >> 1;
+      seed.$[1] = 128 + d.u32(value.y * I32_MAX) >> 2;
+      seed.$[2] = 128 + d.u32(value.z * I32_MAX) << 3;
+      seed.$[3] = 128 + d.u32(value.x * I32_MAX) << 5;
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$[0] = 129 + d.u32(value.x * U32_MAX);
-      seed.$[1] = 257 + d.u32(value.y * U32_MAX);
-      seed.$[2] = 513 + d.u32(value.z * U32_MAX);
-      seed.$[3] = 1025 + d.u32(value.w * U32_MAX);
+      seed.$[0] = 128 + d.u32(value.x * I32_MAX) >> 1;
+      seed.$[1] = 128 + d.u32(value.y * I32_MAX) >> 2;
+      seed.$[2] = 128 + d.u32(value.z * I32_MAX) << 3;
+      seed.$[3] = 128 + d.u32(value.w * I32_MAX) << 5;
     }),
 
     iSeed: tgpu.fn([d.u32])((value) => {
@@ -135,35 +142,43 @@ export const HybridTaus: StatefulGenerator = (() => {
     }),
 
     iSeed2: tgpu.fn([d.vec2u])((value) => {
-      seed.$[0] = value.x;
-      seed.$[1] = value.y;
-      seed.$[2] = value.x;
-      seed.$[3] = value.y;
+      const id = value.x * VIRTUAL_DIM + value.y;
+      seed.$[0] = id;
+      seed.$[1] = id;
+      seed.$[2] = id;
+      seed.$[3] = id;
     }),
 
     iSeed3: tgpu.fn([d.vec3u])((value) => {
-      seed.$[0] = value.x;
-      seed.$[1] = value.y;
-      seed.$[2] = value.z;
-      seed.$[3] = value.z;
+      const id = value.x * VIRTUAL_DIM * VIRTUAL_DIM + value.y * VIRTUAL_DIM +
+        value.z;
+      seed.$[0] = id;
+      seed.$[1] = id;
+      seed.$[2] = id;
+      seed.$[3] = id;
     }),
 
     iSeed4: tgpu.fn([d.vec4u])((value) => {
-      seed.$[0] = value.x;
-      seed.$[1] = value.y;
-      seed.$[2] = value.z;
-      seed.$[3] = value.w;
+      const id = value.x * VIRTUAL_DIM * VIRTUAL_DIM * VIRTUAL_DIM +
+        value.y * VIRTUAL_DIM * VIRTUAL_DIM + value.z * VIRTUAL_DIM +
+        value.w;
+      seed.$[0] = id;
+      seed.$[1] = id;
+      seed.$[2] = id;
+      seed.$[3] = id;
     }),
 
     sample: randomGeneratorShell(() => {
       'kernel';
-      return d.f32(2.3283064e-10) *
-        d.f32(
-          // TausStep(seed.$[0] as number, 13, 19, 12, d.u32(4294967294)) ^
-          //   TausStep(seed.$[1] as number, 2, 25, 4, d.u32(4294967288)) ^
-          //   TausStep(seed.$[2] as number, 3, 11, 17, d.u32(4294967280)) ^
-          LCGStep(seed.$[3] as number, 1664525, 1013904223),
-        );
+      const b1 = ((seed.$.x << 13) ^ seed.$.x) >> 19;
+      seed.$.x = ((seed.$.x & 4294967294) << 12) ^ b1;
+      const b2 = ((seed.$.y << 2) ^ seed.$.y) >> 25;
+      seed.$.y = ((seed.$.y & 4294967288) << 4) ^ b2;
+      const b3 = ((seed.$.z << 3) ^ seed.$.z) >> 11;
+      seed.$.z = ((seed.$.z & 4294967280) << 17) ^ b3;
+      const s = seed.$.x ^ seed.$.y ^ seed.$.z;
+
+      return floater(s);
     }),
   };
 })();

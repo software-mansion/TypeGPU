@@ -44,20 +44,12 @@ const group = root.createBindGroup(layout, {
   f: b2,
 });
 
-// === LCG ===
-const LCGStep = tgpu.fn([d.u32, d.u32, d.u32], d.u32)(
-  (z, A, C) => {
-    return A * z + C;
-  },
-);
-
 // === Floater ===
 const floater = tgpu.fn([d.u32], d.f32)`(val){
-  let lz: u32 = countLeadingZeros(val);
-  let mantissa: u32 = val & 0x7fffff;
-  let exponent: u32 = 126 - lz;
-  let ufloat: u32 = (exponent << 23) | mantissa;
-  return bitcast<f32>(ufloat);
+  let exponent: u32 = 0x3f800000;
+  let mantissa: u32 = 0x007fffff & val;
+  var ufloat: u32 = (exponent | mantissa);
+  return bitcast<f32>(ufloat) - 1f;
 }`;
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
@@ -67,14 +59,18 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   const uv = input.uv.add(d.f32(1)).div(d.f32(2));
   const grided = std.floor(uv.mul(gridSize));
   const id = d.u32(grided.x * gridSize + grided.y);
-  // randf.iSeed(grided.x * gridSize + grided.y);
-  // const sample = randf.sample();
+  // randf.seed2(grided.div(gridSize));
+  randf.iSeed(id);
+  randf.seed2(uv);
+  // randf.seed(d.f32(id) / 10000);
+  // randf.seed2(grided);
+  // randf.iSeed2(d.vec2u(grided));
+  const sample = randf.sample();
 
-  const sample = LCGStep(id, 1664525, 1013904223);
-  layout.bound.u.$[d.u32(grided.x * gridSize + grided.y)] = sample;
-  layout.bound.f.$[d.u32(grided.x * gridSize + grided.y)] = floater(sample);
+  // layout.bound.u.$[id] = sample;
+  // layout.bound.f.$[id] = floater(sample);
 
-  return d.vec4f(d.vec3f(floater(sample)), 1.0);
+  return d.vec4f(d.vec3f(sample), 1.0);
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -101,10 +97,10 @@ pipeline
   })
   .draw(3);
 
-// console.log(tgpu.resolve({ externals: { fullScreenTriangle } }));
+console.log(tgpu.resolve({ externals: { pipeline } }));
 
-console.log('our grid u32', await b1.read());
-console.log('our grid f32', await b2.read());
+// console.log('our grid u32', await b1.read());
+// console.log('our grid f32', await b2.read());
 
 const b = root.createMutable(d.f32);
 const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })`{
