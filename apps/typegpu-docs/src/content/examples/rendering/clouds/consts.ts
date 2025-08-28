@@ -1,4 +1,5 @@
 import * as d from 'typegpu/data';
+import tgpu, { type TgpuFn } from 'typegpu';
 
 export const MAX_ITERATIONS = 120; // 50 - 200
 export const MARCH_SIZE = 0.05; // 0.05 - 0.15
@@ -10,3 +11,6 @@ export const CLOUD_DENSITY = 0.6; // 0.0 - 1.0
 export const CLOUD_CORE_DENSITY = 1.0; //0.0 - 10.0
 export const FLIGHT_SPEED = 3.0; // 1.0 - 10.0
 export const CLOUD_DETALIZATION = 2.23; // 0.0 - 4.0
+
+export const raymarchSlot = tgpu.slot<TgpuFn>();
+export const dimensionsSlot = tgpu.slot<{ w: number; h: number }>();
