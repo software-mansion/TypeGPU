@@ -20,7 +20,6 @@ export const raymarch = tgpu.fn(
   d.vec4f,
 )((ro, rd, sunDirection) => {
   let res = d.vec4f(0.0, 0.0, 0.0, 0.0);
-  const transparency = 0.0;
   const hash = std.fract(
     std.sin(std.dot(rd.xy, d.vec2f(12.9898, 78.233))) * 43758.5453,
   );
