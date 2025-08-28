@@ -13,6 +13,7 @@ import { getName, setName } from '../../shared/meta.ts';
 import {
   $getNameForward,
   $internal,
+  $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
 import type {
@@ -25,6 +26,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
   channelFormatToSchema,
   channelKindToFormat,
+  depthTextureFormats,
   type SampledFormatOptions,
   type StorageFormatOptions,
   type StorageTextureTexelFormat,
@@ -155,7 +157,7 @@ export type TextureViewParams<
   aspect?: GPUTextureAspect;
   baseMipLevel?: number;
   mipLevelCount?: number;
-  baseArrayLayout?: number;
+  baseArrayLayer?: number;
   arrayLayerCount?: number;
 };
 
@@ -213,6 +215,18 @@ export interface TgpuSampledTexture<
   readonly channelDataType: TData;
 }
 
+/**
+ * A texture accessed as depth on the GPU.
+ */
+export interface TgpuDepthTexture<
+  TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
+> {
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType: 'texture-depth-view';
+  readonly dimension: TDimension;
+  readonly channelDataType: F32;
+}
+
 export function INTERNAL_createTexture(
   props: TextureProps,
   branch: ExperimentalTgpuRoot,
@@ -244,11 +258,21 @@ export function isSampledTextureView<T extends TgpuSampledTexture>(
   );
 }
 
+export function isDepthTextureView<T extends TgpuDepthTexture>(
+  value: unknown | T,
+): value is T {
+  return (
+    (value as T)?.resourceType === 'texture-depth-view' &&
+    !!(value as T)[$internal]
+  );
+}
+
 export type TgpuAnyTextureView =
   | TgpuReadonlyTexture
   | TgpuWriteonlyTexture
   | TgpuMutableTexture
-  | TgpuSampledTexture;
+  | TgpuSampledTexture
+  | TgpuDepthTexture;
 
 // --------------
 // Implementation
@@ -266,6 +290,7 @@ class TgpuTextureImpl implements TgpuTexture {
   public usableAsSampled = false;
   public usableAsStorage = false;
   public usableAsRender = false;
+  public usableAsDepth = false;
 
   private _destroyed = false;
   private _flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
@@ -402,7 +427,7 @@ class TgpuTextureImpl implements TgpuTexture {
     const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
 
     if (!type) {
-      throw new Error(`Unsupported storage texture format: ${format}`);
+      throw new Error(`Unsupported sampled texture format: ${format}`);
     }
 
     return new TgpuFixedSampledTextureImpl(params, this);
@@ -428,12 +453,13 @@ const dimensionToCodeMap = {
 
 class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly [$getNameForward]: TgpuTexture<TextureProps>;
-  public readonly resourceType = 'texture-storage-view';
-  public readonly texelDataType: TexelData;
-  public readonly dimension: StorageTextureDimension;
+  readonly [$runtimeResource] = true;
+  readonly [$wgslDataType]: AnyData;
+  readonly [$internal]: TextureViewInternals;
+  readonly [$getNameForward]: TgpuTexture<TextureProps>;
+  readonly resourceType = 'texture-storage-view';
+  readonly texelDataType: TexelData;
+  readonly dimension: StorageTextureDimension;
 
   private _view: GPUTextureView | undefined;
   private readonly _format: StorageTextureTexelFormat;
@@ -502,10 +528,11 @@ class TgpuFixedStorageTextureImpl
 
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly resourceType = 'texture-storage-view';
-  public readonly texelDataType: TexelData;
+  readonly [$runtimeResource] = true;
+  readonly [$wgslDataType]: AnyData;
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType = 'texture-storage-view';
+  readonly texelDataType: TexelData;
 
   constructor(
     private readonly _format: StorageTextureTexelFormat,
@@ -600,6 +627,8 @@ class TgpuFixedSampledTextureImpl
 
     const type = multisampled
       ? 'texture_multisampled_2d'
+      : this._format in depthTextureFormats
+      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
       : `texture_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
@@ -624,7 +653,7 @@ export class TgpuLaidOutSampledTextureImpl
   public readonly channelDataType: ChannelData;
 
   constructor(
-    sampleType: GPUTextureSampleType,
+    private readonly sampleType: GPUTextureSampleType,
     public readonly dimension: GPUTextureViewDimension,
     private readonly _multisampled: boolean,
     private readonly _membership: LayoutMembership,
@@ -643,7 +672,17 @@ export class TgpuLaidOutSampledTextureImpl
 
     const type = this._multisampled
       ? 'texture_multisampled_2d'
+      : this.sampleType === 'depth'
+      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
       : `texture_${dimensionToCodeMap[this.dimension]}`;
+
+    if (this.sampleType === 'depth') {
+      ctx.addDeclaration(
+        `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type};`,
+      );
+
+      return id;
+    }
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${

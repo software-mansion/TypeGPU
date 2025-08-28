@@ -1,5 +1,4 @@
-import type { Undecorate } from '../data/decorateUtils.ts';
-import type { Disarray } from '../data/index.ts';
+import type { Disarray, Undecorate } from '../data/dataTypes.ts';
 import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,

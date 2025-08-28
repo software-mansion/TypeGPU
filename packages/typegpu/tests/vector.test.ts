@@ -4,7 +4,7 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -970,17 +970,14 @@ describe('v4b', () => {
         const three = d.vec4b(d.vec3b(false, false, true), true); // literal
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(`
-          fn main() {
-            var vecLocal = vec3<bool>(true, true, true);
-
-            var one = vec4<bool>(vec3<bool>(true, false, true), true);
-            var two = vec4<bool>(vecLocal, false);
-            var three = vec4<bool>(vec3<bool>(false, false, true), true);
-          }
-        `),
-      );
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() {
+          var vecLocal = vec3<bool>(true);
+          var one = vec4<bool>(true, false, true, true);
+          var two = vec4<bool>(vecLocal, false);
+          var three = vec4<bool>(false, false, true, true);
+        }"
+      `);
     });
   });
 });

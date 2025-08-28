@@ -1,6 +1,6 @@
 import * as MorphCharts from 'morphcharts';
 import type * as d from 'typegpu/data';
-import { clamp } from 'typegpu/std';
+import * as std from 'typegpu/std';
 
 import {
   type GeometricData,
@@ -140,7 +140,7 @@ export class Plotter {
       const animateTransition = (time: number) => {
         const duration = time - start;
 
-        this.#core.renderer.transitionTime = clamp(
+        this.#core.renderer.transitionTime = std.clamp(
           duration / transitionTime,
           0,
           1,
@@ -242,11 +242,7 @@ export class Plotter {
     // that's why I clamp them instead of filtering
     const samplesFiltered = samples.map((sample) => ({
       ...sample,
-      x: sample.x < defaultMinValue
-        ? defaultMinValue
-        : sample.x > defaultMaxValue
-        ? defaultMaxValue
-        : sample.x,
+      x: std.clamp(sample.x, defaultMinValue, defaultMaxValue),
     }));
 
     const { minSample, maxSample } = samplesFiltered.reduce(

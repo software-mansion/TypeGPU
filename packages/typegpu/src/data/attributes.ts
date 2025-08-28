@@ -26,8 +26,8 @@ import {
   isLooseDecorated,
   type LooseDecorated,
   type LooseTypeLiteral,
+  type Undecorate,
 } from './dataTypes.ts';
-import type { Undecorate } from './decorateUtils.ts';
 import { sizeOf } from './sizeOf.ts';
 import {
   type Align,
