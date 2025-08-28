@@ -4,19 +4,35 @@ import { fn } from './core/function/tgpuFn.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
-import type { v3u } from './data/wgslTypes.ts';
+import { v3u } from './data/wgslTypes.ts';
 import { any, ge } from './std/boolean.ts';
 import { ceil } from './std/numeric.ts';
+
+const workgroupSizeConfigs = [
+  vec3u(1, 1, 1),
+  vec3u(256, 1, 1),
+  vec3u(16, 16, 1),
+  vec3u(8, 8, 4),
+] as const;
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
  */
-function toVec3(arr: readonly number[]): v3u {
+function toVec3(arr: readonly (number | undefined)[]): v3u {
   if (arr.includes(0)) {
     throw new Error('Size and workgroupSize cannot contain zeroes.');
   }
   return vec3u(arr[0] ?? 1, arr[1] ?? 1, arr[2] ?? 1);
 }
+
+type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
+  ? TLength extends 0 ? (() => Promise<undefined>)
+  : TLength extends 1 ? ((x: number) => Promise<undefined>)
+  : TLength extends 2 ? ((x: number, y: number) => Promise<undefined>)
+  : TLength extends 3
+    ? ((x: number, y: number, z: number) => Promise<undefined>)
+  : never
+  : never;
 
 /**
  * Creates a dispatch function for a compute pipeline.
@@ -31,58 +47,42 @@ function toVec3(arr: readonly number[]): v3u {
  *
  * The callback is not invoked for any invocation IDs that exceed `options.size`.
  */
-export function prepareDispatch(options: {
-  root: TgpuRoot;
-  callback: (x: number) => void;
-  size: readonly [number];
-  workgroupSize?: readonly [number];
-}): () => Promise<undefined>;
-export function prepareDispatch(options: {
-  root: TgpuRoot;
-  callback: (x: number, y: number) => void;
-  size: readonly [number, number];
-  workgroupSize?: readonly [number, number];
-}): () => Promise<undefined>;
-export function prepareDispatch(options: {
-  root: TgpuRoot;
-  callback: (x: number, y: number, z: number) => void;
-  size: readonly [number, number, number];
-  workgroupSize?: readonly [number, number, number];
-}): () => Promise<undefined>;
-export function prepareDispatch(options: {
-  root: TgpuRoot;
-  callback: (x: number, y: number, z: number) => void;
-  size: readonly number[];
-  workgroupSize?: readonly number[];
-}): () => Promise<undefined> {
-  const size = toVec3(options.size);
-  const workgroupSize = toVec3(options.workgroupSize ?? []);
-  const workgroupCount = ceil(vec3f(size).div(vec3f(workgroupSize)));
+export function prepareDispatch<TArgs extends number[]>(
+  root: TgpuRoot,
+  callback: (...args: TArgs) => undefined,
+): DispatchForArgs<TArgs> {
+  const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
+  const wrappedCallback = fn([u32, u32, u32])(
+    callback as (...args: number[]) => void,
+  );
 
-  const wrappedCallback = fn([u32, u32, u32])(options.callback);
+  const sizeMutable = root.createMutable(vec3u);
 
   const mainCompute = computeFn({
     workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
   })(({ id }) => {
     'kernel';
-    if (any(ge(id, size))) {
+    if (any(ge(id, sizeMutable.$))) {
       return;
     }
     wrappedCallback(id.x, id.y, id.z);
   });
 
-  const pipeline = options.root['~unstable']
+  const pipeline = root['~unstable']
     .withCompute(mainCompute)
     .createPipeline();
 
-  return () => {
+  return ((...size: (number | undefined)[]) => {
+    const sanitizedSize = toVec3(size);
+    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(workgroupSize)));
+    sizeMutable.write(sanitizedSize);
     pipeline.dispatchWorkgroups(
       workgroupCount.x,
       workgroupCount.y,
       workgroupCount.z,
     );
-    options.root['~unstable'].flush();
-    return options.root.device.queue.onSubmittedWorkDone();
-  };
+    root['~unstable'].flush();
+    return root.device.queue.onSubmittedWorkDone();
+  }) as DispatchForArgs<TArgs>;
 }
