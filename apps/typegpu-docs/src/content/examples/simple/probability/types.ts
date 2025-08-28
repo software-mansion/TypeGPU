@@ -37,13 +37,6 @@ export interface HistogramData extends BaseData {
 
 export type PlotData = GeometricData | HistogramData;
 
-export const ExecutionMode = {
-  SINGLE: 'single',
-  PARALLEL: 'parallel',
-} as const;
-
-export type ExecutionMode = typeof ExecutionMode[keyof typeof ExecutionMode];
-
 export const Distribution = {
   IN_UNIT_SPHERE: 'inUnitSphere',
   ON_UNIT_SPHERE: 'onUnitSphere',
