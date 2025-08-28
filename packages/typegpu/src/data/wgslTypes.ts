@@ -28,8 +28,8 @@ import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
 import type {
   WgslExternalTexture,
-  WgslSampledTexture,
   WgslStorageTexture,
+  WgslTexture,
 } from './texture.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
@@ -1558,6 +1558,11 @@ export type FlatInterpolatableData =
   | FlatInterpolatableAdditionalBaseType
   | Decorated<FlatInterpolatableAdditionalBaseType>;
 
+export type PrimitiveNumericData =
+  | F32
+  | I32
+  | U32;
+
 export type ScalarData =
   | Bool
   | F32
@@ -1635,7 +1640,7 @@ export type AnyWgslData =
   | AbstractInt
   | AbstractFloat
   | Void
-  | WgslSampledTexture
+  | WgslTexture
   | WgslStorageTexture
   | WgslExternalTexture;
 
