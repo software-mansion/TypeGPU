@@ -46,6 +46,9 @@ export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
   callback: (...args: TArgs) => undefined,
 ): DispatchForArgs<TArgs> {
+  if (callback.length >= 4) {
+    throw new Error('Dispatch only supports up to three dimensions.');
+  }
   const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
   const wrappedCallback = fn([u32, u32, u32])(
     callback as (...args: number[]) => void,
