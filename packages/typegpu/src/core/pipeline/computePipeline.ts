@@ -2,7 +2,7 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import { getName, setName } from '../../shared/meta.ts';
+import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
@@ -20,7 +20,6 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import { PERF } from '../../shared/meta.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -203,7 +202,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 }
 
-class ComputePipelineCore implements SelfResolvable {
+export class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 

@@ -1,4 +1,6 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
+import { ComputePipelineCore } from './core/pipeline/computePipeline.ts';
+import { RenderPipelineCore } from './core/pipeline/renderPipeline.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -363,10 +365,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly names: NameRegistry;
+  public readonly pipeline:
+    | ComputePipelineCore
+    | RenderPipelineCore
+    | undefined;
   public expectedType: AnyData | undefined;
 
-  constructor(opts: ResolutionCtxImplOptions) {
+  constructor(
+    opts: ResolutionCtxImplOptions,
+    pipeline?: ComputePipelineCore | RenderPipelineCore,
+  ) {
     this.names = opts.names;
+    this.pipeline = pipeline;
   }
 
   get pre(): string {
@@ -769,7 +779,11 @@ export function resolve(
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options);
+  const maybePipeline =
+    item instanceof ComputePipelineCore || item instanceof RenderPipelineCore
+      ? item
+      : undefined;
+  const ctx = new ResolutionCtxImpl(options, maybePipeline);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,

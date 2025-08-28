@@ -12,8 +12,14 @@ import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 import type { TgpuFn } from './core/function/tgpuFn.ts';
 import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
-import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
-import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+import type {
+  ComputePipelineCore,
+  TgpuComputePipeline,
+} from './core/pipeline/computePipeline.ts';
+import type {
+  RenderPipelineCore,
+  TgpuRenderPipeline,
+} from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
@@ -195,6 +201,7 @@ export type ExecState =
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
+  readonly pipeline: ComputePipelineCore | RenderPipelineCore | undefined;
   readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;
