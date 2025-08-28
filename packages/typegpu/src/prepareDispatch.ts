@@ -4,7 +4,7 @@ import { fn } from './core/function/tgpuFn.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
-import { v3u } from './data/wgslTypes.ts';
+import type { v3u } from './data/wgslTypes.ts';
 import { any, ge } from './std/boolean.ts';
 import { ceil } from './std/numeric.ts';
 
@@ -52,14 +52,14 @@ export function prepareDispatch<TArgs extends number[]>(
     callback as (...args: number[]) => void,
   );
 
-  const sizeMutable = root.createMutable(vec3u);
+  const sizeUniform = root.createUniform(vec3u);
 
   const mainCompute = computeFn({
     workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
   })(({ id }) => {
     'kernel';
-    if (any(ge(id, sizeMutable.$))) {
+    if (any(ge(id, sizeUniform.$))) {
       return;
     }
     wrappedCallback(id.x, id.y, id.z);
@@ -72,7 +72,7 @@ export function prepareDispatch<TArgs extends number[]>(
   return ((...size: (number | undefined)[]) => {
     const sanitizedSize = toVec3(size);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(workgroupSize)));
-    sizeMutable.write(sanitizedSize);
+    sizeUniform.write(sanitizedSize);
     pipeline.dispatchWorkgroups(
       workgroupCount.x,
       workgroupCount.y,
