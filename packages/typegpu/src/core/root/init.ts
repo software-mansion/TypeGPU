@@ -192,9 +192,9 @@ class WithVertexImpl implements WithVertex {
   withPrimitive(
     primitiveState:
       | GPUPrimitiveState
-      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
         stripIndexFormat?: U32 | U16;
-      })
+      }
       | undefined,
   ): WithFragment {
     return new WithVertexImpl({ ...this._options, primitiveState });

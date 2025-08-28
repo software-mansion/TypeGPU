@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as m from 'wgpu-matrix';
+import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {
   bindGroupLayout,
@@ -35,9 +35,9 @@ function makeLightViewProj(
   const dir = std.normalize(lightDir);
   const dist = 10;
   const eye = center.add(dir.mul(-dist));
-  const view = m.mat4.lookAt(eye, center, [0, 1, 0], d.mat4x4f());
-  const proj = m.mat4.ortho(-2, 2, -2, 2, 0.1, 30, d.mat4x4f());
-  return m.mat4.mul(proj, view, d.mat4x4f());
+  const view = mat4.lookAt(eye, center, [0, 1, 0], d.mat4x4f());
+  const proj = mat4.ortho(-2, 2, -2, 2, 0.1, 30, d.mat4x4f());
+  return mat4.mul(proj, view, d.mat4x4f());
 }
 
 function createCanvasTextures() {
@@ -83,14 +83,14 @@ function createShadowTextures(
 let currentLightDirection = d.vec3f(0, -1, -1);
 
 const camera = Camera({
-  projection: m.mat4.perspective(
+  projection: mat4.perspective(
     Math.PI / 4,
     canvas.width / canvas.height,
     0.1,
     100,
     d.mat4x4f(),
   ),
-  view: m.mat4.lookAt([0, 2, 5], [0, 0, 0], [0, 1, 0], d.mat4x4f()),
+  view: mat4.lookAt([0, 2, 5], [0, 0, 0], [0, 1, 0], d.mat4x4f()),
   position: d.vec3f(0, 2, 5),
 });
 
@@ -359,7 +359,7 @@ frameId = requestAnimationFrame(render);
 const resizeObserver = new ResizeObserver(() => {
   canvasTextures = createCanvasTextures();
 
-  const newProjection = m.mat4.perspective(
+  const newProjection = mat4.perspective(
     Math.PI / 4,
     canvas.width / canvas.height,
     0.1,
@@ -379,7 +379,7 @@ export const controls = {
     max: 10,
     step: 0.01,
     onSliderChange: (value: number) => {
-      const newView = m.mat4.lookAt(
+      const newView = mat4.lookAt(
         d.vec3f(value, 2, 5),
         d.vec3f(0, 0, 0),
         d.vec3f(0, 1, 0),
