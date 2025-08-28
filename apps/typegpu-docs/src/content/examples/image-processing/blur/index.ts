@@ -17,24 +17,16 @@ const uniformLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
 });
 
-const sampledTexture = d.sampledTexture({
-  viewDimension: '2d',
-  sampleType: 'float',
-});
-const storageTexture = d.storageTexture({
-  viewDimension: '2d',
-  format: 'rgba8unorm',
-  access: 'write-only',
-});
-
 const ioLayout = tgpu.bindGroupLayout({
   flip: { uniform: d.u32 },
-  inTexture: { texture: sampledTexture },
-  outTexture: { texture: storageTexture },
+  inTexture: { texture: d.texture2d(d.f32) },
+  outTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
 });
 
 const renderLayout = tgpu.bindGroupLayout({
-  texture: { texture: sampledTexture },
+  texture: { texture: d.texture2d(d.f32) },
   sampling: { sampler: 'filtering' },
 });
 

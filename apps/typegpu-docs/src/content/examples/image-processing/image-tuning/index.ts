@@ -101,15 +101,6 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
 }
 `;
 
-const LUTtexture = d.sampledTexture({
-  sampleType: 'float',
-  viewDimension: '3d',
-});
-const renderTexture = d.sampledTexture({
-  sampleType: 'float',
-  viewDimension: '2d',
-});
-
 function render() {
   if (!defaultLUTTexture) {
     // Not yet initialized
@@ -117,14 +108,14 @@ function render() {
   }
 
   const uniformLayout = tgpu.bindGroupLayout({
-    currentLUTTexture: { texture: LUTtexture },
+    currentLUTTexture: { texture: d.texture3d(d.f32) },
     lutSampler: { sampler: 'filtering' },
     lut: { uniform: LUTParams },
     adjustments: { uniform: Adjustments },
   });
 
   const renderLayout = tgpu.bindGroupLayout({
-    inTexture: { texture: renderTexture },
+    inTexture: { texture: d.texture2d(d.f32) },
     inSampler: { sampler: 'filtering' },
   });
 
@@ -142,14 +133,14 @@ function render() {
   });
 
   const uniformBindGroup = root.createBindGroup(uniformLayout, {
-    currentLUTTexture: currentLUTTexture.createView(LUTtexture),
+    currentLUTTexture: currentLUTTexture.createView(d.texture3d(d.f32)),
     lutSampler,
     lut: lutParamsBuffer,
     adjustments: adjustmentsBuffer,
   });
 
   const renderBindGroup = root.createBindGroup(renderLayout, {
-    inTexture: imageTexture.createView(renderTexture),
+    inTexture: imageTexture.createView(d.texture2d(d.f32)),
     inSampler: imageSampler,
   });
 

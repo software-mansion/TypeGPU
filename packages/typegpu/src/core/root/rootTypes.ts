@@ -62,10 +62,7 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
-import type {
-  WgslSampledTexture,
-  WgslStorageTexture,
-} from '../../data/index.ts';
+import type { WgslStorageTexture, WgslTexture } from '../../data/index.ts';
 
 // ----------
 // Public API
@@ -161,7 +158,7 @@ export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
-  with<T extends WgslSampledTexture | WgslStorageTexture>(
+  with<T extends WgslTexture | WgslStorageTexture>(
     accessor: TgpuAccessor<T>,
     value: TgpuTextureView<T> | Infer<T>,
   ): Configurable;
@@ -191,7 +188,7 @@ export interface WithBinding {
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends WgslSampledTexture | WgslStorageTexture>(
+  with<T extends WgslTexture | WgslStorageTexture>(
     accessor: TgpuAccessor<T>,
     value: TgpuTextureView<T> | Infer<T>,
   ): WithBinding;

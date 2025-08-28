@@ -5,7 +5,6 @@ import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import {
   Camera,
-  cubeTexture,
   CubeVertex,
   DirectionalLight,
   Material,
@@ -100,7 +99,7 @@ const materialBuffer = root
 
 let chosenCubemap: CubemapNames = 'campsite';
 let cubemapTexture = await loadCubemap(root, chosenCubemap);
-let cubemap = cubemapTexture.createView(cubeTexture);
+let cubemap = cubemapTexture.createView(d.textureCube(d.f32));
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -121,7 +120,7 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 });
 
 const textureLayout = tgpu.bindGroupLayout({
-  cubemap: { texture: cubeTexture },
+  cubemap: { texture: d.textureCube(d.f32) },
   texSampler: { sampler: 'filtering' },
 });
 const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
@@ -477,7 +476,7 @@ export const controls = {
     onSelectChange: async (value: CubemapNames) => {
       chosenCubemap = value;
       const newCubemapTexture = await loadCubemap(root, chosenCubemap);
-      cubemap = newCubemapTexture.createView(cubeTexture);
+      cubemap = newCubemapTexture.createView(d.textureCube(d.f32));
 
       textureBindGroup = root.createBindGroup(textureLayout, {
         cubemap,

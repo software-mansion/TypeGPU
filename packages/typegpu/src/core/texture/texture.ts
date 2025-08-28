@@ -1,6 +1,7 @@
-import type {
-  WgslSampledTexture,
-  WgslStorageTexture,
+import {
+  isWgslStorageTexture,
+  type WgslStorageTexture,
+  type WgslTexture,
 } from '../../data/texture.ts';
 import type {
   F32,
@@ -21,10 +22,7 @@ import {
   $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
-import type {
-  Default,
-  UnionToIntersection,
-} from '../../shared/utilityTypes.ts';
+import type { UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -47,6 +45,36 @@ type TextureViewInternals = {
 export type ChannelData = U32 | I32 | F32;
 export type TexelData = Vec4u | Vec4i | Vec4f;
 
+type TgpuTextureViewDescriptor = {
+  /**
+   * Which {@link GPUTextureAspect | aspect(s)} of the texture are accessible to the texture view.
+   */
+  aspect?: GPUTextureAspect;
+  /**
+   * The first (most detailed) mipmap level accessible to the texture view.
+   */
+  baseMipLevel?: GPUIntegerCoordinate;
+  /**
+   * How many mipmap levels, starting with {@link GPUTextureViewDescriptor#baseMipLevel}, are accessible to
+   * the texture view.
+   */
+  mipLevelCount?: GPUIntegerCoordinate;
+  /**
+   * The index of the first array layer accessible to the texture view.
+   */
+  baseArrayLayer?: GPUIntegerCoordinate;
+  /**
+   * How many array layers, starting with {@link GPUTextureViewDescriptor#baseArrayLayer}, are accessible
+   * to the texture view.
+   */
+  arrayLayerCount?: GPUIntegerCoordinate;
+  /**
+   * The format of the texture view. Must be either the {@link GPUTextureDescriptor#format} of the
+   * texture or one of the {@link GPUTextureDescriptor#viewFormats} specified during its creation.
+   */
+  format?: GPUTextureFormat;
+};
+
 /**
  * @param TProps all properties that distinguish this texture apart from other textures on the type level.
  */
@@ -65,12 +93,18 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
 
-  createView<T extends WgslSampledTexture | WgslStorageTexture>(
+  createView<T extends WgslTexture>(
     schema: T,
+    viewDescriptor?: TgpuTextureViewDescriptor & {
+      sampleType?: T['sampleType']['type'] extends 'f32'
+        ? 'float' | 'unfilterable-float'
+        : never;
+    },
   ): TgpuTextureView<T>;
-  createView(): TgpuTextureView<
-    WgslSampledTexture<Default<TProps['dimension'], '2d'>>
-  >;
+  createView<T extends WgslStorageTexture>(
+    schema: T,
+    viewDescriptor?: TgpuTextureViewDescriptor,
+  ): TgpuTextureView<T>;
 
   destroy(): void;
 }
@@ -91,9 +125,9 @@ export type TextureViewParams<
 };
 
 export interface TgpuTextureView<
-  TSchema extends WgslStorageTexture | WgslSampledTexture =
+  TSchema extends WgslStorageTexture | WgslTexture =
     | WgslStorageTexture
-    | WgslSampledTexture,
+    | WgslTexture,
 > {
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
@@ -192,22 +226,11 @@ class TgpuTextureImpl implements TgpuTexture {
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
-  createView(): TgpuTextureView<
-    WgslSampledTexture<'2d', 'float', false>
-  >;
-  createView<T extends WgslSampledTexture | WgslStorageTexture>(
+  createView<T extends WgslTexture | WgslStorageTexture>(
     schema: T,
-  ): TgpuTextureView<T>;
-  createView<T extends WgslSampledTexture | WgslStorageTexture>(
-    schema?: T,
   ): TgpuTextureView<T> {
     return new TgpuFixedTextureViewImpl(
-      schema ??
-        {
-          viewDimension: this.props.dimension ?? '2d',
-          sampleType: 'float',
-          multisampled: (this.props.sampleCount ?? 1) > 1,
-        } as unknown as T,
+      schema,
       this,
     );
   }
@@ -216,7 +239,7 @@ class TgpuTextureImpl implements TgpuTexture {
 }
 
 class TgpuFixedTextureViewImpl<
-  T extends WgslSampledTexture | WgslStorageTexture,
+  T extends WgslTexture | WgslStorageTexture,
 > implements TgpuTextureView<T>, SelfResolvable {
   readonly [$internal]: TextureViewInternals;
   readonly [$runtimeResource] = true;
@@ -228,28 +251,47 @@ class TgpuFixedTextureViewImpl<
 
   #baseTexture: TgpuTexture;
   #view: GPUTextureView | undefined;
+  #descriptor:
+    | TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float'
+        : never;
+    }
+    | undefined;
 
-  constructor(schema: T, baseTexture: TgpuTexture) {
+  constructor(
+    schema: T,
+    baseTexture: TgpuTexture,
+    descriptor?: TgpuTextureViewDescriptor,
+  ) {
     this.schema = schema;
     this.#baseTexture = baseTexture;
+    this.#descriptor = descriptor;
 
     this[$internal] = {
       unwrap: () => {
         if (!this.#view) {
-          const descriptor: GPUTextureViewDescriptor = {
-            label: getName(this) ?? '<unnamed>',
-            format: schema.format ?? this.#baseTexture.props.format,
-            dimension: schema.viewDimension,
-            aspect: schema.aspect,
-            baseMipLevel: schema.baseMipLevel,
-            baseArrayLayer: schema.baseArrayLayer,
-          };
-
-          if (schema.mipLevelCount !== undefined) {
-            descriptor.mipLevelCount = schema.mipLevelCount;
+          const schema = this.schema;
+          let descriptor: GPUTextureViewDescriptor;
+          if (isWgslStorageTexture(schema)) {
+            descriptor = {
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ?? schema.format,
+              dimension: schema.dimension,
+            };
+          } else {
+            descriptor = {
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ??
+                this.#baseTexture.props.format,
+              dimension: schema.dimension,
+            };
           }
-          if (schema.arrayLayerCount !== undefined) {
-            descriptor.arrayLayerCount = schema.arrayLayerCount;
+
+          if (this.#descriptor?.mipLevelCount !== undefined) {
+            descriptor.mipLevelCount = this.#descriptor.mipLevelCount;
+          }
+          if (this.#descriptor?.arrayLayerCount !== undefined) {
+            descriptor.arrayLayerCount = this.#descriptor.arrayLayerCount;
           }
 
           this.#view = this.#baseTexture[$internal].unwrap().createView(
@@ -296,9 +338,15 @@ class TgpuFixedTextureViewImpl<
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
-      {
-        texture: this.schema,
-      },
+      isWgslStorageTexture(this.schema)
+        ? {
+          storageTexture: this.schema,
+        }
+        : {
+          texture: this.schema,
+          sampleType: this.#descriptor?.sampleType ??
+            this.schema.bindingSampleType[0],
+        },
       this,
     );
 
@@ -313,7 +361,7 @@ class TgpuFixedTextureViewImpl<
 }
 
 export class TgpuLaidOutTextureViewImpl<
-  T extends WgslSampledTexture | WgslStorageTexture,
+  T extends WgslTexture | WgslStorageTexture,
 > implements TgpuTextureView<T>, SelfResolvable {
   readonly [$internal] = { unwrap: undefined };
   readonly [$runtimeResource] = true;

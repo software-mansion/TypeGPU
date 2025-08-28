@@ -2,7 +2,6 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
-import { floatSampledTexture, writeonlyF16Texture } from './types.ts';
 
 const getNeighbors = tgpu.fn([d.vec2i, d.vec2i], d.arrayOf(d.vec2i, 4))(
   (coords, bounds) => {
@@ -25,8 +24,8 @@ const getNeighbors = tgpu.fn([d.vec2i, d.vec2i], d.arrayOf(d.vec2i, 4))(
 
 export const brushLayout = tgpu.bindGroupLayout({
   brushParams: { uniform: p.BrushParams },
-  forceDst: { texture: writeonlyF16Texture },
-  inkDst: { texture: writeonlyF16Texture },
+  forceDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
+  inkDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
 export const brushFn = tgpu['~unstable'].computeFn({
@@ -66,9 +65,9 @@ export const brushFn = tgpu['~unstable'].computeFn({
 });
 
 export const addForcesLayout = tgpu.bindGroupLayout({
-  src: { texture: floatSampledTexture },
-  dst: { texture: writeonlyF16Texture },
-  force: { texture: floatSampledTexture },
+  src: { texture: d.texture2d(d.f32) },
+  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
+  force: { texture: d.texture2d(d.f32) },
   simParams: { uniform: p.ShaderParams },
 });
 
@@ -85,8 +84,8 @@ export const addForcesFn = tgpu['~unstable'].computeFn({
 });
 
 export const advectLayout = tgpu.bindGroupLayout({
-  src: { texture: floatSampledTexture },
-  dst: { texture: writeonlyF16Texture },
+  src: { texture: d.texture2d(d.f32) },
+  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
   simParams: { uniform: p.ShaderParams },
   linSampler: { sampler: 'filtering' },
 });
@@ -130,8 +129,8 @@ export const advectFn = tgpu['~unstable'].computeFn({
 });
 
 export const diffusionLayout = tgpu.bindGroupLayout({
-  in: { texture: floatSampledTexture },
-  out: { texture: writeonlyF16Texture },
+  in: { texture: d.texture2d(d.f32) },
+  out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
   simParams: { uniform: p.ShaderParams },
 });
 
@@ -169,8 +168,8 @@ export const diffusionFn = tgpu['~unstable'].computeFn({
 });
 
 export const divergenceLayout = tgpu.bindGroupLayout({
-  vel: { texture: floatSampledTexture },
-  div: { texture: writeonlyF16Texture },
+  vel: { texture: d.texture2d(d.f32) },
+  div: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
 export const divergenceFn = tgpu['~unstable'].computeFn({
@@ -199,9 +198,9 @@ export const divergenceFn = tgpu['~unstable'].computeFn({
 });
 
 export const pressureLayout = tgpu.bindGroupLayout({
-  x: { texture: floatSampledTexture },
-  b: { texture: floatSampledTexture },
-  out: { texture: writeonlyF16Texture },
+  x: { texture: d.texture2d(d.f32) },
+  b: { texture: d.texture2d(d.f32) },
+  out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
 export const pressureFn = tgpu['~unstable'].computeFn({
@@ -230,9 +229,9 @@ export const pressureFn = tgpu['~unstable'].computeFn({
 });
 
 export const projectLayout = tgpu.bindGroupLayout({
-  vel: { texture: floatSampledTexture },
-  p: { texture: floatSampledTexture },
-  out: { texture: writeonlyF16Texture },
+  vel: { texture: d.texture2d(d.f32) },
+  p: { texture: d.texture2d(d.f32) },
+  out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
 export const projectFn = tgpu['~unstable'].computeFn({
@@ -259,9 +258,9 @@ export const projectFn = tgpu['~unstable'].computeFn({
 });
 
 export const advectInkLayout = tgpu.bindGroupLayout({
-  vel: { texture: floatSampledTexture },
-  src: { texture: floatSampledTexture },
-  dst: { texture: writeonlyF16Texture },
+  vel: { texture: d.texture2d(d.f32) },
+  src: { texture: d.texture2d(d.f32) },
+  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
   simParams: { uniform: p.ShaderParams },
   linSampler: { sampler: 'filtering' },
 });
@@ -296,9 +295,9 @@ export const advectInkFn = tgpu['~unstable'].computeFn({
 });
 
 export const addInkLayout = tgpu.bindGroupLayout({
-  src: { texture: floatSampledTexture },
-  dst: { texture: writeonlyF16Texture },
-  add: { texture: floatSampledTexture },
+  src: { texture: d.texture2d(d.f32) },
+  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
+  add: { texture: d.texture2d(d.f32) },
 });
 
 export const addInkFn = tgpu['~unstable'].computeFn({

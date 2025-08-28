@@ -60,22 +60,15 @@ export const renderSkyBoxVertexLayout = tgpu.vertexLayout(
   d.arrayOf(SkyBoxVertex),
 );
 
-export const atlasTexture = d.sampledTexture({
-  viewDimension: '2d-array',
-});
-export const cubemapTexture = d.sampledTexture({
-  viewDimension: 'cube',
-});
-
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);
 export const filteringSamplerSlot = tgpu.slot<TgpuSampler>();
 export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
 export const timeAccess = tgpu['~unstable'].accessor(Time);
-export const skyBoxAccess = tgpu['~unstable'].accessor(cubemapTexture);
+export const skyBoxAccess = tgpu['~unstable'].accessor(d.textureCube(d.f32));
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
-    celestialBodyTextures: { texture: atlasTexture },
+    celestialBodyTextures: { texture: d.texture2dArray(d.f32) },
     celestialBodies: {
       storage: d.arrayOf(CelestialBody),
       access: 'readonly',

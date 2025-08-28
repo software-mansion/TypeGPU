@@ -13,12 +13,7 @@ import {
   renderLayout,
 } from './render.ts';
 import * as c from './simulation.ts';
-import {
-  type BrushState,
-  type DisplayMode,
-  floatSampledTexture,
-  writeonlyF16Texture,
-} from './types.ts';
+import type { BrushState, DisplayMode } from './types.ts';
 
 // Initialize
 const adapter = await navigator.gpu.requestAdapter();
@@ -174,17 +169,21 @@ const dispatchY = Math.ceil(p.SIM_N / p.WORKGROUP_SIZE_Y);
 // Create bind groups
 const brushBindGroup = root.createBindGroup(c.brushLayout, {
   brushParams: brushParamBuffer,
-  forceDst: forceTex.createView(writeonlyF16Texture),
-  inkDst: newInkTex.createView(writeonlyF16Texture),
+  forceDst: forceTex.createView(
+    d.textureStorage2d('rgba16float', 'write-only'),
+  ),
+  inkDst: newInkTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
 });
 
 const addInkBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.addInkLayout, {
-    src: inkTex[srcIdx].createView(floatSampledTexture),
-    add: newInkTex.createView(floatSampledTexture),
-    dst: inkTex[dstIdx].createView(writeonlyF16Texture),
+    src: inkTex[srcIdx].createView(d.texture2d(d.f32)),
+    add: newInkTex.createView(d.texture2d(d.f32)),
+    dst: inkTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -192,9 +191,11 @@ const addForceBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.addForcesLayout, {
-    src: velTex[srcIdx].createView(floatSampledTexture),
-    force: forceTex.createView(floatSampledTexture),
-    dst: velTex[dstIdx].createView(writeonlyF16Texture),
+    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    force: forceTex.createView(d.texture2d(d.f32)),
+    dst: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
   });
 });
@@ -203,8 +204,10 @@ const advectBindGroups = [0, 1].map((i) => {
   const srcIdx = 1 - i;
   const dstIdx = i;
   return root.createBindGroup(c.advectLayout, {
-    src: velTex[srcIdx].createView(floatSampledTexture),
-    dst: velTex[dstIdx].createView(writeonlyF16Texture),
+    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    dst: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
     linSampler,
   });
@@ -214,8 +217,10 @@ const diffusionBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.diffusionLayout, {
-    in: velTex[srcIdx].createView(floatSampledTexture),
-    out: velTex[dstIdx].createView(writeonlyF16Texture),
+    in: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    out: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
   });
 });
@@ -223,8 +228,10 @@ const diffusionBindGroups = [0, 1].map((i) => {
 const divergenceBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   return root.createBindGroup(c.divergenceLayout, {
-    vel: velTex[srcIdx].createView(floatSampledTexture),
-    div: divergenceTex.createView(writeonlyF16Texture),
+    vel: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    div: divergenceTex.createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -232,9 +239,11 @@ const pressureBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.pressureLayout, {
-    x: pressureTex[srcIdx].createView(floatSampledTexture),
-    b: divergenceTex.createView(floatSampledTexture),
-    out: pressureTex[dstIdx].createView(writeonlyF16Texture),
+    x: pressureTex[srcIdx].createView(d.texture2d(d.f32)),
+    b: divergenceTex.createView(d.texture2d(d.f32)),
+    out: pressureTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -244,9 +253,11 @@ const projectBindGroups = [0, 1].map((velIdx) =>
     const dstVelIdx = 1 - velIdx;
     const srcPIdx = pIdx;
     return root.createBindGroup(c.projectLayout, {
-      vel: velTex[srcVelIdx].createView(floatSampledTexture),
-      p: pressureTex[srcPIdx].createView(floatSampledTexture),
-      out: velTex[dstVelIdx].createView(writeonlyF16Texture),
+      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
+      p: pressureTex[srcPIdx].createView(d.texture2d(d.f32)),
+      out: velTex[dstVelIdx].createView(
+        d.textureStorage2d('rgba16float', 'write-only'),
+      ),
     });
   })
 );
@@ -257,9 +268,11 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
     const srcInkIdx = inkIdx;
     const dstInkIdx = 1 - inkIdx;
     return root.createBindGroup(c.advectInkLayout, {
-      vel: velTex[srcVelIdx].createView(floatSampledTexture),
-      src: inkTex[srcInkIdx].createView(floatSampledTexture),
-      dst: inkTex[dstInkIdx].createView(writeonlyF16Texture),
+      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
+      src: inkTex[srcInkIdx].createView(d.texture2d(d.f32)),
+      dst: inkTex[dstInkIdx].createView(
+        d.textureStorage2d('rgba16float', 'write-only'),
+      ),
       simParams: simParamBuffer,
       linSampler,
     });
@@ -269,25 +282,25 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
 const renderBindGroups = {
   ink: [
     root.createBindGroup(renderLayout, {
-      result: inkTex[0].createView(floatSampledTexture),
-      background: backgroundTexture.createView(floatSampledTexture),
+      result: inkTex[0].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
     root.createBindGroup(renderLayout, {
-      result: inkTex[1].createView(floatSampledTexture),
-      background: backgroundTexture.createView(floatSampledTexture),
+      result: inkTex[1].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
   ],
   velocity: [
     root.createBindGroup(renderLayout, {
-      result: velTex[0].createView(floatSampledTexture),
-      background: backgroundTexture.createView(floatSampledTexture),
+      result: velTex[0].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
     root.createBindGroup(renderLayout, {
-      result: velTex[1].createView(floatSampledTexture),
-      background: backgroundTexture.createView(floatSampledTexture),
+      result: velTex[1].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
   ],
@@ -362,8 +375,8 @@ function loop() {
   inkBuffer.swap();
 
   let renderBG: TgpuBindGroup<{
-    result: { texture: d.WgslSampledTexture<'2d', 'float'> };
-    background: { texture: d.WgslSampledTexture<'2d', 'float'> };
+    result: { texture: d.WgslTexture2d<d.F32> };
+    background: { texture: d.WgslTexture2d<d.F32> };
   }>;
   let pipeline:
     | typeof renderPipelineInk

@@ -32,7 +32,6 @@ import {
   cameraAccess,
   CelestialBody,
   computeLayout,
-  cubemapTexture,
   filteringSamplerSlot,
   lightSourceAccess,
   renderBindGroupLayout,
@@ -84,7 +83,7 @@ const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
   .$usage('vertex');
 const skyBoxTexture = await loadSkyBox(root);
-const skyBox = skyBoxTexture.createView(cubemapTexture);
+const skyBox = skyBoxTexture.createView(d.textureCube(d.f32));
 
 let celestialBodiesCount = 0;
 const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =

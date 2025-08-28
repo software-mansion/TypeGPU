@@ -4,9 +4,8 @@ import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 
-const videoTexture = d.externalTexture();
 const layout = tgpu.bindGroupLayout({
-  externalTexture: { externalTexture: videoTexture },
+  externalTexture: { externalTexture: d.textureExternal() },
 });
 
 const charsetExtended = root.createUniform(d.u32);
@@ -195,7 +194,7 @@ if (navigator.mediaDevices.getUserMedia) {
 
 let bindGroup:
   | TgpuBindGroup<{
-    externalTexture: { externalTexture: typeof videoTexture };
+    externalTexture: { externalTexture: d.WgslExternalTexture };
   }>
   | undefined;
 

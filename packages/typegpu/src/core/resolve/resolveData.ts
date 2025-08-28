@@ -6,8 +6,9 @@ import {
   type Unstruct,
 } from '../../data/dataTypes.ts';
 import {
-  isWgslSampledTexture,
+  accessModeMap,
   isWgslStorageTexture,
+  isWgslTexture,
   type WgslExternalTexture,
 } from '../../data/texture.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
@@ -229,12 +230,6 @@ const sampleTypeToWgslType = {
   'unfilterable-float': 'f32',
 } as const;
 
-const accessMap = {
-  'read-write': 'read_write',
-  'read-only': 'read',
-  'write-only': 'write',
-} as const;
-
 /**
  * Resolves a WGSL data-type schema to a string.
  * @param ctx - The resolution context.
@@ -302,13 +297,13 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (isWgslStorageTexture(data)) {
-    return `${data.type}<${data.format}, ${accessMap[data.access]}>`;
+    return `${data.type}<${data.format}, ${accessModeMap[data.access]}>`;
   }
 
-  if (isWgslSampledTexture(data)) {
-    return data.sampleType === 'depth'
+  if (isWgslTexture(data)) {
+    return data.type.startsWith('texture_depth')
       ? data.type
-      : `${data.type}<${sampleTypeToWgslType[data.sampleType]}>`;
+      : `${data.type}<${data.sampleType.type}>`;
   }
 
   assertExhaustive(data, 'resolveData');
