@@ -40,12 +40,8 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
  * The returned function can be called multiple times to run GPU computations.
  * It returns a promise that resolves when the device queue completes its work.
  *
- * @param options.root A TgpuRoot instance.
- * @param options.callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
- * @param options.size A 3D (or shorter) array specifying the total number of threads to run.
- * @param options.workgroupSize (optional) A 3D (or shorter) array specifying the workgroup dimensions. Defaults to [1, 1, 1].
- *
- * The callback is not invoked for any invocation IDs that exceed `options.size`.
+ * @param root A TgpuRoot instance.
+ * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
  */
 export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
