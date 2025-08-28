@@ -5,7 +5,6 @@ import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
 import type { v3u } from './data/wgslTypes.ts';
-import { any, ge } from './std/boolean.ts';
 import { ceil } from './std/numeric.ts';
 
 const workgroupSizeConfigs = [
@@ -54,16 +53,17 @@ export function prepareDispatch<TArgs extends number[]>(
 
   const sizeUniform = root.createUniform(vec3u);
 
+  // raw WGSL instead of TGSL
+  // because we do not run unplugin before shipping typegpu package
   const mainCompute = computeFn({
     workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
-  })(({ id }) => {
-    'kernel';
-    if (any(ge(id, sizeUniform.$))) {
+  })`{
+    if (any(in.id >= sizeUniform)) {
       return;
     }
-    wrappedCallback(id.x, id.y, id.z);
-  });
+    wrappedCallback(in.id.x, in.id.y, in.id.z);
+  }`.$uses({ sizeUniform, wrappedCallback });
 
   const pipeline = root['~unstable']
     .withCompute(mainCompute)

@@ -25,37 +25,33 @@ describe('3d fish example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct item_1 {
-        @builtin(global_invocation_id) id: vec3u,
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      @group(0) @binding(1) var<uniform> seedUniform_3: f32;
+
+      var<private> seed_6: vec2f;
+
+      fn seed2_5(value: vec2f) {
+        seed_6 = value;
       }
 
-      @group(0) @binding(0) var<uniform> sizeUniform_2: vec3u;
-
-      @group(0) @binding(1) var<uniform> seedUniform_4: f32;
-
-      var<private> seed_7: vec2f;
-
-      fn seed2_6(value: vec2f) {
-        seed_7 = value;
+      fn randSeed2_4(seed: vec2f) {
+        seed2_5(seed);
       }
 
-      fn randSeed2_5(seed: vec2f) {
-        seed2_6(seed);
+      fn item_8() -> f32 {
+        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
+        seed_6.x = fract((cos(a) * 136.8168));
+        seed_6.y = fract((cos(b) * 534.7645));
+        return seed_6.y;
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
-        seed_7.x = fract((cos(a) * 136.8168));
-        seed_7.y = fract((cos(b) * 534.7645));
-        return seed_7.y;
+      fn randFloat01_7() -> f32 {
+        return item_8();
       }
 
-      fn randFloat01_8() -> f32 {
-        return item_9();
-      }
-
-      struct ModelData_10 {
+      struct ModelData_9 {
         position: vec3f,
         direction: vec3f,
         scale: f32,
@@ -65,23 +61,27 @@ describe('3d fish example', () => {
         applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(2) var<storage, read_write> fish_data_0_11: array<ModelData_10, 8192>;
+      @group(0) @binding(2) var<storage, read_write> fish_data_0_10: array<ModelData_9, 8192>;
 
-      @group(0) @binding(3) var<storage, read_write> fish_data_1_12: array<ModelData_10, 8192>;
+      @group(0) @binding(3) var<storage, read_write> fish_data_1_11: array<ModelData_9, 8192>;
 
-      fn wrappedCallback_3(x: u32, _arg_1: u32, _arg_2: u32) {
-        randSeed2_5(vec2f(f32(x), seedUniform_4));
-        var data = ModelData_10(vec3f(((randFloat01_8() * 10) - 5), ((randFloat01_8() * 4) - 2), ((randFloat01_8() * 10) - 5)), vec3f(((randFloat01_8() * 0.1) - 0.05), ((randFloat01_8() * 0.1) - 0.05), ((randFloat01_8() * 0.1) - 0.05)), (0.07 * (1 + ((randFloat01_8() - 0.5) * 0.8))), randFloat01_8(), 1, 1, 1);
-        fish_data_0_11[x] = data;
-        fish_data_1_12[x] = data;
+      fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
+        randSeed2_4(vec2f(f32(x), seedUniform_3));
+        var data = ModelData_9(vec3f(((randFloat01_7() * 10) - 5), ((randFloat01_7() * 4) - 2), ((randFloat01_7() * 10) - 5)), vec3f(((randFloat01_7() * 0.1) - 0.05), ((randFloat01_7() * 0.1) - 0.05), ((randFloat01_7() * 0.1) - 0.05)), (0.07 * (1 + ((randFloat01_7() - 0.5) * 0.8))), randFloat01_7(), 1, 1, 1);
+        fish_data_0_10[x] = data;
+        fish_data_1_11[x] = data;
       }
 
-      @compute @workgroup_size(256, 1, 1) fn item_0(_arg_0: item_1) {
-        if (any((_arg_0.id >= sizeUniform_2))) {
-          return;
+      struct mainCompute_Input_12 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
+          if (any(in.id >= sizeUniform_1)) {
+            return;
+          }
+          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
         }
-        wrappedCallback_3(_arg_0.id.x, _arg_0.id.y, _arg_0.id.z);
-      }
 
       struct computeShader_Input_14 {
         @builtin(global_invocation_id) gid: vec3u,
