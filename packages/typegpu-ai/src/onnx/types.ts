@@ -93,25 +93,3 @@ export const defaultLoadOptions: Required<OnnxLoadOptions> = {
   keepRawData: true,
 };
 
-export function elementSize(dt: TensorDataType): number | null {
-  switch (dt) {
-    case TensorDataType.FLOAT: return 4;
-    case TensorDataType.DOUBLE: return 8;
-    case TensorDataType.INT32: return 4;
-    case TensorDataType.INT64: return 8;
-    case TensorDataType.UINT8: return 1;
-    case TensorDataType.INT8: return 1;
-    case TensorDataType.UINT16: return 2;
-    case TensorDataType.INT16: return 2;
-    case TensorDataType.UINT32: return 4;
-    case TensorDataType.UINT64: return 8;
-    case TensorDataType.BOOL: return 1;
-    case TensorDataType.FLOAT16: return 2;
-    case TensorDataType.BFLOAT16: return 2;
-    default: return null; // variable sized or unsupported
-  }
-}
-
-export function dataTypeName(dt: TensorDataType): string {
-  return TensorDataType[dt] ?? 'UNKNOWN';
-}

@@ -1,5 +1,3 @@
-export * from './load.ts';
-
-import { OnnxModelLoader } from './load.ts';
+import { OnnxModelLoader } from "./onnx/onnxModelLoader";
 
 export default OnnxModelLoader;
