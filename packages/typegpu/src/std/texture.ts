@@ -433,12 +433,7 @@ export const textureSampleCompare: TextureSampleCompareOverload =
       );
     },
     // CODEGEN implementation
-    (...args) => {
-      return snip(
-        stitch`textureSampleCompare(${args})`,
-        f32,
-      );
-    },
+    (...args) => snip(stitch`textureSampleCompare(${args})`, f32),
     'textureSampleCompare',
   );
 

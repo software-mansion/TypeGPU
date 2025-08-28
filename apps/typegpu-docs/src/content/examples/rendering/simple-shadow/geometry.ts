@@ -6,11 +6,11 @@ import type {
   VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import * as m from 'wgpu-matrix';
+import { mat4 } from 'wgpu-matrix';
 import {
   bindGroupLayout,
   InstanceInfo,
-  Material,
+  type Material,
   VertexInfo,
 } from './schema.ts';
 
@@ -33,29 +33,20 @@ function createFaceVertices(
   );
 }
 
-function getDefaultMaterial() {
-  return Material({
-    ambient: d.vec3f(0.1, 0.1, 0.1),
-    diffuse: d.vec3f(0.7, 0.7, 0.7),
-    specular: d.vec3f(1.0, 1.0, 1.0),
-    shininess: 32.0,
-  });
-}
-
 function createModelMatrix(position: d.v3f, rotation: d.v3f) {
-  let modelMatrix = d.mat4x4f.identity();
+  const modelMatrix = d.mat4x4f.identity();
 
   if (rotation[0] !== 0) {
-    modelMatrix = m.mat4.rotateX(modelMatrix, rotation[0], d.mat4x4f());
+    mat4.rotateX(modelMatrix, rotation[0], modelMatrix);
   }
   if (rotation[1] !== 0) {
-    modelMatrix = m.mat4.rotateY(modelMatrix, rotation[1], d.mat4x4f());
+    mat4.rotateY(modelMatrix, rotation[1], modelMatrix);
   }
   if (rotation[2] !== 0) {
-    modelMatrix = m.mat4.rotateZ(modelMatrix, rotation[2], d.mat4x4f());
+    mat4.rotateZ(modelMatrix, rotation[2], modelMatrix);
   }
 
-  return m.mat4.translate(modelMatrix, position, d.mat4x4f());
+  return mat4.translate(modelMatrix, position, modelMatrix);
 }
 
 function createGeometry(
@@ -65,22 +56,17 @@ function createGeometry(
   material: d.Infer<typeof Material>,
   modelMatrix: d.m4x4f,
 ) {
-  const vertexBuffer = root.createBuffer(
-    d.arrayOf(VertexInfo, vertices.length),
-    vertices,
-  )
+  const vertexBuffer = root
+    .createBuffer(d.arrayOf(VertexInfo, vertices.length), vertices)
     .$usage('vertex');
-  const indexBuffer = root.createBuffer(
-    d.arrayOf(d.u16, indices.length),
-    indices,
-  )
+  const indexBuffer = root
+    .createBuffer(d.arrayOf(d.u16, indices.length), indices)
     .$usage('index');
 
   const bindGroup = root.createBindGroup(bindGroupLayout, {
-    instanceInfo: root.createBuffer(InstanceInfo, {
-      modelMatrix,
-      material,
-    }).$usage('uniform'),
+    instanceInfo: root
+      .createBuffer(InstanceInfo, { modelMatrix, material })
+      .$usage('uniform'),
   });
 
   return { vertexBuffer, indexBuffer, instanceInfo: bindGroup };
@@ -88,13 +74,13 @@ function createGeometry(
 
 export function createPlane({
   root,
-  material = getDefaultMaterial(),
+  material,
   size = [1, 1] as [number, number],
   position = d.vec3f(0, 0, 0),
   rotation = d.vec3f(0, 0, 0),
 }: {
   root: TgpuRoot;
-  material?: d.Infer<typeof Material>;
+  material: d.Infer<typeof Material>;
   size?: [number, number];
   position?: d.v3f;
   rotation?: d.v3f;
@@ -137,14 +123,14 @@ export function createPlane({
 
 export function createCuboid({
   root,
-  material = getDefaultMaterial(),
+  material,
   size = [1, 1, 1] as [number, number, number],
   position = d.vec3f(0, 0, 0),
   rotation = d.vec3f(0, 0, 0),
 }: {
   root: TgpuRoot;
-  material?: d.Infer<typeof Material>;
-  size?: [number, number, number]; // width, height, depth
+  material: d.Infer<typeof Material>;
+  size?: [width: number, height: number, depth: number];
   position?: d.v3f;
   rotation?: d.v3f;
 }): {
