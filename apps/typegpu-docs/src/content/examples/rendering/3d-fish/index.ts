@@ -98,38 +98,33 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsDispatch = prepareDispatch({
-  root,
-  size: [p.fishAmount],
-  workgroupSize: [32],
-  callback: (x) => {
-    'kernel';
-    randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
-    const data = ModelData({
-      position: d.vec3f(
-        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-      ),
-      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-      variant: randf.sample(),
-      applySinWave: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 1,
-    });
-    buffer0mutable.$[x] = data;
-    buffer1mutable.$[x] = data;
-  },
+const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
+  'kernel';
+  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+  const data = ModelData({
+    position: d.vec3f(
+      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+    ),
+    direction: d.vec3f(
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+    ),
+    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+    variant: randf.sample(),
+    applySinWave: 1,
+    applySeaFog: 1,
+    applySeaDesaturation: 1,
+  });
+  buffer0mutable.$[x] = data;
+  buffer1mutable.$[x] = data;
 });
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsDispatch();
+  randomizeFishPositionsDispatch(p.fishAmount);
   enqueuePresetChanges();
 };
 
