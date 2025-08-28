@@ -303,7 +303,7 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute'];
+const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute', 'fragment'];
 const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
   'compute',
   'vertex',
@@ -487,7 +487,7 @@ class TgpuBindGroupLayoutImpl<
             };
           } else if ('storageTexture' in entry) {
             visibility = visibility ??
-              DEFAULT_MUTABLE_VISIBILITY.filter((v) => v !== 'vertex');
+              DEFAULT_MUTABLE_VISIBILITY;
             binding.storageTexture = {
               ...entry.storageTexture,
             };

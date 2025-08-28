@@ -121,9 +121,7 @@ function resolveStructProperty(
   [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(
-      property as AnyWgslData,
-    )
+    ctx.resolve(property as AnyWgslData)
   },\n`;
 }
 

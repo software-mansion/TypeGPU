@@ -227,9 +227,9 @@ class WithFragmentImpl implements WithFragment {
   withPrimitive(
     primitiveState:
       | GPUPrimitiveState
-      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
         stripIndexFormat?: U32 | U16;
-      })
+      }
       | undefined,
   ): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
@@ -672,7 +672,7 @@ class TgpuRootImpl extends WithBindingImpl
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?:
-    | (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> })
+    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
