@@ -236,3 +236,9 @@ export class InfixDispatch {
     readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }
+
+export class MatrixColumnsAccess {
+  constructor(
+    readonly matrix: Snippet,
+  ) {}
+}
