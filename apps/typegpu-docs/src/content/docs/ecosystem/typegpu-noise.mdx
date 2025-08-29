@@ -10,7 +10,7 @@ It also features a [Perlin noise](#perlin-noise) implementation, which is useful
 effects, terrains, and other procedural elements.
 
 :::note
-Threads do not share the generator's `State`. As a result, unless you change the seed or provide thread-dependent variables, each thread will produce the same sequence of sampled values.
+Threads do not share the generator's `State`. As a result, unless you change the seed in each thread, each thread will produce the same sequence of sampled values.
 :::
 
 ## Use with either TypeGPU or WebGPU
@@ -266,4 +266,70 @@ pipeline
 // Can be called again to reinitialize the cache with
 // a different domain size
 bindGroup = initBindGroup(d.vec3u(5, 5, 1));
+```
+
+## Generator slot
+The package provides convenient way to change PRNG as needed.
+You can easily implement your own PRNG and plug it into the pipeline.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
+
+const root = await tgpu.init();
+
+const b = root.createMutable(d.f32);
+const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  b.$ = randf.sample();
+});
+// ---cut---
+import {
+  randomGeneratorShell,
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
+import * as std from 'typegpu/std';
+
+const LCG: StatefulGenerator = (() => {
+  const seed = tgpu['~unstable'].privateVar(d.u32);
+
+  const u32ToFloat = tgpu.fn([d.u32], d.f32)`(val){
+    let exponent: u32 = 0x3f800000;
+    let mantissa: u32 = 0x007fffff & val;
+    var ufloat: u32 = (exponent | mantissa);
+    return bitcast<f32>(ufloat) - 1f;
+  }`;
+
+  return {
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.$ = d.u32(value * std.pow(32, 3));
+    }),
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
+    }),
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      seed.$ = d.u32(
+        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
+          value.z * std.pow(32, 1),
+      );
+    }),
+    seed4: tgpu.fn([d.vec4f])((value) => {
+      seed.$ = d.u32(
+        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
+          value.z * std.pow(32, 1) + value.w * std.pow(32, 0),
+      );
+    }),
+    sample: randomGeneratorShell(() => {
+      'kernel';
+      seed.$ = seed.$ * 1664525 + 1013904223; // implicit modulo 2 ^ 32
+      return u32ToFloat(seed.$);
+    }),
+  };
+})();
+
+const pipeline = root['~unstable']
+  .with(randomGeneratorSlot, LCG)
+  .withCompute(f)
+  .createPipeline();
 ```
