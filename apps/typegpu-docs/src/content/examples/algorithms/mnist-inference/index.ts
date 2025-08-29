@@ -6,11 +6,11 @@ const SIZE = 28;
 
 const root = await tgpu.init({
   device: {
-    optionalFeatures: ['timestamp-query', 'subgroups' as GPUFeatureName],
+    optionalFeatures: ['timestamp-query', 'subgroups'],
   },
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-const hasSubgroups = root.enabledFeatures.has('subgroups' as GPUFeatureName);
+const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
 const device = root.device;
 
