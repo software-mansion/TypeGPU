@@ -187,30 +187,26 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     }
     input.write(data);
 
+    const pipeline = useSubgroups && pipelines.subgroup
+      ? pipelines.subgroup
+      : pipelines.default;
+
     // Run the network
     for (let i = 0; i < buffers.length; i++) {
       const isFirstLayer = i === 0;
       const isLastLayer = i === buffers.length - 1;
 
-      const pipeline = useSubgroups && pipelines.subgroup
-        ? pipelines.subgroup
-        : pipelines.default;
-
       let boundPipeline = pipeline
         .with(ioLayout, ioBindGroups[i])
         .with(weightsBiasesLayout, weightsBindGroups[i]);
 
-      if (isFirstLayer && querySet) {
-        boundPipeline = boundPipeline.withTimestampWrites({
+      if (querySet && (isFirstLayer || isLastLayer)) {
+        const descriptor = {
           querySet,
-          beginningOfPassWriteIndex: 0,
-        });
-      }
-      if (isLastLayer && querySet) {
-        boundPipeline = boundPipeline.withTimestampWrites({
-          querySet,
-          endOfPassWriteIndex: 1,
-        });
+          beginningOfPassWriteIndex: isFirstLayer ? 0 : undefined,
+          endOfPassWriteIndex: isLastLayer ? 1 : undefined,
+        };
+        boundPipeline = boundPipeline.withTimestampWrites(descriptor);
       }
 
       boundPipeline.dispatchWorkgroups(
