@@ -403,10 +403,6 @@ export function generateExpression(
     const [_, calleeNode, argNodes] = expression;
     const callee = generateExpression(ctx, calleeNode);
 
-    if (callee.value instanceof ConsoleLog) {
-      return ctx.registerLog();
-    }
-
     if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
       // Struct/array schema call.
       if (argNodes.length > 1) {
@@ -483,6 +479,11 @@ export function generateExpression(
             .map(([type, sn]) => tryConvertSnippet(sn, type));
         }
       }
+
+      if (callee.value instanceof ConsoleLog) {
+        return ctx.registerLog(convertedArguments);
+      }
+
       // Assuming that `callee` is callable
       const fnRes =
         (callee.value as unknown as (...args: unknown[]) => unknown)(

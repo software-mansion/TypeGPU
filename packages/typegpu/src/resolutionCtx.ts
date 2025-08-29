@@ -436,8 +436,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.popBlockScope();
   }
 
-  registerLog(): Snippet {
-    return this._logManager.registerLog(this);
+  registerLog(args: Snippet[]): Snippet {
+    return this._logManager.registerLog(this, args);
   }
 
   get logMetadata(): LogMetadata | undefined {

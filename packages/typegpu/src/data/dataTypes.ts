@@ -243,4 +243,6 @@ export class MatrixColumnsAccess {
   ) {}
 }
 
-export class ConsoleLog {}
+export class ConsoleLog {
+  [$internal] = true;
+}

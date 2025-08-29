@@ -8,13 +8,15 @@ import { struct } from '../data/struct.ts';
 import { U32, Void, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import { GenerationCtx } from './generationHelpers.ts';
 
+const fallbackSnippet = snip('/* console.log() */', Void);
+
 export interface LogManagerOptions {
   oneLogSize?: number;
   maxLogCount?: number;
 }
 
 export interface LogManager {
-  registerLog(ctx: GenerationCtx): Snippet;
+  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
   getMetadata(): LogMetadata | undefined;
 }
 
@@ -35,7 +37,7 @@ export class LogManagerDummyImpl implements LogManager {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
-    return snip('/* console.log() */', Void);
+    return fallbackSnippet;
   }
 }
 
@@ -79,11 +81,20 @@ export class LogManagerImpl implements LogManager {
     };
   }
 
-  registerLog(ctx: GenerationCtx): Snippet {
-    const log = fn([])`() {
-      buffer[0].id = 7312;
-      buffer[0].data[0] = 126;
+  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
+    if (args.length !== 1) {
+      console.warn('Currently only logs of exactly 1 argument are supported.');
+      return snip('/* console.log() */', Void);
+    }
+    if (args[0]?.dataType !== u32) {
+      console.warn("Currently only values of type 'u32' can be logged.");
+      return snip('/* console.log() */', Void);
+    }
+
+    const log = fn([u32])`(loggedValue) {
+      buffer[0].id = 1;
+      buffer[0].data[0] = loggedValue;
     }`.$uses({ buffer: this.#buffer }).$name('log');
-    return snip(`${ctx.resolve(log)}()`, Void);
+    return snip(`${ctx.resolve(log)}(${args[0].value})`, Void);
   }
 }

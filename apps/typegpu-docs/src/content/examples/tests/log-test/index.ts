@@ -4,9 +4,12 @@ import * as d from 'typegpu/data';
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
 
-function run(callback: () => undefined) {
+function run(callback: (input: { gid: d.v3u }) => undefined) {
   const computeRunTests = tgpu['~unstable']
-    .computeFn({ workgroupSize: [1] })(callback);
+    .computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(callback);
 
   const pipeline = root['~unstable']
     .withCompute(computeRunTests)
@@ -17,9 +20,10 @@ function run(callback: () => undefined) {
   console.log(tgpu.resolve({ externals: { pipeline } }));
 }
 
-run(() => {
+run(({ gid }) => {
   'kernel';
-  console.log(126);
+  console.log(gid.x + 10);
+  // console.log(gid.x + 20);
 });
 
 // #region Example controls and cleanup
