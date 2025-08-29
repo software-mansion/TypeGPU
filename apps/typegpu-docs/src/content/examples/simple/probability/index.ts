@@ -12,22 +12,16 @@ const executor = new Executor(root, c.initialNumSamples);
 const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
-let replotFlag = false;
 
 const replot = async (
   currentDistribution: Distribution,
   animate = false,
 ) => {
-  replotFlag = true;
-  try {
-    let samples = undefined;
-    const prng = getPRNG(currentDistribution);
+  let samples = undefined;
+  const prng = getPRNG(currentDistribution);
 
-    samples = await executor.executeMoreWorkers(prng.prng);
-    plotter.plot(samples, prng, animate);
-  } finally {
-    replotFlag = false;
-  }
+  samples = await executor.executeMoreWorkers(prng.prng);
+  plotter.plot(samples, prng, animate);
 };
 
 // #region Example controls & Cleanup
@@ -51,16 +45,19 @@ canvas.addEventListener('touchend', () =>
     helpInfo.style.opacity = '1';
   }, 5000));
 
+plotter.resetView(getCameraPosition(currentDistribution));
+
 export const controls = {
   'Reset Camera': {
-    onButtonClick: () =>
-      plotter.resetView(getCameraPosition(currentDistribution)),
+    onButtonClick: () => {
+      plotter.resetView(getCameraPosition(currentDistribution));
+    },
   },
   'Distribution': {
     initial: c.initialDistribution,
     options: c.distributions,
     onSelectChange: async (value: Distribution) => {
-      if (currentDistribution === value || replotFlag) {
+      if (currentDistribution === value) {
         return;
       }
 
@@ -76,9 +73,6 @@ export const controls = {
     initial: c.initialNumSamples,
     options: c.numSamplesOptions,
     onSelectChange: async (value: number) => {
-      if (replotFlag) {
-        return;
-      }
       executor.count = value;
       await replot(
         currentDistribution,
