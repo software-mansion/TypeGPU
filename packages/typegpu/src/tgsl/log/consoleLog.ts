@@ -1,13 +1,23 @@
-import { TgpuMutable } from '../core/buffer/bufferShorthand.ts';
-import { fn } from '../core/function/tgpuFn.ts';
-import type { TgpuRoot } from '../core/root/rootTypes.ts';
-import { arrayOf } from '../data/array.ts';
-import { atomic } from '../data/atomic.ts';
-import { u32 } from '../data/numeric.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
-import { struct } from '../data/struct.ts';
-import { Atomic, U32, Void, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
-import { GenerationCtx } from './generationHelpers.ts';
+import { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import { fn } from '../../core/function/tgpuFn.ts';
+import type { TgpuRoot } from '../../core/root/rootTypes.ts';
+import { arrayOf } from '../../data/array.ts';
+import { atomic } from '../../data/atomic.ts';
+import { u32 } from '../../data/numeric.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
+import { struct } from '../../data/struct.ts';
+import { vec3u } from '../../data/vector.ts';
+import {
+  AnyWgslData,
+  Atomic,
+  U32,
+  Void,
+  WgslArray,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
+import { GenerationCtx } from '../generationHelpers.ts';
+import { serializers } from './serializers.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
@@ -25,6 +35,7 @@ export interface LogMetadata {
   dataIndexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<LogData>>;
   options: Required<LogManagerOptions>;
+  logIdToSchema: Map<number, AnyWgslData>;
 }
 
 export class LogManagerDummyImpl implements LogManager {
@@ -49,7 +60,7 @@ export class LogManagerImpl implements LogManager {
   #nextLogId = 1;
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
-      options.oneLogSize = 1;
+      options.oneLogSize = 3;
     }
     if (options?.maxLogCount === undefined) {
       options.maxLogCount = 256;
@@ -71,6 +82,7 @@ export class LogManagerImpl implements LogManager {
       dataIndexBuffer,
       dataBuffer,
       options: sanitizedOptions,
+      logIdToSchema: new Map(),
     };
   }
 
@@ -83,17 +95,25 @@ export class LogManagerImpl implements LogManager {
       console.warn('Currently only logs of exactly 1 argument are supported.');
       return snip('/* console.log() */', Void);
     }
-    if (args[0]?.dataType !== u32) {
+    if (args[0]?.dataType !== u32 && args[0]?.dataType !== vec3u) {
       console.warn("Currently only values of type 'u32' can be logged.");
       return snip('/* console.log() */', Void);
     }
     const id = this.#nextLogId++;
 
-    const log = fn([u32])`(loggedValue) {
+    const dataType = args[0].dataType;
+    const serializer = serializers[dataType.type];
+    this.#metaData.logIdToSchema.set(id, dataType);
+
+    const log = fn([dataType])`(loggedValue) {
       var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+      var serializedData = serializer(loggedValue);
       dataBuffer[dataIndex].id = ${id};
-      dataBuffer[dataIndex].data[0] = loggedValue;
+      for (var i = 0u; i< ${sizeOf(dataType)}; i++) {
+        dataBuffer[dataIndex].data[i] = serializedData[i];
+      }
     }`.$uses({
+      serializer,
       dataIndexBuffer: this.#metaData.dataIndexBuffer,
       dataBuffer: this.#metaData.dataBuffer,
     }).$name(`log ${id}`);

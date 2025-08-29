@@ -40,15 +40,15 @@ import {
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import {
+  coerceToSnippet,
+  numericLiteralToSnippet,
+} from './tgsl/generationHelpers.ts';
+import {
   LogManager,
   LogManagerDummyImpl,
   LogManagerImpl,
   LogMetadata,
-} from './tgsl/consoleLog.ts';
-import {
-  coerceToSnippet,
-  numericLiteralToSnippet,
-} from './tgsl/generationHelpers.ts';
+} from './tgsl/log/consoleLog.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
