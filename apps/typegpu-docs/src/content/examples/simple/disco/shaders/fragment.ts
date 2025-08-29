@@ -11,11 +11,11 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
   {
     let newuv = std.mul(std.sub(uv.xy, 0.5), 2.0);
     const aspect = resolutionAccess.$.x / resolutionAccess.$.y; // w / h
-    // if widescreen (aspect > 1) expand x; if tallscreen expand y
+    // if widescreen (aspect > 1) expand x; if tallscreen counter-stretch y
     if (aspect > 1) {
-      newuv.x *= aspect; // widen coordinates so unit circle isn't stretched
+      newuv.x *= aspect;
     } else {
-      newuv.y /= aspect; // aspect < 1 -> height greater, counter-stretch y
+      newuv.y /= aspect;
     }
     const uvv = newuv;
     const finalColor = d.vec3f(0.0, 0.0, 0.0);
