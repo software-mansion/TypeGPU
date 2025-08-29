@@ -1,62 +1,69 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+
+const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+const blue = d.vec4f(0.114, 0.447, 0.941, 1);
+
+const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
+  return mix(purple, blue, ratio);
+}
+`.$uses({ purple, blue });
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position, uv: d.vec2f },
+}) /* wgsl */`{
+  var pos = array<vec2f, 3>(
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+
+  var uv = array<vec2f, 3>(
+    vec2(0.5, 1.0),
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+  );
+
+  return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
+}`;
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+}) /* wgsl */`{
+  return getGradientColor((in.uv[0] + in.uv[1]) / 2);
+}
+`.$uses({ getGradientColor });
 
 const root = await tgpu.init();
 
-const b = root.createMutable(d.f32);
-const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-  b.$ = randf.sample();
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
 });
 
-import {
-  randomGeneratorShell,
-  randomGeneratorSlot,
-  type StatefulGenerator,
-} from '@typegpu/noise';
-import * as std from 'typegpu/std';
-
-const LCG: StatefulGenerator = (() => {
-  const seed = tgpu['~unstable'].privateVar(d.u32);
-
-  const u32ToFloat = tgpu.fn([d.u32], d.f32)`(val){
-    let exponent: u32 = 0x3f800000;
-    let mantissa: u32 = 0x007fffff & val;
-    var ufloat: u32 = (exponent | mantissa);
-    return bitcast<f32>(ufloat) - 1f;
-  }`;
-
-  return {
-    seed: tgpu.fn([d.f32])((value) => {
-      seed.$ = d.u32(value * std.pow(32, 3));
-    }),
-    seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
-    }),
-    seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$ = d.u32(
-        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
-          value.z * std.pow(32, 1),
-      );
-    }),
-    seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$ = d.u32(
-        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
-          value.z * std.pow(32, 1) + value.w * std.pow(32, 0),
-      );
-    }),
-    sample: randomGeneratorShell(() => {
-      'kernel';
-      seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
-      return u32ToFloat(seed.$);
-    }),
-  };
-})();
-
 const pipeline = root['~unstable']
-  .with(randomGeneratorSlot, LCG)
-  .withCompute(f)
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-pipeline.dispatchWorkgroups(1);
-console.log(await b.read());
+setTimeout(() => {
+  pipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
+}, 100);
+
+export function onCleanup() {
+  root.destroy();
+}
