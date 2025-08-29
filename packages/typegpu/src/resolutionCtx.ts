@@ -43,6 +43,7 @@ import {
   LogManager,
   LogManagerDummyImpl,
   LogManagerImpl,
+  LogMetadata,
 } from './tgsl/consoleLog.ts';
 import {
   coerceToSnippet,
@@ -439,6 +440,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._logManager.registerLog(this);
   }
 
+  get logMetadata(): LogMetadata | undefined {
+    return this._logManager.getMetadata();
+  }
+
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
     this._itemStateStack.pushFunctionScope(
       options.args,
@@ -785,11 +790,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param logMetadata - Information about console.logs used in code and a buffer storing the results.
  */
 export interface ResolutionResult {
   code: string;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logMetadata: LogMetadata | undefined;
 }
 
 export function resolve(
@@ -856,6 +863,7 @@ export function resolve(
     code,
     usedBindGroupLayouts,
     catchall,
+    logMetadata: ctx.logMetadata,
   };
 }
 

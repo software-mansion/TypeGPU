@@ -8,6 +8,7 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import { LogMetadata } from '../../tgsl/consoleLog.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -77,6 +78,7 @@ type Memo = {
   pipeline: GPUComputePipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logMetadata: LogMetadata | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -191,6 +193,15 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
+    if (memo.logMetadata) {
+      memo.logMetadata.buffer.read().then((data) => {
+        data
+          .filter((e) => e.id)
+          .map(({ id, data }) => console.log(`${id}: ${data}`));
+      });
+      // AAA clean the buffer
+    }
+
     if (this._priors.performanceCallback) {
       triggerPerformanceCallback({
         root: branch,
@@ -258,7 +269,8 @@ export class ComputePipelineCore implements SelfResolvable {
         );
       }
 
-      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logMetadata } =
+        resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -284,6 +296,7 @@ export class ComputePipelineCore implements SelfResolvable {
         }),
         usedBindGroupLayouts,
         catchall,
+        logMetadata,
       };
 
       if (PERF?.enabled) {
