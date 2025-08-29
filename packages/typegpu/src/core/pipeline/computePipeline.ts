@@ -199,7 +199,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
           .filter((e) => e.id)
           .map(({ data }) => console.log(data[0]));
       });
-      // AAA clean the buffer
+      memo.logMetadata.dataIndexBuffer.write(0);
     }
 
     if (this._priors.performanceCallback) {
