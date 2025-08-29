@@ -985,7 +985,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:main
-        - struct:TestStruct: Property 'struct' of struct 'TestStruct' is a reserved WGSL word. Choose a different name.]
+        - struct:TestStruct: Property key 'struct' is a reserved WGSL word. Choose a different name.]
       `);
   });
 

@@ -106,18 +106,16 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
  * @param ctx - The resolution context.
  * @param key - The key of the property.
  * @param property - The property itself.
- * @param structName - The struct name, used only for better error message.
  *
  * @returns The resolved property string.
  */
 function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseData],
-  structName: string,
 ) {
   if (!isValidIdentifier(key)) {
     throw new Error(
-      `Property '${key}' of struct '${structName}' is a reserved WGSL word. Choose a different name.`,
+      `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
     );
   }
   return `  ${getAttributesString(property)}${key}: ${
@@ -142,9 +140,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
 struct ${id} {
 ${
     Object.entries(struct.propTypes as Record<string, BaseData>)
-      .map((prop) =>
-        resolveStructProperty(ctx, prop, getName(struct) ?? '<unnamed>')
-      )
+      .map((prop) => resolveStructProperty(ctx, prop))
       .join('')
   }\
 }`);
@@ -169,7 +165,6 @@ ${
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   const id = ctx.names.makeUnique(getName(unstruct));
-  const name = getName(unstruct) ?? '<unnamed>';
 
   ctx.addDeclaration(`\
 struct ${id} {
@@ -180,8 +175,8 @@ ${
           ? resolveStructProperty(ctx, [
             prop[0],
             formatToWGSLType[prop[1].format],
-          ], name)
-          : resolveStructProperty(ctx, prop, name)
+          ])
+          : resolveStructProperty(ctx, prop)
       )
       .join('')
   }
