@@ -2,10 +2,11 @@ import { TgpuMutable } from '../core/buffer/bufferShorthand.ts';
 import { fn } from '../core/function/tgpuFn.ts';
 import type { TgpuRoot } from '../core/root/rootTypes.ts';
 import { arrayOf } from '../data/array.ts';
+import { atomic } from '../data/atomic.ts';
 import { u32 } from '../data/numeric.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import { struct } from '../data/struct.ts';
-import { U32, Void, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
+import { Atomic, U32, Void, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import { GenerationCtx } from './generationHelpers.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
@@ -21,11 +22,8 @@ export interface LogManager {
 }
 
 export interface LogMetadata {
-  buffer: TgpuMutable<
-    WgslArray<
-      LogData
-    >
-  >;
+  dataIndexBuffer: TgpuMutable<Atomic<U32>>;
+  dataBuffer: TgpuMutable<WgslArray<LogData>>;
   options: Required<LogManagerOptions>;
 }
 
@@ -45,40 +43,39 @@ type LogData = WgslStruct<{
   id: U32;
   data: WgslArray<U32>;
 }>;
-export class LogManagerImpl implements LogManager {
-  #root: TgpuRoot;
-  #options: Required<LogManagerOptions>;
-  #dataSchema: LogData;
-  #buffer: TgpuMutable<
-    WgslArray<
-      LogData
-    >
-  >;
-  constructor(root: TgpuRoot, options: LogManagerOptions) {
-    this.#root = root;
 
+export class LogManagerImpl implements LogManager {
+  #metaData: LogMetadata;
+  #nextLogId = 1;
+  constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
       options.oneLogSize = 1;
     }
     if (options?.maxLogCount === undefined) {
-      options.maxLogCount = 2;
+      options.maxLogCount = 256;
     }
-    this.#options = options as Required<LogManagerOptions>;
+    const sanitizedOptions = options as Required<LogManagerOptions>;
 
-    this.#dataSchema = struct({
+    const DataSchema = struct({
       id: u32,
-      data: arrayOf(u32, options.oneLogSize),
+      data: arrayOf(u32, sanitizedOptions.oneLogSize),
     }).$name('log data schema');
-    this.#buffer = root.createMutable(
-      arrayOf(this.#dataSchema, options.maxLogCount),
-    ).$name('log buffer');
+
+    const dataBuffer = root
+      .createMutable(arrayOf(DataSchema, sanitizedOptions.maxLogCount))
+      .$name('log buffer');
+
+    const dataIndexBuffer = root.createMutable(atomic(u32));
+
+    this.#metaData = {
+      dataIndexBuffer,
+      dataBuffer,
+      options: sanitizedOptions,
+    };
   }
 
   getMetadata(): LogMetadata | undefined {
-    return {
-      buffer: this.#buffer,
-      options: this.#options,
-    };
+    return this.#nextLogId === 1 ? undefined : this.#metaData;
   }
 
   registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
@@ -90,11 +87,17 @@ export class LogManagerImpl implements LogManager {
       console.warn("Currently only values of type 'u32' can be logged.");
       return snip('/* console.log() */', Void);
     }
+    const id = this.#nextLogId++;
 
     const log = fn([u32])`(loggedValue) {
-      buffer[0].id = 1;
-      buffer[0].data[0] = loggedValue;
-    }`.$uses({ buffer: this.#buffer }).$name('log');
+      var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+      dataBuffer[dataIndex].id = ${id};
+      dataBuffer[dataIndex].data[0] = loggedValue;
+    }`.$uses({
+      dataIndexBuffer: this.#metaData.dataIndexBuffer,
+      dataBuffer: this.#metaData.dataBuffer,
+    }).$name(`log ${id}`);
+
     return snip(`${ctx.resolve(log)}(${args[0].value})`, Void);
   }
 }

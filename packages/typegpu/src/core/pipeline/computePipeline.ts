@@ -194,10 +194,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.end();
 
     if (memo.logMetadata) {
-      memo.logMetadata.buffer.read().then((data) => {
+      memo.logMetadata.dataBuffer.read().then((data) => {
         data
           .filter((e) => e.id)
-          .map(({ id, data }) => console.log(`${id}: ${data}`));
+          .map(({ data }) => console.log(data[0]));
       });
       // AAA clean the buffer
     }
