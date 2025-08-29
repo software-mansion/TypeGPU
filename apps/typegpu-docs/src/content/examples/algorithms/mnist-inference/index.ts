@@ -12,7 +12,6 @@ const root = await tgpu.init({
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
-const device = root.device;
 
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
@@ -29,97 +28,88 @@ const MutableFloats = {
 const ioLayout = tgpu.bindGroupLayout({
   input: ReadonlyFloats,
   output: MutableFloats,
-}).$idx(0);
+});
 
 const weightsBiasesLayout = tgpu.bindGroupLayout({
   weights: ReadonlyFloats,
   biases: ReadonlyFloats,
-}).$idx(1);
+});
 
-// Shader code
+// Shaders
 
 const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
-const defaultShader = tgpu.resolve({
-  template: `
-  @compute @workgroup_size(1)
-  fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let inputSize = arrayLength( &input );
+const defaultCompute = tgpu['~unstable'].computeFn({
+  in: {
+    gid: d.builtin.globalInvocationId,
+  },
+  workgroupSize: [1],
+})(({ gid }) => {
+  const inputSize = ioLayout.$.input.length;
 
-    let i = gid.x;
+  const i = gid.x;
+  const weightsOffset = i * inputSize;
+  let sum = d.f32();
 
-    let weightsOffset = i * inputSize;
-    var sum = 0.0;
-
-    for (var j = 0u; j < inputSize; j = j + 1) {
-      sum = fma(input[j], weights[weightsOffset + j], sum);
-    }
-
-    let total = sum + biases[i];
-    output[i] = relu(total);
+  for (let j = 0; j < inputSize; j++) {
+    sum = std.fma(
+      ioLayout.$.input[j],
+      weightsBiasesLayout.$.weights[weightsOffset + j],
+      sum,
+    );
   }
-`,
-  externals: {
-    relu,
-    ...weightsBiasesLayout.bound,
-    ...ioLayout.bound,
-  },
+
+  const total = sum + weightsBiasesLayout.$.biases[i];
+  ioLayout.$.output[i] = relu(total);
 });
 
-const subgroupShader = tgpu.resolve({
-  template: `
-    const WGS: u32 = 128u;
+const workgroupSize = tgpu['~unstable'].const(d.u32, 128);
+const subgroupCompute = tgpu['~unstable'].computeFn({
+  in: {
+    lid: d.builtin.localInvocationId,
+    wid: d.builtin.workgroupId,
+    sid: d.builtin.subgroupInvocationId,
+    ssize: d.builtin.subgroupSize,
+  },
+  workgroupSize: [128],
+})(({ lid, wid, sid, ssize }) => {
+  const subgroupId = d.u32(lid.x / ssize);
+  const outputsPerWG = d.u32(workgroupSize.$ / ssize);
+  const neuronIndex = wid.x * outputsPerWG + subgroupId;
 
-    @compute @workgroup_size(WGS)
-    fn main(
-      @builtin(local_invocation_id) lid: vec3u,
-      @builtin(workgroup_id) wid: vec3u,
-      @builtin(subgroup_invocation_id) sid: u32,
-      @builtin(subgroup_size) ssize: u32
-    ) {
-      let subgroupId = lid.x / ssize;
-      let outputsPerWG = WGS / ssize;
-      let neuronIndex = wid.x * outputsPerWG + subgroupId;
+  const outLen = ioLayout.$.output.length;
+  const valid = neuronIndex < outLen;
 
-      let outLen = arrayLength(&output);
-      let valid = neuronIndex < outLen;
+  const inputSize = ioLayout.$.input.length;
 
-      let inputSize = arrayLength(&input);
+  let partial = d.f32();
 
-      var partial = 0.0;
-
-      if (valid) {
-        let weightsOffset = neuronIndex * inputSize;
-        for (var j = sid; j < inputSize; j += ssize) {
-          partial = fma(input[j], weights[weightsOffset + j], partial);
-        }
-      }
-
-      let sum = subgroupAdd(partial);
-
-      if (valid && sid == 0u) {
-        output[neuronIndex] = relu(sum + biases[neuronIndex]);
-      }
+  if (valid) {
+    const weightsOffset = neuronIndex * inputSize;
+    for (let j = sid; j < inputSize; j += ssize) {
+      partial = std.fma(
+        ioLayout.$.input[j],
+        weightsBiasesLayout.$.weights[weightsOffset + j],
+        partial,
+      );
     }
-  `,
-  externals: {
-    relu,
-    ...weightsBiasesLayout.bound,
-    ...ioLayout.bound,
-  },
-  enableExtensions: ['subgroups'],
+  }
+
+  const sum = std.subgroupAdd(partial);
+
+  if (valid && sid === 0) {
+    ioLayout.$.output[neuronIndex] = relu(
+      sum + weightsBiasesLayout.$.biases[neuronIndex],
+    );
+  }
 });
 
-let pipeline = device.createComputePipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
-  }),
-  compute: {
-    module: device.createShaderModule({
-      code: useSubgroups ? subgroupShader : defaultShader,
-    }),
-  },
-});
+const pipelines = {
+  default: root['~unstable'].withCompute(defaultCompute).createPipeline(),
+  subgroup: root.enabledFeatures.has('subgroups')
+    ? root['~unstable'].withCompute(subgroupCompute).createPipeline()
+    : null,
+};
 
 // Definitions for the network
 
@@ -142,9 +132,7 @@ interface Network {
   inference(data: number[]): Promise<number[]>;
 }
 
-const querySet = hasTimestampQuery
-  ? root.createQuerySet('timestamp', 2)
-  : undefined;
+const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 
 /**
  * Creates a network from a list of pairs of weights and biases
@@ -200,30 +188,35 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     input.write(data);
 
     // Run the network
-    const encoder = device.createCommandEncoder();
-
     for (let i = 0; i < buffers.length; i++) {
       const isFirstLayer = i === 0;
       const isLastLayer = i === buffers.length - 1;
 
-      const timestampWrites = querySet && isFirstLayer
-        ? { querySet: root.unwrap(querySet), beginningOfPassWriteIndex: 0 }
-        : querySet && isLastLayer
-        ? { querySet: root.unwrap(querySet), endOfPassWriteIndex: 1 }
-        : undefined;
+      const pipeline = useSubgroups && pipelines.subgroup
+        ? pipelines.subgroup
+        : pipelines.default;
 
-      const passDescriptor = timestampWrites ? { timestampWrites } : undefined;
-      const pass = encoder.beginComputePass(passDescriptor);
+      let boundPipeline = pipeline
+        .with(ioLayout, ioBindGroups[i])
+        .with(weightsBiasesLayout, weightsBindGroups[i]);
 
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
-      pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
-      pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
-      pass.end();
+      if (isFirstLayer && querySet) {
+        boundPipeline = boundPipeline.withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+        });
+      }
+      if (isLastLayer && querySet) {
+        boundPipeline = boundPipeline.withTimestampWrites({
+          querySet,
+          endOfPassWriteIndex: 1,
+        });
+      }
+
+      boundPipeline.dispatchWorkgroups(
+        buffers[i].biases.dataType.elementCount,
+      );
     }
-
-    device.queue.submit([encoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
 
     if (querySet?.available) {
       querySet.resolve();
@@ -246,22 +239,6 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     inference,
   };
 }
-
-const recreatePipeline = () => {
-  pipeline = device.createComputePipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [
-        root.unwrap(ioLayout),
-        root.unwrap(weightsBiasesLayout),
-      ],
-    }),
-    compute: {
-      module: device.createShaderModule({
-        code: useSubgroups ? subgroupShader : defaultShader,
-      }),
-    },
-  });
-};
 
 const network = createNetwork(await downloadLayers());
 
@@ -544,7 +521,6 @@ export const controls = {
     initial: hasSubgroups,
     onToggleChange: (value: boolean) => {
       useSubgroups = value;
-      recreatePipeline();
       updateSubgroupsStatus();
     },
   },
