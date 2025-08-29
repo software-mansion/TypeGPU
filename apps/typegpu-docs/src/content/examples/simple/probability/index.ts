@@ -12,20 +12,23 @@ const executor = new Executor(root, c.initialNumSamples);
 const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
+let replotFlag = false;
 
 const replot = async (
   currentDistribution: Distribution,
   animate = false,
 ) => {
-  let samples = undefined;
-  const prng = getPRNG(currentDistribution);
+  replotFlag = true;
+  try {
+    let samples = undefined;
+    const prng = getPRNG(currentDistribution);
 
-  samples = await executor.executeMoreWorkers(prng.prng);
-  plotter.plot(samples, prng, animate);
+    samples = await executor.executeMoreWorkers(prng.prng);
+    plotter.plot(samples, prng, animate);
+  } finally {
+    replotFlag = false;
+  }
 };
-
-await replot(currentDistribution);
-plotter.resetView(getCameraPosition(currentDistribution));
 
 // #region Example controls & Cleanup
 const canvas = document.getElementById('canvas') as HTMLDivElement;
@@ -57,7 +60,7 @@ export const controls = {
     initial: c.initialDistribution,
     options: c.distributions,
     onSelectChange: async (value: Distribution) => {
-      if (currentDistribution === value) {
+      if (currentDistribution === value || replotFlag) {
         return;
       }
 
@@ -73,6 +76,9 @@ export const controls = {
     initial: c.initialNumSamples,
     options: c.numSamplesOptions,
     onSelectChange: async (value: number) => {
+      if (replotFlag) {
+        return;
+      }
       executor.count = value;
       await replot(
         currentDistribution,
