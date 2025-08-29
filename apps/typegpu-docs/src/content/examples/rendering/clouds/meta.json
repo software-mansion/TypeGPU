@@ -1,5 +1,5 @@
 {
   "title": "Clouds",
   "category": "rendering",
-  "tags": ["experimental", "3d", "raytracing"]
+  "tags": ["experimental", "3d", "ray marching"]
 }
