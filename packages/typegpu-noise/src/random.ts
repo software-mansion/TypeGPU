@@ -1,7 +1,6 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
-  clamp,
   cos,
   dot,
   length,
@@ -129,9 +128,9 @@ export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
 export const randUniformExclusive: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => {
     // Our generator currently operates on the range [0, 1),
-    // so clamping with 1 - EPS isn't necessary.
+    // so we don't need to clamp with 1 - EPS.
     // However, let's keep it, in case we change the generator's domain in the future.
-    return clamp(randomGeneratorSlot.value.sample(), 0 + EPS, 1 - EPS);
+    return randomGeneratorSlot.value.sample() * (1 - 2 * EPS) + EPS;
   });
 
 export const randNormal: TgpuFn<(mu: d.F32, sigma: d.F32) => d.F32> = tgpu

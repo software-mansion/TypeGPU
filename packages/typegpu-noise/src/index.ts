@@ -16,7 +16,7 @@ import {
   randSeed2,
   randSeed3,
   randSeed4,
-  randUniformExclusive,
+  randUniformExclusive as randFloat01Exclusive,
 } from './random.ts';
 
 export const randf: {
@@ -25,7 +25,7 @@ export const randf: {
   seed3: typeof randSeed3;
   seed4: typeof randSeed4;
   sample: typeof randFloat01;
-  sampleExclusive: typeof randUniformExclusive;
+  sampleExclusive: typeof randFloat01Exclusive;
   normal: typeof randNormal;
   exponential: typeof randExponential;
   cauchy: typeof randCauchy;
@@ -44,7 +44,7 @@ export const randf: {
   seed3: randSeed3,
   seed4: randSeed4,
   sample: randFloat01,
-  sampleExclusive: randUniformExclusive,
+  sampleExclusive: randFloat01Exclusive,
   normal: randNormal,
   exponential: randExponential,
   cauchy: randCauchy,
