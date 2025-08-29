@@ -5,7 +5,13 @@ import type {
   Disarray,
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
-import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
+import type {
+  AnyWgslData,
+  U16,
+  U32,
+  Void,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -103,6 +109,25 @@ export interface WithVertex<
   >(
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
   ): WithFragment<FragmentOut>;
+
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment<Void>;
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment<Void>;
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment<Void>;
+
+  createPipeline(): TgpuRenderPipeline<Void>;
 }
 
 export interface WithFragment<

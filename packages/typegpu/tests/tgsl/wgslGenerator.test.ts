@@ -80,13 +80,11 @@ describe('wgslGenerator', () => {
       intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
       floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
       scientificLiteral: {
-        value: '12e10',
-        wgsl: '12e10',
-        dataType: abstractFloat,
+        value: '120000000000',
+        dataType: abstractInt,
       },
       scientificNegativeExponentLiteral: {
-        value: '12e-4',
-        wgsl: '12e-4',
+        value: '0.0012',
         dataType: abstractFloat,
       },
     } as const;
@@ -1037,6 +1035,102 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
       "fn main_0(extern_1: u32, extern_1_2: u32) {
 
+      }"
+    `);
+  });
+
+  it('generates correct code for pow expression', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.f32(10);
+      const b = d.f32(3);
+      const n = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 10f;
+        var b = 3f;
+        var n = pow(a, b);
+      }"
+    `);
+  });
+
+  it('calculates pow at comptime when possible', () => {
+    const four = 4;
+    const power = tgpu.fn([])(() => {
+      const n = 2 ** four;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var n = 16.;
+      }"
+    `);
+  });
+
+  it('casts in pow expression when necessary', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.u32(3);
+      const b = d.i32(5);
+      const m = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 3u;
+        var b = 5i;
+        var m = pow(f32(a), f32(b));
+      }"
+    `);
+  });
+
+  it('throws error when accessing matrix elements directly', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const element = matrix[4];
+    });
+
+    expect(() => asWgsl(testFn))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: The only way of accessing matrix elements in TGSL is through the 'columns' property.]
+      `);
+  });
+
+  it('generates correct code when accessing matrix elements through .columns', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const column = matrix.columns[1];
+      const element = column[0];
+      const directElement = matrix.columns[1][0];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var matrix = mat4x4f();
+        var column = matrix[1];
+        var element = column[0];
+        var directElement = matrix[1][0];
+      }"
+    `);
+  });
+
+  it('resolves when accessing matrix elements through .columns', () => {
+    const matrix = tgpu['~unstable'].workgroupVar(d.mat4x4f);
+    const index = tgpu['~unstable'].workgroupVar(d.u32);
+
+    const testFn = tgpu.fn([])(() => {
+      const element = matrix.$.columns[index.$];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "var<workgroup> index: u32;
+
+      var<workgroup> matrix: mat4x4f;
+
+      fn testFn() {
+        var element = matrix[index];
       }"
     `);
   });

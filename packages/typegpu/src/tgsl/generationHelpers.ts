@@ -42,7 +42,6 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -178,7 +177,14 @@ export function getTypeForIndexAccess(
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
-  if (Number.isInteger(value) && value >= MIN_INT32 && value <= MAX_INT32) {
+  // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
+  // Warn when values exceed this range to prevent precision loss.
+  if (Number.isInteger(value)) {
+    if (!Number.isSafeInteger(value)) {
+      console.warn(
+        `The integer ${value} exceeds the safe integer range and may have lost precision.`,
+      );
+    }
     return snip(value, abstractInt);
   }
   return snip(value, abstractFloat);

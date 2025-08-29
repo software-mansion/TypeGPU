@@ -1,4 +1,5 @@
-import { snip } from '../data/snippet.ts';
+import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
   abstractFloat,
@@ -8,25 +9,8 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  AnyFloat32VecInstance,
-  AnyFloatVecInstance,
-  AnyIntegerVecInstance,
-  AnyMatInstance,
-  AnyNumericVecInstance,
-  AnySignedVecInstance,
-  AnyWgslData,
-  v2i,
-  v3f,
-  v3h,
-  v3i,
-  v4i,
-} from '../data/wgslTypes.ts';
-import type { Infer } from '../shared/repr.ts';
-import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
-import { mul, sub } from './operators.ts';
 import {
   vec2f,
   vec2h,
@@ -38,7 +22,26 @@ import {
   vec4h,
   vec4i,
 } from '../data/vector.ts';
-import { stitch } from '../core/resolve/stitch.ts';
+import { VectorOps } from '../data/vectorOps.ts';
+import {
+  type AnyFloat32VecInstance,
+  type AnyFloatVecInstance,
+  type AnyIntegerVecInstance,
+  type AnyMatInstance,
+  type AnyNumericVecInstance,
+  type AnySignedVecInstance,
+  type AnyWgslData,
+  isNumericSchema,
+  isVecInstance,
+  type v2i,
+  type v3f,
+  type v3h,
+  type v3i,
+  type v4i,
+} from '../data/wgslTypes.ts';
+import type { Infer } from '../shared/repr.ts';
+import { unify } from '../tgsl/conversion.ts';
+import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -804,31 +807,36 @@ export const normalize = createDualImpl(
   'normalize',
 );
 
-type PowOverload = {
-  (base: number, exponent: number): number;
-  <T extends AnyFloatVecInstance>(base: T, exponent: T): T;
-};
+function powCpu(base: number, exponent: number): number;
+function powCpu<T extends AnyFloatVecInstance>(
+  base: T,
+  exponent: T,
+): T;
+function powCpu<T extends AnyFloatVecInstance | number>(
+  base: T,
+  exponent: T,
+): T {
+  if (typeof base === 'number' && typeof exponent === 'number') {
+    return (base ** exponent) as T;
+  }
+  if (isVecInstance(base) && isVecInstance(exponent)) {
+    return VectorOps.pow[base.kind](base, exponent) as T;
+  }
+  throw new Error('Invalid arguments to pow()');
+}
 
-export const pow: PowOverload = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(base: T, exponent: T): T => {
-    if (typeof base === 'number' && typeof exponent === 'number') {
-      return (base ** exponent) as T;
-    }
-    if (
-      typeof base === 'object' &&
-      typeof exponent === 'object' &&
-      'kind' in base &&
-      'kind' in exponent
-    ) {
-      return VectorOps.pow[base.kind](base, exponent) as T;
-    }
-    throw new Error('Invalid arguments to pow()');
+export const pow = dualImpl({
+  name: 'pow',
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return {
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    };
   },
-  // GPU implementation
-  (base, exponent) => snip(stitch`pow(${base}, ${exponent})`, base.dataType),
-  'pow',
-);
+  normalImpl: powCpu,
+  codegenImpl: (lhs, rhs) => stitch`pow(${lhs}, ${rhs})`,
+});
 
 export const quantizeToF16 = createDualImpl(
   // CPU implementation
