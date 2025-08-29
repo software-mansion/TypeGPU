@@ -1,5 +1,8 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+import {
+  isComputePipeline,
+  TgpuComputePipeline,
+} from './core/pipeline/computePipeline.ts';
 import { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
@@ -36,6 +39,11 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import {
+  LogManager,
+  LogManagerDummyImpl,
+  LogManagerImpl,
+} from './tgsl/consoleLog.ts';
 import {
   coerceToSnippet,
   numericLiteralToSnippet,
@@ -340,6 +348,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
+  private readonly _logManager: LogManager;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -377,6 +386,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   ) {
     this.names = opts.names;
     this.pipeline = pipeline;
+    if (isComputePipeline(pipeline)) {
+      this._logManager = new LogManagerImpl((pipeline as any)._core.branch, {});
+    } else {
+      this._logManager = new LogManagerDummyImpl();
+    }
   }
 
   get pre(): string {
@@ -419,6 +433,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
+  }
+
+  registerLog(): Snippet {
+    return this._logManager.registerLog(this);
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

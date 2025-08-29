@@ -4,7 +4,6 @@ import {
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -15,6 +14,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -36,6 +36,7 @@ import {
   type AnyWgslData,
   hasInternalDataType,
   isMatInstance,
+  isNumericSchema,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -43,7 +44,6 @@ import {
 } from '../data/wgslTypes.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { isNumericSchema } from '../data/wgslTypes.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -218,6 +218,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
+  registerLog(): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
