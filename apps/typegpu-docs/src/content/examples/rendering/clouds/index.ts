@@ -1,8 +1,8 @@
 import tgpu, { type TgpuSampledTexture } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
-  dimensionsSlot,
   raymarchSlot,
+  resolutionAccess,
   sampledViewSlot,
   samplerSlot,
   timeAccess,
@@ -26,8 +26,10 @@ context.configure({
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
-const w = root.createUniform(d.f32, canvas.width);
-const h = root.createUniform(d.f32, canvas.height);
+const resolutionUniform = root.createUniform(
+  d.vec2f,
+  d.vec2f(canvas.width, canvas.height),
+);
 
 const NOISE_SIZE = 256;
 const noiseData = new Uint8Array(NOISE_SIZE * NOISE_SIZE * 4);
@@ -65,7 +67,7 @@ const pipeline = root['~unstable']
   .with(sampledViewSlot, sampledView)
   .with(samplerSlot, sampler)
   .with(timeAccess, time)
-  .with(dimensionsSlot, { w: canvas.width, h: canvas.height })
+  .with(resolutionAccess, resolutionUniform)
   .withVertex(mainVertex, {})
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
@@ -73,8 +75,7 @@ const pipeline = root['~unstable']
 // Animation loop
 let frameId: number;
 function render() {
-  w.write(canvas.width);
-  h.write(canvas.height);
+  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
   time.write((performance.now() / 1000) % 500);
 
   pipeline

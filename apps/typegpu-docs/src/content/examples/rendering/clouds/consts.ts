@@ -17,7 +17,7 @@ export const FLIGHT_SPEED = 3.0; // 1.0 - 10.0
 export const CLOUD_DETALIZATION = 2.23; // 0.0 - 4.0
 
 export const raymarchSlot = tgpu.slot<TgpuFn>();
-export const dimensionsSlot = tgpu.slot<{ w: number; h: number }>();
 export const sampledViewSlot = tgpu.slot<TgpuSampledTexture<'2d', d.F32>>();
 export const samplerSlot = tgpu.slot<TgpuSampler>();
 export const timeAccess = tgpu['~unstable'].accessor(d.f32);
+export const resolutionAccess = tgpu['~unstable'].accessor(d.vec2f);
