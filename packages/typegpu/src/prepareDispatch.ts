@@ -25,11 +25,10 @@ function toVec3(arr: readonly (number | undefined)[]): v3u {
 }
 
 type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
-  ? TLength extends 0 ? (() => Promise<undefined>)
-  : TLength extends 1 ? ((x: number) => Promise<undefined>)
-  : TLength extends 2 ? ((x: number, y: number) => Promise<undefined>)
-  : TLength extends 3
-    ? ((x: number, y: number, z: number) => Promise<undefined>)
+  ? TLength extends 0 ? (() => void)
+  : TLength extends 1 ? ((x: number) => void)
+  : TLength extends 2 ? ((x: number, y: number) => void)
+  : TLength extends 3 ? ((x: number, y: number, z: number) => void)
   : never
   : never;
 
@@ -37,7 +36,6 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
  * Creates a dispatch function for a compute pipeline.
  *
  * The returned function can be called multiple times to run GPU computations.
- * It returns a promise that resolves when the device queue completes its work.
  *
  * @param root A TgpuRoot instance.
  * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
@@ -82,6 +80,5 @@ export function prepareDispatch<TArgs extends number[]>(
       workgroupCount.z,
     );
     root['~unstable'].flush();
-    return root.device.queue.onSubmittedWorkDone();
   }) as DispatchForArgs<TArgs>;
 }

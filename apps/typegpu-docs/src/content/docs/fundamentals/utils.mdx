@@ -3,7 +3,7 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## Dispatch
+## *prepareDispatch*
 
 The `prepareDispatch` function simplifies running simple computations on the GPU.
 Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns a dispatch function to execute it.
@@ -30,8 +30,7 @@ const dispatch = prepareDispatch(root, (x) => {
   boidsMutable.$[x] = boidData;
 });
 // run callback for each x in range 0..2047
-await dispatch(2048);
-console.log('Dispatch finished!');
+dispatch(2048);
 ```
 
 :::note
@@ -60,10 +59,9 @@ doubleUp(4);
 // no need to await `doubleUp()` because the command encoder
 // will queue the read after `doubleUp` anyway
 console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
-
 ```
 
-The callback can have up to three arguments (dimensions). 
+The callback can have up to three arguments (dimensions).
 Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
