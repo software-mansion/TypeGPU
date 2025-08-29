@@ -319,6 +319,7 @@ import ListItem from '../../../components/ListItem.astro';
 ## Index Buffers
 TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
 You may refer to the [pipelines](/TypeGPU/fundamentals/pipelines/#drawing-with-drawindexed) section for usage details.
+
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
