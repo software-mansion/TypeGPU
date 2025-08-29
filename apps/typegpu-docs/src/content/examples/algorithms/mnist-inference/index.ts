@@ -68,46 +68,40 @@ const defaultShader = tgpu.resolve({
 
 const subgroupShader = tgpu.resolve({
   template: `
-    // WebGPU guarantees a subgroup size of at least 4
-    var<workgroup> subgroupSums: array<f32, 64 / 4>;
+    const WGS: u32 = 128u;
 
-    @compute @workgroup_size(64)
+    @compute @workgroup_size(WGS)
     fn main(
-        @builtin(local_invocation_id) lid: vec3u,
-        @builtin(workgroup_id) wid: vec3u,
-        @builtin(subgroup_invocation_id) sid: u32,
-        @builtin(subgroup_size) ssize: u32
+      @builtin(local_invocation_id) lid: vec3u,
+      @builtin(workgroup_id) wid: vec3u,
+      @builtin(subgroup_invocation_id) sid: u32,
+      @builtin(subgroup_size) ssize: u32
     ) {
-      let neuronIndex = wid.x;
-      let inputSize = arrayLength(&input);
-      let weightsOffset = neuronIndex * inputSize;
-
-      var partial = 0.;
-      for (var j = lid.x; j < inputSize; j += 64) {
-        partial = fma(input[j], weights[weightsOffset + j], partial);
-      }
-
-      let subgroupSum = subgroupAdd(partial);
       let subgroupId = lid.x / ssize;
+      let outputsPerWG = WGS / ssize;
+      let neuronIndex = wid.x * outputsPerWG + subgroupId;
 
-      let numSubgroups = 64 / ssize;
+      let outLen = arrayLength(&output);
+      let valid = neuronIndex < outLen;
 
-      if (sid == 0u) {
-        subgroupSums[subgroupId] = subgroupSum;
+      let inputSize = arrayLength(&input);
+
+      var partial = 0.0;
+
+      if (valid) {
+        let weightsOffset = neuronIndex * inputSize;
+        for (var j = sid; j < inputSize; j += ssize) {
+          partial = fma(input[j], weights[weightsOffset + j], partial);
+        }
       }
 
-      workgroupBarrier();
+      let sum = subgroupAdd(partial);
 
-      var total: f32 = 0.0;
-      if (lid.x == 0u) {
-        for (var i = 0u; i < numSubgroups; i = i + 1u) {
-          total = total + subgroupSums[i];
-        }
-        total = total + biases[neuronIndex];
-        output[neuronIndex] = relu(total);
-     }
-  }
-`,
+      if (valid && sid == 0u) {
+        output[neuronIndex] = relu(sum + biases[neuronIndex]);
+      }
+    }
+  `,
   externals: {
     relu,
     ...weightsBiasesLayout.bound,
