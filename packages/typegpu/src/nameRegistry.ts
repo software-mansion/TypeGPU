@@ -1,98 +1,3 @@
-export interface NameRegistry {
-  /**
-   * Creates a valid WGSL identifier, each guaranteed to be unique
-   * in the lifetime of a single resolution process.
-   * Should append "_" to primer, followed by some id.
-   * @param primer Used in the generation process, makes the identifier more recognizable.
-   */
-  makeUnique(primer?: string): string;
-
-  /**
-   * Creates a valid WGSL identifier.
-   * Renames identifiers that are WGSL reserved words.
-   * @param primer Used in the generation process.
-   *
-   * @example
-   * makeValid("notAKeyword"); // "notAKeyword"
-   * makeValid("struct"); // makeUnique("struct")
-   * makeValid("struct_1"); // makeUnique("struct_1") (to avoid potential name collisions)
-   * makeValid("_"); // ERROR (too difficult to make valid to care)
-   */
-  makeValid(primer: string): string;
-}
-
-/**
- * A function for checking whether an identifier needs renaming.
- * Throws if provided with an invalid identifier that cannot be easily renamed.
- * @example
- * isValidIdentifier("ident"); // true
- * isValidIdentifier("struct"); // false
- * isValidIdentifier("struct_1"); // false
- * isValidIdentifier("_"); // ERROR
- * isValidIdentifier("my variable"); // ERROR
- */
-export function isValidIdentifier(ident: string): boolean {
-  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
-    throw new Error(
-      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
-    );
-  }
-  const prefix = ident.split('_')[0] as string;
-  return !bannedTokens.has(prefix);
-}
-
-abstract class NameRegistryImpl implements NameRegistry {
-  abstract makeUnique(primer?: string): string;
-
-  makeValid(primer: string): string {
-    if (isValidIdentifier(primer)) {
-      return primer;
-    }
-    return this.makeUnique(primer);
-  }
-}
-
-export class RandomNameRegistry extends NameRegistryImpl {
-  private lastUniqueId = 0;
-
-  makeUnique(primer?: string | undefined): string {
-    let label: string;
-    if (primer) {
-      // sanitizing
-      label = primer.replaceAll(/\s/g, '_'); // whitespace -> _
-      label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-    } else {
-      label = 'item';
-    }
-
-    return `${label}_${this.lastUniqueId++}`;
-  }
-}
-
-export class StrictNameRegistry extends NameRegistryImpl {
-  /**
-   * Allows to provide a good fallback for instances of the
-   * same function that are bound to different slot values.
-   */
-  private readonly _usedNames = new Set<string>(bannedTokens);
-
-  makeUnique(primer?: string | undefined): string {
-    if (primer === undefined) {
-      throw new Error('Unnamed item found when using a strict name registry');
-    }
-
-    let index = 0;
-    let unusedName = primer;
-    while (this._usedNames.has(unusedName)) {
-      index++;
-      unusedName = `${primer}_${index}`;
-    }
-
-    this._usedNames.add(unusedName);
-    return unusedName;
-  }
-}
-
 const bannedTokens = new Set([
   // keywords
   'alias',
@@ -269,3 +174,98 @@ const bannedTokens = new Set([
   'writeonly',
   'yield',
 ]);
+
+export interface NameRegistry {
+  /**
+   * Creates a valid WGSL identifier, each guaranteed to be unique
+   * in the lifetime of a single resolution process.
+   * Should append "_" to primer, followed by some id.
+   * @param primer Used in the generation process, makes the identifier more recognizable.
+   */
+  makeUnique(primer?: string): string;
+
+  /**
+   * Creates a valid WGSL identifier.
+   * Renames identifiers that are WGSL reserved words.
+   * @param primer Used in the generation process.
+   *
+   * @example
+   * makeValid("notAKeyword"); // "notAKeyword"
+   * makeValid("struct"); // makeUnique("struct")
+   * makeValid("struct_1"); // makeUnique("struct_1") (to avoid potential name collisions)
+   * makeValid("_"); // ERROR (too difficult to make valid to care)
+   */
+  makeValid(primer: string): string;
+}
+
+/**
+ * A function for checking whether an identifier needs renaming.
+ * Throws if provided with an invalid identifier that cannot be easily renamed.
+ * @example
+ * isValidIdentifier("ident"); // true
+ * isValidIdentifier("struct"); // false
+ * isValidIdentifier("struct_1"); // false
+ * isValidIdentifier("_"); // ERROR
+ * isValidIdentifier("my variable"); // ERROR
+ */
+export function isValidIdentifier(ident: string): boolean {
+  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
+    throw new Error(
+      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
+    );
+  }
+  const prefix = ident.split('_')[0] as string;
+  return !bannedTokens.has(prefix);
+}
+
+abstract class NameRegistryImpl implements NameRegistry {
+  abstract makeUnique(primer?: string): string;
+
+  makeValid(primer: string): string {
+    if (isValidIdentifier(primer)) {
+      return primer;
+    }
+    return this.makeUnique(primer);
+  }
+}
+
+export class RandomNameRegistry extends NameRegistryImpl {
+  private lastUniqueId = 0;
+
+  makeUnique(primer?: string | undefined): string {
+    let label: string;
+    if (primer) {
+      // sanitizing
+      label = primer.replaceAll(/\s/g, '_'); // whitespace -> _
+      label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+    } else {
+      label = 'item';
+    }
+
+    return `${label}_${this.lastUniqueId++}`;
+  }
+}
+
+export class StrictNameRegistry extends NameRegistryImpl {
+  /**
+   * Allows to provide a good fallback for instances of the
+   * same function that are bound to different slot values.
+   */
+  private readonly _usedNames = new Set<string>(bannedTokens);
+
+  makeUnique(primer?: string | undefined): string {
+    if (primer === undefined) {
+      throw new Error('Unnamed item found when using a strict name registry');
+    }
+
+    let index = 0;
+    let unusedName = primer;
+    while (this._usedNames.has(unusedName)) {
+      index++;
+      unusedName = `${primer}_${index}`;
+    }
+
+    this._usedNames.add(unusedName);
+    return unusedName;
+  }
+}
