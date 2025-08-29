@@ -88,9 +88,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {
+    // AAA think of a better way to pass the pipeline
+    // AAA implement this for render pipeline as well
+    const thisPipeline = this;
     this[$internal] = {
       get rawPipeline() {
-        return _core.unwrap().pipeline;
+        return _core.unwrap(thisPipeline).pipeline;
       },
       get priors() {
         return _priors;
@@ -108,7 +111,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   get rawPipeline(): GPUComputePipeline {
-    return this._core.unwrap().pipeline;
+    return this._core.unwrap(this).pipeline;
   }
 
   with(
@@ -153,7 +156,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     y?: number | undefined,
     z?: number | undefined,
   ): void {
-    const memo = this._core.unwrap();
+    const memo = this._core.unwrap(this);
     const { branch } = this._core;
 
     const passDescriptor: GPUComputePassDescriptor = {
@@ -223,7 +226,7 @@ export class ComputePipelineCore implements SelfResolvable {
     return 'computePipelineCore';
   }
 
-  public unwrap(): Memo {
+  public unwrap(pipeline: TgpuComputePipeline): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
 
@@ -233,16 +236,26 @@ export class ComputePipelineCore implements SelfResolvable {
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: this.branch.nameRegistry,
+          },
+          (cfg) => cfg,
+          pipeline,
+        );
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: this.branch.nameRegistry,
+          },
+          (cfg) => cfg,
+          pipeline,
+        );
       }
 
       const { code, usedBindGroupLayouts, catchall } = resolutionResult;

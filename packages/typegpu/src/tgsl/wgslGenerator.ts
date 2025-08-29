@@ -1,5 +1,6 @@
 import * as tinyest from 'tinyest';
-import { ComputePipelineCore } from '../core/pipeline/computePipeline.ts';
+import { fn } from '../core/function/tgpuFn.ts';
+import { isComputePipeline } from '../core/pipeline/computePipeline.ts';
 import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
@@ -405,13 +406,18 @@ export function generateExpression(
     const callee = generateExpression(ctx, calleeNode);
 
     if (callee.value instanceof ConsoleLog) {
-      if (ctx.pipeline instanceof ComputePipelineCore) {
-        return snip('/* console.log() */', UnknownData);
+      if (isComputePipeline(ctx.pipeline)) {
+        const buffer = (ctx.pipeline as any)._core.branch.createMutable(u32);
+        const log = fn([])(() => {
+          'kernel';
+          buffer.$ = 1;
+        }).$name('log');
+        return snip(`${ctx.resolve(log)}()`, wgsl.Void);
       } else {
         console.warn(
           "'console.log' is currently only supported in compute pipelines.",
         );
-        return snip('/* console.log() */', UnknownData);
+        return snip('/* console.log() */', wgsl.Void);
       }
     }
 

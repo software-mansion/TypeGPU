@@ -1,6 +1,6 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import { ComputePipelineCore } from './core/pipeline/computePipeline.ts';
-import { RenderPipelineCore } from './core/pipeline/renderPipeline.ts';
+import { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+import { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -366,14 +366,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly names: NameRegistry;
   public readonly pipeline:
-    | ComputePipelineCore
-    | RenderPipelineCore
+    | TgpuComputePipeline
+    | TgpuRenderPipeline
     | undefined;
   public expectedType: AnyData | undefined;
 
   constructor(
     opts: ResolutionCtxImplOptions,
-    pipeline?: ComputePipelineCore | RenderPipelineCore,
+    pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
   ) {
     this.names = opts.names;
     this.pipeline = pipeline;
@@ -778,12 +778,9 @@ export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
+  pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
 ): ResolutionResult {
-  const maybePipeline =
-    item instanceof ComputePipelineCore || item instanceof RenderPipelineCore
-      ? item
-      : undefined;
-  const ctx = new ResolutionCtxImpl(options, maybePipeline);
+  const ctx = new ResolutionCtxImpl(options, pipeline);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,

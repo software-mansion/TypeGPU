@@ -79,4 +79,33 @@ describe('wgslGenerator with console.log', () => {
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('Parses a single console.log in a compute pipeline', ({ root }) => {
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.log(10);
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> buffer: u32;
+
+      fn log() {
+          buffer = 1;
+        }
+
+      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+        log();
+      }"
+    `);
+  });
 });

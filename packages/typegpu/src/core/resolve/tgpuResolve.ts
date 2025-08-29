@@ -1,10 +1,12 @@
-import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import { isComputePipeline } from '../pipeline/computePipeline.ts';
+import { isRenderPipeline } from '../pipeline/renderPipeline.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 
@@ -86,11 +88,23 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
-  return resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
-  }, config);
+  const pipelines = Object.values(externals).filter((e) =>
+    isComputePipeline(e) || isRenderPipeline(e)
+  );
+  if (pipelines.length > 1) {
+    throw new Error('Cannot resolve more than one pipeline at once.');
+  }
+
+  return resolveImpl(
+    resolutionObj,
+    {
+      names: names === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry(),
+    },
+    config,
+    pipelines[0],
+  );
 }
 
 /**
