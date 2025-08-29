@@ -74,7 +74,7 @@ export class StrictNameRegistry extends NameRegistryImpl {
    * Allows to provide a good fallback for instances of the
    * same function that are bound to different slot values.
    */
-  private readonly _usedNames = new Set<string>();
+  private readonly _usedNames = new Set<string>(bannedTokens);
 
   makeUnique(primer?: string | undefined): string {
     if (primer === undefined) {

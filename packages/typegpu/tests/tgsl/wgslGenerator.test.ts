@@ -939,7 +939,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn main_0() -> i32 {
+      "fn main() -> i32 {
         var notAKeyword = 0;
         var struct_1 = 1;
         return struct_1;
@@ -953,7 +953,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn main_0(n: i32, macro_1: i32) -> i32 {
+      "fn main(n: i32, macro_1: i32) -> i32 {
         return (n + macro_1);
       }"
     `);
@@ -1020,10 +1020,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn main_0() {
+      "fn main() {
         var mut_1 = 1;
+        var mut_1_1 = 2;
         var mut_1_2 = 2;
-        var mut_1_2_3 = 2;
       }"
     `);
   });
@@ -1033,7 +1033,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn main_0(extern_1: u32, extern_1_2: u32) {
+      "fn main(extern_1: u32, extern_1_1: u32) {
 
       }"
     `);
