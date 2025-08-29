@@ -9,6 +9,10 @@ import type {
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
@@ -227,6 +231,14 @@ class ComputePipelineCore implements SelfResolvable {
   public unwrap(): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
+      const enableExtensions = wgslExtensions.filter((extension) =>
+        this.branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+      );
+      console.log(
+        `Enabled WGSL extensions: ${
+          enableExtensions.length > 0 ? enableExtensions.join(', ') : 'none'
+        }`,
+      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
@@ -236,6 +248,7 @@ class ComputePipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
+          enableExtensions,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -243,6 +256,7 @@ class ComputePipelineCore implements SelfResolvable {
       } else {
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
+          enableExtensions,
         });
       }
 

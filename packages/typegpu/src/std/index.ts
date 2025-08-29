@@ -155,3 +155,5 @@ export {
   textureSampleLevel,
   textureStore,
 } from './texture.ts';
+
+export { extensionEnabled } from './extensions.ts';

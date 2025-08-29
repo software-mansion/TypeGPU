@@ -55,6 +55,10 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import { PERF } from '../../shared/meta.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -682,6 +686,9 @@ class RenderPipelineCore implements SelfResolvable {
         multisampleState,
       } = this.options;
       const device = branch.device;
+      const enableExtensions = wgslExtensions.filter((extension) =>
+        branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
@@ -691,6 +698,7 @@ class RenderPipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -698,6 +706,7 @@ class RenderPipelineCore implements SelfResolvable {
       } else {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
         });
       }
 

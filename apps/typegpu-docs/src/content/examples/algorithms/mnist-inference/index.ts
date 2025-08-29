@@ -66,10 +66,8 @@ const defaultShader = tgpu.resolve({
   },
 });
 
-const subgroupShader = `enable subgroups;
-  ${
-  tgpu.resolve({
-    template: `
+const subgroupShader = tgpu.resolve({
+  template: `
     // WebGPU guarantees a subgroup size of at least 4
     var<workgroup> subgroupSums: array<f32, 64 / 4>;
 
@@ -110,13 +108,15 @@ const subgroupShader = `enable subgroups;
      }
   }
 `,
-    externals: {
-      relu,
-      ...weightsBiasesLayout.bound,
-      ...ioLayout.bound,
-    },
-  })
-}`;
+  externals: {
+    relu,
+    ...weightsBiasesLayout.bound,
+    ...ioLayout.bound,
+  },
+  enableExtensions: ['subgroups'],
+});
+
+console.log(subgroupShader);
 
 let pipeline = device.createComputePipeline({
   layout: device.createPipelineLayout({

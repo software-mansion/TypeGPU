@@ -7,6 +7,7 @@ import {
 import type { SelfResolvable, Wgsl } from '../../types.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
+import type { WgslExtension } from '../../wgslExtensions.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -27,6 +28,10 @@ export interface TgpuResolveOptions {
    * A function to configure the resolution context.
    */
   config?: ((cfg: Configurable) => Configurable) | undefined;
+  /**
+   * List of WGSL shader extensions to enable.
+   */
+  enableExtensions?: WgslExtension[] | undefined;
 }
 
 /**
@@ -72,6 +77,7 @@ export function resolveWithContext(
     template,
     names,
     config,
+    enableExtensions,
   } = options;
 
   const dependencies = {} as Record<string, Wgsl>;
@@ -86,11 +92,16 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
-  return resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
-  }, config);
+  return resolveImpl(
+    resolutionObj,
+    {
+      names: names === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry(),
+      enableExtensions,
+    },
+    config,
+  );
 }
 
 /**
