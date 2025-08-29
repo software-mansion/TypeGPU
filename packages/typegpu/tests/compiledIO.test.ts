@@ -89,7 +89,9 @@ describe('createCompileInstructions', () => {
       b: d.vec3f,
     });
 
-    const writer = getCompiledWriterForSchema(struct);
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(struct)!;
+
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
 
@@ -106,7 +108,8 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.u32, 3),
     });
 
-    const writer = getCompiledWriterForSchema(struct);
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -132,7 +135,8 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.struct({ d: d.u32 }), 3),
     });
 
-    const writer = getCompiledWriterForSchema(struct);
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -151,7 +155,8 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for an array', () => {
     const array = d.arrayOf(d.vec3f, 5);
 
-    const writer = getCompiledWriterForSchema(array);
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(array)!;
 
     const arr = new ArrayBuffer(sizeOf(array));
     const dataView = new DataView(arr);
@@ -177,7 +182,9 @@ describe('createCompileInstructions', () => {
     const Schema = d.struct({
       transform: d.mat4x4f,
     });
-    const writer = getCompiledWriterForSchema(Schema);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -196,7 +203,9 @@ describe('createCompileInstructions', () => {
     const Schema = d.struct({
       transform: d.mat3x3f,
     });
-    const writer = getCompiledWriterForSchema(Schema);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -214,7 +223,9 @@ describe('createCompileInstructions', () => {
     const Schema = d.struct({
       transform: d.mat2x2f,
     });
-    const writer = getCompiledWriterForSchema(Schema);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -225,5 +236,390 @@ describe('createCompileInstructions', () => {
 
     expect(arr.byteLength).toBe(16);
     expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 3]);
+  });
+
+  it('should compile a writer for an array of u16', () => {
+    const array = d.arrayOf(d.u16, 5);
+
+    const builtWriter = buildWriter(array, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 5; i++) {
+      output.setUint16((offset + i * 2), value[i], littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(array)!;
+
+    const arr = new ArrayBuffer(sizeOf(array));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [1, 2, 3, 4, 5]);
+
+    expect([...new Uint16Array(arr)]).toStrictEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('should compile a writer for struct with size attribute', () => {
+    const schema = d.struct({
+      a: d.size(16, d.f32),
+      b: d.arrayOf(d.f32, 2),
+    });
+
+    const builtWriter = buildWriter(schema, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "output.setFloat32((offset + 0), value.a, littleEndian);
+      for (let i = 0; i < 2; i++) {
+      output.setFloat32(((offset + 16) + i * 4), value.b[i], littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(schema)!;
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, { a: 1.0, b: [2.0, 3.0] });
+
+    expect([...new Float32Array(arr)]).toStrictEqual([1.0, 0, 0, 0, 2.0, 3.0]);
+  });
+
+  it('should compile a writer for struct with align attribute', () => {
+    const schema = d.struct({
+      a: d.f32,
+      b: d.align(64, d.arrayOf(d.f32, 2)),
+    });
+
+    const builtWriter = buildWriter(schema, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "output.setFloat32((offset + 0), value.a, littleEndian);
+      for (let i = 0; i < 2; i++) {
+      output.setFloat32(((offset + 64) + i * 4), value.b[i], littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(schema)!;
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, { a: 1.0, b: [2.0, 3.0] });
+
+    expect([...new Float32Array(arr)]).toStrictEqual([
+      1.0,
+      ...Array.from({ length: 15 }).map(() => 0), // padding
+      2.0,
+      3.0,
+      ...Array.from({ length: 14 }).map(() => 0), // padding
+    ]);
+  });
+
+  it('should compile a writer for unstruct', () => {
+    const unstruct = d.unstruct({
+      a: d.vec3f,
+      b: d.vec4f,
+    });
+
+    const builtWriter = buildWriter(unstruct, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "output.setFloat32(((offset + 0) + 0), value.a.x, littleEndian);
+      output.setFloat32(((offset + 0) + 4), value.a.y, littleEndian);
+      output.setFloat32(((offset + 0) + 8), value.a.z, littleEndian);
+      output.setFloat32(((offset + 12) + 0), value.b.x, littleEndian);
+      output.setFloat32(((offset + 12) + 4), value.b.y, littleEndian);
+      output.setFloat32(((offset + 12) + 8), value.b.z, littleEndian);
+      output.setFloat32(((offset + 12) + 12), value.b.w, littleEndian);
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(unstruct)!;
+
+    const arr = new ArrayBuffer(sizeOf(unstruct));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, {
+      a: d.vec3f(1, 2, 3),
+      b: d.vec4f(3, 4, 5, 6),
+    });
+
+    expect([...new Float32Array(arr)]).toStrictEqual([1, 2, 3, 3, 4, 5, 6]);
+  });
+
+  it('should compile a writer for a disarray', () => {
+    const disarray = d.disarrayOf(d.vec3f, 3);
+
+    const builtWriter = buildWriter(disarray, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 3; i++) {
+      output.setFloat32(((offset + i * 12) + 0), value[i].x, littleEndian);
+      output.setFloat32(((offset + i * 12) + 4), value[i].y, littleEndian);
+      output.setFloat32(((offset + i * 12) + 8), value[i].z, littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(disarray)!;
+
+    const arr = new ArrayBuffer(sizeOf(disarray));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [d.vec3f(1, 2, 3), d.vec3f(4, 5, 6), d.vec3f(7, 8, 9)]);
+
+    expect([...new Float32Array(arr)]).toStrictEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+    ]);
+  });
+
+  it('should compile for a disarray of unstructs', () => {
+    const unstruct = d.unstruct({
+      a: d.vec3f,
+      b: d.vec4f,
+    });
+    const disarray = d.disarrayOf(unstruct, 2);
+
+    const builtWriter = buildWriter(disarray, 'offset', 'value');
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 2; i++) {
+      output.setFloat32((((offset + i * 28) + 0) + 0), value[i].a.x, littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 4), value[i].a.y, littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 8), value[i].a.z, littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 0), value[i].b.x, littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 4), value[i].b.y, littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 8), value[i].b.z, littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 12), value[i].b.w, littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(disarray)!;
+
+    const arr = new ArrayBuffer(sizeOf(disarray));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      { a: d.vec3f(1, 2, 3), b: d.vec4f(4, 5, 6, 7) },
+      { a: d.vec3f(8, 9, 10), b: d.vec4f(11, 12, 13, 14) },
+    ]);
+
+    expect([...new Float32Array(arr)]).toStrictEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+    ]);
+  });
+
+  it('should work for unstructs with loose data', () => {
+    const unstruct = d.unstruct({
+      a: d.uint16x2,
+      b: d.unorm10_10_10_2,
+      c: d.uint8x2,
+      d: d.unorm8x4,
+    });
+
+    const unstructWriter = buildWriter(unstruct, 'offset', 'value');
+    expect(unstructWriter).toMatchInlineSnapshot(`
+      "output.setUint16(((offset + 0) + 0), value.a.x, littleEndian);
+      output.setUint16(((offset + 0) + 2), value.a.y, littleEndian);
+      output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
+      output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
+      output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
+      output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
+      output.setUint8(((offset + 10) + 1), Math.round(value.d.y * 255), littleEndian);
+      output.setUint8(((offset + 10) + 2), Math.round(value.d.z * 255), littleEndian);
+      output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
+      "
+    `);
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(unstruct)!;
+
+    const arr = new ArrayBuffer(sizeOf(unstruct));
+    const dataView = new DataView(arr);
+
+    const inputData = {
+      a: d.vec2u(1, 2),
+      b: d.vec4f(0.25, 0.5, 0.75, 1),
+      c: d.vec2u(7, 8),
+      d: d.vec4f(0.34, 0.67, 0.91, 1),
+    };
+
+    writer(dataView, 0, inputData);
+
+    const decoded = {
+      a: d.vec2f(dataView.getUint16(0, true), dataView.getUint16(2, true)),
+      b: (() => {
+        const packed = dataView.getUint32(4, true);
+        return d.vec4f(
+          ((packed >> 22) & 0x3FF) / 1023,
+          ((packed >> 12) & 0x3FF) / 1023,
+          ((packed >> 2) & 0x3FF) / 1023,
+          (packed & 3) / 3,
+        );
+      })(),
+      c: d.vec2u(
+        dataView.getUint8(8),
+        dataView.getUint8(9),
+      ),
+      d: d.vec4f(
+        dataView.getUint8(10) / 255,
+        dataView.getUint8(11) / 255,
+        dataView.getUint8(12) / 255,
+        dataView.getUint8(13) / 255,
+      ),
+    };
+
+    expect(decoded.a).toEqual(inputData.a);
+    expect(decoded.b.x).toBeCloseTo(inputData.b.x, 2);
+    expect(decoded.b.y).toBeCloseTo(inputData.b.y, 2);
+    expect(decoded.b.z).toBeCloseTo(inputData.b.z, 2);
+    expect(decoded.b.w).toBeCloseTo(inputData.b.w, 1);
+    expect(decoded.c).toEqual(inputData.c);
+    expect(decoded.d.x).toBeCloseTo(inputData.d.x, 2);
+    expect(decoded.d.y).toBeCloseTo(inputData.d.y, 2);
+    expect(decoded.d.z).toBeCloseTo(inputData.d.z, 2);
+    expect(decoded.d.w).toBeCloseTo(inputData.d.w, 2);
+  });
+
+  it('should work for disarrays of unstructs containing loose data', () => {
+    const unstruct = d.unstruct({
+      a: d.unorm16x2,
+      b: d.unorm8x4_bgra,
+      c: d.snorm8x4,
+      d: d.snorm16x2,
+      e: d.sint8x2,
+      f: d.sint16x2,
+    });
+
+    const disarray = d.disarrayOf(unstruct, 2);
+    const disarrayWriter = buildWriter(disarray, 'offset', 'value');
+    expect(disarrayWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 2; i++) {
+      output.setUint16((((offset + i * 22) + 0) + 0), Math.round(value[i].a.x * 65535), littleEndian);
+      output.setUint16((((offset + i * 22) + 0) + 2), Math.round(value[i].a.y * 65535), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 0), Math.round(value[i].b.z * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 1), Math.round(value[i].b.y * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 2), Math.round(value[i].b.x * 255), littleEndian);
+      output.setUint8((((offset + i * 22) + 4) + 3), Math.round(value[i].b.w * 255), littleEndian);
+      output.setInt8((((offset + i * 22) + 8) + 0), Math.round(value[i].c.x * 127), littleEndian);
+      output.setInt8((((offset + i * 22) + 8) + 1), Math.round(value[i].c.y * 127), littleEndian);
+      output.setInt8((((offset + i * 22) + 8) + 2), Math.round(value[i].c.z * 127), littleEndian);
+      output.setInt8((((offset + i * 22) + 8) + 3), Math.round(value[i].c.w * 127), littleEndian);
+      output.setInt16((((offset + i * 22) + 12) + 0), Math.round(value[i].d.x * 32767), littleEndian);
+      output.setInt16((((offset + i * 22) + 12) + 2), Math.round(value[i].d.y * 32767), littleEndian);
+      output.setInt8((((offset + i * 22) + 16) + 0), value[i].e.x, littleEndian);
+      output.setInt8((((offset + i * 22) + 16) + 1), value[i].e.y, littleEndian);
+      output.setInt16((((offset + i * 22) + 18) + 0), value[i].f.x, littleEndian);
+      output.setInt16((((offset + i * 22) + 18) + 2), value[i].f.y, littleEndian);
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const compiled = getCompiledWriterForSchema(disarray)!;
+
+    const arr = new ArrayBuffer(sizeOf(disarray));
+    const dataView = new DataView(arr);
+
+    const inputData = [
+      {
+        a: d.vec2f(0.5, 0.25),
+        b: d.vec4f(0.25, 0.5, 0.75, 1),
+        c: d.vec4f(-0.5, 0.5, -0.25, 0.75),
+        d: d.vec2f(0.34, 0.67),
+        e: d.vec2i(1, 2),
+        f: d.vec2i(3, 4),
+      },
+      {
+        a: d.vec2f(0.75, 1.0),
+        b: d.vec4f(0.1, 0.2, 0.3, 0.4),
+        c: d.vec4f(0.1, -0.1, 0.9, -0.9),
+        d: d.vec2f(-0.5, 0.8),
+        e: d.vec2i(5, 6),
+        f: d.vec2i(7, 8),
+      },
+    ];
+
+    compiled(dataView, 0, inputData);
+
+    const decoded = [];
+    for (let i = 0; i < 2; i++) {
+      const offset = i * 22;
+      decoded.push({
+        a: d.vec2f(
+          dataView.getUint16(offset + 0, true) / 65535,
+          dataView.getUint16(offset + 2, true) / 65535,
+        ),
+        b: d.vec4f(
+          dataView.getUint8(offset + 6) / 255,
+          dataView.getUint8(offset + 5) / 255,
+          dataView.getUint8(offset + 4) / 255,
+          dataView.getUint8(offset + 7) / 255,
+        ),
+        c: d.vec4f(
+          dataView.getInt8(offset + 8) / 127,
+          dataView.getInt8(offset + 9) / 127,
+          dataView.getInt8(offset + 10) / 127,
+          dataView.getInt8(offset + 11) / 127,
+        ),
+        d: d.vec2f(
+          dataView.getInt16(offset + 12, true) / 32767,
+          dataView.getInt16(offset + 14, true) / 32767,
+        ),
+        e: d.vec2i(
+          dataView.getInt8(offset + 16),
+          dataView.getInt8(offset + 17),
+        ),
+        f: d.vec2i(
+          dataView.getInt16(offset + 18, true),
+          dataView.getInt16(offset + 20, true),
+        ),
+      });
+    }
+
+    for (let i = 0; i < 2; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: it's a test
+      const result = decoded[i]!;
+      // biome-ignore lint/style/noNonNullAssertion: it's a test
+      const expected = inputData[i]!;
+      expect(result.a.x).toBeCloseTo(expected.a.x, 4);
+      expect(result.a.y).toBeCloseTo(expected.a.y, 4);
+      expect(result.b.x).toBeCloseTo(expected.b.x, 2);
+      expect(result.b.y).toBeCloseTo(expected.b.y, 2);
+      expect(result.b.z).toBeCloseTo(expected.b.z, 2);
+      expect(result.b.w).toBeCloseTo(expected.b.w, 2);
+      expect(result.c.x).toBeCloseTo(expected.c.x, 2);
+      expect(result.c.y).toBeCloseTo(expected.c.y, 2);
+      expect(result.c.z).toBeCloseTo(expected.c.z, 2);
+      expect(result.c.w).toBeCloseTo(expected.c.w, 2);
+      expect(result.d.x).toBeCloseTo(expected.d.x, 3);
+      expect(result.d.y).toBeCloseTo(expected.d.y, 3);
+      expect(result.e).toEqual(expected.e);
+      expect(result.f).toEqual(expected.f);
+    }
   });
 });

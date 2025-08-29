@@ -4,6 +4,7 @@ import * as d from 'typegpu/data';
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   threshold: { uniform: d.f32 },
+  uvTransform: { uniform: d.mat2x2f },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
@@ -45,7 +46,8 @@ fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
 
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  var color = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
+  let uv2 = uvTransform * (uv - vec2f(0.5)) + vec2f(0.5);
+  var color = textureSampleBaseClampToEdge(inputTexture, sampling, uv2);
   let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
   if (grey < threshold) {
@@ -60,24 +62,6 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 canvas.parentElement?.appendChild(video);
 
-function resizeVideo() {
-  if (video.videoHeight === 0) {
-    return;
-  }
-
-  const aspectRatio = video.videoWidth / video.videoHeight;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
-}
-
-const videoSizeObserver = new ResizeObserver(resizeVideo);
-videoSizeObserver.observe(video);
-video.addEventListener('resize', resizeVideo);
-
 const root = await tgpu.init();
 const device = root.device;
 
@@ -86,20 +70,29 @@ const sampler = root.device.createSampler({
   minFilter: 'linear',
 });
 
-const thresholdBuffer = root
-  .createBuffer(d.f32)
-  .$name('threshold')
+const thresholdBuffer = root.createBuffer(d.f32).$usage('uniform');
+
+const uvTransformBuffer = root
+  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
   .$usage('uniform');
 
 const rareBindGroup = root.createBindGroup(rareLayout, {
   sampling: sampler,
   threshold: thresholdBuffer,
+  uvTransform: uvTransformBuffer,
 });
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
-    video: true,
+    video: {
+      facingMode: 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 60 },
+    },
   });
+} else {
+  throw new Error('getUserMedia not supported');
 }
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -135,6 +128,36 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
+function onVideoChange(size: { width: number; height: number }) {
+  const aspectRatio = size.width / size.height;
+  if (canvas.parentElement) {
+    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
+    canvas.parentElement.style.height =
+      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+  }
+}
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function setUVTransformForIOS() {
+  const angle = screen.orientation.type;
+
+  let m = d.mat2x2f(1, 0, 0, 1);
+  if (angle === 'portrait-primary') {
+    m = d.mat2x2f(0, -1, 1, 0);
+  } else if (angle === 'portrait-secondary') {
+    m = d.mat2x2f(0, 1, -1, 0);
+  } else if (angle === 'landscape-primary') {
+    m = d.mat2x2f(-1, 0, 0, -1);
+  }
+
+  uvTransformBuffer.write(m);
+}
+
+if (isIOS) {
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
+}
+
 const renderPassDescriptor: GPURenderPassDescriptor = {
   colorAttachments: [
     {
@@ -146,17 +169,30 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
   ],
 };
 
-let ready = false;
-let frameRequest = requestAnimationFrame(run);
+let videoFrameCallbackId: number | undefined;
+let lastFrameSize: { width: number; height: number } | undefined = undefined;
 
-function run() {
-  frameRequest = requestAnimationFrame(run);
-
-  if (!(video.currentTime > 0)) {
+function processVideoFrame(
+  _: number,
+  metadata: VideoFrameCallbackMetadata,
+) {
+  if (video.readyState < 2) {
+    videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
 
-  // Updating the target render texture
+  const frameWidth = metadata.width;
+  const frameHeight = metadata.height;
+
+  if (
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
+  ) {
+    lastFrameSize = { width: frameWidth, height: frameHeight };
+    onVideoChange(lastFrameSize);
+  }
+
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
   )[0].view = context.getCurrentTexture().createView();
@@ -179,13 +215,12 @@ function run() {
 
   device.queue.submit([encoder.finish()]);
 
-  if (!ready) {
-    device.queue.onSubmittedWorkDone().then(() => {
-      spinner.style.display = 'none';
-      ready = true;
-    });
-  }
+  spinner.style.display = 'none';
+
+  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
+
+videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
@@ -200,8 +235,9 @@ export const controls = {
 };
 
 export function onCleanup() {
-  cancelAnimationFrame(frameRequest);
-
+  if (videoFrameCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(videoFrameCallbackId);
+  }
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -209,7 +245,6 @@ export function onCleanup() {
   }
 
   root.destroy();
-  videoSizeObserver.disconnect();
 }
 
 // #endregion

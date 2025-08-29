@@ -1,16 +1,22 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.ts';
+import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
+import { pointersTest } from './pointers.ts';
 
 const root = await tgpu.init();
-const result = root['~unstable'].createMutable(d.i32, 0);
+const result = root.createMutable(d.i32, 0);
 
 const computeRunTests = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })(() => {
     let s = true;
     s = s && logicalExpressionTests();
     s = s && matrixOpsTests();
+    s = s && infixOperatorsTests();
+    s = s && arrayAndStructConstructorsTest();
+    s = s && pointersTest();
 
     if (s) {
       result.value = 1;
@@ -25,7 +31,7 @@ const pipeline = root['~unstable']
 
 async function runTests() {
   pipeline.dispatchWorkgroups(1);
-  return await result.buffer.read();
+  return await result.read();
 }
 
 // #region Example controls and cleanup
@@ -40,6 +46,11 @@ export const controls = {
       table.innerText = (await runTests())
         ? 'Tests succeeded!'
         : 'Tests failed.';
+    },
+  },
+  'Log resolved pipeline': {
+    async onButtonClick() {
+      console.log(tgpu.resolve({ externals: { pipeline } }));
     },
   },
 };

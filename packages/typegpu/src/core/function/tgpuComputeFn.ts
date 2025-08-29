@@ -6,11 +6,11 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioOutputType.ts';
+import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -74,6 +74,7 @@ export interface TgpuComputeFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
   ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly shell: TgpuComputeFnShellHeader<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -148,10 +149,14 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   implementation: Implementation,
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> & SelfResolvable & {
+    [$internal]: true;
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(shell, implementation);
+  const core = createFnCore(
+    implementation,
+    `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
+  );
   const inputType = shell.argTypes[0];
 
   const result: This = {
@@ -162,6 +167,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       return this;
     },
 
+    [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(core, newLabel);
@@ -174,7 +180,8 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(
         ctx,
-        `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
+        shell.argTypes,
+        shell.returnType,
       );
     },
 

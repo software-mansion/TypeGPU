@@ -72,7 +72,7 @@ const drawColorBuffers = initialFunctions.map((data) =>
 
 const computeLayout = tgpu.bindGroupLayout({
   lineVertices: {
-    storage: (n: number) => d.arrayOf(d.vec2f, n),
+    storage: d.arrayOf(d.vec2f),
     access: 'mutable',
   },
   properties: { uniform: Properties },
@@ -217,7 +217,7 @@ const renderBackgroundPassDescriptor = {
 // Render shader
 
 const renderLayout = tgpu.bindGroupLayout({
-  lineVertices: { storage: (n: number) => d.arrayOf(d.vec2f, n) },
+  lineVertices: { storage: d.arrayOf(d.vec2f) },
   properties: { uniform: Properties },
   color: { uniform: d.vec4f },
 });
@@ -605,7 +605,9 @@ export const controls = {
   },
   Recenter: {
     async onButtonClick() {
-      properties.transformation = mat4.identity(d.mat4x4f());
+      properties.transformation = d.mat4x4f.scaling(
+        d.vec3f(canvas.clientWidth / canvas.clientHeight, 1, 1),
+      );
     },
   },
 };

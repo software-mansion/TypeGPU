@@ -16,11 +16,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "${configDir}/node_modules/@types",
-      "./node_modules/@webgpu/types"
-    ]
+    "types": ["@webgpu/types", "@vitest/browser/matchers"]
   },
   "exclude": ["${configDir}/dist", "${configDir}/node_modules"]
 }

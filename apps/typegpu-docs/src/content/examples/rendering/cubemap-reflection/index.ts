@@ -112,7 +112,6 @@ const renderLayout = tgpu.bindGroupLayout({
   light: { uniform: DirectionalLight },
   material: { uniform: Material },
 });
-const { camera, light, material } = renderLayout.bound;
 
 const renderBindGroup = root.createBindGroup(renderLayout, {
   camera: cameraBuffer,
@@ -131,7 +130,7 @@ let textureBindGroup = root.createBindGroup(textureLayout, {
   texSampler: sampler,
 });
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout(d.disarrayOf(Vertex));
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(CubeVertex, n)
 );
@@ -150,8 +149,8 @@ const vertexFn = tgpu['~unstable'].vertexFn({
   },
 })((input) => ({
   pos: std.mul(
-    camera.value.projection,
-    std.mul(camera.value.view, input.position),
+    renderLayout.$.camera.projection,
+    std.mul(renderLayout.$.camera.view, input.position),
   ),
   normal: input.normal,
   worldPos: input.position,
@@ -165,11 +164,11 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   const normalizedNormal = std.normalize(input.normal.xyz);
-  const normalizedLightDir = std.normalize(light.value.direction);
+  const normalizedLightDir = std.normalize(renderLayout.$.light.direction);
 
   const ambientLight = std.mul(
-    material.value.ambient,
-    std.mul(light.value.intensity, light.value.color),
+    renderLayout.$.material.ambient,
+    std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
   );
 
   const diffuseFactor = std.max(
@@ -179,13 +178,13 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const diffuseLight = std.mul(
     diffuseFactor,
     std.mul(
-      material.value.diffuse,
-      std.mul(light.value.intensity, light.value.color),
+      renderLayout.$.material.diffuse,
+      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
     ),
   );
 
   const viewDirection = std.normalize(
-    std.sub(camera.value.position.xyz, input.worldPos.xyz),
+    std.sub(renderLayout.$.camera.position.xyz, input.worldPos.xyz),
   );
   const reflectionDirection = std.reflect(
     std.neg(normalizedLightDir),
@@ -194,13 +193,13 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const specularFactor = std.pow(
     std.max(std.dot(viewDirection, reflectionDirection), 0.0),
-    material.value.shininess,
+    renderLayout.$.material.shininess,
   );
   const specularLight = std.mul(
     specularFactor,
     std.mul(
-      material.value.specular,
-      std.mul(light.value.intensity, light.value.color),
+      renderLayout.$.material.specular,
+      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
     ),
   );
 
@@ -222,7 +221,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const finalColor = std.mix(
     directLighting,
     environmentColor.xyz,
-    material.value.reflectivity,
+    renderLayout.$.material.reflectivity,
   );
 
   return d.vec4f(finalColor, 1.0);
@@ -239,11 +238,11 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
   },
 })((input) => {
   const viewPos =
-    std.mul(camera.value.view, d.vec4f(input.position.xyz, 0)).xyz;
+    std.mul(renderLayout.$.camera.view, d.vec4f(input.position.xyz, 0)).xyz;
 
   return {
     pos: std.mul(
-      camera.value.projection,
+      renderLayout.$.camera.projection,
       d.vec4f(viewPos, 1),
     ),
     texCoord: input.position.xyz,

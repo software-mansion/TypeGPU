@@ -3,87 +3,214 @@ title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
 
-:::caution[Experimental]
-Functions are an *unstable* feature. The API may be subject to change in the near future.
-:::
-
 :::note[Recommended reading]
 We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-TypeGPU allows writing shaders by composing typed functions, which are special wrappers around WGSL code. 
-These functions can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts etc. 
+TypeGPU functions let you define shader logic in a modular and type-safe way.
+Their signatures are fully visible to TypeScript, enabling tooling and static checks.
+Dependencies, including GPU resources or other functions, are resolved automatically, with no duplication or name clashes.
+This also supports distributing shader logic across multiple modules or packages.
+Imported functions from external sources are automatically resolved and embedded into the final shader when referenced.
 
-## Creating a function
+## Defining a function
 
-Functions are constructed by first defining their shells, which specify their inputs and outputs.
-Then the actual WGSL implementation is passed in as an argument to a shell invocation. If the code string is a template literal, you can omit the parentheses, which may result in a more compact Biome/Prettier formatting.
+In order to construct a TypeGPU function, you need to start by defining its shell, an object holding only the input and output types.
+The shell constructor `tgpu.fn` relies on [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas), objects that represent WGSL data types and assist in generating shader code at runtime.
+It accepts two arguments:
 
-The following code defines a function that accepts one argument and returns one value.
+- An array of schemas representing argument types,
+- (Optionally) a schema representing the return type.
 
-```ts
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)(/* wgsl */ `(ratio: f32) -> vec4f {
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-    return color;
-  }`);
+Then the actual WGSL implementation is passed in to a shell invocation using the tagged template literal.
 
-// or
+The following code defines a function that accepts one argument of type `f32` and returns a `vec4f`.
 
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f) /* wgsl */`(ratio: f32) -> vec4f {
-    let color = mix(vec4f(0.769, 0.392, 1.0, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
-    return color;
-  };
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const getGradientColor = tgpu.fn(
+  [d.f32], 
+  d.vec4f
+) /* wgsl */`(ratio: f32) -> vec4f {
+  var purple = vec4f(0.769, 0.392, 1.0, 1);
+  var blue = vec4f(0.114, 0.447, 0.941, 1);
+  return mix(purple, blue, ratio);
+}`;
 ```
 
-If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+:::tip
+If you're using Visual Studio Code, you can use [this extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+:::
+
+Since type information is already present in the shell, the WGSL header can be simplified to include only the argument names.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// ---cut---
+const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
+  var purple = vec4f(0.769, 0.392, 1.0, 1);
+  var blue = vec4f(0.114, 0.447, 0.941, 1);
+  return mix(purple, blue, ratio);
+}`;
+```
 
 ## External resources
 
-Functions can use external resources passed inside a record via the `$uses` method. 
-Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
+Functions can use external resources passed via the `$uses` method.
+Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer usages, textures, samplers, slots, accessors etc.).
 
-```ts
-const getBlue = tgpu['~unstable'].fn([], d.vec4f)`() -> vec4f {
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// ---cut---
+const getBlueFunction = tgpu.fn([], d.vec4f)`() {
   return vec4f(0.114, 0.447, 0.941, 1); 
 }`;
 
-const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+// calling a schema to create a value on the JS side
+const purple = d.vec4f(0.769, 0.392, 1.0, 1); 
 
-const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)`(ratio: f32) -> vec4f {
-    let color = mix(purple, getBlue(), ratio);
-    return color;
-  }
-  `.$uses({ purple, getBlue });
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
+  return mix(purple, getBlue(), ratio);;
+}
+`.$uses({ purple, getBlue: getBlueFunction });
 ```
 
-The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
+You can check yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
-fn getBlue_1() -> vec4f { 
+// results of calling tgpu.resolve({ externals: { getGradientColor } })
+fn getBlueFunction_1() -> vec4f{
   return vec4f(0.114, 0.447, 0.941, 1); 
 }
 
-fn getGradientColor_0(ratio: f32) -> vec4f {
-  let color = mix(vec4f(0.769, 0.392, 1, 1), getBlue_1(), ratio);
-  return color;
+fn getGradientColor_0(ratio: f32) -> vec4f{
+  return mix(vec4f(0.769, 0.392, 1, 1), getBlueFunction_1(), ratio);;
 }
 ```
 
 ## Entry functions
 
-Defining entry functions is similar to regular ones, but is done through dedicated constructors:
-- `tgpu['~unstable'].vertexFn`
-- `tgpu['~unstable'].fragmentFn`
-- `tgpu['~unstable'].computeFn`
+:::caution[Experimental]
+Entry functions are an *unstable* feature. The API may be subject to change in the near future.
+:::
 
-They can be passed to root-defined pipelines and they accept special arguments like builtins (`d.builtin`) and decorated data (`d.location`).
+Instead of annotating a `TgpuFn` with attributes, entry functions are defined using dedicated shell constructors:
+
+- `tgpu['~unstable'].computeFn`,
+- `tgpu['~unstable'].vertexFn`,
+- `tgpu['~unstable'].fragmentFn`.
+
+### Entry point function I/O
+
+To describe the input and output of an entry point function, we use `IORecord`s, JavaScript objects that map argument names to their types.
 
 ```ts
+const vertexInput = { 
+  idx: d.builtin.vertexIndex,
+  position: d.vec4f, 
+  color: d.vec4f
+}
+```
+
+As you may note, builtin inter-stage inputs and outputs are available on the `d.builtin` object,
+and require no further type clarification.
+
+Another thing to note is that there is no need to specify locations of the arguments,
+as TypeGPU tries to assign locations automatically. 
+If you wish to, you can assign the locations manually with the `d.location` decorator.
+
+During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
+In WGSL implementation, input and output structs of the given function can be referenced as `In` and `Out` respectively.
+Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.
+
+:::note
+Schemas used in `d.struct` can be wrapped in `d.size` and `d.align` decorators, 
+corresponding to `@size` and `@align` WGSL attributes.
+
+Since TypeGPU wraps `IORecord`s into automatically generated structs, you can also use those decorators in `IOStruct`s.
+:::
+
+### Compute
+
+`TgpuComputeFn` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `workgroupSize` -- a JS array of 1-3 numbers that corresponds to the `@workgroup_size` attribute.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const particleDataBuffer = root
+  .createBuffer(d.arrayOf(d.u32, 100))
+  .$usage('storage', 'uniform', 'vertex');
+
+const deltaTime = root.createUniform(d.f32);
+const time = root.createMutable(d.f32);
+const particleDataStorage = particleDataBuffer.as('mutable');
+// ---cut---
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+}) /* wgsl */`{
+  let index = in.gid.x;
+  if index == 0 {
+    time += deltaTime;
+  }
+  let phase = (time / 300) + particleData[index].seed;
+  particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+}`.$uses({ particleData: particleDataStorage, deltaTime, time });
+```
+
+Resolved WGSL for the compute function above is equivalent (with respect to some cleanup) to the following:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> particleData: array<u32, 100>;
+@group(0) @binding(1) var<uniform> deltaTime: f32;
+@group(0) @binding(2) var<storage, read_write> time: f32;
+
+struct mainCompute_Input {
+  @builtin(global_invocation_id) gid: vec3u,
+}
+
+@compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input)  {
+  let index = in.gid.x;
+  if index == 0 {
+    time += deltaTime;
+  }
+  let phase = (time / 300) + particleData[index].seed;
+  particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+}
+```
+
+### Vertex and fragment
+
+`TgpuVertexFn` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `out` -- an `IORecord` describing the output of the function.
+
+`TgpuFragment` accepts an object with two properties:
+
+- `in` -- an `IORecord` describing the input of the function,
+- `out` -- `d.vec4f`, or an `IORecord` describing the output of the function.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)``;
+// ---cut---
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
@@ -111,15 +238,75 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   }`.$uses({ getGradientColor });
 ```
 
-When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. 
-Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
+Resolved WGSL for the pipeline including the two entry point functions above is equivalent (with respect to some cleanup) to the following:
+
+```wgsl
+struct mainVertex_Input {
+  @builtin(vertex_index) vertexIndex: u32,
+}
+
+struct mainVertex_Output {
+  @builtin(position) outPos: vec4f,
+  @location(0) uv: vec2f,
+}
+
+@vertex fn mainVertex(in: mainVertex_Input) -> mainVertex_Output {
+  var pos = array<vec2f, 3>(
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+
+  var uv = array<vec2f, 3>(
+    vec2(0.5, 1.0),
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+  );
+
+  return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
+}
+
+fn getGradientColor(ratio: f32) -> vec4f{
+  return mix(vec4f(0.769, 0.392, 1, 1), vec4f(0.114, 0.447, 0.941, 1), ratio);
+}
+
+struct mainFragment_Input {
+  @location(0) uv: vec2f,
+}
+
+@fragment fn mainFragment(in: mainFragment_Input) -> @location(0) vec4f {
+  return getGradientColor((in.uv[0] + in.uv[1]) / 2);
+}
+```
 
 ## Usage in pipelines
 
-Typed functions are crucial for simplified pipeline creation offered by TypeGPU. You can define and run pipelines as follows:
+:::caution[Experimental]
+Pipelines are an *unstable* feature. The API may be subject to change in the near future.
+:::
 
-```ts
+Typed functions are crucial for simplified [pipeline](/TypeGPU/fundamentals/pipelines) creation offered by TypeGPU. You can define and run pipelines as follows:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const context = undefined as any;
+const presentationFormat = "rgba8unorm";
+const root = await tgpu.init();
+
+const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */``;
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { outPos: d.builtin.position, uv: d.vec2f },
+})``;
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})``;
+// ---cut---
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
   .withFragment(mainFragment, { format: presentationFormat })
@@ -139,5 +326,3 @@ The rendering result looks like this:
 ![rendering result - gradient triangle](./triangle-result.png)
 
 You can check out the full example on [our examples page](/TypeGPU/examples#example=simple--triangle).
-
-

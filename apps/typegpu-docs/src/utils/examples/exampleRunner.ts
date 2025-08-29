@@ -57,36 +57,7 @@ export async function executeExample(
     }
   }
 
-  function extractUrlFromViteImport(
-    importFn: () => void,
-  ): [URL | undefined, boolean] {
-    const filePath = String(importFn);
-    const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
-
-    if (match?.[1]) {
-      const isRelative = match[1].startsWith('./');
-      return [new URL(match[1], window.location.origin), isRelative];
-    }
-
-    return [undefined, false];
-  }
-
-  function noCacheImport(
-    importFn: () => void,
-  ): Promise<Record<string, unknown>> {
-    const [url, isRelative] = extractUrlFromViteImport(importFn);
-
-    if (!url) {
-      throw new Error(`Could not no-cache-import using ${importFn}`);
-    }
-
-    url.searchParams.append('update', Date.now().toString());
-    return import(
-      /* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`
-    );
-  }
-
-  const entryExampleFile = await noCacheImport(tsImport);
+  const entryExampleFile = await tsImport();
   const { controls, onCleanup } = entryExampleFile as {
     controls?: Record<string, Labelless<ExampleControlParam>> | undefined;
     onCleanup?: () => void;

@@ -1,7 +1,11 @@
-import type { JitTranspiler } from '../../jitTranspiler.ts';
+import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
-import { resolve as resolveImpl } from '../../resolutionCtx.ts';
+import {
+  type ResolutionResult,
+  resolve as resolveImpl,
+} from '../../resolutionCtx.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 
 export interface TgpuResolveOptions {
@@ -20,10 +24,73 @@ export interface TgpuResolveOptions {
    */
   names?: 'strict' | 'random' | undefined;
   /**
-   * Optional JIT transpiler for resolving TGSL functions.
-   * @experimental
+   * A function to configure the resolution context.
    */
-  unstable_jitTranspiler?: JitTranspiler | undefined;
+  config?: ((cfg: Configurable) => Configurable) | undefined;
+}
+
+/**
+ * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
+ * Any dependencies of the externals will also be resolved and included in the output.
+ * @param options - The options for the resolution.
+ *
+ * @returns {ResolutionResult}
+ *
+ * @example
+ * ```ts
+ * const Gradient = d.struct({
+ *   from: d.vec3f,
+ *   to: d.vec3f,
+ * });
+ *
+ * const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+ *   template: `
+ *     fn getGradientAngle(gradient: Gradient) -> f32 {
+ *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ *     }
+ *   `,
+ *   externals: {
+ *     Gradient,
+ *   },
+ * });
+ *
+ * console.log(code);
+ * // struct Gradient_0 {
+ * //   from: vec3f,
+ * //   to: vec3f,
+ * // }
+ * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
+ * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ * // }
+ * ```
+ */
+export function resolveWithContext(
+  options: TgpuResolveOptions,
+): ResolutionResult {
+  const {
+    externals,
+    template,
+    names,
+    config,
+  } = options;
+
+  const dependencies = {} as Record<string, Wgsl>;
+  applyExternals(dependencies, externals ?? {});
+
+  const resolutionObj: SelfResolvable = {
+    [$internal]: true,
+    '~resolve'(ctx) {
+      return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
+    },
+
+    toString: () => '<root>',
+  };
+
+  return resolveImpl(resolutionObj, {
+    names: names === 'strict'
+      ? new StrictNameRegistry()
+      : new RandomNameRegistry(),
+  }, config);
 }
 
 /**
@@ -62,30 +129,5 @@ export interface TgpuResolveOptions {
  * ```
  */
 export function resolve(options: TgpuResolveOptions): string {
-  const {
-    externals,
-    template,
-    names,
-    unstable_jitTranspiler: jitTranspiler,
-  } = options;
-
-  const dependencies = {} as Record<string, Wgsl>;
-  applyExternals(dependencies, externals ?? {});
-
-  const resolutionObj: SelfResolvable = {
-    '~resolve'(ctx) {
-      return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
-    },
-
-    toString: () => '<root>',
-  };
-
-  const { code } = resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
-    jitTranspiler,
-  });
-
-  return code;
+  return resolveWithContext(options).code;
 }

@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { $wgslDataType } from '../src/shared/symbols.ts';
-import type { ResolutionCtx } from '../src/types.ts';
-import { parse } from './utils/parseResolved.ts';
 import { setName } from '../src/shared/meta.ts';
+import {
+  $internal,
+  $runtimeResource,
+  $wgslDataType,
+} from '../src/shared/symbols.ts';
+import type { ResolutionCtx } from '../src/types.ts';
+import { it } from './utils/extendedIt.ts';
+import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -26,10 +31,31 @@ describe('tgpu resolve', () => {
     );
   });
 
+  it('should resolve a nested external JS struct', () => {
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var g = _EXT_.constants.n; }',
+      externals: {
+        _EXT_: {
+          constants: {
+            n: 1000,
+          },
+        },
+      },
+      names: 'strict',
+    });
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn foo() { var g = 1000; }"`,
+    );
+  });
+
   it('should deduplicate dependencies', () => {
     const intensity = {
+      [$internal]: true,
+
       get value(): number {
         return {
+          [$internal]: true,
+          [$runtimeResource]: true,
           [$wgslDataType]: d.f32,
           '~resolve'(ctx: ResolutionCtx) {
             return ctx.resolve(intensity);
@@ -80,10 +106,9 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const getPlayerHealth = tgpu['~unstable']
-      .fn([PlayerData], d.f32)((pInfo) => {
-        return pInfo.health;
-      })
+    const getPlayerHealth = tgpu.fn([PlayerData], d.f32)((pInfo) => {
+      return pInfo.health;
+    })
       .$name('getPlayerHealthTest');
 
     const shaderLogic = `
@@ -131,15 +156,14 @@ describe('tgpu resolve', () => {
       range: d.vec2f,
     });
 
-    const random = tgpu['~unstable']
-      .fn([], d.f32)(/* wgsl */ `() -> f32 {
+    const random = tgpu.fn([], d.f32)`() {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
         r.range = vec2<f32>(0.0, 1.0);
         r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
         r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
         return clamp(r.seed.y, r.range.x, r.range.y);
-      }`)
+      }`
       .$uses({ Random });
 
     const shaderLogic = `
@@ -161,7 +185,7 @@ describe('tgpu resolve', () => {
           range: vec2f,
         }
 
-        fn randomTest() -> f32 {
+        fn random() -> f32 {
           var r: Random;
           r.seed = vec2<f32>(3.14, 1.59);
           r.range = vec2<f32>(0.0, 1.0);
@@ -172,7 +196,7 @@ describe('tgpu resolve', () => {
 
         @compute @workgroup_size(1)
         fn main() {
-          var value = randomTest();
+          var value = random();
         }
       `),
     );
@@ -231,21 +255,23 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve an unstruct with a complex nested structure', () => {
+    const Extra = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+      c: d.float16x2,
+    });
+
+    const More = d.unstruct({
+      a: d.snorm8,
+      b: d.snorm8x4,
+    });
+
     const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
-      extra: d
-        .unstruct({
-          a: d.snorm8,
-          b: d.snorm8x4,
-          c: d.float16x2,
-        })
-        .$name('extra'),
-      more: d.disarrayOf(
-        d.unstruct({ a: d.snorm8, b: d.snorm8x4 }).$name('more'),
-        16,
-      ),
+      extra: Extra,
+      more: d.disarrayOf(More, 16),
     });
 
     const resolved = tgpu.resolve({
@@ -256,13 +282,13 @@ describe('tgpu resolve', () => {
 
     expect(parse(resolved)).toBe(
       parse(`
-        struct extra {
+        struct Extra {
           a: f32,
           b: vec4f,
           c: vec2f,
         }
 
-        struct more {
+        struct More {
           a: f32,
           b: vec4f,
         }
@@ -271,8 +297,8 @@ describe('tgpu resolve', () => {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
-          extra: extra,
-          more: array<more, 16>,
+          extra: Extra,
+          more: array<More, 16>,
         }
 
         fn foo() { var v: VertexInfo; }
@@ -281,8 +307,7 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve object externals and replace their usages in template', () => {
-    const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -321,15 +346,13 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve only used object externals and ignore non-existing', () => {
-    const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
-    const getIntensity = tgpu['~unstable']
-      .fn([], d.vec3f)(`() -> vec3f {
+    const getIntensity = tgpu.fn([], d.vec3f)(`() -> vec3f {
         return 1;
       }`)
       .$name('get_intensity');
@@ -401,5 +424,174 @@ describe('tgpu resolve', () => {
           let y = 2;
         }`),
     );
+  });
+});
+
+describe('tgpu resolveWithContext', () => {
+  it('should resolve a template with external values', () => {
+    const Gradient = d.struct({
+      from: d.vec3f,
+      to: d.vec3f,
+    });
+
+    const { code } = tgpu.resolveWithContext({
+      template: `
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `,
+      externals: { Gradient },
+      names: 'strict',
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+        struct Gradient {
+          from: vec3f,
+          to: vec3f,
+        }
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `),
+    );
+  });
+
+  it('should resolve a template with additional config', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `,
+      externals: { Voxel },
+      names: 'strict',
+      config: (cfg) => cfg.pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `),
+    );
+
+    // verify resolveWithContext::config impl is being called
+    expect(configSpy.mock.lastCall?.[0]).toBeDefined();
+  });
+
+  it('should resolve a template with a slot', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const v = d.vec4f(1, 0, 1, 0);
+    const colorSlot = tgpu.slot<d.v4f>();
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * colorTint;
+          }
+        `,
+      externals: { Voxel, colorTint: colorSlot },
+      names: 'strict',
+      config: (cfg) => cfg.with(colorSlot, v).pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * vec4f(1, 0, 1, 0);
+          }
+        `),
+    );
+    // verify resolveWithContext::config impl is actually working
+    expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
+      [[colorSlot, v]],
+    );
+  });
+
+  it('should warn when external WGSL is not used', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: 'fn testFn() { return; }',
+      externals: {
+        ArraySchema: d.arrayOf(d.u32, 4),
+        JavaScriptObject: { field: d.vec2f() },
+      },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'ArraySchema' wasn't used in the resolved template.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'JavaScriptObject' wasn't used in the resolved template.",
+    );
+  });
+
+  it('should warn when external is neither wgsl nor an object', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { var a = identity(1); return; }',
+      externals: { identity: (a: number) => a },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `During resolution, the external 'identity' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+    );
+  });
+
+  it('should not warn when In/Out are unused', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { return; }',
+      externals: {},
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not resolve the same nested property twice', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const resolved = tgpu.resolve({
+      template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
+      externals: { _EXT_: { n: 100 } },
+    });
+
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn testFn() { return 100 + 100; }"`,
+    );
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });

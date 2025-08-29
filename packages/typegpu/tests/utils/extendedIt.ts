@@ -4,13 +4,21 @@ import tgpu from '../../src/index.ts';
 import './webgpuGlobals.ts';
 
 const adapterMock = {
+  features: new Set(['timestamp-query']),
   requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),
+  limits: {
+    maxStorageBufferBindingSize: 64 * 1024 * 1024,
+  },
 };
 
 const navigatorMock = {
   gpu: {
     __brand: 'GPU',
     requestAdapter: vi.fn(() => Promise.resolve(adapterMock)),
+    getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm'),
+  },
+  mediaDevices: {
+    getUserMedia: vi.fn(() => Promise.resolve()),
   },
 };
 
@@ -42,10 +50,12 @@ const mockComputePassEncoder = {
 
 const mockRenderPassEncoder = {
   draw: vi.fn(),
+  drawIndexed: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
 };
 
 const mockQuerySet = {
@@ -57,6 +67,13 @@ const mockQuerySet = {
     this._label = value;
   },
   _label: '<unnamed>',
+};
+
+const mockComputePipeline = {
+  get getBindGroupLayout() {
+    return vi.fn(() => 'mockBindGroupLayout');
+  },
+  label: '<unnamed>',
 };
 
 const mockDevice = {
@@ -91,7 +108,7 @@ const mockDevice = {
     },
   ),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
+  createComputePipeline: vi.fn(() => mockComputePipeline),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
   createQuerySet: vi.fn(
     ({ type, count }: GPUQuerySetDescriptor) => {

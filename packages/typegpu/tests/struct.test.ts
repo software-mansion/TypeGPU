@@ -11,13 +11,17 @@ import {
   struct,
   u32,
   type v3u,
+  vec2f,
   vec2h,
   vec2u,
   vec3f,
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
+import { parse, parseResolved } from './utils/parseResolved.ts';
+import { frexp } from '../src/std/numeric.ts';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -253,6 +257,143 @@ describe('struct', () => {
     });
 
     // @ts-expect-error
-    TestStruct({ x: 1, z: 2 });
+    (() => TestStruct({ x: 1, z: 2 }));
+  });
+
+  it('can be called to create a deep copy of other struct', () => {
+    const schema = struct({ nested: struct({ prop1: vec2f, prop2: u32 }) });
+    const instance = schema({ nested: { prop1: vec2f(1, 2), prop2: 21 } });
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual(instance);
+    expect(clone).not.toBe(instance);
+    expect(clone.nested).not.toBe(instance.nested);
+    expect(clone.nested.prop1).not.toBe(instance.nested.prop1);
+  });
+
+  it('can be called to strip extra properties of a struct', () => {
+    const schema = struct({ prop1: vec2f, prop2: u32 });
+    const instance = { prop1: vec2f(1, 2), prop2: 21, prop3: 'extra' };
+
+    const clone = schema(instance);
+
+    expect(clone).toStrictEqual({ prop1: vec2f(1, 2), prop2: 21 });
+  });
+
+  it('can be called to create a default value', () => {
+    const schema = struct({ nested: struct({ prop1: vec2f, prop2: u32 }) });
+
+    const defaultStruct = schema();
+
+    expect(defaultStruct).toStrictEqual({
+      nested: { prop1: vec2f(), prop2: u32() },
+    });
+  });
+
+  it('can be called to create a default value with nested array', () => {
+    const schema = struct({ arr: arrayOf(u32, 1) });
+
+    const defaultStruct = schema();
+
+    expect(defaultStruct).toStrictEqual({ arr: [0] });
+  });
+
+  it('generates correct code when struct default constructor is used', () => {
+    const Nested = struct({ prop1: vec2f, prop2: u32 });
+    const Outer = struct({
+      nested: Nested,
+    });
+
+    const testFunction = tgpu.fn([])(() => {
+      const defaultValue = Outer();
+    });
+
+    expect(parseResolved({ testFunction })).toBe(parse(`
+          struct Nested {
+            prop1: vec2f,
+            prop2: u32,
+          }
+
+          struct Outer {
+            nested: Nested,
+          }
+
+          fn testFunction() {
+            var defaultValue = Outer();
+          }
+        `));
+  });
+
+  it('generates correct code when struct clone is used', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: f32,
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const myStruct = TestStruct({ x: 1, y: 2 });
+      const myClone = TestStruct(myStruct);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        struct TestStruct {
+          x: u32,
+          y: f32,
+        }
+
+        fn testFn() {
+          var myStruct = TestStruct(1, 2);
+          var myClone = myStruct;
+          return;
+        }`),
+    );
+  });
+
+  it('generates correct code when complex struct clone is used', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: f32,
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const myStructs = [TestStruct({ x: 1, y: 2 })] as const;
+      const myClone = TestStruct(myStructs[0]);
+      return;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        struct TestStruct {
+          x: u32,
+          y: f32,
+        }
+
+        fn testFn() {
+          var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
+          var myClone = myStructs[0];
+          return;
+        }`),
+    );
+  });
+});
+
+describe('abstruct', () => {
+  it('gets correctly resolved when returned from an std function', () => {
+    const testFn = tgpu.fn([f32], f32)((x) => {
+      const result = frexp(x);
+      // It should know that exp is an u32 and cast it to f32
+      return result.exp;
+    });
+
+    expect(parseResolved({ testFn })).toBe(
+      parse(`
+        fn testFn(x: f32) -> f32 {
+          var result = frexp(x);
+          return f32(result.exp);
+        }`),
+    );
   });
 });

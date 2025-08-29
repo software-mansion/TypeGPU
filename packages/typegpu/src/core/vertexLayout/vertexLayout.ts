@@ -11,6 +11,7 @@ import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { setName } from '../../shared/meta.ts';
+import { $internal } from '../../shared/symbols.ts';
 import {
   kindToDefaultFormatMap,
   type TgpuVertexAttrib,
@@ -29,6 +30,7 @@ import type {
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
 > extends TgpuNamable {
+  readonly [$internal]: true;
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
@@ -87,8 +89,9 @@ function dataToContainedAttribs<
   if (isWgslStruct(data)) {
     let memberOffset = offset;
 
+    const propTypes = data.propTypes as Record<string, BaseData>;
     return Object.fromEntries(
-      Object.entries(data.propTypes).map(([key, value]) => {
+      Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
@@ -109,8 +112,9 @@ function dataToContainedAttribs<
   if (isUnstruct(data)) {
     let memberOffset = offset;
 
+    const propTypes = data.propTypes as Record<string, BaseData>;
     return Object.fromEntries(
-      Object.entries(data.propTypes).map(([key, value]) => {
+      Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,
@@ -157,6 +161,7 @@ function dataToContainedAttribs<
 
 class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
   implements TgpuVertexLayout<TData> {
+  public readonly [$internal] = true;
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;

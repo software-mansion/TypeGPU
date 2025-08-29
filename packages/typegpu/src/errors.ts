@@ -4,6 +4,7 @@ import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
 import { getName } from './shared/meta.ts';
+import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
@@ -21,7 +22,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (process.env.NODE_ENV === 'production') {
+  if (!DEV) {
     throw new Error(prefix);
   }
 
@@ -57,7 +58,7 @@ export class ResolutionError extends Error {
     }
 
     super(
-      `Resolution of the following tree failed: \n${entries.join('\n')}: ${
+      `Resolution of the following tree failed:\n${entries.join('\n')}: ${
         cause && typeof cause === 'object' && 'message' in cause
           ? cause.message
           : cause
@@ -72,6 +73,43 @@ export class ResolutionError extends Error {
     const newTrace = [ancestor, ...this.trace];
 
     return new ResolutionError(this.cause, newTrace);
+  }
+}
+
+/**
+ * An error that happens during execution of TypeGPU functions.
+ * Contains a trace of all TypeGPU functions called along the way.
+ *
+ * @category Errors
+ */
+export class ExecutionError extends Error {
+  constructor(
+    public readonly cause: unknown,
+    public readonly trace: unknown[],
+  ) {
+    let entries = trace.map((ancestor) => `- ${ancestor}`);
+
+    // Showing only the root and leaf nodes.
+    if (entries.length > 20) {
+      entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
+    }
+
+    super(
+      `Execution of the following tree failed:\n${entries.join('\n')}: ${
+        cause && typeof cause === 'object' && 'message' in cause
+          ? cause.message
+          : cause
+      }`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ExecutionError.prototype);
+  }
+
+  appendToTrace(ancestor: unknown): ExecutionError {
+    const newTrace = [ancestor, ...this.trace];
+
+    return new ExecutionError(this.cause, newTrace);
   }
 }
 
@@ -139,5 +177,32 @@ export class MissingVertexBuffersError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingVertexBuffersError.prototype);
+  }
+}
+
+export class IllegalVarAccessError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, IllegalVarAccessError.prototype);
+  }
+}
+
+export class IllegalBufferAccessError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, IllegalBufferAccessError.prototype);
+  }
+}
+
+export class WgslTypeError extends Error {
+  constructor(msg: string) {
+    super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, WgslTypeError.prototype);
   }
 }

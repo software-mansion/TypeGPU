@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { cos, sin } from 'typegpu/std';
 
 // constants
 
@@ -47,11 +48,6 @@ const ParticleData = d.struct({
 
 // buffers
 
-const canvasAspectRatioUniform = root['~unstable'].createUniform(
-  d.f32,
-  canvas.width / canvas.height,
-);
-
 const particleGeometryBuffer = root
   .createBuffer(
     d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT),
@@ -63,41 +59,40 @@ const particleGeometryBuffer = root
         color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
       })),
   )
-  .$name('geometry')
   .$usage('vertex');
 
 const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const deltaTimeUniform = root['~unstable'].createUniform(d.f32);
-const timeStorage = root['~unstable'].createMutable(d.f32);
+const aspectRatio = root.createUniform(d.f32, canvas.width / canvas.height);
+const deltaTime = root.createUniform(d.f32);
+const time = root.createMutable(d.f32);
 
 const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
-  .$name('geometry');
+const geometryLayout = tgpu.vertexLayout(
+  d.arrayOf(ParticleGeometry),
+  'instance',
+);
 
-const dataLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
-  .$name('data');
+const dataLayout = tgpu.vertexLayout(
+  d.arrayOf(ParticleData),
+  'instance',
+);
 
 // functions
 
-const rotate = tgpu['~unstable'].fn(
-  [d.vec2f, d.f32],
-  d.vec2f,
-) /* wgsl */`(v: vec2f, angle: f32) -> vec2f {
-  let pos = vec2(
+const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
+  const pos = d.vec2f(
     (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle))
+    (v.x * sin(angle)) + (v.y * cos(angle)),
   );
 
   return pos;
-}`;
+});
 
 const mainVert = tgpu['~unstable'].vertexFn({
   in: {
@@ -119,16 +114,16 @@ const mainVert = tgpu['~unstable'].vertexFn({
     vec2f(width, height),
   )[in.index] / 350, in.angle) + in.center;
 
-  if (canvasAspectRatio < 1) {
-    pos.x /= canvasAspectRatio;
+  if (aspectRatio < 1) {
+    pos.x /= aspectRatio;
   } else {
-    pos.y *= canvasAspectRatio;
+    pos.y *= aspectRatio;
   }
 
   return Out(vec4f(pos, 0.0, 1.0), in.color);
 }`.$uses({
   rotate,
-  canvasAspectRatio: canvasAspectRatioUniform,
+  aspectRatio,
 });
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
@@ -148,8 +143,8 @@ const mainCompute = tgpu['~unstable'].computeFn({
   particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
 }`.$uses({
   particleData: particleDataStorage,
-  deltaTime: deltaTimeUniform,
-  time: timeStorage,
+  deltaTime,
+  time,
 });
 
 // pipelines
@@ -168,14 +163,12 @@ const renderPipeline = root['~unstable']
     topology: 'triangle-strip',
   })
   .createPipeline()
-  .$name('draw confetti')
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)
-  .createPipeline()
-  .$name('move particles');
+  .createPipeline();
 
 // compute and draw
 
@@ -213,9 +206,9 @@ function onFrame(loop: (deltaTime: number) => unknown) {
   requestAnimationFrame(runner);
 }
 
-onFrame((deltaTime) => {
-  deltaTimeUniform.write(deltaTime);
-  canvasAspectRatioUniform.write(canvas.width / canvas.height);
+onFrame((dt) => {
+  deltaTime.write(dt);
+  aspectRatio.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 

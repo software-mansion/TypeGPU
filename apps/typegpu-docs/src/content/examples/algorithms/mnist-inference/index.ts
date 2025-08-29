@@ -1,5 +1,6 @@
 import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const SIZE = 28;
 
@@ -37,12 +38,10 @@ const weightsBiasesLayout = tgpu.bindGroupLayout({
 
 // Shader code
 
-const fallbackShader = tgpu.resolve({
-  template: `
-  fn relu(x: f32) -> f32 {
-    return max(0.0, x);
-  }
+const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
+const defaultShader = tgpu.resolve({
+  template: `
   @compute @workgroup_size(1)
   fn main(@builtin(global_invocation_id) gid: vec3u) {
     let inputSize = arrayLength( &input );
@@ -53,7 +52,7 @@ const fallbackShader = tgpu.resolve({
     var sum = 0.0;
 
     for (var j = 0u; j < inputSize; j = j + 1) {
-      sum = sum + input[j] * weights[weightsOffset + j];
+      sum = fma(input[j], weights[weightsOffset + j], sum);
     }
 
     let total = sum + biases[i];
@@ -61,6 +60,7 @@ const fallbackShader = tgpu.resolve({
   }
 `,
   externals: {
+    relu,
     ...weightsBiasesLayout.bound,
     ...ioLayout.bound,
   },
@@ -70,27 +70,23 @@ const subgroupShader = `enable subgroups;
   ${
   tgpu.resolve({
     template: `
-  fn relu(x: f32) -> f32 {
-    return max(0.0, x);
-  }
+    // WebGPU guarantees a subgroup size of at least 4
+    var<workgroup> subgroupSums: array<f32, 64 / 4>;
 
-  // WebGPU guarantees a subgroup size of at least 4
-  var<workgroup> subgroupSums: array<f32, 64 / 4>;
-
-  @compute @workgroup_size(64)
-  fn main(
-      @builtin(local_invocation_id) lid: vec3u,
-      @builtin(workgroup_id) wid: vec3u,
-      @builtin(subgroup_invocation_id) sid: u32,
-      @builtin(subgroup_size) ssize: u32
-  ) {
+    @compute @workgroup_size(64)
+    fn main(
+        @builtin(local_invocation_id) lid: vec3u,
+        @builtin(workgroup_id) wid: vec3u,
+        @builtin(subgroup_invocation_id) sid: u32,
+        @builtin(subgroup_size) ssize: u32
+    ) {
       let neuronIndex = wid.x;
       let inputSize = arrayLength(&input);
       let weightsOffset = neuronIndex * inputSize;
 
-      var partial: f32 = 0.0;
-      for (var j = lid.x; j < inputSize; j = j + 64) {
-        partial = partial + input[j] * weights[weightsOffset + j];
+      var partial = 0.;
+      for (var j = lid.x; j < inputSize; j += 64) {
+        partial = fma(input[j], weights[weightsOffset + j], partial);
       }
 
       let subgroupSum = subgroupAdd(partial);
@@ -111,10 +107,11 @@ const subgroupShader = `enable subgroups;
         }
         total = total + biases[neuronIndex];
         output[neuronIndex] = relu(total);
-      }
+     }
   }
 `,
     externals: {
+      relu,
       ...weightsBiasesLayout.bound,
       ...ioLayout.bound,
     },
@@ -127,7 +124,7 @@ let pipeline = device.createComputePipeline({
   }),
   compute: {
     module: device.createShaderModule({
-      code: useSubgroups ? subgroupShader : fallbackShader,
+      code: useSubgroups ? subgroupShader : defaultShader,
     }),
   },
 });
@@ -240,7 +237,6 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       querySet.resolve();
       const results = await querySet.read();
       const inferenceTimeMs = Number(results[1] - results[0]) / 1_000_000;
-      console.log(`Inference took ${inferenceTimeMs} ms`);
 
       inferenceTimeEl.textContent = `${inferenceTimeMs.toFixed(2)} ms`;
     } else {
@@ -269,7 +265,7 @@ const recreatePipeline = () => {
     }),
     compute: {
       module: device.createShaderModule({
-        code: useSubgroups ? subgroupShader : fallbackShader,
+        code: useSubgroups ? subgroupShader : defaultShader,
       }),
     },
   });

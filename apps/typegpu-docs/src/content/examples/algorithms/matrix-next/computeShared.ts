@@ -7,13 +7,13 @@ import { computeLayout } from './types.ts';
 const tileA = tgpu['~unstable'].workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
 const tileB = tgpu['~unstable'].workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
 
-export const getIndex = tgpu['~unstable'].fn([d.u32, d.u32, d.u32], d.u32)(
+export const getIndex = tgpu.fn([d.u32, d.u32, d.u32], d.u32)(
   (row, col, columns) => {
     return col + row * columns;
   },
 );
 
-const getTileIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32)((row, col) => {
+const getTileIndex = tgpu.fn([d.u32, d.u32], d.u32)((row, col) => {
   return col + row * TILE_SIZE;
 });
 
@@ -26,7 +26,9 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
   },
 })((input) => {
   const dimensions = computeLayout.$.dimensions;
-  const numTiles = (dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE;
+  const numTiles = d.u32(
+    (dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE,
+  );
 
   const globalRow = input.wid.x * TILE_SIZE + input.lid.x;
   const globalCol = input.wid.y * TILE_SIZE + input.lid.y;

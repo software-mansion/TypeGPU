@@ -38,7 +38,7 @@ const Transform = d.struct({
   model: d.mat4x4f,
 });
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 // Scene Setup
 
@@ -174,21 +174,20 @@ const planeTransformBuffer = root
   })
   .$usage('uniform');
 
-const bindGroupLayout = tgpu.bindGroupLayout({
+const layout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   transform: { uniform: Transform },
 });
-const { camera, transform } = bindGroupLayout.bound;
 
-const bindGroup = root.createBindGroup(bindGroupLayout, {
+const bindGroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
   transform: transformBuffer,
 });
-const secondBindGroup = root.createBindGroup(bindGroupLayout, {
+const secondBindGroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
   transform: secondTransformBuffer,
 });
-const planeBindGroup = root.createBindGroup(bindGroupLayout, {
+const planeBindGroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
   transform: planeTransformBuffer,
 });
@@ -232,8 +231,11 @@ const vertex = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, color: d.vec4f },
 })((input) => {
   const pos = std.mul(
-    camera.value.projection,
-    std.mul(camera.value.view, std.mul(transform.value.model, input.position)),
+    layout.$.camera.projection,
+    std.mul(
+      layout.$.camera.view,
+      std.mul(layout.$.transform.model, input.position),
+    ),
   );
   return { pos, color: input.color };
 });
@@ -260,7 +262,7 @@ const pipeline = root['~unstable']
 
 function drawObject(
   buffer: TgpuBuffer<d.WgslArray<typeof Vertex>> & VertexFlag,
-  group: TgpuBindGroup<typeof bindGroupLayout.entries>,
+  group: TgpuBindGroup<typeof layout.entries>,
   vertexCount: number,
   loadOp: 'clear' | 'load',
 ) {
@@ -279,7 +281,7 @@ function drawObject(
       depthStoreOp: 'store',
     })
     .with(vertexLayout, buffer)
-    .with(bindGroupLayout, group)
+    .with(layout, group)
     .draw(vertexCount);
 }
 

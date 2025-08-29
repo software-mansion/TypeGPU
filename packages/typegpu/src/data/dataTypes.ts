@@ -1,28 +1,27 @@
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
-  $repr,
   Infer,
   InferGPURecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
+  IsValidVertexSchema,
   MemIdentityRecord,
 } from '../shared/repr.ts';
+import type {
+  $gpuRepr,
+  $invalidSchemaReason,
+  $memIdent,
+  $repr,
+  $reprPartial,
+  $validVertexSchema,
+} from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
-import type { FnArgsConversionHint } from '../types.ts';
+import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
-
-export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
-  & TImpl
-  & {
-    [$internal]: {
-      implementation: TImpl | string;
-      argTypes: FnArgsConversionHint;
-    };
-  };
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -32,15 +31,23 @@ export type TgpuDualFn<TImpl extends (...args: never[]) => unknown> =
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
-  readonly [$internal]: true;
+export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
+  extends wgsl.BaseData {
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly '~reprPartial':
+  readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
+  readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
+  readonly [$invalidSchemaReason]:
+    'Disarrays are not host-shareable, use arrays instead';
+  // ---
 }
 
 /**
@@ -52,32 +59,73 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
  * via `d.align` function.
  */
 export interface Unstruct<
-  TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
-> extends TgpuNamable {
-  readonly [$internal]: true;
+  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
+  TProps extends Record<string, wgsl.BaseData> = any,
+> extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
+  (): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
-  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
-  readonly '~memIdent': Unstruct<Prettify<MemIdentityRecord<TProps>>>;
-  readonly '~reprPartial':
+  readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
+  readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
+  readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
+  readonly [$validVertexSchema]: {
+    [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
+  }[keyof TProps] extends true ? true : false;
+  readonly [$invalidSchemaReason]:
+    'Unstructs are not host-shareable, use structs instead';
+  // ---
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
-export type AnyUnstruct = Unstruct<any>;
+/** @deprecated Just use `Unstruct` without any type parameters */
+export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
-> {
-  readonly [$internal]: true;
+> extends wgsl.BaseData {
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  readonly [$invalidSchemaReason]:
+    'Loosely decorated schemas are not host-shareable';
+  readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
+  // ---
+}
+
+/**
+ * Type utility to extract the inner type from decorated types.
+ */
+export type Undecorate<T> = T extends {
+  readonly type: 'decorated' | 'loose-decorated';
+  readonly inner: infer TInner;
+} ? TInner
+  : T;
+
+/**
+ * Type utility to undecorate all values in a record.
+ */
+export type UndecorateRecord<T extends Record<string, unknown>> = {
+  [Key in keyof T]: Undecorate<T[Key]>;
+};
+
+/**
+ * Runtime function to extract the inner data type from decorated types.
+ * If the data is not decorated, returns the data as-is.
+ */
+export function undecorate(data: AnyData): AnyData {
+  if (data.type === 'decorated' || data.type === 'loose-decorated') {
+    return data.inner as AnyData;
+  }
+  return data;
 }
 
 const looseTypeLiterals = [
@@ -89,7 +137,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
+export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return (
@@ -145,19 +193,19 @@ export function isLooseDecorated<T extends LooseDecorated>(
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isAlignAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomSize(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isSizeAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function getCustomLocation(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isLocationAttrib,
-  )?.value;
+  )?.params[0];
 }
 
 export function isData(value: unknown): value is AnyData {
@@ -181,28 +229,16 @@ export const UnknownData = {
   },
 } as UnknownData;
 
-export interface Snippet {
-  readonly value: unknown;
-  readonly dataType: AnyData | UnknownData;
-}
-
-class SnippetImpl implements Snippet {
+export class InfixDispatch {
   constructor(
-    readonly value: unknown,
-    readonly dataType: AnyData | UnknownData,
+    readonly name: string,
+    readonly lhs: Snippet,
+    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
 }
 
-export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {
-  return new SnippetImpl(
-    value,
-    // We don't care about attributes in snippet land, so we discard that information.
-    dataType.type === 'decorated' || dataType.type === 'loose-decorated'
-      ? dataType.inner as AnyData
-      : dataType,
-  );
-}
-
-export function isSnippet(value: unknown): value is Snippet {
-  return value instanceof SnippetImpl;
+export class MatrixColumnsAccess {
+  constructor(
+    readonly matrix: Snippet,
+  ) {}
 }
