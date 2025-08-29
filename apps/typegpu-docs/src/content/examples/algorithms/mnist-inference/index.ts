@@ -116,8 +116,6 @@ const subgroupShader = tgpu.resolve({
   enableExtensions: ['subgroups'],
 });
 
-console.log(subgroupShader);
-
 let pipeline = device.createComputePipeline({
   layout: device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
