@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { mainVertex } from './shaders/vertex.ts';
 import { dimensionsSlot, timeAccess } from './consts.ts';
-import { mainFragment } from './shaders/fragment.ts';
+import { mainFragment, mainFragment2 } from './shaders/fragment.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -28,6 +28,14 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
+const pipeline2 = root['~unstable']
+  .with(timeAccess, time)
+  .with(dimensionsSlot, { w: canvas.width, h: canvas.height })
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment2, { format: presentationFormat })
+  .createPipeline();
+let currentPipeline = pipeline;
+
 let startTime = performance.now();
 let frameId: number;
 
@@ -38,7 +46,7 @@ function render() {
   w.write(canvas.width);
   h.write(canvas.height);
 
-  pipeline
+  currentPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 1],
@@ -59,9 +67,11 @@ export function onCleanup() {
 
 export const controls = {
   'Pattern': {
-    initial: 'fragmentShader1',
-    options: ['fragmentShader1', 'fragmentShader2'].map((x) => x),
+    initial: 'pattern1',
+    options: ['pattern1', 'pattern2'].map((x) => x),
     onSelectChange(value: string) {
+      currentPipeline = value === 'pattern1' ? pipeline : pipeline2;
+      render();
     },
   },
 };
