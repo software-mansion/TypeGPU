@@ -938,7 +938,7 @@ describe('wgslGenerator', () => {
       return struct;
     });
 
-    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main_0() -> i32 {
         var notAKeyword = 0;
         var struct_1 = 1;
@@ -952,7 +952,7 @@ describe('wgslGenerator', () => {
       return n + macro;
     });
 
-    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main_0(n: i32, macro_1: i32) -> i32 {
         return (n + macro_1);
       }"
@@ -965,7 +965,7 @@ describe('wgslGenerator', () => {
       const instance = TestStruct();
     });
 
-    expect(() => tgpu.resolve({ externals: { main } }))
+    expect(() => asWgsl(main))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -980,7 +980,7 @@ describe('wgslGenerator', () => {
       const instance = TestStruct();
     });
 
-    expect(() => tgpu.resolve({ externals: { main } }))
+    expect(() => asWgsl(main))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -998,13 +998,13 @@ describe('wgslGenerator', () => {
       const __my_var = 1;
     });
 
-    expect(() => tgpu.resolve({ externals: { main1 } }))
+    expect(() => asWgsl(main1))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
       `);
-    expect(() => tgpu.resolve({ externals: { main2 } }))
+    expect(() => asWgsl(main2))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -1019,7 +1019,7 @@ describe('wgslGenerator', () => {
       const mut_1_2 = 2;
     });
 
-    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main_0() {
         var mut_1 = 1;
         var mut_1_2 = 2;
@@ -1032,7 +1032,7 @@ describe('wgslGenerator', () => {
     const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {
     });
 
-    expect(tgpu.resolve({ externals: { main } })).toMatchInlineSnapshot(`
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main_0(extern_1: u32, extern_1_2: u32) {
 
       }"
