@@ -234,11 +234,6 @@ class ComputePipelineCore implements SelfResolvable {
       const enableExtensions = wgslExtensions.filter((extension) =>
         this.branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
       );
-      console.log(
-        `Enabled WGSL extensions: ${
-          enableExtensions.length > 0 ? enableExtensions.join(', ') : 'none'
-        }`,
-      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
