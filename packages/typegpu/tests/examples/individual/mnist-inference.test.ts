@@ -19,20 +19,20 @@ describe('mnist inference example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "
-        @binding(0) @group(0) var<storage, read> input: array<f32>;
-        @binding(1) @group(0) var<storage, read_write> output: array<f32>;
+      "fn relu_0(x: f32) -> f32 {
+        return max(0, x);
+      }
 
-        @binding(0) @group(1) var<storage, read> weights: array<f32>;
-        @binding(1) @group(1) var<storage, read> biases: array<f32>;
+      @group(1) @binding(0) var<storage, read> weights_1: array<f32>;
 
-        fn relu(x: f32) -> f32 {
-          return max(0.0, x);
-        }
+      @group(1) @binding(1) var<storage, read> biases_2: array<f32>;
 
+      @group(0) @binding(0) var<storage, read> input_3: array<f32>;
+
+      @group(0) @binding(1) var<storage, read_write> output_4: array<f32>;
         @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) gid: vec3u) {
-          let inputSize = arrayLength( &input );
+          let inputSize = arrayLength( &input_3 );
 
           let i = gid.x;
 
@@ -40,11 +40,11 @@ describe('mnist inference example', () => {
           var sum = 0.0;
 
           for (var j = 0u; j < inputSize; j = j + 1) {
-            sum = sum + input[j] * weights[weightsOffset + j];
+            sum = fma(input_3[j], weights_1[weightsOffset + j], sum);
           }
 
-          sum = sum + biases[i];
-          output[i] = relu(sum);
+          let total = sum + biases_2[i];
+          output_4[i] = relu_0(total);
         }
       "
     `);
