@@ -56,3 +56,12 @@ export function onCleanup() {
   cancelAnimationFrame(frameId);
   root.destroy();
 }
+
+export const controls = {
+  'Pattern': {
+    initial: 'fragmentShader1',
+    options: ['fragmentShader1', 'fragmentShader2'].map((x) => x),
+    onSelectChange(value: string) {
+    },
+  },
+};
