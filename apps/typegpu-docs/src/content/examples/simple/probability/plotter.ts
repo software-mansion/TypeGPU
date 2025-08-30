@@ -46,11 +46,11 @@ export class Plotter {
     this.#core.renderer.transitionTime = 1; // it is number from [0, 1] indicating the state of the animation - 1 means current
   }
 
-  async plot(samples: d.v3f[], prng: PRNG, animate = false) {
+  async plot(samples: d.v3f[], prng: PRNG, animate = false): Promise<void> {
     let needNewBuffer = false;
     if (samples.length !== this.#count) {
-      needNewBuffer = true;
       this.#count = samples.length;
+      needNewBuffer = true;
     }
 
     switch (prng.plotType) {
@@ -97,7 +97,7 @@ export class Plotter {
     subplotter: () => void,
     animate: boolean,
     needNewBuffer: boolean,
-  ) {
+  ): Promise<void> {
     if (animate && !needNewBuffer) {
       this.#makeRoomForNewPlot();
     }
@@ -134,9 +134,8 @@ export class Plotter {
   }
 
   #distributionsTransition(): Promise<void> {
-    const start = performance.now();
-
     return new Promise((resolve) => {
+      const start = performance.now();
       const animateTransition = (time: number) => {
         const duration = time - start;
 
@@ -155,6 +154,7 @@ export class Plotter {
           requestAnimationFrame(animateTransition);
         } else {
           resolve();
+          return;
         }
       };
       requestAnimationFrame(animateTransition);

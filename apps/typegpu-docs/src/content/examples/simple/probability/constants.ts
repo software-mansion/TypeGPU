@@ -1,5 +1,6 @@
 import { Distribution } from './types.ts';
 
+export const popupCooldown = 100000;
 export const cameraPositionGeo = [0, 0, 0.5];
 export const cameraPositionHist = [0, 0, 0.2];
 export const initialCameraAngle = 15;

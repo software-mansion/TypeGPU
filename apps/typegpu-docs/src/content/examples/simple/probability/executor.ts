@@ -61,6 +61,12 @@ export class Executor {
     });
   }
 
+  reseed() {
+    this.#seedBuffer.write(
+      Array.from({ length: this.#count }, () => Math.random()),
+    );
+  }
+
   set count(value: number) {
     this.#count = value;
     this.#samplesBuffer = this.#root

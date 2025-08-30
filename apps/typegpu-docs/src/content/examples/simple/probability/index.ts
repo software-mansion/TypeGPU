@@ -21,7 +21,7 @@ const replot = async (
   const prng = getPRNG(currentDistribution);
 
   samples = await executor.executeMoreWorkers(prng.prng);
-  plotter.plot(samples, prng, animate);
+  await plotter.plot(samples, prng, animate);
 };
 
 // #region Example controls & Cleanup
@@ -35,7 +35,7 @@ canvas.addEventListener('mouseover', () => {
 canvas.addEventListener('mouseout', () =>
   setTimeout(() => {
     helpInfo.style.opacity = '1';
-  }, 5000));
+  }, c.popupCooldown));
 // handle mobile devices
 canvas.addEventListener('touchstart', () => {
   helpInfo.style.opacity = '0';
@@ -43,13 +43,23 @@ canvas.addEventListener('touchstart', () => {
 canvas.addEventListener('touchend', () =>
   setTimeout(() => {
     helpInfo.style.opacity = '1';
-  }, 5000));
+  }, c.popupCooldown));
 
 plotter.resetView(getCameraPosition(currentDistribution));
 
 export const controls = {
   'Reset Camera': {
     onButtonClick: () => {
+      plotter.resetView(getCameraPosition(currentDistribution));
+    },
+  },
+  'Reseed': {
+    onButtonClick: async () => {
+      executor.reseed();
+      await replot(
+        currentDistribution,
+        true,
+      );
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
