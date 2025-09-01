@@ -523,14 +523,15 @@ export const controls = {
     },
   },
   'Test Resolution': {
-    onButtonClick: [defaultCompute, subgroupCompute]
-      .map((fn) =>
-        tgpu.resolve({
-          externals: { fn },
-          enableExtensions: ['subgroups'],
-        })
-      )
-      .map((r) => root.device.createShaderModule({ code: r })),
+    onButtonClick: () =>
+      [defaultCompute, subgroupCompute]
+        .map((fn) =>
+          tgpu.resolve({
+            externals: { fn },
+            enableExtensions: ['subgroups'],
+          })
+        )
+        .map((r) => root.device.createShaderModule({ code: r })),
   },
 };
 
