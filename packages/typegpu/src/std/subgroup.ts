@@ -17,11 +17,11 @@ function identityNumOrVec<T extends number | AnyNumericVecInstance>(
   throw new Error('subgroup operations can only be used in the GPU context');
 }
 
-export function identityIntNumOrVec(e: number): number;
-export function identityIntNumOrVec<T extends AnyIntegerVecInstance>(
+function identityIntNumOrVec(e: number): number;
+function identityIntNumOrVec<T extends AnyIntegerVecInstance>(
   e: T,
 ): T;
-export function identityIntNumOrVec<
+function identityIntNumOrVec<
   T extends number | AnyIntegerVecInstance,
 >(
   e: T,

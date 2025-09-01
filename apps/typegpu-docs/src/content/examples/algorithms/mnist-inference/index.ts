@@ -513,7 +513,7 @@ export const controls = {
   Reset: {
     onButtonClick: resetDrawing,
   },
-  'Use Subgroups': {
+  'Use Subgroups': hasSubgroups && {
     initial: hasSubgroups,
     onToggleChange: (value: boolean) => {
       useSubgroups = value;
