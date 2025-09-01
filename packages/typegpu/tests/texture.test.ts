@@ -4,10 +4,10 @@ import type {
   RenderFlag,
   SampledFlag,
 } from '../src/core/texture/usageExtension.ts';
-import { sampledTexture } from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
+import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
 
 describe('TgpuTexture', () => {
@@ -184,13 +184,11 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     };
 
-    const sampled1 = texture.createView(sampledTexture({}));
-    const sampled2 = texture.createView(
-      sampledTexture({ viewDimension: '2d-array' }),
-    );
+    const sampled1 = texture.createView(d.texture2d(d.i32));
+    const sampled2 = texture.createView(d.texture2dArray(d.f32));
 
     expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
-      'texture_2d<f32>',
+      'texture_2d<i32>',
     );
 
     expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
