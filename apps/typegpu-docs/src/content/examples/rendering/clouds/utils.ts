@@ -80,8 +80,7 @@ const scene = tgpu.fn(
   [d.vec3f],
   d.f32,
 )((p) => {
-  const f = fractalBrownianMotion(p);
-  return f - 1.5 + CLOUD_DENSITY * 2;
+  return fractalBrownianMotion(p) - 1.5 + CLOUD_DENSITY * 2;
 });
 
 const fractalBrownianMotion = tgpu.fn(
