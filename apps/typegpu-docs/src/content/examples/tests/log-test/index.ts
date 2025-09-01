@@ -15,7 +15,6 @@ function run(callback: (input: { gid: d.v3u }) => undefined, size: number) {
     .createPipeline();
 
   pipeline.dispatchWorkgroups(size);
-  pipeline.dispatchWorkgroups(size);
 
   console.log(tgpu.resolve({ externals: { pipeline } }));
 }
@@ -24,7 +23,7 @@ run(({ gid }) => {
   'kernel';
   console.log(gid.x + 10);
   console.log(gid.add(1).mul(3));
-}, 1);
+}, 2);
 
 // #region Example controls and cleanup
 

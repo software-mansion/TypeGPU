@@ -10,7 +10,7 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
-import { LogMetadata } from '../../tgsl/log/consoleLog.ts';
+import { LogMetadata } from '../../tgsl/log/log.ts';
 import { deserializers } from '../../tgsl/log/serializers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';

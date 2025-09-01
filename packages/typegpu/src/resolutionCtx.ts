@@ -48,7 +48,7 @@ import {
   LogManagerDummyImpl,
   LogManagerImpl,
   LogMetadata,
-} from './tgsl/log/consoleLog.ts';
+} from './tgsl/log/log.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
