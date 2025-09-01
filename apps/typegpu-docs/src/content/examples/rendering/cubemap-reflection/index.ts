@@ -389,7 +389,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.mat4x4f(),
   );
   cameraBuffer.writePartial({ view: newView, position: newCameraPos });
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
@@ -398,22 +398,25 @@ canvas.addEventListener('mousedown', (event) => {
 });
 
 canvas.addEventListener('touchstart', (event) => {
+  event.preventDefault();
   if (event.touches.length === 1) {
     isDragging = true;
     prevX = event.touches[0].clientX;
     prevY = event.touches[0].clientY;
   }
-});
+}, { passive: false });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
-window.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
-canvas.addEventListener('mousemove', (event) => {
+const mouseMoveEventListener = (event: MouseEvent) => {
   const dx = event.clientX - prevX;
   const dy = event.clientY - prevY;
   prevX = event.clientX;
@@ -422,9 +425,10 @@ canvas.addEventListener('mousemove', (event) => {
   if (isDragging) {
     updateCameraOrbit(dx, dy);
   }
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-canvas.addEventListener('touchmove', (event) => {
+const touchMoveEventListener = (event: TouchEvent) => {
   if (isDragging && event.touches.length === 1) {
     event.preventDefault();
     const dx = event.touches[0].clientX - prevX;
@@ -434,6 +438,9 @@ canvas.addEventListener('touchmove', (event) => {
 
     updateCameraOrbit(dx, dy);
   }
+};
+window.addEventListener('touchmove', touchMoveEventListener, {
+  passive: false,
 });
 
 function hideHelp() {
@@ -443,7 +450,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  window.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export const controls = {
@@ -544,6 +551,10 @@ export const controls = {
 
 export function onCleanup() {
   exampleDestroyed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.unobserve(canvas);
   icosphereGenerator.destroy();
   cubemapTexture.destroy();

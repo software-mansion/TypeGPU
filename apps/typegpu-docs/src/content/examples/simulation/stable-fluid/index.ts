@@ -438,12 +438,15 @@ canvas.addEventListener('touchstart', (e) => {
   };
 }, { passive: false });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   brushState.isDown = false;
-});
-window.addEventListener('touchend', () => {
+};
+window.addEventListener('mouseup', mouseUpEventListener);
+
+const touchEndEventListener = () => {
   brushState.isDown = false;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 canvas.addEventListener('mousemove', (e) => {
   const x = e.offsetX * devicePixelRatio;
@@ -470,7 +473,7 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'touchstart']) {
-  window.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export const controls = {
@@ -523,8 +526,9 @@ export const controls = {
 };
 
 export function onCleanup() {
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   root.destroy();
-  root.device.destroy();
 }
 
 // #endregion
