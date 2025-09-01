@@ -181,9 +181,15 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     if (querySet?.available) {
       querySet.resolve();
       const results = await querySet.read();
-      console.log(
-        `Inference took ${Number(results[1] - results[0]) / 1_000_000} ms`,
+      const timeInMs = Number(results[1] - results[0]) / 1_000_000;
+      const formattedTimeInMs = timeInMs.toFixed(2);
+      const predictionLabel = document.querySelector<HTMLDivElement>(
+        '.predictions-label',
       );
+      if (!predictionLabel) {
+        throw new Error('Missing prediction label.');
+      }
+      predictionLabel.innerText = `Predictions (${formattedTimeInMs}ms)`;
     }
 
     // Read the output
@@ -335,14 +341,16 @@ canvas.addEventListener('mousedown', () => {
   uiState.isDrawing = true;
 });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   uiState.isDrawing = false;
   uiState.lastPos = null;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
-canvas.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   uiState.lastPos = null;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 function centerImage(data: number[]) {
   const mass = data.reduce((acc, value) => acc + value, 0);
@@ -449,7 +457,7 @@ canvas.addEventListener('touchmove', (event) => {
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
   handleDrawing(x, y);
-});
+}, { passive: false });
 
 export const controls = {
   Reset: {
@@ -463,6 +471,8 @@ export const controls = {
 
 export function onCleanup() {
   disposed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   root.destroy();
 }
 
