@@ -349,7 +349,9 @@ export function ControlPanel() {
           <>
             <h2 className='m-0 font-medium text-xl'>Example controls</h2>
             <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
-              {exampleControlParams.map((param) => paramToControlRow(param))}
+              {exampleControlParams.filter(({ label }) =>
+                !label.startsWith('Test')
+              ).map((param) => paramToControlRow(param))}
             </div>
           </>
         )

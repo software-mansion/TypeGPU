@@ -51,7 +51,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
   const weightsOffset = i * inputSize;
   let sum = d.f32();
 
-  for (let j = 0; j < inputSize; j++) {
+  for (let j = d.u32(); j < inputSize; j++) {
     sum = std.fma(
       ioLayout.$.input[j],
       weightsBiasesLayout.$.weights[weightsOffset + j],
@@ -304,7 +304,7 @@ function downloadLayers(): Promise<[LayerData, LayerData][]> {
 
 // #endregion
 
-// #region User Interface
+// #region Example controls and cleanup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -520,11 +520,17 @@ export const controls = {
       updateSubgroupsStatus();
     },
   },
+  'Test Resolution': {
+    onButtonClick: [defaultCompute, subgroupCompute]
+      .map((fn) =>
+        tgpu.resolve({
+          externals: { fn },
+          enableExtensions: ['subgroups'],
+        })
+      )
+      .map((r) => root.device.createShaderModule({ code: r })),
+  },
 };
-
-// #endregion
-
-// #region Resource cleanup
 
 export function onCleanup() {
   disposed = true;
