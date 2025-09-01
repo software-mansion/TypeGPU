@@ -2,9 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { sdRoundedBox2d } from '@typegpu/sdf';
-
-const cat = await fetch('/TypeGPU/cat.webp');
-const imageBitmap = await createImageBitmap(await cat.blob());
+import { loadExternalImageWithMipmaps } from './mipmaps.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -13,46 +11,11 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const mousePosUniform = root.createUniform(d.vec2f);
-const sampler = tgpu['~unstable'].sampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
-const imageTexture = root['~unstable'].createTexture({
-  size: [imageBitmap.width, imageBitmap.height],
-  format: 'rgba8unorm',
-}).$usage('sampled', 'render');
-const sampledView = imageTexture.createView('sampled');
 
-device.queue.copyExternalImageToTexture(
-  { source: imageBitmap },
-  { texture: root.unwrap(imageTexture) },
-  [imageBitmap.width, imageBitmap.height],
+const { sampledView, sampler } = await loadExternalImageWithMipmaps(
+  root,
+  '/TypeGPU/cat.webp',
 );
-
-const Params = d.struct({
-  rectDims: d.vec2f,
-  radius: d.f32,
-  start: d.f32,
-  end: d.f32,
-  chromaticStrength: d.f32,
-  refractionStrength: d.f32,
-});
-const defaultParams: d.Infer<typeof Params> = {
-  rectDims: d.vec2f(0.13, 0.01),
-  radius: 0.003,
-  start: 0.05,
-  end: 0.1,
-  chromaticStrength: 0.02,
-  refractionStrength: 0.1,
-};
-
-const paramsUniform = root.createUniform(Params, defaultParams);
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -67,28 +30,57 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
+const Params = d.struct({
+  rectDims: d.vec2f,
+  radius: d.f32,
+  start: d.f32,
+  end: d.f32,
+  chromaticStrength: d.f32,
+  refractionStrength: d.f32,
+  blur: d.f32,
+  edgeFeather: d.f32,
+});
+const defaultParams: d.Infer<typeof Params> = {
+  rectDims: d.vec2f(0.13, 0.01),
+  radius: 0.003,
+  start: 0.05,
+  end: 0.1,
+  chromaticStrength: 0.02,
+  refractionStrength: 0.1,
+  blur: 2.0,
+  edgeFeather: 1.0,
+};
+
+const paramsUniform = root.createUniform(Params, defaultParams);
+
+context.configure({
+  device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
 const sampleWithChromaticAberration = tgpu.fn(
   [d.vec2f, d.f32, d.vec2f],
   d.vec3f,
 )(
   (uv, offset, dir) => {
-    const red = std.textureSampleLevel(
+    const red = std.textureSampleBias(
       sampledView,
       sampler,
       uv.add(dir.mul(offset)),
-      0,
+      paramsUniform.$.blur,
     );
-    const green = std.textureSampleLevel(
+    const green = std.textureSampleBias(
       sampledView,
       sampler,
       uv,
-      0,
+      paramsUniform.$.blur,
     );
-    const blue = std.textureSampleLevel(
+    const blue = std.textureSampleBias(
       sampledView,
       sampler,
       uv.sub(dir.mul(offset)),
-      0,
+      paramsUniform.$.blur,
     );
     return d.vec3f(red.x, green.y, blue.z);
   },
@@ -107,11 +99,13 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const end = paramsUniform.$.end;
 
   const sampled = std.textureSampleLevel(sampledView, sampler, uv, 0);
+  const blurSampled = std.textureSampleBias(
+    sampledView,
+    sampler,
+    uv,
+    paramsUniform.$.blur,
+  );
   const sdfDist = sdRoundedBox2d(posInBoxSpace, rectDims, radius);
-
-  if (sdfDist > end || sdfDist < start) {
-    return sampled;
-  }
 
   const chromaticStrength = paramsUniform.$.chromaticStrength;
   const refractionStrength = paramsUniform.$.refractionStrength;
@@ -126,7 +120,22 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     dir,
   );
 
-  return d.vec4f(refractedColor, 1.0);
+  const dim = d.vec2f(std.textureDimensions(sampledView, 0));
+  const featherUV = paramsUniform.$.edgeFeather / std.max(dim.x, dim.y);
+
+  const insideBlurWeight = 1.0 -
+    std.smoothstep(start - featherUV, start + featherUV, sdfDist);
+  const outsideWeight = std.smoothstep(
+    end - featherUV,
+    end + featherUV,
+    sdfDist,
+  );
+  const ringWeight = std.max(0.0, 1.0 - insideBlurWeight - outsideWeight);
+
+  const ringColor = d.vec4f(refractedColor, 1.0);
+  return blurSampled.mul(insideBlurWeight)
+    .add(ringColor.mul(ringWeight))
+    .add(sampled.mul(outsideWeight));
 });
 
 const pipeline = root['~unstable']
@@ -228,6 +237,24 @@ export const controls = {
       paramsUniform.writePartial({
         refractionStrength: v,
       });
+    },
+  },
+  'Blur strength': {
+    initial: defaultParams.blur,
+    min: 0.0,
+    max: 6.0,
+    step: 0.1,
+    onSliderChange: (v: number) => {
+      paramsUniform.writePartial({ blur: v });
+    },
+  },
+  'Feather ammount': {
+    initial: defaultParams.edgeFeather,
+    min: 0.0,
+    max: 3.0,
+    step: 0.1,
+    onSliderChange: (v: number) => {
+      paramsUniform.writePartial({ edgeFeather: v });
     },
   },
 };
