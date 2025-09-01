@@ -35,7 +35,7 @@ export interface LogMetadata {
   dataIndexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<LogData>>;
   options: Required<LogManagerOptions>;
-  logIdToSchema: Map<number, AnyWgslData>;
+  logIdToSchema: Map<number, (string | AnyWgslData)[]>;
 }
 
 export class LogManagerDummyImpl implements LogManager {
@@ -96,14 +96,16 @@ export class LogManagerImpl implements LogManager {
       return snip('/* console.log() */', Void);
     }
     if (args[0]?.dataType !== u32 && args[0]?.dataType !== vec3u) {
-      console.warn("Currently only values of type 'u32' can be logged.");
+      console.warn(
+        "Currently only values of type 'u32', 'vec3u' and strings can be logged.",
+      );
       return snip('/* console.log() */', Void);
     }
     const id = this.#nextLogId++;
 
     const dataType = args[0].dataType;
     const serializer = serializers[dataType.type];
-    this.#metaData.logIdToSchema.set(id, dataType);
+    this.#metaData.logIdToSchema.set(id, [dataType]);
 
     const log = fn([dataType])`(loggedValue) {
       var dataIndex = atomicAdd(&dataIndexBuffer, 1);

@@ -3,6 +3,7 @@ import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { deserializeAndStringify } from '../../src/tgsl/log/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
@@ -107,5 +108,57 @@ describe('wgslGenerator with console.log', () => {
         log();
       }"
     `);
+  });
+});
+
+describe('deserializeAndStringify', () => {
+  it('works for string literals', () => {
+    const data: number[] = [];
+    const logInfo: (string | d.AnyWgslData)[] = ['String literal'];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"String literal"`,
+    );
+  });
+
+  it('works for u32', () => {
+    const data: number[] = [123];
+    const logInfo: (string | d.AnyWgslData)[] = [d.u32];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"123"`,
+    );
+  });
+
+  it('works for vec3u', () => {
+    const data: number[] = [1, 2, 3];
+    const logInfo: (string | d.AnyWgslData)[] = [d.vec3u];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"vec3u(1, 2, 3)"`,
+    );
+  });
+
+  it('works for clumped vectors', () => {
+    const data: number[] = [1, 2, 3, 4, 5, 6]; // no alignment
+    const logInfo: (string | d.AnyWgslData)[] = [d.vec3u, d.vec3u];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"vec3u(1, 2, 3) vec3u(4, 5, 6)"`,
+    );
+  });
+
+  it('works for multiple arguments', () => {
+    const data: number[] = [1, 2, 3, 456];
+    const logInfo: (string | d.AnyWgslData)[] = [
+      'GID:',
+      d.vec3u,
+      'Result:',
+      d.u32,
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"GID: vec3u(1, 2, 3) Result: 456"`,
+    );
   });
 });

@@ -1,5 +1,4 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
 import { AnyWgslData } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
@@ -10,8 +9,8 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import { deserializeAndStringify } from '../../tgsl/log/deserializers.ts';
 import { LogMetadata } from '../../tgsl/log/log.ts';
-import { deserializers } from '../../tgsl/log/serializers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -201,12 +200,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         data
           .filter((e) => e.id)
           .map(({ id, data }) => {
-            const schema = memo.logMetadata?.logIdToSchema.get(
+            const logInfo = memo.logMetadata?.logIdToSchema.get(
               id,
-            ) as AnyWgslData;
-            const deserializer = deserializers[schema.type as 'u32' | 'vec3u'];
-            const slice = data.slice(0, sizeOf(schema));
-            console.log(deserializer(slice));
+            ) as (AnyWgslData | string)[];
+            const result = deserializeAndStringify(data, logInfo);
+            console.log(result);
           });
       });
       memo.logMetadata.dataIndexBuffer.write(0);
