@@ -19,42 +19,57 @@ export const raymarch = tgpu.fn(
   [d.vec3f, d.vec3f, d.vec3f],
   d.vec4f,
 )((ro, rd, sunDirection) => {
-  let res = d.vec4f(0.0, 0.0, 0.0, 0.0);
+  let res = d.vec4f();
+
   const hash = std.fract(
     std.sin(std.dot(rd.xy, d.vec2f(12.9898, 78.233))) * 43758.5453,
   );
   let depth = hash * MARCH_SIZE;
+
+  const white = d.vec3f(1.0, 1.0, 1.0);
+  const dark = d.vec3f(0.2, 0.2, 0.2);
+  const skyAmbient = d.vec3f(0.6, 0.45, 0.75);
+  const sunTint = d.vec3f(1.0, 0.7, 0.3);
+
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const p = std.add(ro, std.mul(rd, depth));
-    const density = std.clamp(scene(p), 0.0, 1.0);
+    const rawDensity = scene(p);
+    const density = std.clamp(rawDensity, 0.0, 1.0);
+
     if (density > 0.0) {
+      // light occlusion along sun direction
       let diffuse = std.clamp(
-        scene(p) - scene(std.add(p, sunDirection)),
+        rawDensity - scene(std.add(p, sunDirection)),
         0.0,
         1.0,
       );
+      // contrast boost
       diffuse = std.mix(0.3, 1.0, diffuse);
-      const lin = std.add(
-        std.mul(d.vec3f(0.6, 0.45, 0.75), 1.1),
-        std.mul(d.vec3f(1.0, 0.7, 0.3), diffuse * SUN_INTENSITY),
+
+      const lighting = std.add(
+        std.mul(skyAmbient, 1.1),
+        std.mul(sunTint, diffuse * SUN_INTENSITY),
       );
-      let color = d.vec4f(
-        std.mix(d.vec3f(1.0, 1.0, 1.0), d.vec3f(0.2, 0.2, 0.2), density),
+
+      const albedo = std.mix(white, dark, density);
+
+      const lit = d.vec3f(
+        albedo.x * lighting.x,
+        albedo.y * lighting.y,
+        albedo.z * lighting.z,
+      );
+      const premul = d.vec4f(
+        lit.x * density,
+        lit.y * density,
+        lit.z * density,
         density,
       );
-      color = d.vec4f(
-        color.x * lin.x,
-        color.y * lin.y,
-        color.z * lin.z,
-        color.w,
-      );
-      color = d.vec4f(
-        color.x * color.w,
-        color.y * color.w,
-        color.z * color.w,
-        color.w,
-      );
-      res = std.add(res, std.mul(color, LIGHT_ABSORBTION - res.w));
+
+      res = std.add(res, std.mul(premul, LIGHT_ABSORBTION - res.w));
+
+      if (res.w >= LIGHT_ABSORBTION - 1e-3) {
+        break;
+      }
     }
     depth += MARCH_SIZE;
   }
@@ -65,14 +80,15 @@ const scene = tgpu.fn(
   [d.vec3f],
   d.f32,
 )((p) => {
-  const f = fbm(p);
-  return f - 1.5 + CLOUD_DENSITY * 2.0;
+  const f = fractalBrownianMotion(p);
+  return f - 1.5 + CLOUD_DENSITY * 2;
 });
 
-const fbm = tgpu.fn(
+const fractalBrownianMotion = tgpu.fn(
   [d.vec3f],
   d.f32,
 )((p) => {
+  // simple wind/movement
   let q = std.add(
     p,
     d.vec3f(
@@ -81,17 +97,17 @@ const fbm = tgpu.fn(
       timeAccess.$ * FLIGHT_SPEED,
     ),
   );
-  let f = d.f32(0.0);
-  let scale = d.f32(CLOUD_CORE_DENSITY);
-  let factor = d.f32(CLOUD_DETALIZATION);
+  let sum = d.f32(0.0);
+  let amplitude = d.f32(CLOUD_CORE_DENSITY);
+  let frequency = d.f32(CLOUD_DETALIZATION);
 
   for (let i = 0; i < 4; i++) {
-    f += noise(q) * scale;
-    q = std.mul(q, factor);
-    scale *= 0.4;
-    factor += 0.5;
+    sum += noise(q) * amplitude;
+    q = std.mul(q, frequency);
+    amplitude *= 0.4;
+    frequency += 0.5;
   }
-  return f;
+  return sum;
 });
 
 const noise = tgpu.fn(
@@ -100,7 +116,6 @@ const noise = tgpu.fn(
 )((x) => {
   const p = std.floor(x);
   let f = std.fract(x);
-
   f = std.mul(std.mul(f, f), std.sub(3.0, std.mul(2.0, f)));
 
   const uv = std.add(
