@@ -315,3 +315,20 @@ import ListItem from '../../../components/ListItem.astro';
   data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
 </ListItem>
 :::
+
+## Index Buffers
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+You may refer to the [pipelines](/TypeGPU/fundamentals/pipelines/#drawing-with-drawindexed) section for usage details.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+
+```
+
