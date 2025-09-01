@@ -386,7 +386,7 @@ canvas.addEventListener('mouseout', () => {
 // handle mobile devices
 canvas.addEventListener('touchstart', () => {
   helpInfo.style.opacity = '0';
-});
+}, { passive: true });
 canvas.addEventListener('touchend', () => {
   helpInfo.style.opacity = '1';
 });
@@ -406,7 +406,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.mat4x4f(),
   );
   cameraBuffer.writePartial({ view: newView });
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
@@ -420,10 +420,11 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   isRightDragging = false;
   isDragging = false;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
 canvas.addEventListener('mousemove', (event) => {
   const dx = event.clientX - prevX;
@@ -452,7 +453,7 @@ canvas.addEventListener('touchstart', (event: TouchEvent) => {
   // Use the first touch for rotation.
   prevX = event.touches[0].clientX;
   prevY = event.touches[0].clientY;
-});
+}, { passive: false });
 
 canvas.addEventListener('touchmove', (event: TouchEvent) => {
   event.preventDefault();
@@ -468,15 +469,16 @@ canvas.addEventListener('touchmove', (event: TouchEvent) => {
   if (isRightDragging && event.touches.length === 2) {
     updateCubesRotation(dx, dy);
   }
-});
+}, { passive: false });
 
-canvas.addEventListener('touchend', (event: TouchEvent) => {
+const touchEndEventListener = (event: TouchEvent) => {
   event.preventDefault();
   if (event.touches.length === 0) {
     isRightDragging = false;
     isDragging = false;
   }
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 const resizeObserver = new ResizeObserver(() => {
   createDepthAndMsaaTextures();
@@ -485,6 +487,8 @@ resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }
