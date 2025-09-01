@@ -1,4 +1,3 @@
-import { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn } from '../../core/function/tgpuFn.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { arrayOf } from '../../data/array.ts';
@@ -8,35 +7,12 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
 import { vec3u } from '../../data/vector.ts';
-import {
-  AnyWgslData,
-  Atomic,
-  U32,
-  Void,
-  WgslArray,
-  WgslStruct,
-} from '../../data/wgslTypes.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import { GenerationCtx } from '../generationHelpers.ts';
 import { serializers } from './serializers.ts';
+import { LogManager, LogManagerOptions, LogMetadata } from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
-
-export interface LogManagerOptions {
-  oneLogSize?: number;
-  maxLogCount?: number;
-}
-
-export interface LogManager {
-  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
-  getMetadata(): LogMetadata | undefined;
-}
-
-export interface LogMetadata {
-  dataIndexBuffer: TgpuMutable<Atomic<U32>>;
-  dataBuffer: TgpuMutable<WgslArray<LogData>>;
-  options: Required<LogManagerOptions>;
-  logIdToSchema: Map<number, (string | AnyWgslData)[]>;
-}
 
 export class LogManagerDummyImpl implements LogManager {
   getMetadata(): undefined {
@@ -49,11 +25,6 @@ export class LogManagerDummyImpl implements LogManager {
     return fallbackSnippet;
   }
 }
-
-type LogData = WgslStruct<{
-  id: U32;
-  data: WgslArray<U32>;
-}>;
 
 export class LogManagerImpl implements LogManager {
   #metaData: LogMetadata;
