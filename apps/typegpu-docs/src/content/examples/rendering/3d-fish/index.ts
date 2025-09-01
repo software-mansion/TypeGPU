@@ -1,4 +1,5 @@
-import tgpu from 'typegpu';
+import { randf } from '@typegpu/noise';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -11,7 +12,7 @@ import {
   computeBindGroupLayout,
   FishBehaviorParams,
   Line3,
-  type ModelData,
+  ModelData,
   ModelDataArray,
   modelVertexLayout,
   MouseRay,
@@ -94,29 +95,36 @@ function enqueuePresetChanges() {
   }, 300);
 }
 
+const buffer0mutable = fishDataBuffers[0].as('mutable');
+const buffer1mutable = fishDataBuffers[1].as('mutable');
+const seedUniform = root.createUniform(d.f32);
+const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
+  'kernel';
+  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+  const data = ModelData({
+    position: d.vec3f(
+      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+    ),
+    direction: d.vec3f(
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+    ),
+    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+    variant: randf.sample(),
+    applySinWave: 1,
+    applySeaFog: 1,
+    applySeaDesaturation: 1,
+  });
+  buffer0mutable.$[x] = data;
+  buffer1mutable.$[x] = data;
+});
+
 const randomizeFishPositions = () => {
-  const positions: d.Infer<typeof ModelData>[] = Array.from(
-    { length: p.fishAmount },
-    () => ({
-      position: d.vec3f(
-        Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-      ),
-      scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
-      variant: Math.random(),
-      applySinWave: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 1,
-    }),
-  );
-  fishDataBuffers[0].write(positions);
-  fishDataBuffers[1].write(positions);
+  seedUniform.write((performance.now() % 10000) / 10000);
+  randomizeFishPositionsDispatch(p.fishAmount);
   enqueuePresetChanges();
 };
 
