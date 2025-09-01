@@ -15,7 +15,7 @@ const mousePosUniform = root.createUniform(d.vec2f);
 
 const { sampledView, sampler } = await loadExternalImageWithMipmaps(
   root,
-  '/TypeGPU/cat.webp',
+  '/TypeGPU/plums.jpg',
 );
 
 const Params = d.struct({
@@ -35,8 +35,8 @@ const defaultParams: d.Infer<typeof Params> = {
   end: 0.1,
   chromaticStrength: 0.02,
   refractionStrength: 0.1,
-  blur: 2.0,
-  edgeFeather: 1.0,
+  blur: 1.2,
+  edgeFeather: 2.0,
 };
 
 const paramsUniform = root.createUniform(Params, defaultParams);
