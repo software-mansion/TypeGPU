@@ -10,7 +10,7 @@ import type {
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
 import { deserializeAndStringify } from '../../tgsl/log/deserializers.ts';
-import { LogMetadata } from '../../tgsl/log/log.ts';
+import { LogMetadata } from '../../tgsl/log/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -199,11 +199,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       memo.logMetadata.dataBuffer.read().then((data) => {
         data
           .filter((e) => e.id)
-          .map(({ id, data }) => {
+          .map(({ id, data: logData }) => {
             const logInfo = memo.logMetadata?.logIdToSchema.get(
               id,
             ) as (AnyWgslData | string)[];
-            const result = deserializeAndStringify(data, logInfo);
+            const result = deserializeAndStringify(logData, logInfo);
             console.log(result);
           });
       });

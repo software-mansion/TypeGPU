@@ -1,15 +1,12 @@
-import { fn } from '../../core/function/tgpuFn.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { u32 } from '../../data/numeric.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
-import { vec3u } from '../../data/vector.ts';
-import { Void } from '../../data/wgslTypes.ts';
+import { AnyWgslData, Void } from '../../data/wgslTypes.ts';
 import { GenerationCtx } from '../generationHelpers.ts';
-import { serializers } from './serializers.ts';
+import { createLoggingFunction } from './serializers.ts';
 import { LogManager, LogManagerOptions, LogMetadata } from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
@@ -31,7 +28,7 @@ export class LogManagerImpl implements LogManager {
   #nextLogId = 1;
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
-      options.oneLogSize = 3;
+      options.oneLogSize = 64;
     }
     if (options?.maxLogCount === undefined) {
       options.maxLogCount = 256;
@@ -62,35 +59,23 @@ export class LogManagerImpl implements LogManager {
   }
 
   registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
-    if (args.length !== 1) {
-      console.warn('Currently only logs of exactly 1 argument are supported.');
-      return snip('/* console.log() */', Void);
-    }
-    if (args[0]?.dataType !== u32 && args[0]?.dataType !== vec3u) {
-      console.warn(
-        "Currently only values of type 'u32', 'vec3u' and strings can be logged.",
-      );
-      return snip('/* console.log() */', Void);
-    }
     const id = this.#nextLogId++;
+    const nonStringArgs = args
+      .filter((e) => typeof e !== 'string')
+      .map((e) => e.dataType) as AnyWgslData[];
 
-    const dataType = args[0].dataType;
-    const serializer = serializers[dataType.type];
-    this.#metaData.logIdToSchema.set(id, [dataType]);
+    const logFn = createLoggingFunction(
+      id,
+      nonStringArgs,
+      this.#metaData.dataBuffer,
+      this.#metaData.dataIndexBuffer,
+    );
 
-    const log = fn([dataType])`(loggedValue) {
-      var dataIndex = atomicAdd(&dataIndexBuffer, 1);
-      var serializedData = serializer(loggedValue);
-      dataBuffer[dataIndex].id = ${id};
-      for (var i = 0u; i< ${sizeOf(dataType)}; i++) {
-        dataBuffer[dataIndex].data[i] = serializedData[i];
-      }
-    }`.$uses({
-      serializer,
-      dataIndexBuffer: this.#metaData.dataIndexBuffer,
-      dataBuffer: this.#metaData.dataBuffer,
-    }).$name(`log ${id}`);
+    this.#metaData.logIdToSchema.set(id, nonStringArgs);
 
-    return snip(`${ctx.resolve(log)}(${args[0].value})`, Void);
+    return snip(
+      `${ctx.resolve(logFn)}(${args.map((e) => e.value).join(', ')})`,
+      Void,
+    );
   }
 }

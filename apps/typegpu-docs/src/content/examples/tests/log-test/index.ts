@@ -19,11 +19,16 @@ function run(callback: (input: { gid: d.v3u }) => undefined, size: number) {
   console.log(tgpu.resolve({ externals: { pipeline } }));
 }
 
-run(({ gid }) => {
+// run(({ gid }) => {
+//   'kernel';
+//   console.log(gid.x + 10);
+//   console.log(gid.add(1).mul(3));
+// }, 2);
+
+run(() => {
   'kernel';
-  console.log(gid.x + 10);
-  console.log(gid.add(1).mul(3));
-}, 2);
+  console.log(d.u32(1), d.u32(2), d.vec3u(9, 8, 7), d.u32(3));
+}, 1);
 
 // #region Example controls and cleanup
 
