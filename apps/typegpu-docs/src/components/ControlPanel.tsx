@@ -18,6 +18,8 @@ import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
 
+const DEV = import.meta.env.DEV;
+
 function ToggleRow({
   label,
   initial = false,
@@ -350,7 +352,7 @@ export function ControlPanel() {
             <h2 className='m-0 font-medium text-xl'>Example controls</h2>
             <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
               {exampleControlParams.filter(({ label }) =>
-                !label.startsWith('Test')
+                DEV || !label.startsWith('Test')
               ).map((param) => paramToControlRow(param))}
             </div>
           </>
