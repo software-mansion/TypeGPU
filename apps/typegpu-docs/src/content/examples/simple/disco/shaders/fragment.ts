@@ -4,21 +4,27 @@ import * as std from 'typegpu/std';
 import { palette } from '../utils.ts';
 import { resolutionAccess, timeAccess } from '../consts.ts';
 
+const aspectCorrected = tgpu.fn([d.vec2f], d.vec2f)((uv) => {
+  const v = uv.xy.sub(0.5).mul(2.0);
+  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
+  if (aspect > 1) v.x *= aspect;
+  else v.y /= aspect;
+  return v;
+});
+
+const accumulate = tgpu.fn(
+  [d.vec3f, d.vec3f, d.f32],
+  d.vec3f,
+)((acc, col, weight) => acc.add(col.mul(weight)));
+
 export const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   {
-    let newuv = std.mul(std.sub(uv.xy, 0.5), 2.0);
-    const aspect = resolutionAccess.$.x / resolutionAccess.$.y; // w / h
-    // if widescreen (aspect > 1) expand x; if tallscreen counter-stretch y
-    if (aspect > 1) {
-      newuv.x *= aspect;
-    } else {
-      newuv.y /= aspect;
-    }
+    let newuv = aspectCorrected(uv);
     const uvv = newuv;
-    const finalColor = d.vec3f(0.0, 0.0, 0.0);
+    let finalColor = d.vec3f();
     for (let i = 0.0; i < 5.0; i++) {
       newuv = std.sub(
         std.fract(std.mul(newuv, 1.3 * std.sin(timeAccess.$))),
@@ -30,9 +36,7 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
       len = std.abs(len);
       len = std.smoothstep(0.0, 0.1, len);
       len = 0.06 / len;
-      finalColor.x += col.x * len;
-      finalColor.y += col.y * len;
-      finalColor.z += col.z * len;
+      finalColor = accumulate(finalColor, col, len);
     }
     return d.vec4f(finalColor, 1.0);
   }
@@ -44,15 +48,9 @@ export const mainFragment2 = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   {
-    let newuv = (uv.xy.sub(0.5)).mul(2);
-    const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-    if (aspect > 1) {
-      newuv.x *= aspect;
-    } else {
-      newuv.y /= aspect;
-    }
+    let newuv = aspectCorrected(uv);
     const uvv = newuv;
-    const finalColor = d.vec3f(0.0, 0.0, 0.0);
+    let finalColor = d.vec3f();
     for (let i = 0.0; i < 3.0; i++) {
       newuv = std.fract(newuv.mul(-0.9)).sub(0.5);
       let len = std.length(newuv) * std.exp(-std.length(uvv) * 0.5);
@@ -61,9 +59,7 @@ export const mainFragment2 = tgpu['~unstable'].fragmentFn({
       len = std.abs(len);
       len = std.smoothstep(0.0, 0.1, len);
       len = 0.1 / len;
-      finalColor.x += col.x * len;
-      finalColor.y += col.y * len;
-      finalColor.z += col.z * len;
+      finalColor = accumulate(finalColor, col, len);
     }
     return d.vec4f(finalColor, 1.0);
   }
@@ -74,12 +70,9 @@ export const mainFragment3 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let newuv = std.mul(std.sub(uv.xy, 0.5), 2.0);
-  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) newuv.x *= aspect;
-  else newuv.y /= aspect;
+  let newuv = aspectCorrected(uv);
   const uvv = newuv;
-  const finalColor = d.vec3f(0.0, 0.0, 0.0);
+  let finalColor = d.vec3f();
   const baseAngle = timeAccess.$ * 0.3;
   const ca = std.cos(baseAngle);
   const sa = std.sin(baseAngle);
@@ -101,9 +94,7 @@ export const mainFragment3 = tgpu['~unstable'].fragmentFn({
     len = std.abs(len);
     len = std.smoothstep(0.0, 0.11, len);
     len = 0.055 / (len + 1e-5);
-    finalColor.x += col.x * len;
-    finalColor.y += col.y * len;
-    finalColor.z += col.z * len;
+    finalColor = accumulate(finalColor, col, len);
   }
   return d.vec4f(finalColor, 1.0);
 });
@@ -114,10 +105,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   // iterative bloom
-  let newuv = uv.sub(0.5).mul(2);
-  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) newuv.x *= aspect;
-  else newuv.y /= aspect;
+  let newuv = aspectCorrected(uv);
   // diagonal mirror
   const base = d.vec2f(
     std.abs(std.fract(newuv.x * 1.2) - 0.5),
@@ -125,7 +113,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
   ).mul(2).sub(1);
   newuv = base;
   const origin = newuv;
-  const finalColor = d.vec3f(0, 0, 0);
+  let finalColor = d.vec3f(0, 0, 0);
   const t = timeAccess.$;
   for (let i = 0; i < 4; i++) {
     const fi = d.f32(i);
@@ -146,9 +134,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
     len = std.smoothstep(0.0, 0.105, len);
     len = (0.058 + fi * 0.006) / (len + 1e-5);
     const col = palette(std.length(origin) + t * 0.65 + fi * 0.045);
-    finalColor.x += col.x * len;
-    finalColor.y += col.y * len;
-    finalColor.z += col.z * len;
+    finalColor = accumulate(finalColor, col, len);
   }
   return d.vec4f(finalColor, 1.0);
 });
@@ -158,12 +144,9 @@ export const mainFragment5 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let newuv = uv.sub(0.5).mul(2);
-  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) newuv.x *= aspect;
-  else newuv.y /= aspect;
+  let newuv = aspectCorrected(uv);
   const uvv = newuv;
-  const finalColor = d.vec3f(0.0, 0.0, 0.0);
+  let finalColor = d.vec3f();
   for (let i = 0; i < 3; i++) {
     const fi = d.f32(i);
     // swirl distortion
@@ -181,9 +164,7 @@ export const mainFragment5 = tgpu['~unstable'].fragmentFn({
     len = std.abs(len);
     len = std.smoothstep(0.0, 0.1, len);
     len = (0.085 + fi * 0.005) / (len + 1e-5);
-    finalColor.x += col.x * len;
-    finalColor.y += col.y * len;
-    finalColor.z += col.z * len;
+    finalColor = accumulate(finalColor, col, len);
   }
   return d.vec4f(finalColor, 1.0);
 });
@@ -193,12 +174,9 @@ export const mainFragment6 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let newuv = uv.sub(0.5).mul(2);
-  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) newuv.x *= aspect;
-  else newuv.y /= aspect;
+  let newuv = aspectCorrected(uv);
   const base = newuv;
-  const colorAcc = d.vec3f(0, 0, 0);
+  let colorAcc = d.vec3f(0, 0, 0);
   const t = timeAccess.$;
   for (let i = 0; i < 5; i++) {
     const fi = d.f32(i);
@@ -218,9 +196,7 @@ export const mainFragment6 = tgpu['~unstable'].fragmentFn({
     len = std.smoothstep(0.0, 0.1, len);
     len = (0.05 + fi * 0.005) / (len + 1e-5);
     const col = palette(std.length(base) + t * 0.7 + fi * 0.04);
-    colorAcc.x += col.x * len;
-    colorAcc.y += col.y * len;
-    colorAcc.z += col.z * len;
+    colorAcc = accumulate(colorAcc, col, len);
   }
   return d.vec4f(colorAcc, 1.0);
 });
@@ -230,17 +206,14 @@ export const mainFragment7 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let newuv = uv.sub(0.5).mul(2);
-  const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) newuv.x *= aspect;
-  else newuv.y /= aspect;
+  let newuv = aspectCorrected(uv);
   // mirror diagonally
   newuv = d.vec2f(
     std.abs(std.fract(newuv.x * 1.5) - 0.5),
     std.abs(std.fract(newuv.y * 1.5) - 0.5),
   ).mul(2);
   const base = newuv;
-  const finalColor = d.vec3f(0, 0, 0);
+  let finalColor = d.vec3f(0, 0, 0);
   const t = timeAccess.$;
   for (let i = 0; i < 4; i++) {
     const fi = d.f32(i);
@@ -262,9 +235,7 @@ export const mainFragment7 = tgpu['~unstable'].fragmentFn({
     len = std.smoothstep(0.0, 0.11, len);
     len = (0.06 + fi * 0.005) / (len + 1e-5);
     const col = palette(std.length(base) + t * 0.75 + fi * 0.05);
-    finalColor.x += col.x * len;
-    finalColor.y += col.y * len;
-    finalColor.z += col.z * len;
+    finalColor = accumulate(finalColor, col, len);
   }
   return d.vec4f(finalColor, 1.0);
 });
