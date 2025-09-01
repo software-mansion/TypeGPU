@@ -43,8 +43,8 @@ describe('mnist inference example', () => {
         var i = _arg_0.gid.x;
         var weightsOffset = (i * inputSize);
         var sum = 0f;
-        for (var j = 0; (j < i32(inputSize)); j++) {
-          sum = fma(input_2[j], weights_3[(i32(weightsOffset) + j)], sum);
+        for (var j = 0u; (j < inputSize); j++) {
+          sum = fma(input_2[j], weights_3[(weightsOffset + j)], sum);
         }
         var total = (sum + biases_4[i]);
         output_5[i] = relu_6(total);
