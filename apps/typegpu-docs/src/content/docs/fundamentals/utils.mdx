@@ -56,7 +56,7 @@ doubleUp(8);
 doubleUp(8);
 doubleUp(4);
 
-// no need to await `doubleUp()` because the command encoder
+// no need to call `onSubmittedWorkDone()` because the command encoder
 // will queue the read after `doubleUp` anyway
 console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
 ```

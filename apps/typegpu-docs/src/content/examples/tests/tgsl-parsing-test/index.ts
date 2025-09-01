@@ -39,7 +39,7 @@ if (!table) {
   throw new Error('Nowhere to display the results');
 }
 runTests().then((result) => {
-  table.innerText = result ? 'Tests succeeded!' : 'Tests failed.';
+  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
 });
 
 // #region Example controls and cleanup
