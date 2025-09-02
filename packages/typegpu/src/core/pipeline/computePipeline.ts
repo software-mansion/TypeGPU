@@ -62,13 +62,6 @@ export function INTERNAL_createComputePipeline(
   );
 }
 
-export function isComputePipeline(
-  value: unknown,
-): value is TgpuComputePipeline {
-  const maybe = value as TgpuComputePipeline | undefined;
-  return maybe?.resourceType === 'compute-pipeline' && !!maybe[$internal];
-}
-
 // --------------
 // Implementation
 // --------------

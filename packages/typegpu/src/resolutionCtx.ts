@@ -1,9 +1,7 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import {
-  isComputePipeline,
-  type TgpuComputePipeline,
-} from './core/pipeline/computePipeline.ts';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+import { isComputePipeline } from './core/pipeline/typeGuards.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';

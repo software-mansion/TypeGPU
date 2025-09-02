@@ -5,8 +5,7 @@ import {
 } from '../../resolutionCtx.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
-import { isComputePipeline } from '../pipeline/computePipeline.ts';
-import { isRenderPipeline } from '../pipeline/renderPipeline.ts';
+import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 

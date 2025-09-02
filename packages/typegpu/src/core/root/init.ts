@@ -1,9 +1,9 @@
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
   type TgpuQuerySet,
 } from '../../core/querySet/querySet.ts';
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
@@ -43,6 +43,12 @@ import {
   type TgpuBuffer,
   type VertexFlag,
 } from '../buffer/buffer.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -51,16 +57,15 @@ import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
-  isComputePipeline,
   type TgpuComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  isRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
+import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -88,6 +93,7 @@ import {
   isVertexLayout,
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
+import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
   CreateTextureOptions,
@@ -100,13 +106,6 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
-import {
-  TgpuBufferShorthandImpl,
-  type TgpuMutable,
-  type TgpuReadonly,
-  type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
-import { ConfigurableImpl } from './configurableImpl.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(

@@ -255,11 +255,6 @@ export function INTERNAL_createRenderPipeline(
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
 }
 
-export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
-  const maybe = value as TgpuRenderPipeline | undefined;
-  return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
-}
-
 // --------------
 // Implementation
 // --------------
