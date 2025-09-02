@@ -1,7 +1,13 @@
-import { TgpuMutable } from '../../core/buffer/bufferShorthand';
-import { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data';
-import { Snippet } from '../../data/snippet';
-import { GenerationCtx } from '../generationHelpers';
+import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { Snippet } from '../../data/snippet.ts';
+import type {
+  AnyWgslData,
+  Atomic,
+  U32,
+  WgslArray,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
+import type { GenerationCtx } from '../generationHelpers.ts';
 
 export interface LogManagerOptions {
   oneLogSize?: number;

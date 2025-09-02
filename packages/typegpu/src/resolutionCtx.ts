@@ -1,9 +1,9 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import {
   isComputePipeline,
-  TgpuComputePipeline,
+  type TgpuComputePipeline,
 } from './core/pipeline/computePipeline.ts';
-import { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -43,12 +43,8 @@ import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import {
-  LogManager,
-  LogManagerDummyImpl,
-  LogManagerImpl,
-  LogMetadata,
-} from './tgsl/log/log.ts';
+import { LogManagerDummyImpl, LogManagerImpl } from './tgsl/log/log.ts';
+import type { LogManager, LogMetadata } from './tgsl/log/types.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
@@ -388,7 +384,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.names = opts.names;
     this.pipeline = pipeline;
     if (isComputePipeline(pipeline)) {
-      this._logManager = new LogManagerImpl((pipeline as any)._core.branch, {});
+      this._logManager = new LogManagerImpl(pipeline[$internal].branch, {});
     } else {
       this._logManager = new LogManagerDummyImpl();
     }

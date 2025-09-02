@@ -1,7 +1,7 @@
 import { sizeOf } from '../../data/sizeOf.ts';
 import { vec3u } from '../../data/vector.ts';
 import {
-  AnyWgslData,
+  type AnyWgslData,
   isVecInstance,
   isWgslData,
 } from '../../data/wgslTypes.ts';

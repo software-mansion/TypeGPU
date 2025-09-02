@@ -1,11 +1,16 @@
-import { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
-import { fn, TgpuFn } from '../../core/function/tgpuFn.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { arrayOf } from '../../data/array.ts';
 import { u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { vec3u } from '../../data/vector.ts';
-import { AnyWgslData, Atomic, U32, WgslArray } from '../../data/wgslTypes.ts';
-import { LogData } from './types.ts';
+import type {
+  AnyWgslData,
+  Atomic,
+  U32,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
+import type { LogData } from './types.ts';
 
 const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(n);
@@ -21,10 +26,10 @@ export const serializers = {
   vec3u: serializeVec3u,
 } as const;
 
-function generateFor(from: number, to: number, index: number): string {
+function generateFor(from: number, size: number, index: number): string {
   return `
     var serializedData_${index} = serializer_${index}(_arg_${index});
-    for (var i = ${from}u; i< ${to}u; i++) {
+    for (var i = ${from}u; i< ${from + size}u; i++) {
       dataBuffer[dataIndex].data[i] = serializedData_${index}[i - ${from}];
     }
 `;
@@ -44,8 +49,10 @@ export function createLoggingFunction(
       throw new Error(`Cannot serialize data of type ${arg.type}`);
     }
     usedSerializers.push([`serializer_${i}`, serializer]);
-    const size = sizeOf(arg) / 4;
-    return generateFor(currentIndex, currentIndex += size, i);
+    const size = Math.ceil(sizeOf(arg) / 4);
+    const result = generateFor(currentIndex, size, i);
+    currentIndex += size;
+    return result;
   });
   const uses = Object.fromEntries(usedSerializers);
 

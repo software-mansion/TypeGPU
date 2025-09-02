@@ -1,5 +1,5 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -10,7 +10,7 @@ import type {
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
 import { deserializeAndStringify } from '../../tgsl/log/deserializers.ts';
-import { LogMetadata } from '../../tgsl/log/types.ts';
+import type { LogMetadata } from '../../tgsl/log/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -27,6 +27,7 @@ import {
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
+  readonly branch: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -101,6 +102,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       },
       get priors() {
         return _priors;
+      },
+      get branch() {
+        return _core.branch;
       },
     };
     this[$getNameForward] = _core;

@@ -4,10 +4,10 @@ import { atomic } from '../../data/atomic.ts';
 import { u32 } from '../../data/numeric.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
-import { AnyWgslData, Void } from '../../data/wgslTypes.ts';
-import { GenerationCtx } from '../generationHelpers.ts';
+import { type AnyWgslData, Void } from '../../data/wgslTypes.ts';
+import type { GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
-import { LogManager, LogManagerOptions, LogMetadata } from './types.ts';
+import type { LogManager, LogManagerOptions, LogMetadata } from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
