@@ -31,50 +31,26 @@ const resolutionUniform = root.createUniform(
   d.vec2f(canvas.width, canvas.height),
 );
 
-const pipeline = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+const fragmentShaders = [
+  mainFragment,
+  mainFragment2,
+  mainFragment3,
+  mainFragment4,
+  mainFragment5,
+  mainFragment6,
+  mainFragment7,
+];
 
-const pipeline2 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment2, { format: presentationFormat })
-  .createPipeline();
-const pipeline3 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment3, { format: presentationFormat })
-  .createPipeline();
-const pipeline4 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment4, { format: presentationFormat })
-  .createPipeline();
-const pipeline5 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment5, { format: presentationFormat })
-  .createPipeline();
-const pipeline6 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment6, { format: presentationFormat })
-  .createPipeline();
-const pipeline7 = root['~unstable']
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment7, { format: presentationFormat })
-  .createPipeline();
-let currentPipeline = pipeline;
+const pipelines = fragmentShaders.map((fragment) =>
+  root['~unstable']
+    .with(timeAccess, time)
+    .with(resolutionAccess, resolutionUniform)
+    .withVertex(mainVertex, {})
+    .withFragment(fragment, { format: presentationFormat })
+    .createPipeline()
+);
+
+let currentPipeline = pipelines[0];
 
 let startTime = performance.now();
 let frameId: number;
@@ -117,30 +93,19 @@ export const controls = {
       'pattern7',
     ],
     onSelectChange(value: string) {
-      switch (value) {
-        case 'pattern1':
-          currentPipeline = pipeline;
-          break;
-        case 'pattern2':
-          currentPipeline = pipeline2;
-          break;
-        case 'pattern3':
-          currentPipeline = pipeline3;
-          break;
-        case 'pattern4':
-          currentPipeline = pipeline4;
-          break;
-        case 'pattern5':
-          currentPipeline = pipeline5;
-          break;
-        case 'pattern6':
-          currentPipeline = pipeline6;
-          break;
-        case 'pattern7':
-          currentPipeline = pipeline7;
-          break;
+      const patternIndex = {
+        pattern1: 0,
+        pattern2: 1,
+        pattern3: 2,
+        pattern4: 3,
+        pattern5: 4,
+        pattern6: 5,
+        pattern7: 6,
+      }[value];
+      if (patternIndex !== undefined) {
+        currentPipeline = pipelines[patternIndex];
+        render();
       }
-      render();
     },
   },
 };
