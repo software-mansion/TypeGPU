@@ -23,7 +23,7 @@ describe('wgslGenerator with console.log', () => {
       .mockImplementation(() => {});
 
     const fn = tgpu.fn([])(() => {
-      console.log('stray function');
+      console.log(987);
     });
 
     expect(asWgsl(fn)).toMatchInlineSnapshot(`
@@ -45,12 +45,12 @@ describe('wgslGenerator with console.log', () => {
 
     const vs = tgpu['~unstable']
       .vertexFn({ out: { pos: d.builtin.position } })(() => {
-        console.log('Vertex shader');
+        console.log(654);
         return { pos: d.vec4f() };
       });
     const fs = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => {
-        console.log('Fragment shader');
+        console.log(321);
         return d.vec4f();
       });
 
@@ -86,7 +86,7 @@ describe('wgslGenerator with console.log', () => {
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
-      console.log(10);
+      console.log(d.u32(10));
     });
 
     const pipeline = root['~unstable']
@@ -98,14 +98,163 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @group(0) @binding(0) var<storage, read_write> buffer: u32;
+      fn serializeU32(n: u32) -> array<u32,1>{
+        return array<u32, 1>(n);
+      }
 
-      fn log() {
-          buffer = 1;
+      @group(0) @binding(0) var<storage, read_write> dataIndexBuffer: atomic<u32>;
+
+      struct log data schema {
+        id: u32,
+        data: array<u32, 64>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+
+      fn log data 1 serializer(_arg_0: u32) {
+          var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+          log buffer[dataIndex].id = 1;
+
+
+          var serializedData_0 = serializeU32(_arg_0);
+          for (var i = 0u; i< 1u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+          }
+
+          
         }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
-        log();
+        log data 1 serializer(10);
+      }"
+    `);
+  });
+
+  it('Parses two console.logs in a compute pipeline', ({ root }) => {
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.log(d.u32(10));
+      console.log(d.u32(20));
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      fn serializeU32(n: u32) -> array<u32,1>{
+        return array<u32, 1>(n);
+      }
+
+      @group(0) @binding(0) var<storage, read_write> dataIndexBuffer: atomic<u32>;
+
+      struct log data schema {
+        id: u32,
+        data: array<u32, 64>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+
+      fn log data 1 serializer(_arg_0: u32) {
+          var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+          log buffer[dataIndex].id = 1;
+
+
+          var serializedData_0 = serializeU32(_arg_0);
+          for (var i = 0u; i< 1u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+          }
+
+          
+        }
+
+      fn log data 2 serializer(_arg_0: u32) {
+          var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+          log buffer[dataIndex].id = 2;
+
+
+          var serializedData_0 = serializeU32(_arg_0);
+          for (var i = 0u; i< 1u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+          }
+
+          
+        }
+
+      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+        log data 1 serializer(10);
+        log data 2 serializer(20);
+      }"
+    `);
+  });
+
+  it('Parses console.logs with more arguments in a compute pipeline', ({ root }) => {
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.log(d.u32(10), d.vec3u(2, 3, 4), d.u32(50));
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      fn serializeU32(n: u32) -> array<u32,1>{
+        return array<u32, 1>(n);
+      }
+
+      fn serializeVec3u(v: vec3u) -> array<u32,3>{
+        return array<u32, 3>(v.x, v.y, v.z);
+      }
+
+      @group(0) @binding(0) var<storage, read_write> dataIndexBuffer: atomic<u32>;
+
+      struct log data schema {
+        id: u32,
+        data: array<u32, 64>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+
+      fn log data 1 serializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
+          var dataIndex = atomicAdd(&dataIndexBuffer, 1);
+          log buffer[dataIndex].id = 1;
+
+
+          var serializedData_0 = serializeU32(_arg_0);
+          for (var i = 0u; i< 1u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+          }
+
+
+          var serializedData_1 = serializeVec3u(_arg_1);
+          for (var i = 1u; i< 4u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_1[i - 1];
+          }
+
+
+          var serializedData_2 = serializeU32(_arg_2);
+          for (var i = 4u; i< 5u; i++) {
+            log buffer[dataIndex].data[i] = serializedData_2[i - 4];
+          }
+
+          
+        }
+
+      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+        log data 1 serializer(10, vec3u(2, 3, 4), 50);
       }"
     `);
   });

@@ -17,8 +17,7 @@ const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
 }`;
 
 const serializeVec3u = fn([vec3u], arrayOf(u32, 3))`(v) => {
-  return array<u32, 3>(100, 200, 300);
-  // return array<u32, 3>(v.x, v.y, v.z);
+  return array<u32, 3>(v.x, v.y, v.z);
 }`;
 
 export const serializers = {

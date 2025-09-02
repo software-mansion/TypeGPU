@@ -58,6 +58,7 @@ export class LogManagerImpl implements LogManager {
     return this.#nextLogId === 1 ? undefined : this.#metaData;
   }
 
+  // AAA snippet types should be concretized before passing them here
   registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
     const id = this.#nextLogId++;
     const nonStringArgs = args
