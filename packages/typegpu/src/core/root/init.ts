@@ -1,9 +1,9 @@
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
   type TgpuQuerySet,
 } from '../../core/querySet/querySet.ts';
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
@@ -37,12 +37,19 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
   type TgpuBuffer,
   type VertexFlag,
 } from '../buffer/buffer.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -88,6 +95,7 @@ import {
   isVertexLayout,
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
+import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
   CreateTextureOptions,
@@ -100,14 +108,6 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
-import {
-  TgpuBufferShorthandImpl,
-  type TgpuMutable,
-  type TgpuReadonly,
-  type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
-import { ConfigurableImpl } from './configurableImpl.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -191,6 +191,37 @@ class WithVertexImpl implements WithVertex {
       ...this._options,
       fragmentFn,
       targets,
+    });
+  }
+
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, primitiveState });
+  }
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, depthStencilState });
+  }
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, multisampleState });
+  }
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline({
+      ...this._options,
+      fragmentFn: null,
+      targets: null,
     });
   }
 }

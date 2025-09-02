@@ -5,7 +5,13 @@ import type {
   Disarray,
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
-import type { AnyWgslData, U16, U32, WgslArray } from '../../data/wgslTypes.ts';
+import type {
+  AnyWgslData,
+  U16,
+  U32,
+  Void,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import type { NameRegistry } from '../../nameRegistry.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -25,8 +31,15 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type {
+  TgpuBufferShorthand,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -50,13 +63,6 @@ import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type {
-  TgpuBufferShorthand,
-  TgpuMutable,
-  TgpuReadonly,
-  TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 // ----------
 // Public API
@@ -104,6 +110,25 @@ export interface WithVertex<
   >(
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
   ): WithFragment<FragmentOut>;
+
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment<Void>;
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment<Void>;
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment<Void>;
+
+  createPipeline(): TgpuRenderPipeline<Void>;
 }
 
 export interface WithFragment<

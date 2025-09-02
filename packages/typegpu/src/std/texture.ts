@@ -1,14 +1,18 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { TgpuSampler } from '../core/sampler/sampler.ts';
 import type { TgpuExternalTexture } from '../core/texture/externalTexture.ts';
 import type {
+  TgpuComparisonSampler,
+  TgpuSampler,
+} from '../core/sampler/sampler.ts';
+import type {
+  TgpuDepthTexture,
   TgpuSampledTexture,
   TgpuStorageTexture,
 } from '../core/texture/texture.ts';
 import type { ChannelData, TexelData } from '../core/texture/texture.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { snip } from '../data/snippet.ts';
-import { u32 } from '../data/numeric.ts';
+import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
   type F32,
@@ -368,6 +372,70 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   },
   'textureDimensions',
 );
+
+type TextureSampleCompareOverload = {
+  <T extends TgpuDepthTexture<'2d'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'2d'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuDepthTexture<'2d-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'2d-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuDepthTexture<'cube'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v3f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'cube-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v3f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+};
+
+export const textureSampleCompare: TextureSampleCompareOverload =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuDepthTexture,
+      _sampler: TgpuComparisonSampler,
+      _coords: v2f | v3f,
+      _depthRefOrArrayIndex: number,
+      _depthRefOrOffset?: number | v2i,
+      _maybeOffset?: v2i,
+    ) => {
+      throw new Error(
+        'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
+      );
+    },
+    // CODEGEN implementation
+    (...args) => snip(stitch`textureSampleCompare(${args})`, f32),
+    'textureSampleCompare',
+  );
 
 type TextureSampleBaseClampToEdge = (
   texture: TgpuSampledTexture<'2d', F32> | TgpuExternalTexture,
