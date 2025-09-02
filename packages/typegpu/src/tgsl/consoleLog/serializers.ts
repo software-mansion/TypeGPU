@@ -27,18 +27,18 @@ export const serializers = {
 
 function generateFor(from: number, size: number, index: number): string {
   return `
-    var serializedData_${index} = serializer_${index}(_arg_${index});
-    for (var i = ${from}u; i< ${from + size}u; i++) {
-      dataBuffer[dataIndex].serializedData[i] = serializedData_${index}[i - ${from}];
-    }
+  var serializedData${index} = serializer${index}(_arg_${index});
+  for (var i = ${from}u; i< ${from + size}u; i++) {
+    serializedLogDataBuffer[index].serializedData[i] = serializedData${index}[i - ${from}];
+  }
 `;
 }
 
 export function createLoggingFunction(
   id: number,
   args: AnyWgslData[],
-  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
-  dataIndexBuffer: TgpuMutable<Atomic<U32>>,
+  serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
+  logCallIndexBuffer: TgpuMutable<Atomic<U32>>,
 ): TgpuFn {
   const usedSerializers: [string, unknown][] = [];
   let currentIndex = 0;
@@ -47,7 +47,7 @@ export function createLoggingFunction(
     if (!serializer) {
       throw new Error(`Cannot serialize data of type ${arg.type}`);
     }
-    usedSerializers.push([`serializer_${i}`, serializer]);
+    usedSerializers.push([`serializer${i}`, serializer]);
     const size = Math.ceil(sizeOf(arg) / 4);
     const result = generateFor(currentIndex, size, i);
     currentIndex += size;
@@ -56,15 +56,11 @@ export function createLoggingFunction(
   const uses = Object.fromEntries(usedSerializers);
 
   return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
-    var dataIndex = atomicAdd(&dataIndexBuffer, 1);
-    dataBuffer[dataIndex].id = ${id};
-
-${innerForLoops.join('\n')}
-    
-  }`.$uses({
+  var index = atomicAdd(&logCallIndexBuffer, 1);
+  serializedLogDataBuffer[index].id = ${id};
+${innerForLoops.join('')}}`.$uses({
     ...uses,
-    dataIndexBuffer,
-    dataBuffer,
-  }).$name(`log data ${id} serializer`);
-  // AAA find more fitting names for resources
+    logCallIndexBuffer,
+    serializedLogDataBuffer,
+  }).$name(`log${id}`);
 }

@@ -38,8 +38,8 @@ export class LogManagerNullImpl implements LogManager {
 }
 
 export class LogManagerImpl implements LogManager {
-  #dataIndexBuffer: TgpuMutable<Atomic<U32>>;
-  #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
+  #logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
+  #serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   #options: Required<LogManagerOptions>;
   #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   #firstUnusedId = 1;
@@ -54,22 +54,26 @@ export class LogManagerImpl implements LogManager {
     this.#options = options as Required<LogManagerOptions>;
     this.#logIdToArgTypes = new Map();
 
-    const DataSchema = struct({
+    const SerializedLogData = struct({
       id: u32,
       serializedData: arrayOf(u32, options.serializedLogDataSizeLimit),
-    }).$name('log data schema');
+    }).$name('SerializedLogData');
 
-    this.#dataBuffer = root
-      .createMutable(arrayOf(DataSchema, options.logCountPerDispatchLimit))
-      .$name('log buffer');
+    this.#serializedLogDataBuffer = root
+      .createMutable(
+        arrayOf(SerializedLogData, options.logCountPerDispatchLimit),
+      )
+      .$name('serializedLogDataBuffer');
 
-    this.#dataIndexBuffer = root.createMutable(atomic(u32));
+    this.#logCallIndexBuffer = root
+      .createMutable(atomic(u32))
+      .$name('logCallIndexBuffer');
   }
 
   get logResources(): LogResources | undefined {
     return this.#firstUnusedId === 1 ? undefined : {
-      dataBuffer: this.#dataBuffer,
-      dataIndexBuffer: this.#dataIndexBuffer,
+      serializedLogDataBuffer: this.#serializedLogDataBuffer,
+      logCallIndexBuffer: this.#logCallIndexBuffer,
       options: this.#options,
       logIdToArgTypes: this.#logIdToArgTypes,
     };
@@ -91,8 +95,8 @@ export class LogManagerImpl implements LogManager {
     const logFn = createLoggingFunction(
       id,
       nonStringArgs.map((e) => e.dataType as AnyWgslData),
-      this.#dataBuffer,
-      this.#dataIndexBuffer,
+      this.#serializedLogDataBuffer,
+      this.#logCallIndexBuffer,
     );
 
     this.#logIdToArgTypes.set(

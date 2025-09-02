@@ -20,8 +20,8 @@ export type SerializedLogCallData = WgslStruct<{
 }>;
 
 export interface LogResources {
-  dataIndexBuffer: TgpuMutable<Atomic<U32>>;
-  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
+  logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
+  serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogManagerOptions>;
   logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
 }

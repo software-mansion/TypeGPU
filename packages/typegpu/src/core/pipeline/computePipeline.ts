@@ -193,7 +193,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.end();
 
     if (memo.logResources) {
-      memo.logResources.dataBuffer.read().then((data) => {
+      memo.logResources.serializedLogDataBuffer.read().then((data) => {
         data
           .filter((e) => e.id)
           .map(({ id, serializedData }) => {
@@ -203,7 +203,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
             console.log(result);
           });
       });
-      memo.logResources.dataIndexBuffer.write(0);
+      memo.logResources.logCallIndexBuffer.write(0);
     }
 
     if (this._priors.performanceCallback) {
