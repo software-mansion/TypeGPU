@@ -611,7 +611,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 }
 
-export class RenderPipelineCore implements SelfResolvable {
+class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly usedVertexLayouts: TgpuVertexLayout[];
 

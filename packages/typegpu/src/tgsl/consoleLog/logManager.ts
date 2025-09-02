@@ -1,17 +1,30 @@
+import { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { u32 } from '../../data/numeric.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
-import { type AnyWgslData, Void } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  Atomic,
+  U32,
+  Void,
+  WgslArray,
+} from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
-import type { LogManager, LogManagerOptions, LogMetadata } from './types.ts';
+import type {
+  LogData,
+  LogManager,
+  LogManagerOptions,
+  LogMetadata,
+} from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
-export class LogManagerDummyImpl implements LogManager {
+export class LogManagerNullImpl implements LogManager {
   getMetadata(): undefined {
     return undefined;
   }
@@ -24,7 +37,10 @@ export class LogManagerDummyImpl implements LogManager {
 }
 
 export class LogManagerImpl implements LogManager {
-  #metaData: LogMetadata;
+  #dataIndexBuffer: TgpuMutable<Atomic<U32>>;
+  #dataBuffer: TgpuMutable<WgslArray<LogData>>;
+  #options: Required<LogManagerOptions>;
+  #logIdToSchema: Map<number, (string | AnyWgslData)[]>;
   #nextLogId = 1;
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
@@ -33,29 +49,28 @@ export class LogManagerImpl implements LogManager {
     if (options?.maxLogCount === undefined) {
       options.maxLogCount = 256;
     }
-    const sanitizedOptions = options as Required<LogManagerOptions>;
+    this.#options = options as Required<LogManagerOptions>;
+    this.#logIdToSchema = new Map();
 
     const DataSchema = struct({
       id: u32,
-      data: arrayOf(u32, sanitizedOptions.oneLogSize),
+      data: arrayOf(u32, options.oneLogSize),
     }).$name('log data schema');
 
-    const dataBuffer = root
-      .createMutable(arrayOf(DataSchema, sanitizedOptions.maxLogCount))
+    this.#dataBuffer = root
+      .createMutable(arrayOf(DataSchema, options.maxLogCount))
       .$name('log buffer');
 
-    const dataIndexBuffer = root.createMutable(atomic(u32));
-
-    this.#metaData = {
-      dataIndexBuffer,
-      dataBuffer,
-      options: sanitizedOptions,
-      logIdToSchema: new Map(),
-    };
+    this.#dataIndexBuffer = root.createMutable(atomic(u32));
   }
 
   getMetadata(): LogMetadata | undefined {
-    return this.#nextLogId === 1 ? undefined : this.#metaData;
+    return this.#nextLogId === 1 ? undefined : {
+      dataBuffer: this.#dataBuffer,
+      dataIndexBuffer: this.#dataIndexBuffer,
+      options: this.#options,
+      logIdToSchema: this.#logIdToSchema,
+    };
   }
 
   // AAA snippet types should be concretized before passing them here
@@ -68,15 +83,12 @@ export class LogManagerImpl implements LogManager {
     const logFn = createLoggingFunction(
       id,
       nonStringArgs,
-      this.#metaData.dataBuffer,
-      this.#metaData.dataIndexBuffer,
+      this.#dataBuffer,
+      this.#dataIndexBuffer,
     );
 
-    this.#metaData.logIdToSchema.set(id, nonStringArgs);
+    this.#logIdToSchema.set(id, nonStringArgs);
 
-    return snip(
-      `${ctx.resolve(logFn)}(${args.map((e) => e.value).join(', ')})`,
-      Void,
-    );
+    return snip(stitch`${ctx.resolve(logFn)}(${args})`, Void);
   }
 }

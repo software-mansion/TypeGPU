@@ -3,7 +3,7 @@ import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { deserializeAndStringify } from '../../src/tgsl/log/deserializers.ts';
+import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl } from '../utils/parseResolved.ts';

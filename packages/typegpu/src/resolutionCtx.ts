@@ -38,11 +38,14 @@ import {
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import {
+  LogManagerImpl,
+  LogManagerNullImpl,
+} from './tgsl/consoleLog/logManager.ts';
+import type { LogManager, LogMetadata } from './tgsl/consoleLog/types.ts';
+import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import { LogManagerDummyImpl, LogManagerImpl } from './tgsl/log/log.ts';
-import type { LogManager, LogMetadata } from './tgsl/log/types.ts';
 import { generateFunction } from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
@@ -384,7 +387,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isComputePipeline(pipeline)) {
       this._logManager = new LogManagerImpl(pipeline[$internal].branch, {});
     } else {
-      this._logManager = new LogManagerDummyImpl();
+      this._logManager = new LogManagerNullImpl();
     }
   }
 

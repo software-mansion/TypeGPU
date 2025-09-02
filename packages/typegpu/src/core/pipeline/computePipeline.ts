@@ -9,8 +9,8 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
-import { deserializeAndStringify } from '../../tgsl/log/deserializers.ts';
-import type { LogMetadata } from '../../tgsl/log/types.ts';
+import { deserializeAndStringify } from '../../tgsl/consoleLog/deserializers.ts';
+import type { LogMetadata } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -221,7 +221,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 }
 
-export class ComputePipelineCore implements SelfResolvable {
+class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
