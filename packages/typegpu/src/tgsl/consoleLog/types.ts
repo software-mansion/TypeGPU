@@ -14,19 +14,19 @@ export interface LogManagerOptions {
   maxLogCount?: number;
 }
 
-export interface LogManager {
-  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
-  getMetadata(): LogMetadata | undefined;
-}
+export type SerializedLogCallData = WgslStruct<{
+  id: U32;
+  data: WgslArray<U32>;
+}>;
 
-export interface LogMetadata {
+export interface LogResources {
   dataIndexBuffer: TgpuMutable<Atomic<U32>>;
-  dataBuffer: TgpuMutable<WgslArray<LogData>>;
+  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogManagerOptions>;
   logIdToSchema: Map<number, (string | AnyWgslData)[]>;
 }
 
-export type LogData = WgslStruct<{
-  id: U32;
-  data: WgslArray<U32>;
-}>;
+export interface LogManager {
+  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
+  get logResources(): LogResources | undefined;
+}

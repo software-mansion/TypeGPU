@@ -41,7 +41,7 @@ import {
   LogManagerImpl,
   LogManagerNullImpl,
 } from './tgsl/consoleLog/logManager.ts';
-import type { LogManager, LogMetadata } from './tgsl/consoleLog/types.ts';
+import type { LogManager, LogResources } from './tgsl/consoleLog/types.ts';
 import {
   coerceToSnippet,
   numericLiteralToSnippet,
@@ -437,8 +437,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._logManager.registerLog(this, args);
   }
 
-  get logMetadata(): LogMetadata | undefined {
-    return this._logManager.getMetadata();
+  get logResources(): LogResources | undefined {
+    return this._logManager.logResources;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
@@ -787,13 +787,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
- * @param logMetadata - Information about console.logs used in code and a buffer storing the results.
+ * @param logResources - Buffers and information about console.logs used in code.
  */
 export interface ResolutionResult {
   code: string;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
-  logMetadata: LogMetadata | undefined;
+  logResources: LogResources | undefined;
 }
 
 export function resolve(
@@ -860,7 +860,7 @@ export function resolve(
     code,
     usedBindGroupLayouts,
     catchall,
-    logMetadata: ctx.logMetadata,
+    logResources: ctx.logResources,
   };
 }
 

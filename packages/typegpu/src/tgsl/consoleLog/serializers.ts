@@ -10,7 +10,7 @@ import type {
   U32,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type { LogData } from './types.ts';
+import type { SerializedLogCallData } from './types.ts';
 
 const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(n);
@@ -37,7 +37,7 @@ function generateFor(from: number, size: number, index: number): string {
 export function createLoggingFunction(
   id: number,
   args: AnyWgslData[],
-  dataBuffer: TgpuMutable<WgslArray<LogData>>,
+  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
   dataIndexBuffer: TgpuMutable<Atomic<U32>>,
 ): TgpuFn {
   const usedSerializers: [string, unknown][] = [];

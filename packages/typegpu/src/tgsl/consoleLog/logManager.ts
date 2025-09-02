@@ -1,4 +1,4 @@
-import { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { arrayOf } from '../../data/array.ts';
@@ -8,24 +8,24 @@ import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
 import {
   type AnyWgslData,
-  Atomic,
-  U32,
+  type Atomic,
+  type U32,
   Void,
-  WgslArray,
+  type WgslArray,
 } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import type {
-  LogData,
   LogManager,
   LogManagerOptions,
-  LogMetadata,
+  LogResources,
+  SerializedLogCallData,
 } from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
 export class LogManagerNullImpl implements LogManager {
-  getMetadata(): undefined {
+  get logResources(): undefined {
     return undefined;
   }
   registerLog(): Snippet {
@@ -38,10 +38,11 @@ export class LogManagerNullImpl implements LogManager {
 
 export class LogManagerImpl implements LogManager {
   #dataIndexBuffer: TgpuMutable<Atomic<U32>>;
-  #dataBuffer: TgpuMutable<WgslArray<LogData>>;
+  #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   #options: Required<LogManagerOptions>;
   #logIdToSchema: Map<number, (string | AnyWgslData)[]>;
   #nextLogId = 1;
+
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
       options.oneLogSize = 64;
@@ -64,7 +65,7 @@ export class LogManagerImpl implements LogManager {
     this.#dataIndexBuffer = root.createMutable(atomic(u32));
   }
 
-  getMetadata(): LogMetadata | undefined {
+  get logResources(): LogResources | undefined {
     return this.#nextLogId === 1 ? undefined : {
       dataBuffer: this.#dataBuffer,
       dataIndexBuffer: this.#dataIndexBuffer,

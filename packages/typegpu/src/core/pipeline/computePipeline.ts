@@ -10,7 +10,7 @@ import type {
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
 import { deserializeAndStringify } from '../../tgsl/consoleLog/deserializers.ts';
-import type { LogMetadata } from '../../tgsl/consoleLog/types.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -74,7 +74,7 @@ type Memo = {
   pipeline: GPUComputePipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
-  logMetadata: LogMetadata | undefined;
+  logResources: LogResources | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -192,19 +192,19 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    if (memo.logMetadata) {
-      memo.logMetadata.dataBuffer.read().then((data) => {
+    if (memo.logResources) {
+      memo.logResources.dataBuffer.read().then((data) => {
         data
           .filter((e) => e.id)
           .map(({ id, data: logData }) => {
-            const logInfo = memo.logMetadata?.logIdToSchema.get(
+            const logInfo = memo.logResources?.logIdToSchema.get(
               id,
             ) as (AnyWgslData | string)[];
             const result = deserializeAndStringify(logData, logInfo);
             console.log(result);
           });
       });
-      memo.logMetadata.dataIndexBuffer.write(0);
+      memo.logResources.dataIndexBuffer.write(0);
     }
 
     if (this._priors.performanceCallback) {
@@ -274,7 +274,7 @@ class ComputePipelineCore implements SelfResolvable {
         );
       }
 
-      const { code, usedBindGroupLayouts, catchall, logMetadata } =
+      const { code, usedBindGroupLayouts, catchall, logResources } =
         resolutionResult;
 
       if (catchall !== undefined) {
@@ -301,7 +301,7 @@ class ComputePipelineCore implements SelfResolvable {
         }),
         usedBindGroupLayouts,
         catchall,
-        logMetadata,
+        logResources,
       };
 
       if (PERF?.enabled) {
