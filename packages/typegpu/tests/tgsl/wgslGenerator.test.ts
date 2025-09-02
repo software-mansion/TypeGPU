@@ -34,6 +34,7 @@ describe('wgslGenerator', () => {
       shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
+    wgslGenerator.initGenerator(ctx);
   });
 
   it('creates a simple return statement', () => {
@@ -50,7 +51,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      const gen = wgslGenerator.functionDefinition(parsedBody);
       expect(parse(gen)).toBe(parse('{return true;}'));
     });
   });
@@ -71,7 +72,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
-      const gen = wgslGenerator.generateFunction(ctx, parsedBody);
+      const gen = wgslGenerator.functionDefinition(parsedBody);
       expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
     });
   });
@@ -113,8 +114,7 @@ describe('wgslGenerator', () => {
       for (const stmt of (parsedBody as tinyest.Block)[1]) {
         const letStatement = stmt as tinyest.Let;
         const [_, name, numLiteral] = letStatement;
-        const generatedExpr = wgslGenerator.generateExpression(
-          ctx,
+        const generatedExpr = wgslGenerator.expression(
           numLiteral as tinyest.Num,
         );
         const expected = literals[name as keyof typeof literals];
@@ -160,8 +160,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                   ^ this should be a u32
-      const res1 = wgslGenerator.generateExpression(
-        ctx,
+      const res1 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
         (
         (
@@ -174,8 +173,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //                                       ^ this should be a u32
-      const res2 = wgslGenerator.generateExpression(
-        ctx,
+      const res2 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
         (
         (
@@ -187,8 +185,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value.a + testUsage.value.b.x;
       //            ^ this should be a u32
-      const sum = wgslGenerator.generateExpression(
-        ctx,
+      const sum = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
       expect(sum.dataType).toStrictEqual(d.u32);
@@ -228,8 +225,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.value[3];
       //                   ^ this should be a u32
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -301,8 +297,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
       //                           ^ this part should be a i32
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2],
       );
 
@@ -311,9 +306,8 @@ describe('wgslGenerator', () => {
       // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
-      const res2 = wgslGenerator.generateExpression(
-        ctx,
+      wgslGenerator.blockVariable('value', d.i32);
+      const res2 = wgslGenerator.expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
       ctx[$internal].itemStateStack.popBlockScope();
@@ -324,13 +318,11 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
-      const res3 = wgslGenerator.generateExpression(
-        ctx,
+      wgslGenerator.blockVariable('vec', d.vec4f);
+      const res3 = wgslGenerator.expression(
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
-      const res4 = wgslGenerator.generateExpression(
-        ctx,
+      const res4 = wgslGenerator.expression(
         astInfo.ast?.body[1][2] as tinyest.Expression,
       );
       ctx[$internal].itemStateStack.popBlockScope();
@@ -357,7 +349,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => wgslGenerator.functionDefinition(parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -383,7 +375,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => wgslGenerator.functionDefinition(parsed),
     );
 
     expect(parse(gen)).toBe(
@@ -407,7 +399,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.generateFunction(ctx, parsed),
+      () => wgslGenerator.functionDefinition(parsed),
     );
 
     expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
@@ -445,10 +437,10 @@ describe('wgslGenerator', () => {
         astInfo.externals ?? {},
       );
 
+      wgslGenerator.initGenerator(ctx);
       // Check for: return derivedV4u.value;
       //                      ^ this should be a vec4u
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -483,8 +475,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return derivedV2f.value[idx];
       //                      ^ this should be a f32
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -527,8 +518,8 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [1, 2, 3]
       //                        ^ this should be an array<u32, 3>
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      wgslGenerator.initGenerator(ctx);
+      const res = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
         (
           astInfo.ast?.body[1][0] as tinyest.Const
@@ -625,8 +616,8 @@ describe('wgslGenerator', () => {
 
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
       //                        ^ this should be an array<TestStruct, 2>
-      return wgslGenerator.generateExpression(
-        ctx,
+      wgslGenerator.initGenerator(ctx);
+      return wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
     });
@@ -713,10 +704,10 @@ describe('wgslGenerator', () => {
         astInfo.externals ?? {},
       );
 
+      wgslGenerator.initGenerator(ctx);
       // Check for: return fnOne().y.x;
       //                   ^ this should be a f32
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -760,8 +751,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = testSlot.value.value;
       //                  ^ this should be a vec3f
-      const res = wgslGenerator.generateExpression(
-        ctx,
+      const res = wgslGenerator.expression(
         (
           astInfo.ast?.body[1][0] as tinyest.Const
         )[2] as unknown as tinyest.Expression,
@@ -842,8 +832,7 @@ describe('wgslGenerator', () => {
     const gen = provideCtx(
       ctx,
       () =>
-        wgslGenerator.generateFunction(
-          ctx,
+        wgslGenerator.functionDefinition(
           getMetaData(main)?.ast?.body as tinyest.Block,
         ),
     );

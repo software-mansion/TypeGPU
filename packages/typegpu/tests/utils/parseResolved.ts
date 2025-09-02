@@ -78,8 +78,8 @@ export function expectDataTypeOf(
           );
         }
 
-        const exprSnippet = wgslGenerator.generateExpression(
-          ctx,
+        wgslGenerator.initGenerator(ctx);
+        const exprSnippet = wgslGenerator.expression(
           statements[0] as tinyest.Expression,
         );
 

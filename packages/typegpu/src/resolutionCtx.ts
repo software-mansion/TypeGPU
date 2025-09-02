@@ -424,12 +424,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
+      this.#shaderGenerator.initGenerator(this);
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: this.#shaderGenerator.generateFunction(
-          this,
-          options.body,
-        ),
+        body: this.#shaderGenerator.functionDefinition(options.body),
       };
     } finally {
       this._itemStateStack.popFunctionScope();
