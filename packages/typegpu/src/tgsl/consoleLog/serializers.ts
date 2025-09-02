@@ -29,7 +29,7 @@ function generateFor(from: number, size: number, index: number): string {
   return `
     var serializedData_${index} = serializer_${index}(_arg_${index});
     for (var i = ${from}u; i< ${from + size}u; i++) {
-      dataBuffer[dataIndex].data[i] = serializedData_${index}[i - ${from}];
+      dataBuffer[dataIndex].serializedData[i] = serializedData_${index}[i - ${from}];
     }
 `;
 }

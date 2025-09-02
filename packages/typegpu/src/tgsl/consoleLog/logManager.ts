@@ -45,22 +45,22 @@ export class LogManagerImpl implements LogManager {
   #nextLogId = 1;
 
   constructor(root: TgpuRoot, options: LogManagerOptions) {
-    if (options?.oneLogSize === undefined) {
-      options.oneLogSize = 2 ** 8 - 1;
+    if (options?.serializedLogDataSizeLimit === undefined) {
+      options.serializedLogDataSizeLimit = 2 ** 4 - 1;
     }
-    if (options?.maxLogCount === undefined) {
-      options.maxLogCount = 2 ** 10;
+    if (options?.logCountPerDispatchLimit === undefined) {
+      options.logCountPerDispatchLimit = 2 ** 6;
     }
     this.#options = options as Required<LogManagerOptions>;
     this.#logIdToSchema = new Map();
 
     const DataSchema = struct({
       id: u32,
-      data: arrayOf(u32, options.oneLogSize),
+      serializedData: arrayOf(u32, options.serializedLogDataSizeLimit),
     }).$name('log data schema');
 
     this.#dataBuffer = root
-      .createMutable(arrayOf(DataSchema, options.maxLogCount))
+      .createMutable(arrayOf(DataSchema, options.logCountPerDispatchLimit))
       .$name('log buffer');
 
     this.#dataIndexBuffer = root.createMutable(atomic(u32));

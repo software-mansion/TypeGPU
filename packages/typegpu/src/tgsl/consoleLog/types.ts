@@ -10,13 +10,13 @@ import type {
 import type { GenerationCtx } from '../generationHelpers.ts';
 
 export interface LogManagerOptions {
-  oneLogSize?: number;
-  maxLogCount?: number;
+  serializedLogDataSizeLimit?: number;
+  logCountPerDispatchLimit?: number;
 }
 
 export type SerializedLogCallData = WgslStruct<{
   id: U32;
-  data: WgslArray<U32>;
+  serializedData: WgslArray<U32>;
 }>;
 
 export interface LogResources {
