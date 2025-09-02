@@ -131,7 +131,7 @@ class WgslGenerator implements ShaderGenerator {
     this.#ctx = ctx;
   }
 
-  get ctx(): GenerationCtx {
+  private get ctx(): GenerationCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
