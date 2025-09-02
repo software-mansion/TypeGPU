@@ -3,6 +3,7 @@ import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
+import { UnknownData } from '../../data/dataTypes.ts';
 import { u32 } from '../../data/numeric.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
@@ -45,10 +46,10 @@ export class LogManagerImpl implements LogManager {
 
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.oneLogSize === undefined) {
-      options.oneLogSize = 64;
+      options.oneLogSize = 2 ** 8 - 1;
     }
     if (options?.maxLogCount === undefined) {
-      options.maxLogCount = 256;
+      options.maxLogCount = 2 ** 10;
     }
     this.#options = options as Required<LogManagerOptions>;
     this.#logIdToSchema = new Map();
@@ -75,21 +76,34 @@ export class LogManagerImpl implements LogManager {
   }
 
   // AAA snippet types should be concretized before passing them here
+  /**
+   * Generates all necessary resources for serializing arguments for logging purposes.
+   *
+   * @param ctx Resolution context.
+   * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
+   * @returns A snippet containing the call to the logging function.
+   */
   registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
     const id = this.#nextLogId++;
     const nonStringArgs = args
-      .filter((e) => typeof e !== 'string')
-      .map((e) => e.dataType) as AnyWgslData[];
+      .filter((e) => e.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
       id,
-      nonStringArgs,
+      nonStringArgs.map((e) => e.dataType as AnyWgslData),
       this.#dataBuffer,
       this.#dataIndexBuffer,
     );
 
-    this.#logIdToSchema.set(id, nonStringArgs);
+    this.#logIdToSchema.set(
+      id,
+      args.map((e) =>
+        e.dataType === UnknownData
+          ? (e.value as string)
+          : e.dataType as AnyWgslData
+      ),
+    );
 
-    return snip(stitch`${ctx.resolve(logFn)}(${args})`, Void);
+    return snip(stitch`${ctx.resolve(logFn)}(${nonStringArgs})`, Void);
   }
 }
