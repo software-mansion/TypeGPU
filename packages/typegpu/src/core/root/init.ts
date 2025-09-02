@@ -37,7 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
-import { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
