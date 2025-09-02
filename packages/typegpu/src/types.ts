@@ -195,7 +195,6 @@ export type ExecState =
  */
 export interface ResolutionCtx {
   readonly names: NameRegistry;
-  readonly pipeline: TgpuComputePipeline | TgpuRenderPipeline | undefined;
   readonly mode: ExecState;
 
   addDeclaration(declaration: string): void;

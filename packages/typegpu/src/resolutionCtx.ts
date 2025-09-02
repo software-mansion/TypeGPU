@@ -372,11 +372,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly names: NameRegistry;
-  // AAA remove this, it is unnecessary, if needed we can pass this to log manager in constructor
-  public readonly pipeline:
-    | TgpuComputePipeline
-    | TgpuRenderPipeline
-    | undefined;
   public expectedType: AnyData | undefined;
 
   constructor(
@@ -384,7 +379,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
   ) {
     this.names = opts.names;
-    this.pipeline = pipeline;
     this._logManager = isComputePipeline(pipeline)
       ? new LogManagerImpl(pipeline[$internal].branch, {})
       : new LogManagerNullImpl();
