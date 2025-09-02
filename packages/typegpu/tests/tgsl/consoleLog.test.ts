@@ -106,10 +106,10 @@ describe('wgslGenerator with console.log', () => {
 
       struct log data schema {
         id: u32,
-        data: array<u32, 64>,
+        serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 64>;
 
       fn log data 1 serializer(_arg_0: u32) {
           var dataIndex = atomicAdd(&dataIndexBuffer, 1);
@@ -118,7 +118,7 @@ describe('wgslGenerator with console.log', () => {
 
           var serializedData_0 = serializeU32(_arg_0);
           for (var i = 0u; i< 1u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+            log buffer[dataIndex].serializedData[i] = serializedData_0[i - 0];
           }
 
           
@@ -156,10 +156,10 @@ describe('wgslGenerator with console.log', () => {
 
       struct log data schema {
         id: u32,
-        data: array<u32, 64>,
+        serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 64>;
 
       fn log data 1 serializer(_arg_0: u32) {
           var dataIndex = atomicAdd(&dataIndexBuffer, 1);
@@ -168,7 +168,7 @@ describe('wgslGenerator with console.log', () => {
 
           var serializedData_0 = serializeU32(_arg_0);
           for (var i = 0u; i< 1u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+            log buffer[dataIndex].serializedData[i] = serializedData_0[i - 0];
           }
 
           
@@ -181,7 +181,7 @@ describe('wgslGenerator with console.log', () => {
 
           var serializedData_0 = serializeU32(_arg_0);
           for (var i = 0u; i< 1u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+            log buffer[dataIndex].serializedData[i] = serializedData_0[i - 0];
           }
 
           
@@ -223,10 +223,10 @@ describe('wgslGenerator with console.log', () => {
 
       struct log data schema {
         id: u32,
-        data: array<u32, 64>,
+        serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 256>;
+      @group(0) @binding(1) var<storage, read_write> log buffer: array<log data schema, 64>;
 
       fn log data 1 serializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
           var dataIndex = atomicAdd(&dataIndexBuffer, 1);
@@ -235,19 +235,19 @@ describe('wgslGenerator with console.log', () => {
 
           var serializedData_0 = serializeU32(_arg_0);
           for (var i = 0u; i< 1u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_0[i - 0];
+            log buffer[dataIndex].serializedData[i] = serializedData_0[i - 0];
           }
 
 
           var serializedData_1 = serializeVec3u(_arg_1);
           for (var i = 1u; i< 4u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_1[i - 1];
+            log buffer[dataIndex].serializedData[i] = serializedData_1[i - 1];
           }
 
 
           var serializedData_2 = serializeU32(_arg_2);
           for (var i = 4u; i< 5u; i++) {
-            log buffer[dataIndex].data[i] = serializedData_2[i - 4];
+            log buffer[dataIndex].serializedData[i] = serializedData_2[i - 4];
           }
 
           

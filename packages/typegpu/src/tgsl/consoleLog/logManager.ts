@@ -41,8 +41,8 @@ export class LogManagerImpl implements LogManager {
   #dataIndexBuffer: TgpuMutable<Atomic<U32>>;
   #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   #options: Required<LogManagerOptions>;
-  #logIdToSchema: Map<number, (string | AnyWgslData)[]>;
-  #nextLogId = 1;
+  #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
+  #firstUnusedId = 1;
 
   constructor(root: TgpuRoot, options: LogManagerOptions) {
     if (options?.serializedLogDataSizeLimit === undefined) {
@@ -52,7 +52,7 @@ export class LogManagerImpl implements LogManager {
       options.logCountPerDispatchLimit = 2 ** 6;
     }
     this.#options = options as Required<LogManagerOptions>;
-    this.#logIdToSchema = new Map();
+    this.#logIdToArgTypes = new Map();
 
     const DataSchema = struct({
       id: u32,
@@ -67,11 +67,11 @@ export class LogManagerImpl implements LogManager {
   }
 
   get logResources(): LogResources | undefined {
-    return this.#nextLogId === 1 ? undefined : {
+    return this.#firstUnusedId === 1 ? undefined : {
       dataBuffer: this.#dataBuffer,
       dataIndexBuffer: this.#dataIndexBuffer,
       options: this.#options,
-      logIdToSchema: this.#logIdToSchema,
+      logIdToArgTypes: this.#logIdToArgTypes,
     };
   }
 
@@ -84,7 +84,7 @@ export class LogManagerImpl implements LogManager {
    * @returns A snippet containing the call to the logging function.
    */
   registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
-    const id = this.#nextLogId++;
+    const id = this.#firstUnusedId++;
     const nonStringArgs = args
       .filter((e) => e.dataType !== UnknownData);
 
@@ -95,7 +95,7 @@ export class LogManagerImpl implements LogManager {
       this.#dataIndexBuffer,
     );
 
-    this.#logIdToSchema.set(
+    this.#logIdToArgTypes.set(
       id,
       args.map((e) =>
         e.dataType === UnknownData

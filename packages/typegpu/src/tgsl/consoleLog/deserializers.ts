@@ -36,7 +36,7 @@ function deserialize(
       if (!deserializer) {
         throw new Error(`Cannot deserialize data of type ${type}`);
       }
-      const size = sizeOf(elem) / 4;
+      const size = Math.ceil(sizeOf(elem) / 4);
       const slice = data.slice(currentIndex, currentIndex + size);
       currentIndex += size;
       return deserializer(slice);
@@ -46,8 +46,8 @@ function deserialize(
 }
 
 export function deserializeAndStringify(
-  data: number[],
-  logInfo: (AnyWgslData | string)[],
+  serializedData: number[],
+  argTypes: (AnyWgslData | string)[],
 ): string {
-  return deserialize(data, logInfo).map(stringify).join(' ');
+  return deserialize(serializedData, argTypes).map(stringify).join(' ');
 }

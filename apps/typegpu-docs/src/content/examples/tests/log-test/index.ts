@@ -49,7 +49,7 @@ export const controls = {
         'kernel';
         console.log('Log from dispatch', indexUniform.$);
       });
-      for (var i = 0; i < 100; i++) {
+      for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
         dispatch();
         console.log(`[CPU] dispatched ${i}`);

@@ -197,10 +197,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         data
           .filter((e) => e.id)
           .map(({ id, serializedData }) => {
-            const logInfo = memo.logResources?.logIdToSchema.get(
-              id,
-            ) as (AnyWgslData | string)[];
-            const result = deserializeAndStringify(serializedData, logInfo);
+            const argTypes = memo.logResources?.logIdToArgTypes
+              .get(id) as (AnyWgslData | string)[];
+            const result = deserializeAndStringify(serializedData, argTypes);
             console.log(result);
           });
       });

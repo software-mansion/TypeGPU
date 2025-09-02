@@ -66,4 +66,5 @@ ${innerForLoops.join('\n')}
     dataIndexBuffer,
     dataBuffer,
   }).$name(`log data ${id} serializer`);
+  // AAA find more fitting names for resources
 }

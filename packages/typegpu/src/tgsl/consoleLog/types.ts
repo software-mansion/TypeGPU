@@ -23,7 +23,7 @@ export interface LogResources {
   dataIndexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogManagerOptions>;
-  logIdToSchema: Map<number, (string | AnyWgslData)[]>;
+  logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
 }
 
 export interface LogManager {

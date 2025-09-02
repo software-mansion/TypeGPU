@@ -372,6 +372,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly names: NameRegistry;
+  // AAA remove this, it is unnecessary, if needed we can pass this to log manager in constructor
   public readonly pipeline:
     | TgpuComputePipeline
     | TgpuRenderPipeline
@@ -384,11 +385,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   ) {
     this.names = opts.names;
     this.pipeline = pipeline;
-    if (isComputePipeline(pipeline)) {
-      this._logManager = new LogManagerImpl(pipeline[$internal].branch, {});
-    } else {
-      this._logManager = new LogManagerNullImpl();
-    }
+    this._logManager = isComputePipeline(pipeline)
+      ? new LogManagerImpl(pipeline[$internal].branch, {})
+      : new LogManagerNullImpl();
   }
 
   get pre(): string {
@@ -787,7 +786,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
- * @param logResources - Buffers and information about console.logs used in code.
+ * @param logResources - Buffers and information about used console.logs needed to decode raw data.
  */
 export interface ResolutionResult {
   code: string;
