@@ -157,7 +157,9 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Snippet {
-  return ctx.defineVariable(id, dataType);
+  const snippet = snip(ctx.names.makeValid(id), dataType);
+  ctx.defineVariable(id, snippet);
+  return snippet;
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
@@ -674,13 +676,13 @@ ${ctx.pre}else ${alternate}`;
       );
     }
 
-    registerBlockVariable(
+    const snippet = registerBlockVariable(
       ctx,
       rawId,
       concretize(eq.dataType as wgsl.AnyWgslData),
     );
-    const id = generateIdentifier(ctx, rawId);
-    return stitchWithExactTypes`${ctx.pre}var ${id} = ${eq};`;
+    return stitchWithExactTypes`${ctx.pre}var ${snippet
+      .value as string} = ${eq};`;
   }
 
   if (statement[0] === NODE.block) {
