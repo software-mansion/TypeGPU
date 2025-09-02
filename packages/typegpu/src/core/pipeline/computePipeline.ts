@@ -200,7 +200,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
             const argTypes = memo.logResources?.logIdToArgTypes
               .get(id) as (AnyWgslData | string)[];
             const result = deserializeAndStringify(serializedData, argTypes);
-            console.log(result);
+            // AAA the `[GPU]` is temporary for debugging purposes,
+            // though we could allow for a prefix in the LogManagerOptions
+            console.log(`[GPU] ${result}`);
           });
       });
       memo.logResources.logCallIndexBuffer.write(0);

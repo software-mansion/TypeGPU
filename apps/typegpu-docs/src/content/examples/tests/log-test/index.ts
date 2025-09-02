@@ -52,7 +52,7 @@ export const controls = {
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
         dispatch();
-        console.log(`[CPU] dispatched ${i}`);
+        console.log(`dispatched ${i}`);
       }
     },
   },
