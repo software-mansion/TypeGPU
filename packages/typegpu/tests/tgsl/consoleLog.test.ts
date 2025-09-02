@@ -116,9 +116,7 @@ describe('wgslGenerator with console.log', () => {
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        for (var i = 0u; i< 1u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData0[i - 0];
-        }
+        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
@@ -163,9 +161,7 @@ describe('wgslGenerator with console.log', () => {
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        for (var i = 0u; i< 1u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData0[i - 0];
-        }
+        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       fn log2(_arg_0: u32) {
@@ -173,9 +169,7 @@ describe('wgslGenerator with console.log', () => {
         serializedLogDataBuffer[index].id = 2;
 
         var serializedData0 = serializeU32(_arg_0);
-        for (var i = 0u; i< 1u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData0[i - 0];
-        }
+        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
@@ -229,19 +223,15 @@ describe('wgslGenerator with console.log', () => {
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        for (var i = 0u; i< 1u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData0[i - 0];
-        }
+        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
 
         var serializedData1 = serializeVec3u(_arg_1);
-        for (var i = 1u; i< 4u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData1[i - 1];
-        }
+        serializedLogDataBuffer[index].serializedData[1] = serializedData1[0];
+        serializedLogDataBuffer[index].serializedData[2] = serializedData1[1];
+        serializedLogDataBuffer[index].serializedData[3] = serializedData1[2];
 
         var serializedData2 = serializeU32(_arg_2);
-        for (var i = 4u; i< 5u; i++) {
-          serializedLogDataBuffer[index].serializedData[i] = serializedData2[i - 4];
-        }
+        serializedLogDataBuffer[index].serializedData[4] = serializedData2[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {

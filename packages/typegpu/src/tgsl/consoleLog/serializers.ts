@@ -25,13 +25,21 @@ export const serializers = {
   vec3u: serializeVec3u,
 } as const;
 
-function generateFor(from: number, size: number, index: number): string {
-  return `
-  var serializedData${index} = serializer${index}(_arg_${index});
-  for (var i = ${from}u; i< ${from + size}u; i++) {
-    serializedLogDataBuffer[index].serializedData[i] = serializedData${index}[i - ${from}];
-  }
-`;
+function generateDataCopyingInstructions(
+  from: number,
+  size: number,
+  index: number,
+): string {
+  const serializedDataDecl =
+    `  var serializedData${index} = serializer${index}(_arg_${index});\n`;
+
+  const copyInstructions = Array(size).keys().map((i) =>
+    `  serializedLogDataBuffer[index].serializedData[${
+      from + i
+    }] = serializedData${index}[${i}];\n`
+  );
+
+  return [serializedDataDecl, ...copyInstructions].join('');
 }
 
 export function createLoggingFunction(
@@ -49,7 +57,7 @@ export function createLoggingFunction(
     }
     usedSerializers.push([`serializer${i}`, serializer]);
     const size = Math.ceil(sizeOf(arg) / 4);
-    const result = generateFor(currentIndex, size, i);
+    const result = generateDataCopyingInstructions(currentIndex, size, i);
     currentIndex += size;
     return result;
   });
@@ -58,9 +66,11 @@ export function createLoggingFunction(
   return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
   var index = atomicAdd(&logCallIndexBuffer, 1);
   serializedLogDataBuffer[index].id = ${id};
-${innerForLoops.join('')}}`.$uses({
-    ...uses,
-    logCallIndexBuffer,
-    serializedLogDataBuffer,
-  }).$name(`log${id}`);
+
+${innerForLoops.join('\n')}}`
+    .$uses({
+      ...uses,
+      logCallIndexBuffer,
+      serializedLogDataBuffer,
+    }).$name(`log${id}`);
 }
