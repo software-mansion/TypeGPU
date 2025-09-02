@@ -1,9 +1,9 @@
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
   type TgpuQuerySet,
 } from '../../core/querySet/querySet.ts';
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
@@ -43,6 +43,12 @@ import {
   type TgpuBuffer,
   type VertexFlag,
 } from '../buffer/buffer.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -84,6 +90,7 @@ import {
   isVertexLayout,
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
+import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
   CreateTextureOptions,
@@ -96,13 +103,6 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
-import {
-  TgpuBufferShorthandImpl,
-  type TgpuMutable,
-  type TgpuReadonly,
-  type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
-import { ConfigurableImpl } from './configurableImpl.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
