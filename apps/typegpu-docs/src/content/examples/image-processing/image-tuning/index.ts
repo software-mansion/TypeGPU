@@ -1,4 +1,4 @@
-import tgpu, { type TgpuTexture } from 'typegpu';
+import tgpu, { type SampledFlag, type TgpuTexture } from 'typegpu';
 import * as d from 'typegpu/data';
 
 type LUTData = {
@@ -24,9 +24,9 @@ const Adjustments = d.struct({
   saturation: d.f32,
 });
 
-let defaultLUTTexture: TgpuTexture;
-let currentLUTTexture: TgpuTexture;
-let imageTexture: TgpuTexture;
+let defaultLUTTexture: TgpuTexture & SampledFlag;
+let currentLUTTexture: TgpuTexture & SampledFlag;
+let imageTexture: TgpuTexture & SampledFlag;
 
 const root = await tgpu.init();
 const device = root.device;

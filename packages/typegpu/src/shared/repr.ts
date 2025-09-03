@@ -159,7 +159,7 @@ export type IsValidSubdimension<
 > = TextureViewDimToSubdims[
   TSchema['dimension']
 ] extends infer TVDim
-  ? Default<TTexture['props']['dimension'], '2d'> extends TVDim ? true
+  ? TVDim extends Default<TTexture['props']['dimension'], '2d'> ? true
   : {
     readonly invalidViewDim: `Texture dimension '${Default<
       TTexture['props']['dimension'],
