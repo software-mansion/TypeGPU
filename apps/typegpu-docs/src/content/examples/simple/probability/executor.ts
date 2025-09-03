@@ -13,7 +13,6 @@ import * as d from 'typegpu/data';
 import { randf } from '@typegpu/noise';
 
 export class Executor {
-  readonly #root: TgpuRoot;
   // don't exceed max workgroup grid X dimension size
   #count!: number;
   #samplesBuffer!:
@@ -22,13 +21,24 @@ export class Executor {
   #seedBuffer!:
     & TgpuBuffer<d.WgslArray<d.F32>>
     & StorageFlag;
+  #bindGroup!: TgpuBindGroup;
+  readonly #root: TgpuRoot;
   readonly #dataMoreWorkersFunc: TgpuComputeFn;
   readonly #distributionSlot: TgpuSlot<TgpuFn<() => d.Vec3f>>;
   readonly #bindGroupLayout: TgpuBindGroupLayout;
-  #bindGroup!: TgpuBindGroup;
+  readonly #bufferCache: Map<
+    number,
+    [
+      & TgpuBuffer<d.WgslArray<d.Vec3f>>
+      & StorageFlag,
+      & TgpuBuffer<d.WgslArray<d.F32>>
+      & StorageFlag,
+    ]
+  >;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
+    this.#bufferCache = new Map();
 
     const distributionSlotTempAlias = tgpu.slot<TgpuFn<() => d.Vec3f>>();
     this.#distributionSlot = distributionSlotTempAlias;
@@ -59,14 +69,20 @@ export class Executor {
 
   set count(value: number) {
     this.#count = value;
-    this.#samplesBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec3f, value))
-      .$usage('storage');
-    this.#seedBuffer = this.#root
-      .createBuffer(
-        d.arrayOf(d.f32, value),
-        Array.from({ length: value }, () => Math.random()),
-      ).$usage('storage');
+    if (this.#bufferCache.has(value)) {
+      // biome-ignore lint/style/noNonNullAssertion: just checked it above
+      [this.#samplesBuffer, this.#seedBuffer] = this.#bufferCache.get(value)!;
+    } else {
+      this.#samplesBuffer = this.#root
+        .createBuffer(d.arrayOf(d.vec3f, value))
+        .$usage('storage');
+      this.#seedBuffer = this.#root
+        .createBuffer(
+          d.arrayOf(d.f32, value),
+          Array.from({ length: value }, () => Math.random()),
+        ).$usage('storage');
+      this.#bufferCache.set(value, [this.#samplesBuffer, this.#seedBuffer]);
+    }
 
     this.#bindGroup = this.#root.createBindGroup(this.#bindGroupLayout, {
       seedBuffer: this.#seedBuffer,
