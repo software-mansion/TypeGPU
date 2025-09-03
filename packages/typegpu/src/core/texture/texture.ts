@@ -14,6 +14,7 @@ import type {
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import type { ValidateTextureViewSchema } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
@@ -93,17 +94,14 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
 
-  createView<T extends WgslTexture>(
-    schema: T,
+  createView<T extends WgslTexture | WgslStorageTexture>(
+    schema: ValidateTextureViewSchema<this, T>,
     viewDescriptor?: TgpuTextureViewDescriptor & {
-      sampleType?: T['sampleType']['type'] extends 'f32'
-        ? 'float' | 'unfilterable-float'
+      sampleType?: T extends WgslTexture
+        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
+        : never
         : never;
     },
-  ): TgpuTextureView<T>;
-  createView<T extends WgslStorageTexture>(
-    schema: T,
-    viewDescriptor?: TgpuTextureViewDescriptor,
   ): TgpuTextureView<T>;
 
   destroy(): void;
@@ -227,11 +225,18 @@ class TgpuTextureImpl implements TgpuTexture {
   }
 
   createView<T extends WgslTexture | WgslStorageTexture>(
-    schema: T,
+    schema: never,
+    viewDescriptor?: TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture
+        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
+        : never
+        : never;
+    },
   ): TgpuTextureView<T> {
     return new TgpuFixedTextureViewImpl(
-      schema,
+      schema as T,
       this,
+      viewDescriptor,
     );
   }
 

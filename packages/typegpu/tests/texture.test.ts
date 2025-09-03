@@ -9,6 +9,7 @@ import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
+import { attest } from '@ark/attest';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -196,33 +197,34 @@ describe('TgpuTexture', () => {
     );
   });
 
-  // TODO: add back when validation is here
-  //   it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
-  //     const texture = root.createTexture({
-  //       size: [1, 1],
-  //       format: 'rgba8unorm',
-  //     });
+  it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
+    const texture = root.createTexture({
+      size: [1, 1],
+      format: 'rgba8unorm',
+    });
 
-  //     // @ts-expect-error
-  //     const getSampled = () => texture.createView('sampled');
-  //     // @ts-expect-error
-  //     const getReadonly = () => texture.createView('readonly');
-  //     // @ts-expect-error
-  //     const getWriteonly = () => texture.createView('writeonly');
-  //     // @ts-expect-error
-  //     const getMutable = () => texture.createView('mutable');
+    // @ts-expect-error
+    attest(texture.createView(d.texture2d(d.f32)))
+      .type.errors.snap(
+        "Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '\"(Error) Texture not usable as sampled, call $usage('sampled') first\"'.",
+      );
 
-  //     const texture2 = texture.$usage('sampled');
+    // @ts-expect-error
+    attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        'Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+      );
 
-  //     const getSampled2 = () => texture2.createView('sampled');
-  //     // @ts-expect-error
-  //     const getReadonly2 = () => texture2.createView('readonly');
-  //     // @ts-expect-error
-  //     const getWriteonly2 = () => texture2.createView('writeonly');
-  //     // @ts-expect-error
-  //     const getMutable2 = () => texture2.createView('mutable');
-  //   });
-  // });
+    const texture2 = texture.$usage('sampled');
+
+    texture2.createView(d.texture2d(d.f32));
+
+    // @ts-expect-error
+    attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        'Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+      );
+  });
 
   // TODO: add back when default view is implemented
   // describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
