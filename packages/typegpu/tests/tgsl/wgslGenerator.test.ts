@@ -1,8 +1,8 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
-import { snip } from '../../src/data/snippet.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
+import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
@@ -14,7 +14,7 @@ import * as std from '../../src/std/index.ts';
 import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
-import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -80,13 +80,11 @@ describe('wgslGenerator', () => {
       intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
       floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
       scientificLiteral: {
-        value: '12e10',
-        wgsl: '12e10',
-        dataType: abstractFloat,
+        value: '120000000000',
+        dataType: abstractInt,
       },
       scientificNegativeExponentLiteral: {
-        value: '12e-4',
-        wgsl: '12e-4',
+        value: '0.0012',
         dataType: abstractFloat,
       },
     } as const;
@@ -499,13 +497,12 @@ describe('wgslGenerator', () => {
       return arr[1] as number;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> u32 {
-        var arr = array<u32, 3>(u32(1), 2, 3);
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var arr = array<u32, 3>(1, 2, 3);
         return arr[1];
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -571,15 +568,14 @@ describe('wgslGenerator', () => {
       return a;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> u32 {
-        var a = u32(12);
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var a = 12u;
         var b = 2.5f;
         a = u32(b);
         return a;
-      }`),
-    );
+      }"
+    `);
   });
 
   it('generates correct code for array expressions with struct elements', () => {
@@ -775,71 +771,64 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for conditional with single statement', () => {
-    const main0 = tgpu.fn([], d.u32)(() => {
-      'kernel';
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) return 0;
+    const main0 = tgpu.fn([d.bool], d.u32)((cond) => {
+      if (cond) return 0;
       return 1;
     });
 
-    expect(parseResolved({ main0 })).toBe(
-      parse(`
-    fn main0() -> u32 {
-      if (true) {
-        return 0;
-      }
-      return 1;
-    }`),
-    );
+    expect(asWgsl(main0)).toMatchInlineSnapshot(`
+      "fn main0(cond: bool) -> u32 {
+        if (cond) {
+          return 0;
+        }
+        return 1;
+      }"
+    `);
   });
 
   it('generates correct code for conditional with else', () => {
-    const main1 = tgpu.fn([], d.i32)(() => {
-      'kernel';
+    const main1 = tgpu.fn([d.bool], d.i32)((cond) => {
       let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) y = 1;
+      if (cond) y = 1;
       else y = 2;
       return y;
     });
 
-    expect(parseResolved({ main1 })).toBe(
-      parse(`
-    fn main1() -> i32 {
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
+    expect(asWgsl(main1)).toMatchInlineSnapshot(`
+      "fn main1(cond: bool) -> i32 {
+        var y = 0;
+        if (cond) {
+          y = 1;
+        }
+        else {
+          y = 2;
+        }
+        return y;
+      }"
+    `);
   });
 
   it('generates correct code for conditionals block', () => {
-    const main2 = tgpu.fn([], d.i32)(() => {
-      'kernel';
+    const main2 = tgpu.fn([d.bool], d.i32)((cond) => {
       let y = 0;
-      // biome-ignore lint/correctness/noConstantCondition: sshhhh, it's just a test
-      if (true) {
+      if (cond) {
         y = 1;
       } else y = 2;
       return y;
     });
 
-    expect(parseResolved({ main2 })).toBe(
-      parse(`
-    fn main2() -> i32 {
-      var y = 0;
-      if (true) {
-        y = 1;
-      } else {
-       y = 2;
-      }
-      return y;
-    }`),
-    );
+    expect(asWgsl(main2)).toMatchInlineSnapshot(`
+      "fn main2(cond: bool) -> i32 {
+        var y = 0;
+        if (cond) {
+          y = 1;
+        }
+        else {
+          y = 2;
+        }
+        return y;
+      }"
+    `);
   });
 
   it('generates correct code for for loops with single statements', () => {
@@ -940,5 +929,101 @@ describe('wgslGenerator', () => {
         *val += 1;
       }`),
     );
+  });
+
+  it('generates correct code for pow expression', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.f32(10);
+      const b = d.f32(3);
+      const n = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 10f;
+        var b = 3f;
+        var n = pow(a, b);
+      }"
+    `);
+  });
+
+  it('calculates pow at comptime when possible', () => {
+    const four = 4;
+    const power = tgpu.fn([])(() => {
+      const n = 2 ** four;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var n = 16.;
+      }"
+    `);
+  });
+
+  it('casts in pow expression when necessary', () => {
+    const power = tgpu.fn([])(() => {
+      const a = d.u32(3);
+      const b = d.i32(5);
+      const m = a ** b;
+    });
+
+    expect(asWgsl(power)).toMatchInlineSnapshot(`
+      "fn power() {
+        var a = 3u;
+        var b = 5i;
+        var m = pow(f32(a), f32(b));
+      }"
+    `);
+  });
+
+  it('throws error when accessing matrix elements directly', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const element = matrix[4];
+    });
+
+    expect(() => asWgsl(testFn))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: The only way of accessing matrix elements in TGSL is through the 'columns' property.]
+      `);
+  });
+
+  it('generates correct code when accessing matrix elements through .columns', () => {
+    const testFn = tgpu.fn([])(() => {
+      const matrix = d.mat4x4f();
+      const column = matrix.columns[1];
+      const element = column[0];
+      const directElement = matrix.columns[1][0];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var matrix = mat4x4f();
+        var column = matrix[1];
+        var element = column[0];
+        var directElement = matrix[1][0];
+      }"
+    `);
+  });
+
+  it('resolves when accessing matrix elements through .columns', () => {
+    const matrix = tgpu['~unstable'].workgroupVar(d.mat4x4f);
+    const index = tgpu['~unstable'].workgroupVar(d.u32);
+
+    const testFn = tgpu.fn([])(() => {
+      const element = matrix.$.columns[index.$];
+    });
+
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "var<workgroup> index: u32;
+
+      var<workgroup> matrix: mat4x4f;
+
+      fn testFn() {
+        var element = matrix[index];
+      }"
+    `);
   });
 });

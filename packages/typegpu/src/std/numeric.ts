@@ -1,4 +1,5 @@
-import { snip } from '../data/snippet.ts';
+import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
   abstractFloat,
@@ -8,25 +9,8 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  AnyFloat32VecInstance,
-  AnyFloatVecInstance,
-  AnyIntegerVecInstance,
-  AnyMatInstance,
-  AnyNumericVecInstance,
-  AnySignedVecInstance,
-  AnyWgslData,
-  v2i,
-  v3f,
-  v3h,
-  v3i,
-  v4i,
-} from '../data/wgslTypes.ts';
-import type { Infer } from '../shared/repr.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
-import { mul, sub } from './operators.ts';
 import {
   vec2f,
   vec2h,
@@ -38,7 +22,26 @@ import {
   vec4h,
   vec4i,
 } from '../data/vector.ts';
-import { stitch } from '../core/resolve/stitch.ts';
+import { VectorOps } from '../data/vectorOps.ts';
+import {
+  type AnyFloat32VecInstance,
+  type AnyFloatVecInstance,
+  type AnyIntegerVecInstance,
+  type AnyMatInstance,
+  type AnyNumericVecInstance,
+  type AnySignedVecInstance,
+  type AnyWgslData,
+  isNumericSchema,
+  isVecInstance,
+  type v2i,
+  type v3f,
+  type v3h,
+  type v3i,
+  type v4i,
+} from '../data/wgslTypes.ts';
+import type { Infer } from '../shared/repr.ts';
+import { unify } from '../tgsl/conversion.ts';
+import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -342,14 +345,13 @@ export const distance = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#dot-builtin
  */
-export const dot = createDualImpl(
-  // CPU implementation
-  <T extends NumVec>(lhs: T, rhs: T): number =>
+export const dot = dualImpl({
+  name: 'dot',
+  signature: (...argTypes) => ({ argTypes, returnType: f32 }),
+  normalImpl: <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
-  // GPU implementation
-  (lhs, rhs) => snip(stitch`dot(${lhs}, ${rhs})`, f32),
-  'dot',
-);
+  codegenImpl: (lhs, rhs) => stitch`dot(${lhs}, ${rhs})`,
+});
 
 export const dot4U8Packed = createDualImpl(
   // CPU implementation
@@ -469,18 +471,17 @@ export const firstTrailingBit = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#floor-builtin
  */
-export const floor = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
+export const floor = dualImpl({
+  name: 'floor',
+  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  normalImpl<T extends AnyFloatVecInstance | number>(value: T): T {
     if (typeof value === 'number') {
       return Math.floor(value) as T;
     }
     return VectorOps.floor[value.kind](value) as T;
   },
-  // GPU implementation
-  (value) => snip(stitch`floor(${value})`, value.dataType),
-  'floor',
-);
+  codegenImpl: (arg) => stitch`floor(${arg})`,
+});
 
 export const fma = createDualImpl(
   // CPU implementation
@@ -497,18 +498,17 @@ export const fma = createDualImpl(
   'fma',
 );
 
-export const fract = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(a: T): T => {
+export const fract = dualImpl({
+  name: 'fract',
+  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  normalImpl<T extends AnyFloatVecInstance | number>(a: T): T {
     if (typeof a === 'number') {
       return (a - Math.floor(a)) as T;
     }
     return VectorOps.fract[a.kind](a) as T;
   },
-  // GPU implementation
-  (a) => snip(stitch`fract(${a})`, a.dataType),
-  'fract',
-);
+  codegenImpl: (a) => stitch`fract(${a})`,
+});
 
 const FrexpResults = {
   f32: abstruct({ fract: f32, exp: i32 }),
@@ -646,18 +646,17 @@ export const ldexp: LdexpOverload = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#length-builtin
  */
-export const length = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): number => {
-    if (typeof value === 'number') {
-      return Math.abs(value);
+export const length = dualImpl({
+  name: 'length',
+  signature: (...argTypes) => ({ argTypes, returnType: f32 }),
+  normalImpl<T extends AnyFloatVecInstance | number>(arg: T): number {
+    if (typeof arg === 'number') {
+      return Math.abs(arg);
     }
-    return VectorOps.length[value.kind](value);
+    return VectorOps.length[arg.kind](arg);
   },
-  // GPU implementation
-  (value) => snip(stitch`length(${value})`, f32),
-  'length',
-);
+  codegenImpl: (arg) => stitch`length(${arg})`,
+});
 
 /**
  * @privateRemarks
@@ -808,31 +807,36 @@ export const normalize = createDualImpl(
   'normalize',
 );
 
-type PowOverload = {
-  (base: number, exponent: number): number;
-  <T extends AnyFloatVecInstance>(base: T, exponent: T): T;
-};
+function powCpu(base: number, exponent: number): number;
+function powCpu<T extends AnyFloatVecInstance>(
+  base: T,
+  exponent: T,
+): T;
+function powCpu<T extends AnyFloatVecInstance | number>(
+  base: T,
+  exponent: T,
+): T {
+  if (typeof base === 'number' && typeof exponent === 'number') {
+    return (base ** exponent) as T;
+  }
+  if (isVecInstance(base) && isVecInstance(exponent)) {
+    return VectorOps.pow[base.kind](base, exponent) as T;
+  }
+  throw new Error('Invalid arguments to pow()');
+}
 
-export const pow: PowOverload = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(base: T, exponent: T): T => {
-    if (typeof base === 'number' && typeof exponent === 'number') {
-      return (base ** exponent) as T;
-    }
-    if (
-      typeof base === 'object' &&
-      typeof exponent === 'object' &&
-      'kind' in base &&
-      'kind' in exponent
-    ) {
-      return VectorOps.pow[base.kind](base, exponent) as T;
-    }
-    throw new Error('Invalid arguments to pow()');
+export const pow = dualImpl({
+  name: 'pow',
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return {
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    };
   },
-  // GPU implementation
-  (base, exponent) => snip(stitch`pow(${base}, ${exponent})`, base.dataType),
-  'pow',
-);
+  normalImpl: powCpu,
+  codegenImpl: (lhs, rhs) => stitch`pow(${lhs}, ${rhs})`,
+});
 
 export const quantizeToF16 = createDualImpl(
   // CPU implementation
