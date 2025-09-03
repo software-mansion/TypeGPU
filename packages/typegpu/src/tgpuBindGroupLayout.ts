@@ -439,8 +439,8 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
-/*
- * @deprecated Layouts containing the legacy texture api entries are deprecated and will be removed in future versions. Please use the up-to-date texture api entries instead.
+/**
+ * @deprecated This feature is now stable, use tgpu.slot.
  */
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLegacyLayoutEntry | null>,

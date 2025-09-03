@@ -585,6 +585,48 @@ describe('TgpuBindGroup', () => {
     });
   });
 
+  describe('legacy texture layout', () => {
+    it('supports legacy texture definitions and converts the types correctly', ({ root }) => {
+      const layout = tgpu.bindGroupLayout({
+        foo: { texture: 'float', viewDimension: '2d' },
+        bar: { storageTexture: 'bgra8unorm', access: 'readonly' },
+      });
+
+      const bg = root.createBindGroup(layout, {
+        foo: root['~unstable'].createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        }).$usage('sampled'),
+        bar: root['~unstable'].createTexture({
+          size: [64, 64],
+          format: 'bgra8unorm',
+        }).$usage('storage'),
+      });
+
+      expect(bg).toBeDefined();
+
+      const { foo, bar } = layout.bound;
+      expectTypeOf(foo).toEqualTypeOf<
+        TgpuTextureView<
+          d.WgslTexture<{
+            dimension: '2d';
+            sampleType: d.F32;
+            multisampled: false;
+          }>
+        >
+      >();
+      expectTypeOf(bar).toEqualTypeOf<
+        TgpuTextureView<
+          d.WgslStorageTexture<{
+            format: 'bgra8unorm';
+            access: 'read-only';
+            dimension: '2d';
+          }>
+        >
+      >();
+    });
+  });
+
   describe('texture layout', () => {
     let layout2d: TgpuBindGroupLayout<{
       foo: { texture: d.WgslTexture2d<d.F32> };
