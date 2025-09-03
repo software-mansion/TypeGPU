@@ -72,7 +72,7 @@ const drawColorBuffers = initialFunctions.map((data) =>
 
 const computeLayout = tgpu.bindGroupLayout({
   lineVertices: {
-    storage: (n: number) => d.arrayOf(d.vec2f, n),
+    storage: d.arrayOf(d.vec2f),
     access: 'mutable',
   },
   properties: { uniform: Properties },
@@ -217,7 +217,7 @@ const renderBackgroundPassDescriptor = {
 // Render shader
 
 const renderLayout = tgpu.bindGroupLayout({
-  lineVertices: { storage: (n: number) => d.arrayOf(d.vec2f, n) },
+  lineVertices: { storage: d.arrayOf(d.vec2f) },
   properties: { uniform: Properties },
   color: { uniform: d.vec4f },
 });
@@ -454,7 +454,7 @@ canvas.addEventListener('mousedown', (event) => {
   lastPos = [event.clientX, event.clientY];
 });
 
-window.addEventListener('mousemove', (event) => {
+const mouseMoveEventListener = (event: MouseEvent) => {
   if (lastPos === null) {
     return;
   }
@@ -475,11 +475,13 @@ window.addEventListener('mousemove', (event) => {
   );
 
   lastPos = currentPos;
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-window.addEventListener('mouseup', (_) => {
+const mouseUpEventListener = () => {
   lastPos = null;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
@@ -492,18 +494,18 @@ canvas.addEventListener('wheel', (event) => {
     [scale, scale, 1],
     properties.transformation,
   );
-});
+}, { passive: false });
 
-// Mouse interaction
+// Touch interaction
 
 canvas.addEventListener('touchstart', (event) => {
   event.preventDefault();
   if (event.touches.length === 1) {
     lastPos = [event.touches[0].clientX, event.touches[0].clientY];
   }
-});
+}, { passive: false });
 
-window.addEventListener('touchmove', (event) => {
+const touchMoveEventListener = (event: TouchEvent) => {
   if (lastPos === null || event.touches.length !== 1) {
     return;
   }
@@ -521,11 +523,13 @@ window.addEventListener('touchmove', (event) => {
   );
 
   lastPos = currentPos;
-});
+};
+window.addEventListener('touchmove', touchMoveEventListener);
 
-window.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   lastPos = null;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
 // Resize observer and cleanup
 
@@ -605,13 +609,19 @@ export const controls = {
   },
   Recenter: {
     async onButtonClick() {
-      properties.transformation = mat4.identity(d.mat4x4f());
+      properties.transformation = d.mat4x4f.scaling(
+        d.vec3f(canvas.clientWidth / canvas.clientHeight, 1, 1),
+      );
     },
   },
 };
 
 export function onCleanup() {
   destroyed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

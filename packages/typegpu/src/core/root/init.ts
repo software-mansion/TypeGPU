@@ -1,9 +1,9 @@
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
   type TgpuQuerySet,
 } from '../../core/querySet/querySet.ts';
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
@@ -37,12 +37,19 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
   type TgpuBuffer,
   type VertexFlag,
 } from '../buffer/buffer.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -88,6 +95,7 @@ import {
   isVertexLayout,
   type TgpuVertexLayout,
 } from '../vertexLayout/vertexLayout.ts';
+import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
   CreateTextureOptions,
@@ -100,12 +108,6 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
-import {
-  TgpuBufferShorthandImpl,
-  type TgpuMutable,
-  type TgpuReadonly,
-  type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -144,8 +146,12 @@ class WithBindingImpl implements WithBinding {
     });
   }
 
-  pipe(transform: (cfg: Configurable) => Configurable): Configurable {
-    return transform(this);
+  pipe(transform: (cfg: Configurable) => Configurable): WithBinding {
+    const newCfg = transform(new ConfigurableImpl([]));
+    return new WithBindingImpl(this._getRoot, [
+      ...this._slotBindings,
+      ...newCfg.bindings,
+    ]);
   }
 }
 
@@ -185,6 +191,37 @@ class WithVertexImpl implements WithVertex {
       ...this._options,
       fragmentFn,
       targets,
+    });
+  }
+
+  withPrimitive(
+    primitiveState:
+      | GPUPrimitiveState
+      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+        stripIndexFormat?: U32 | U16;
+      }
+      | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, primitiveState });
+  }
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, depthStencilState });
+  }
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment {
+    return new WithVertexImpl({ ...this._options, multisampleState });
+  }
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline({
+      ...this._options,
+      fragmentFn: null,
+      targets: null,
     });
   }
 }
@@ -247,6 +284,7 @@ class TgpuRootImpl extends WithBindingImpl
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
+    public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
@@ -658,6 +696,11 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -667,6 +710,11 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -730,6 +778,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
+    options?.shaderGenerator,
   );
 }
 
@@ -752,5 +801,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
+    options?.shaderGenerator,
   );
 }

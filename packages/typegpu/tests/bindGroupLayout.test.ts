@@ -84,15 +84,15 @@ describe('TgpuBindGroupLayout', () => {
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
     const layout = tgpu.bindGroupLayout({
       a: {
-        storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
+        storage: d.arrayOf(d.u32),
         access: 'mutable',
       },
-      b: { storage: (arrayLength: number) => d.arrayOf(d.vec3f, arrayLength) },
+      b: { storage: d.arrayOf(d.vec3f) },
     });
 
     tgpu.bindGroupLayout({
       // @ts-expect-error
-      c: { uniform: (arrayLength: number) => d.arrayOf(d.vec3f, arrayLength) },
+      c: { uniform: d.arrayOf(d.vec3f) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
@@ -308,7 +308,7 @@ describe('TgpuBindGroup', () => {
           foo: { uniform: d.u32 },
           bar: { uniform: d.arrayOf(d.i32, 4) },
           baz: { storage: d.struct({ a: d.u32, b: d.i32 }) },
-          qux: { storage: (n: number) => d.arrayOf(d.i32, n) },
+          qux: { storage: d.arrayOf(d.i32) },
         })
         .$name('example');
     });

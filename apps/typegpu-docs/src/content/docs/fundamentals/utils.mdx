@@ -1,0 +1,111 @@
+---
+title: Utilities
+description: A list of various utilities provided by TypeGPU.
+---
+
+## *prepareDispatch*
+
+The `prepareDispatch` function simplifies running simple computations on the GPU.
+Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns a dispatch function to execute it.
+
+This can help reduce serialization overhead when initializing buffers with data.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const Boid = d.struct({
+  index: d.u32,
+  pos: d.vec3f,
+});
+
+// buffer of 2048 Boids
+const boidsMutable = root.createMutable(d.arrayOf(Boid, 2048));
+
+const dispatch = prepareDispatch(root, (x) => {
+  'kernel';
+  const boidData = Boid({ index: x, pos: d.vec3f() });
+  boidsMutable.$[x] = boidData;
+});
+// run callback for each x in range 0..2047
+dispatch(2048);
+```
+
+:::note
+Remember to mark the callback with `'kernel'` directive to let TypeGPU know that this function is TGSL.
+:::
+
+The returned dispatch function can be called multiple times.
+Since the pipeline is reused, there’s no additional overhead for subsequent calls.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
+
+const doubleUp = prepareDispatch(root, (x) => {
+  'kernel';
+  data.$[x] *= 2;
+});
+
+doubleUp(8);
+doubleUp(8);
+doubleUp(4);
+
+// no need to call `onSubmittedWorkDone()` because the command encoder
+// will queue the read after `doubleUp` anyway
+console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
+```
+
+The callback can have up to three arguments (dimensions).
+Buffer initialization commonly uses random number generators.
+For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+import { randf } from '@typegpu/noise';
+
+const root = await tgpu.init();
+
+// buffer of 1024x512 floats
+const waterLevelMutable = root.createMutable(
+  d.arrayOf(d.arrayOf(d.f32, 512), 1024),
+);
+
+prepareDispatch(root, (x, y) => {
+  'kernel';
+  randf.seed2(d.vec2f(x, y).div(1024));
+  waterLevelMutable.$[x][y] = 10 + randf.sample();
+})(1024, 512);
+// callback will be called for x in range 0..1023 and y in range 0..511
+
+// (optional) read values in JS
+console.log(await waterLevelMutable.read());
+```
+
+It is highly recommended NOT to use `dispatch` for:
+
+- More complex compute shaders.
+When using `dispatch`, it is impossible to switch bind groups or to change workgroup sizes.
+For such cases, a manually created pipeline would be more suitable.
+
+- Small calls.
+Usually, for small data the shader creation and dispatch is more costly than serialization.
+Small buffers can be more efficiently initialized with `buffer.write()` method.
+
+:::note
+The default workgroup sizes are:
+
+- `[1, 1, 1]` for 0D dispatches,
+- `[256, 1, 1]` for 1D dispatches,
+- `[16, 16, 1]` for 2D dispatches,
+- `[8, 8, 4]` for 3D dispatches.
+
+The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
+:::

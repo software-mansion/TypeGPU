@@ -1,6 +1,10 @@
 import type { Infer } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { $repr } from '../shared/symbols.ts';
+import type {
+  $invalidSchemaReason,
+  $repr,
+  $validVertexSchema,
+} from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
 import {
@@ -14,14 +18,20 @@ import {
   vec4i,
   vec4u,
 } from './vector.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexFormatData<T extends VertexFormat> {
-  readonly [$internal]: true;
+export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
   readonly type: T;
+
+  // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
+  readonly [$validVertexSchema]: true;
+  readonly [$invalidSchemaReason]:
+    'Vertex formats are not host-shareable, use concrete types instead';
+  // ---
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
@@ -30,6 +40,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
+  declare readonly [$validVertexSchema]: true;
+  declare readonly [$invalidSchemaReason]:
+    'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
   constructor(public readonly type: T) {}
@@ -79,7 +92,7 @@ export const formatToWGSLType = {
   'unorm8x4-bgra': vec4f,
 } as const;
 
-export const packedFormats = Object.keys(formatToWGSLType);
+export const packedFormats = new Set(Object.keys(formatToWGSLType));
 
 export type uint8 = TgpuVertexFormatData<'uint8'>;
 export const uint8 = new TgpuVertexFormatDataImpl('uint8') as uint8;
@@ -250,3 +263,12 @@ export type PackedData =
   | sint32x4
   | unorm10_10_10_2
   | unorm8x4_bgra;
+
+export function isPackedData(
+  value: unknown,
+): value is PackedData {
+  return (value as PackedData)?.[$internal] &&
+    packedFormats.has(
+      (value as PackedData)?.type,
+    );
+}

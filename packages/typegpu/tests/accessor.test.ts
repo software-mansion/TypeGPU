@@ -11,7 +11,7 @@ describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
     const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
 
-    const red = tgpu.fn([], d.vec3f)(`() { return ${RED}; }`).$uses({ RED });
+    const red = tgpu.fn([], d.vec3f)('() { return RED; }').$uses({ RED });
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess })
@@ -123,7 +123,7 @@ describe('tgpu.accessor', () => {
 
     expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
       .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed: 
+        [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
         - accessor:color: Missing value for 'slot:color']

@@ -30,7 +30,7 @@ const colorIndices = {
 const colorBuffer = root
   .createBuffer(d.arrayOf(d.vec4f, 4), Object.values(colors))
   .$usage('vertex');
-const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec4f, n));
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
 
 const vertex = tgpu['~unstable'].vertexFn({
   in: {

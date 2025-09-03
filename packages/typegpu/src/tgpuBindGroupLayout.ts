@@ -18,12 +18,16 @@ import {
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
 } from './core/sampler/sampler.ts';
-import { TgpuExternalTextureImpl } from './core/texture/externalTexture.ts';
+import {
+  type TgpuExternalTexture,
+  TgpuExternalTextureImpl,
+} from './core/texture/externalTexture.ts';
 import {
   isSampledTextureView,
   isStorageTextureView,
   isTexture,
   type StorageTextureDimension,
+  type TgpuDepthTexture,
   TgpuLaidOutSampledTextureImpl,
   TgpuLaidOutStorageTextureImpl,
   type TgpuMutableTexture,
@@ -57,7 +61,7 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
-import { $internal } from './shared/symbols.ts';
+import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type {
   Default,
   NullableToOptional,
@@ -168,6 +172,9 @@ export interface TgpuBindGroupLayout<
   readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+  [$gpuValueOf](): {
+    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
   readonly value: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
@@ -334,6 +341,7 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
@@ -341,11 +349,16 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? TgpuSampledTexture<
+  : T extends TgpuLayoutTexture
+    ? T['texture'] extends 'depth' ? TgpuDepthTexture<
+        Default<T['viewDimension'], '2d'>
+      >
+    : TgpuSampledTexture<
       Default<T['viewDimension'], '2d'>,
       ChannelFormatToSchema[T['texture']]
     >
   : T extends TgpuLayoutStorageTexture ? StorageTextureUsageForEntry<T>
+  : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
 export type ExtractBindGroupInputFromLayout<
@@ -429,6 +442,10 @@ class TgpuBindGroupLayoutImpl<
   public readonly $ = this.value as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
+
+  [$gpuValueOf]() {
+    return this.$;
+  }
 
   constructor(public readonly entries: Entries) {
     let idx = 0;
@@ -712,7 +729,12 @@ export class TgpuBindGroupImpl<
               }
 
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & Sampled).createView('sampled'),
+                (value as TgpuTexture & Sampled).createView(
+                  'sampled',
+                  {
+                    dimension: entry.viewDimension ?? '2d',
+                  },
+                ),
               );
             } else if (isSampledTextureView(value)) {
               resource = unwrapper.unwrap(value);

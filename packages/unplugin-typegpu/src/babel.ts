@@ -6,6 +6,7 @@ import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
   type Context,
+  defaultOptions,
   embedJSON,
   gatherTgpuAliases,
   isShellImplementationCall,
@@ -14,6 +15,7 @@ import {
   performExpressionNaming,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
+import defu from 'defu';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -45,11 +47,30 @@ function functionToTranspiled(
 ): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
 
-  const metadata = `{
-    v: ${FORMAT_VERSION},
-    ast: ${embedJSON({ params, body, externalNames })},
-    externals: {${externalNames.join(', ')}},
-  }`;
+  const metadata = types.objectExpression([
+    types.objectProperty(
+      i('v'),
+      types.numericLiteral(FORMAT_VERSION),
+    ),
+    types.objectProperty(
+      i('ast'),
+      template.expression`${embedJSON({ params, body, externalNames })}`(),
+    ),
+    types.objectMethod(
+      'get',
+      i('externals'),
+      [],
+      types.blockStatement([
+        types.returnStatement(
+          types.objectExpression(
+            externalNames.map((name) =>
+              types.objectProperty(i(name), i(name), false, true)
+            ),
+          ),
+        ),
+      ]),
+    ),
+  ]);
 
   return types.callExpression(
     types.arrowFunctionExpression(
@@ -71,7 +92,7 @@ function functionToTranspiled(
               types.memberExpression(i('$'), i('f')),
               node,
             ),
-            template.expression`${metadata}`(),
+            metadata,
           ],
         ),
         types.memberExpression(i('$'), i('f')),
@@ -185,7 +206,7 @@ export default function () {
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const code: string | undefined = (state as any).file?.code;
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const options: Options | undefined = (state as any).opts;
+        const options = defu((state as any).opts as Options, defaultOptions);
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const id: string | undefined = (state as any).filename;
 
@@ -196,10 +217,10 @@ export default function () {
 
         const ctx: Context = {
           tgpuAliases: new Set<string>(
-            options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
+            options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
           ),
           fileId: id,
-          autoNamingEnabled: options?.autoNamingEnabled ?? true,
+          autoNamingEnabled: options.autoNamingEnabled,
         };
 
         path.traverse(functionVisitor(ctx));

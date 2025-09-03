@@ -5,9 +5,7 @@ import * as Plot from '@observablehq/plot';
 import type { INTERNAL_GlobalExt } from 'typegpu';
 import { pipe } from 'remeda';
 
-const globalExt = globalThis as unknown as
-  & typeof globalThis
-  & INTERNAL_GlobalExt;
+const globalExt = globalThis as INTERNAL_GlobalExt;
 
 const testArtifactsDirectory = './tests/artifacts';
 const { writeFile } = server.commands;

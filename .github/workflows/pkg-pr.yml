@@ -41,7 +41,7 @@ jobs:
         run: pnpm nightly-build
 
       - name: Publish (pkg.pr.new)
-        run: npx pkg-pr-new publish './packages/typegpu/dist' --json output.json --comment=off
+        run: npx pkg-pr-new publish './packages/typegpu/dist' './packages/typegpu-noise/dist' './packages/unplugin-typegpu/dist' --json output.json --comment=off
       - name: Post or update comment
         uses: actions/github-script@v6
         with:
@@ -60,12 +60,11 @@ jobs:
             const body = `**pkg.pr.new**
 
             *packages*
-            \`\`\`
-            pnpm i https://pkg.pr.new/software-mansion/TypeGPU/typegpu@${context.issue.number}
+            Ready to be installed by your favorite package manager ⬇️
+
             ${output.packages
-              .map((p) => `pnpm i ${p.url}`)
+              .map((p) => `\`\`\`\n${p.url}\n\`\`\``)
               .join('\n')}
-            \`\`\`
 
             *benchmark*
             [view benchmark](https://docs.swmansion.com/TypeGPU/benchmark?p=npm-latest_pr-${context.issue.number})

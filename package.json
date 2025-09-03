@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
+    "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
     "fix": "biome lint --write . && deno fmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
@@ -17,7 +18,7 @@
     "test:browser": "vitest run --browser.enabled --project browser",
     "test:browser:watch": "vitest --browser.enabled --project browser",
     "test:coverage": "vitest --coverage run",
-    "nightly-build": "pnpm --filter typegpu prepublishOnly --skip-publish-tag-check",
+    "nightly-build": "pnpm --filter typegpu --filter @typegpu/noise --filter unplugin-typegpu prepublishOnly --skip-all-checks",
     "changes": "tgpu-dev-cli changes"
   },
   "engines": {

@@ -57,8 +57,8 @@ export async function loadModel(
   );
 
   return {
-    vertexBuffer: vertexBuffer,
-    polygonCount: polygonCount,
-    texture: texture,
+    vertexBuffer,
+    polygonCount,
+    texture,
   };
 }

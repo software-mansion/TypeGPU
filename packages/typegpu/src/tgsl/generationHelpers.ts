@@ -1,13 +1,10 @@
-import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
   isDisarray,
-  isSnippet,
   isUnstruct,
-  snip,
-  type Snippet,
   UnknownData,
 } from '../data/dataTypes.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -34,29 +31,19 @@ import {
   vec4h,
   vec4i,
   vec4u,
-  vecTypeToPrimitive,
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  type AnyWgslStruct,
-  type F16,
-  type F32,
   hasInternalDataType,
-  type I32,
-  isMat,
   isMatInstance,
   isVec,
   isVecInstance,
   isWgslArray,
   isWgslStruct,
-  type U32,
 } from '../data/wgslTypes.ts';
-import { invariant } from '../errors.ts';
-import { getResolutionCtx } from '../gpuMode.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
-import { assertExhaustive } from '../shared/utilityTypes.ts';
-import { isNumericSchema } from '../std/numeric.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { isNumericSchema } from '../data/wgslTypes.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -189,229 +176,18 @@ export function getTypeForIndexAccess(
   return UnknownData;
 }
 
-export function numericLiteralToSnippet(value: string): Snippet | undefined {
-  // Hex literals
-  if (/^0x[0-9a-f]+$/i.test(value)) {
-    return snip(value, abstractInt);
-  }
-
-  // Binary literals
-  if (/^0b[01]+$/i.test(value)) {
-    return snip(`${Number.parseInt(value.slice(2), 2)}`, abstractInt);
-  }
-
-  // Floating point literals
-  if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
-
-  // Floating point literals with scientific notation
-  if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
-    return snip(value, abstractFloat);
-  }
-
-  // Integer literals
-  if (/^-?\d+$/i.test(value)) {
-    return snip(value, abstractInt);
-  }
-
-  return undefined;
-}
-
-type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
-
-type ConversionRankInfo =
-  | { rank: number; action: 'cast'; targetType: AnyData }
-  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
-
-const INFINITE_RANK: ConversionRankInfo = {
-  rank: Number.POSITIVE_INFINITY,
-  action: 'none',
-};
-
-function unwrapDecorated(data: AnyData): AnyData {
-  if (data.type === 'decorated') {
-    return data.inner as AnyData;
-  }
-  return data;
-}
-
-function getVectorComponent(type: AnyData): AnyData | undefined {
-  return isVec(type) ? vecTypeToPrimitive[type.type] : undefined;
-}
-
-function getAutoConversionRank(
-  src: AnyData,
-  dest: AnyData,
-): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
-
-  if (trueSrc.type === trueDst.type) {
-    return { rank: 0, action: 'none' };
-  }
-
-  if (trueSrc.type === 'abstractFloat') {
-    if (trueDst.type === 'f32') return { rank: 1, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 2, action: 'none' };
-  }
-
-  if (trueSrc.type === 'abstractInt') {
-    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
-    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
-    if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
-    if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
-  }
-
-  if (isVec(trueSrc) && isVec(trueDst)) {
-    const compSrc = getVectorComponent(trueSrc);
-    const compDest = getVectorComponent(trueDst);
-    if (compSrc && compDest) {
-      return getAutoConversionRank(compSrc, compDest);
-    }
-  }
-
-  if (isMat(trueSrc) && isMat(trueDst)) {
-    // Matrix conversion rank depends only on component type (always f32 for now)
-    return { rank: 0, action: 'none' };
-  }
-
-  return INFINITE_RANK;
-}
-
-function getImplicitConversionRank(
-  src: AnyData,
-  dest: AnyData,
-): ConversionRankInfo {
-  const trueSrc = unwrapDecorated(src);
-  const trueDst = unwrapDecorated(dest);
-
-  if (
-    trueSrc.type === 'ptr' &&
-    getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
-      Number.POSITIVE_INFINITY
-  ) {
-    return { rank: 0, action: 'deref' };
-  }
-
-  if (
-    trueDst.type === 'ptr' &&
-    getAutoConversionRank(trueSrc, trueDst.inner as AnyData).rank <
-      Number.POSITIVE_INFINITY
-  ) {
-    return { rank: 1, action: 'ref' };
-  }
-
-  const primitivePreference = {
-    f32: 0,
-    f16: 1,
-    i32: 2,
-    u32: 3,
-    bool: 4,
-  } as const;
-  type PrimitiveType = keyof typeof primitivePreference;
-
-  if (
-    trueSrc.type in primitivePreference &&
-    trueDst.type in primitivePreference
-  ) {
-    const srcType = trueSrc.type as PrimitiveType;
-    const destType = trueDst.type as PrimitiveType;
-
-    if (srcType !== destType) {
-      const srcPref = primitivePreference[srcType];
-      const destPref = primitivePreference[destType];
-
-      const rank = destPref < srcPref ? 10 : 20;
-
-      return { rank: rank, action: 'cast', targetType: trueDst };
-    }
-  }
-
-  return INFINITE_RANK;
-}
-
-function getConversionRank(
-  src: AnyData,
-  dest: AnyData,
-  allowImplicit: boolean,
-): ConversionRankInfo {
-  const autoRank = getAutoConversionRank(src, dest);
-  if (autoRank.rank < Number.POSITIVE_INFINITY) {
-    return autoRank;
-  }
-  if (allowImplicit) {
-    return getImplicitConversionRank(src, dest);
-  }
-  return INFINITE_RANK;
-}
-
-export type ConversionResultAction = {
-  sourceIndex: number;
-  action: ConversionAction;
-  targetType?: U32 | F32 | I32 | F16;
-};
-
-export type ConversionResult = {
-  targetType: AnyData;
-  actions: ConversionResultAction[];
-  hasImplicitConversions?: boolean;
-};
-
-function findBestType(
-  types: AnyData[],
-  uniqueTypes: AnyData[],
-  allowImplicit: boolean,
-): ConversionResult | undefined {
-  let bestType: AnyData | undefined;
-  let minSum = Number.POSITIVE_INFINITY;
-  const conversionDetails = new Map<AnyData, ConversionRankInfo[]>();
-
-  for (const targetType of uniqueTypes) {
-    let currentSum = 0;
-    const currentDetails: ConversionRankInfo[] = [];
-    let possible = true;
-
-    for (const sourceType of types) {
-      const conversion = getConversionRank(
-        sourceType,
-        targetType,
-        allowImplicit,
+export function numericLiteralToSnippet(value: number): Snippet {
+  // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
+  // Warn when values exceed this range to prevent precision loss.
+  if (Number.isInteger(value)) {
+    if (!Number.isSafeInteger(value)) {
+      console.warn(
+        `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
-      if (conversion.rank === Number.POSITIVE_INFINITY) {
-        possible = false;
-        break;
-      }
-      currentSum += conversion.rank;
-      currentDetails.push(conversion);
     }
-
-    if (possible && currentSum < minSum) {
-      minSum = currentSum;
-      bestType = targetType;
-      conversionDetails.set(bestType, currentDetails);
-    }
+    return snip(value, abstractInt);
   }
-
-  if (!bestType) {
-    return undefined;
-  }
-
-  const bestDetails = conversionDetails.get(bestType) as ConversionRankInfo[];
-  const actions: ConversionResultAction[] = bestDetails.map(
-    (detail, index) => ({
-      sourceIndex: index,
-      action: detail.action,
-      ...(detail.action === 'cast' && {
-        targetType: detail.targetType as U32 | F32 | I32 | F16,
-      }),
-    }),
-  );
-
-  const hasCasts = actions.some((action) => action.action === 'cast');
-
-  return { targetType: bestType, actions, hasImplicitConversions: hasCasts };
+  return snip(value, abstractFloat);
 }
 
 export function concretize(type: AnyWgslData): AnyWgslData {
@@ -426,61 +202,18 @@ export function concretize(type: AnyWgslData): AnyWgslData {
   return type;
 }
 
-export function getBestConversion(
-  types: AnyData[],
-  targetTypes?: AnyData[],
-): ConversionResult | undefined {
-  if (types.length === 0) return undefined;
-
-  const uniqueTypes = [...new Set(types.map(unwrapDecorated))];
-  const uniqueTargetTypes = targetTypes
-    ? [...new Set(targetTypes.map(unwrapDecorated))]
-    : uniqueTypes;
-
-  const explicitResult = findBestType(types, uniqueTargetTypes, false);
-  if (explicitResult) {
-    return explicitResult;
-  }
-
-  const implicitResult = findBestType(types, uniqueTargetTypes, true);
-  if (implicitResult) {
-    implicitResult.hasImplicitConversions = implicitResult.actions.some(
-      (action) => action.action === 'cast',
-    );
-    return implicitResult;
-  }
-
-  return undefined;
-}
-
-export function convertType(
-  sourceType: AnyData,
-  targetType: AnyData,
-  allowImplicit = true,
-): ConversionResult | undefined {
-  const conversion = getConversionRank(sourceType, targetType, allowImplicit);
-
-  if (conversion.rank < Number.POSITIVE_INFINITY) {
-    const actionDetail: ConversionResultAction = {
-      sourceIndex: 0,
-      action: conversion.action,
-    };
-    if (conversion.action === 'cast') {
-      actionDetail.targetType = conversion.targetType as U32 | F32 | I32 | F16;
-    }
-    return {
-      targetType: unwrapDecorated(targetType),
-      actions: [actionDetail],
-      hasImplicitConversions: conversion.action === 'cast',
-    };
-  }
-
-  return undefined;
-}
-
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
-  readonly callStack: unknown[];
+  /**
+   * Used by `generateTypedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `generateTypedExpression` function.
+   */
+  expectedType: AnyData | undefined;
+
+  readonly topFunctionReturnType: AnyData;
   indent(): string;
   dedent(): string;
   pushBlockScope(): void;
@@ -488,87 +221,6 @@ export type GenerationCtx = ResolutionCtx & {
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
-
-function applyActionToSnippet(
-  ctx: GenerationCtx,
-  value: Snippet,
-  action: ConversionResultAction,
-  targetType: AnyData,
-): Snippet {
-  if (action.action === 'none') {
-    return snip(value.value, targetType);
-  }
-
-  const resolvedValue = ctx.resolve(value.value);
-
-  switch (action.action) {
-    case 'ref':
-      return snip(`&${resolvedValue}`, targetType);
-    case 'deref':
-      return snip(`*${resolvedValue}`, targetType);
-    case 'cast': {
-      return snip(`${ctx.resolve(targetType)}(${resolvedValue})`, targetType);
-    }
-    default: {
-      assertExhaustive(action.action, 'applyActionToSnippet');
-    }
-  }
-}
-
-export function convertToCommonType(
-  ctx: GenerationCtx,
-  values: Snippet[],
-  restrictTo?: AnyData[],
-): Snippet[] | undefined {
-  const types = values.map((value) => value.dataType);
-
-  if (types.some((type) => type === UnknownData)) {
-    return undefined;
-  }
-
-  const conversion = getBestConversion(types as AnyData[], restrictTo);
-  if (!conversion) {
-    return undefined;
-  }
-
-  if (conversion.hasImplicitConversions) {
-    console.warn(
-      `Implicit conversions from [\n${
-        values
-          .map((v) => `  ${v.value}: ${v.dataType.type}`)
-          .join(
-            ',\n',
-          )
-      }\n] to ${conversion.targetType.type} are supported, but not recommended.
-Consider using explicit conversions instead.`,
-    );
-  }
-
-  return values.map((value, index) => {
-    const action = conversion.actions[index];
-    invariant(action, 'Action should not be undefined');
-    return applyActionToSnippet(ctx, value, action, conversion.targetType);
-  });
-}
-
-export function convertStructValues(
-  ctx: GenerationCtx,
-  structType: AnyWgslStruct,
-  values: Record<string, Snippet>,
-): Snippet[] {
-  const propKeys = Object.keys(structType.propTypes);
-
-  return propKeys.map((key) => {
-    const val = values[key];
-    if (!val) {
-      throw new Error(`Missing property ${key}`);
-    }
-
-    const targetType = structType.propTypes[key];
-    const converted = convertToCommonType(ctx, [val], [targetType as AnyData]);
-    return converted?.[0] ?? val;
-  });
-}
 
 export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
@@ -585,28 +237,6 @@ export function coerceToSnippet(value: unknown): Snippet {
     return snip(value, kindToSchema[value.kind]);
   }
 
-  if (Array.isArray(value)) {
-    const coerced = value.map(coerceToSnippet).filter(Boolean);
-    const context = getResolutionCtx() as GenerationCtx | undefined;
-    if (!context) {
-      throw new Error('Tried to coerce array without a context');
-    }
-
-    const converted = convertToCommonType(context, coerced as Snippet[]);
-    const commonType = getBestConversion(
-      coerced.map((v) => v.dataType as AnyData),
-    )?.targetType as AnyWgslData | undefined;
-
-    if (!converted || !commonType) {
-      return snip(value, UnknownData);
-    }
-
-    return snip(
-      converted.map((v) => v.value).join(', '),
-      arrayOf(concretize(commonType), value.length),
-    );
-  }
-
   if (
     typeof value === 'string' || typeof value === 'function' ||
     typeof value === 'object' || typeof value === 'symbol' ||
@@ -616,11 +246,8 @@ export function coerceToSnippet(value: unknown): Snippet {
     return snip(value, UnknownData);
   }
 
-  if (typeof value === 'number' || typeof value === 'bigint') {
-    return snip(
-      value,
-      numericLiteralToSnippet(String(value))?.dataType ?? UnknownData,
-    );
+  if (typeof value === 'number') {
+    return numericLiteralToSnippet(value);
   }
 
   if (typeof value === 'boolean') {

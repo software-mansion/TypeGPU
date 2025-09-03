@@ -45,20 +45,19 @@ export const Time = d.struct({ passed: d.f32, multiplier: d.f32 });
 export const computeLayout = tgpu.bindGroupLayout({
   celestialBodiesCount: {
     uniform: d.i32,
-    access: 'readonly',
   },
   inState: {
-    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    storage: d.arrayOf(CelestialBody),
     access: 'readonly',
   },
   outState: {
-    storage: (n: number) => d.arrayOf(CelestialBody, n),
+    storage: d.arrayOf(CelestialBody),
     access: 'mutable',
   },
 });
 
-export const renderSkyBoxVertexLayout = tgpu.vertexLayout((n) =>
-  d.arrayOf(SkyBoxVertex, n)
+export const renderSkyBoxVertexLayout = tgpu.vertexLayout(
+  d.arrayOf(SkyBoxVertex),
 );
 
 export const cameraAccess = tgpu['~unstable'].accessor(Camera);
@@ -71,10 +70,10 @@ export const renderBindGroupLayout = tgpu
   .bindGroupLayout({
     celestialBodyTextures: { texture: 'float', viewDimension: '2d-array' },
     celestialBodies: {
-      storage: (n: number) => d.arrayOf(CelestialBody, n),
+      storage: d.arrayOf(CelestialBody),
       access: 'readonly',
     },
   });
 
 export const renderVertexLayout = tgpu
-  .vertexLayout((n) => d.arrayOf(d.struct(VertexInput), n));
+  .vertexLayout(d.arrayOf(d.struct(VertexInput)));

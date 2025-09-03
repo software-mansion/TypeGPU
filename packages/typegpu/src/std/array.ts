@@ -1,23 +1,26 @@
-import { snip } from '../data/dataTypes.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
-import type { AnyWgslData } from '../data/wgslTypes.ts';
-import { isPtr, isWgslArray } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
+import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 
-export const arrayLength = createDualImpl(
-  // CPU implementation
-  (a: unknown[]) => a.length,
-  // GPU implementation
-  (a) => {
-    if (
-      isPtr(a.dataType) && isWgslArray(a.dataType.inner) &&
-      a.dataType.inner.elementCount > 0
-    ) {
-      return snip(String(a.dataType.inner.elementCount), abstractInt);
-    }
-    return snip(`arrayLength(${a.value})`, u32);
+const sizeOfPointedToArray = (dataType: unknown) =>
+  isPtr(dataType) && isWgslArray(dataType.inner)
+    ? dataType.inner.elementCount
+    : 0;
+
+export const arrayLength = dualImpl({
+  name: 'arrayLength',
+  signature: (arg) => {
+    const ptrArg = isPtr(arg) ? arg : ptrFn(arg as StorableData);
+    return ({
+      argTypes: [ptrArg],
+      returnType: sizeOfPointedToArray(ptrArg) > 0 ? abstractInt : u32,
+    });
   },
-  'arrayLength',
-  (a) => [ptrFn(a.dataType as AnyWgslData)],
-);
+  normalImpl: (a: unknown[]) => a.length,
+  codegenImpl(a) {
+    const length = sizeOfPointedToArray(a.dataType);
+    return length > 0 ? String(length) : stitch`arrayLength(${a})`;
+  },
+});

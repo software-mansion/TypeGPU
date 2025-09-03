@@ -22,7 +22,7 @@ const TriangleData = d.struct({
   velocity: d.vec2f,
 });
 
-const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
+const TriangleDataArray = d.arrayOf(TriangleData);
 
 // layouts and buffers
 const renderBindGroupLayout = tgpu.bindGroupLayout({

@@ -8,6 +8,7 @@ import type {
   Interpolate,
   Location,
   Vec4f,
+  WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -16,7 +17,6 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -72,7 +72,10 @@ export type TgpuFragmentFnShell<
    * Creates a type-safe implementation of this signature
    */
   & ((
-    implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
+    implementation: (
+      input: InferIO<FragmentIn>,
+      out: FragmentOut extends IORecord ? WgslStruct<FragmentOut> : FragmentOut,
+    ) => InferIO<FragmentOut>,
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
   & /**
    * @param implementation
@@ -223,31 +226,11 @@ function createFragmentFn(
       }
       core.applyExternals({ Out: outputType });
 
-      if (typeof implementation === 'string') {
-        return core.resolve(
-          ctx,
-          inputWithLocation ? [inputWithLocation] : [],
-          shell.returnType,
-        );
-      }
-
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(outputType);
-        return core.resolve(
-          ctx,
-          inputWithLocation ? [inputWithLocation] : [],
-          shell.returnType,
-        );
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        inputWithLocation ? [inputWithLocation] : [],
+        shell.returnType,
+      );
     },
 
     toString() {

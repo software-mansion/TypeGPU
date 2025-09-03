@@ -8,6 +8,7 @@ export default defineConfig({
     'src/index.ts',
     'src/rollup.ts',
     'src/babel.ts',
+    'src/bun.ts',
     'src/esbuild.ts',
     'src/farm.ts',
     'src/rolldown.ts',

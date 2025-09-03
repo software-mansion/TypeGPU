@@ -1,7 +1,10 @@
-import { type AnyData, snip, UnknownData } from '../../data/dataTypes.ts';
-import { schemaCallWrapper } from '../../data/utils.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { DualFn } from '../../data/dualFn.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { createDualImpl } from '../../shared/generators.ts';
+import { ExecutionError } from '../../errors.ts';
+import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -9,20 +12,16 @@ import {
   $getNameForward,
   $internal,
   $providing,
+  $runtimeResource,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
-import type {
-  FnArgsConversionHint,
-  ResolutionCtx,
-  SelfResolvable,
-  Wgsl,
-} from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
+import { stitch } from '../resolve/stitch.ts';
 import {
   type Eventual,
   isAccessor,
@@ -31,6 +30,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
+import { createDualImpl } from './dualImpl.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   AnyFn,
@@ -80,10 +80,6 @@ export type TgpuFnShell<
   ) => TgpuFn<(...args: Args) => Return>);
 
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
-  readonly [$internal]: {
-    implementation: Implementation<ImplSchema>;
-    argTypes: FnArgsConversionHint;
-  };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
@@ -102,7 +98,14 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
 // biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
 export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & TgpuFnBase<ImplSchema>
-  & InferImplSchema<ImplSchema>;
+  & InferImplSchema<ImplSchema>
+  & {
+    readonly [$internal]:
+      & DualFn<InferImplSchema<ImplSchema>>[typeof $internal]
+      & {
+        implementation: Implementation<ImplSchema>;
+      };
+  };
 
 export function fn<
   Args extends AnyData[] | [],
@@ -164,11 +167,7 @@ function createFn<ImplSchema extends AnyFn>(
 
   const core = createFnCore(implementation as Implementation, '');
 
-  const fnBase: This = {
-    [$internal]: {
-      implementation,
-      argTypes: shell.argTypes,
-    },
+  const fnBase = {
     shell,
     resourceType: 'function' as const,
 
@@ -204,54 +203,45 @@ function createFn<ImplSchema extends AnyFn>(
           shell.returnType,
           core.applyExternals,
         );
-
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
       }
 
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(shell.returnType);
-        return core.resolve(ctx, shell.argTypes, shell.returnType);
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(ctx, shell.argTypes, shell.returnType);
     },
-  };
+  } as This;
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) => {
-      if (typeof implementation === 'string') {
-        throw new Error(
-          'Cannot execute on the CPU functions constructed with raw WGSL',
-        );
-      }
-
-      const castAndCopiedArgs = args.map((arg, index) =>
-        schemaCallWrapper(shell.argTypes[index], arg)
-      ) as InferArgs<Parameters<ImplSchema>>;
-
-      return implementation(...castAndCopiedArgs);
-    },
     (...args) =>
-      snip(
-        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        shell.returnType ?? UnknownData,
-      ),
+      provideInsideTgpuFn(() => {
+        try {
+          if (typeof implementation === 'string') {
+            throw new Error(
+              'Cannot execute on the CPU functions constructed with raw WGSL',
+            );
+          }
+
+          const castAndCopiedArgs = args.map((arg, index) =>
+            schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
+          ) as InferArgs<Parameters<ImplSchema>>;
+
+          const result = implementation(...castAndCopiedArgs);
+          // Casting the result to the appropriate schema
+          return schemaCallWrapper(shell.returnType, result);
+        } catch (err) {
+          if (err instanceof ExecutionError) {
+            throw err.appendToTrace(fn);
+          }
+          throw new ExecutionError(err, [fn]);
+        }
+      }),
+    (...args) => snip(new FnCall(fn, args), shell.returnType),
     'tgpuFnCall',
     shell.argTypes,
   );
 
-  call[$internal].implementation = implementation;
-
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     ImplSchema
   >;
+  fn[$internal].implementation = implementation;
 
   Object.defineProperty(fn, 'toString', {
     value() {
@@ -271,10 +261,6 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   };
 
   const fnBase: This = {
-    [$internal]: {
-      implementation: innerFn[$internal].implementation,
-      argTypes: innerFn[$internal].argTypes,
-    },
     resourceType: 'function',
     shell: innerFn.shell,
     [$providing]: {
@@ -306,16 +292,13 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) => innerFn(...args),
-    (...args) =>
-      snip(
-        new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        innerFn.shell.returnType ?? UnknownData,
-      ),
+    (...args) => snip(new FnCall(fn, args), innerFn.shell.returnType),
     'tgpuFnCall',
-    innerFn.shell.argTypes as AnyData[],
+    innerFn.shell.argTypes,
   );
 
-  const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
+  const fn = Object.assign(call, fnBase) as unknown as TgpuFn<ImplSchema>;
+  fn[$internal].implementation = innerFn[$internal].implementation;
 
   Object.defineProperty(fn, 'toString', {
     value() {
@@ -331,20 +314,25 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 }
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
-  readonly [$getNameForward]: TgpuFnBase<ImplSchema>;
+  readonly [$internal] = true;
+  readonly [$runtimeResource] = true;
+  readonly [$getNameForward]: unknown;
+  readonly #fn: TgpuFnBase<ImplSchema>;
+  readonly #params: Snippet[];
 
   constructor(
-    private readonly _fn: TgpuFnBase<ImplSchema>,
-    private readonly _params: Wgsl[],
+    fn: TgpuFnBase<ImplSchema>,
+    params: Snippet[],
   ) {
-    this[$getNameForward] = _fn;
+    this.#fn = fn;
+    this.#params = params;
+    this[$getNameForward] = fn;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    return ctx.resolve(
-      `${ctx.resolve(this._fn)}(${
-        this._params.map((param) => ctx.resolve(param)).join(', ')
-      })`,
+    // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
+    return ctx.withResetIndentLevel(() =>
+      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
     );
   }
 

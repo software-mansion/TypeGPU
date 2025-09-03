@@ -1,19 +1,21 @@
 import cs from 'classnames';
 import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
 import useEvent from '../utils/useEvent.ts';
+import { useHydrated } from '../utils/useHydrated.ts';
 
 type Props = {
   exampleKey: string | undefined;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
+  const hydrated = useHydrated();
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
@@ -23,7 +25,7 @@ export function ExampleLink(props: Props) {
     setMenuShownMobile(false);
   });
 
-  const isCurrentExample = currentExample === exampleKey;
+  const isCurrentExample = hydrated && currentExample === exampleKey;
 
   return (
     <a

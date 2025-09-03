@@ -139,8 +139,8 @@ function setPipeline({
   outOfGamutPattern,
   gamutClip,
 }: {
-  outOfGamutPattern: d.Infer<typeof patternSlot>;
-  gamutClip: d.Infer<typeof oklabGamutClipSlot>;
+  outOfGamutPattern: typeof patternSlot.$;
+  gamutClip: typeof oklabGamutClipSlot.$;
 }) {
   pipeline = root['~unstable']
     .with(patternSlot, outOfGamutPattern)

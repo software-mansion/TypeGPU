@@ -1,4 +1,7 @@
+import type { AnyData } from '../../data/dataTypes.ts';
+import { $internal } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 
@@ -23,9 +26,14 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
   public readonly resourceType = 'external-texture';
+  public readonly [$wgslDataType]: AnyData;
+  readonly [$internal] = true;
 
   constructor(private readonly _membership: LayoutMembership) {
     setName(this, _membership.key);
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    this[$wgslDataType] = this as any;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

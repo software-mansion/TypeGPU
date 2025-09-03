@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import {
   applyExternals,
@@ -33,6 +34,7 @@ export function declare(declaration: string): TgpuDeclare {
 // --------------
 
 class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
+  readonly [$internal] = true;
   private externalsToApply: ExternalMap[] = [];
 
   constructor(private declaration: string) {}

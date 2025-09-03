@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
-import { $wgslDataType } from '../src/shared/symbols.ts';
+import {
+  $internal,
+  $runtimeResource,
+  $wgslDataType,
+} from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
+import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
 
 describe('tgpu resolve', () => {
@@ -26,10 +31,31 @@ describe('tgpu resolve', () => {
     );
   });
 
+  it('should resolve a nested external JS struct', () => {
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var g = _EXT_.constants.n; }',
+      externals: {
+        _EXT_: {
+          constants: {
+            n: 1000,
+          },
+        },
+      },
+      names: 'strict',
+    });
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn foo() { var g = 1000; }"`,
+    );
+  });
+
   it('should deduplicate dependencies', () => {
     const intensity = {
+      [$internal]: true,
+
       get value(): number {
         return {
+          [$internal]: true,
+          [$runtimeResource]: true,
           [$wgslDataType]: d.f32,
           '~resolve'(ctx: ResolutionCtx) {
             return ctx.resolve(intensity);
@@ -398,5 +424,174 @@ describe('tgpu resolve', () => {
           let y = 2;
         }`),
     );
+  });
+});
+
+describe('tgpu resolveWithContext', () => {
+  it('should resolve a template with external values', () => {
+    const Gradient = d.struct({
+      from: d.vec3f,
+      to: d.vec3f,
+    });
+
+    const { code } = tgpu.resolveWithContext({
+      template: `
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `,
+      externals: { Gradient },
+      names: 'strict',
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+        struct Gradient {
+          from: vec3f,
+          to: vec3f,
+        }
+        fn getGradientAngle(gradient: Gradient) -> f32 {
+          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+        }
+      `),
+    );
+  });
+
+  it('should resolve a template with additional config', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `,
+      externals: { Voxel },
+      names: 'strict',
+      config: (cfg) => cfg.pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color;
+          }
+        `),
+    );
+
+    // verify resolveWithContext::config impl is being called
+    expect(configSpy.mock.lastCall?.[0]).toBeDefined();
+  });
+
+  it('should resolve a template with a slot', () => {
+    const configSpy = vi.fn((innerCfg) => innerCfg);
+
+    const v = d.vec4f(1, 0, 1, 0);
+    const colorSlot = tgpu.slot<d.v4f>();
+
+    const Voxel = d.struct({
+      position: d.vec3f,
+      color: d.vec4f,
+    });
+    const { code } = tgpu.resolveWithContext({
+      template: `
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * colorTint;
+          }
+        `,
+      externals: { Voxel, colorTint: colorSlot },
+      names: 'strict',
+      config: (cfg) => cfg.with(colorSlot, v).pipe(configSpy),
+    });
+
+    expect(parse(code)).toBe(
+      parse(`
+          struct Voxel {
+            position: vec3f,
+            color: vec4f,
+          }
+          fn getVoxelColor(voxel: Voxel) -> vec4f {
+            return voxel.color * vec4f(1, 0, 1, 0);
+          }
+        `),
+    );
+    // verify resolveWithContext::config impl is actually working
+    expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
+      [[colorSlot, v]],
+    );
+  });
+
+  it('should warn when external WGSL is not used', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolveWithContext({
+      template: 'fn testFn() { return; }',
+      externals: {
+        ArraySchema: d.arrayOf(d.u32, 4),
+        JavaScriptObject: { field: d.vec2f() },
+      },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'ArraySchema' wasn't used in the resolved template.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The external 'JavaScriptObject' wasn't used in the resolved template.",
+    );
+  });
+
+  it('should warn when external is neither wgsl nor an object', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { var a = identity(1); return; }',
+      externals: { identity: (a: number) => a },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `During resolution, the external 'identity' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+    );
+  });
+
+  it('should not warn when In/Out are unused', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    tgpu.resolve({
+      template: 'fn testFn() { return; }',
+      externals: {},
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not resolve the same nested property twice', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const resolved = tgpu.resolve({
+      template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
+      externals: { _EXT_: { n: 100 } },
+    });
+
+    expect(resolved).toMatchInlineSnapshot(
+      `"fn testFn() { return 100 + 100; }"`,
+    );
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });

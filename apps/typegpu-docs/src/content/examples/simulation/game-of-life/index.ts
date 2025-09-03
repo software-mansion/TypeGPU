@@ -28,11 +28,11 @@ const bindGroupLayoutCompute = tgpu.bindGroupLayout({
     access: 'readonly',
   },
   current: {
-    storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
+    storage: d.arrayOf(d.u32),
     access: 'readonly',
   },
   next: {
-    storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
+    storage: d.arrayOf(d.u32),
     access: 'mutable',
   },
 });
@@ -84,12 +84,12 @@ const squareBuffer = root
   .$usage('vertex');
 
 const squareVertexLayout = tgpu.vertexLayout(
-  (n: number) => d.arrayOf(d.location(1, d.vec2u), n),
+  d.arrayOf(d.location(1, d.vec2u)),
   'vertex',
 );
 
 const cellsVertexLayout = tgpu.vertexLayout(
-  (n: number) => d.arrayOf(d.location(0, d.u32), n),
+  d.arrayOf(d.location(0, d.u32)),
   'instance',
 );
 

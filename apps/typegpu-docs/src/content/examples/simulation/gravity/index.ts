@@ -365,7 +365,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 
   cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
   updateCameraPosition();
-});
+}, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
@@ -379,17 +379,19 @@ canvas.addEventListener('touchstart', (event) => {
     prevX = event.touches[0].clientX;
     prevY = event.touches[0].clientY;
   }
-});
+}, { passive: true });
 
-window.addEventListener('mouseup', () => {
+const mouseUpEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('mouseup', mouseUpEventListener);
 
-window.addEventListener('touchend', () => {
+const touchEndEventListener = () => {
   isDragging = false;
-});
+};
+window.addEventListener('touchend', touchEndEventListener);
 
-window.addEventListener('mousemove', (event) => {
+const mouseMoveEventListener = (event: MouseEvent) => {
   const dx = event.clientX - prevX;
   const dy = event.clientY - prevY;
   prevX = event.clientX;
@@ -398,9 +400,10 @@ window.addEventListener('mousemove', (event) => {
   if (isDragging) {
     updateCameraOrbit(dx, dy);
   }
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-canvas.addEventListener('touchmove', (event) => {
+const touchMoveEventListener = (event: TouchEvent) => {
   if (isDragging && event.touches.length === 1) {
     event.preventDefault();
     const dx = event.touches[0].clientX - prevX;
@@ -410,7 +413,8 @@ canvas.addEventListener('touchmove', (event) => {
 
     updateCameraOrbit(dx, dy);
   }
-});
+};
+window.addEventListener('touchmove', touchMoveEventListener);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -419,11 +423,15 @@ function hideHelp() {
   }
 }
 for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  window.addEventListener(eventName, hideHelp, { once: true });
+  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
 export function onCleanup() {
   destroyed = true;
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
   resizeObserver.unobserve(canvas);
   root.destroy();
 }

@@ -142,6 +142,26 @@ const fooLayout = tgpu.bindGroupLayout({
   // ...
 });
 ```
+
+You don't have to write arrow functions every time, `d.arrayOf(schema)` is a convenient shorhand for that.
+
+```diff lang="ts"
+// main.ts
+const Filter = (n: number) =>
+  d.struct({
+    clamp: d.f32,
+    // Unfortunately, in structs, you cannot simply write d.arrayOf(d.f32)
+    values: d.arrayOf(d.f32, n),
+  });
+
+const fooLayout = tgpu.bindGroupLayout({
+-  factors: { storage: (n: number) => d.arrayOf(d.f32, n) },
++  factors: { storage: d.arrayOf(d.f32) },
+  filter: { storage: Filter },
+  // ...
+});
+```
+
 Matching WGSL code:
 ```wgsl
 // shader.wgsl

@@ -1,13 +1,21 @@
-import type { TgpuSampler } from '../core/sampler/sampler.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import type { TgpuExternalTexture } from '../core/texture/externalTexture.ts';
 import type {
+  TgpuComparisonSampler,
+  TgpuSampler,
+} from '../core/sampler/sampler.ts';
+import type {
+  TgpuDepthTexture,
   TgpuSampledTexture,
   TgpuStorageTexture,
 } from '../core/texture/texture.ts';
 import type { ChannelData, TexelData } from '../core/texture/texture.ts';
-import { snip } from '../data/dataTypes.ts';
-import { u32 } from '../data/numeric.ts';
+import { createDualImpl } from '../core/function/dualImpl.ts';
+import { snip } from '../data/snippet.ts';
+import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
+  type F32,
   type v2f,
   type v2i,
   type v2u,
@@ -19,7 +27,6 @@ import {
   type v4u,
   Void,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../shared/generators.ts';
 
 type TextureSampleOverload = {
   <T extends TgpuSampledTexture<'1d'>>(
@@ -115,22 +122,12 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     _offsetOrArrayIndex?: v2i | v3i | number,
     _maybeOffset?: v2i | v3i,
   ) => {
-    throw new Error('Texture sampling is not supported outside of GPU mode.');
+    throw new Error(
+      'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
+    );
   },
-  // GPU implementation
-  (texture, sampler, coords, offsetOrArrayIndex, maybeOffset) => {
-    const args = [texture, sampler, coords];
-
-    if (offsetOrArrayIndex !== undefined) {
-      args.push(offsetOrArrayIndex);
-    }
-
-    if (maybeOffset !== undefined) {
-      args.push(maybeOffset);
-    }
-
-    return snip(`textureSample(${args.map((v) => v.value).join(', ')})`, vec4f);
-  },
+  // CODEGEN implementation
+  (...args) => snip(stitch`textureSample(${args})`, vec4f),
   'textureSample',
 );
 
@@ -175,21 +172,12 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     _level: number,
     _offsetOrArrayIndex?: v2i | v3i | number,
   ) => {
-    throw new Error('Texture sampling is not supported outside of GPU mode.');
-  },
-  // GPU implementation
-  (texture, sampler, coords, level, offsetOrArrayIndex) => {
-    const args = [texture, sampler, coords, level];
-
-    if (offsetOrArrayIndex !== undefined) {
-      args.push(offsetOrArrayIndex);
-    }
-
-    return snip(
-      `textureSampleLevel(${args.map((v) => v.value).join(', ')})`,
-      vec4f,
+    throw new Error(
+      'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
+  // CODEGEN implementation
+  (...args) => snip(stitch`textureSampleLevel(${args})`, vec4f),
   'textureSampleLevel',
 );
 
@@ -261,22 +249,20 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
     _coords: number | v2i | v2u | v3i | v3u,
     _levelOrArrayIndex?: number,
   ) => {
-    throw new Error('Texture loading is not supported outside of GPU mode.');
+    throw new Error(
+      '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
+    );
   },
-  // GPU implementation
-  (texture, coords, levelOrArrayIndex) => {
-    const args = [texture, coords];
-
-    if (levelOrArrayIndex !== undefined) {
-      args.push(levelOrArrayIndex);
-    }
+  // CODEGEN implementation
+  (...args) => {
+    const texture = args[0];
 
     const textureInfo = texture.dataType as unknown as
       | TgpuStorageTexture
       | TgpuSampledTexture;
 
     return snip(
-      `textureLoad(${args.map((v) => v.value).join(', ')})`,
+      stitch`textureLoad(${args})`,
       'texelDataType' in textureInfo
         ? textureInfo.texelDataType
         : channelDataToInstance[textureInfo.channelDataType.type],
@@ -317,18 +303,12 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     _arrayIndexOrValue?: number | TexelData,
     _maybeValue?: TexelData,
   ) => {
-    throw new Error('Texture storing is not supported outside of GPU mode.');
+    throw new Error(
+      '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',
+    );
   },
-  // GPU implementation
-  (texture, coords, arrayIndexOrValue, maybeValue) =>
-    snip(
-      `textureStore(${
-        [texture, coords, arrayIndexOrValue, maybeValue].filter(
-          (arg) => arg !== undefined,
-        ).map((v) => v.value).join(', ')
-      })`,
-      Void,
-    ),
+  // CODEGEN implementation
+  (...args) => snip(stitch`textureStore(${args})`, Void),
   'textureStore',
 );
 
@@ -345,7 +325,8 @@ type TextureDimensionsOverload = {
       | TgpuSampledTexture<'cube'>
       | TgpuSampledTexture<'cube-array'>
       | TgpuStorageTexture<'2d'>
-      | TgpuStorageTexture<'2d-array'>,
+      | TgpuStorageTexture<'2d-array'>
+      | TgpuExternalTexture,
   >(
     texture: T,
   ): v2u;
@@ -355,10 +336,7 @@ type TextureDimensionsOverload = {
       | TgpuSampledTexture<'2d-array'>
       | TgpuSampledTexture<'cube'>
       | TgpuSampledTexture<'cube-array'>,
-  >(
-    texture: T,
-    level: number,
-  ): v2u;
+  >(texture: T, level: number): v2u;
 
   <T extends TgpuSampledTexture<'3d'> | TgpuStorageTexture<'3d'>>(
     texture: T,
@@ -368,22 +346,120 @@ type TextureDimensionsOverload = {
 
 export const textureDimensions: TextureDimensionsOverload = createDualImpl(
   // CPU implementation
-  (_texture: TgpuSampledTexture | TgpuStorageTexture, _level?: number) => {
+  (
+    _texture: TgpuSampledTexture | TgpuStorageTexture | TgpuExternalTexture,
+    _level?: number,
+  ) => {
     throw new Error(
-      'Texture dimensions are not supported outside of GPU mode.',
+      '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
     );
   },
-  // GPU implementation
+  // CODEGEN implementation
   (texture, level) => {
-    const dim =
-      (texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture)
-        .dimension;
+    const resourceType = (texture as unknown as
+      | TgpuSampledTexture
+      | TgpuStorageTexture
+      | TgpuExternalTexture).resourceType;
+
+    const dim = resourceType === 'external-texture' ? '2d' : (
+      texture.dataType as unknown as TgpuSampledTexture | TgpuStorageTexture
+    ).dimension;
+
     return snip(
-      `textureDimensions(${texture.value}${
-        level !== undefined ? `, ${level.value}` : ''
-      })`,
+      stitch`textureDimensions(${[texture, level]})`,
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
     );
   },
   'textureDimensions',
 );
+
+type TextureSampleCompareOverload = {
+  <T extends TgpuDepthTexture<'2d'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'2d'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuDepthTexture<'2d-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'2d-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v2f,
+    arrayIndex: number,
+    depthRef: number,
+    offset: v2i,
+  ): number;
+  <T extends TgpuDepthTexture<'cube'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v3f,
+    depthRef: number,
+  ): number;
+  <T extends TgpuDepthTexture<'cube-array'>>(
+    texture: T,
+    sampler: TgpuComparisonSampler,
+    coords: v3f,
+    arrayIndex: number,
+    depthRef: number,
+  ): number;
+};
+
+export const textureSampleCompare: TextureSampleCompareOverload =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuDepthTexture,
+      _sampler: TgpuComparisonSampler,
+      _coords: v2f | v3f,
+      _depthRefOrArrayIndex: number,
+      _depthRefOrOffset?: number | v2i,
+      _maybeOffset?: v2i,
+    ) => {
+      throw new Error(
+        'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
+      );
+    },
+    // CODEGEN implementation
+    (...args) => snip(stitch`textureSampleCompare(${args})`, f32),
+    'textureSampleCompare',
+  );
+
+type TextureSampleBaseClampToEdge = (
+  texture: TgpuSampledTexture<'2d', F32> | TgpuExternalTexture,
+  sampler: TgpuSampler,
+  coords: v2f,
+) => v4f;
+
+export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
+  createDualImpl(
+    // CPU implementation
+    (
+      _texture: TgpuSampledTexture | TgpuExternalTexture,
+      _sampler: TgpuSampler,
+      _coords: v2f,
+    ) => {
+      throw new Error(
+        'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
+      );
+    },
+    // GPU implementation
+    (...args) =>
+      snip(
+        stitch`textureSampleBaseClampToEdge(${args})`,
+        vec4f,
+      ),
+    'textureSampleBaseClampToEdge',
+  );

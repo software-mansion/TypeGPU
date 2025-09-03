@@ -3,7 +3,12 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
-import type { Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
+import type {
+  Decorated,
+  Interpolate,
+  Location,
+  WgslStruct,
+} from '../../data/wgslTypes.ts';
 import {
   getName,
   isNamable,
@@ -11,7 +16,6 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
@@ -61,7 +65,10 @@ export type TgpuVertexFnShell<
 > =
   & TgpuVertexFnShellHeader<VertexIn, VertexOut>
   & ((
-    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+    implementation: (
+      input: InferIO<VertexIn>,
+      out: WgslStruct<VertexOut>,
+    ) => InferIO<VertexOut>,
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
   & ((
     implementation: string,
@@ -199,31 +206,13 @@ function createVertexFn(
           core.applyExternals({ In: inputType });
         }
         core.applyExternals({ Out: outputWithLocation });
-
-        return core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        );
       }
 
-      const generationCtx = ctx as GenerationCtx;
-      if (generationCtx.callStack === undefined) {
-        throw new Error(
-          'Cannot resolve a TGSL function outside of a generation context',
-        );
-      }
-
-      try {
-        generationCtx.callStack.push(outputWithLocation);
-        return core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        );
-      } finally {
-        generationCtx.callStack.pop();
-      }
+      return core.resolve(
+        ctx,
+        shell.argTypes,
+        outputWithLocation,
+      );
     },
 
     toString() {

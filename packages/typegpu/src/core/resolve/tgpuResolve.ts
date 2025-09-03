@@ -1,10 +1,13 @@
+import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -21,6 +24,15 @@ export interface TgpuResolveOptions {
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
+  /**
+   * A function to configure the resolution context.
+   */
+  config?: ((cfg: Configurable) => Configurable) | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
 }
 
 /**
@@ -63,14 +75,17 @@ export function resolveWithContext(
 ): ResolutionResult {
   const {
     externals,
+    shaderGenerator,
     template,
     names,
+    config,
   } = options;
 
   const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, externals ?? {});
 
   const resolutionObj: SelfResolvable = {
+    [$internal]: true,
     '~resolve'(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
@@ -78,11 +93,16 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
-  return resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
-  });
+  return resolveImpl(
+    resolutionObj,
+    {
+      names: names === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry(),
+      shaderGenerator,
+    },
+    config,
+  );
 }
 
 /**

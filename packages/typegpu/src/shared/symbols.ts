@@ -18,6 +18,19 @@ export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
  */
 export const $providing = Symbol(`typegpu:${version}:$providing`);
 
+/**
+ * Marks objects that represent values at runtime GPU execution time), and don't have an inherent value
+ * at comp-time (resolution time).
+ * @example
+ * readonly [$runtimeResource]: true
+ */
+export const $runtimeResource = Symbol(`typegpu:${version}:$runtimeResource`);
+
+export function isRuntimeResource(value: unknown): boolean {
+  return !!(value as { readonly [$runtimeResource]?: boolean | undefined })
+    ?.[$runtimeResource];
+}
+
 //
 // Type tokens
 //
@@ -40,3 +53,28 @@ export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
  * Type token holding schemas that are identical in memory layout.
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);
+
+/**
+ * Type token, signaling that a schema can be used in a storage buffer.
+ */
+export const $validStorageSchema = Symbol(
+  `typegpu:${version}:$invalidStorageSchema`,
+);
+/**
+ * Type token, signaling that a schema can be used in a uniform buffer.
+ */
+export const $validUniformSchema = Symbol(
+  `typegpu:${version}:$validUniformSchema`,
+);
+/**
+ * Type token, signaling that a schema can be used in a vertex buffer.
+ */
+export const $validVertexSchema = Symbol(
+  `typegpu:${version}:$validVertexSchema`,
+);
+/**
+ * Type token, containing a reason for why the schema is invalid (if it is).
+ */
+export const $invalidSchemaReason = Symbol(
+  `typegpu:${version}:$invalidSchemaReason`,
+);

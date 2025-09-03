@@ -31,7 +31,7 @@ export const ModelData = d.struct({
   applySeaDesaturation: d.u32, // bool
 });
 
-export const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
+export const ModelDataArray = d.arrayOf(ModelData);
 
 export const ModelVertexInput = {
   modelPosition: d.vec3f,

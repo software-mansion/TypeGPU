@@ -188,7 +188,7 @@ const mainInitWorld = tgpu['~unstable'].computeFn({
     value = d.vec4f();
   } else {
     // Ocean
-    if (y < d.i32(gridSize) / 2) {
+    if (y < d.i32(gridSize / 2)) {
       const depth = 1 - d.f32(y) / (d.f32(gridSize) / 2);
       value = d.vec4f(0, 0, 10 + depth * 10, 0);
     }
@@ -211,7 +211,7 @@ const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
 
       const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
       const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
-      const minY = std.max(0, obs.center.y - d.i32(obs.size.y) / 2);
+      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
       const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
       const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));

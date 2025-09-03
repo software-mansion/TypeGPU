@@ -3,7 +3,3 @@ declare interface ImportMeta {
     MODE: string;
   };
 }
-
-declare interface PerformanceEventMap {
-  'typegpu:pipeline-unwrapped': Event;
-}

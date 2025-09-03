@@ -142,18 +142,6 @@ export const examples = R.pipe(
   ),
 );
 
-export const examplesStable = R.pipe(
-  examples,
-  R.entries(),
-  R.filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
-  R.filter(([_, example]) =>
-    example.metadata.tags?.includes('camera')
-      ? typeof MediaStreamTrackProcessor === 'undefined'
-      : true
-  ),
-  R.fromEntries(),
-);
-
 export const examplesByCategory = R.groupBy(
   Object.values(examples),
   (example) => example.metadata.category,

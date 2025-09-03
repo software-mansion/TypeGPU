@@ -11,7 +11,8 @@ The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you wa
 :::
 
 Here's an example:
-```ts
+
+```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -80,6 +81,26 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 }
 ```
 
+:::tip
+If you wish to resolve just a single TGSL function and its dependencies, you can call resolve with that function in the externals and with no template.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const multiply = tgpu.fn([d.u32], d.u32)((n) => 2 * n);
+
+const resolved = tgpu.resolve({ externals: { multiply } });
+
+console.log(resolved);
+// fn multiply_0(n: u32) ->  u32{
+//   return (2 * n);
+// }
+```
+
+You can also resolve TypeGPU schemas or even entire pipelines the same way.
+:::
+
 ## Template
 
 This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions. 
@@ -87,10 +108,10 @@ It can contain references to objects passed in the `externals` record.
 
 ## Externals
 
-This is a record with TypeGPU objects that are to be included in the final resolved shader code. 
+This is a record with TypeGPU objects that are to be included in the final resolved shader code.
 The values in the mapping are the objects themselves, while the keys are the names by which they are referenced in the template code.
 Each object is resolved to its WGSL declaration, which is included in the final shader code.
-Moreover each reference to the object in the template is replaced with the name used in its newly generated declaration.
+Moreover, each reference to the object in the template is replaced with the name used in its newly generated declaration.
 
 If an object is being referenced only by another TypeGPU object in *externals*, it doesn't have to be included in the record.
 Any passed-in object's dependencies are automatically resolved and included in the final result.
@@ -111,17 +132,95 @@ To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fu
     ...layout.bound,
   }
 ```
+
 :::
 
 ## Naming scheme
 
 When externals are being resolved, they are given new names based on the specified naming scheme (`names` parameter).
 
-The default naming scheme is `"random"`. It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record. 
-In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
+The default naming scheme is `"random"`.
+It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
+In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other.
 
-Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS,
-unless there is a name conflict, in which case a suffix is added.
-If there is no explicit *.$name* call, an object is named based on its associated key in *externals*. 
-This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
+Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, unless there is a name conflict, in which case a suffix is added.
+If there is no `.$name` call, an object is named based on its associated key in *externals*.
+This approach makes all the generated identifiers predictable, but demands that all labels are valid identifiers
 and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
+
+:::note
+If you are using the [TypeGPU Build Plugin](/TypeGPU/tooling/unplugin-typegpu), then most TypeGPU resources will be auto-named for you.
+
+```ts
+// before unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f });
+
+// after unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f }).$name("myStruct");
+```
+
+This does not work for all resources.
+For example, a resource created in a function return statement will not be auto-named.
+:::
+
+## *resolveWithContext*
+
+Sometimes, it may not be clear which bind group layouts were used in a given resolution.
+This may occur especially when using:
+
+- Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
+- TypeGPU functions implemented in TGSL, which generate their externals automatically.
+
+For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to the resolved code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
+
+- `code` - the resolved code,
+- `usedBindGroupLayouts` - a list of used `tgpu.bindGroupLayout`,
+- `catchall` - a two-element array containing the bind group constructed for buffer usages and buffer shorthands, preceded by its index.
+
+An example, where the "catchall" bind group is created:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const countMutable = root.createMutable(d.u32);
+
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+  template: `
+    fn exampleFn() {
+      countMutable += 1;
+    }
+  `,
+  externals: { countMutable },
+});
+
+console.log(code); // same as tgpu.resolve(...)
+console.log(usedBindGroupLayouts); // an array containing the catchall bind group layout
+console.log(catchall?.[0]); // 0 - the group index of the catchall bind group
+console.log(catchall?.[1]); // the catchall bind group
+```
+
+An example, where a bind group layout is automatically included via a TGSL function:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const myLayout = tgpu.bindGroupLayout({ count: { uniform: d.u32 } });
+
+const exampleFn = tgpu.fn([])(() => {
+  myLayout.$.count += 1;
+});
+
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+  externals: { exampleFn },
+});
+
+console.log(code); // same as tgpu.resolve(...)
+console.log(usedBindGroupLayouts); // [myLayout]
+console.log(catchall); // undefined
+```
