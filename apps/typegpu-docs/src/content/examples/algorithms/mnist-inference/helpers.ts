@@ -3,12 +3,8 @@ import type { LayerData } from './data.ts';
 import * as d from 'typegpu/data';
 
 /**
- * Create a LayerData object from a layer ArrayBuffer
- *
  * The function extracts the header, shape and data from the layer
  * If there are any issues with the layer, an error is thrown
- *
- * Automatically creates appropriate buffer initialized with the data
  */
 function getLayerData(layer: ArrayBuffer): {
   shape: readonly [number] | readonly [number, number];
