@@ -4,6 +4,7 @@ import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.
 import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
+import { pointersTest } from './pointers.ts';
 
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
@@ -15,6 +16,7 @@ const computeRunTests = tgpu['~unstable']
     s = s && matrixOpsTests();
     s = s && infixOperatorsTests();
     s = s && arrayAndStructConstructorsTest();
+    s = s && pointersTest();
 
     if (s) {
       result.value = 1;
@@ -32,20 +34,17 @@ async function runTests() {
   return await result.read();
 }
 
+const table = document.querySelector<HTMLDivElement>('.result');
+if (!table) {
+  throw new Error('Nowhere to display the results');
+}
+runTests().then((result) => {
+  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
+});
+
 // #region Example controls and cleanup
 
 export const controls = {
-  'Run tests': {
-    async onButtonClick() {
-      const table = document.querySelector<HTMLDivElement>('.result');
-      if (!table) {
-        throw new Error('Nowhere to display the results');
-      }
-      table.innerText = (await runTests())
-        ? 'Tests succeeded!'
-        : 'Tests failed.';
-    },
-  },
   'Log resolved pipeline': {
     async onButtonClick() {
       console.log(tgpu.resolve({ externals: { pipeline } }));

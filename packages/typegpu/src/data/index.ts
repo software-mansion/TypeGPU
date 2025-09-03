@@ -73,6 +73,7 @@ export type {
   Mat4x4f,
   Ptr,
   Size,
+  StorableData,
   TgpuCallable,
   U16,
   U32,
