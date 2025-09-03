@@ -3,7 +3,7 @@ import { $internal, $repr } from '../shared/symbols.ts';
 import { f32 } from './numeric.ts';
 import type { BaseData, PrimitiveNumericData } from './wgslTypes.ts';
 
-type StorageTextureDimension = '1d' | '2d' | '2d-array' | '3d';
+export type StorageTextureDimension = '1d' | '2d' | '2d-array' | '3d';
 
 export type WgslTextureProps = {
   dimension: GPUTextureViewDimension;
