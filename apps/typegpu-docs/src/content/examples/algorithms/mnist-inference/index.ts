@@ -422,7 +422,7 @@ export const controls = {
       updateSubgroupsStatus();
     },
   },
-  'Test Resolution': {
+  'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () =>
       [defaultCompute, subgroupCompute]
         .map((fn) =>
