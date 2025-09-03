@@ -23,8 +23,6 @@ const cache = new WeakMap<TgpuRoot, WeakMap<BinaryOp, PrefixScanComputer>>();
 class PrefixScanComputer {
   #scanPipeline?: TgpuComputePipeline;
   #addPipeline?: TgpuComputePipeline;
-  #scratchBuffers: Map<number, TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag> =
-    new Map();
   #querySet: TgpuQuerySet<'timestamp'> | null = null;
   #first = true;
   #timeCallback?:
@@ -153,10 +151,6 @@ class PrefixScanComputer {
   compute(
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const numWorkgroups = Math.ceil(
-      buffer.dataType.elementCount / (workgroupSize * 8),
-    );
-
     const result = this.recursiveScan(buffer, buffer.dataType.elementCount);
     this.root['~unstable'].flush();
 
