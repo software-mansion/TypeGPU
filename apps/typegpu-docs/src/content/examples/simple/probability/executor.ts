@@ -5,6 +5,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuBuffer,
   TgpuComputeFn,
+  TgpuComputePipeline,
   TgpuFn,
   TgpuRoot,
   TgpuSlot,
@@ -35,10 +36,12 @@ export class Executor {
       & StorageFlag,
     ]
   >;
+  readonly #pipelineCache: Map<TgpuFn, TgpuComputePipeline>;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
     this.#bufferCache = new Map();
+    this.#pipelineCache = new Map();
 
     const distributionSlotTempAlias = tgpu.slot<TgpuFn<() => d.Vec3f>>();
     this.#distributionSlot = distributionSlotTempAlias;
@@ -90,22 +93,24 @@ export class Executor {
     });
   }
 
-  get count() {
-    return this.#count;
-  }
-
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
   ): Promise<d.v3f[]> {
-    const pipeline = this.#root['~unstable']
-      .with(this.#distributionSlot, distribution)
-      .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-      .createPipeline();
+    let pipeline: TgpuComputePipeline;
+    if (this.#pipelineCache.has(distribution)) {
+      // biome-ignore lint/style/noNonNullAssertion: just checked it above
+      pipeline = this.#pipelineCache.get(distribution)!;
+    } else {
+      pipeline = this.#root['~unstable']
+        .with(this.#distributionSlot, distribution)
+        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
+        .createPipeline();
+      this.#pipelineCache.set(distribution, pipeline);
+    }
 
     pipeline
       .with(this.#bindGroupLayout, this.#bindGroup)
       .dispatchWorkgroups(Math.ceil(this.#count / 64));
-    this.#root['~unstable'].flush();
 
     return await this.#samplesBuffer.read();
   }
