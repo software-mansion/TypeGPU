@@ -28,11 +28,7 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl"
-  ],
+  "keywords": ["webgpu", "wgpu", "wgsl"],
   "bugs": {
     "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
