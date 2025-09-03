@@ -1,6 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { perlin3d } from '@typegpu/noise';
 import {
   CLOUD_CORE_DENSITY,
   CLOUD_DENSITY,
@@ -9,8 +10,6 @@ import {
   LIGHT_ABSORBTION,
   MARCH_SIZE,
   MAX_ITERATIONS,
-  sampledViewSlot,
-  samplerSlot,
   SUN_INTENSITY,
   timeAccess,
 } from './consts.ts';
@@ -109,24 +108,4 @@ const fractalBrownianMotion = tgpu.fn(
   return sum;
 });
 
-const noise = tgpu.fn(
-  [d.vec3f],
-  d.f32,
-)((x) => {
-  const p = std.floor(x);
-  let f = std.fract(x);
-  f = std.mul(std.mul(f, f), std.sub(3.0, std.mul(2.0, f)));
-
-  const uv = std.add(
-    std.add(p.xy, std.mul(d.vec2f(37.0, 239.0), d.vec2f(p.z, p.z))),
-    f.xy,
-  );
-  const tex = std.textureSampleLevel(
-    sampledViewSlot.$,
-    samplerSlot.$,
-    std.fract(std.div(std.add(uv, d.vec2f(0.5, 0.5)), 256.0)),
-    0.0,
-  ).yx;
-
-  return std.mix(tex.x, tex.y, f.z) * 2.0 - 1.0;
-});
+const noise = tgpu.fn([d.vec3f], d.f32)((x) => perlin3d.sample(x));
