@@ -27,11 +27,11 @@ import {
 
 export const createUberPlugin = (
   factory: UnpluginFactory<Options, false>,
-): UnpluginInstance<Options, false> => {
+) => {
   const standardPlugins = createUnplugin(factory);
 
   return {
-    ...standardPlugins,
+    ...standardPlugins as UnpluginInstance<Options, false>,
     rolldownBrowser: ((options: Options) => {
       // The unplugin API is based on the rollup/rolldonw APIs, so it
       // should just be a compatible rolldown plugin.
