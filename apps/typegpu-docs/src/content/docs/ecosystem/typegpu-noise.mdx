@@ -276,6 +276,7 @@ You can easily implement your own PRNG and plug it into the pipeline.
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { randf } from '@typegpu/noise';
+import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 
@@ -289,7 +290,6 @@ import {
   randomGeneratorSlot,
   type StatefulGenerator,
 } from '@typegpu/noise';
-import * as std from 'typegpu/std';
 
 const LCG: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(d.u32);

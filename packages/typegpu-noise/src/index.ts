@@ -22,22 +22,22 @@ import {
 export const randf: {
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best results, should be in [0, 1] range.
+   * @param seed seed value to set. For the best results, should be in [-1000, 1000] range.
    */
   seed: typeof randSeed;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best results, all elements should be in [0, 1] range.
+   * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed2: typeof randSeed2;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best results, all elements should be in [0, 1] range.
+   * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed3: typeof randSeed3;
   /**
    * Sets the private seed of the thread.
-   * @param seed seed value to set. For the best results, all elements should be in [0, 1] range.
+   * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed4: typeof randSeed4;
   /**
@@ -49,18 +49,18 @@ export const randf: {
    */
   sampleExclusive: typeof randFloat01Exclusive;
   /**
-   * Returns a random f32 value basen on normal (gaussian) distribution.
+   * Returns a random f32 value based on normal (gaussian) distribution.
    * @param mu mean value.
    * @param sigma standard deviation. Must be > 0.
    */
   normal: typeof randNormal;
   /**
-   * Returns a random f32 value basen on exponential distribution.
+   * Returns a random f32 value based on exponential distribution.
    * @param rate rate parameter. Must be > 0.
    */
   exponential: typeof randExponential;
   /**
-   * Returns a random f32 value basen on cauchy distribution.
+   * Returns a random f32 value based on cauchy distribution.
    * @param x0 location parameter.
    * @param gamma scale parameter. Must be > 0.
    */
@@ -128,9 +128,8 @@ export const randf: {
 };
 
 export {
-  // Generators
+  // --- Generators ---
   BPETER,
-  // ---
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
   // ---
