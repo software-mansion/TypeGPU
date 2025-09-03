@@ -4,6 +4,7 @@ import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
@@ -157,6 +158,11 @@ export default defineConfig({
             {
               label: 'Slots',
               slug: 'fundamentals/slots',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Utilities',
+              slug: 'fundamentals/utils',
               badge: { text: 'new' },
             },
             // {

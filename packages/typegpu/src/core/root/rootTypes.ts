@@ -33,6 +33,12 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type {
+  TgpuBufferShorthand,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -56,12 +62,6 @@ import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type {
-  TgpuBufferShorthand,
-  TgpuMutable,
-  TgpuReadonly,
-  TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
 
 // ----------
 // Public API
