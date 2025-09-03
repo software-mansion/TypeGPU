@@ -1,67 +1,10 @@
 import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { randf, randomGeneratorSlot } from '@typegpu/noise';
-import { LCG } from './lcg.ts';
+
+import * as c from './constants.ts';
+import type { PRNG } from './prngs.ts';
+import { executePipeline } from './helpers.ts';
 
 const root = await tgpu.init();
-
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: pos[input.vertexIndex],
-  };
-});
-
-// === GRID ===
-const gridSize = 100;
-
-const b1 = root.createBuffer(d.arrayOf(d.u32, gridSize * gridSize)).$usage(
-  'storage',
-);
-const b2 = root.createBuffer(d.arrayOf(d.f32, gridSize * gridSize)).$usage(
-  'storage',
-);
-
-const layout = tgpu.bindGroupLayout({
-  u: {
-    storage: d.arrayOf(d.u32, gridSize * gridSize),
-    access: 'mutable',
-    visibility: ['fragment'],
-  },
-  f: {
-    storage: d.arrayOf(d.f32, gridSize * gridSize),
-    access: 'mutable',
-    visibility: ['fragment'],
-  },
-});
-
-const group = root.createBindGroup(layout, {
-  u: b1,
-  f: b2,
-});
-
-const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})((input) => {
-  const uv = input.uv.add(d.f32(1)).div(d.f32(2));
-  const grided = std.floor(uv.mul(gridSize));
-  // const id = d.u32(grided.x * gridSize + grided.y);
-
-  randf.seed2(grided);
-  const sample = randf.sample();
-
-  // layout.bound.u.$[id] = sample;
-  // layout.bound.f.$[id] = floater(sample);
-
-  return d.vec4f(d.vec3f(sample), 1.0);
-});
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -72,20 +15,19 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable']
-  .with(randomGeneratorSlot, LCG)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+// #region Example controls & Cleanup
 
-pipeline
-  .with(layout, group)
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
-  .draw(3);
+export const controls = {
+  'PRNG': {
+    initial: c.initialPRNG,
+    options: c.prngs,
+    onSelectChange: async (value: PRNG) =>
+      executePipeline(root, context, value),
+  },
+};
 
-// console.log('our grid u32', await b1.read());
-// console.log('our grid f32', await b2.read());
+export function onCleanup() {
+  root.destroy();
+}
+
+// #endregion
