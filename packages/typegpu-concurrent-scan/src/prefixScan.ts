@@ -70,16 +70,8 @@ class PrefixScanComputer {
 
   private getScratchBuffer(
     size: number,
-    level: number,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const key = (level << 20) | size;
-    if (!this.#scratchBuffers.has(key)) {
-      this.#scratchBuffers.set(
-        key,
-        this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage'),
-      );
-    }
-    return this.#scratchBuffers.get(key) as
+    return this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage') as
       & TgpuBuffer<d.WgslArray<d.F32>>
       & StorageFlag;
   }
@@ -93,7 +85,7 @@ class PrefixScanComputer {
 
     // Base case: single workgroup
     if (numWorkgroups === 1) {
-      const finalSums = this.getScratchBuffer(1, level);
+      const finalSums = this.getScratchBuffer(1);
       const bg = this.root.createBindGroup(scanLayout, {
         input: buffer,
         sums: finalSums,
@@ -115,7 +107,7 @@ class PrefixScanComputer {
       return buffer;
     }
     // Recursive case:
-    let sumsBuffer = this.getScratchBuffer(numWorkgroups, level);
+    let sumsBuffer = this.getScratchBuffer(numWorkgroups);
 
     // Up-scan & Down-scan
     const scanBg = this.root.createBindGroup(scanLayout, {
