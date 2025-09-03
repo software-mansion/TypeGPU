@@ -32,13 +32,14 @@ export const raymarch = tgpu.fn(
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const p = std.add(ro, std.mul(rd, depth));
-    const rawDensity = scene(p);
+    const rawDensity = fractalBrownianMotion(p) - 1.5 + CLOUD_DENSITY * 2;
     const density = std.clamp(rawDensity, 0.0, 1.0);
 
     if (density > 0.0) {
       // light occlusion along sun direction
       let diffuse = std.clamp(
-        rawDensity - scene(std.add(p, sunDirection)),
+        rawDensity - fractalBrownianMotion(std.add(p, sunDirection)) - 1.5 +
+          CLOUD_DENSITY * 2,
         0.0,
         1.0,
       );
@@ -75,13 +76,6 @@ export const raymarch = tgpu.fn(
   return res;
 });
 
-const scene = tgpu.fn(
-  [d.vec3f],
-  d.f32,
-)((p) => {
-  return fractalBrownianMotion(p) - 1.5 + CLOUD_DENSITY * 2;
-});
-
 const fractalBrownianMotion = tgpu.fn(
   [d.vec3f],
   d.f32,
@@ -100,12 +94,10 @@ const fractalBrownianMotion = tgpu.fn(
   let frequency = d.f32(CLOUD_DETALIZATION);
 
   for (let i = 0; i < 4; i++) {
-    sum += noise(q) * amplitude;
+    sum += perlin3d.sample(q) * amplitude;
     q = std.mul(q, frequency);
     amplitude *= 0.4;
     frequency += 0.5;
   }
   return sum;
 });
-
-const noise = tgpu.fn([d.vec3f], d.f32)((x) => perlin3d.sample(x));
