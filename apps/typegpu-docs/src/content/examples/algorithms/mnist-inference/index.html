@@ -2,9 +2,7 @@
 <div class="example">
   <canvas></canvas>
   <div class="predictions-container">
-    <div class="predictions-label">
-      Predictions (-.--ms)
-    </div>
+    <div class="predictions-label">Predictions (-.--ms)</div>
 
     <div class="bars-container">
       <div class="bar">O</div>
@@ -104,6 +102,11 @@
       font-size: 0.65rem;
       margin-left: 1rem;
     }
+
+    .bar {
+      height: 1rem;
+      font-size: 0.75rem;
+    }
   }
 
   .info div {
@@ -136,25 +139,19 @@
     border-radius: 9999px;
   }
 
-  @media (max-width: 1024px) {
-    .bar {
-      height: 1rem;
-      font-size: 0.75rem;
-    }
-  }
-
   .bar::before {
+    content: '';
     height: 100%;
     width: calc((100% - 2rem) * var(--bar-width, 0%));
     background-color: #dadaed;
     position: absolute;
     left: 2rem;
     border-radius: 9999px;
-    content: '';
     transition: all 0.2s ease-in-out;
   }
 
   .bar::after {
+    content: '';
     height: 100%;
     width: calc((100% - 2rem) * var(--bar-width, 0%));
     opacity: var(--highlight-opacity, 0);
@@ -163,6 +160,5 @@
     left: 2rem;
     border-radius: 9999px;
     transition: width 0.2s ease-in-out, opacity 0.5s ease-in-out;
-    content: '';
   }
 </style>

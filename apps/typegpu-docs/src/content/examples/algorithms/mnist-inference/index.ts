@@ -16,12 +16,12 @@ let useSubgroups = hasSubgroups;
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
 const ReadonlyFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
+  storage: d.arrayOf(d.f32),
   access: 'readonly',
 } as const;
 
 const MutableFloats = {
-  storage: (n: number) => d.arrayOf(d.f32, n),
+  storage: d.arrayOf(d.f32),
   access: 'mutable',
 } as const;
 
