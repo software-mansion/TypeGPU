@@ -440,7 +440,7 @@ export type TgpuBindGroup<
 };
 
 /**
- * @deprecated This feature is now stable, use tgpu.slot.
+ * @deprecated Layouts containing the legacy texture api entries are deprecated and will be removed in future versions. Please use the up-to-date texture api entries instead.
  */
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLegacyLayoutEntry | null>,
