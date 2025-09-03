@@ -18,7 +18,7 @@ import {
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
-const EPS = 1e-9;
+const EPS = 1e-7; // don't ever get any lower than this
 
 export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
   .fn([d.f32])((seed) => {
@@ -93,9 +93,9 @@ export const randInUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
     const u = randomGeneratorSlot.value.sample();
     const v = d.vec3f(randNormal(0, 1), randNormal(0, 1), randNormal(0, 1));
 
-    const vNorm = safeNormalize(v);
+    const vNorm = normalize(v);
 
-    return vNorm.mul(pow(u, 1 / 3));
+    return vNorm.mul(pow(u, 0.33));
   });
 
 export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
