@@ -8,7 +8,7 @@ import { getCameraPosition, getPRNG } from './helpers.ts';
 
 const root = await tgpu.init();
 
-const executor = new Executor(root, c.initialNumSamples);
+const executor = new Executor(root);
 const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
