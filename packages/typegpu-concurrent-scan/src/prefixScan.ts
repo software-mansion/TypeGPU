@@ -93,10 +93,10 @@ class PrefixScanComputer {
 
     // Base case: single workgroup
     if (numWorkgroups === 1) {
-      const dummySums = this.getScratchBuffer(1, level);
+      const finalSums = this.getScratchBuffer(1, level);
       const bg = this.root.createBindGroup(scanLayout, {
         input: buffer,
-        sums: dummySums,
+        sums: finalSums,
       });
       this.scanPipeline
         .with(scanLayout, bg)
@@ -110,7 +110,7 @@ class PrefixScanComputer {
         .dispatchWorkgroups(1);
 
       if (this.onlyGreatestElement) {
-        return dummySums;
+        return finalSums;
       }
       return buffer;
     }
@@ -176,6 +176,20 @@ class PrefixScanComputer {
   }
 }
 
+/**
+ * Perform a GPU prefix-scan (parallel prefix scan depending on the
+ * provided `binaryOp`) over the values in `buffer`. For instance, this can be used to
+ * compute a prefix sum over an array of numbers.
+ *
+ * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
+ * @param buffer - A storage buffer (`TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag`) containing
+ *                 the input values to scan.
+ * @param binaryOp - Binary operation defining the associative operation and identity element
+ *                   used for the scan e.g. addition for prefix-sum.
+ * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
+ *                       GPU dispatch has been submitted; useful for measuring execution time.
+ * @returns The `buffer` instance which contains the scanned values.
+ */
 export function prefixScan(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
@@ -194,6 +208,20 @@ export function prefixScan(
   return computer.compute(buffer);
 }
 
+/**
+ * Compute only the aggregated reduction result for `buffer` using `binaryOp`.
+ * Returns only the top-level sums/reductions instead of the full. This is useful when
+ * you only need the final reduction - for instance, the sum of the whole array).
+ *
+ * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
+ * @param buffer - A storage buffer (`TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag`) containing
+ *                 the input values to reduce.
+ * @param binaryOp - Binary operation defining the associative operation and identity element
+ *                   used for the reduction e.g. {std.add, 0} for sum.
+ * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
+ *                       GPU dispatch has been submitted; useful for measuring execution time.
+ * @returns A buffer containing the aggregated reduction result (single-element buffer).
+ */
 export function scan(
   root: TgpuRoot,
   buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
@@ -212,6 +240,15 @@ export function scan(
   return computer.compute(buffer);
 }
 
+/**
+ * Create or retrieve a cached `PrefixScanComputer` for the given `root` and `binaryOp`.
+ *
+ * @param root - The TypeGPU root/context to associate with the cached computer.
+ * @param binaryOp - The binary operation used by the computer.
+ * @param onlyGreatestElement - When true, the created/retrieved computer will compute only the
+ *                              top-level reduction(s) instead of the full prefix-scan.
+ * @returns A `PrefixScanComputer` instance associated with the provided `root` and `binaryOp`.
+ */
 export function initCache(
   root: TgpuRoot,
   binaryOp: BinaryOp,
