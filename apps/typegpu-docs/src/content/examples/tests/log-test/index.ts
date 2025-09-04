@@ -1,7 +1,9 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 
-const root = await tgpu.init();
+const root = await tgpu.init({
+  unstable_logOptions: { logCountPerDispatchLimit: 32 },
+});
 
 // #region Example controls and cleanup
 

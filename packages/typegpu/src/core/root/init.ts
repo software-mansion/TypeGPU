@@ -37,6 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
@@ -278,14 +279,22 @@ class TgpuRootImpl extends WithBindingImpl
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
+  [$internal]: {
+    logOptions: LogManagerOptions;
+  };
+
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
+    logOptions: LogManagerOptions,
   ) {
     super(() => this, []);
 
     this['~unstable'] = this;
+    this[$internal] = {
+      logOptions,
+    };
   }
 
   get commandEncoder() {
@@ -693,6 +702,7 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  unstable_logOptions?: LogManagerOptions;
 };
 
 /**
@@ -702,6 +712,7 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  unstable_logOptions?: LogManagerOptions;
 };
 
 /**
@@ -727,6 +738,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -765,6 +777,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
+    unstable_logOptions ?? {},
   );
 }
 
@@ -781,11 +794,13 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
   return new TgpuRootImpl(
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
+    unstable_logOptions ?? {},
   );
 }

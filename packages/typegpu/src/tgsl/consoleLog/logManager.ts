@@ -14,6 +14,7 @@ import {
   Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import type {
@@ -44,7 +45,8 @@ export class LogManagerImpl implements LogManager {
   #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   #firstUnusedId = 1;
 
-  constructor(root: TgpuRoot, options: LogManagerOptions) {
+  constructor(root: TgpuRoot) {
+    const options = root[$internal].logOptions;
     if (options?.serializedLogDataSizeLimit === undefined) {
       options.serializedLogDataSizeLimit = 2 ** 4 - 1;
     }

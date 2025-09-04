@@ -380,7 +380,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   ) {
     this.names = opts.names;
     this._logManager = isComputePipeline(pipeline)
-      ? new LogManagerImpl(pipeline[$internal].branch, {})
+      ? new LogManagerImpl(pipeline[$internal].branch)
       : new LogManagerNullImpl();
   }
 
