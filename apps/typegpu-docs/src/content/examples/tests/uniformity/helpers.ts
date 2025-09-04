@@ -1,23 +1,33 @@
-import type { TgpuRoot } from 'typegpu';
+import type { TgpuRenderPipeline, TgpuRoot, TgpuUniform } from 'typegpu';
 import { randomGeneratorSlot } from '@typegpu/noise';
-import { fullScreenTriangleVertexShader } from './vertex.ts';
-import { fullScreenGridFragmentShader } from './fragment.ts';
+import type * as d from 'typegpu/data';
 
+import { fullScreenTriangleVertexShader } from './vertex.ts';
+import { bindFullScreenGridFSWithUniforms } from './fragment.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
 
-export const executePipeline = (
+export const preparePipeline = (
   root: TgpuRoot,
   context: GPUCanvasContext,
   prng: PRNG,
-) => {
-  const pipeline = root['~unstable']
+  gridSizeUniform: TgpuUniform<d.F32>,
+  canvasRatioUniform: TgpuUniform<d.F32>,
+): TgpuRenderPipeline =>
+  root['~unstable']
     .with(randomGeneratorSlot, getPRNG(prng))
     .withVertex(fullScreenTriangleVertexShader, {})
-    .withFragment(fullScreenGridFragmentShader, {
-      format: context.getConfiguration()?.format as GPUTextureFormat,
-    })
+    .withFragment(
+      bindFullScreenGridFSWithUniforms(gridSizeUniform, canvasRatioUniform),
+      {
+        format: context.getConfiguration()?.format as GPUTextureFormat,
+      },
+    )
     .createPipeline();
 
+export const executePipeline = (
+  pipeline: TgpuRenderPipeline,
+  context: GPUCanvasContext,
+) =>
   pipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -25,4 +35,3 @@ export const executePipeline = (
       storeOp: 'store',
     })
     .draw(3);
-};
