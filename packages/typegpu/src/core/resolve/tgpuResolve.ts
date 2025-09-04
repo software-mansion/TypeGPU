@@ -108,17 +108,14 @@ export function resolveWithContext(
   }
 
   return resolveImpl(
-    
     resolutionObj,
-   
     {
-        names: names === 'strict'
-          ? new StrictNameRegistry()
-          : new RandomNameRegistry(),
-        enableExtensions,
+      names: names === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry(),
+      enableExtensions,
       shaderGenerator,
     },
-   
     config,
     pipelines[0],
   );

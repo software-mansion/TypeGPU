@@ -269,9 +269,9 @@ ${this.ctx.pre}}`;
       const [_, targetNode, property] = expression;
       const target = this.expression(targetNode);
 
-    if (target.value === console) {
-      return snip(new ConsoleLog(), UnknownData);
-    }
+      if (target.value === console) {
+        return snip(new ConsoleLog(), UnknownData);
+      }
 
       if (
         infixKinds.includes(target.dataType.type) &&
@@ -479,12 +479,12 @@ ${this.ctx.pre}}`;
               .map(([type, sn]) => tryConvertSnippet(sn, type));
           }
         }
-  
-      if (callee.value instanceof ConsoleLog) {
-        return ctx.registerLog(convertedArguments);
-      }
 
-      // Assuming that `callee` is callable
+        if (callee.value instanceof ConsoleLog) {
+          return this.ctx.registerLog(convertedArguments);
+        }
+
+        // Assuming that `callee` is callable
         const fnRes =
           (callee.value as unknown as (...args: unknown[]) => unknown)(
             ...convertedArguments,

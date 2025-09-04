@@ -252,8 +252,8 @@ class ComputePipelineCore implements SelfResolvable {
           this,
           {
             names: this.branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
+            enableExtensions,
+            shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
           pipeline,
@@ -266,8 +266,8 @@ class ComputePipelineCore implements SelfResolvable {
           this,
           {
             names: this.branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
+            enableExtensions,
+            shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
           pipeline,
