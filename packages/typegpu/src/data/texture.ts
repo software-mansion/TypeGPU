@@ -289,7 +289,7 @@ export type TextureSchemaForDescriptor<
 export function textureDescriptorToSchema<
   T extends WgslTextureProps | WgslStorageTextureProps,
 >(desc: T): TextureSchemaForDescriptor<T> {
-  if (isWgslTexture(desc)) {
+  if ('multisampled' in desc) {
     if (desc.multisampled) {
       if (desc.dimension === '2d') {
         return textureMultisampled2d(
@@ -322,11 +322,12 @@ export function textureDescriptorToSchema<
         ) as TextureSchemaForDescriptor<T>;
       default:
         throw new Error(
+          // @ts-expect-error
           `Unsupported texture dimension: '${desc.dimension}'`,
         );
     }
   }
-  if (!isWgslStorageTexture(desc)) {
+  if (!('access' in desc)) {
     throw new Error('Descriptor is neither a sampled nor a storage texture');
   }
 

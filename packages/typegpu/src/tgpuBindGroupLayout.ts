@@ -25,11 +25,11 @@ import {
 import {
   isTexture,
   isTextureView,
+  type PropsForSchema,
   TgpuLaidOutTextureViewImpl,
   type TgpuTexture,
   type TgpuTextureView,
 } from './core/texture/texture.ts';
-import type { TextureProps } from './core/texture/textureProps.ts';
 import {
   isUsableAsSampled,
   NotSampledError,
@@ -393,11 +393,14 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
     : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
     : T extends TgpuLayoutTexture ?
         | GPUTextureView
-        | (SampledFlag & TgpuTexture<Prettify<TextureProps>>)
+        | (SampledFlag & TgpuTexture<Prettify<PropsForSchema<T['texture']>>>)
         | TgpuTextureView<WgslTexture>
     : T extends TgpuLayoutStorageTexture ?
         | GPUTextureView
-        | (StorageFlag & TgpuTexture<Prettify<TextureProps>>)
+        | (
+          & StorageFlag
+          & TgpuTexture<Prettify<PropsForSchema<T['storageTexture']>>>
+        )
         | TgpuTextureView<WgslStorageTexture>
     : T extends TgpuLayoutExternalTexture ? GPUExternalTexture
     : never;
@@ -407,8 +410,8 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? StorageUsageForEntry<T>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? TgpuTextureView<T['texture']>
-  : T extends TgpuLayoutStorageTexture ? TgpuTextureView<T['storageTexture']>
+  : T extends TgpuLayoutTexture<infer TSchema> ? TgpuTextureView<TSchema>
+  : T extends TgpuLayoutStorageTexture<infer TSchema> ? TgpuTextureView<TSchema>
   : T extends TgpuLayoutExternalTexture ? TgpuExternalTexture
   : never;
 
@@ -417,9 +420,9 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture ? Infer<T['texture']>
-  : T extends TgpuLayoutStorageTexture ? Infer<T['storageTexture']>
-  : T extends TgpuLayoutExternalTexture ? Infer<T['externalTexture']>
+  : T extends TgpuLayoutTexture<infer TSchema> ? TSchema
+  : T extends TgpuLayoutStorageTexture<infer TSchema> ? TSchema
+  : T extends TgpuLayoutExternalTexture ? T['externalTexture']
   : never;
 
 export type ExtractBindGroupInputFromLayout<

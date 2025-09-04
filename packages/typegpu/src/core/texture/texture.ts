@@ -86,11 +86,39 @@ type TgpuTextureViewDescriptor = {
   format?: GPUTextureFormat;
 };
 
-type GetDefaultViewSchema<T extends TextureProps> = TextureSchemaForDescriptor<{
+type DefaultViewSchema<T extends TextureProps> = TextureSchemaForDescriptor<{
   dimension: Default<T['dimension'], '2d'>;
   sampleType: TexelFormatToChannelType[T['format']];
   multisampled: Default<T['sampleCount'], 1> extends 1 ? false : true;
 }>;
+
+type ViewDimensionToTextureDimension = {
+  '1d': '1d';
+  '2d': '2d';
+  '2d-array': '2d';
+  'cube': '2d';
+  'cube-array': '2d';
+  '3d': '3d';
+};
+
+export type PropsForSchema<T extends WgslTexture | WgslStorageTexture> =
+  T extends WgslTexture ? {
+      size: readonly number[];
+      format: GPUTextureFormat;
+      dimension?: T['dimension'] extends keyof ViewDimensionToTextureDimension
+        ? ViewDimensionToTextureDimension[T['dimension']]
+        : never;
+      sampleCount?: T['multisampled'] extends true ? 4 : 1 | undefined;
+    }
+    : T extends WgslStorageTexture ? {
+        size: readonly number[];
+        format: T['format'];
+        dimension?: T['dimension'] extends keyof ViewDimensionToTextureDimension
+          ? ViewDimensionToTextureDimension[T['dimension']]
+          : never;
+        sampleCount?: 1 | undefined;
+      }
+    : never;
 
 function getDescriptorForProps<T extends TextureProps>(
   props: T,
@@ -98,7 +126,7 @@ function getDescriptorForProps<T extends TextureProps>(
   return {
     dimension: (props.dimension ?? '2d') as Default<T['dimension'], '2d'>,
     sampleType: texelFormatToChannelType[props.format],
-    multisampled: ((props.sampleCount ?? 1) === 1) as Default<
+    multisampled: !((props.sampleCount ?? 1) === 1) as Default<
       T['sampleCount'],
       1
     > extends 1 ? false
@@ -127,7 +155,7 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   createView(
     ...args: this['usableAsSampled'] extends true ? []
       : [ValidateTextureViewSchema<this, WgslTexture>]
-  ): TgpuTextureView<GetDefaultViewSchema<TProps>>;
+  ): TgpuTextureView<DefaultViewSchema<TProps>>;
   createView<T extends WgslTexture | WgslStorageTexture>(
     schema: ValidateTextureViewSchema<this, T>,
     viewDescriptor?: TgpuTextureViewDescriptor & {
@@ -260,7 +288,7 @@ class TgpuTextureImpl implements TgpuTexture {
 
   createView(
     ...args: this['usableAsSampled'] extends true ? [] : [never]
-  ): TgpuTextureView<GetDefaultViewSchema<TextureProps>>;
+  ): TgpuTextureView<DefaultViewSchema<TextureProps>>;
   createView<T extends WgslTexture | WgslStorageTexture>(
     schema: never,
     viewDescriptor?: TgpuTextureViewDescriptor & {
