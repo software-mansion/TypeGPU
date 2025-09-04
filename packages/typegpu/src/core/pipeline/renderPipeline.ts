@@ -32,6 +32,10 @@ import {
 } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { isGPUBuffer } from '../../types.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
@@ -676,6 +680,9 @@ class RenderPipelineCore implements SelfResolvable {
         multisampleState,
       } = this.options;
       const device = branch.device;
+      const enableExtensions = wgslExtensions.filter((extension) =>
+        branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
@@ -685,6 +692,8 @@ class RenderPipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -692,6 +701,8 @@ class RenderPipelineCore implements SelfResolvable {
       } else {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
       }
 

@@ -11,6 +11,10 @@ import type {
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
@@ -234,6 +238,9 @@ class ComputePipelineCore implements SelfResolvable {
   public unwrap(pipeline: TgpuComputePipeline): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
+      const enableExtensions = wgslExtensions.filter((extension) =>
+        this.branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
@@ -245,6 +252,8 @@ class ComputePipelineCore implements SelfResolvable {
           this,
           {
             names: this.branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
           pipeline,
@@ -257,6 +266,8 @@ class ComputePipelineCore implements SelfResolvable {
           this,
           {
             names: this.branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
           pipeline,

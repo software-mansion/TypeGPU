@@ -46,7 +46,8 @@ import {
   coerceToSnippet,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
-import { generateFunction } from './tgsl/wgslGenerator.ts';
+import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
   ExecState,
@@ -62,6 +63,7 @@ import {
   isSelfResolvable,
   NormalState,
 } from './types.ts';
+import type { WgslExtension } from './wgslExtensions.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -76,6 +78,8 @@ const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
+  readonly enableExtensions?: WgslExtension[] | undefined;
+  readonly shaderGenerator?: ShaderGenerator | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -372,13 +376,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly names: NameRegistry;
+  public readonly enableExtensions: WgslExtension[] | undefined;
   public expectedType: AnyData | undefined;
+  readonly #shaderGenerator: ShaderGenerator;
 
   constructor(
     opts: ResolutionCtxImplOptions,
     pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
   ) {
     this.names = opts.names;
+    this.enableExtensions = opts.enableExtensions;
+    this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
     this._logManager = isComputePipeline(pipeline)
       ? new LogManagerImpl(pipeline[$internal].branch)
       : new LogManagerNullImpl();
@@ -443,9 +451,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
+      this.#shaderGenerator.initGenerator(this);
       return {
         head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: generateFunction(this, options.body),
+        body: this.#shaderGenerator.functionDefinition(options.body),
       };
     } finally {
       this._itemStateStack.popFunctionScope();
@@ -847,6 +856,11 @@ export function resolve(
     const idx = layout.index ?? automaticIds.next().value;
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
+  }
+
+  if (options.enableExtensions && options.enableExtensions.length > 0) {
+    const extensions = options.enableExtensions.map((ext) => `enable ${ext};`);
+    code = `${extensions.join('\n')}\n\n${code}`;
   }
 
   return {

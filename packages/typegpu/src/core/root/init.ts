@@ -38,6 +38,7 @@ import {
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
 import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
@@ -288,6 +289,7 @@ class TgpuRootImpl extends WithBindingImpl
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
     logOptions: LogManagerOptions,
+    public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
@@ -702,6 +704,11 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
   unstable_logOptions?: LogManagerOptions;
 };
 
@@ -712,6 +719,11 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
   unstable_logOptions?: LogManagerOptions;
 };
 
@@ -778,6 +790,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
     unstable_logOptions ?? {},
+    options?.shaderGenerator,
   );
 }
 
@@ -802,5 +815,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
     unstable_logOptions ?? {},
+    options?.shaderGenerator,
   );
 }
