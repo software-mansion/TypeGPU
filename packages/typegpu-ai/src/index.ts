@@ -1,3 +1,3 @@
-import { OnnxModelLoader } from './onnx/onnxModelLoader';
+import { OnnxLoader } from './onnx/onnxLoader';
 
-export default OnnxModelLoader;
+export default OnnxLoader;

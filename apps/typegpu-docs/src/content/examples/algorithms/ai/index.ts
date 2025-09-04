@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import OnnxModelLoader from '@typegpu/ai';
+import OnnxLoader from '@typegpu/ai';
 
 const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
@@ -10,14 +10,14 @@ const root = await tgpu.init();
 const device = root.device;
 
 let loadedModel:
-  | Awaited<ReturnType<typeof OnnxModelLoader.fromPath>>
+  | Awaited<ReturnType<typeof OnnxLoader.fromPath>>
   | undefined;
 const nodeWeightRefs: { index: number; weightNames: string[] }[] = [];
 
 async function testModelLoad() {
   const MODEL_PATH = '/TypeGPU/assets/model.onnx';
   try {
-    const loader = await OnnxModelLoader.fromPath(MODEL_PATH);
+    const loader = await OnnxLoader.fromPath(MODEL_PATH);
     loadedModel = loader;
     console.log(loader.getNodes());
     for (const n of loader.getNodes()) {

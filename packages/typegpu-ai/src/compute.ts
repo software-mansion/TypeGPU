@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { ioLayout, weightsBiasesLayout } from './schemas.ts';
 import { calculateIndex, workgroupSize } from './schemas.ts';
+import { relu } from './activationFunctions.ts';
 
 export const nnCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
@@ -31,12 +32,5 @@ export const nnCompute = tgpu['~unstable'].computeFn({
   ioLayout.$.output[i] = relu(sum);
 });
 
-const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0.0, x));
-const sigmoid = tgpu.fn([d.f32], d.f32)((x) => 1.0 / (1.0 + std.exp(-x)));
-const tanh = tgpu.fn(
-  [d.f32],
-  d.f32,
-)((x) => {
-  const e2x = std.exp(2.0 * x);
-  return (e2x - 1.0) / (e2x + 1.0);
-});
+
+

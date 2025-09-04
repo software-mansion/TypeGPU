@@ -13,20 +13,20 @@ import {
   type Tensor,
 } from './types.ts';
 
-export class OnnxModelLoader {
+export class OnnxLoader {
   static async fromPath(
     path: string,
     opts?: OnnxLoadOptions,
-  ): Promise<OnnxModelLoader> {
+  ): Promise<OnnxLoader> {
     const buf = await fetchOrRead(path);
-    return OnnxModelLoader.fromBuffer(buf, opts);
+    return OnnxLoader.fromBuffer(buf, opts);
   }
 
   static fromBuffer(
     buffer: Uint8Array,
     opts?: OnnxLoadOptions,
-  ): OnnxModelLoader {
-    const loader = new OnnxModelLoader();
+  ): OnnxLoader {
+    const loader = new OnnxLoader();
     loader.#decode(buffer, opts);
     return loader;
   }
@@ -51,8 +51,8 @@ export class OnnxModelLoader {
   static async load(
     pathOrBuffer: string | Uint8Array,
     opts?: OnnxLoadOptions,
-  ): Promise<OnnxModelLoader> {
-    const inst = new OnnxModelLoader(pathOrBuffer, opts);
+  ): Promise<OnnxLoader> {
+    const inst = new OnnxLoader(pathOrBuffer, opts);
     await inst.ready;
     return inst;
   }

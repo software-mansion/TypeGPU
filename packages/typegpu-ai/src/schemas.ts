@@ -12,13 +12,6 @@ interface Layer {
   state: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
 }
 
-interface Network {
-  layers: Layer[];
-  input: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  output: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-
-  inference(data: number[]): Promise<number[]>;
-}
 
 export const calculateIndex = tgpu.fn([d.vec3u, d.vec3u], d.u32)((id, nwg) =>
   id.x + id.y * nwg.x + id.z * nwg.x * nwg.y
