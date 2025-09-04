@@ -135,11 +135,15 @@ const pipeline = root['~unstable']
 
 let isRectangleFixed = false;
 function updateMousePos(event: MouseEvent) {
-  if (isRectangleFixed) return;
+  if (isRectangleFixed) {
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  if (x < 0 || x > 1 || y < 0 || y > 1) {
+    return;
+  }
   mousePosUniform.write(d.vec2f(x, y));
 }
 canvas.addEventListener('mousemove', updateMousePos);
