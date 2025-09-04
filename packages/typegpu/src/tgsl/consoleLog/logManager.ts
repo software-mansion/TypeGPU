@@ -26,6 +26,12 @@ import type {
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
+const defaultOptions: Required<LogManagerOptions> = {
+  logCountPerDispatchLimit: 64,
+  serializedLogDataSizeLimit: 15,
+  messagePrefix: '[GPU] ',
+};
+
 export class LogManagerNullImpl implements LogManager {
   get logResources(): undefined {
     return undefined;
@@ -46,24 +52,17 @@ export class LogManagerImpl implements LogManager {
   #firstUnusedId = 1;
 
   constructor(root: TgpuRoot) {
-    const options = root[$internal].logOptions;
-    if (options?.serializedLogDataSizeLimit === undefined) {
-      options.serializedLogDataSizeLimit = 2 ** 4 - 1;
-    }
-    if (options?.logCountPerDispatchLimit === undefined) {
-      options.logCountPerDispatchLimit = 2 ** 6;
-    }
-    this.#options = options as Required<LogManagerOptions>;
+    this.#options = { ...defaultOptions, ...root[$internal].logOptions };
     this.#logIdToArgTypes = new Map();
 
     const SerializedLogData = struct({
       id: u32,
-      serializedData: arrayOf(u32, options.serializedLogDataSizeLimit),
+      serializedData: arrayOf(u32, this.#options.serializedLogDataSizeLimit),
     }).$name('SerializedLogData');
 
     this.#serializedLogDataBuffer = root
       .createMutable(
-        arrayOf(SerializedLogData, options.logCountPerDispatchLimit),
+        arrayOf(SerializedLogData, this.#options.logCountPerDispatchLimit),
       )
       .$name('serializedLogDataBuffer');
 

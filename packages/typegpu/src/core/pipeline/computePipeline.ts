@@ -202,7 +202,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
             const result = deserializeAndStringify(serializedData, argTypes);
             // AAA the `[GPU]` is temporary for debugging purposes,
             // though we could allow for a prefix in the LogManagerOptions
-            console.log(`[GPU] ${result}`);
+            console.log(`${memo.logResources?.options.messagePrefix}${result}`);
           });
       });
       memo.logResources.logCallIndexBuffer.write(0);

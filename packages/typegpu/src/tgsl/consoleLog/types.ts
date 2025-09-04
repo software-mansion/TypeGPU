@@ -9,9 +9,11 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 
+// AAA add docs with defaults
 export interface LogManagerOptions {
   serializedLogDataSizeLimit?: number;
   logCountPerDispatchLimit?: number;
+  messagePrefix?: string;
 }
 
 export type SerializedLogCallData = WgslStruct<{
