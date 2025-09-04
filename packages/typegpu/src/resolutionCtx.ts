@@ -38,10 +38,10 @@ import {
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import {
-  LogManagerImpl,
-  LogManagerNullImpl,
-} from './tgsl/consoleLog/logManager.ts';
-import type { LogManager, LogResources } from './tgsl/consoleLog/types.ts';
+  LogGeneratorImpl,
+  LogGeneratorNullImpl,
+} from './tgsl/consoleLog/logGenerator.ts';
+import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
 import {
   coerceToSnippet,
   numericLiteralToSnippet,
@@ -350,7 +350,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
-  private readonly _logManager: LogManager;
+  private readonly _logGenerator: LogGenerator;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -387,9 +387,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this._logManager = isComputePipeline(pipeline)
-      ? new LogManagerImpl(pipeline[$internal].branch)
-      : new LogManagerNullImpl();
+    this._logGenerator = isComputePipeline(pipeline)
+      ? new LogGeneratorImpl(pipeline[$internal].branch)
+      : new LogGeneratorNullImpl();
   }
 
   get pre(): string {
@@ -434,12 +434,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.popBlockScope();
   }
 
-  registerLog(args: Snippet[]): Snippet {
-    return this._logManager.registerLog(this, args);
+  generateLog(args: Snippet[]): Snippet {
+    return this._logGenerator.generateLog(this, args);
   }
 
   get logResources(): LogResources | undefined {
-    return this._logManager.logResources;
+    return this._logGenerator.logResources;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {

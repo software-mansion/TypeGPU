@@ -218,7 +218,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  registerLog(args: Snippet[]): Snippet;
+  generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };

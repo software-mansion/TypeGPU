@@ -37,7 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
-import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
@@ -281,14 +281,14 @@ class TgpuRootImpl extends WithBindingImpl
   private _commandEncoder: GPUCommandEncoder | null = null;
 
   [$internal]: {
-    logOptions: LogManagerOptions;
+    logOptions: LogGeneratorOptions;
   };
 
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
-    logOptions: LogManagerOptions,
+    logOptions: LogGeneratorOptions,
     public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
@@ -709,7 +709,7 @@ export type InitOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
-  unstable_logOptions?: LogManagerOptions;
+  unstable_logOptions?: LogGeneratorOptions;
 };
 
 /**
@@ -724,7 +724,7 @@ export type InitFromDeviceOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
-  unstable_logOptions?: LogManagerOptions;
+  unstable_logOptions?: LogGeneratorOptions;
 };
 
 /**

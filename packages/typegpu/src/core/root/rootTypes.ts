@@ -32,7 +32,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
@@ -441,7 +441,7 @@ export type ValidateUniformSchema<TData extends AnyData> =
 
 export interface TgpuRoot extends Unwrapper {
   [$internal]: {
-    logOptions: LogManagerOptions;
+    logOptions: LogGeneratorOptions;
   };
 
   /**

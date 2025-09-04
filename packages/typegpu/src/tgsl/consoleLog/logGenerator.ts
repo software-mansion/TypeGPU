@@ -18,25 +18,25 @@ import { $internal } from '../../shared/symbols.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import type {
-  LogManager,
-  LogManagerOptions,
+  LogGenerator,
+  LogGeneratorOptions,
   LogResources,
   SerializedLogCallData,
 } from './types.ts';
 
 const fallbackSnippet = snip('/* console.log() */', Void);
 
-const defaultOptions: Required<LogManagerOptions> = {
+const defaultOptions: Required<LogGeneratorOptions> = {
   logCountPerDispatchLimit: 64,
   serializedLogDataSizeLimit: 15,
   messagePrefix: '[GPU] ',
 };
 
-export class LogManagerNullImpl implements LogManager {
+export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
     return undefined;
   }
-  registerLog(): Snippet {
+  generateLog(): Snippet {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
@@ -44,10 +44,10 @@ export class LogManagerNullImpl implements LogManager {
   }
 }
 
-export class LogManagerImpl implements LogManager {
+export class LogGeneratorImpl implements LogGenerator {
   #logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
   #serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
-  #options: Required<LogManagerOptions>;
+  #options: Required<LogGeneratorOptions>;
   #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   #firstUnusedId = 1;
 
@@ -88,7 +88,7 @@ export class LogManagerImpl implements LogManager {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
+  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
     const id = this.#firstUnusedId++;
     const nonStringArgs = args
       .filter((e) => e.dataType !== UnknownData);

@@ -481,7 +481,7 @@ ${this.ctx.pre}}`;
         }
 
         if (callee.value instanceof ConsoleLog) {
-          return this.ctx.registerLog(convertedArguments);
+          return this.ctx.generateLog(convertedArguments);
         }
 
         // Assuming that `callee` is callable

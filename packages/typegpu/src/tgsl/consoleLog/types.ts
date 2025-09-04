@@ -10,7 +10,7 @@ import type {
 import type { GenerationCtx } from '../generationHelpers.ts';
 
 // AAA add docs with defaults
-export interface LogManagerOptions {
+export interface LogGeneratorOptions {
   serializedLogDataSizeLimit?: number;
   logCountPerDispatchLimit?: number;
   messagePrefix?: string;
@@ -24,11 +24,11 @@ export type SerializedLogCallData = WgslStruct<{
 export interface LogResources {
   logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
   serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
-  options: Required<LogManagerOptions>;
+  options: Required<LogGeneratorOptions>;
   logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
 }
 
-export interface LogManager {
-  registerLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
+export interface LogGenerator {
+  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
   get logResources(): LogResources | undefined;
 }
