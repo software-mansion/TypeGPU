@@ -47,6 +47,7 @@ export function createLoggingFunction(
   args: AnyWgslData[],
   serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
   logCallIndexBuffer: TgpuMutable<Atomic<U32>>,
+  logCountPerDispatchLimit: number,
 ): TgpuFn {
   const usedSerializers: [string, unknown][] = [];
   let currentIndex = 0;
@@ -65,6 +66,9 @@ export function createLoggingFunction(
 
   return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
   var index = atomicAdd(&logCallIndexBuffer, 1);
+  if (index >= ${logCountPerDispatchLimit}) {
+    return;
+  }
   serializedLogDataBuffer[index].id = ${id};
 
 ${innerForLoops.join('\n')}}`

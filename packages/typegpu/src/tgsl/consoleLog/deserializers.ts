@@ -5,6 +5,7 @@ import {
   isVecInstance,
   isWgslData,
 } from '../../data/wgslTypes.ts';
+import { LogResources } from './types.ts';
 
 const deserializeU32 = (data: number[]) => data[0] ?? 0;
 
@@ -50,4 +51,34 @@ export function deserializeAndStringify(
   argTypes: (AnyWgslData | string)[],
 ): string {
   return deserialize(serializedData, argTypes).map(stringify).join(' ');
+}
+
+export function logDataFromGPU(resources: LogResources) {
+  const {
+    logCallIndexBuffer,
+    serializedLogDataBuffer,
+    logIdToArgTypes,
+    options,
+  } = resources;
+
+  serializedLogDataBuffer.read().then((data) => {
+    data
+      .filter((e) => e.id)
+      .map(({ id, serializedData }) => {
+        const argTypes = logIdToArgTypes
+          .get(id) as (AnyWgslData | string)[];
+        const result = deserializeAndStringify(serializedData, argTypes);
+        console.log(`${options.messagePrefix}${result}`);
+      });
+  });
+
+  logCallIndexBuffer.read().then((totalCalls) => {
+    if (totalCalls > options.logCountPerDispatchLimit) {
+      console.warn(
+        `Log count limit per dispatch (${options.logCountPerDispatchLimit}) exceeded by ${
+          totalCalls - options.logCountPerDispatchLimit
+        } calls. Consider increasing it by passing appropriate options to tgpu.init().`,
+      );
+    }
+  });
 }

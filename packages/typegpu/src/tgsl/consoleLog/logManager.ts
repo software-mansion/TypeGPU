@@ -98,6 +98,7 @@ export class LogManagerImpl implements LogManager {
       nonStringArgs.map((e) => e.dataType as AnyWgslData),
       this.#serializedLogDataBuffer,
       this.#logCallIndexBuffer,
+      this.#options.logCountPerDispatchLimit,
     );
 
     this.#logIdToArgTypes.set(

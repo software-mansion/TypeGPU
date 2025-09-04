@@ -2,7 +2,7 @@ import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init({
-  unstable_logOptions: { logCountPerDispatchLimit: 32 },
+  unstable_logOptions: { logCountPerDispatchLimit: 30 },
 });
 
 // #region Example controls and cleanup
@@ -57,6 +57,15 @@ export const controls = {
         console.log(`dispatched ${i}`);
       }
     },
+  },
+  'Too many logs': {
+    onButtonClick: () =>
+      prepareDispatch(root, (x) => {
+        'kernel';
+        console.log('Log 1 from thread', x);
+        console.log('Log 2 from thread', x);
+        console.log('Log 3 from thread', x);
+      })(16),
   },
 };
 

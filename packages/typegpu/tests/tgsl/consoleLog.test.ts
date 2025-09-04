@@ -113,6 +113,9 @@ describe('wgslGenerator with console.log', () => {
 
       fn log1(_arg_0: u32) {
         var index = atomicAdd(&logCallIndexBuffer, 1);
+        if (index >= 64) {
+          return;
+        }
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
@@ -158,6 +161,9 @@ describe('wgslGenerator with console.log', () => {
 
       fn log1(_arg_0: u32) {
         var index = atomicAdd(&logCallIndexBuffer, 1);
+        if (index >= 64) {
+          return;
+        }
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
@@ -166,6 +172,9 @@ describe('wgslGenerator with console.log', () => {
 
       fn log2(_arg_0: u32) {
         var index = atomicAdd(&logCallIndexBuffer, 1);
+        if (index >= 64) {
+          return;
+        }
         serializedLogDataBuffer[index].id = 2;
 
         var serializedData0 = serializeU32(_arg_0);
@@ -220,6 +229,9 @@ describe('wgslGenerator with console.log', () => {
 
       fn log1(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
         var index = atomicAdd(&logCallIndexBuffer, 1);
+        if (index >= 64) {
+          return;
+        }
         serializedLogDataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);

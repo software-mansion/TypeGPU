@@ -1,5 +1,4 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -9,7 +8,7 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
-import { deserializeAndStringify } from '../../tgsl/consoleLog/deserializers.ts';
+import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -193,18 +192,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.end();
 
     if (memo.logResources) {
-      memo.logResources.serializedLogDataBuffer.read().then((data) => {
-        data
-          .filter((e) => e.id)
-          .map(({ id, serializedData }) => {
-            const argTypes = memo.logResources?.logIdToArgTypes
-              .get(id) as (AnyWgslData | string)[];
-            const result = deserializeAndStringify(serializedData, argTypes);
-            // AAA the `[GPU]` is temporary for debugging purposes,
-            // though we could allow for a prefix in the LogManagerOptions
-            console.log(`${memo.logResources?.options.messagePrefix}${result}`);
-          });
-      });
+      logDataFromGPU(memo.logResources);
       memo.logResources.logCallIndexBuffer.write(0);
     }
 
