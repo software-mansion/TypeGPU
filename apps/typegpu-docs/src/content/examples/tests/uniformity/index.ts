@@ -2,7 +2,7 @@ import tgpu, { type TgpuRenderPipeline } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import * as c from './constants.ts';
-import type { PRNG } from './prngs.ts';
+import { PRNG } from './prngs.ts';
 import { executePipeline, preparePipeline } from './helpers.ts';
 
 const root = await tgpu.init();
@@ -29,7 +29,7 @@ const redraw = (value: PRNG) => {
   if (!pipelineCache.has(value)) {
     pipeline = preparePipeline(
       root,
-      context,
+      presentationFormat,
       value,
       gridSizeUniform,
       canvasRatioUniform,
@@ -42,7 +42,6 @@ const redraw = (value: PRNG) => {
 };
 
 // #region Example controls & Cleanup
-
 export const controls = {
   'PRNG': {
     initial: c.initialPRNG,
@@ -58,6 +57,26 @@ export const controls = {
     onSelectChange: async (value: number) => {
       gridSizeUniform.write(value);
       redraw(prng);
+    },
+  },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () => {
+      c.prngs
+        .filter((prng) => prng !== PRNG.DEFAULT_GENERATOR)
+        .map((prng) =>
+          tgpu.resolve({
+            externals: {
+              f: preparePipeline(
+                root,
+                presentationFormat,
+                prng,
+                gridSizeUniform,
+                canvasRatioUniform,
+              ),
+            },
+          })
+        )
+        .map((r) => root.device.createShaderModule({ code: r }));
     },
   },
 };

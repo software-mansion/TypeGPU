@@ -8,21 +8,22 @@ import { getPRNG, type PRNG } from './prngs.ts';
 
 export const preparePipeline = (
   root: TgpuRoot,
-  context: GPUCanvasContext,
+  presentationFormat: GPUTextureFormat,
   prng: PRNG,
   gridSizeUniform: TgpuUniform<d.F32>,
   canvasRatioUniform: TgpuUniform<d.F32>,
-): TgpuRenderPipeline =>
-  root['~unstable']
+): TgpuRenderPipeline => {
+  return root['~unstable']
     .with(randomGeneratorSlot, getPRNG(prng))
     .withVertex(fullScreenTriangleVertexShader, {})
     .withFragment(
       bindFullScreenGridFSWithUniforms(gridSizeUniform, canvasRatioUniform),
       {
-        format: context.getConfiguration()?.format as GPUTextureFormat,
+        format: presentationFormat,
       },
     )
     .createPipeline();
+};
 
 export const executePipeline = (
   pipeline: TgpuRenderPipeline,
