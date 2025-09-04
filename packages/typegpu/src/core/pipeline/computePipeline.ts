@@ -244,6 +244,7 @@ class ComputePipelineCore implements SelfResolvable {
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
           enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -252,6 +253,7 @@ class ComputePipelineCore implements SelfResolvable {
         resolutionResult = resolve(this, {
           names: this.branch.nameRegistry,
           enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
         });
       }
 

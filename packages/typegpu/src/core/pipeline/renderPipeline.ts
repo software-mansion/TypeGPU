@@ -699,6 +699,7 @@ class RenderPipelineCore implements SelfResolvable {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
           enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -707,6 +708,7 @@ class RenderPipelineCore implements SelfResolvable {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
           enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
       }
 
