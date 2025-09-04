@@ -31,6 +31,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type {
@@ -620,6 +621,9 @@ export interface TgpuRoot extends Unwrapper {
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly nameRegistry: NameRegistry;
+  readonly shaderGenerator?:
+    | ShaderGenerator
+    | undefined;
   /**
    * The current command encoder. This property will
    * hold the same value until `flush()` is called.
