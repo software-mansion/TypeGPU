@@ -37,6 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,
@@ -279,6 +280,7 @@ class TgpuRootImpl extends WithBindingImpl
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
+    public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
@@ -676,6 +678,11 @@ export type InitOptions = {
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -685,6 +692,11 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
 };
 
 /**
@@ -748,6 +760,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
+    options?.shaderGenerator,
   );
 }
 
@@ -767,5 +780,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
+    options?.shaderGenerator,
   );
 }
