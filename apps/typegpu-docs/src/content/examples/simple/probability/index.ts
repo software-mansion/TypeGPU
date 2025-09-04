@@ -89,6 +89,19 @@ export const controls = {
       );
     },
   },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () => {
+      c.distributions
+        .map((dist) =>
+          tgpu.resolve({
+            externals: {
+              f: executor.cachedPipeline(getPRNG(dist).prng),
+            },
+          })
+        )
+        .map((r) => root.device.createShaderModule({ code: r }));
+    },
+  },
 };
 
 export function onCleanup() {
