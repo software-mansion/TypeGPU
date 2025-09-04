@@ -1,0 +1,67 @@
+import type { ProtobuffReader } from '../protobuf';
+import { TensorDataType } from '../types';
+
+
+
+export function float16ToFloat32(src: Uint16Array): Float32Array {
+  const out = new Float32Array(src.length);
+  for (let i = 0; i < src.length; i++) {
+    const h: number = src[i]!;
+    const s = (h & 0x8000) >> 15;
+    const e = (h & 0x7C00) >> 10;
+    const f = h & 0x03FF;
+    let val: number;
+    if (e === 0) {
+      val = (f / 0x400) * Math.pow(2, -14);
+    } else if (e === 0x1f) {
+      val = f ? Number.NaN : Number.POSITIVE_INFINITY;
+    } else {
+      val = (1 + f / 0x400) * Math.pow(2, e - 15);
+    }
+    out[i] = s ? -val : val;
+  }
+  return out;
+}
+export function bfloat16ToFloat32(src: Uint16Array): Float32Array {
+  const out = new Float32Array(src.length);
+  const u32 = new Uint32Array(out.buffer);
+  for (let i = 0; i < src.length; i++) u32[i] = (src[i]! as number) << 16;
+  return out;
+}
+
+export function elementSize(dt: TensorDataType): number | null {
+  switch (dt) {
+    case TensorDataType.FLOAT:
+      return 4;
+    case TensorDataType.DOUBLE:
+      return 8;
+    case TensorDataType.INT32:
+      return 4;
+    case TensorDataType.INT64:
+      return 8;
+    case TensorDataType.UINT8:
+      return 1;
+    case TensorDataType.INT8:
+      return 1;
+    case TensorDataType.UINT16:
+      return 2;
+    case TensorDataType.INT16:
+      return 2;
+    case TensorDataType.UINT32:
+      return 4;
+    case TensorDataType.UINT64:
+      return 8;
+    case TensorDataType.BOOL:
+      return 1;
+    case TensorDataType.FLOAT16:
+      return 2;
+    case TensorDataType.BFLOAT16:
+      return 2;
+    default:
+      return null; // variable sized or unsupported
+  }
+}
+
+export function dataTypeName(dt: TensorDataType): string {
+  return TensorDataType[dt] ?? 'UNKNOWN';
+}

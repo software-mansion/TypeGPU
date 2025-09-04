@@ -21,6 +21,26 @@ export enum TensorDataType {
   // newer types omitted for brevity
 }
 
+export enum WireType {
+  Varint = 0,
+  Bit64 = 1,
+  LengthDelimited = 2,
+  // 3,4 (start/end group) unused in ONNX proto3
+  Bit32 = 5,
+}
+
+export type TypedArray =
+  | Float32Array
+  | Float64Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | BigInt64Array
+  | BigUint64Array;
+
 export interface Tensor {
   name: string;
   dims: (number | string)[]; // symbolic dims become strings
@@ -31,10 +51,6 @@ export interface Tensor {
   elementCount: number;
 }
 
-export type TypedArray =
-  | Float32Array | Float64Array | Int8Array | Int16Array | Int32Array
-  | Uint8Array | Uint16Array | Uint32Array | BigInt64Array | BigUint64Array;
-
 export interface ValueInfo {
   name: string; // (1)
   elemType?: TensorDataType;
@@ -42,9 +58,12 @@ export interface ValueInfo {
   doc?: string;
 }
 
-export interface NodeAttribute { name: string; type: string; // simplified
+export interface NodeAttribute {
+  name: string;
+  type: string; // simplified
   // value kept raw (number | string | Tensor | number[] ... ) depending on attr type
-  value: unknown; }
+  value: unknown;
+}
 
 export interface Node {
   opType: string; // (4)
@@ -92,4 +111,3 @@ export const defaultLoadOptions: Required<OnnxLoadOptions> = {
   decodeData: true,
   keepRawData: true,
 };
-
