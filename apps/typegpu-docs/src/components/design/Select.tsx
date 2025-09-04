@@ -21,7 +21,7 @@ export function Select({
           position='popper'
           className='-top-4 relative min-w-30'
         >
-          <RadixSelect.Viewport className='rounded bg-tameplum-50'>
+          <RadixSelect.Viewport className='max-h-[50vh] rounded bg-tameplum-50'>
             {options.map((option) => (
               <RadixSelect.Item
                 key={option}
