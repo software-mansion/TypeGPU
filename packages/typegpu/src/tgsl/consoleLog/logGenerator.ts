@@ -28,7 +28,7 @@ const fallbackSnippet = snip('/* console.log() */', Void);
 
 const defaultOptions: Required<LogGeneratorOptions> = {
   logCountPerDispatchLimit: 64,
-  serializedLogDataSizeLimit: 15,
+  serializedLogDataSizeLimit: 60,
   messagePrefix: '[GPU] ',
 };
 
@@ -57,7 +57,10 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const SerializedLogData = struct({
       id: u32,
-      serializedData: arrayOf(u32, this.#options.serializedLogDataSizeLimit),
+      serializedData: arrayOf(
+        u32,
+        Math.ceil(this.#options.serializedLogDataSizeLimit / 4),
+      ),
     }).$name('SerializedLogData');
 
     this.#serializedLogDataBuffer = root
@@ -69,15 +72,6 @@ export class LogGeneratorImpl implements LogGenerator {
     this.#logCallIndexBuffer = root
       .createMutable(atomic(u32))
       .$name('logCallIndexBuffer');
-  }
-
-  get logResources(): LogResources | undefined {
-    return this.#firstUnusedId === 1 ? undefined : {
-      serializedLogDataBuffer: this.#serializedLogDataBuffer,
-      logCallIndexBuffer: this.#logCallIndexBuffer,
-      options: this.#options,
-      logIdToArgTypes: this.#logIdToArgTypes,
-    };
   }
 
   // AAA snippet types should be concretized before passing them here
@@ -98,7 +92,7 @@ export class LogGeneratorImpl implements LogGenerator {
       nonStringArgs.map((e) => e.dataType as AnyWgslData),
       this.#serializedLogDataBuffer,
       this.#logCallIndexBuffer,
-      this.#options.logCountPerDispatchLimit,
+      this.#options,
     );
 
     this.#logIdToArgTypes.set(
@@ -111,5 +105,14 @@ export class LogGeneratorImpl implements LogGenerator {
     );
 
     return snip(stitch`${ctx.resolve(logFn)}(${nonStringArgs})`, Void);
+  }
+
+  get logResources(): LogResources | undefined {
+    return this.#firstUnusedId === 1 ? undefined : {
+      serializedLogDataBuffer: this.#serializedLogDataBuffer,
+      logCallIndexBuffer: this.#logCallIndexBuffer,
+      options: this.#options,
+      logIdToArgTypes: this.#logIdToArgTypes,
+    };
   }
 }

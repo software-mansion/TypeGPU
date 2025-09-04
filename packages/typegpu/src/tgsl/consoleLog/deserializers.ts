@@ -77,7 +77,7 @@ export function logDataFromGPU(resources: LogResources) {
       console.warn(
         `Log count limit per dispatch (${options.logCountPerDispatchLimit}) exceeded by ${
           totalCalls - options.logCountPerDispatchLimit
-        } calls. Consider increasing it by passing appropriate options to tgpu.init().`,
+        } calls. Consider increasing the limit by passing appropriate options to tgpu.init().`,
       );
     }
   });

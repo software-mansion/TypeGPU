@@ -10,7 +10,7 @@ import type {
   U32,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type { SerializedLogCallData } from './types.ts';
+import type { LogGeneratorOptions, SerializedLogCallData } from './types.ts';
 
 const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(n);
@@ -47,8 +47,15 @@ export function createLoggingFunction(
   args: AnyWgslData[],
   serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
   logCallIndexBuffer: TgpuMutable<Atomic<U32>>,
-  logCountPerDispatchLimit: number,
+  logOptions: Required<LogGeneratorOptions>,
 ): TgpuFn {
+  const serializedSize = args.map(sizeOf).reduce((a, b) => a + b, 0);
+  if (serializedSize > logOptions.serializedLogDataSizeLimit) {
+    throw new Error(
+      `Logged data needs to fit in ${logOptions.serializedLogDataSizeLimit} bytes (one of the logs requires ${serializedSize} bytes). Consider increasing the limit by passing appropriate options to tgpu.init().`,
+    );
+  }
+
   const usedSerializers: [string, unknown][] = [];
   let currentIndex = 0;
   const innerForLoops = args.map((arg, i) => {
@@ -66,7 +73,7 @@ export function createLoggingFunction(
 
   return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
   var index = atomicAdd(&logCallIndexBuffer, 1);
-  if (index >= ${logCountPerDispatchLimit}) {
+  if (index >= ${logOptions.logCountPerDispatchLimit}) {
     return;
   }
   serializedLogDataBuffer[index].id = ${id};
