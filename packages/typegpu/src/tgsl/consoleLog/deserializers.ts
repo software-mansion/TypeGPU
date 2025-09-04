@@ -5,7 +5,7 @@ import {
   isVecInstance,
   isWgslData,
 } from '../../data/wgslTypes.ts';
-import { LogResources } from './types.ts';
+import type { LogResources } from './types.ts';
 
 const deserializeU32 = (data: number[]) => data[0] ?? 0;
 

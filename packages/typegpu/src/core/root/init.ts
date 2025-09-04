@@ -37,7 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
-import { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
+import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,

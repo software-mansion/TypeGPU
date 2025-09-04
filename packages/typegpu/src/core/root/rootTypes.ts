@@ -32,7 +32,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
+import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type {
