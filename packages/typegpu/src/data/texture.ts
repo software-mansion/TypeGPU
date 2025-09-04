@@ -354,6 +354,7 @@ export function textureDescriptorToSchema<
       ) as TextureSchemaForDescriptor<T>;
     default:
       throw new Error(
+        // @ts-expect-error
         `Unsupported storage texture dimension: '${desc.dimension}'`,
       );
   }
