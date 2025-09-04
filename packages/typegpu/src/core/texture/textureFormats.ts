@@ -1,13 +1,6 @@
 import { f32, i32, u32 } from '../../data/numeric.ts';
 import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
+import type { F32, I32, U32 } from '../../data/wgslTypes.ts';
 import type { Default } from '../../shared/utilityTypes.ts';
 import type { TextureProps } from './textureProps.ts';
 
@@ -107,12 +100,12 @@ export const texelFormatToChannelType = {
   'astc-12x10-unorm-srgb': f32,
   'astc-12x12-unorm': f32,
   'astc-12x12-unorm-srgb': f32,
-  'r16snorm': f32,
-  'r16unorm': f32,
-  'rg16unorm': f32,
-  'rg16snorm': f32,
-  'rgba16unorm': f32,
-  'rgba16snorm': f32,
+  r16snorm: f32,
+  r16unorm: f32,
+  rg16unorm: f32,
+  rg16snorm: f32,
+  rgba16unorm: f32,
+  rgba16snorm: f32,
 } satisfies Record<GPUTextureFormat, U32 | I32 | F32>;
 
 export type TexelFormatToChannelType = typeof texelFormatToChannelType;
@@ -172,24 +165,41 @@ export type StorageTextureTexelFormat =
   | 'bgra8unorm';
 
 export const texelFormatToDataType = {
-  rgba8unorm: vec4f as Vec4f,
-  rgba8snorm: vec4f as Vec4f,
-  rgba8uint: vec4u as Vec4u,
-  rgba8sint: vec4i as Vec4i,
-  rgba16uint: vec4u as Vec4u,
-  rgba16sint: vec4i as Vec4i,
-  rgba16float: vec4f as Vec4f,
-  r32uint: vec4u as Vec4u,
-  r32sint: vec4i as Vec4i,
-  r32float: vec4f as Vec4f,
-  rg32uint: vec4u as Vec4u,
-  rg32sint: vec4i as Vec4i,
-  rg32float: vec4f as Vec4f,
-  rgba32uint: vec4u as Vec4u,
-  rgba32sint: vec4i as Vec4i,
-  rgba32float: vec4f as Vec4f,
-  bgra8unorm: vec4f as Vec4f,
+  rgba8unorm: vec4f,
+  rgba8snorm: vec4f,
+  rgba8uint: vec4u,
+  rgba8sint: vec4i,
+  rgba16uint: vec4u,
+  rgba16sint: vec4i,
+  rgba16float: vec4f,
+  r32uint: vec4u,
+  r32sint: vec4i,
+  r32float: vec4f,
+  rg32uint: vec4u,
+  rg32sint: vec4i,
+  rg32float: vec4f,
+  rgba32uint: vec4u,
+  rgba32sint: vec4i,
+  rgba32float: vec4f,
+  bgra8unorm: vec4f,
+
+  stencil8: vec4u,
+  depth16unorm: vec4f,
+  depth24plus: vec4f,
+  // not true
+  'depth24plus-stencil8': vec4f,
+  depth32float: vec4f,
+  // not true
+  'depth32float-stencil8': vec4f,
 } as const;
+
+export const depthTextureFormats = [
+  'depth16unorm',
+  'depth24plus',
+  'depth32float',
+  'depth32float-stencil8',
+  'depth24plus-stencil8',
+] as const;
 
 export const channelKindToFormat = {
   f32: 'float',

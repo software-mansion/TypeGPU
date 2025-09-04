@@ -152,6 +152,33 @@ export {
   textureSample,
   textureSampleBaseClampToEdge,
   textureSampleBias,
+  textureSampleCompare,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';
+
+export {
+  subgroupAdd,
+  subgroupAll,
+  subgroupAnd,
+  subgroupAny,
+  subgroupBallot,
+  subgroupBroadcast,
+  subgroupBroadcastFirst,
+  subgroupElect,
+  subgroupExclusiveAdd,
+  subgroupExclusiveMul,
+  subgroupInclusiveAdd,
+  subgroupInclusiveMul,
+  subgroupMax,
+  subgroupMin,
+  subgroupMul,
+  subgroupOr,
+  subgroupShuffle,
+  subgroupShuffleDown,
+  subgroupShuffleUp,
+  subgroupShuffleXor,
+  subgroupXor,
+} from './subgroup.ts';
+
+export { extensionEnabled } from './extensions.ts';

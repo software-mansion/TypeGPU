@@ -55,6 +55,10 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import { PERF } from '../../shared/meta.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -238,7 +242,7 @@ export type RenderPipelineCoreOptions = {
   slotBindings: [TgpuSlot<unknown>, unknown][];
   vertexAttribs: AnyVertexAttribs;
   vertexFn: TgpuVertexFn;
-  fragmentFn: TgpuFragmentFn;
+  fragmentFn: TgpuFragmentFn | null;
   primitiveState:
     | GPUPrimitiveState
     | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
@@ -246,7 +250,7 @@ export type RenderPipelineCoreOptions = {
     }
     | undefined;
   depthStencilState: GPUDepthStencilState | undefined;
-  targets: AnyFragmentTargets;
+  targets: AnyFragmentTargets | null;
   multisampleState: GPUMultisampleState | undefined;
 };
 
@@ -466,19 +470,21 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const memo = internals.core.unwrap();
     const { branch, fragmentFn } = internals.core.options;
 
-    const colorAttachments = connectAttachmentToShader(
-      fragmentFn.shell.out,
-      internals.priors.colorAttachment ?? {},
-    ).map((attachment) => {
-      if (isTexture(attachment.view)) {
-        return {
-          ...attachment,
-          view: branch.unwrap(attachment.view).createView(),
-        };
-      }
+    const colorAttachments = fragmentFn
+      ? connectAttachmentToShader(
+        fragmentFn.shell.out,
+        internals.priors.colorAttachment ?? {},
+      ).map((attachment) => {
+        if (isTexture(attachment.view)) {
+          return {
+            ...attachment,
+            view: branch.unwrap(attachment.view).createView(),
+          };
+        }
 
-      return attachment;
-    }) as GPURenderPassColorAttachment[];
+        return attachment;
+      }) as GPURenderPassColorAttachment[]
+      : [null];
 
     const renderPassDescriptor: GPURenderPassDescriptor = {
       label: getName(internals.core) ?? '<unnamed>',
@@ -621,7 +627,7 @@ class RenderPipelineCore implements SelfResolvable {
 
   private _memo: Memo | undefined;
   private readonly _vertexBufferLayouts: GPUVertexBufferLayout[];
-  private readonly _targets: GPUColorTargetState[];
+  private readonly _targets: GPUColorTargetState[] | [null];
 
   constructor(public readonly options: RenderPipelineCoreOptions) {
     const connectedAttribs = connectAttributesToShader(
@@ -632,10 +638,12 @@ class RenderPipelineCore implements SelfResolvable {
     this._vertexBufferLayouts = connectedAttribs.bufferDefinitions;
     this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
 
-    this._targets = connectTargetsToShader(
-      options.fragmentFn.shell.out,
-      options.targets,
-    );
+    this._targets = options.fragmentFn && options.targets
+      ? connectTargetsToShader(
+        options.fragmentFn.shell.out,
+        options.targets,
+      )
+      : [null];
   }
 
   '~resolve'(ctx: ResolutionCtx) {
@@ -647,7 +655,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const locations = matchUpVaryingLocations(
       vertexFn.shell.out,
-      fragmentFn.shell.in,
+      fragmentFn?.shell.in,
       getName(vertexFn) ?? '<unnamed>',
       getName(fragmentFn) ?? '<unnamed>',
     );
@@ -657,7 +665,9 @@ class RenderPipelineCore implements SelfResolvable {
       () =>
         ctx.withSlots(slotBindings, () => {
           ctx.resolve(vertexFn);
-          ctx.resolve(fragmentFn);
+          if (fragmentFn) {
+            ctx.resolve(fragmentFn);
+          }
           return '';
         }),
     );
@@ -676,6 +686,9 @@ class RenderPipelineCore implements SelfResolvable {
         multisampleState,
       } = this.options;
       const device = branch.device;
+      const enableExtensions = wgslExtensions.filter((extension) =>
+        branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+      );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
@@ -685,6 +698,8 @@ class RenderPipelineCore implements SelfResolvable {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -692,6 +707,8 @@ class RenderPipelineCore implements SelfResolvable {
       } else {
         resolutionResult = resolve(this, {
           names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
         });
       }
 
@@ -717,15 +734,18 @@ class RenderPipelineCore implements SelfResolvable {
           module,
           buffers: this._vertexBufferLayouts,
         },
-        fragment: {
-          module,
-          targets: this._targets,
-        },
       };
 
       const label = getName(this);
       if (label !== undefined) {
         descriptor.label = label;
+      }
+
+      if (this.options.fragmentFn) {
+        descriptor.fragment = {
+          module,
+          targets: this._targets,
+        };
       }
 
       if (primitiveState) {
