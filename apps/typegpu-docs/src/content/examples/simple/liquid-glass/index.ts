@@ -27,6 +27,7 @@ const Params = d.struct({
   refractionStrength: d.f32,
   blur: d.f32,
   edgeFeather: d.f32,
+  edgeBlurMultiplier: d.f32,
 });
 const defaultParams: d.Infer<typeof Params> = {
   rectDims: d.vec2f(0.13, 0.01),
@@ -37,6 +38,7 @@ const defaultParams: d.Infer<typeof Params> = {
   refractionStrength: 0.1,
   blur: 1.2,
   edgeFeather: 2.0,
+  edgeBlurMultiplier: 0.7,
 };
 
 const paramsUniform = root.createUniform(Params, defaultParams);
@@ -48,27 +50,27 @@ context.configure({
 });
 
 const sampleWithChromaticAberration = tgpu.fn(
-  [d.vec2f, d.f32, d.vec2f],
+  [d.vec2f, d.f32, d.vec2f, d.f32],
   d.vec3f,
 )(
-  (uv, offset, dir) => {
+  (uv, offset, dir, blur) => {
     const red = std.textureSampleBias(
       sampledView,
       sampler,
       uv.add(dir.mul(offset)),
-      paramsUniform.$.blur,
+      blur,
     );
     const green = std.textureSampleBias(
       sampledView,
       sampler,
       uv,
-      paramsUniform.$.blur,
+      blur,
     );
     const blue = std.textureSampleBias(
       sampledView,
       sampler,
       uv.sub(dir.mul(offset)),
-      paramsUniform.$.blur,
+      blur,
     );
     return d.vec3f(red.x, green.y, blue.z);
   },
@@ -82,30 +84,32 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const posInBoxSpace = uv.sub(mousePos);
 
   const rectDims = paramsUniform.$.rectDims;
-  const radius = paramsUniform.$.radius;
   const start = paramsUniform.$.start;
   const end = paramsUniform.$.end;
+  const blurStrength = paramsUniform.$.blur;
+
+  const sdfDist = sdRoundedBox2d(
+    posInBoxSpace,
+    rectDims,
+    paramsUniform.$.radius,
+  );
+
+  const dir = std.normalize(posInBoxSpace.mul(rectDims.yx));
+  const normalizedDist = (sdfDist - start) / (end - start);
+  const chromaticOffset = paramsUniform.$.chromaticStrength * normalizedDist;
 
   const sampled = std.textureSampleLevel(sampledView, sampler, uv, 0);
   const blurSampled = std.textureSampleBias(
     sampledView,
     sampler,
     uv,
-    paramsUniform.$.blur,
+    blurStrength,
   );
-  const sdfDist = sdRoundedBox2d(posInBoxSpace, rectDims, radius);
-
-  const chromaticStrength = paramsUniform.$.chromaticStrength;
-  const refractionStrength = paramsUniform.$.refractionStrength;
-
-  const dir = std.normalize(posInBoxSpace.mul(rectDims.yx));
-
-  const normalizedDist = (sdfDist - start) / (end - start);
-  const chromaticOffset = chromaticStrength * normalizedDist;
   const refractedColor = sampleWithChromaticAberration(
-    uv.add(dir.mul(refractionStrength * normalizedDist)),
+    uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
     chromaticOffset,
     dir,
+    blurStrength * paramsUniform.$.edgeBlurMultiplier,
   );
 
   const dim = d.vec2f(std.textureDimensions(sampledView, 0));
@@ -238,6 +242,15 @@ export const controls = {
     step: 0.1,
     onSliderChange: (v: number) => {
       paramsUniform.writePartial({ blur: v });
+    },
+  },
+  'Edge blur multiplier': {
+    initial: defaultParams.edgeBlurMultiplier,
+    min: 0.0,
+    max: 1.0,
+    step: 0.05,
+    onSliderChange: (v: number) => {
+      paramsUniform.writePartial({ edgeBlurMultiplier: v });
     },
   },
   'Feather ammount': {
