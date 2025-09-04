@@ -93,6 +93,23 @@ export class Executor {
     });
   }
 
+  cachedPipeline(distribution: TgpuFn<() => d.Vec3f>) {
+    if (!import.meta.env.DEV) {
+      throw new Error('Function only for testing purposes');
+    }
+
+    if (!this.#pipelineCache.has(distribution)) {
+      const pipeline = this.#root['~unstable']
+        .with(this.#distributionSlot, distribution)
+        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
+        .createPipeline();
+      this.#pipelineCache.set(distribution, pipeline);
+    }
+
+    // biome-ignore lint/style/noNonNullAssertion: just checked it above
+    return this.#pipelineCache.get(distribution)!;
+  }
+
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
   ): Promise<d.v3f[]> {
