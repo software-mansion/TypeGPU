@@ -250,6 +250,114 @@ export interface WgslStorageTexture3d<
   readonly type: 'texture_storage_3d';
 }
 
+type SampledTextureSchemaMap<T extends WgslTextureProps> = {
+  multisampled: {
+    '1d': never;
+    '2d': WgslTextureMultisampled2d<T['sampleType']>;
+    '2d-array': never;
+    '3d': never;
+    cube: never;
+    'cube-array': never;
+  };
+  sampled: {
+    '1d': WgslTexture1d<T['sampleType']>;
+    '2d': WgslTexture2d<T['sampleType']>;
+    '2d-array': WgslTexture2dArray<T['sampleType']>;
+    '3d': WgslTexture3d<T['sampleType']>;
+    cube: WgslTextureCube<T['sampleType']>;
+    'cube-array': WgslTextureCubeArray<T['sampleType']>;
+  };
+};
+
+type StorageTextureSchemaMap<T extends WgslStorageTextureProps> = {
+  '1d': WgslStorageTexture1d<T['format'], T['access']>;
+  '2d': WgslStorageTexture2d<T['format'], T['access']>;
+  '2d-array': WgslStorageTexture2dArray<T['format'], T['access']>;
+  '3d': WgslStorageTexture3d<T['format'], T['access']>;
+};
+
+export type TextureSchemaForDescriptor<
+  T extends WgslTextureProps | WgslStorageTextureProps,
+> = T extends WgslTextureProps
+  ? T['multisampled'] extends true
+    ? SampledTextureSchemaMap<T>['multisampled'][T['dimension']]
+  : SampledTextureSchemaMap<T>['sampled'][T['dimension']]
+  : T extends WgslStorageTextureProps
+    ? StorageTextureSchemaMap<T>[T['dimension']]
+  : never;
+
+export function textureDescriptorToSchema<
+  T extends WgslTextureProps | WgslStorageTextureProps,
+>(desc: T): TextureSchemaForDescriptor<T> {
+  if (isWgslTexture(desc)) {
+    if (desc.multisampled) {
+      if (desc.dimension === '2d') {
+        return textureMultisampled2d(
+          desc.sampleType,
+        ) as TextureSchemaForDescriptor<T>;
+      }
+      throw new Error(
+        `Multisampled textures only support '2d' dimension, got '${desc.dimension}'`,
+      );
+    }
+
+    switch (desc.dimension) {
+      case '1d':
+        return texture1d(desc.sampleType) as TextureSchemaForDescriptor<T>;
+      case '2d':
+        return texture2d(desc.sampleType) as TextureSchemaForDescriptor<T>;
+      case '2d-array':
+        return texture2dArray(
+          desc.sampleType,
+        ) as TextureSchemaForDescriptor<T>;
+      case '3d':
+        return texture3d(desc.sampleType) as TextureSchemaForDescriptor<T>;
+      case 'cube':
+        return textureCube(
+          desc.sampleType,
+        ) as TextureSchemaForDescriptor<T>;
+      case 'cube-array':
+        return textureCubeArray(
+          desc.sampleType,
+        ) as TextureSchemaForDescriptor<T>;
+      default:
+        throw new Error(
+          `Unsupported texture dimension: '${desc.dimension}'`,
+        );
+    }
+  }
+  if (!isWgslStorageTexture(desc)) {
+    throw new Error('Descriptor is neither a sampled nor a storage texture');
+  }
+
+  switch (desc.dimension) {
+    case '1d':
+      return textureStorage1d(
+        desc.format,
+        desc.access,
+      ) as TextureSchemaForDescriptor<T>;
+    case '2d':
+      return textureStorage2d(
+        desc.format,
+        desc.access,
+      ) as TextureSchemaForDescriptor<T>;
+    case '2d-array':
+      return textureStorage2dArray(
+        desc.format,
+        desc.access,
+      ) as TextureSchemaForDescriptor<T>;
+    case '3d':
+      return textureStorage3d(
+        desc.format,
+        desc.access,
+      ) as TextureSchemaForDescriptor<T>;
+    default:
+      throw new Error(
+        `Unsupported storage texture dimension: '${desc.dimension}'`,
+      );
+  }
+}
+
 function createTexture<TProps extends WgslTextureProps>(
   type: SampledTextureLiteral,
   props: TProps,

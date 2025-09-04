@@ -37,11 +37,13 @@ import {
 } from './core/texture/usageExtension.ts';
 import type { AnyData } from './data/dataTypes.ts';
 import { f32, i32, u32 } from './data/numeric.ts';
-import type {
-  StorageTextureDimension,
-  WgslExternalTexture,
-  WgslStorageTexture,
-  WgslTexture,
+import {
+  type StorageTextureDimension,
+  textureDescriptorToSchema,
+  type TextureSchemaForDescriptor,
+  type WgslExternalTexture,
+  type WgslStorageTexture,
+  type WgslTexture,
 } from './data/texture.ts';
 import type { AnyWgslData, BaseData, F32, I32, U32 } from './data/wgslTypes.ts';
 import { NotUniformError } from './errors.ts';
@@ -212,7 +214,7 @@ type MapLegacyTextureToUpToDate<
   [K in keyof T]: T[K] extends TgpuLayoutEntry | null ? T[K]
     : T[K] extends TgpuLegacyLayoutTexture<infer SampleType>
       ? TgpuLayoutTexture<
-        WgslTexture<{
+        TextureSchemaForDescriptor<{
           dimension: Default<T[K]['viewDimension'], '2d'>;
           sampleType: SampleTypeToPrimitive[SampleType];
           multisampled: Default<T[K]['multisampled'], false>;
@@ -220,7 +222,7 @@ type MapLegacyTextureToUpToDate<
       >
     : T[K] extends TgpuLegacyLayoutStorageTexture<infer Format>
       ? TgpuLayoutStorageTexture<
-        WgslStorageTexture<{
+        TextureSchemaForDescriptor<{
           access: LeagcyAccessToAccess[Default<T[K]['access'], 'writeonly'>];
           format: Format;
           dimension: Default<T[K]['viewDimension'], '2d'>;
@@ -248,20 +250,16 @@ function convertLegacyEntries(
       const sampleType = entry.texture;
       result[key] = {
         ...entry,
-        texture: {
+        texture: textureDescriptorToSchema({
           dimension: entry.viewDimension ?? '2d',
-          sampleType: {
-            type: sampleType === 'sint'
-              ? i32
-              : sampleType === 'uint'
-              ? u32
-              : f32,
-          },
+          sampleType: sampleType === 'sint'
+            ? i32
+            : sampleType === 'uint'
+            ? u32
+            : f32,
           multisampled: entry.multisampled ?? false,
-          bindingSampleType: [entry.texture],
-        } as unknown as WgslTexture,
-        sampleType: entry.texture,
-      } as TgpuLayoutTexture;
+        }),
+      };
     } else if (
       'storageTexture' in entry && typeof entry.storageTexture === 'string'
     ) {
@@ -272,12 +270,12 @@ function convertLegacyEntries(
       } as const;
       result[key] = {
         ...entry,
-        storageTexture: {
+        storageTexture: textureDescriptorToSchema({
           access: accessMap[entry.access ?? 'writeonly'],
           format: entry.storageTexture,
           dimension: entry.viewDimension ?? '2d',
-        },
-      } as TgpuLayoutStorageTexture;
+        }),
+      };
     } else if (
       'externalTexture' in entry &&
       Object.keys(entry.externalTexture).length === 0

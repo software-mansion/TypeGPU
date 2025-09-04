@@ -607,22 +607,10 @@ describe('TgpuBindGroup', () => {
 
       const { foo, bar } = layout.bound;
       expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<
-          d.WgslTexture<{
-            dimension: '2d';
-            sampleType: d.F32;
-            multisampled: false;
-          }>
-        >
+        TgpuTextureView<d.WgslTexture2d<d.F32>>
       >();
       expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<
-          d.WgslStorageTexture<{
-            format: 'bgra8unorm';
-            access: 'read-only';
-            dimension: '2d';
-          }>
-        >
+        TgpuTextureView<d.WgslStorageTexture2d<'bgra8unorm', 'read-only'>>
       >();
     });
   });

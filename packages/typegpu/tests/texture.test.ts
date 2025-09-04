@@ -1,5 +1,8 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import type { TgpuTexture } from '../src/core/texture/texture.ts';
+import type {
+  TgpuTexture,
+  TgpuTextureView,
+} from '../src/core/texture/texture.ts';
 import type {
   RenderFlag,
   SampledFlag,
@@ -226,149 +229,53 @@ describe('TgpuTexture', () => {
       );
   });
 
-  // TODO: add back when default view is implemented
-  // describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  //   it('inherits the dimension and format from its owner texture', ({ root }) => {
-  //     const texture1 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8unorm',
-  //       })
-  //       .$usage('storage');
+  describe('Texture view', () => {
+    it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({ root }) => {
+      const texture1 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled');
 
-  //     expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
-  //       TgpuReadonlyTexture<'2d', Vec4f>
-  //     >();
+      expectTypeOf(texture1.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture2d<d.F32>>
+      >();
 
-  //     expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
-  //       TgpuWriteonlyTexture<'2d', Vec4f>
-  //     >();
+      const texture2 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8uint',
+          dimension: '3d',
+        })
+        .$usage('sampled');
 
-  //     expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
-  //       TgpuMutableTexture<'2d', Vec4f>
-  //     >();
+      expectTypeOf(texture2.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture3d<d.U32>>
+      >();
 
-  //     const texture2 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8uint',
-  //         dimension: '3d',
-  //       })
-  //       .$usage('storage');
+      const texture3 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8sint',
+          dimension: '1d',
+          viewFormats: ['rgba8unorm'],
+        })
+        .$usage('sampled');
 
-  //     expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
-  //       TgpuReadonlyTexture<'3d', Vec4u>
-  //     >();
+      expectTypeOf(texture3.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture1d<d.I32>>
+      >();
 
-  //     expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
-  //       TgpuWriteonlyTexture<'3d', Vec4u>
-  //     >();
+      const texture4 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('storage');
 
-  //     expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
-  //       TgpuMutableTexture<'3d', Vec4u>
-  //     >();
-
-  //     const texture3 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8sint',
-  //         dimension: '1d',
-  //         viewFormats: ['rgba8unorm'],
-  //       })
-  //       .$usage('storage');
-
-  //     expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
-  //       TgpuReadonlyTexture<'1d', Vec4i>
-  //     >();
-
-  //     expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
-  //       TgpuWriteonlyTexture<'1d', Vec4i>
-  //     >();
-
-  //     expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
-  //       TgpuMutableTexture<'1d', Vec4i>
-  //     >();
-  //   });
-
-  // TODO: add back when validation is here
-  //   it('rejects formats different than those specified when defining the texture', ({ root }) => {
-  //     const texture = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8unorm',
-  //         dimension: '3d',
-  //       })
-  //       .$usage('storage');
-
-  //     texture.createView('readonly', {
-  //       // @ts-expect-error
-  //       format: 'rgba8snorm',
-  //     });
-
-  //     texture.createView('writeonly', {
-  //       // @ts-expect-error
-  //       format: 'rg32uint',
-  //     });
-
-  //     texture.createView('mutable', {
-  //       // @ts-expect-error
-  //       format: 'rgba32float',
-  //     });
-  //   });
-  // });
-
-  // TODO: add back when default view is implemented
-  // describe('TgpuSampledTexture', () => {
-  //   it('inherits the dimension and format from its owner texture', ({ root }) => {
-  //     const texture1 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8unorm',
-  //       })
-  //       .$usage('sampled');
-
-  //     expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
-  //       TgpuSampledTexture<'2d', F32>
-  //     >();
-
-  //     const texture2 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8uint',
-  //         dimension: '3d',
-  //       })
-  //       .$usage('sampled');
-
-  //     expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
-  //       TgpuSampledTexture<'3d', U32>
-  //     >();
-
-  //     const texture3 = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8sint',
-  //         dimension: '1d',
-  //         viewFormats: ['rgba8unorm'],
-  //       })
-  //       .$usage('sampled');
-
-  //     expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
-  //       TgpuSampledTexture<'1d', I32>
-  //     >();
-  //   });
-
-  //   it('rejects formats different than those specified when defining the texture', ({ root }) => {
-  //     const texture = root
-  //       .createTexture({
-  //         size: [512, 512],
-  //         format: 'rgba8unorm',
-  //         dimension: '3d',
-  //       })
-  //       .$usage('sampled');
-
-  //     texture.createView('sampled', {
-  //       // @ts-expect-error
-  //       format: 'rgba8snorm',
-  //     });
-  //   });
+      // @ts-expect-error
+      attest(texture4.createView()).type.errors.snap();
+    });
+  });
 });

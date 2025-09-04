@@ -42,10 +42,10 @@ export const texelFormatToChannelType = {
   rgba32uint: u32,
   rgba32sint: i32,
   rgba32float: f32,
-  stencil8: f32, // NOTE: Honestly have no idea if this is right
+  stencil8: u32,
   depth16unorm: f32,
-  depth24plus: f32, // NOTE: Honestly have no idea if this is right
-  'depth24plus-stencil8': f32, // NOTE: Honestly have no idea if this is right
+  depth24plus: f32,
+  'depth24plus-stencil8': f32,
   depth32float: f32,
   'depth32float-stencil8': f32,
   'bc1-rgba-unorm': f32,
@@ -258,7 +258,7 @@ export const channelFormatToSchema = {
   'unfilterable-float': f32,
   uint: u32,
   sint: i32,
-  depth: f32, // I guess?
+  depth: f32,
 };
 export type ChannelFormatToSchema = typeof channelFormatToSchema;
 
