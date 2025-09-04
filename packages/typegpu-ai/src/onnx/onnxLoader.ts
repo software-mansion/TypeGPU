@@ -92,7 +92,7 @@ export class OnnxLoader {
     const { model } = decodeModel(buffer, options);
     this.#model = model;
     this.#buffer = buffer;
-  }  
+  }
 }
 
 // TypedBinary

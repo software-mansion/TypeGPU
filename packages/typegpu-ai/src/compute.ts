@@ -1,7 +1,11 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { ioLayout, weightsBiasesLayout } from './schemas.ts';
+import {
+  activationFunctionSlot,
+  ioLayout,
+  weightsBiasesLayout,
+} from './schemas.ts';
 import { calculateIndex, workgroupSize } from './schemas.ts';
 import { relu } from './activationFunctions.ts';
 
@@ -18,19 +22,15 @@ export const nnCompute = tgpu['~unstable'].computeFn({
   const i = globalIdx;
 
   const inputSize = ioLayout.$.input.length;
-
   const weightsOffset = i * inputSize;
-  let sum = 0.0;
 
-  for (let j = d.u32(0); j < inputSize; j = j + 1) {
+  let sum = d.f32(0);
+  for (let j = d.u32(0); j < inputSize; j = j + d.u32(1)) {
     sum = sum +
       (ioLayout.$.input[j] as number) *
         (weightsBiasesLayout.$.weights[weightsOffset + j] as number);
   }
 
   sum = sum + (weightsBiasesLayout.$.biases[i] as number);
-  ioLayout.$.output[i] = relu(sum);
+  ioLayout.$.output[i] = activationFunctionSlot.$(sum);
 });
-
-
-

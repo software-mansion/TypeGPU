@@ -10,13 +10,8 @@ import {
   type ValueInfo,
   type WireType,
 } from '../types.ts';
-import {
-  bfloat16ToFloat32,
-  elementSize,
-  float16ToFloat32,
-
-} from './convert.ts';
-import { readFloatFromVarint, readDoubleFromFixed64 } from './io.ts';
+import { bfloat16ToFloat32, elementSize, float16ToFloat32 } from './convert.ts';
+import { readDoubleFromFixed64, readFloatFromVarint } from './io.ts';
 
 export function decodeModel(
   buffer: Uint8Array,

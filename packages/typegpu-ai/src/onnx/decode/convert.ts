@@ -1,8 +1,6 @@
 import type { ProtobuffReader } from '../protobuf';
 import { TensorDataType } from '../types';
 
-
-
 export function float16ToFloat32(src: Uint16Array): Float32Array {
   const out = new Float32Array(src.length);
   for (let i = 0; i < src.length; i++) {

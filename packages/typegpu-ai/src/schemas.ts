@@ -1,22 +1,14 @@
-import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
+import tgpu, {
+  type StorageFlag,
+  TgpuBindGroup,
+  type TgpuBuffer,
+  TgpuFn,
+} from 'typegpu';
 import * as d from 'typegpu/data';
-
-interface LayerData {
-  shape: readonly [number] | readonly [number, number];
-  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-}
-
-interface Layer {
-  weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  state: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-}
-
 
 export const calculateIndex = tgpu.fn([d.vec3u, d.vec3u], d.u32)((id, nwg) =>
   id.x + id.y * nwg.x + id.z * nwg.x * nwg.y
 );
-
 export const workgroupSize = 64;
 
 const ReadonlyFloats = {
@@ -38,3 +30,20 @@ export const weightsBiasesLayout = tgpu.bindGroupLayout({
   weights: ReadonlyFloats,
   biases: ReadonlyFloats,
 });
+
+export const activationFunctionSlot = tgpu.slot<TgpuFn>();
+
+export interface DenseLayerGpu {
+  inSize: number;
+  outSize: number;
+  weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+  biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+  ioBindGroup: TgpuBindGroup;
+  wbBindGroup: TgpuBindGroup;
+}
+
+export interface NetworkRunner {
+  run(input: number[] | Float32Array): Promise<number[]>;
+  dispose(): void;
+  readonly layers: DenseLayerGpu[];
+}
