@@ -7,6 +7,7 @@ import type {
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
+import { sizeOf } from '../../data/index.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -18,9 +19,9 @@ import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import type { TgpuNamable } from '../../shared/meta.ts';
-import { getName, setName } from '../../shared/meta.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -30,6 +31,11 @@ import {
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { isGPUBuffer } from '../../types.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
@@ -44,8 +50,6 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
-import { isGPUBuffer } from '../../types.ts';
-import { sizeOf } from '../../data/index.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -54,11 +58,6 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import { PERF } from '../../shared/meta.ts';
-import {
-  wgslExtensions,
-  wgslExtensionToFeatureName,
-} from '../../wgslExtensions.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -258,11 +257,6 @@ export function INTERNAL_createRenderPipeline(
   options: RenderPipelineCoreOptions,
 ) {
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
-}
-
-export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
-  const maybe = value as TgpuRenderPipeline | undefined;
-  return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
 }
 
 // --------------

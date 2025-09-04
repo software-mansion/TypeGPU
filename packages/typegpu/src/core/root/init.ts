@@ -37,6 +37,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import type { LogManagerOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
@@ -58,16 +59,15 @@ import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
-  isComputePipeline,
   type TgpuComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  isRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
+import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -280,15 +280,23 @@ class TgpuRootImpl extends WithBindingImpl
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
+  [$internal]: {
+    logOptions: LogManagerOptions;
+  };
+
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     private readonly _ownDevice: boolean,
+    logOptions: LogManagerOptions,
     public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
     this['~unstable'] = this;
+    this[$internal] = {
+      logOptions,
+    };
   }
 
   get commandEncoder() {
@@ -701,6 +709,7 @@ export type InitOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
+  unstable_logOptions?: LogManagerOptions;
 };
 
 /**
@@ -715,6 +724,7 @@ export type InitFromDeviceOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
+  unstable_logOptions?: LogManagerOptions;
 };
 
 /**
@@ -740,6 +750,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -778,6 +789,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     true,
+    unstable_logOptions ?? {},
     options?.shaderGenerator,
   );
 }
@@ -795,12 +807,14 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
   return new TgpuRootImpl(
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     false,
+    unstable_logOptions ?? {},
     options?.shaderGenerator,
   );
 }

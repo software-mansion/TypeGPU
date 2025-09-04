@@ -242,3 +242,8 @@ export class MatrixColumnsAccess {
     readonly matrix: Snippet,
   ) {}
 }
+
+// AAA make this callable so no extra logic in wgslGenerator is necessary
+export class ConsoleLog {
+  [$internal] = true;
+}

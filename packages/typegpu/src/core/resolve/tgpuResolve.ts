@@ -1,14 +1,15 @@
-import { $internal } from '../../shared/symbols.ts';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
+import { $internal } from '../../shared/symbols.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { WgslExtension } from '../../wgslExtensions.ts';
+import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
-import type { WgslExtension } from '../../wgslExtensions.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -99,6 +100,13 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
+  const pipelines = Object.values(externals).filter((e) =>
+    isComputePipeline(e) || isRenderPipeline(e)
+  );
+  if (pipelines.length > 1) {
+    throw new Error('Cannot resolve more than one pipeline at once.');
+  }
+
   return resolveImpl(
     resolutionObj,
     {
@@ -109,6 +117,7 @@ export function resolveWithContext(
       shaderGenerator,
     },
     config,
+    pipelines[0],
   );
 }
 

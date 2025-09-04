@@ -2,12 +2,14 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import { getName, setName } from '../../shared/meta.ts';
+import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import {
   wgslExtensions,
@@ -24,11 +26,11 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import { PERF } from '../../shared/meta.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
+  readonly branch: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -63,13 +65,6 @@ export function INTERNAL_createComputePipeline(
   );
 }
 
-export function isComputePipeline(
-  value: unknown,
-): value is TgpuComputePipeline {
-  const maybe = value as TgpuComputePipeline | undefined;
-  return maybe?.resourceType === 'compute-pipeline' && !!maybe[$internal];
-}
-
 // --------------
 // Implementation
 // --------------
@@ -82,6 +77,7 @@ type Memo = {
   pipeline: GPUComputePipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logResources: LogResources | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -93,12 +89,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {
+    // AAA think of a better way to pass the pipeline
+    // AAA implement this for render pipeline as well
+    const thisPipeline = this;
     this[$internal] = {
       get rawPipeline() {
-        return _core.unwrap().pipeline;
+        return _core.unwrap(thisPipeline).pipeline;
       },
       get priors() {
         return _priors;
+      },
+      get branch() {
+        return _core.branch;
       },
     };
     this[$getNameForward] = _core;
@@ -113,7 +115,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   get rawPipeline(): GPUComputePipeline {
-    return this._core.unwrap().pipeline;
+    return this._core.unwrap(this).pipeline;
   }
 
   with(
@@ -158,7 +160,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     y?: number | undefined,
     z?: number | undefined,
   ): void {
-    const memo = this._core.unwrap();
+    const memo = this._core.unwrap(this);
     const { branch } = this._core;
 
     const passDescriptor: GPUComputePassDescriptor = {
@@ -192,6 +194,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+
+    if (memo.logResources) {
+      logDataFromGPU(memo.logResources);
+      memo.logResources.logCallIndexBuffer.write(0);
+    }
 
     if (this._priors.performanceCallback) {
       triggerPerformanceCallback({
@@ -228,7 +235,7 @@ class ComputePipelineCore implements SelfResolvable {
     return 'computePipelineCore';
   }
 
-  public unwrap(): Memo {
+  public unwrap(pipeline: TgpuComputePipeline): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
       const enableExtensions = wgslExtensions.filter((extension) =>
@@ -241,23 +248,34 @@ class ComputePipelineCore implements SelfResolvable {
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: this.branch.nameRegistry,
+            enableExtensions,
+            shaderGenerator: this.branch.shaderGenerator,
+          },
+          (cfg) => cfg,
+          pipeline,
+        );
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: this.branch.nameRegistry,
+            enableExtensions,
+            shaderGenerator: this.branch.shaderGenerator,
+          },
+          (cfg) => cfg,
+          pipeline,
+        );
       }
 
-      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } =
+        resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -283,6 +301,7 @@ class ComputePipelineCore implements SelfResolvable {
         }),
         usedBindGroupLayouts,
         catchall,
+        logResources,
       };
 
       if (PERF?.enabled) {
