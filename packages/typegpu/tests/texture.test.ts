@@ -209,13 +209,15 @@ describe('TgpuTexture', () => {
     // @ts-expect-error
     attest(texture.createView(d.texture2d(d.f32)))
       .type.errors.snap(
-        "Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '\"(Error) Texture not usable as sampled, call $usage('sampled') first\"'.",
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as sampled, call $usage('sampled') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: "float" | "unfilterable-float"; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.`,
       );
 
     // @ts-expect-error
     attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
       .type.errors.snap(
-        'Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as storage, call $usage('storage') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as storage, call $usage('storage') first"'.`,
       );
 
     const texture2 = texture.$usage('sampled');
@@ -275,7 +277,9 @@ describe('TgpuTexture', () => {
         .$usage('storage');
 
       // @ts-expect-error
-      attest(texture4.createView()).type.errors.snap();
+      attest(texture4.createView()).type.errors.snap(
+        'Expected 1-2 arguments, but got 0.',
+      );
     });
   });
 });
