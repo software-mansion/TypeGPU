@@ -440,6 +440,9 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
+export function bindGroupLayout<
+  Entries extends Record<string, TgpuLayoutEntry | null>,
+>(entries: Entries): TgpuBindGroupLayout<Prettify<Entries>>;
 /**
  * @deprecated Layouts containing the legacy texture api entries are deprecated and will be removed in future versions. Please use the up-to-date texture api entries instead.
  */
@@ -450,9 +453,6 @@ export function bindGroupLayout<
 ): TgpuBindGroupLayout<
   Prettify<MapLegacyTextureToUpToDate<Entries>>
 >;
-export function bindGroupLayout<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Prettify<Entries>>;
 export function bindGroupLayout<
   Entries extends Record<
     string,

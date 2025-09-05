@@ -24,9 +24,20 @@ const Adjustments = d.struct({
   saturation: d.f32,
 });
 
-let defaultLUTTexture: TgpuTexture & SampledFlag;
-let currentLUTTexture: TgpuTexture & SampledFlag;
-let imageTexture: TgpuTexture & SampledFlag;
+let defaultLUTTexture:
+  & TgpuTexture<{ size: [1, 1, 1]; format: 'rgba16float'; dimension: '3d' }>
+  & SampledFlag;
+let currentLUTTexture:
+  & TgpuTexture<
+    { size: [number, number, number]; format: 'rgba16float'; dimension: '3d' }
+  >
+  & SampledFlag;
+let imageTexture:
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'rgba8unorm';
+  }>
+  & SampledFlag;
 
 const root = await tgpu.init();
 const device = root.device;

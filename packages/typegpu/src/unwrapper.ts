@@ -21,10 +21,11 @@ export interface Unwrapper {
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
-  unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
   unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
+  // biome-ignore lint/suspicious/noExplicitAny: we need to supress validation
+  unwrap(resource: TgpuTexture<any>): GPUTexture;
 }
