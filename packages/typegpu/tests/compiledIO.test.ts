@@ -117,7 +117,8 @@ describe('buildWriter', () => {
   });
 
   it('should compile a writer for deeply nested arrays', () => {
-    // The WGSL nested composite type limit is 15
+    // The WGSL minimum maximum nesting depth of a composite type is 15
+    // https://www.w3.org/TR/WGSL/#limits
     // deno-fmt-ignore
     const veryDeeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2);
 
