@@ -1,16 +1,17 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import OnnxLoader, { createDenseReluNetwork } from '@typegpu/ai';
+import type { NetworkRunner } from '../../../../../../../packages/typegpu-ai/src/schemas';
+import { exampleKMNISTInput } from './KMNIST_example.ts';
 
 const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
 });
 
-const MODEL_PATH = '/TypeGPU/assets/model.onnx';
+const MODEL_PATH = '/TypeGPU/assets/MNISTImageClassifier.onnx';
 const root = await tgpu.init();
-const device = root.device;
 
-let network: ReturnType<typeof createDenseReluNetwork> | undefined;
+let network: NetworkRunner | undefined;
 
 try {
   const loader = await OnnxLoader.fromPath(MODEL_PATH);
@@ -19,26 +20,20 @@ try {
     '[AI Example] Dense network layers:',
     network.layers.map((l) => ({ in: l.inSize, out: l.outSize })),
   );
-  runRandomInference();
+  runExampleInference();
 } catch (err) {}
 
 export const controls = {
-  'Run Random Inference': { onButtonClick: () => void runRandomInference() },
+  'Run KMNIST Example': { onButtonClick: () => void runExampleInference() },
 };
 
-async function runRandomInference() {
+async function runExampleInference() {
   if (!network) return;
   const inSize = network.layers[0].inSize;
-  const input = Float32Array.from(
-    { length: inSize },
-    () => Math.random() * 2 - 1,
-  );
-  const out = await network.run(input);
-  console.log(await network.run(input));
-  console.log(
-    '[AI Example] Output length',
-    out.length,
-    ' sample:',
-    out.slice(0, Math.min(8, out.length)),
-  );
+  if (exampleKMNISTInput.length !== inSize) {
+    console.warn('[AI Example] KMNIST example size mismatch', exampleKMNISTInput.length, '!=', inSize);
+    return;
+  }
+  const out = await network.run(exampleKMNISTInput);
+  console.log('[AI Example] Inference output:', out.slice(0, Math.min(16, out.length)));
 }
