@@ -1,4 +1,5 @@
 import type { TgpuRoot } from 'typegpu';
+import type { OnnxModel, Tensor } from './onnx/types.ts';
 import * as d from 'typegpu/data';
 import { nnCompute } from './compute.ts';
 import {
@@ -11,10 +12,49 @@ import {
 } from './schemas.ts';
 import { identity, relu } from './activationFunctions.ts';
 
+/**
+ * Create a dense (fully-connected) + ReLU network runner.
+ * When given an OnnxModel, we auto-extract layer weights/biases by:
+ *  - Scanning all initializers with dims.length === 2 as weight matrices
+ *  - For each weight tensor W (out x in) locating a unique bias tensor b with dims.length === 1 and dims[0] === out
+ *  - Ordering layers by descending weight element count (heuristic consistent with prior manual example)
+ *  - Maintaining original order heuristic (largest -> smallest) while preventing bias reuse
+ *
+ * Limitations (current simplified implementation):
+ *  - Ignores actual node graph topology; purely pairs weight/bias tensors
+ *  - Assumes weight dims are [out, in]
+ *  - Stops when no unique matching bias is found for a weight
+ */
 export function createDenseReluNetwork(
   root: TgpuRoot,
-  layerSpecs: { weights: Float32Array; biases: Float32Array }[],
+  model: OnnxModel,
 ): NetworkRunner {
+  // Auto-extract from ONNX initializers (assumes only dense + activations relevant)
+  const tensors = model.graph.initializers;
+  const sorted = [...tensors]
+    .filter((t): t is Tensor & { data: Float32Array } =>
+      t.data instanceof Float32Array
+    )
+    .sort((a, b) => b.elementCount - a.elementCount);
+  const usedBiases = new Set<Tensor>();
+  const layerSpecs: { weights: Float32Array; biases: Float32Array }[] = [];
+  for (const w of sorted) {
+    if (w.dims.length !== 2) continue;
+    const outDim = Number(w.dims[0]);
+    const bias = sorted.find((b) =>
+      b !== w && !usedBiases.has(b) && b.dims.length === 1 &&
+      Number(b.dims[0]) === outDim
+    );
+    if (!bias) continue;
+    if (!(bias.data instanceof Float32Array)) continue;
+    layerSpecs.push({ weights: w.data, biases: bias.data });
+    usedBiases.add(bias);
+  }
+  if (layerSpecs.length === 0) {
+    throw new Error(
+      '[typegpu-ai] No dense layers could be inferred from ONNX model (need weight[O,I] & bias[O]).',
+    );
+  }
   const device = root.device;
   const layers: DenseLayerGpu[] = [];
 

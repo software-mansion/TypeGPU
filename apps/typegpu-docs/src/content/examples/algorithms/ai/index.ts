@@ -10,48 +10,16 @@ const MODEL_PATH = '/TypeGPU/assets/model.onnx';
 const root = await tgpu.init();
 const device = root.device;
 
-let loadedModel: Awaited<ReturnType<typeof OnnxLoader.fromPath>> | undefined;
 let network: ReturnType<typeof createDenseReluNetwork> | undefined;
 
 try {
   const loader = await OnnxLoader.fromPath(MODEL_PATH);
-  loadedModel = loader;
-  const tensors = loader.model.graph.initializers;
-  const weights: { weights: Float32Array; biases: Float32Array }[] = [];
-  const sorted = [...tensors].filter((t) => t.data instanceof Float32Array)
-    .sort((a, b) => b.elementCount - a.elementCount);
-  for (const w of sorted) {
-    if (w.dims.length !== 2) continue;
-    const outDim = Number(w.dims[0]);
-    const bias = sorted.find((b) =>
-      b.dims.length === 1 && Number(b.dims[0]) === outDim && b !== w
-    );
-    if (!bias) continue;
-    if (
-      !(w.data instanceof Float32Array) ||
-      !(bias.data instanceof Float32Array)
-    ) continue;
-    // Avoid reusing same bias multiple times
-    if (weights.some((x) => x.biases === bias.data)) continue;
-    weights.push({ weights: w.data, biases: bias.data });
-    if (weights.length === 3) break; // target 3 dense layers
-  }
-  if (weights.length === 3) {
-    network = createDenseReluNetwork(root, weights);
-    console.log(
-      '[AI Example] Network created with layers:',
-      weights.map((l) => ({
-        in: l.weights.length / l.biases.length,
-        out: l.biases.length,
-      })),
-    );
-    runRandomInference();
-  } else {
-    console.warn(
-      '[AI Example] Could not assemble 3 dense layers automatically. Found',
-      weights.length,
-    );
-  }
+  network = createDenseReluNetwork(root, loader.model);
+  console.log(
+    '[AI Example] Dense network layers:',
+    network.layers.map((l) => ({ in: l.inSize, out: l.outSize })),
+  );
+  runRandomInference();
 } catch (err) {}
 
 export const controls = {
