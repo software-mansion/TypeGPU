@@ -44,6 +44,5 @@ export interface DenseLayerGpu {
 
 export interface NetworkRunner {
   run(input: number[] | Float32Array): Promise<number[]>;
-  dispose(): void;
   readonly layers: DenseLayerGpu[];
 }

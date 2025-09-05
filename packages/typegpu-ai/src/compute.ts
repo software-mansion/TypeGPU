@@ -7,7 +7,6 @@ import {
   weightsBiasesLayout,
 } from './schemas.ts';
 import { calculateIndex, workgroupSize } from './schemas.ts';
-import { relu } from './activationFunctions.ts';
 
 export const nnCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],
@@ -18,7 +17,6 @@ export const nnCompute = tgpu['~unstable'].computeFn({
   },
 })(({ gid, nwg, wid }) => {
   const globalIdx = calculateIndex(gid, nwg);
-  const workgroupId = calculateIndex(wid, nwg);
   const i = globalIdx;
 
   const inputSize = ioLayout.$.input.length;

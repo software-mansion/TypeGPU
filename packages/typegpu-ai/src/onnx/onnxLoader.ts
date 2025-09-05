@@ -31,32 +31,6 @@ export class OnnxLoader {
     return loader;
   }
 
-  // Backwards-compatible constructor taking path or buffer (async readiness via ready promise)
-  public readonly ready: Promise<void>;
-  private constructor(
-    pathOrBuffer?: string | Uint8Array,
-    opts?: OnnxLoadOptions,
-  ) {
-    this.ready = (async () => {
-      if (pathOrBuffer !== undefined) {
-        const buf = typeof pathOrBuffer === 'string'
-          ? await fetchOrRead(pathOrBuffer)
-          : pathOrBuffer;
-        this.#decode(buf, opts);
-      }
-    })();
-  }
-
-  // Factory helper for convenience when using `new` is desired.
-  static async load(
-    pathOrBuffer: string | Uint8Array,
-    opts?: OnnxLoadOptions,
-  ): Promise<OnnxLoader> {
-    const inst = new OnnxLoader(pathOrBuffer, opts);
-    await inst.ready;
-    return inst;
-  }
-
   // Decoded model + tensor map
   #model?: OnnxModel;
   #buffer?: Uint8Array;
@@ -86,7 +60,6 @@ export class OnnxLoader {
     return this.model.graph.nodes;
   }
 
-  // Internal decode
   #decode(buffer: Uint8Array, opts?: OnnxLoadOptions): void {
     const options = { ...defaultLoadOptions, ...(opts || {}) };
     const { model } = decodeModel(buffer, options);
