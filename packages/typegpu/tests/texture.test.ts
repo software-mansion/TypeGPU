@@ -231,6 +231,34 @@ Overload 2 of 2, '(schema: "(Error) Texture not usable as storage, call $usage('
       );
   });
 
+  it('rejects invalid formats for storage texture views', ({ root }) => {
+    const texture = root
+      .createTexture({
+        size: [1, 1],
+        format: 'rgba8unorm',
+        viewFormats: ['rgba8unorm-srgb'],
+      }).$usage('storage');
+
+    // @ts-expect-error
+    attest(texture.createView(d.textureStorage2d('rgba8snorm', 'read-only')))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'", viewDescriptor?: (TgpuTextureViewDescriptor & { ...; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'"'.`,
+      );
+
+    // valid
+    texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
+
+    // not a valid storage format
+    attest(
+      // @ts-expect-error
+      d.textureStorage2d('rgba8unorm-srgb', 'read-only'),
+    )
+      .type.errors.snap(
+        "Argument of type '\"rgba8unorm-srgb\"' is not assignable to parameter of type 'StorageTextureFormats'.",
+      );
+  });
+
   describe('Texture view', () => {
     it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({ root }) => {
       const texture1 = root
@@ -261,7 +289,7 @@ Overload 2 of 2, '(schema: "(Error) Texture not usable as storage, call $usage('
           size: [512, 512],
           format: 'rgba8sint',
           dimension: '1d',
-          viewFormats: ['rgba8unorm'],
+          viewFormats: ['rgba8sint'],
         })
         .$usage('sampled');
 

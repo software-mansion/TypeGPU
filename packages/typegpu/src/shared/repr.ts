@@ -164,14 +164,21 @@ export type IsValidStorageFormat<
   TTexture extends TgpuTexture,
   TSchema extends WgslStorageTexture,
 > = TSchema['format'] extends TTexture['props']['format'] ? true
-  : TSchema['format'] extends TTexture['props']['viewFormats'] ? true
-  : {
-    readonly invalidFormat: `Storage texture format '${TSchema[
-      'format'
-    ]}' incompatible with texture format '${TTexture['props'][
-      'format'
-    ]}'`;
-  };
+  : TTexture['props']['viewFormats'] extends readonly unknown[]
+    ? TSchema['format'] extends TTexture['props']['viewFormats'][number] ? true
+    : FormatError<TSchema, TTexture>
+  : FormatError<TSchema, TTexture>;
+
+type FormatError<
+  TSchema extends WgslStorageTexture,
+  TTexture extends TgpuTexture,
+> = {
+  readonly invalidFormat: `Storage texture format '${TSchema[
+    'format'
+  ]}' incompatible with texture format '${TTexture['props'][
+    'format'
+  ]}'`;
+};
 
 type IsExactly<T, U> = [T] extends [U] ? ([U] extends [T] ? true : false)
   : false;
