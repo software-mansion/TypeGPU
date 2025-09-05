@@ -20,6 +20,4 @@ const PRNG_MAP = {
   [PRNG.LCG]: LCG,
 };
 
-export const getPRNG = (prng: PRNG): StatefulGenerator => {
-  return PRNG_MAP[prng];
-};
+export const getPRNG = (prng: PRNG): StatefulGenerator => PRNG_MAP[prng];

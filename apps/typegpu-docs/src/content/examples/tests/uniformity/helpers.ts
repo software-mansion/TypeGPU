@@ -12,8 +12,8 @@ export const preparePipeline = (
   prng: PRNG,
   gridSizeUniform: TgpuUniform<d.F32>,
   canvasRatioUniform: TgpuUniform<d.F32>,
-): TgpuRenderPipeline => {
-  return root['~unstable']
+): TgpuRenderPipeline =>
+  root['~unstable']
     .with(randomGeneratorSlot, getPRNG(prng))
     .withVertex(fullScreenTriangleVertexShader, {})
     .withFragment(
@@ -23,7 +23,6 @@ export const preparePipeline = (
       },
     )
     .createPipeline();
-};
 
 export const executePipeline = (
   pipeline: TgpuRenderPipeline,

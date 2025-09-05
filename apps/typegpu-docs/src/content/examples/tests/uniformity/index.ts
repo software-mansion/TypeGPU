@@ -46,7 +46,7 @@ export const controls = {
   'PRNG': {
     initial: c.initialPRNG,
     options: c.prngs,
-    onSelectChange: async (value: PRNG) => {
+    onSelectChange: (value: PRNG) => {
       prng = value;
       redraw(value);
     },
@@ -54,7 +54,7 @@ export const controls = {
   'Grid Size': {
     initial: c.initialGridSize,
     options: c.gridSizes,
-    onSelectChange: async (value: number) => {
+    onSelectChange: (value: number) => {
       gridSizeUniform.write(value);
       redraw(prng);
     },

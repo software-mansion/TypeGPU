@@ -7,8 +7,8 @@ import { randf } from '@typegpu/noise';
 export const bindFullScreenGridFSWithUniforms = (
   gridSizeUniform: TgpuUniform<d.F32>,
   canvasRatioUniform: TgpuUniform<d.F32>,
-) => {
-  return tgpu['~unstable'].fragmentFn({
+) =>
+  tgpu['~unstable'].fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
   })((input) => {
@@ -19,4 +19,3 @@ export const bindFullScreenGridFSWithUniforms = (
 
     return d.vec4f(d.vec3f(randf.sample()), 1.0);
   });
-};
