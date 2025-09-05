@@ -17,8 +17,6 @@ export type LiteralToExtensionMap = {
   render: RenderFlag;
 };
 
-export type TextureExtensionLiteral = keyof LiteralToExtensionMap;
-
 export type AllowedUsages<TProps extends TextureProps> =
   | 'sampled'
   | 'render'
@@ -45,21 +43,5 @@ export class NotSampledError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotSampledError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotRenderError extends Error {
-  constructor(value: object) {
-    super(
-      `Resource '${
-        getName(value) ?? '<unnamed>'
-      }' cannot be bound as 'render'. Use .$usage('render') to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotRenderError.prototype);
   }
 }

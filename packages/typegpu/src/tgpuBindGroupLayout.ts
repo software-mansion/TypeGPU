@@ -45,6 +45,7 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
+import type { StorageTextureFormats } from './core/texture/textureFormats.ts';
 import type { AnyWgslData, BaseData, F32, I32, U32 } from './data/wgslTypes.ts';
 import { NotUniformError } from './errors.ts';
 import {
@@ -143,27 +144,8 @@ export type TgpuLegacyLayoutTexture<
   multisampled?: boolean;
 };
 
-export type StorageTextureTexelFormat =
-  | 'rgba8unorm'
-  | 'rgba8snorm'
-  | 'rgba8uint'
-  | 'rgba8sint'
-  | 'rgba16uint'
-  | 'rgba16sint'
-  | 'rgba16float'
-  | 'r32uint'
-  | 'r32sint'
-  | 'r32float'
-  | 'rg32uint'
-  | 'rg32sint'
-  | 'rg32float'
-  | 'rgba32uint'
-  | 'rgba32sint'
-  | 'rgba32float'
-  | 'bgra8unorm';
-
 export type TgpuLegacyLayoutStorageTexture<
-  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
+  TFormat extends StorageTextureFormats = StorageTextureFormats,
 > = TgpuLayoutEntryBase & {
   storageTexture: TFormat;
   /** @default 'writeonly' */

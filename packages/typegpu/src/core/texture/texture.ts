@@ -6,18 +6,12 @@ import {
   type WgslTexture,
   type WgslTextureProps,
 } from '../../data/texture.ts';
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
+import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { ValidateTextureViewSchema } from '../../shared/repr.ts';
+import type { ViewDimensionToDimension } from './textureFormats.ts';
 import {
   $getNameForward,
   $gpuValueOf,
@@ -53,7 +47,6 @@ type TextureViewInternals = {
 // Public API
 // ----------
 
-export type ChannelData = U32 | I32 | F32;
 export type TexelData = Vec4u | Vec4i | Vec4f;
 
 type TgpuTextureViewDescriptor = {
@@ -92,29 +85,20 @@ type DefaultViewSchema<T extends TextureProps> = TextureSchemaForDescriptor<{
   multisampled: Default<T['sampleCount'], 1> extends 1 ? false : true;
 }>;
 
-type ViewDimensionToTextureDimension = {
-  '1d': '1d';
-  '2d': '2d';
-  '2d-array': '2d';
-  'cube': '2d';
-  'cube-array': '2d';
-  '3d': '3d';
-};
-
 export type PropsForSchema<T extends WgslTexture | WgslStorageTexture> =
   T extends WgslTexture ? {
       size: readonly number[];
       format: GPUTextureFormat;
-      dimension?: T['dimension'] extends keyof ViewDimensionToTextureDimension
-        ? ViewDimensionToTextureDimension[T['dimension']]
+      dimension?: T['dimension'] extends keyof ViewDimensionToDimension
+        ? ViewDimensionToDimension[T['dimension']]
         : never;
       sampleCount?: T['multisampled'] extends true ? 4 : 1 | undefined;
     }
     : T extends WgslStorageTexture ? {
         size: readonly number[];
         format: T['format'];
-        dimension?: T['dimension'] extends keyof ViewDimensionToTextureDimension
-          ? ViewDimensionToTextureDimension[T['dimension']]
+        dimension?: T['dimension'] extends keyof ViewDimensionToDimension
+          ? ViewDimensionToDimension[T['dimension']]
           : never;
         sampleCount?: 1 | undefined;
       }
@@ -169,21 +153,6 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   destroy(): void;
 }
 
-export type StorageTextureAccess = 'readonly' | 'writeonly' | 'mutable';
-
-export type TextureViewParams<
-  TDimension extends GPUTextureViewDimension | undefined,
-  TFormat extends GPUTextureFormat | undefined,
-> = {
-  format?: TFormat;
-  dimension?: TDimension;
-  aspect?: GPUTextureAspect;
-  baseMipLevel?: number;
-  mipLevelCount?: number;
-  baseArrayLayer?: number;
-  arrayLayerCount?: number;
-};
-
 export interface TgpuTextureView<
   TSchema extends WgslStorageTexture | WgslTexture =
     | WgslStorageTexture
@@ -229,7 +198,6 @@ class TgpuTextureImpl implements TgpuTexture {
   usableAsSampled = false;
   usableAsStorage = false;
   usableAsRender = false;
-  usableAsDepth = false;
 
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;

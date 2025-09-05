@@ -13,6 +13,7 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from './symbols.ts';
+import type { ViewDimensionToDimension } from '../core/texture/textureFormats.ts';
 import type { Default } from './utilityTypes.ts';
 
 /**
@@ -141,22 +142,13 @@ export type IsValidStorageTextureUsage<TTexture extends TgpuTexture> =
         "Texture not usable as storage, call $usage('storage') first";
     };
 
-type TextureViewDimToSubdims = {
-  '1d': '1d';
-  '2d': '2d';
-  '2d-array': '2d';
-  cube: '2d';
-  'cube-array': '2d';
-  '3d': '3d';
-};
-
 /**
  * Validates if a texture view dimension is compatible with the texture dimension
  */
 export type IsValidSubdimension<
   TTexture extends TgpuTexture,
   TSchema extends WgslTexture | WgslStorageTexture,
-> = TextureViewDimToSubdims[
+> = ViewDimensionToDimension[
   TSchema['dimension']
 ] extends infer TVDim
   ? TVDim extends Default<TTexture['props']['dimension'], '2d'> ? true

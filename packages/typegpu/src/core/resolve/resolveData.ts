@@ -11,6 +11,7 @@ import {
   isWgslTexture,
   type WgslExternalTexture,
 } from '../../data/texture.ts';
+
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
@@ -219,14 +220,6 @@ function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
     ? `array<${element}>`
     : `array<${element}, ${disarray.elementCount}>`;
 }
-
-const sampleTypeToWgslType = {
-  float: 'f32',
-  sint: 'i32',
-  uint: 'u32',
-  depth: 'f32',
-  'unfilterable-float': 'f32',
-} as const;
 
 /**
  * Resolves a WGSL data-type schema to a string.

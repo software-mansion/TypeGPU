@@ -1,5 +1,6 @@
 import type { StorageTextureFormats } from '../core/texture/textureFormats.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
+import type { WithDefaults } from '../shared/utilityTypes.ts';
 import { f32 } from './numeric.ts';
 import type { BaseData, PrimitiveNumericData } from './wgslTypes.ts';
 
@@ -16,10 +17,6 @@ export type WgslStorageTextureProps = {
   format: StorageTextureFormats;
   access: GPUStorageTextureAccess;
 };
-
-type WithDefaults<TPartial, TDefaults> =
-  & Omit<TDefaults, keyof TPartial>
-  & TPartial;
 
 type ResolvedTextureProps<
   TProps extends Partial<WgslTextureProps>,

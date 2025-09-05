@@ -1,8 +1,6 @@
 import { f32, i32, u32 } from '../../data/numeric.ts';
 import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
 import type { F32, I32, U32 } from '../../data/wgslTypes.ts';
-import type { Default } from '../../shared/utilityTypes.ts';
-import type { TextureProps } from './textureProps.ts';
 
 export const texelFormatToChannelType = {
   r8unorm: f32,
@@ -110,29 +108,6 @@ export const texelFormatToChannelType = {
 
 export type TexelFormatToChannelType = typeof texelFormatToChannelType;
 
-type TexelFormatToStringChannels = {
-  [Key in keyof TexelFormatToChannelType]:
-    TexelFormatToChannelType[Key]['type'];
-};
-type KeysWithValue<T extends Record<string, unknown>, TValue> = keyof {
-  [Key in keyof T as T[Key] extends TValue ? Key : never]: Key;
-};
-export type ChannelTypeToLegalFormats = {
-  [Key in TexelFormatToChannelType[keyof TexelFormatToChannelType]['type']]:
-    KeysWithValue<
-      TexelFormatToStringChannels,
-      Key
-    >;
-};
-
-export type SampleTypeToStringChannelType = {
-  float: 'f32';
-  'unfilterable-float': 'f32';
-  depth: 'f32';
-  sint: 'i32';
-  uint: 'u32';
-};
-
 export type ViewDimensionToDimension = {
   '1d': '1d';
   '2d': '2d';
@@ -239,44 +214,4 @@ export const texelFormatToDataType = {
   'depth32float-stencil8': vec4f,
 } as const;
 
-export const depthTextureFormats = [
-  'depth16unorm',
-  'depth24plus',
-  'depth32float',
-  'depth32float-stencil8',
-  'depth24plus-stencil8',
-] as const;
-
-export const channelKindToFormat = {
-  f32: 'float',
-  u32: 'uint',
-  i32: 'sint',
-} as const;
-
-export const channelFormatToSchema = {
-  float: f32,
-  'unfilterable-float': f32,
-  uint: u32,
-  sint: i32,
-  depth: f32,
-};
-export type ChannelFormatToSchema = typeof channelFormatToSchema;
-
 export type TexelFormatToDataType = typeof texelFormatToDataType;
-export type TexelFormatToDataTypeOrNever<T> = T extends
-  keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;
-
-/**
- * Represents what formats a storage view can choose from based on its owner texture's props.
- */
-export type StorageFormatOptions<TProps extends TextureProps> = Extract<
-  TProps['format'] | Default<TProps['viewFormats'], []>[number],
-  StorageTextureFormats
->;
-
-/**
- * Represents what formats a sampled view can choose from based on its owner texture's props.
- */
-export type SampledFormatOptions<TProps extends TextureProps> =
-  | TProps['format']
-  | Default<TProps['viewFormats'], []>[number];
