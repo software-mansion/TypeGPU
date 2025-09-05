@@ -1,17 +1,18 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import type {
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
   TgpuTexture,
-  TgpuWriteonlyTexture,
+  TgpuTextureView,
 } from '../src/core/texture/texture.ts';
-import type { Render, Sampled } from '../src/core/texture/usageExtension.ts';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data/index.ts';
+import type {
+  RenderFlag,
+  SampledFlag,
+} from '../src/core/texture/usageExtension.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
+import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
+import { attest } from '@ark/attest';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -146,7 +147,7 @@ describe('TgpuTexture', () => {
       .$usage('sampled');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledFlag
     >();
   });
 
@@ -159,7 +160,9 @@ describe('TgpuTexture', () => {
       .$usage('sampled', 'render');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled & Render
+      & TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
+      & SampledFlag
+      & RenderFlag
     >();
   });
 
@@ -185,11 +188,11 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     };
 
-    const sampled1 = texture.createView('sampled');
-    const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
+    const sampled1 = texture.createView(d.texture2d(d.i32));
+    const sampled2 = texture.createView(d.texture2dArray(d.f32));
 
     expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
-      'texture_2d<f32>',
+      'texture_2d<i32>',
     );
 
     expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
@@ -204,166 +207,107 @@ describe('TgpuTexture', () => {
     });
 
     // @ts-expect-error
-    const getSampled = () => texture.createView('sampled');
+    attest(texture.createView(d.texture2d(d.f32)))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as sampled, call $usage('sampled') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: "float" | "unfilterable-float"; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.`,
+      );
+
     // @ts-expect-error
-    const getReadonly = () => texture.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly = () => texture.createView('writeonly');
-    // @ts-expect-error
-    const getMutable = () => texture.createView('mutable');
+    attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as storage, call $usage('storage') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as storage, call $usage('storage') first"'.`,
+      );
 
     const texture2 = texture.$usage('sampled');
 
-    const getSampled2 = () => texture2.createView('sampled');
+    texture2.createView(d.texture2d(d.f32));
+
     // @ts-expect-error
-    const getReadonly2 = () => texture2.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly2 = () => texture2.createView('writeonly');
-    // @ts-expect-error
-    const getMutable2 = () => texture2.createView('mutable');
-  });
-});
-
-describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'2d', Vec4f>
-    >();
-
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'3d', Vec4u>
-    >();
-
-    expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'3d', Vec4u>
-    >();
-
-    expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'3d', Vec4u>
-    >();
-
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'1d', Vec4i>
-    >();
-
-    expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'1d', Vec4i>
-    >();
-
-    expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'1d', Vec4i>
-    >();
+    attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        'Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+      );
   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
+  it('rejects invalid formats for storage texture views', ({ root }) => {
     const texture = root
       .createTexture({
-        size: [512, 512],
+        size: [1, 1],
         format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('storage');
+        viewFormats: ['rgba8unorm-srgb'],
+      }).$usage('storage');
 
-    texture.createView('readonly', {
+    // @ts-expect-error
+    attest(texture.createView(d.textureStorage2d('rgba8snorm', 'read-only')))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'", viewDescriptor?: (TgpuTextureViewDescriptor & { ...; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'"'.`,
+      );
+
+    // valid
+    texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
+
+    // not a valid storage format
+    attest(
       // @ts-expect-error
-      format: 'rgba8snorm',
-    });
-
-    texture.createView('writeonly', {
-      // @ts-expect-error
-      format: 'rg32uint',
-    });
-
-    texture.createView('mutable', {
-      // @ts-expect-error
-      format: 'rgba32float',
-    });
-  });
-});
-
-describe('TgpuSampledTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'2d', F32>
-    >();
-
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'3d', U32>
-    >();
-
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'1d', I32>
-    >();
+      d.textureStorage2d('rgba8unorm-srgb', 'read-only'),
+    )
+      .type.errors.snap(
+        "Argument of type '\"rgba8unorm-srgb\"' is not assignable to parameter of type 'StorageTextureFormats'.",
+      );
   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
-    const texture = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('sampled');
+  describe('Texture view', () => {
+    it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({ root }) => {
+      const texture1 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled');
 
-    texture.createView('sampled', {
+      expectTypeOf(texture1.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture2d<d.F32>>
+      >();
+
+      const texture2 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8uint',
+          dimension: '3d',
+        })
+        .$usage('sampled');
+
+      expectTypeOf(texture2.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture3d<d.U32>>
+      >();
+
+      const texture3 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8sint',
+          dimension: '1d',
+          viewFormats: ['rgba8sint'],
+        })
+        .$usage('sampled');
+
+      expectTypeOf(texture3.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture1d<d.I32>>
+      >();
+
+      const texture4 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('storage');
+
       // @ts-expect-error
-      format: 'rgba8snorm',
+      attest(texture4.createView()).type.errors.snap(
+        'Expected 1-2 arguments, but got 0.',
+      );
     });
   });
 });

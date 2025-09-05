@@ -1,18 +1,22 @@
-import type { AnyData } from '../../data/dataTypes.ts';
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
-import { invariant } from '../../errors.ts';
+import {
+  isWgslStorageTexture,
+  textureDescriptorToSchema,
+  type TextureSchemaForDescriptor,
+  type WgslStorageTexture,
+  type WgslTexture,
+  type WgslTextureProps,
+} from '../../data/texture.ts';
+import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import type { ValidateTextureViewSchema } from '../../shared/repr.ts';
+import type { ViewDimensionToDimension } from './textureFormats.ts';
 import {
   $getNameForward,
+  $gpuValueOf,
   $internal,
+  $repr,
   $runtimeResource,
   $wgslDataType,
 } from '../../shared/symbols.ts';
@@ -23,53 +27,96 @@ import type {
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
 import {
-  channelFormatToSchema,
-  channelKindToFormat,
-  depthTextureFormats,
-  type SampledFormatOptions,
-  type StorageFormatOptions,
-  type StorageTextureTexelFormat,
   type TexelFormatToChannelType,
   texelFormatToChannelType,
-  type TexelFormatToDataType,
-  texelFormatToDataType,
-  type TexelFormatToDataTypeOrNever,
 } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
 
-type ResolveStorageDimension<
-  TDimension extends GPUTextureViewDimension,
-  TProps extends TextureProps,
-> = StorageTextureDimension extends TDimension
-  ? Default<TProps['dimension'], '2d'>
-  : TDimension extends StorageTextureDimension ? TDimension
-  : '2d';
-
-type ViewUsages<
-  TProps extends TextureProps,
-  TTexture extends TgpuTexture<TProps>,
-> = boolean extends TTexture['usableAsSampled']
-  ? boolean extends TTexture['usableAsStorage'] ? never
-  : 'readonly' | 'writeonly' | 'mutable'
-  : boolean extends TTexture['usableAsStorage'] ? 'sampled'
-  : 'readonly' | 'writeonly' | 'mutable' | 'sampled';
-
-interface TextureInternals {
+type TextureInternals = {
   unwrap(): GPUTexture;
-}
+};
 
-interface TextureViewInternals {
-  readonly unwrap?: (() => GPUTextureView) | undefined;
-}
+type TextureViewInternals = {
+  readonly unwrap: (() => GPUTextureView) | undefined;
+};
 
 // ----------
 // Public API
 // ----------
 
-export type ChannelData = U32 | I32 | F32;
 export type TexelData = Vec4u | Vec4i | Vec4f;
+
+type TgpuTextureViewDescriptor = {
+  /**
+   * Which {@link GPUTextureAspect | aspect(s)} of the texture are accessible to the texture view.
+   */
+  aspect?: GPUTextureAspect;
+  /**
+   * The first (most detailed) mipmap level accessible to the texture view.
+   */
+  baseMipLevel?: GPUIntegerCoordinate;
+  /**
+   * How many mipmap levels, starting with {@link GPUTextureViewDescriptor#baseMipLevel}, are accessible to
+   * the texture view.
+   */
+  mipLevelCount?: GPUIntegerCoordinate;
+  /**
+   * The index of the first array layer accessible to the texture view.
+   */
+  baseArrayLayer?: GPUIntegerCoordinate;
+  /**
+   * How many array layers, starting with {@link GPUTextureViewDescriptor#baseArrayLayer}, are accessible
+   * to the texture view.
+   */
+  arrayLayerCount?: GPUIntegerCoordinate;
+  /**
+   * The format of the texture view. Must be either the {@link GPUTextureDescriptor#format} of the
+   * texture or one of the {@link GPUTextureDescriptor#viewFormats} specified during its creation.
+   */
+  format?: GPUTextureFormat;
+};
+
+type DefaultViewSchema<T extends TextureProps> = TextureSchemaForDescriptor<{
+  dimension: Default<T['dimension'], '2d'>;
+  sampleType: TexelFormatToChannelType[T['format']];
+  multisampled: Default<T['sampleCount'], 1> extends 1 ? false : true;
+}>;
+
+export type PropsForSchema<T extends WgslTexture | WgslStorageTexture> =
+  T extends WgslTexture ? {
+      size: readonly number[];
+      format: GPUTextureFormat;
+      dimension?: T['dimension'] extends keyof ViewDimensionToDimension
+        ? ViewDimensionToDimension[T['dimension']]
+        : never;
+      sampleCount?: T['multisampled'] extends true ? 4 : 1 | undefined;
+    }
+    : T extends WgslStorageTexture ? {
+        size: readonly number[];
+        format: T['format'];
+        dimension?: T['dimension'] extends keyof ViewDimensionToDimension
+          ? ViewDimensionToDimension[T['dimension']]
+          : never;
+        sampleCount?: 1 | undefined;
+      }
+    : never;
+
+function getDescriptorForProps<T extends TextureProps>(
+  props: T,
+): WgslTextureProps {
+  return {
+    dimension: (props.dimension ?? '2d') as Default<T['dimension'], '2d'>,
+    sampleType: texelFormatToChannelType[props.format],
+    multisampled: !((props.sampleCount ?? 1) === 1) as Default<
+      T['sampleCount'],
+      1
+    > extends 1 ? false
+      : true,
+  };
+}
 
 /**
  * @param TProps all properties that distinguish this texture apart from other textures on the type level.
@@ -89,142 +136,35 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
 
-  createView<
-    TUsage extends ViewUsages<TProps, this>,
-    TDimension extends 'sampled' extends TUsage ? GPUTextureViewDimension
-      : StorageTextureDimension,
-    TFormat extends 'sampled' extends TUsage ? SampledFormatOptions<TProps>
-      : StorageFormatOptions<TProps>,
-  >(
-    access: TUsage,
-    params?: TextureViewParams<TDimension, TFormat>,
-  ): {
-    mutable: TgpuMutableTexture<
-      ResolveStorageDimension<TDimension, TProps>,
-      TexelFormatToDataTypeOrNever<
-        StorageFormatOptions<TProps> extends TFormat ? TProps['format']
-          : TFormat
-      >
-    >;
-    readonly: TgpuReadonlyTexture<
-      ResolveStorageDimension<TDimension, TProps>,
-      TexelFormatToDataTypeOrNever<
-        StorageFormatOptions<TProps> extends TFormat ? TProps['format']
-          : TFormat
-      >
-    >;
-    writeonly: TgpuWriteonlyTexture<
-      ResolveStorageDimension<TDimension, TProps>,
-      TexelFormatToDataTypeOrNever<
-        StorageFormatOptions<TProps> extends TFormat ? TProps['format']
-          : TFormat
-      >
-    >;
-    sampled: TgpuSampledTexture<
-      GPUTextureViewDimension extends TDimension
-        ? Default<TProps['dimension'], '2d'>
-        : TDimension,
-      TexelFormatToChannelType[
-        SampledFormatOptions<TProps> extends TFormat ? TProps['format']
-          : TFormat
-      ]
-    >;
-  }[TUsage];
+  createView(
+    ...args: this['usableAsSampled'] extends true ? []
+      : [ValidateTextureViewSchema<this, WgslTexture>]
+  ): TgpuTextureView<DefaultViewSchema<TProps>>;
+  createView<T extends WgslTexture | WgslStorageTexture>(
+    schema: ValidateTextureViewSchema<this, T>,
+    viewDescriptor?: TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture
+        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
+        : never
+        : never;
+    },
+  ): TgpuTextureView<T>;
 
   destroy(): void;
 }
 
-export type StorageTextureAccess = 'readonly' | 'writeonly' | 'mutable';
-
-/**
- * Based on @see GPUTextureViewDimension
- * https://www.w3.org/TR/WGSL/#texture-depth
- */
-export type StorageTextureDimension =
-  | '1d'
-  | '2d'
-  | '2d-array'
-  // | 'cube' <- not supported by storage textures
-  // | 'cube-array' <- not supported by storage textures
-  | '3d';
-
-export type TextureViewParams<
-  TDimension extends GPUTextureViewDimension | undefined,
-  TFormat extends GPUTextureFormat | undefined,
-> = {
-  format?: TFormat;
-  dimension?: TDimension;
-  aspect?: GPUTextureAspect;
-  baseMipLevel?: number;
-  mipLevelCount?: number;
-  baseArrayLayer?: number;
-  arrayLayerCount?: number;
-};
-
-export interface TgpuStorageTexture<
-  TDimension extends StorageTextureDimension = StorageTextureDimension,
-  TData extends TexelData = TexelData,
+export interface TgpuTextureView<
+  TSchema extends WgslStorageTexture | WgslTexture =
+    | WgslStorageTexture
+    | WgslTexture,
 > {
   readonly [$internal]: TextureViewInternals;
-  readonly resourceType: 'texture-storage-view';
-  readonly dimension: TDimension;
-  readonly texelDataType: TData;
-  readonly access: StorageTextureAccess;
-}
+  readonly resourceType: 'texture-view';
+  readonly schema: TSchema;
 
-/**
- * A texture accessed as "readonly" storage on the GPU.
- */
-export interface TgpuReadonlyTexture<
-  TDimension extends StorageTextureDimension = StorageTextureDimension,
-  TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData> {
-  readonly access: 'readonly';
-}
-
-/**
- * A texture accessed as "writeonly" storage on the GPU.
- */
-export interface TgpuWriteonlyTexture<
-  TDimension extends StorageTextureDimension = StorageTextureDimension,
-  TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData> {
-  readonly access: 'writeonly';
-}
-
-/**
- * A texture accessed as "mutable" (or read_write) storage on the GPU.
- */
-export interface TgpuMutableTexture<
-  TDimension extends StorageTextureDimension = StorageTextureDimension,
-  TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData> {
-  readonly access: 'mutable';
-}
-
-/**
- * A texture accessed as sampled on the GPU.
- */
-export interface TgpuSampledTexture<
-  TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
-  TData extends ChannelData = ChannelData,
-> {
-  readonly [$internal]: TextureViewInternals;
-  readonly resourceType: 'texture-sampled-view';
-  readonly dimension: TDimension;
-  readonly channelDataType: TData;
-}
-
-/**
- * A texture accessed as depth on the GPU.
- */
-export interface TgpuDepthTexture<
-  TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
-> {
-  readonly [$internal]: TextureViewInternals;
-  readonly resourceType: 'texture-depth-view';
-  readonly dimension: TDimension;
-  readonly channelDataType: F32;
+  [$gpuValueOf](ctx: ResolutionCtx): TSchema;
+  value: TSchema;
+  $: TSchema;
 }
 
 export function INTERNAL_createTexture(
@@ -240,78 +180,47 @@ export function isTexture<T extends TgpuTexture>(
   return (value as T)?.resourceType === 'texture' && !!(value as T)[$internal];
 }
 
-export function isStorageTextureView<
-  T extends TgpuReadonlyTexture | TgpuWriteonlyTexture | TgpuMutableTexture,
->(value: unknown | T): value is T {
-  return (
-    (value as T)?.resourceType === 'texture-storage-view' &&
-    !!(value as T)[$internal]
-  );
-}
-
-export function isSampledTextureView<T extends TgpuSampledTexture>(
+export function isTextureView<T extends TgpuTextureView>(
   value: unknown | T,
 ): value is T {
   return (
-    (value as T)?.resourceType === 'texture-sampled-view' &&
-    !!(value as T)[$internal]
+    (value as T)?.resourceType === 'texture-view' && !!(value as T)[$internal]
   );
 }
-
-export function isDepthTextureView<T extends TgpuDepthTexture>(
-  value: unknown | T,
-): value is T {
-  return (
-    (value as T)?.resourceType === 'texture-depth-view' &&
-    !!(value as T)[$internal]
-  );
-}
-
-export type TgpuAnyTextureView =
-  | TgpuReadonlyTexture
-  | TgpuWriteonlyTexture
-  | TgpuMutableTexture
-  | TgpuSampledTexture
-  | TgpuDepthTexture;
 
 // --------------
 // Implementation
 // --------------
 
-const accessMap = {
-  mutable: 'read_write',
-  readonly: 'read',
-  writeonly: 'write',
-} as const;
-
 class TgpuTextureImpl implements TgpuTexture {
-  public readonly [$internal]: TextureInternals;
-  public readonly resourceType = 'texture';
-  public usableAsSampled = false;
-  public usableAsStorage = false;
-  public usableAsRender = false;
-  public usableAsDepth = false;
+  readonly [$internal]: TextureInternals;
+  readonly resourceType = 'texture';
+  usableAsSampled = false;
+  usableAsStorage = false;
+  usableAsRender = false;
 
-  private _destroyed = false;
-  private _flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
-  private _texture: GPUTexture | null = null;
+  #destroyed = false;
+  #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
+  #texture: GPUTexture | null = null;
+  #branch: ExperimentalTgpuRoot;
 
   constructor(
     public readonly props: TextureProps,
-    private readonly _branch: ExperimentalTgpuRoot,
+    branch: ExperimentalTgpuRoot,
   ) {
+    this.#branch = branch;
     this[$internal] = {
       unwrap: () => {
-        if (this._destroyed) {
+        if (this.#destroyed) {
           throw new Error('This texture has been destroyed');
         }
 
-        if (!this._texture) {
-          this._texture = this._branch.device.createTexture({
+        if (!this.#texture) {
+          this.#texture = this.#branch.device.createTexture({
             label: getName(this) ?? '<unnamed>',
             format: this.props.format,
             size: this.props.size,
-            usage: this._flags,
+            usage: this.#flags,
             dimension: this.props.dimension ?? '2d',
             viewFormats: this.props.viewFormats ?? [],
             mipLevelCount: this.props.mipLevelCount ?? 1,
@@ -319,7 +228,7 @@ class TgpuTextureImpl implements TgpuTexture {
           });
         }
 
-        return this._texture;
+        return this.#texture;
       },
     };
   }
@@ -335,9 +244,9 @@ class TgpuTextureImpl implements TgpuTexture {
     const hasStorage = usages.includes('storage');
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
-    this._flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
-    this._flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
-    this._flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
+    this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
+    this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
+    this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
     this.usableAsStorage ||= hasStorage;
     this.usableAsSampled ||= hasSampled;
     this.usableAsRender ||= hasRender;
@@ -346,354 +255,217 @@ class TgpuTextureImpl implements TgpuTexture {
   }
 
   createView(
-    access: 'mutable' | 'readonly' | 'writeonly' | 'sampled',
-    params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
-  ) {
-    if (access === 'sampled') {
-      return this._asSampled(params);
-    }
-
-    const storageParams = params as TextureViewParams<
-      StorageTextureDimension,
-      StorageTextureTexelFormat
-    >;
-
-    switch (access) {
-      case 'mutable':
-        return this._asMutable(storageParams);
-      case 'readonly':
-        return this._asReadonly(storageParams);
-      case 'writeonly':
-        return this._asWriteonly(storageParams);
-    }
+    ...args: this['usableAsSampled'] extends true ? [] : [never]
+  ): TgpuTextureView<DefaultViewSchema<TextureProps>>;
+  createView<T extends WgslTexture | WgslStorageTexture>(
+    schema: never,
+    viewDescriptor?: TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture
+        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
+        : never
+        : never;
+    },
+  ): TgpuTextureView<T>;
+  createView<T extends WgslTexture | WgslStorageTexture>(
+    schema?: never,
+    viewDescriptor?: TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture
+        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
+        : never
+        : never;
+    },
+  ): TgpuTextureView<T> {
+    return new TgpuFixedTextureViewImpl(
+      schema ??
+        (textureDescriptorToSchema(getDescriptorForProps(this.props)) as T),
+      this,
+      viewDescriptor,
+    );
   }
 
-  private _asStorage(
-    params:
-      | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
-      | undefined,
-    access: StorageTextureAccess,
-  ): TgpuFixedStorageTextureImpl {
-    if (!this.usableAsStorage) {
-      throw new Error('Unusable as storage');
-    }
-
-    const format = params?.format ?? this.props.format;
-    const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
-    invariant(!!type, `Unsupported storage texture format: ${format}`);
-
-    return new TgpuFixedStorageTextureImpl(params ?? {}, access, this);
-  }
-
-  private _asReadonly(
-    params?: TextureViewParams<
-      StorageTextureDimension,
-      StorageTextureTexelFormat
-    >,
-  ) {
-    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    return this._asStorage(params, 'readonly') as any;
-  }
-
-  private _asWriteonly(
-    params?: TextureViewParams<
-      StorageTextureDimension,
-      StorageTextureTexelFormat
-    >,
-  ) {
-    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    return this._asStorage(params, 'writeonly') as any;
-  }
-
-  private _asMutable(
-    params?: TextureViewParams<
-      StorageTextureDimension,
-      StorageTextureTexelFormat
-    >,
-  ) {
-    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    return this._asStorage(params, 'mutable') as any;
-  }
-
-  private _asSampled(
-    params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
-    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-  ): any {
-    if (!this.usableAsSampled) {
-      throw new Error('Unusable as sampled');
-    }
-
-    const format = params?.format ?? this.props.format;
-    const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
-
-    if (!type) {
-      throw new Error(`Unsupported sampled texture format: ${format}`);
-    }
-
-    return new TgpuFixedSampledTextureImpl(params, this);
-  }
-
-  destroy() {
-    if (this._destroyed) {
-      return;
-    }
-    this._destroyed = true;
-    this._texture?.destroy();
-  }
+  destroy() {}
 }
 
-const dimensionToCodeMap = {
-  '1d': '1d',
-  '2d': '2d',
-  '2d-array': '2d_array',
-  cube: 'cube',
-  'cube-array': 'cube_array',
-  '3d': '3d',
-} satisfies Record<GPUTextureViewDimension, string>;
-
-class TgpuFixedStorageTextureImpl
-  implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
-  readonly [$runtimeResource] = true;
-  readonly [$wgslDataType]: AnyData;
+class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
+  implements TgpuTextureView<T>, SelfResolvable {
   readonly [$internal]: TextureViewInternals;
-  readonly [$getNameForward]: TgpuTexture<TextureProps>;
-  readonly resourceType = 'texture-storage-view';
-  readonly texelDataType: TexelData;
-  readonly dimension: StorageTextureDimension;
+  readonly [$runtimeResource] = true;
+  readonly [$getNameForward]: TgpuTexture;
+  readonly [$repr]: T = undefined as unknown as T;
 
-  private _view: GPUTextureView | undefined;
-  private readonly _format: StorageTextureTexelFormat;
+  readonly resourceType = 'texture-view';
+  readonly schema: T;
+
+  #baseTexture: TgpuTexture;
+  #view: GPUTextureView | undefined;
+  #descriptor:
+    | (TgpuTextureViewDescriptor & {
+      sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float'
+        : never;
+    })
+    | undefined;
 
   constructor(
-    props:
-      | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
-      | undefined,
-    public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture,
+    schema: T,
+    baseTexture: TgpuTexture,
+    descriptor?: TgpuTextureViewDescriptor,
   ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
+    this.schema = schema;
+    this.#baseTexture = baseTexture;
+    this.#descriptor = descriptor;
+
     this[$internal] = {
       unwrap: () => {
-        if (!this._view) {
-          this._view = this._texture[$internal].unwrap().createView({
-            label: `${getName(this) ?? '<unnamed>'} - View`,
-            format: this._format,
-            dimension: this.dimension,
-          });
-        }
+        if (!this.#view) {
+          const schema = this.schema;
+          let descriptor: GPUTextureViewDescriptor;
+          if (isWgslStorageTexture(schema)) {
+            descriptor = {
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ?? schema.format,
+              dimension: schema.dimension,
+            };
+          } else {
+            descriptor = {
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ??
+                this.#baseTexture.props.format,
+              dimension: schema.dimension,
+            };
+          }
 
-        return this._view;
+          if (this.#descriptor?.mipLevelCount !== undefined) {
+            descriptor.mipLevelCount = this.#descriptor.mipLevelCount;
+          }
+          if (this.#descriptor?.arrayLayerCount !== undefined) {
+            descriptor.arrayLayerCount = this.#descriptor.arrayLayerCount;
+          }
+
+          this.#view = this.#baseTexture[$internal]
+            .unwrap()
+            .createView(descriptor);
+        }
+        return this.#view;
       },
     };
-    this[$getNameForward] = _texture;
-
-    this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
-    this._format = props?.format ??
-      (_texture.props.format as StorageTextureTexelFormat);
-    this.texelDataType = texelFormatToDataType[this._format];
+    this[$getNameForward] = baseTexture;
   }
 
-  $name(label: string): this {
-    this._texture.$name(label);
-    return this;
+  [$gpuValueOf](): T {
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.schema,
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as unknown as T;
+  }
+
+  get $(): T {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      'Direct access to texture view values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): T {
+    return this.$;
+  }
+
+  toString() {
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
-      {
-        storageTexture: this._format,
-        access: this.access,
-        viewDimension: this.dimension,
-      },
-      this,
-    );
-    const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${
-        accessMap[this.access]
-      }>;`,
-    );
-
-    return id;
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-}
-
-export class TgpuLaidOutStorageTextureImpl
-  implements TgpuStorageTexture, SelfResolvable {
-  readonly [$runtimeResource] = true;
-  readonly [$wgslDataType]: AnyData;
-  readonly [$internal]: TextureViewInternals;
-  readonly resourceType = 'texture-storage-view';
-  readonly texelDataType: TexelData;
-
-  constructor(
-    private readonly _format: StorageTextureTexelFormat,
-    public readonly dimension: StorageTextureDimension,
-    public readonly access: StorageTextureAccess,
-    private readonly _membership: LayoutMembership,
-  ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
-    this[$internal] = {};
-    this.texelDataType = texelFormatToDataType[this._format];
-    setName(this, _membership.key);
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
-    const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${this._format}, ${
-        accessMap[this.access]
-      }>;`,
-    );
-
-    return id;
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-}
-
-class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, SelfResolvable, TgpuNamable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly [$getNameForward]: TgpuTexture<TextureProps>;
-  public readonly resourceType = 'texture-sampled-view';
-  public readonly channelDataType: ChannelData;
-  public readonly dimension: GPUTextureViewDimension;
-
-  private _format: GPUTextureFormat;
-  private _view: GPUTextureView | undefined;
-
-  constructor(
-    private readonly _props:
-      | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
-      | undefined,
-    private readonly _texture: TgpuTexture,
-  ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
-    this[$internal] = {
-      unwrap: () => {
-        if (!this._view) {
-          this._view = this._texture[$internal].unwrap().createView({
-            label: `${getName(this) ?? '<unnamed>'} - View`,
-            ...this._props,
-          });
+      isWgslStorageTexture(this.schema)
+        ? {
+          storageTexture: this.schema,
         }
-
-        return this._view;
-      },
-    };
-    this[$getNameForward] = _texture;
-    this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
-    this._format = _props?.format ??
-      (_texture.props.format as GPUTextureFormat);
-    this.channelDataType = texelFormatToChannelType[this._format];
-  }
-
-  $name(label: string): this {
-    this._texture.$name(label);
-    return this;
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
-
-    const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
-    const { group, binding } = ctx.allocateFixedEntry(
-      {
-        texture: channelKindToFormat[this.channelDataType.type],
-        viewDimension: this.dimension,
-        multisampled,
-      },
+        : {
+          texture: this.schema,
+          sampleType: this.#descriptor?.sampleType ??
+            this.schema.bindingSampleType[0],
+        },
       this,
     );
 
-    const type = multisampled
-      ? 'texture_multisampled_2d'
-      : this._format in depthTextureFormats
-      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
-      : `texture_${dimensionToCodeMap[this.dimension]}`;
-
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${
-        ctx.resolve(this.channelDataType)
-      }>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${
+        ctx.resolve(this.schema)
+      };`,
     );
 
     return id;
   }
+}
+
+export class TgpuLaidOutTextureViewImpl<
+  T extends WgslTexture | WgslStorageTexture,
+> implements TgpuTextureView<T>, SelfResolvable {
+  readonly [$internal] = { unwrap: undefined };
+  readonly [$runtimeResource] = true;
+  readonly [$repr]: T = undefined as unknown as T;
+
+  readonly resourceType = 'texture-view';
+  readonly schema: T;
+
+  constructor(
+    schema: T,
+    private readonly _membership: LayoutMembership,
+  ) {
+    this.schema = schema;
+    setName(this, _membership.key);
+  }
 
   toString() {
     return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-}
-
-export class TgpuLaidOutSampledTextureImpl
-  implements TgpuSampledTexture, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
-  public readonly [$internal]: TextureViewInternals;
-  public readonly resourceType = 'texture-sampled-view';
-  public readonly channelDataType: ChannelData;
-
-  constructor(
-    private readonly sampleType: GPUTextureSampleType,
-    public readonly dimension: GPUTextureViewDimension,
-    private readonly _multisampled: boolean,
-    private readonly _membership: LayoutMembership,
-  ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
-    this[$internal] = {};
-    setName(this, _membership.key);
-    this.channelDataType = channelFormatToSchema[sampleType];
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
-    const type = this._multisampled
-      ? 'texture_multisampled_2d'
-      : this.sampleType === 'depth'
-      ? `texture_depth_${dimensionToCodeMap[this.dimension]}`
-      : `texture_${dimensionToCodeMap[this.dimension]}`;
-
-    if (this.sampleType === 'depth') {
-      ctx.addDeclaration(
-        `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type};`,
-      );
-
-      return id;
-    }
-
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${
-        ctx.resolve(this.channelDataType)
-      }>;`,
+      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${
+        ctx.resolve(this.schema)
+      };`,
     );
 
     return id;
   }
 
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+  [$gpuValueOf](): T {
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$runtimeResource]: true,
+        [$wgslDataType]: this.schema,
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as unknown as T;
+  }
+
+  get $(): T {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf]();
+    }
+
+    throw new Error(
+      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): T {
+    return this.$;
   }
 }

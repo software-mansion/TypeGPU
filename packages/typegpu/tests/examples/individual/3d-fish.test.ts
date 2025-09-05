@@ -289,16 +289,11 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(1) var modelTexture_38: texture_2d<f32>;
+      @group(0) @binding(1) var modelTexture_37: texture_2d<f32>;
 
-      @group(0) @binding(3) var sampler_39: sampler;
+      @group(0) @binding(3) var sampler_38: sampler;
 
-      fn sampleTexture_37(uv: vec2f) -> vec4f{
-        return textureSample(modelTexture_38, sampler_39, uv);
-      }
-
-
-      fn rgbToHsv_40(rgb: vec3f) -> vec3f {
+      fn rgbToHsv_39(rgb: vec3f) -> vec3f {
         var r = rgb.x;
         var g = rgb.y;
         var b = rgb.z;
@@ -345,7 +340,7 @@ describe('3d fish example', () => {
         return vec3f(h, s, v);
       }
 
-      fn hsvToRgb_41(hsv: vec3f) -> vec3f {
+      fn hsvToRgb_40(hsv: vec3f) -> vec3f {
         var h = hsv.x;
         var s = hsv.y;
         var v = hsv.z;
@@ -399,7 +394,7 @@ describe('3d fish example', () => {
       }
 
       @fragment fn fragmentShader_35(input: fragmentShader_Input_36) -> @location(0) vec4f {
-        var textureColorWithAlpha = sampleTexture_37(input.textureUV);
+        var textureColorWithAlpha = textureSample(modelTexture_37, sampler_38, input.textureUV);
         var textureColor = textureColorWithAlpha.xyz;
         var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
@@ -413,11 +408,11 @@ describe('3d fish example', () => {
         var desaturatedColor = lightedColor;
         if ((input.applySeaDesaturation == 1)) {
           var desaturationFactor = (-atan2(((distanceFromCamera - 5) / 10f), 1) / 3f);
-          var hsv = rgbToHsv_40(desaturatedColor);
+          var hsv = rgbToHsv_39(desaturatedColor);
           hsv.y += (desaturationFactor / 2f);
           hsv.z += desaturationFactor;
           hsv.x += ((input.variant - 0.5) * 0.2);
-          desaturatedColor = hsvToRgb_41(hsv);
+          desaturatedColor = hsvToRgb_40(hsv);
         }
         var foggedColor = desaturatedColor;
         if ((input.applySeaFog == 1)) {

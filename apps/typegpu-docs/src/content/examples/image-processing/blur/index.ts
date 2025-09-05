@@ -19,12 +19,14 @@ const uniformLayout = tgpu.bindGroupLayout({
 
 const ioLayout = tgpu.bindGroupLayout({
   flip: { uniform: d.u32 },
-  inTexture: { texture: 'float' },
-  outTexture: { storageTexture: 'rgba8unorm' },
+  inTexture: { texture: d.texture2d(d.f32) },
+  outTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
 });
 
 const renderLayout = tgpu.bindGroupLayout({
-  texture: { texture: 'float' },
+  texture: { texture: d.texture2d(d.f32) },
   sampling: { sampler: 'filtering' },
 });
 

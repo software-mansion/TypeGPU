@@ -8,7 +8,7 @@ import {
   filteringSamplerSlot,
   lightSourceAccess,
   renderBindGroupLayout as renderLayout,
-  skyBoxSlot,
+  skyBoxAccess,
   VertexInput,
   VertexOutput,
 } from './schemas.ts';
@@ -41,7 +41,7 @@ export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) =>
   std.textureSample(
-    skyBoxSlot.$,
+    skyBoxAccess.$,
     filteringSamplerSlot.$,
     std.normalize(input.texCoord),
   )

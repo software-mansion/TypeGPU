@@ -1,8 +1,6 @@
 import { f32, i32, u32 } from '../../data/numeric.ts';
 import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
 import type { F32, I32, U32 } from '../../data/wgslTypes.ts';
-import type { Default } from '../../shared/utilityTypes.ts';
-import type { TextureProps } from './textureProps.ts';
 
 export const texelFormatToChannelType = {
   r8unorm: f32,
@@ -42,10 +40,10 @@ export const texelFormatToChannelType = {
   rgba32uint: u32,
   rgba32sint: i32,
   rgba32float: f32,
-  stencil8: f32, // NOTE: Honestly have no idea if this is right
+  stencil8: u32,
   depth16unorm: f32,
-  depth24plus: f32, // NOTE: Honestly have no idea if this is right
-  'depth24plus-stencil8': f32, // NOTE: Honestly have no idea if this is right
+  depth24plus: f32,
+  'depth24plus-stencil8': f32,
   depth32float: f32,
   'depth32float-stencil8': f32,
   'bc1-rgba-unorm': f32,
@@ -110,29 +108,6 @@ export const texelFormatToChannelType = {
 
 export type TexelFormatToChannelType = typeof texelFormatToChannelType;
 
-type TexelFormatToStringChannels = {
-  [Key in keyof TexelFormatToChannelType]:
-    TexelFormatToChannelType[Key]['type'];
-};
-type KeysWithValue<T extends Record<string, unknown>, TValue> = keyof {
-  [Key in keyof T as T[Key] extends TValue ? Key : never]: Key;
-};
-export type ChannelTypeToLegalFormats = {
-  [Key in TexelFormatToChannelType[keyof TexelFormatToChannelType]['type']]:
-    KeysWithValue<
-      TexelFormatToStringChannels,
-      Key
-    >;
-};
-
-export type SampleTypeToStringChannelType = {
-  float: 'f32';
-  'unfilterable-float': 'f32';
-  depth: 'f32';
-  sint: 'i32';
-  uint: 'u32';
-};
-
 export type ViewDimensionToDimension = {
   '1d': '1d';
   '2d': '2d';
@@ -145,14 +120,25 @@ export type ViewDimensionToDimension = {
 /**
  * https://www.w3.org/TR/WGSL/#storage-texel-formats
  */
-export type StorageTextureTexelFormat =
+export type StorageTextureFormats =
   | 'rgba8unorm'
   | 'rgba8snorm'
   | 'rgba8uint'
   | 'rgba8sint'
+  | 'rgba16unorm'
+  | 'rgba16snorm'
   | 'rgba16uint'
   | 'rgba16sint'
   | 'rgba16float'
+  | 'rg8unorm'
+  | 'rg8snorm'
+  | 'rg8uint'
+  | 'rg8sint'
+  | 'rg16unorm'
+  | 'rg16snorm'
+  | 'rg16uint'
+  | 'rg16sint'
+  | 'rg16float'
   | 'r32uint'
   | 'r32sint'
   | 'r32float'
@@ -162,16 +148,39 @@ export type StorageTextureTexelFormat =
   | 'rgba32uint'
   | 'rgba32sint'
   | 'rgba32float'
-  | 'bgra8unorm';
+  | 'bgra8unorm'
+  | 'r8unorm'
+  | 'r8snorm'
+  | 'r8uint'
+  | 'r8sint'
+  | 'r16unorm'
+  | 'r16snorm'
+  | 'r16uint'
+  | 'r16sint'
+  | 'r16float'
+  | 'rgb10a2unorm'
+  | 'rgb10a2uint'
+  | 'rg11b10ufloat';
 
 export const texelFormatToDataType = {
   rgba8unorm: vec4f,
   rgba8snorm: vec4f,
   rgba8uint: vec4u,
   rgba8sint: vec4i,
+  rgba16unorm: vec4f,
+  rgba16snorm: vec4f,
   rgba16uint: vec4u,
   rgba16sint: vec4i,
   rgba16float: vec4f,
+  rg8unorm: vec4f,
+  rg8snorm: vec4f,
+  rg8uint: vec4u,
+  rg8sint: vec4i,
+  rg16unorm: vec4f,
+  rg16snorm: vec4f,
+  rg16uint: vec4u,
+  rg16sint: vec4i,
+  rg16float: vec4f,
   r32uint: vec4u,
   r32sint: vec4i,
   r32float: vec4f,
@@ -182,6 +191,18 @@ export const texelFormatToDataType = {
   rgba32sint: vec4i,
   rgba32float: vec4f,
   bgra8unorm: vec4f,
+  r8unorm: vec4f,
+  r8snorm: vec4f,
+  r8uint: vec4u,
+  r8sint: vec4i,
+  r16unorm: vec4f,
+  r16snorm: vec4f,
+  r16uint: vec4u,
+  r16sint: vec4i,
+  r16float: vec4f,
+  rgb10a2unorm: vec4f,
+  rgb10a2uint: vec4u,
+  rg11b10ufloat: vec4f,
 
   stencil8: vec4u,
   depth16unorm: vec4f,
@@ -193,44 +214,4 @@ export const texelFormatToDataType = {
   'depth32float-stencil8': vec4f,
 } as const;
 
-export const depthTextureFormats = [
-  'depth16unorm',
-  'depth24plus',
-  'depth32float',
-  'depth32float-stencil8',
-  'depth24plus-stencil8',
-] as const;
-
-export const channelKindToFormat = {
-  f32: 'float',
-  u32: 'uint',
-  i32: 'sint',
-} as const;
-
-export const channelFormatToSchema = {
-  float: f32,
-  'unfilterable-float': f32,
-  uint: u32,
-  sint: i32,
-  depth: f32, // I guess?
-};
-export type ChannelFormatToSchema = typeof channelFormatToSchema;
-
 export type TexelFormatToDataType = typeof texelFormatToDataType;
-export type TexelFormatToDataTypeOrNever<T> = T extends
-  keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;
-
-/**
- * Represents what formats a storage view can choose from based on its owner texture's props.
- */
-export type StorageFormatOptions<TProps extends TextureProps> = Extract<
-  TProps['format'] | Default<TProps['viewFormats'], []>[number],
-  StorageTextureTexelFormat
->;
-
-/**
- * Represents what formats a sampled view can choose from based on its owner texture's props.
- */
-export type SampledFormatOptions<TProps extends TextureProps> =
-  | TProps['format']
-  | Default<TProps['viewFormats'], []>[number];

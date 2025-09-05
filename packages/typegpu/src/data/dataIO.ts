@@ -447,6 +447,58 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
     return value;
   },
+
+  'texture_1d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_3d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_cube'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_cube_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_cube'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_cube_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_multisampled_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_multisampled_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_1d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_3d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_external'() {
+    throw new Error('Textures are not implemented yet!');
+  },
 } satisfies CompleteDataWriters as Record<
   string,
   (output: ISerialOutput, schema: unknown, value: unknown) => void
@@ -801,6 +853,58 @@ const dataReaders = {
     const value = readData(input, schema.inner);
     input.seekTo(beginning + sizeOf(schema));
     return value;
+  },
+
+  'texture_1d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_3d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_cube'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_cube_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_cube'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_cube_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_depth_multisampled_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_multisampled_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_1d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_2d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_2d_array'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_storage_3d'() {
+    throw new Error('Textures are not implemented yet!');
+  },
+  'texture_external'() {
+    throw new Error('Textures are not implemented yet!');
   },
 } satisfies CompleteDataReaders;
 

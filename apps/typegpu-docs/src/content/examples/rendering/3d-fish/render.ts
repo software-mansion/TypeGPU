@@ -93,11 +93,6 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampleTexture = tgpu.fn([d.vec2f], d.vec4f)`(uv) {
-  return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
-}
-`.$uses({ layout });
-
 export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
@@ -106,7 +101,11 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
 
-  const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+  const textureColorWithAlpha = std.textureSample(
+    layout.$.modelTexture,
+    layout.$.sampler,
+    input.textureUV,
+  );
   const textureColor = textureColorWithAlpha.xyz;
 
   const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
