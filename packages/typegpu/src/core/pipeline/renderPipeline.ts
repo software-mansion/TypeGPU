@@ -31,7 +31,7 @@ import {
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
-import { LogResources } from '../../tgsl/consoleLog/types.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { isGPUBuffer } from '../../types.ts';
 import {
