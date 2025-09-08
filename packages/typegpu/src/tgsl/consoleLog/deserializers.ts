@@ -1,22 +1,54 @@
 import { sizeOf } from '../../data/sizeOf.ts';
-import { vec3u } from '../../data/vector.ts';
+import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
 import {
   type AnyWgslData,
   isVecInstance,
   isWgslData,
 } from '../../data/wgslTypes.ts';
+import { Infer } from '../../shared/repr.ts';
 import type { LogResources } from './types.ts';
 
+// -------------
+// Deserializers
+// -------------
+
+const deserializeBool = (data: number[]) => !!data[0];
+
 const deserializeU32 = (data: number[]) => data[0] ?? 0;
+
+const deserializeVec2u = (
+  data: number[],
+) => vec2u(data[0] ?? 0, data[1] ?? 0);
 
 const deserializeVec3u = (
   data: number[],
 ) => vec3u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0);
 
-const deserializers = {
+const deserializeVec4u = (
+  data: number[],
+) => vec4u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0, data[3] ?? 0);
+
+// ----------------
+// Deserializer map
+// ----------------
+
+type DeserializerMap = {
+  [K in AnyWgslData['type']]?: (
+    data: number[],
+  ) => Infer<Extract<AnyWgslData, { type: K }>>;
+};
+
+const deserializerMap: DeserializerMap = {
+  bool: deserializeBool,
   u32: deserializeU32,
+  vec2u: deserializeVec2u,
   vec3u: deserializeVec3u,
-} as const;
+  vec4u: deserializeVec4u,
+};
+
+// -------
+// Helpers
+// -------
 
 function stringify(data: unknown): string {
   if (isVecInstance(data)) {
@@ -33,7 +65,7 @@ function deserialize(
   return logInfo.map((elem) => {
     if (isWgslData(elem)) {
       const type = elem.type;
-      const deserializer = deserializers[type as keyof typeof deserializers];
+      const deserializer = deserializerMap[type];
       if (!deserializer) {
         throw new Error(`Cannot deserialize data of type ${type}`);
       }

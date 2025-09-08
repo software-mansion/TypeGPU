@@ -133,6 +133,17 @@ export const controls = {
       }, 100);
     },
   },
+  'Different types': {
+    onButtonClick: () =>
+      prepareDispatch(root, () => {
+        'kernel';
+        console.log(d.bool(true));
+        console.log(d.u32(3_000_000_000));
+        console.log(d.vec2u(1, 2));
+        console.log(d.vec3u(1, 2, 3));
+        console.log(d.vec4u(1, 2, 3, 4));
+      })(),
+  },
 };
 
 export function onCleanup() {
