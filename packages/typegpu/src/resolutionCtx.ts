@@ -55,6 +55,7 @@ import {
   isSelfResolvable,
   NormalState,
 } from './types.ts';
+import type { WgslExtension } from './wgslExtensions.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -69,6 +70,7 @@ const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
+  readonly enableExtensions?: WgslExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
 };
 
@@ -365,11 +367,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly names: NameRegistry;
+  public readonly enableExtensions: WgslExtension[] | undefined;
   public expectedType: AnyData | undefined;
   readonly #shaderGenerator: ShaderGenerator;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
+    this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
   }
 
@@ -826,6 +830,11 @@ export function resolve(
     const idx = layout.index ?? automaticIds.next().value;
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
+  }
+
+  if (options.enableExtensions && options.enableExtensions.length > 0) {
+    const extensions = options.enableExtensions.map((ext) => `enable ${ext};`);
+    code = `${extensions.join('\n')}\n\n${code}`;
   }
 
   return {

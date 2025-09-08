@@ -587,7 +587,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      throw new Error('Cannot use string literals in TGSL.');
+      return snip(expression[1], UnknownData);
     }
 
     if (expression[0] === NODE.preUpdate) {
