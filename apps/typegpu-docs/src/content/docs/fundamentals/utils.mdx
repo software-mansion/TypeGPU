@@ -109,3 +109,110 @@ The default workgroup sizes are:
 
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
+
+## *console.log*
+
+Yes, you read that correctly, TypeGPU implements logging to console on the GPU!
+Just call `console.log`, like you would in plain JavaScript, and open the console to see the results.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const callCountMutable = root.createMutable(d.u32, 0);
+const dispatch = prepareDispatch(root, () => {
+  'kernel';
+  callCountMutable.$ += 1;
+  console.log('Call number', callCountMutable.$);
+});
+
+dispatch(); // [GPU] Call number 1
+dispatch(); // [GPU] Call number 2
+```
+
+Under the hood, TypeGPU translates `console.log` to a series of serializing functions that all write to one buffer,
+that is read and deserialized after every draw/dispatch call.
+
+The buffer is of fixed size, which may limit the total amount of information that can be logged.
+If that's an issue, you may specify the size manually when creating the `root` object.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+
+const presentationFormat = undefined as any;
+const canvas = undefined as any;
+const context = canvas.getContext('webgpu') as any;
+// ---cut---
+const root = await tgpu.init({
+  unstable_logOptions: {
+    logCountPerDispatchLimit: 32,
+    serializedLogDataSizeLimit: 8, // in bytes, enough to fit 2*u32
+  },
+});
+
+// ---cut-start---
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const positions = [
+    d.vec2f(0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
+});
+// ---cut-end---
+/* vertex shader */
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  // this log fits in 8 bytes
+  // static strings do not count towards the serialized log size
+  console.log('X:', d.u32(pos.x), 'Y:', d.u32(pos.y));
+  return d.vec4f(0, 1, 1, 1);
+});
+
+/* pipeline creation and draw call */
+// ---cut-after---
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
+const pipeline = root['~unstable']
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline();
+
+pipeline
+  .withColorAttachment({
+    view: context.getCurrentTexture().createView(),
+    clearValue: [0, 0, 0, 0],
+    loadOp: 'clear',
+    storeOp: 'store',
+  })
+  .draw(3);
+```
+
+:::note
+The logs are written to console only after the dispatch finishes and the buffer is read.
+This may happen with a noticeable delay.
+:::
+
+Limitations:
+
+- `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
+Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
+- `console.log` only works in fragment and compute shaders.
+This is due to [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
+- TypeGPU needs to handle every logged data type individually.
+Currently, the only supported types are `bool`, `u32`, `vec2u`, `vec3u` and `vec4u`.
+- `console.log` currently does not support template literals and string substitutions.
