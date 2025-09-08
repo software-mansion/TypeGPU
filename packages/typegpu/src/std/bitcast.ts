@@ -1,11 +1,8 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import { bitcastU32toF32Impl, bitcastU32toI32Impl } from '../data/numberOps.ts';
 import { f32, i32, u32 } from '../data/numeric.ts';
-import {
-  bitcastU32toF32Impl,
-  bitcastU32toI32Impl,
-  VectorOps,
-} from '../data/vectorOps.ts';
+import { VectorOps } from '../data/vectorOps.ts';
 import type { AnyFloatVecInstance } from '../data/wgslTypes.ts';
 
 export const bitcastU32toF32 = dualImpl({

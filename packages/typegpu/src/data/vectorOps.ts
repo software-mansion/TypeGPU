@@ -1,6 +1,12 @@
 import { $internal } from '../shared/symbols.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import { clamp, divInteger, smoothstepScalar } from './numberOps.ts';
+import {
+  bitcastU32toF32Impl,
+  bitcastU32toI32Impl,
+  clamp,
+  divInteger,
+  smoothstepScalar,
+} from './numberOps.ts';
 import * as vectorConstructors from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
@@ -1265,19 +1271,3 @@ export const VectorOps = {
     vec4u: unary4u((n) => bitcastU32toI32Impl(n)),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 };
-
-export function bitcastU32toF32Impl(n: number): number {
-  const buffer = new ArrayBuffer(4);
-  const float32View = new Float32Array(buffer);
-  const uint32View = new Uint32Array(buffer);
-  uint32View[0] = n;
-  return float32View[0] as number;
-}
-
-export function bitcastU32toI32Impl(n: number): number {
-  const buffer = new ArrayBuffer(4);
-  const uint32View = new Uint32Array(buffer);
-  const int32View = new Int32Array(buffer);
-  uint32View[0] = n;
-  return int32View[0] as number;
-}
