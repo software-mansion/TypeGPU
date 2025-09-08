@@ -2,18 +2,16 @@ import tgpu from 'typegpu';
 import * as THREE from 'three/webgpu';
 import * as tgpu3 from '@typegpu/three';
 import * as d from 'typegpu/data';
-import { uv } from 'three/tsl';
+import * as TSL from 'three/tsl';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const dualColor = tgpu3.Tgpu3Fn();
-
-const tgpuMaterial = new tgpu3.TypeGPUMaterial(
-  tgpu.fn([d.vec2f], d.vec4f)((uv) => {
-    return d.vec4f(uv.x, uv.y, 0.5, 1);
-  }),
-  [uv()],
-);
+// const tgpuMaterial = new tgpu3.TypeGPUMaterial(
+//   tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+//     return d.vec4f(uv.x, uv.y, 0.5, 1);
+//   }),
+//   [uv()],
+// );
 
 const renderer = new THREE.WebGPURenderer({ canvas });
 await renderer.init();
@@ -30,9 +28,20 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.z = 5;
 
+const material = new THREE.MeshBasicNodeMaterial();
+
+const uv = tgpu3.fromTSL(TSL.uv(), { type: d.vec2f });
+
+// material.colorNode = uv().x.add(time).mul(5).fract();
+material.colorNode = tgpu3.toTSL(
+  tgpu.fn([], d.vec4f)(() => {
+    return d.vec4f(uv.$, 0.5, 1);
+  }),
+);
+
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
-  tgpuMaterial,
+  material,
 );
 scene.add(mesh);
 
