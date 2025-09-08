@@ -66,7 +66,7 @@ function generateDataCopyingInstructions(
   const serializedDataDecl =
     `  var serializedData${index} = serializer${index}(_arg_${index});\n`;
 
-  const copyInstructions = Array(size).keys().map((i) =>
+  const copyInstructions = [...Array(size).keys()].map((i) =>
     `  serializedLogDataBuffer[index].serializedData[${
       from + i
     }] = serializedData${index}[${i}];\n`
