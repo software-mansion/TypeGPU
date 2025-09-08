@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init({
   unstable_logOptions: {
-    logCountPerDispatchLimit: 30,
+    logCountPerDispatchLimit: 32,
     serializedLogDataSizeLimit: 32,
   },
 });
@@ -71,11 +71,17 @@ export const controls = {
       })(16),
   },
   'Too much data': {
-    onButtonClick: () =>
-      prepareDispatch(root, (x) => {
+    onButtonClick: () => {
+      const dispatch = prepareDispatch(root, (x) => {
         'kernel';
         console.log(d.vec3u(), d.vec3u(), d.vec3u());
-      })(16),
+      });
+      try {
+        dispatch(1);
+      } catch (err) {
+        console.log(err);
+      }
+    },
   },
   'Render pipeline': {
     onButtonClick: () => {
