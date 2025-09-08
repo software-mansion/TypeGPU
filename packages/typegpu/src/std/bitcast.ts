@@ -1,34 +1,32 @@
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { snip } from '../data/snippet.ts';
+import { f32, i32, u32 } from '../data/numeric.ts';
 
-export const bitcastU32toF32 = createDualImpl(
-  // CPU implementation
-  (n: number) => {
+export const bitcastU32toF32 = dualImpl({
+  name: 'bitcastU32toF32',
+  normalImpl: (n: number) => {
     const buffer = new ArrayBuffer(4);
     const uint32View = new Uint32Array(buffer);
     const float32View = new Float32Array(buffer);
     uint32View[0] = n;
     return float32View[0];
   },
-  // GPU implementation
-  (n) => snip(stitch`bitcast<f32>(${n})`, n.dataType),
-  'bitcastU32toF32',
-);
+  codegenImpl: (n) => stitch`bitcast<f32>(${n})`,
+  signature: { argTypes: [u32], returnType: f32 },
+});
 
-export const bitcastU32toI32 = createDualImpl(
-  // CPU implementation
-  (n: number) => {
+export const bitcastU32toI32 = dualImpl({
+  name: 'bitcastU32toI32',
+  normalImpl: (n: number) => {
     const buffer = new ArrayBuffer(4);
     const uint32View = new Uint32Array(buffer);
     const int32View = new Int32Array(buffer);
     uint32View[0] = n;
     return int32View[0];
   },
-  // GPU implementation
-  (n) => snip(stitch`bitcast<i32>(${n})`, n.dataType),
-  'bitcastU32toI32',
-);
+  codegenImpl: (n) => stitch`bitcast<i32>(${n})`,
+  signature: { argTypes: [u32], returnType: i32 },
+});
 
 export function checkEndian() {
   const arrayBuffer = new ArrayBuffer(2);
