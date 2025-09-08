@@ -9,10 +9,23 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 
-// AAA add docs with defaults
 export interface LogGeneratorOptions {
-  serializedLogDataSizeLimit?: number;
-  logCountPerDispatchLimit?: number;
+  /**
+   * The maximum number of logs that appear during a single draw/dispatch call.
+   * If this number is exceeded, a warning containing the total number of calls is logged.
+   * @default 64
+   */
+  logCountLimit?: number;
+  /**
+   * The total number of bytes reserved for each log call.
+   * If this number is exceeded, an exception is thrown.
+   * @default 60
+   */
+  logSizeLimit?: number;
+  /**
+   * The prefix attached to each log call.
+   * @default "[GPU] "
+   */
   messagePrefix?: string;
 }
 

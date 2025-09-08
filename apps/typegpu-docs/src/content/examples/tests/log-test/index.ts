@@ -3,8 +3,8 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init({
   unstable_logOptions: {
-    logCountPerDispatchLimit: 32,
-    serializedLogDataSizeLimit: 32,
+    logCountLimit: 32,
+    logSizeLimit: 32,
   },
 });
 

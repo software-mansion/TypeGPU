@@ -27,8 +27,8 @@ import type {
 const fallbackSnippet = snip('/* console.log() */', Void);
 
 const defaultOptions: Required<LogGeneratorOptions> = {
-  logCountPerDispatchLimit: 64,
-  serializedLogDataSizeLimit: 60,
+  logCountLimit: 64,
+  logSizeLimit: 60,
   messagePrefix: '[GPU] ',
 };
 
@@ -59,13 +59,13 @@ export class LogGeneratorImpl implements LogGenerator {
       id: u32,
       serializedData: arrayOf(
         u32,
-        Math.ceil(this.#options.serializedLogDataSizeLimit / 4),
+        Math.ceil(this.#options.logSizeLimit / 4),
       ),
     }).$name('SerializedLogData');
 
     this.#serializedLogDataBuffer = root
       .createMutable(
-        arrayOf(SerializedLogData, this.#options.logCountPerDispatchLimit),
+        arrayOf(SerializedLogData, this.#options.logCountLimit),
       )
       .$name('serializedLogDataBuffer');
 

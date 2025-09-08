@@ -83,9 +83,9 @@ export function createLoggingFunction(
   logOptions: Required<LogGeneratorOptions>,
 ): TgpuFn {
   const serializedSize = args.map(sizeOf).reduce((a, b) => a + b, 0);
-  if (serializedSize > logOptions.serializedLogDataSizeLimit) {
+  if (serializedSize > logOptions.logSizeLimit) {
     throw new Error(
-      `Logged data needs to fit in ${logOptions.serializedLogDataSizeLimit} bytes (one of the logs requires ${serializedSize} bytes). Consider increasing the limit by passing appropriate options to tgpu.init().`,
+      `Logged data needs to fit in ${logOptions.logSizeLimit} bytes (one of the logs requires ${serializedSize} bytes). Consider increasing the limit by passing appropriate options to tgpu.init().`,
     );
   }
 
@@ -106,7 +106,7 @@ export function createLoggingFunction(
 
   return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
   var index = atomicAdd(&logCallIndexBuffer, 1);
-  if (index >= ${logOptions.logCountPerDispatchLimit}) {
+  if (index >= ${logOptions.logCountLimit}) {
     return;
   }
   serializedLogDataBuffer[index].id = ${id};

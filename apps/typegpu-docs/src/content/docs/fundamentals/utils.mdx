@@ -148,8 +148,8 @@ const context = canvas.getContext('webgpu') as any;
 // ---cut---
 const root = await tgpu.init({
   unstable_logOptions: {
-    logCountPerDispatchLimit: 32,
-    serializedLogDataSizeLimit: 8, // in bytes, enough to fit 2*u32
+    logCountLimit: 32,
+    logSizeLimit: 8, // in bytes, enough to fit 2*u32
   },
 });
 
@@ -207,7 +207,7 @@ The logs are written to console only after the dispatch finishes and the buffer 
 This may happen with a noticeable delay.
 :::
 
-Limitations:
+There are some limitations (some of which we intend to alleviate in the future):
 
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.

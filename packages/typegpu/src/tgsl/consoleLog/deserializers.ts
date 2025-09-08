@@ -105,10 +105,10 @@ export function logDataFromGPU(resources: LogResources) {
   });
 
   logCallIndexBuffer.read().then((totalCalls) => {
-    if (totalCalls > options.logCountPerDispatchLimit) {
+    if (totalCalls > options.logCountLimit) {
       console.warn(
-        `Log count limit per dispatch (${options.logCountPerDispatchLimit}) exceeded by ${
-          totalCalls - options.logCountPerDispatchLimit
+        `Log count limit per dispatch (${options.logCountLimit}) exceeded by ${
+          totalCalls - options.logCountLimit
         } calls. Consider increasing the limit by passing appropriate options to tgpu.init().`,
       );
     }
