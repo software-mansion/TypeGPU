@@ -5,7 +5,7 @@ import {
   isVecInstance,
   isWgslData,
 } from '../../data/wgslTypes.ts';
-import { Infer } from '../../shared/repr.ts';
+import type { Infer } from '../../shared/repr.ts';
 import type { LogResources } from './types.ts';
 
 // -------------

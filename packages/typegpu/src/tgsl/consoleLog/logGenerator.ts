@@ -15,7 +15,10 @@ import {
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { GenerationCtx } from '../generationHelpers.ts';
+import {
+  concretizeSnippets,
+  type GenerationCtx,
+} from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import type {
   LogGenerator,
@@ -74,7 +77,6 @@ export class LogGeneratorImpl implements LogGenerator {
       .$name('logCallIndexBuffer');
   }
 
-  // AAA snippet types should be concretized before passing them here
   /**
    * Generates all necessary resources for serializing arguments for logging purposes.
    *
@@ -83,8 +85,10 @@ export class LogGeneratorImpl implements LogGenerator {
    * @returns A snippet containing the call to the logging function.
    */
   generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
+    const concreteArgs = concretizeSnippets(args);
+
     const id = this.#firstUnusedId++;
-    const nonStringArgs = args
+    const nonStringArgs = concreteArgs
       .filter((e) => e.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
@@ -97,7 +101,7 @@ export class LogGeneratorImpl implements LogGenerator {
 
     this.#logIdToArgTypes.set(
       id,
-      args.map((e) =>
+      concreteArgs.map((e) =>
         e.dataType === UnknownData
           ? (e.value as string)
           : e.dataType as AnyWgslData
