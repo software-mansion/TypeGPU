@@ -38,19 +38,14 @@ describe('wgslGenerator with console.log', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('Parses console.log in render pipeline to a comment and warns', ({ root }) => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
-
+  it('Parses a single console.log in a render pipeline', ({ root }) => {
     const vs = tgpu['~unstable']
       .vertexFn({ out: { pos: d.builtin.position } })(() => {
-        console.log(654);
         return { pos: d.vec4f() };
       });
     const fs = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => {
-        console.log(321);
+        console.log(d.u32(321));
         return d.vec4f();
       });
 
@@ -65,20 +60,38 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @vertex fn vs() -> vs_Output {
-        /* console.log() */;
         return vs_Output(vec4f());
       }
 
+      fn serializeU32(n: u32) -> array<u32,1>{
+        return array<u32, 1>(n);
+      }
+
+      @group(0) @binding(0) var<storage, read_write> logCallIndexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 15>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> serializedLogDataBuffer: array<SerializedLogData, 64>;
+
+      fn log1(_arg_0: u32) {
+        var index = atomicAdd(&logCallIndexBuffer, 1);
+        if (index >= 64) {
+          return;
+        }
+        serializedLogDataBuffer[index].id = 1;
+
+        var serializedData0 = serializeU32(_arg_0);
+        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
+      }
+
       @fragment fn fs() -> @location(0) vec4f {
-        /* console.log() */;
+        log1(321);
         return vec4f();
       }"
     `);
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is currently only supported in compute pipelines.",
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
   });
 
   it('Parses a single console.log in a compute pipeline', ({ root }) => {

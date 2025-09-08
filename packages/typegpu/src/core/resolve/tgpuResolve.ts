@@ -117,7 +117,7 @@ export function resolveWithContext(
       shaderGenerator,
     },
     config,
-    pipelines[0],
+    pipelines[0]?.[$internal].branch,
   );
 }
 

@@ -1,11 +1,11 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
-import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
-import { isComputePipeline } from './core/pipeline/typeGuards.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
-import type { Configurable } from './core/root/rootTypes.ts';
+import type {
+  Configurable,
+  ExperimentalTgpuRoot,
+} from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -382,13 +382,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(
     opts: ResolutionCtxImplOptions,
-    pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
+    root?: ExperimentalTgpuRoot,
   ) {
     this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this._logGenerator = isComputePipeline(pipeline)
-      ? new LogGeneratorImpl(pipeline[$internal].branch)
+    this._logGenerator = root
+      ? new LogGeneratorImpl(root)
       : new LogGeneratorNullImpl();
   }
 
@@ -802,9 +802,9 @@ export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
   config?: (cfg: Configurable) => Configurable,
-  pipeline?: TgpuComputePipeline | TgpuRenderPipeline,
+  root?: ExperimentalTgpuRoot,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options, pipeline);
+  const ctx = new ResolutionCtxImpl(options, root);
   let code = config
     ? ctx.withSlots(
       config(new ConfigurableImpl([])).bindings,

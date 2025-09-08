@@ -89,12 +89,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {
-    // AAA think of a better way to pass the pipeline
-    // AAA implement this for render pipeline as well
-    const thisPipeline = this;
     this[$internal] = {
       get rawPipeline() {
-        return _core.unwrap(thisPipeline).pipeline;
+        return _core.unwrap().pipeline;
       },
       get priors() {
         return _priors;
@@ -115,7 +112,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   get rawPipeline(): GPUComputePipeline {
-    return this._core.unwrap(this).pipeline;
+    return this._core.unwrap().pipeline;
   }
 
   with(
@@ -160,7 +157,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     y?: number | undefined,
     z?: number | undefined,
   ): void {
-    const memo = this._core.unwrap(this);
+    const memo = this._core.unwrap();
     const { branch } = this._core;
 
     const passDescriptor: GPUComputePassDescriptor = {
@@ -235,7 +232,7 @@ class ComputePipelineCore implements SelfResolvable {
     return 'computePipelineCore';
   }
 
-  public unwrap(pipeline: TgpuComputePipeline): Memo {
+  public unwrap(): Memo {
     if (this._memo === undefined) {
       const device = this.branch.device;
       const enableExtensions = wgslExtensions.filter((extension) =>
@@ -256,7 +253,7 @@ class ComputePipelineCore implements SelfResolvable {
             shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
-          pipeline,
+          this.branch,
         );
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -270,7 +267,7 @@ class ComputePipelineCore implements SelfResolvable {
             shaderGenerator: this.branch.shaderGenerator,
           },
           (cfg) => cfg,
-          pipeline,
+          this.branch,
         );
       }
 

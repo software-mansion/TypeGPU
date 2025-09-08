@@ -30,6 +30,8 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
+import { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { isGPUBuffer } from '../../types.ts';
 import {
@@ -62,6 +64,7 @@ import {
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
   readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
+  readonly branch: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -286,6 +289,7 @@ type Memo = {
   pipeline: GPURenderPipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logResources: LogResources | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -298,6 +302,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$internal] = {
       core,
       priors,
+      branch: core.options.branch,
     };
     this[$getNameForward] = core;
   }
@@ -552,11 +557,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const internals = this[$internal];
     const pass = this.setupRenderPass();
+    const { logResources } = internals.core.unwrap();
     const { branch } = internals.core.options;
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+      logResources.logCallIndexBuffer.write(0);
+    }
 
     internals.priors.performanceCallback
       ? triggerPerformanceCallback({
@@ -690,23 +701,34 @@ class RenderPipelineCore implements SelfResolvable {
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: branch.shaderGenerator,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: branch.nameRegistry,
+            enableExtensions,
+            shaderGenerator: branch.shaderGenerator,
+          },
+          (cfg) => cfg,
+          branch,
+        );
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
-          enableExtensions,
-          shaderGenerator: branch.shaderGenerator,
-        });
+        resolutionResult = resolve(
+          this,
+          {
+            names: branch.nameRegistry,
+            enableExtensions,
+            shaderGenerator: branch.shaderGenerator,
+          },
+          (cfg) => cfg,
+          branch,
+        );
       }
 
-      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } =
+        resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -768,6 +790,7 @@ class RenderPipelineCore implements SelfResolvable {
         pipeline: device.createRenderPipeline(descriptor),
         usedBindGroupLayouts,
         catchall,
+        logResources,
       };
 
       if (PERF?.enabled) {
