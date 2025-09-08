@@ -21,11 +21,10 @@ describe('bitcast', () => {
     //1 11111111 00000000000000000000000
     const f2 = bitcastU32toF32(3212836864);
     expect(f2).toBeCloseTo(-1.0);
-
   });
 
-    it('bitcastU32toI32', () => {
-        // -1 in i32
+  it('bitcastU32toI32', () => {
+    // -1 in i32
     // 11111111111111111111111111111111
     const i = bitcastU32toI32(4294967295);
     expect(i).toBe(-1);
