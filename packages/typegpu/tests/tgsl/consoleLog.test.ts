@@ -262,6 +262,34 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
   });
+
+  it('Throws when not enough space to serialize console.log', ({ root }) => {
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      // default limit is 60 bytes
+      console.log(
+        d.vec4u(12, 13, 14, 15),
+        d.vec4u(22, 23, 24, 25),
+        d.vec4u(32, 33, 34, 35),
+        d.vec4u(42, 43, 44, 45),
+      );
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(() => asWgsl(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computePipeline:pipeline
+      - computePipelineCore
+      - computeFn:fn
+      - undefined: Logged data needs to fit in 60 bytes (one of the logs requires 64 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+    `);
+  });
 });
 
 describe('deserializeAndStringify', () => {
