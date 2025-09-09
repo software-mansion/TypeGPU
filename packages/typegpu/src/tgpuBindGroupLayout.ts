@@ -87,7 +87,7 @@ export type TgpuLayoutEntryBase = {
    * By default, each resource is visible to all shader stage types, but
    * depending on the underlying implementation, this may have performance implications.
    *
-   * @default ['compute'] for mutable resources
+   * @default ['compute', 'fragment'] for mutable resources
    * @default ['compute','vertex','fragment'] for everything else
    */
   visibility?: TgpuShaderStage[];
@@ -416,7 +416,7 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute'];
+const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute', 'fragment'];
 const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
   'compute',
   'vertex',
