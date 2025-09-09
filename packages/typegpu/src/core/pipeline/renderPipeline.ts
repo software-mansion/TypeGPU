@@ -508,7 +508,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     }
 
-    const pass = branch.commandEncoder.beginRenderPass(renderPassDescriptor);
+    const pass = branch[$internal].commandEncoder.beginRenderPass(
+      renderPassDescriptor,
+    );
 
     pass.setPipeline(memo.pipeline);
 
@@ -569,7 +571,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         root: branch,
         priors: internals.priors,
       })
-      : branch.flush();
+      : branch[$internal].flush();
   }
 
   drawIndexed(
@@ -617,7 +619,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         root: branch,
         priors: internals.priors,
       })
-      : branch.flush();
+      : branch[$internal].flush();
   }
 }
 

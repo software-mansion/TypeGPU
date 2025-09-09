@@ -25,6 +25,7 @@ import type {
   OmitProps,
   Prettify,
 } from '../../shared/utilityTypes.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -616,7 +617,23 @@ export interface TgpuRoot extends Unwrapper {
    */
   destroy(): void;
 
+  readonly [$internal]: TgpuRootInternals;
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+}
+export interface TgpuRootInternals {
+  /**
+   * The current command encoder. This property will
+   * hold the same value throughout the entire `batch()` invocation.
+   * In case of single `draw()` or `dispatchWorkgroups()` call, getter will be used
+   * to create a single-use command encoder.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
+  /**
+   * Causes all commands enqueued by pipelines to be
+   * submitted to the GPU.
+   * If a single `draw()` or `dispatchWorkgroups()` is called, `flush()` is executed after each command.
+   */
+  flush(): void;
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
@@ -624,11 +641,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -667,10 +679,4 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
-
-  /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
-   */
-  flush(): void;
 }

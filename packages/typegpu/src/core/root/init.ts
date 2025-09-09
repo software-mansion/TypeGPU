@@ -103,6 +103,7 @@ import type {
   ExperimentalTgpuRoot,
   RenderPass,
   TgpuRoot,
+  TgpuRootInternals,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -267,6 +268,7 @@ interface Disposable {
  */
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
+  readonly [$internal]: TgpuRootInternals;
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 
   private _disposables: Disposable[] = [];
@@ -278,8 +280,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
@@ -289,14 +289,32 @@ class TgpuRootImpl extends WithBindingImpl
     super(() => this, []);
 
     this['~unstable'] = this;
-  }
 
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
-    }
+    this[$internal] = new class {
+      readonly device: GPUDevice;
+      #commandEncoder: GPUCommandEncoder | null = null;
 
-    return this._commandEncoder;
+      constructor(device: GPUDevice) {
+        this.device = device;
+      }
+
+      get commandEncoder() {
+        if (!this.#commandEncoder) {
+          this.#commandEncoder = this.device.createCommandEncoder();
+        }
+
+        return this.#commandEncoder;
+      }
+
+      flush() {
+        if (!this.#commandEncoder) {
+          return;
+        }
+
+        this.device.queue.submit([this.#commandEncoder.finish()]);
+        this.#commandEncoder = null;
+      }
+    }(device);
   }
 
   get enabledFeatures() {
@@ -527,7 +545,7 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const pass = this[$internal].commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -674,15 +692,6 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-  }
-
-  flush() {
-    if (!this._commandEncoder) {
-      return;
-    }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
   }
 }
 

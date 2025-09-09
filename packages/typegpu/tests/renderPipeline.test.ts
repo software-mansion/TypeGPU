@@ -155,22 +155,22 @@ describe('TgpuRenderPipeline', () => {
         ).createPipeline();
 
       expect(parseResolved({ pipeline })).toEqual(parse(`
-        struct vertex_Output { 
+        struct vertex_Output {
           @location(0) a: vec3f,
           @location(1) b: vec2f,
           @builtin(position) pos: vec4f,
-        } 
-          
+        }
+
         @vertex fn vertex() -> vertex_Output {
           return vertex_Output();
         }
-        
-        struct fragment_Input { 
+
+        struct fragment_Input {
           @builtin(position) a: vec4f,
         }
-        
-        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f { 
-          return vec4f(1, 2, 3, 4); 
+
+        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+          return vec4f(1, 2, 3, 4);
         }
       `));
     });
@@ -769,7 +769,10 @@ describe('TgpuRenderPipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
 
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const beginRenderPassSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'beginRenderPass',
+    );
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -840,8 +843,14 @@ describe('TgpuRenderPipeline', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
-    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+    const beginRenderPassSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'beginRenderPass',
+    );
+    const resolveQuerySetSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'resolveQuerySet',
+    );
 
     const callback = vi.fn();
 
@@ -884,21 +893,23 @@ describe('TgpuRenderPipeline', () => {
       count: 2,
     });
 
-    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
-      colorAttachments: [
-        {
-          loadOp: 'clear',
-          storeOp: 'store',
-          view: expect.any(Object),
+    expect(root[$internal].commandEncoder.beginRenderPass).toHaveBeenCalledWith(
+      {
+        colorAttachments: [
+          {
+            loadOp: 'clear',
+            storeOp: 'store',
+            view: expect.any(Object),
+          },
+        ],
+        label: 'pipeline',
+        timestampWrites: {
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+          querySet: querySet.querySet,
         },
-      ],
-      label: 'pipeline',
-      timestampWrites: {
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-        querySet: querySet.querySet,
       },
-    });
+    );
 
     expect(resolveQuerySetSpy).toHaveBeenCalledWith(
       querySet.querySet,
@@ -923,6 +934,60 @@ describe('TgpuRenderPipeline', () => {
         querySet: querySet.querySet,
       },
     });
+  });
+  it('should flush after draw', ({ root }) => {
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })('');
+
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f },
+    })('');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    vi.spyOn(root.device.queue, 'submit');
+
+    expect(root.device.queue.submit).toHaveBeenCalledTimes(0);
+
+    pipeline.draw(3);
+
+    expect(root.device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+  it('root internal command encoder should be null before and after draw', ({ root }) => {
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })('');
+
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f },
+    })('');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    // expect(root[$internal].commandEncoder).toBeNull();
+    pipeline.draw(3);
+    expect(root[$internal].commandEncoder).toBeNull();
   });
 });
 
