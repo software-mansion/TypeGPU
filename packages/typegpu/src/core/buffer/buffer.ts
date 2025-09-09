@@ -219,8 +219,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       });
 
       if (this.initial) {
-        const mapped = this._buffer.getMappedRange();
-        this._writeToTarget(mapped, this.initial);
+        this._writeToTarget(this._buffer.getMappedRange(), this.initial);
         this._buffer.unmap();
       }
     }
