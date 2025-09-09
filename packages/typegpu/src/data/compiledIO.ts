@@ -136,10 +136,10 @@ const specialPackedFormats = {
     generator: (offsetExpr: string, valueExpr: string) => {
       const bgraComponents = ['z', 'y', 'x', 'w'];
       let code = '';
-      for (let i = 0; i < 4; i++) {
+      for (let idx = 0; idx < 4; idx++) {
         code +=
-          `output.setUint8((${offsetExpr} + ${i}), Math.round(${valueExpr}.${
-            bgraComponents[i]
+          `output.setUint8((${offsetExpr} + ${idx}), Math.round(${valueExpr}.${
+            bgraComponents[idx]
           } * 255), littleEndian);\n`;
       }
       return code;
@@ -151,9 +151,12 @@ export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
   valueExpr: string,
+  depth = 0,
 ): string {
+  const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
+
   if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
-    return buildWriter(node.inner, offsetExpr, valueExpr);
+    return buildWriter(node.inner, offsetExpr, valueExpr, depth);
   }
 
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
@@ -166,6 +169,7 @@ export function buildWriter(
         subSchema,
         `(${offsetExpr} + ${propOffset.offset})`,
         `${valueExpr}.${key}`,
+        depth,
       );
     }
     return code;
@@ -178,11 +182,13 @@ export function buildWriter(
     );
     let code = '';
 
-    code += `for (let i = 0; i < ${node.elementCount}; i++) {\n`;
+    code +=
+      `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
     code += buildWriter(
       node.elementType,
-      `(${offsetExpr} + i * ${elementSize})`,
-      `${valueExpr}[i]`,
+      `(${offsetExpr} + ${loopVar} * ${elementSize})`,
+      `${valueExpr}[${loopVar}]`,
+      depth + 1,
     );
     code += '}\n';
 
@@ -213,9 +219,9 @@ export function buildWriter(
     const rowStride = roundUp(matSize * 4, 8);
 
     let code = '';
-    for (let i = 0; i < elementCount; i++) {
-      const colIndex = Math.floor(i / matSize);
-      const rowIndex = i % matSize;
+    for (let idx = 0; idx < elementCount; idx++) {
+      const colIndex = Math.floor(idx / matSize);
+      const rowIndex = idx % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
       code +=
@@ -259,13 +265,13 @@ export function buildWriter(
     ];
 
     let code = '';
-    for (let i = 0; i < componentCount; i++) {
+    for (let idx = 0; idx < componentCount; idx++) {
       const accessor = componentCount === 1
         ? valueExpr
-        : `${valueExpr}.${components[i]}`;
+        : `${valueExpr}.${components[idx]}`;
       const value = transform ? transform(accessor) : accessor;
       code += `output.${writeFunc}((${offsetExpr} + ${
-        i * componentSize
+        idx * componentSize
       }), ${value}, littleEndian);\n`;
     }
 
@@ -311,7 +317,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   }
 
   try {
-    const body = buildWriter(schema, 'offset', 'value');
+    const body = buildWriter(schema, 'offset', 'value', 0);
 
     const fn = new Function(
       'output',
