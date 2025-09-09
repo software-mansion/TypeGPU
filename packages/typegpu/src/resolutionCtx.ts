@@ -80,6 +80,8 @@ export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
   readonly enableExtensions?: WgslExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
+  readonly config?: ((cfg: Configurable) => Configurable) | undefined;
+  readonly root?: ExperimentalTgpuRoot | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -801,13 +803,11 @@ export interface ResolutionResult {
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
-  config?: (cfg: Configurable) => Configurable,
-  root?: ExperimentalTgpuRoot,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options, root);
-  let code = config
+  const ctx = new ResolutionCtxImpl(options, options.root);
+  let code = options.config
     ? ctx.withSlots(
-      config(new ConfigurableImpl([])).bindings,
+      options.config(new ConfigurableImpl([])).bindings,
       () => ctx.resolve(item),
     )
     : ctx.resolve(item);

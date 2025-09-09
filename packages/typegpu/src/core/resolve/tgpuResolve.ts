@@ -115,9 +115,9 @@ export function resolveWithContext(
         : new RandomNameRegistry(),
       enableExtensions,
       shaderGenerator,
+      config,
+      root: pipelines[0]?.[$internal].branch,
     },
-    config,
-    pipelines[0]?.[$internal].branch,
   );
 }
 

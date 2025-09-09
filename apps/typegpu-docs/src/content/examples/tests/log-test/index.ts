@@ -131,12 +131,12 @@ export const controls = {
   },
   'Too much data': {
     onButtonClick: () => {
-      const dispatch = prepareDispatch(root, (x) => {
+      const dispatch = prepareDispatch(root, () => {
         'kernel';
         console.log(d.vec3u(), d.vec3u(), d.vec3u());
       });
       try {
-        dispatch(1);
+        dispatch();
       } catch (err) {
         console.log(err);
       }
