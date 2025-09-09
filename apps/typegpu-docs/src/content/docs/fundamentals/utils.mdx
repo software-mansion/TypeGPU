@@ -112,8 +112,8 @@ The callback is not called if the global invocation id of a thread would exceed 
 
 ## *console.log*
 
-Yes, you read that correctly, TypeGPU implements logging to console on the GPU!
-Just call `console.log`, like you would in plain JavaScript, and open the console to see the results.
+Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
+Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
 import tgpu, { prepareDispatch } from 'typegpu';
@@ -132,10 +132,9 @@ dispatch(); // [GPU] Call number 1
 dispatch(); // [GPU] Call number 2
 ```
 
-Under the hood, TypeGPU translates `console.log` to a series of serializing functions that all write to one buffer,
-that is read and deserialized after every draw/dispatch call.
+Under the hood, TypeGPU translates `console.log` to a series of serializing functions that write the logged arguments to a buffer that is read and deserialized after every draw/dispatch call.
 
-The buffer is of fixed size, which may limit the total amount of information that can be logged.
+The buffer is of fixed size, which may limit the total amount of information that can be logged; if the buffer overflows, additional logs are dropped.
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
@@ -153,20 +152,6 @@ const root = await tgpu.init({
   },
 });
 
-// ---cut-start---
-const mainVertex = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position },
-})((input) => {
-  const positions = [
-    d.vec2f(0, 0.5),
-    d.vec2f(-0.5, -0.5),
-    d.vec2f(0.5, -0.5),
-  ];
-
-  return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
-});
-// ---cut-end---
 /* vertex shader */
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
@@ -180,31 +165,16 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 
 /* pipeline creation and draw call */
-// ---cut-after---
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
-
-pipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    clearValue: [0, 0, 0, 0],
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
-  .draw(3);
 ```
 
 :::note
 The logs are written to console only after the dispatch finishes and the buffer is read.
 This may happen with a noticeable delay.
+:::
+
+:::caution
+When using `console.log`, atomic operations are injected into the WGSL code to safely synchronize logging from multiple threads.
+This synchronization can introduce overhead and significantly impact shader performance.
 :::
 
 There are some limitations (some of which we intend to alleviate in the future):
