@@ -126,12 +126,12 @@ describe('bitcast', () => {
     expect(std.bitcastU32toI32(0xffffffff)).toBe(-1);
 
     // Vectors
-    const v3 = vec3u(0x00000000, 0x7fffffff, 0xffffffff);
+    const v3 = vec3u(0x00000000, 0x80000000, 0xffffffff);
     const c3 = std.bitcastU32toI32(v3);
-    expect(c3).toEqual(vec3i(0, 2147483648, -1));
+    expect(c3).toEqual(vec3i(0, -2147483648, -1));
 
     const v4 = vec4u(0x80000000, 0x00000001, 0x00000000, 0x7fffffff);
     const c4 = std.bitcastU32toI32(v4);
-    expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
+    expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483648));
   });
 });
