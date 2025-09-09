@@ -76,4 +76,62 @@ describe('bitcast', () => {
     const cast4 = std.bitcastU32toI32(v4);
     expect(cast4).toEqual(vec4i(0, 1, -1, -2147483648));
   });
+
+  it('bitcastU32toF32 specials (NaN, infinities etc)', () => {
+    // +0
+    const pz = std.bitcastU32toF32(0x00000000);
+    expect(Object.is(pz, 0)).toBe(true);
+    expect(1 / pz).toBe(Number.POSITIVE_INFINITY);
+
+    // -0
+    const nz = std.bitcastU32toF32(0x80000000);
+    expect(Object.is(nz, -0)).toBe(true);
+    expect(1 / nz).toBe(Number.NEGATIVE_INFINITY);
+
+    // +Inf / -Inf
+    expect(std.bitcastU32toF32(0x7f800000)).toBe(Number.POSITIVE_INFINITY);
+    expect(std.bitcastU32toF32(0xff800000)).toBe(Number.NEGATIVE_INFINITY);
+
+    // NaNs
+    const qnan = std.bitcastU32toF32(0x7fc00000);
+    const snan = std.bitcastU32toF32(0x7f800001);
+    expect(Number.isNaN(qnan)).toBe(true);
+    expect(Number.isNaN(snan)).toBe(true);
+
+    // Smallest positive subnormal
+    const sub = std.bitcastU32toF32(0x00000001);
+    expect(sub).toBeGreaterThan(0);
+    expect(sub).toBeLessThan(1e-44);
+
+    // Smallest negative subnormal
+    const nsub = std.bitcastU32toF32(0x80000001);
+    expect(nsub).toBeLessThan(0);
+    expect(nsub).toBeGreaterThan(-1e-44);
+  });
+
+  it('bitcastU32toF32 vector specials', () => {
+    const v = vec4u(0x7f800000, 0xff800000, 0x7fc00000, 0x80000000);
+    const cast = std.bitcastU32toF32(v);
+    expect(cast.x).toBe(Number.POSITIVE_INFINITY);
+    expect(cast.y).toBe(Number.NEGATIVE_INFINITY);
+    expect(Number.isNaN(cast.z)).toBe(true);
+    expect(Object.is(cast.w, -0)).toBe(true);
+  });
+
+  it('bitcastU32toI32 more edges', () => {
+    // Scalars
+    expect(std.bitcastU32toI32(0x00000000)).toBe(0);
+    expect(std.bitcastU32toI32(0x00000001)).toBe(1);
+    expect(std.bitcastU32toI32(0x7fffffff)).toBe(2147483647);
+    expect(std.bitcastU32toI32(0xffffffff)).toBe(-1);
+
+    // Vectors
+    const v3 = vec3u(0x00000000, 0x7fffffff, 0xffffffff);
+    const c3 = std.bitcastU32toI32(v3);
+    expect(c3).toEqual(vec3i(0, 2147483648, -1));
+
+    const v4 = vec4u(0x80000000, 0x00000001, 0x00000000, 0x7fffffff);
+    const c4 = std.bitcastU32toI32(v4);
+    expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
+  });
 });
