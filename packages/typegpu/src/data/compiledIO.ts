@@ -151,12 +151,12 @@ export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
   valueExpr: string,
-  depth = 0,
+  currentDepth = 0,
 ): string {
-  const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
+  const loopVar = ['i', 'j', 'k'][currentDepth] || `i${currentDepth}`;
 
   if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
-    return buildWriter(node.inner, offsetExpr, valueExpr, depth);
+    return buildWriter(node.inner, offsetExpr, valueExpr, currentDepth);
   }
 
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
@@ -169,7 +169,7 @@ export function buildWriter(
         subSchema,
         `(${offsetExpr} + ${propOffset.offset})`,
         `${valueExpr}.${key}`,
-        depth,
+        currentDepth,
       );
     }
     return code;
@@ -188,7 +188,7 @@ export function buildWriter(
       node.elementType,
       `(${offsetExpr} + ${loopVar} * ${elementSize})`,
       `${valueExpr}[${loopVar}]`,
-      depth + 1,
+      currentDepth + 1,
     );
     code += '}\n';
 
