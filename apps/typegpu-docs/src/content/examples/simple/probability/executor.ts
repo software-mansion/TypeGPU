@@ -11,7 +11,11 @@ import type {
   TgpuSlot,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+import {
+  randf,
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
 
 export class Executor {
   // don't exceed max workgroup grid X dimension size
@@ -36,7 +40,10 @@ export class Executor {
       & StorageFlag,
     ]
   >;
-  readonly #pipelineCache: Map<TgpuFn, TgpuComputePipeline>;
+  readonly #pipelineCache: WeakMap<
+    TgpuFn,
+    WeakMap<StatefulGenerator, TgpuComputePipeline>
+  >;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
@@ -93,37 +100,54 @@ export class Executor {
     });
   }
 
-  cachedPipeline(distribution: TgpuFn<() => d.Vec3f>) {
-    if (!import.meta.env.DEV) {
-      throw new Error('Function only for testing purposes');
+  #pipelineCacheHas(
+    distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
+  ): boolean {
+    const generatorMap = this.#pipelineCache.get(distribution);
+    if (!generatorMap) {
+      return false;
     }
 
+    return generatorMap.has(generator);
+  }
+
+  #pipelineCacheSet(
+    distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
+    pipeline: TgpuComputePipeline,
+  ) {
     if (!this.#pipelineCache.has(distribution)) {
-      const pipeline = this.#root['~unstable']
-        .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-        .createPipeline();
-      this.#pipelineCache.set(distribution, pipeline);
+      this.#pipelineCache.set(distribution, new Map([[generator, pipeline]]));
+      return;
     }
 
     // biome-ignore lint/style/noNonNullAssertion: just checked it above
-    return this.#pipelineCache.get(distribution)!;
+    this.#pipelineCache.get(distribution)!.set(generator, pipeline);
+  }
+
+  pipelineCacheGet(
+    distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
+  ): TgpuComputePipeline {
+    if (!this.#pipelineCacheHas(distribution, generator)) {
+      const pipeline = this.#root['~unstable']
+        .with(randomGeneratorSlot, generator)
+        .with(this.#distributionSlot, distribution)
+        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
+        .createPipeline();
+      this.#pipelineCacheSet(distribution, generator, pipeline);
+    }
+
+    // biome-ignore lint/style/noNonNullAssertion: just checked it above
+    return this.#pipelineCache.get(distribution)!.get(generator)!;
   }
 
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
   ): Promise<d.v3f[]> {
-    let pipeline: TgpuComputePipeline;
-    if (this.#pipelineCache.has(distribution)) {
-      // biome-ignore lint/style/noNonNullAssertion: just checked it above
-      pipeline = this.#pipelineCache.get(distribution)!;
-    } else {
-      pipeline = this.#root['~unstable']
-        .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-        .createPipeline();
-      this.#pipelineCache.set(distribution, pipeline);
-    }
+    const pipeline = this.pipelineCacheGet(distribution, generator);
 
     pipeline
       .with(this.#bindGroupLayout, this.#bindGroup)
