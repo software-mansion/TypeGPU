@@ -1287,15 +1287,15 @@ export const VectorOps = {
 
   bitcastU32toI32: {
     vec2u: (n: wgsl.v2u) =>
-      vec2f(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y)),
+      vec2i(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y)),
     vec3u: (n: wgsl.v3u) =>
-      vec3f(
+      vec3i(
         bitcastU32toI32Impl(n.x),
         bitcastU32toI32Impl(n.y),
         bitcastU32toI32Impl(n.z),
       ),
     vec4u: (n: wgsl.v4u) =>
-      vec4f(
+      vec4i(
         bitcastU32toI32Impl(n.x),
         bitcastU32toI32Impl(n.y),
         bitcastU32toI32Impl(n.z),
@@ -1305,8 +1305,8 @@ export const VectorOps = {
     VecKind,
     <T extends wgsl.AnyUnsignedVecInstance>(
       v: T,
-    ) => T extends wgsl.v2u ? wgsl.v2f
-      : T extends wgsl.v3u ? wgsl.v3f
-      : wgsl.v4f
+    ) => T extends wgsl.v2u ? wgsl.v2i
+      : T extends wgsl.v3u ? wgsl.v3i
+      : wgsl.v4i
   >,
 };
