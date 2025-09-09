@@ -15,13 +15,13 @@ import type { GenerationCtx } from '../generationHelpers.ts';
 export interface LogGeneratorOptions {
   /**
    * The maximum number of logs that appear during a single draw/dispatch call.
-   * If this number is exceeded, a warning containing the total number of calls is logged.
+   * If this number is exceeded, a warning containing the total number of calls is logged and further logs are dropped.
    * @default 64
    */
   logCountLimit?: number;
   /**
    * The total number of bytes reserved for each log call.
-   * If this number is exceeded, an exception is thrown.
+   * If this number is exceeded, an exception is thrown during resolution.
    * @default 60
    */
   logSizeLimit?: number;
@@ -37,9 +37,17 @@ export type SerializedLogCallData = WgslStruct<{
   serializedData: WgslArray<U32>;
 }>;
 
+/**
+ * The resources required for logging within the TGSL console.
+ *
+ * @property indexBuffer - A buffer used for indexing log entries. Needs to be cleared after each dispatch/draw.
+ * @property dataBuffer - A buffer containing an array of serialized log call data.
+ * @property options - The configuration options for the LogGenerator.
+ * @property logIdToArgTypes - A mapping from log identifiers to their corresponding argument types.
+ */
 export interface LogResources {
-  logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
-  serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
+  indexBuffer: TgpuMutable<Atomic<U32>>;
+  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogGeneratorOptions>;
   logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
 }

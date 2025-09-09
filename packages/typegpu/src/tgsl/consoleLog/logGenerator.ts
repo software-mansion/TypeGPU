@@ -27,8 +27,6 @@ import type {
   SerializedLogCallData,
 } from './types.ts';
 
-const fallbackSnippet = snip('/* console.log() */', Void);
-
 const defaultOptions: Required<LogGeneratorOptions> = {
   logCountLimit: 64,
   logSizeLimit: 60,
@@ -43,16 +41,16 @@ export class LogGeneratorNullImpl implements LogGenerator {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
-    return fallbackSnippet;
+    return snip('/* console.log() */', Void);
   }
 }
 
 export class LogGeneratorImpl implements LogGenerator {
-  #logCallIndexBuffer: TgpuMutable<Atomic<U32>>;
-  #serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   #options: Required<LogGeneratorOptions>;
   #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   #firstUnusedId = 1;
+  #indexBuffer: TgpuMutable<Atomic<U32>>;
+  #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
 
   constructor(root: TgpuRoot) {
     this.#options = { ...defaultOptions, ...root[$internal].logOptions };
@@ -60,21 +58,16 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const SerializedLogData = struct({
       id: u32,
-      serializedData: arrayOf(
-        u32,
-        Math.ceil(this.#options.logSizeLimit / 4),
-      ),
+      serializedData: arrayOf(u32, Math.ceil(this.#options.logSizeLimit / 4)),
     }).$name('SerializedLogData');
 
-    this.#serializedLogDataBuffer = root
-      .createMutable(
-        arrayOf(SerializedLogData, this.#options.logCountLimit),
-      )
-      .$name('serializedLogDataBuffer');
+    this.#dataBuffer = root
+      .createMutable(arrayOf(SerializedLogData, this.#options.logCountLimit))
+      .$name('dataBuffer');
 
-    this.#logCallIndexBuffer = root
+    this.#indexBuffer = root
       .createMutable(atomic(u32))
-      .$name('logCallIndexBuffer');
+      .$name('indexBuffer');
   }
 
   /**
@@ -86,16 +79,16 @@ export class LogGeneratorImpl implements LogGenerator {
    */
   generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
     const concreteArgs = concretizeSnippets(args);
-
     const id = this.#firstUnusedId++;
+
     const nonStringArgs = concreteArgs
       .filter((e) => e.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
       id,
       nonStringArgs.map((e) => e.dataType as AnyWgslData),
-      this.#serializedLogDataBuffer,
-      this.#logCallIndexBuffer,
+      this.#dataBuffer,
+      this.#indexBuffer,
       this.#options,
     );
 
@@ -113,8 +106,8 @@ export class LogGeneratorImpl implements LogGenerator {
 
   get logResources(): LogResources | undefined {
     return this.#firstUnusedId === 1 ? undefined : {
-      serializedLogDataBuffer: this.#serializedLogDataBuffer,
-      logCallIndexBuffer: this.#logCallIndexBuffer,
+      dataBuffer: this.#dataBuffer,
+      indexBuffer: this.#indexBuffer,
       options: this.#options,
       logIdToArgTypes: this.#logIdToArgTypes,
     };

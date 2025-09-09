@@ -107,18 +107,15 @@ export function resolveWithContext(
     );
   }
 
-  return resolveImpl(
-    resolutionObj,
-    {
-      names: names === 'strict'
-        ? new StrictNameRegistry()
-        : new RandomNameRegistry(),
-      enableExtensions,
-      shaderGenerator,
-      config,
-      root: pipelines[0]?.[$internal].branch,
-    },
-  );
+  return resolveImpl(resolutionObj, {
+    names: names === 'strict'
+      ? new StrictNameRegistry()
+      : new RandomNameRegistry(),
+    enableExtensions,
+    shaderGenerator,
+    config,
+    root: pipelines[0]?.[$internal].branch,
+  });
 }
 
 /**

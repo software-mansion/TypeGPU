@@ -64,25 +64,25 @@ function generateDataCopyingInstructions(
   index: number,
 ): string {
   const serializedDataDecl =
-    `  var serializedData${index} = serializer${index}(_arg_${index});\n`;
+    `  var serializedData${index} = serializer${index}(_arg_${index});`;
 
   const copyInstructions = [...Array(size).keys()].map((i) =>
-    `  serializedLogDataBuffer[index].serializedData[${
+    `  dataBuffer[index].serializedData[${
       from + i
-    }] = serializedData${index}[${i}];\n`
+    }] = serializedData${index}[${i}];`
   );
 
-  return [serializedDataDecl, ...copyInstructions].join('');
+  return [serializedDataDecl, ...copyInstructions].join('\n');
 }
 
 export function createLoggingFunction(
   id: number,
-  args: AnyWgslData[],
-  serializedLogDataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
-  logCallIndexBuffer: TgpuMutable<Atomic<U32>>,
+  argTypes: AnyWgslData[],
+  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
+  indexBuffer: TgpuMutable<Atomic<U32>>,
   logOptions: Required<LogGeneratorOptions>,
 ): TgpuFn {
-  const serializedSize = args.map(sizeOf).reduce((a, b) => a + b, 0);
+  const serializedSize = argTypes.map(sizeOf).reduce((a, b) => a + b, 0);
   if (serializedSize > logOptions.logSizeLimit) {
     throw new Error(
       `Logged data needs to fit in ${logOptions.logSizeLimit} bytes (one of the logs requires ${serializedSize} bytes). Consider increasing the limit by passing appropriate options to tgpu.init().`,
@@ -90,31 +90,31 @@ export function createLoggingFunction(
   }
 
   const usedSerializers: [string, unknown][] = [];
-  let currentIndex = 0;
-  const innerForLoops = args.map((arg, i) => {
+  let index = 0;
+  const innerForLoops = argTypes.map((arg, i) => {
     const serializer = serializerMap[arg.type];
     if (!serializer) {
       throw new Error(`Cannot serialize data of type ${arg.type}`);
     }
     usedSerializers.push([`serializer${i}`, serializer]);
     const size = Math.ceil(sizeOf(arg) / 4);
-    const result = generateDataCopyingInstructions(currentIndex, size, i);
-    currentIndex += size;
-    return result;
+    const instructions = generateDataCopyingInstructions(index, size, i);
+    index += size;
+    return instructions;
   });
   const uses = Object.fromEntries(usedSerializers);
 
-  return fn(args)`(${args.map((_, i) => `_arg_${i}`).join(', ')}) {
-  var index = atomicAdd(&logCallIndexBuffer, 1);
+  return fn(argTypes)`(${argTypes.map((_, i) => `_arg_${i}`).join(', ')}) {
+  var index = atomicAdd(&indexBuffer, 1);
   if (index >= ${logOptions.logCountLimit}) {
     return;
   }
-  serializedLogDataBuffer[index].id = ${id};
+  dataBuffer[index].id = ${id};
 
-${innerForLoops.join('\n')}}`
-    .$uses({
+${innerForLoops.join('\n')}
+}`.$uses({
       ...uses,
-      logCallIndexBuffer,
-      serializedLogDataBuffer,
+      indexBuffer: indexBuffer,
+      dataBuffer: dataBuffer,
     }).$name(`log${id}`);
 }

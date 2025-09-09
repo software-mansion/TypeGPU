@@ -566,7 +566,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     if (logResources) {
       logDataFromGPU(logResources);
-      logResources.logCallIndexBuffer.write(0);
+      logResources.indexBuffer.write(0);
     }
 
     internals.priors.performanceCallback
@@ -701,28 +701,22 @@ class RenderPipelineCore implements SelfResolvable {
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(
-          this,
-          {
-            names: branch.nameRegistry,
-            enableExtensions,
-            shaderGenerator: branch.shaderGenerator,
-            root: branch,
-          },
-        );
+        resolutionResult = resolve(this, {
+          names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
+          root: branch,
+        });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(
-          this,
-          {
-            names: branch.nameRegistry,
-            enableExtensions,
-            shaderGenerator: branch.shaderGenerator,
-            root: branch,
-          },
-        );
+        resolutionResult = resolve(this, {
+          names: branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: branch.shaderGenerator,
+          root: branch,
+        });
       }
 
       const { code, usedBindGroupLayouts, catchall, logResources } =

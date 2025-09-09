@@ -67,24 +67,24 @@ describe('wgslGenerator with console.log', () => {
         return array<u32, 1>(n);
       }
 
-      @group(0) @binding(0) var<storage, read_write> logCallIndexBuffer: atomic<u32>;
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
         serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> serializedLogDataBuffer: array<SerializedLogData, 64>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&logCallIndexBuffer, 1);
+        var index = atomicAdd(&indexBuffer, 1);
         if (index >= 64) {
           return;
         }
-        serializedLogDataBuffer[index].id = 1;
+        dataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
+        dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       @fragment fn fs() -> @location(0) vec4f {
@@ -115,24 +115,24 @@ describe('wgslGenerator with console.log', () => {
         return array<u32, 1>(n);
       }
 
-      @group(0) @binding(0) var<storage, read_write> logCallIndexBuffer: atomic<u32>;
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
         serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> serializedLogDataBuffer: array<SerializedLogData, 64>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&logCallIndexBuffer, 1);
+        var index = atomicAdd(&indexBuffer, 1);
         if (index >= 64) {
           return;
         }
-        serializedLogDataBuffer[index].id = 1;
+        dataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
+        dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
@@ -163,35 +163,35 @@ describe('wgslGenerator with console.log', () => {
         return array<u32, 1>(n);
       }
 
-      @group(0) @binding(0) var<storage, read_write> logCallIndexBuffer: atomic<u32>;
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
         serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> serializedLogDataBuffer: array<SerializedLogData, 64>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&logCallIndexBuffer, 1);
+        var index = atomicAdd(&indexBuffer, 1);
         if (index >= 64) {
           return;
         }
-        serializedLogDataBuffer[index].id = 1;
+        dataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
+        dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       fn log2(_arg_0: u32) {
-        var index = atomicAdd(&logCallIndexBuffer, 1);
+        var index = atomicAdd(&indexBuffer, 1);
         if (index >= 64) {
           return;
         }
-        serializedLogDataBuffer[index].id = 2;
+        dataBuffer[index].id = 2;
 
         var serializedData0 = serializeU32(_arg_0);
-        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
+        dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
@@ -231,32 +231,30 @@ describe('wgslGenerator with console.log', () => {
         return array<u32, 3>(v.x, v.y, v.z);
       }
 
-      @group(0) @binding(0) var<storage, read_write> logCallIndexBuffer: atomic<u32>;
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
         serializedData: array<u32, 15>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> serializedLogDataBuffer: array<SerializedLogData, 64>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
       fn log1(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
-        var index = atomicAdd(&logCallIndexBuffer, 1);
+        var index = atomicAdd(&indexBuffer, 1);
         if (index >= 64) {
           return;
         }
-        serializedLogDataBuffer[index].id = 1;
+        dataBuffer[index].id = 1;
 
         var serializedData0 = serializeU32(_arg_0);
-        serializedLogDataBuffer[index].serializedData[0] = serializedData0[0];
-
+        dataBuffer[index].serializedData[0] = serializedData0[0];
         var serializedData1 = serializeVec3u(_arg_1);
-        serializedLogDataBuffer[index].serializedData[1] = serializedData1[0];
-        serializedLogDataBuffer[index].serializedData[2] = serializedData1[1];
-        serializedLogDataBuffer[index].serializedData[3] = serializedData1[2];
-
+        dataBuffer[index].serializedData[1] = serializedData1[0];
+        dataBuffer[index].serializedData[2] = serializedData1[1];
+        dataBuffer[index].serializedData[3] = serializedData1[2];
         var serializedData2 = serializeU32(_arg_2);
-        serializedLogDataBuffer[index].serializedData[4] = serializedData2[0];
+        dataBuffer[index].serializedData[4] = serializedData2[0];
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {

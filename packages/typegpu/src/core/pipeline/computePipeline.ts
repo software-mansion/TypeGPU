@@ -194,7 +194,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     if (memo.logResources) {
       logDataFromGPU(memo.logResources);
-      memo.logResources.logCallIndexBuffer.write(0);
+      memo.logResources.indexBuffer.write(0);
     }
 
     if (this._priors.performanceCallback) {
@@ -245,28 +245,22 @@ class ComputePipelineCore implements SelfResolvable {
       let resolveMeasure: PerformanceMeasure | undefined;
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(
-          this,
-          {
-            names: this.branch.nameRegistry,
-            enableExtensions,
-            shaderGenerator: this.branch.shaderGenerator,
-            root: this.branch,
-          },
-        );
+        resolutionResult = resolve(this, {
+          names: this.branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
+          root: this.branch,
+        });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
         });
       } else {
-        resolutionResult = resolve(
-          this,
-          {
-            names: this.branch.nameRegistry,
-            enableExtensions,
-            shaderGenerator: this.branch.shaderGenerator,
-            root: this.branch,
-          },
-        );
+        resolutionResult = resolve(this, {
+          names: this.branch.nameRegistry,
+          enableExtensions,
+          shaderGenerator: this.branch.shaderGenerator,
+          root: this.branch,
+        });
       }
 
       const { code, usedBindGroupLayouts, catchall, logResources } =
