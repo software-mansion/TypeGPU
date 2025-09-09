@@ -13,3 +13,9 @@ export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
   const maybe = value as TgpuRenderPipeline | undefined;
   return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
 }
+
+export function isPipeline(
+  value: unknown,
+): value is TgpuComputePipeline | TgpuRenderPipeline {
+  return isRenderPipeline(value) || isComputePipeline(value);
+}
