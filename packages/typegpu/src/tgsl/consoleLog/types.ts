@@ -9,6 +9,9 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 
+/**
+ * Options for configuring GPU log generation.
+ */
 export interface LogGeneratorOptions {
   /**
    * The maximum number of logs that appear during a single draw/dispatch call.

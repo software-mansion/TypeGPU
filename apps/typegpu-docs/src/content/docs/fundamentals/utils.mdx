@@ -209,7 +209,6 @@ This may happen with a noticeable delay.
 
 There are some limitations (some of which we intend to alleviate in the future):
 
-- Other `console` methods like `clear` or `warn` are not yet supported.
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
@@ -217,3 +216,4 @@ This is due to [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) th
 - TypeGPU needs to handle every logged data type individually.
 Currently, the only supported types are `bool`, `u32`, `vec2u`, `vec3u` and `vec4u`.
 - `console.log` currently does not support template literals and string substitutions.
+- Other `console` methods like `clear` or `warn` are not yet supported.
