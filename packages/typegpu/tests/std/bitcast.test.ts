@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import * as std from '../../src/std/index.ts';
 import {
   vec2f,
+  vec2i,
   vec2u,
   vec3f,
+  vec3i,
   vec3u,
   vec4f,
+  vec4i,
   vec4u,
 } from '../../src/data/vector.ts';
-// Import VectorOps directly for now since vector bitcasts are CPU-side helpers there
-import { VectorOps } from '../../src/data/vectorOps.ts';
 
 describe('bitcast', () => {
   it('checksEndian', () => {
@@ -43,42 +44,36 @@ describe('bitcast', () => {
 
   it('bitcastU32toF32 vectors', () => {
     const v2 = vec2u(1065353216, 3212836864); // 1.0f, -1.0f
-    const cast2 = VectorOps.bitcastU32toF32.vec2u(v2);
-    expect(std.isCloseTo(vec2f(cast2.x, cast2.y), vec2f(1.0, -1.0))).toBe(true);
+    const cast2 = std.bitcastU32toF32(v2);
+    expect(std.isCloseTo(cast2, vec2f(1.0, -1.0))).toBe(true);
 
     const v3 = vec3u(0, 1065353216, 3212836864); // 0.0f, 1.0f, -1.0f
-    const cast3 = VectorOps.bitcastU32toF32.vec3u(v3);
+    const cast3 = std.bitcastU32toF32(v3);
     expect(
-      std.isCloseTo(vec3f(cast3.x, cast3.y, cast3.z), vec3f(0.0, 1.0, -1.0)),
+      std.isCloseTo(cast3, vec3f(0.0, 1.0, -1.0)),
     ).toBe(true);
 
     const v4 = vec4u(0, 1065353216, 3212836864, 0); // 0,1,-1,0
-    const cast4 = VectorOps.bitcastU32toF32.vec4u(v4);
+    const cast4 = std.bitcastU32toF32(v4);
     expect(
       std.isCloseTo(
-        vec4f(cast4.x, cast4.y, cast4.z, cast4.w),
+        cast4,
         vec4f(0.0, 1.0, -1.0, 0.0),
       ),
     ).toBe(true);
   });
 
   it('bitcastU32toI32 vectors', () => {
-    const v2 = vec2u(0xFFFFFFFF, 0x80000000); // -1, -2147483648
-    const cast2 = VectorOps.bitcastU32toI32.vec2u(v2);
-    expect(cast2.x).toBe(-1);
-    expect(cast2.y).toBe(-2147483648);
+    const v2 = vec2u(4294967295, 2147483648); // -1, -2147483648
+    const cast2 = std.bitcastU32toI32(v2); // int vector
+    expect(cast2).toEqual(vec2i(-1, -2147483648));
 
-    const v3 = vec3u(0, 0xFFFFFFFF, 0x80000000);
-    const cast3 = VectorOps.bitcastU32toI32.vec3u(v3);
-    expect(cast3.x).toBe(0);
-    expect(cast3.y).toBe(-1);
-    expect(cast3.z).toBe(-2147483648);
+    const v3 = vec3u(0, 4294967295, 2147483648);
+    const cast3 = std.bitcastU32toI32(v3);
+    expect(cast3).toEqual(vec3i(0, -1, -2147483648));
 
-    const v4 = vec4u(0, 1, 0xFFFFFFFF, 0x80000000);
-    const cast4 = VectorOps.bitcastU32toI32.vec4u(v4);
-    expect(cast4.x).toBe(0);
-    expect(cast4.y).toBe(1);
-    expect(cast4.z).toBe(-1);
-    expect(cast4.w).toBe(-2147483648);
+    const v4 = vec4u(0, 1, 4294967295, 2147483648);
+    const cast4 = std.bitcastU32toI32(v4);
+    expect(cast4).toEqual(vec4i(0, 1, -1, -2147483648));
   });
 });

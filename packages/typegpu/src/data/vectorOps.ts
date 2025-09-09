@@ -1261,13 +1261,52 @@ export const VectorOps = {
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   bitcastU32toF32: {
-    vec2u: unary2u((n) => bitcastU32toF32Impl(n)),
-    vec3u: unary3u((n) => bitcastU32toF32Impl(n)),
-    vec4u: unary4u((n) => bitcastU32toF32Impl(n)),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    vec2u: (n: wgsl.v2u) =>
+      vec2f(bitcastU32toF32Impl(n.x), bitcastU32toF32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3f(
+        bitcastU32toF32Impl(n.x),
+        bitcastU32toF32Impl(n.y),
+        bitcastU32toF32Impl(n.z),
+      ),
+    vec4u: (n: wgsl.v4u) =>
+      vec4f(
+        bitcastU32toF32Impl(n.x),
+        bitcastU32toF32Impl(n.y),
+        bitcastU32toF32Impl(n.z),
+        bitcastU32toF32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2f
+      : T extends wgsl.v3u ? wgsl.v3f
+      : wgsl.v4f
+  >,
+
   bitcastU32toI32: {
-    vec2u: unary2u((n) => bitcastU32toI32Impl(n)),
-    vec3u: unary3u((n) => bitcastU32toI32Impl(n)),
-    vec4u: unary4u((n) => bitcastU32toI32Impl(n)),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    vec2u: (n: wgsl.v2u) =>
+      vec2f(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3f(
+        bitcastU32toI32Impl(n.x),
+        bitcastU32toI32Impl(n.y),
+        bitcastU32toI32Impl(n.z),
+      ),
+    vec4u: (n: wgsl.v4u) =>
+      vec4f(
+        bitcastU32toI32Impl(n.x),
+        bitcastU32toI32Impl(n.y),
+        bitcastU32toI32Impl(n.z),
+        bitcastU32toI32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2f
+      : T extends wgsl.v3u ? wgsl.v3f
+      : wgsl.v4f
+  >,
 };
