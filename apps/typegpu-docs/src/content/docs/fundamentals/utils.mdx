@@ -209,6 +209,7 @@ This may happen with a noticeable delay.
 
 There are some limitations (some of which we intend to alleviate in the future):
 
+- Other `console` methods like `clear` or `warn` are not yet supported.
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.

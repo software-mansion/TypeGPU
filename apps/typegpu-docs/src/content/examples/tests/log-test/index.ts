@@ -32,6 +32,17 @@ export const controls = {
         console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
       })(),
   },
+  'Different types': {
+    onButtonClick: () =>
+      prepareDispatch(root, () => {
+        'kernel';
+        console.log(d.bool(true));
+        console.log(d.u32(3_000_000_000));
+        console.log(d.vec2u(1, 2));
+        console.log(d.vec3u(1, 2, 3));
+        console.log(d.vec4u(1, 2, 3, 4));
+      })(),
+  },
   'Two logs': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
@@ -58,28 +69,6 @@ export const controls = {
         indexUniform.write(i);
         dispatch();
         console.log(`dispatched ${i}`);
-      }
-    },
-  },
-  'Too many logs': {
-    onButtonClick: () =>
-      prepareDispatch(root, (x) => {
-        'kernel';
-        console.log('Log 1 from thread', x);
-        console.log('Log 2 from thread', x);
-        console.log('Log 3 from thread', x);
-      })(16),
-  },
-  'Too much data': {
-    onButtonClick: () => {
-      const dispatch = prepareDispatch(root, (x) => {
-        'kernel';
-        console.log(d.vec3u(), d.vec3u(), d.vec3u());
-      });
-      try {
-        dispatch(1);
-      } catch (err) {
-        console.log(err);
       }
     },
   },
@@ -121,28 +110,37 @@ export const controls = {
         .withFragment(mainFragment, { format: presentationFormat })
         .createPipeline();
 
-      setTimeout(() => {
-        pipeline
-          .withColorAttachment({
-            view: context.getCurrentTexture().createView(),
-            clearValue: [0, 0, 0, 0],
-            loadOp: 'clear',
-            storeOp: 'store',
-          })
-          .draw(3);
-      }, 100);
+      pipeline
+        .withColorAttachment({
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        })
+        .draw(3);
     },
   },
-  'Different types': {
+  'Too many logs': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
+      prepareDispatch(root, (x) => {
         'kernel';
-        console.log(d.bool(true));
-        console.log(d.u32(3_000_000_000));
-        console.log(d.vec2u(1, 2));
-        console.log(d.vec3u(1, 2, 3));
-        console.log(d.vec4u(1, 2, 3, 4));
-      })(),
+        console.log('Log 1 from thread', x);
+        console.log('Log 2 from thread', x);
+        console.log('Log 3 from thread', x);
+      })(16),
+  },
+  'Too much data': {
+    onButtonClick: () => {
+      const dispatch = prepareDispatch(root, (x) => {
+        'kernel';
+        console.log(d.vec3u(), d.vec3u(), d.vec3u());
+      });
+      try {
+        dispatch(1);
+      } catch (err) {
+        console.log(err);
+      }
+    },
   },
 };
 
