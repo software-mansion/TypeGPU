@@ -41,7 +41,8 @@ import {
 } from '../data/wgslTypes.ts';
 import {
   type StorageTextureFormats,
-  texelFormatToDataType,
+  type TextureFormats,
+  textureFormats,
 } from '../core/texture/textureFormats.ts';
 import type { $repr } from '../shared/symbols.ts';
 import type { AnyData } from '../data/index.ts';
@@ -253,7 +254,7 @@ type PrimitiveToLoadedType = {
 };
 
 type TexelFormatToInstanceType<T extends StorageTextureFormats> =
-  (typeof texelFormatToDataType)[T][typeof $repr];
+  TextureFormats[T]['vectorType'][typeof $repr];
 
 function textureLoadCpu<T extends WgslTexture1d>(
   texture: T,
@@ -329,7 +330,7 @@ export const textureLoad = dualImpl({
       };
     }
     const format = texture.format;
-    const dataType = texelFormatToDataType[format];
+    const dataType = textureFormats[format].vectorType;
     return {
       argTypes: args,
       returnType: dataType,
@@ -340,23 +341,23 @@ export const textureLoad = dualImpl({
 function textureStoreCpu<T extends WgslStorageTexture1d>(
   texture: T,
   coords: number,
-  value: (typeof texelFormatToDataType)[T['format']][typeof $repr],
+  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
 ): void;
 function textureStoreCpu<T extends WgslStorageTexture2d>(
   texture: T,
   coords: v2i | v2u,
-  value: (typeof texelFormatToDataType)[T['format']][typeof $repr],
+  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
 ): void;
 function textureStoreCpu<T extends WgslStorageTexture2dArray>(
   texture: T,
   coords: v2i | v2u,
   arrayIndex: number,
-  value: (typeof texelFormatToDataType)[T['format']][typeof $repr],
+  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
 ): void;
 function textureStoreCpu<T extends WgslStorageTexture3d>(
   texture: T,
   coords: v3i | v3u,
-  value: (typeof texelFormatToDataType)[T['format']][typeof $repr],
+  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
 ): void;
 function textureStoreCpu(
   _texture: WgslStorageTexture,

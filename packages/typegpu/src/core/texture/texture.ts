@@ -32,11 +32,7 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
-import {
-  type TexelFormatToChannelType,
-  texelFormatToChannelType,
-  textureFormats,
-} from './textureFormats.ts';
+import { type TextureFormats, textureFormats } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
 import {
@@ -101,9 +97,9 @@ type TgpuTextureViewDescriptor = {
 type DefaultViewSchema<T extends Partial<TextureProps>> =
   TextureSchemaForDescriptor<{
     dimension: Default<T['dimension'], '2d'>;
-    sampleType: T['format'] extends keyof TexelFormatToChannelType
-      ? TexelFormatToChannelType[T['format']]
-      : TexelFormatToChannelType[keyof TexelFormatToChannelType];
+    sampleType: T['format'] extends keyof TextureFormats
+      ? TextureFormats[T['format']]['channelType']
+      : TextureFormats[keyof TextureFormats]['channelType'];
     multisampled: Default<T['sampleCount'], 1> extends 1 ? false : true;
   }>;
 
@@ -134,7 +130,7 @@ function getDescriptorForProps<T extends TextureProps>(
 ): WgslTextureProps {
   return {
     dimension: (props.dimension ?? '2d') as Default<T['dimension'], '2d'>,
-    sampleType: texelFormatToChannelType[props.format],
+    sampleType: textureFormats[props.format].channelType,
     multisampled: !((props.sampleCount ?? 1) === 1) as Default<
       T['sampleCount'],
       1
