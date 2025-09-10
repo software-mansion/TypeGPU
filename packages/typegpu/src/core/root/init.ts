@@ -18,6 +18,7 @@ import {
   MissingVertexBuffersError,
 } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
+import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import {
   type NameRegistry,
   RandomNameRegistry,
@@ -368,6 +369,8 @@ class TgpuRootImpl extends WithBindingImpl
     for (const disposable of this._disposables) {
       disposable.destroy();
     }
+
+    clearTextureUtilsCache(this.device);
 
     if (this._ownDevice) {
       this.device.destroy();

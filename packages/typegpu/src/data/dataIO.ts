@@ -448,56 +448,91 @@ const dataWriters = {
     return value;
   },
 
+  // TODO: Move texture IO logic here after we expand repr to have in/out variants
   'texture_1d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_3d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_cube'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_cube_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_cube'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_cube_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_multisampled_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_multisampled_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_1d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_3d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_external'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
 } satisfies CompleteDataWriters as Record<
   string,
@@ -855,56 +890,91 @@ const dataReaders = {
     return value;
   },
 
+  // TODO: Move texture IO logic here after we expand repr to have in/out variants
   'texture_1d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_3d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_cube'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_cube_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_cube'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_cube_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_depth_multisampled_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_multisampled_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_1d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_2d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_2d_array'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_storage_3d'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
   'texture_external'() {
-    throw new Error('Textures are not implemented yet!');
+    throw new Error(
+      'Data writers/readers for textures are not implemented yet. Use `texture.read()` or `texture.write()`',
+    );
   },
 } satisfies CompleteDataReaders;
 

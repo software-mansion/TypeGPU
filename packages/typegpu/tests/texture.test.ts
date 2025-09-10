@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf } from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type {
   TgpuTexture,
   TgpuTextureView,
@@ -308,6 +308,370 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
       attest(texture4.createView()).type.errors.snap(
         'Expected 1-2 arguments, but got 0.',
       );
+    });
+
+    describe('Texture methods', () => {
+      it('calls queue.writeTexture when clear is called', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        texture.clear();
+
+        // Should clear all 3 mip levels
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(3);
+
+        // Verify mip level 0: 64x32
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          1,
+          { texture: expect.anything(), mipLevel: 0 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 256, rowsPerImage: 32 }, // 64 * 4 bytes per pixel
+          [64, 32, 1],
+        );
+
+        // Verify mip level 1: 32x16
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          2,
+          { texture: expect.anything(), mipLevel: 1 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 128, rowsPerImage: 16 }, // 32 * 4 bytes per pixel
+          [32, 16, 1],
+        );
+
+        // Verify mip level 2: 16x8
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          3,
+          { texture: expect.anything(), mipLevel: 2 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 64, rowsPerImage: 8 }, // 16 * 4 bytes per pixel
+          [16, 8, 1],
+        );
+      });
+
+      it('calls queue.writeTexture for specific mip level when clear is called with mipLevel', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        texture.clear(1);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 1 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 128, rowsPerImage: 16 }, // 32 * 4 bytes per pixel for mip 1
+          [32, 16, 1],
+        );
+      });
+
+      it('calls appropriate device methods when generateMipmaps is called', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+          mipLevelCount: 4,
+        });
+
+        texture.generateMipmaps();
+
+        expect(
+          device.mock.createShaderModule.mock.calls.flatMap((call) =>
+            call.flatMap((arg) => (arg as { code: string }).code)
+          ),
+        )
+          .toMatchInlineSnapshot(`
+            [
+              "
+                    struct VertexOutput {
+                      @builtin(position) pos: vec4f,
+                      @location(0) uv: vec2f,
+                    }
+
+                    @vertex
+                    fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+                      let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+                      let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+                      var output: VertexOutput;
+                      output.pos = vec4f(pos[vertexIndex], 0, 1);
+                      output.uv = uv[vertexIndex];
+                      return output;
+                    }
+                  ",
+              "
+                    @group(0) @binding(0) var inputTexture: texture_2d<f32>;
+                    @group(0) @binding(1) var inputSampler: sampler;
+
+                    @fragment
+                    fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+                      return textureSample(inputTexture, inputSampler, uv);
+                    }
+                  ",
+            ]
+          `);
+
+        expect(device.mock.createRenderPipeline).toHaveBeenCalledWith(
+          expect.objectContaining({
+            vertex: expect.objectContaining({
+              module: expect.anything(),
+            }),
+            fragment: expect.objectContaining({
+              module: expect.anything(),
+              targets: [{ format: 'rgba8unorm' }],
+            }),
+            primitive: { topology: 'triangle-list' },
+          }),
+        );
+
+        expect(device.mock.createSampler).toHaveBeenCalledWith({
+          magFilter: 'linear',
+          minFilter: 'linear',
+        });
+
+        expect(device.mock.createBindGroupLayout).toHaveBeenCalledWith({
+          entries: [
+            {
+              binding: 0,
+              visibility: GPUShaderStage.FRAGMENT,
+              texture: { sampleType: 'float' },
+            },
+            {
+              binding: 1,
+              visibility: GPUShaderStage.FRAGMENT,
+              sampler: { type: 'filtering' },
+            },
+          ],
+        });
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls generateMipmaps with specific parameters', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 5,
+        });
+
+        texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
+
+        // Should create shader modules for mipmap generation (fresh cache per test)
+        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+
+        // Should call submit for each mip level transition (2 levels: 1->2, 2->3)
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls queue.writeTexture when write is called with buffer data', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+        });
+
+        const data = new Uint8Array(64); // 4x4x4 bytes per pixel
+        texture.write(data, 0);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({
+            texture: expect.anything(),
+            mipLevel: 0,
+          }),
+          data,
+          expect.objectContaining({
+            bytesPerRow: 16, // 4 pixels * 4 bytes per pixel
+            rowsPerImage: 4,
+          }),
+          [4, 4, 1],
+        );
+      });
+
+      it('calls write with buffer data for specific mip level', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        const data = new Uint8Array(16); // 2x2x4 bytes for mip level 2
+        texture.write(data, 2);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 2 },
+          data,
+          { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
+          [2, 2, 1], // Mip level 2 dimensions
+        );
+      });
+
+      it('calls queue.copyExternalImageToTexture when write is called with image source', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage);
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: mockImage },
+            expect.objectContaining({
+              texture: expect.anything(),
+            }),
+            [32, 32],
+          );
+      });
+
+      it('handles resizing when image dimensions do not match texture', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        });
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage);
+
+        // Should create textures for resampling since image size doesn't match texture size
+        expect(device.mock.createTexture).toHaveBeenCalled();
+        expect(device.mock.createShaderModule).toHaveBeenCalled();
+        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+
+        // Verify that command encoder and render pass are used for resampling
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls device methods when copyFrom is called', ({ root, device }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.copyFrom(sourceTexture);
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+
+        const commandEncoder = device.mock.createCommandEncoder.mock
+          .results[device.mock.createCommandEncoder.mock.results.length - 1]
+          ?.value;
+        expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
+          { texture: expect.anything() },
+          { texture: expect.anything() },
+          [16, 16],
+        );
+
+        expect(commandEncoder?.finish).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+      });
+
+      it('throws error when copyFrom is called with mismatched format', ({ root }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8sint',
+        });
+
+        // @ts-expect-error - Testing format mismatch error
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
+          'Texture format mismatch',
+        );
+      });
+
+      it('throws error when copyFrom is called with mismatched size', ({ root }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        // @ts-expect-error - Testing size mismatch error
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
+          'Texture size mismatch',
+        );
+      });
+
+      it('throws error when write is called with incorrect buffer size', ({ root }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+        });
+
+        const incorrectData = new Uint8Array(32); // Should be 64 bytes for 4x4x4
+
+        expect(() => texture.write(incorrectData)).toThrow(
+          'Buffer size mismatch',
+        );
+      });
+
+      it('warns and returns early when generateMipmaps would generate no mipmaps', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
+          () => {},
+        );
+
+        // Base mip level 3 would result in 0 mip levels to generate, so it should return early
+        expect(() => texture.generateMipmaps(3)).not.toThrow();
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'generateMipmaps is a no-op: would generate 0 mip levels (base: 3, total: 3)',
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      it('warns when generateMipmaps would generate only 1 mip level', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
+          () => {},
+        );
+
+        // Base mip level 2 would result in 1 mip level to generate (3-2=1), so it should warn and return early
+        expect(() => texture.generateMipmaps(2)).not.toThrow();
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'generateMipmaps is a no-op: would generate 1 mip levels (base: 2, total: 3)',
+        );
+
+        consoleSpy.mockRestore();
+      });
     });
   });
 });
