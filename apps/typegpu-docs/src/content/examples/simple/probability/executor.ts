@@ -72,9 +72,9 @@ export class Executor {
 
   set count(value: number) {
     this.#count = value;
-    if (this.#bufferCache.has(value)) {
-      // biome-ignore lint/style/noNonNullAssertion: just checked it above
-      [this.#samplesBuffer, this.#seedBuffer] = this.#bufferCache.get(value)!;
+    const cacheEntry = this.#bufferCache.get(value);
+    if (cacheEntry) {
+      [this.#samplesBuffer, this.#seedBuffer] = cacheEntry;
     } else {
       this.#samplesBuffer = this.#root
         .createBuffer(d.arrayOf(d.vec3f, value))
@@ -101,7 +101,7 @@ export class Executor {
     if (!this.#pipelineCache.has(distribution)) {
       const pipeline = this.#root['~unstable']
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
+        .withCompute(this.#dataMoreWorkersFunc)
         .createPipeline();
       this.#pipelineCache.set(distribution, pipeline);
     }
@@ -113,11 +113,8 @@ export class Executor {
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
   ): Promise<d.v3f[]> {
-    let pipeline: TgpuComputePipeline;
-    if (this.#pipelineCache.has(distribution)) {
-      // biome-ignore lint/style/noNonNullAssertion: just checked it above
-      pipeline = this.#pipelineCache.get(distribution)!;
-    } else {
+    let pipeline = this.#pipelineCache.get(distribution);
+    if (!pipeline) {
       pipeline = this.#root['~unstable']
         .with(this.#distributionSlot, distribution)
         .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
