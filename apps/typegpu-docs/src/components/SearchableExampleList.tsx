@@ -1,6 +1,6 @@
 import Fuse from 'fuse.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { examples } from '../utils/examples/exampleContent.ts';
+import { examples } from '../examples/exampleContent.ts';
 import { type Example, exampleCategories } from '../utils/examples/types.ts';
 import { ExampleCard } from './ExampleCard.tsx';
 

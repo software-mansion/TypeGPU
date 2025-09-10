@@ -5,7 +5,7 @@ import type {
   ExampleMetadata,
   ExampleSrcFile,
   ThumbnailPair,
-} from './types.ts';
+} from '../utils/examples/types.ts';
 
 function extractUrlFromViteImport(
   importFn: () => void,
@@ -36,12 +36,10 @@ function noCacheImport<T>(
   );
 }
 
-const contentExamplesPath = '../../content/examples/';
-
 function pathToExampleKey(path: string): string {
   return R.pipe(
     path,
-    (p) => pathe.relative(contentExamplesPath, p), // removing parent folder
+    (p) => pathe.relative('./', p), // removing parent folder
     (p) => p.split('/'), // splitting into segments
     ([category, name]) => `${category}--${name}`,
   );
@@ -53,14 +51,10 @@ function globToExampleFiles(
   return R.pipe(
     record,
     R.mapValues((content, key): ExampleSrcFile => {
-      const pathRelToExamples = pathe.relative(contentExamplesPath, key);
+      const pathRelToExamples = pathe.relative('./', key);
       const categoryDir = pathRelToExamples.split('/')[0];
       const exampleDir = pathRelToExamples.split('/')[1];
-      const examplePath = pathe.join(
-        contentExamplesPath,
-        categoryDir,
-        exampleDir,
-      );
+      const examplePath = pathe.join(categoryDir, exampleDir);
 
       return {
         exampleKey: pathToExampleKey(key),
@@ -74,7 +68,7 @@ function globToExampleFiles(
 }
 
 const metaFiles = R.pipe(
-  import.meta.glob('../../content/examples/**/meta.json', {
+  import.meta.glob('./**/meta.json', {
     eager: true,
     import: 'default',
   }) as Record<string, ExampleMetadata>,
@@ -82,7 +76,7 @@ const metaFiles = R.pipe(
 );
 
 const readonlyTsFiles = R.pipe(
-  import.meta.glob('../../content/examples/**/*.ts', {
+  import.meta.glob('./**/*.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -91,7 +85,7 @@ const readonlyTsFiles = R.pipe(
 );
 
 const tsFilesImportFunctions = R.pipe(
-  import.meta.glob('../../content/examples/**/index.ts') as Record<
+  import.meta.glob('./**/index.ts') as Record<
     string,
     () => Promise<unknown>
   >,
@@ -99,7 +93,7 @@ const tsFilesImportFunctions = R.pipe(
 );
 
 const htmlFiles = R.pipe(
-  import.meta.glob('../../content/examples/**/index.html', {
+  import.meta.glob('./**/index.html', {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -108,7 +102,7 @@ const htmlFiles = R.pipe(
 );
 
 const thumbnailFiles = R.pipe(
-  import.meta.glob('../../content/examples/**/thumbnail.png', {
+  import.meta.glob('./**/thumbnail.png', {
     eager: true,
     import: 'default',
     query: 'w=512;1024',
