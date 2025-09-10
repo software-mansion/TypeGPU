@@ -247,6 +247,9 @@ importers:
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
+      '@typegpu/react':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-react
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
@@ -676,6 +679,35 @@ importers:
       unbuild:
         specifier: catalog:build
         version: 3.5.0(tsover@5.9.11)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-react:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.1.0
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.1.8
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.66
+      tsdown:
+        specifier: catalog:build
+        version: 0.21.7(tsover@5.9.11)
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
