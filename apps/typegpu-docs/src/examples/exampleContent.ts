@@ -121,19 +121,25 @@ const thumbnailFiles = R.pipe(
   }),
 );
 
+const DEV = globalThis.process.env.NODE_ENV === 'development';
+const TEST = globalThis.process.env.NODE_ENV === 'test';
+
 export const examples = R.pipe(
   metaFiles,
-  R.mapValues(
-    (value, key) =>
-      ({
-        key,
-        metadata: value,
-        tsFiles: readonlyTsFiles[key] ?? [],
-        tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
-        htmlFile: htmlFiles[key]?.[0] ?? '',
-        thumbnails: thumbnailFiles[key],
-      }) satisfies Example,
-  ),
+  R.entries(),
+  R.filter(([_key, meta]) => DEV || TEST || !meta.dev),
+  R.map(([key, value]): [string, Example] => [
+    key,
+    {
+      key,
+      metadata: value,
+      tsFiles: readonlyTsFiles[key] ?? [],
+      tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
+      htmlFile: htmlFiles[key]?.[0] ?? '',
+      thumbnails: thumbnailFiles[key],
+    },
+  ]),
+  R.fromEntries(),
 );
 
 export const examplesByCategory = R.groupBy(
