@@ -803,7 +803,7 @@ function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: T,
-  e3: T | number,
+  e3: T,
 ): T {
   if (typeof e1 === 'number') {
     if (typeof e3 !== 'number' || typeof e2 !== 'number') {
@@ -847,6 +847,18 @@ type ModfOverload = {
   ): Infer<typeof ModfResult[T['kind']]>;
 };
 
+function cpuModf(e: number): Infer<typeof ModfResult['f32']>;
+function cpuModf<T extends AnyFloatVecInstance>(
+  e: T,
+): Infer<typeof ModfResult[T['kind']]>;
+function cpuModf<T extends AnyFloatVecInstance | number>(
+  value: T,
+): Infer<typeof ModfResult[keyof typeof ModfResult]> {
+  throw new Error(
+    'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const modf: ModfOverload = dualImpl({
   signature: (e) => {
     const returnType = ModfResult[e.type as keyof typeof ModfResult];
@@ -859,13 +871,7 @@ export const modf: ModfOverload = dualImpl({
 
     return { argTypes: [e], returnType };
   },
-  // CPU implementation
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T) => {
-    throw new Error(
-      'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
-  // GPU implementation
+  normalImpl: cpuModf,
   codegenImpl: (value) => stitch`modf(${value})`,
   name: 'modf',
 });
