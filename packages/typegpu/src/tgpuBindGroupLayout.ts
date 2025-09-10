@@ -375,10 +375,12 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
     : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler | GPUSampler
     : T extends TgpuLayoutTexture ?
         | GPUTextureView
+        | GPUTexture
         | (SampledFlag & TgpuTexture<Prettify<PropsForSchema<T['texture']>>>)
         | TgpuTextureView<WgslTexture>
     : T extends TgpuLayoutStorageTexture ?
         | GPUTextureView
+        | GPUTexture
         | (
           & StorageFlag
           & TgpuTexture<Prettify<PropsForSchema<T['storageTexture']>>>
