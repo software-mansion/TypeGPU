@@ -5,6 +5,7 @@ import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: '
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
 import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
+import typegpuReactPackageJson from '@typegpu/react/package.json' with { type: 'json' };
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with { type: 'json' };
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
@@ -121,6 +122,7 @@ ${example.htmlFile.content}
       "@typegpu/color": "${typegpuColorPackageJson.version}",
       "@typegpu/sdf": "${typegpuSdfPackageJson.version}",
       "@typegpu/three": "${typegpuThreePackageJson.version}"
+      "@typegpu/react": "${typegpuReactPackageJson.version}"
     }
 }`,
         'vite.config.js': `\
