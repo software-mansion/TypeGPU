@@ -77,10 +77,6 @@ export const acos = dualImpl({
   name: 'acos',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#acosh-builtin
- */
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -97,10 +93,6 @@ export const acosh = dualImpl({
   name: 'acosh',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#asin-builtin
- */
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -117,10 +109,6 @@ export const asin = dualImpl({
   name: 'asin',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#asinh-builtin
- */
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -137,10 +125,6 @@ export const asinh = dualImpl({
   name: 'asinh',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#atan-builtin
- */
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -157,10 +141,6 @@ export const atan = dualImpl({
   name: 'atan',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#atanh-builtin
- */
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -202,10 +182,6 @@ export const atan2 = dualImpl({
   name: 'atan2',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#ceil-builtin
- */
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -222,10 +198,6 @@ export const ceil = dualImpl({
   name: 'ceil',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#clamp
- */
 function cpuClamp(value: number, low: number, high: number): number;
 function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
@@ -249,10 +221,6 @@ export const clamp = dualImpl({
   name: 'clamp',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#cos-builtin
- */
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -269,10 +237,6 @@ export const cos = dualImpl({
   name: 'cos',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#cosh-builtin
- */
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -340,10 +304,6 @@ export const countTrailingZeros = dualImpl({
   name: 'countTrailingZeros',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#cross-builtin
- */
 export const cross = dualImpl({
   signature: (lhs, rhs) => ({ argTypes: [lhs, rhs], returnType: lhs }),
   normalImpl: <T extends v3f | v3h>(a: T, b: T): T =>
@@ -406,10 +366,6 @@ export const distance = dualImpl({
   name: 'distance',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#dot-builtin
- */
 export const dot = dualImpl({
   name: 'dot',
   signature: (...argTypes) => ({ argTypes, returnType: f32 }),
@@ -440,10 +396,6 @@ export const dot4I8Packed = dualImpl({
   name: 'dot4I8Packed',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#exp-builtin
- */
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -460,10 +412,6 @@ export const exp = dualImpl({
   name: 'exp',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#exp2-builtin
- */
 function cpuExp2(value: number): number;
 function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -555,10 +503,6 @@ export const firstTrailingBit = dualImpl({
   name: 'firstTrailingBit',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#floor-builtin
- */
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -768,10 +712,6 @@ export const ldexp: LdexpOverload = createDualImpl(
   },
 );
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#length-builtin
- */
 function cpuLength(value: number): number;
 function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
 function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
@@ -791,10 +731,6 @@ export const length = dualImpl({
   codegenImpl: (arg) => stitch`length(${arg})`,
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#log-builtin
- */
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -811,10 +747,6 @@ export const log = dualImpl({
   name: 'log',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#log2-builtin
- */
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -831,10 +763,6 @@ export const log2 = dualImpl({
   name: 'log2',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#max-float-builtin
- */
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
@@ -857,10 +785,6 @@ export const max = dualImpl({
   name: 'max',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#min-float-builtin
- */
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
@@ -1120,10 +1044,6 @@ export const sign = dualImpl({
   name: 'sign',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#sin-builtin
- */
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -1140,10 +1060,6 @@ export const sin = dualImpl({
   name: 'sin',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#sinh-builtin
- */
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
@@ -1250,10 +1166,6 @@ export const tan = dualImpl({
   name: 'tan',
 });
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#tanh-builtin
- */
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
