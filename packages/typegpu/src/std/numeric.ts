@@ -845,28 +845,28 @@ type ModfOverload = {
   ): Infer<typeof ModfResult[T['kind']]>;
 };
 
-export const modf: ModfOverload = createDualImpl(
+export const modf: ModfOverload = dualImpl({
+  signature: (e) => {
+    const returnType = ModfResult[e.type as keyof typeof ModfResult];
+
+    if (!returnType) {
+      throw new Error(
+        `Unsupported data type for modf: ${e.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
+      );
+    }
+
+    return { argTypes: [e], returnType };
+  },
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T) => {
+  normalImpl: <T extends AnyFloatVecInstance | number>(value: T) => {
     throw new Error(
       'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
   // GPU implementation
-  (value) => {
-    const returnType =
-      ModfResult[value.dataType.type as keyof typeof ModfResult];
-
-    if (!returnType) {
-      throw new Error(
-        `Unsupported data type for modf: ${value.dataType.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
-      );
-    }
-
-    return snip(stitch`modf(${value})`, returnType);
-  },
-  'modf',
-);
+  codegenImpl: (value) => stitch`modf(${value})`,
+  name: 'modf',
+});
 
 export const normalize = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
