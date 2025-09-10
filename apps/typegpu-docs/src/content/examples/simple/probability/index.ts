@@ -54,19 +54,16 @@ export const controls = {
     },
   },
   'Reseed': {
-    onButtonClick: async () => {
+    async onButtonClick() {
       executor.reseed();
-      await replot(
-        currentDistribution,
-        true,
-      );
+      await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
   'Distribution': {
     initial: c.initialDistribution,
     options: c.distributions,
-    onSelectChange: async (value: Distribution) => {
+    async onSelectChange(value: Distribution) {
       if (currentDistribution === value) {
         return;
       }
@@ -82,7 +79,7 @@ export const controls = {
   'Number of samples': {
     initial: c.initialNumSamples,
     options: c.numSamplesOptions,
-    onSelectChange: async (value: number) => {
+    async onSelectChange(value: number) {
       executor.count = value;
       await replot(
         currentDistribution,
@@ -90,7 +87,7 @@ export const controls = {
     },
   },
   'Test Resolution': import.meta.env.DEV && {
-    onButtonClick: () => {
+    onButtonClick() {
       c.distributions
         .map((dist) =>
           tgpu.resolve({
