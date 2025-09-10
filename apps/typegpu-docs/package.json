@@ -30,6 +30,7 @@
     "@typegpu/color": "workspace:*",
     "@typegpu/geometry": "workspace:*",
     "@typegpu/noise": "workspace:*",
+    "@typegpu/react": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "@typegpu/sort": "workspace:*",
     "@typegpu/three": "workspace:*",
