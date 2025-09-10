@@ -12,55 +12,75 @@ import {
 } from './schemas.ts';
 import { identity, relu } from './activationFunctions.ts';
 
-/**
- * Create a dense (fully-connected) + ReLU network runner.
- * When given an OnnxModel, we auto-extract layer weights/biases by:
- *  - Scanning all initializers with dims.length === 2 as weight matrices
- *  - For each weight tensor W (out x in) locating a unique bias tensor b with dims.length === 1 and dims[0] === out
- *  - Ordering layers by descending weight element count (heuristic consistent with prior manual example)
- *  - Maintaining original order heuristic (largest -> smallest) while preventing bias reuse
- *
- * Limitations (current simplified implementation):
- *  - Ignores actual node graph topology; purely pairs weight/bias tensors
- *  - Assumes weight dims are [out, in]
- *  - Stops when no unique matching bias is found for a weight
- */
 export function createDenseReluNetwork(
   root: TgpuRoot,
   model: OnnxModel,
 ): NetworkRunner {
-  // Auto-extract from ONNX initializers (assumes only dense + activations relevant)
-  const tensors = model.graph.initializers;
-  const sorted = [...tensors]
-    .filter((t): t is Tensor & { data: Float32Array } =>
-      t.data instanceof Float32Array
-    )
-    .sort((a, b) => b.elementCount - a.elementCount);
-  const usedBiases = new Set<Tensor>();
+  // Build an initializer map for quick lookup (prefer model.tensorMap if present)
+  const initMap = model.tensorMap;
+
+  function transposeFloat32(data: Float32Array, rows: number, cols: number) {
+    const out = new Float32Array(data.length);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const srcIdx = r * cols + c;
+        out[c * rows + r] = data[srcIdx] as number;
+      }
+    }
+    return out;
+  }
+
+  // Extract layers by scanning graph nodes in order (Gemm only for now)
   const layerSpecs: { weights: Float32Array; biases: Float32Array }[] = [];
-  for (const w of sorted) {
-    if (w.dims.length !== 2) continue;
-    const outDim = Number(w.dims[0]);
-    const bias = sorted.find((b) =>
-      b !== w && !usedBiases.has(b) && b.dims.length === 1 &&
-      Number(b.dims[0]) === outDim
-    );
-    if (!bias) continue;
-    if (!(bias.data instanceof Float32Array)) continue;
-    layerSpecs.push({ weights: w.data, biases: bias.data });
-    usedBiases.add(bias);
+  for (const node of model.graph.nodes) {
+    if (node.opType !== 'Gemm') continue;
+    // Gemm inputs: [A, B, C?] — B is weights, C optional bias
+    const weightTensor = initMap.get(node.inputs[1] as string);
+    const biasName = node.inputs[2] as string;
+    const biasTensor = biasName ? initMap.get(biasName) : undefined;
+
+    if (!weightTensor || !biasTensor) continue;
+    if (
+      !(weightTensor.data instanceof Float32Array) ||
+      !(biasTensor.data instanceof Float32Array)
+    ) continue;
+    if (weightTensor.dims.length !== 2 || biasTensor.dims.length !== 1) {
+      continue;
+    }
+
+    const outDim = Number(weightTensor.dims[0]);
+    const inDim = Number(weightTensor.dims[1]);
+
+    let weightsData = weightTensor.data as Float32Array;
+
+    const transBAttr = node.attributes.find((a) => a.name === 'transB'); //pytorch transpose
+    const transB = transBAttr ? Number(transBAttr.value as any) === 1 : false;
+    if (transB) {
+      weightsData = transposeFloat32(weightsData, outDim, inDim);
+    }
+
+    layerSpecs.push({
+      weights: weightsData,
+      biases: biasTensor.data as Float32Array,
+    });
   }
-  if (layerSpecs.length === 0) {
-    throw new Error(
-      '[typegpu-ai] No dense layers could be inferred from ONNX model (need weight[O,I] & bias[O]).',
-    );
-  }
+
+  console.log('before shader', layerSpecs);
   const device = root.device;
   const layers: DenseLayerGpu[] = [];
 
+  // Determine buffer size: must fit the largest input or output dimension used by any layer
   const maxOut = Math.max(...layerSpecs.map((l) => l.biases.length));
-  const bufferA = root.createBuffer(d.arrayOf(d.f32, maxOut)).$usage('storage');
-  const bufferB = root.createBuffer(d.arrayOf(d.f32, maxOut)).$usage('storage');
+  const maxIn = Math.max(
+    ...layerSpecs.map((l) => Math.floor(l.weights.length / l.biases.length)),
+  );
+  const bufferSize = Math.max(maxOut, maxIn);
+  const bufferA = root.createBuffer(d.arrayOf(d.f32, bufferSize)).$usage(
+    'storage',
+  );
+  const bufferB = root.createBuffer(d.arrayOf(d.f32, bufferSize)).$usage(
+    'storage',
+  );
   let currentInputBuffer = bufferA;
   let currentOutputBuffer = bufferB;
 
@@ -144,10 +164,20 @@ export function createDenseReluNetwork(
 
     // result in: if layer count odd -> bufferB else -> bufferA (because of last swap rule)
     const finalBuffer = (layers.length % 2 === 0) ? bufferA : bufferB; // after loop, if even layers we swapped last iteration leaving output in initial input buffer
-    const out = await finalBuffer.read();
-
-    return out.slice(0, layers[layers.length - 1]!.outSize);
+    const outFull = await finalBuffer.read();
+    const finalSize = layers[layers.length - 1]!.outSize;
+    // only apply softmax over the actual output slice
+    const slice = Array.from(outFull.slice(0, finalSize));
+    const out = softmax(slice);
+    return out;
   }
 
   return { run, layers };
+}
+
+function softmax(arr: number[]): number[] {
+  const max = Math.max(...arr);
+  const exps = arr.map((x) => Math.exp(x - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map((x) => x / sum);
 }

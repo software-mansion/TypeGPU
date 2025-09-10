@@ -8,7 +8,7 @@ const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
 });
 
-const MODEL_PATH = '/TypeGPU/assets/MNISTImageClassifier.onnx';
+const MODEL_PATH = '/TypeGPU/assets/kmnist2137.onnx';
 const root = await tgpu.init();
 
 let network: NetworkRunner | undefined;
@@ -31,9 +31,17 @@ async function runExampleInference() {
   if (!network) return;
   const inSize = network.layers[0].inSize;
   if (exampleKMNISTInput.length !== inSize) {
-    console.warn('[AI Example] KMNIST example size mismatch', exampleKMNISTInput.length, '!=', inSize);
+    console.warn(
+      '[AI Example] KMNIST example size mismatch',
+      exampleKMNISTInput.length,
+      '!=',
+      inSize,
+    );
     return;
   }
   const out = await network.run(exampleKMNISTInput);
-  console.log('[AI Example] Inference output:', out.slice(0, Math.min(16, out.length)));
+  console.log(
+    '[AI Example] Inference output:',
+    out.slice(0, Math.min(16, out.length)),
+  );
 }
