@@ -1011,6 +1011,26 @@ describe('TgpuRenderPipeline', () => {
 
       expect(root[$internal].flush).toBeCalledTimes(1);
     });
+    it('does not flush inside batch', ({ root }) => {
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      tgpu['~unstable'].batch(() => {
+        pipeline.draw(3);
+        expect(root[$internal].flush).toBeCalledTimes(0);
+      });
+    });
   });
 });
 

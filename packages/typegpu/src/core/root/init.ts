@@ -109,6 +109,7 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
+import { BatchFlag } from '../../batch.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -692,7 +693,7 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-    this[$internal].flush();
+    BatchFlag.insideBatch ? (() => {})() : this[$internal].flush();
   }
 }
 

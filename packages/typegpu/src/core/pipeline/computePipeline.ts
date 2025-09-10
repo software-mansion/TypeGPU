@@ -25,6 +25,7 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import { PERF } from '../../shared/meta.ts';
+import { BatchFlag } from '../../batch.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -200,7 +201,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         root: branch,
         priors: this._priors,
       })
-      : branch[$internal].flush();
+      : (BatchFlag.insideBatch ? (() => {})() : branch[$internal].flush());
   }
 
   $name(label: string): this {
