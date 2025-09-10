@@ -22,10 +22,11 @@ const navigatorMock = {
   },
 };
 
-const mockTexture = {
+const mockTexture = (descriptor: GPUTextureDescriptor) => ({
+  ...descriptor,
   createView: vi.fn(() => 'view'),
   destroy: vi.fn(),
-};
+});
 
 const mockCommandEncoder = {
   get mock() {
@@ -122,7 +123,7 @@ const mockDevice = {
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => mockTexture),
+  createTexture: vi.fn((descriptor) => mockTexture(descriptor)),
   importExternalTexture: vi.fn(() => 'mockExternalTexture'),
   queue: {
     copyExternalImageToTexture: vi.fn(),

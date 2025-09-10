@@ -1,35 +1,33 @@
 import type { StorageFlag } from '../../extension.ts';
 import { getName } from '../../shared/meta.ts';
-import type { StorageTextureTexelFormat } from './textureFormats.ts';
+import type { StorageTextureFormats } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 
-export interface Sampled {
+export interface SampledFlag {
   usableAsSampled: true;
 }
 
-export interface Render {
+export interface RenderFlag {
   usableAsRender: true;
 }
 
 export type LiteralToExtensionMap = {
   storage: StorageFlag; // <- shared between buffers and textures
-  sampled: Sampled;
-  render: Render;
+  sampled: SampledFlag;
+  render: RenderFlag;
 };
-
-export type TextureExtensionLiteral = keyof LiteralToExtensionMap;
 
 export type AllowedUsages<TProps extends TextureProps> =
   | 'sampled'
   | 'render'
-  | (TProps['format'] extends StorageTextureTexelFormat ? 'storage' : never);
+  | (TProps['format'] extends StorageTextureFormats ? 'storage' : never);
 
-export function isUsableAsSampled<T>(value: T): value is T & Sampled {
-  return !!(value as unknown as Sampled)?.usableAsSampled;
+export function isUsableAsSampled<T>(value: T): value is T & SampledFlag {
+  return !!(value as unknown as SampledFlag)?.usableAsSampled;
 }
 
-export function isUsableAsRender<T>(value: T): value is T & Render {
-  return !!(value as unknown as Render)?.usableAsRender;
+export function isUsableAsRender<T>(value: T): value is T & RenderFlag {
+  return !!(value as unknown as RenderFlag)?.usableAsRender;
 }
 
 /**
@@ -45,21 +43,5 @@ export class NotSampledError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotSampledError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotRenderError extends Error {
-  constructor(value: object) {
-    super(
-      `Resource '${
-        getName(value) ?? '<unnamed>'
-      }' cannot be bound as 'render'. Use .$usage('render') to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotRenderError.prototype);
   }
 }

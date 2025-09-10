@@ -16,6 +16,14 @@ export type Prettify<T> =
   & {};
 
 /**
+ * Utility type that merges a partial type with defaults, where defaults are used
+ * for properties not present in the partial type.
+ */
+export type WithDefaults<TPartial, TDefaults> =
+  & Omit<TDefaults, keyof TPartial>
+  & TPartial;
+
+/**
  * Removes properties from record type that extend `Prop`
  */
 export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<

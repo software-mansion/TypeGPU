@@ -99,7 +99,7 @@ const materialBuffer = root
 
 let chosenCubemap: CubemapNames = 'campsite';
 let cubemapTexture = await loadCubemap(root, chosenCubemap);
-let cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+let cubemap = cubemapTexture.createView(d.textureCube(d.f32));
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -120,7 +120,7 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 });
 
 const textureLayout = tgpu.bindGroupLayout({
-  cubemap: { texture: 'float', viewDimension: 'cube' },
+  cubemap: { texture: d.textureCube(d.f32) },
   texSampler: { sampler: 'filtering' },
 });
 const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
@@ -208,7 +208,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
     normalizedNormal,
   );
   const environmentColor = std.textureSample(
-    cubemapBinding,
+    cubemapBinding.$,
     texSampler,
     reflectionVector,
   );
@@ -256,7 +256,7 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   return std.textureSample(
-    cubemapBinding,
+    cubemapBinding.$,
     texSampler,
     std.normalize(input.texCoord),
   );
@@ -483,7 +483,7 @@ export const controls = {
     onSelectChange: async (value: CubemapNames) => {
       chosenCubemap = value;
       const newCubemapTexture = await loadCubemap(root, chosenCubemap);
-      cubemap = newCubemapTexture.createView('sampled', { dimension: 'cube' });
+      cubemap = newCubemapTexture.createView(d.textureCube(d.f32));
 
       textureBindGroup = root.createBindGroup(textureLayout, {
         cubemap,

@@ -19,109 +19,87 @@ describe('blur example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct Settings_1 {
+      "struct computeFn_Input_1 {
+        @builtin(workgroup_id) wid: vec3u,
+        @builtin(local_invocation_id) lid: vec3u,
+      }
+
+      struct Settings_3 {
         filterDim: i32,
         blockDim: u32,
       }
 
-      @group(0) @binding(0) var<uniform> settings_0: Settings_1;
-
-      @group(0) @binding(1) var sampling_2: sampler;
-
-      @group(1) @binding(0) var<uniform> flip_3: u32;
+      @group(0) @binding(0) var<uniform> settingsUniform_2: Settings_3;
 
       @group(1) @binding(1) var inTexture_4: texture_2d<f32>;
 
-      @group(1) @binding(2) var outTexture_5: texture_storage_2d<rgba8unorm, write>;
+      @group(1) @binding(0) var<uniform> flip_5: u32;
 
-      var<workgroup> tile: array<array<vec3f, 128>, 4>;
+      var<workgroup> tileData_6: array<array<vec3f, 128>, 4>;
 
-      @compute @workgroup_size(32, 1)
-      fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
-        let filterOffset = (settings_0.filterDim - 1) / 2;
-        let dims = vec2i(textureDimensions(inTexture_4, 0));
-        let baseIndex = vec2i(wid.xy * vec2(settings_0.blockDim, 4) +
-                                  lid.xy * vec2(4, 1))
-                        - vec2(filterOffset, 0);
+      @group(0) @binding(1) var sampler_7: sampler;
 
-        for (var r = 0; r < 4; r++) {
-          for (var c = 0; c < 4; c++) {
-            var loadIndex = baseIndex + vec2(c, r);
-            if (flip_3 != 0) {
+      @group(1) @binding(2) var outTexture_8: texture_storage_2d<rgba8unorm, write>;
+
+      @compute @workgroup_size(32, 1, 1) fn computeFn_0(_arg_0: computeFn_Input_1) {
+        var settings2 = settingsUniform_2;
+        var filterOffset = i32((f32((settings2.filterDim - 1)) / 2f));
+        var dims = vec2i(textureDimensions(inTexture_4));
+        var baseIndex = (vec2i(((_arg_0.wid.xy * vec2u(settings2.blockDim, 4)) + (_arg_0.lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0));
+        for (var r = 0; (r < 4); r++) {
+          for (var c = 0; (c < 4); c++) {
+            var loadIndex = (baseIndex + vec2i(c, r));
+            if ((flip_5 != 0)) {
               loadIndex = loadIndex.yx;
             }
-
-            tile[r][4 * lid.x + u32(c)] = textureSampleLevel(
-              inTexture_4,
-              sampling_2,
-              (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
-              0.0
-            ).rgb;
+            tileData_6[r][((_arg_0.lid.x * 4) + u32(c))] = textureSampleLevel(inTexture_4, sampler_7, vec2f(((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims))), 0).xyz;
           }
         }
-
         workgroupBarrier();
-
-        for (var r = 0; r < 4; r++) {
-          for (var c = 0; c < 4; c++) {
-            var writeIndex = baseIndex + vec2(c, r);
-            if (flip_3 != 0) {
+        for (var r = 0; (r < 4); r++) {
+          for (var c = 0; (c < 4); c++) {
+            var writeIndex = (baseIndex + vec2i(c, r));
+            if ((flip_5 != 0)) {
               writeIndex = writeIndex.yx;
             }
-
-            let center = i32(4 * lid.x) + c;
-            if (center >= filterOffset &&
-                center < 128 - filterOffset &&
-                all(writeIndex < dims)) {
-              var acc = vec3(0.0, 0.0, 0.0);
-              for (var f = 0; f < settings_0.filterDim; f++) {
-                var i = center + f - filterOffset;
-                acc = acc + (1.0 / f32(settings_0.filterDim)) * tile[r][i];
+            var center = (i32((4 * _arg_0.lid.x)) + c);
+            if ((((center >= filterOffset) && (center < (128 - filterOffset))) && all((writeIndex < dims)))) {
+              var acc = vec3f();
+              for (var f = 0; (f < settings2.filterDim); f++) {
+                var i = ((center + f) - filterOffset);
+                acc = (acc + (tileData_6[r][i] * (1f / f32(settings2.filterDim))));
               }
-              textureStore(outTexture_5, writeIndex, vec4(acc, 1.0));
+              textureStore(outTexture_8, writeIndex, vec4f(acc, 1));
             }
           }
         }
       }
 
-      struct VertexOutput_0 {
-        @builtin(position) position: vec4f,
+      struct fullScreenTriangle_Input_10 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_11 {
+        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @group(0) @binding(0) var texture_1: texture_2d<f32>;
-
-      @group(0) @binding(1) var sampling_2: sampler;
-
-      @vertex
-      fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput_0 {
-        const pos = array(
-          vec2( 1.0,  1.0),
-          vec2( 1.0, -1.0),
-          vec2(-1.0, -1.0),
-          vec2( 1.0,  1.0),
-          vec2(-1.0, -1.0),
-          vec2(-1.0,  1.0),
-        );
-
-        const uv = array(
-          vec2(1.0, 0.0),
-          vec2(1.0, 1.0),
-          vec2(0.0, 1.0),
-          vec2(1.0, 0.0),
-          vec2(0.0, 1.0),
-          vec2(0.0, 0.0),
-        );
-
-        var output: VertexOutput_0;
-        output.position = vec4(pos[index], 0.0, 1.0);
-        output.uv = uv[index];
-        return output;
+      @vertex fn fullScreenTriangle_9(input: fullScreenTriangle_Input_10) -> fullScreenTriangle_Output_11 {
+        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return fullScreenTriangle_Output_11(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
       }
 
-      @fragment
-      fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(texture_1, sampling_2, uv);
+      struct renderFragment_Input_13 {
+        @location(0) uv: vec2f,
+      }
+
+      @group(0) @binding(0) var item_14: texture_2d<f32>;
+
+      @group(0) @binding(1) var sampler_15: sampler;
+
+      @fragment fn renderFragment_12(input: renderFragment_Input_13) -> @location(0) vec4f {
+        return textureSample(item_14, sampler_15, input.uv);
       }"
     `);
   });
