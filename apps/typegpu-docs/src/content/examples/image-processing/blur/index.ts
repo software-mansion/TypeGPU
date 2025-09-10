@@ -127,8 +127,6 @@ const computeFn = tgpu['~unstable'].computeFn({
   }
 });
 
-console.log(tgpu.resolve({ externals: { computeFn } }));
-
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
@@ -183,27 +181,21 @@ const renderPipeline = root['~unstable']
   .withFragment(renderFragment, { format: presentationFormat })
   .createPipeline();
 
-function runCompute(ioIndex: number) {
-  computePipeline
-    .with(ioLayout, ioBindGroups[ioIndex])
-    .dispatchWorkgroups(
-      Math.ceil(srcWidth / settings.blockDim),
-      Math.ceil(srcHeight / 4),
-    );
-}
-
 function render() {
   settingsUniform.write({
     filterDim: settings.filterDim,
     blockDim: settings.blockDim,
   });
 
-  runCompute(0);
-  runCompute(1);
+  const indices = [0, 1, ...Array(settings.iterations - 1).fill([2, 1]).flat()];
 
-  for (let i = 0; i < settings.iterations - 1; i++) {
-    runCompute(2);
-    runCompute(1);
+  for (const i of indices) {
+    computePipeline
+      .with(ioLayout, ioBindGroups[i])
+      .dispatchWorkgroups(
+        Math.ceil(srcWidth / settings.blockDim),
+        Math.ceil(srcHeight / 4),
+      );
   }
 
   renderPipeline.withColorAttachment({
