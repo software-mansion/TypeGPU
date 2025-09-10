@@ -797,34 +797,36 @@ export const min = dualImpl({
   name: 'min',
 });
 
-type MixOverload = {
-  (e1: number, e2: number, e3: number): number;
-  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
-  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
-};
-
-export const mix: MixOverload = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T | number): T => {
-    if (typeof e1 === 'number') {
-      if (typeof e3 !== 'number' || typeof e2 !== 'number') {
-        throw new Error(
-          'When e1 and e2 are numbers, the blend factor must be a number.',
-        );
-      }
-      return (e1 * (1 - e3) + e2 * e3) as T;
+function cpuMix(e1: number, e2: number, e3: number): number;
+function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
+function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+function cpuMix<T extends AnyFloatVecInstance | number>(
+  e1: T,
+  e2: T,
+  e3: T | number,
+): T {
+  if (typeof e1 === 'number') {
+    if (typeof e3 !== 'number' || typeof e2 !== 'number') {
+      throw new Error(
+        'When e1 and e2 are numbers, the blend factor must be a number.',
+      );
     }
+    return (e1 * (1 - e3) + e2 * e3) as T;
+  }
 
-    if (typeof e1 === 'number' || typeof e2 === 'number') {
-      throw new Error('e1 and e2 need to both be vectors of the same kind.');
-    }
+  if (typeof e1 === 'number' || typeof e2 === 'number') {
+    throw new Error('e1 and e2 need to both be vectors of the same kind.');
+  }
 
-    return VectorOps.mix[e1.kind](e1, e2, e3) as T;
-  },
-  // GPU implementation
-  (e1, e2, e3) => snip(stitch`mix(${e1}, ${e2}, ${e3})`, e1.dataType),
-  'mix',
-);
+  return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+}
+
+export const mix = dualImpl({
+  name: 'mix',
+  signature: (e1, e2, e3) => ({ argTypes: [e1, e2, e3], returnType: e1 }),
+  normalImpl: cpuMix,
+  codegenImpl: (e1, e2, e3) => stitch`mix(${e1}, ${e2}, ${e3})`,
+});
 
 const ModfResult = {
   f32: abstruct({ fract: f32, whole: f32 }),
