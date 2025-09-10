@@ -46,6 +46,18 @@ function dtsFileToModule(
   ] as const;
 }
 
+const reactModules = pipe(
+  entries(
+    import.meta.glob('../../../node_modules/@types/react/**/*.d.ts', {
+      query: 'raw',
+      eager: true,
+      import: 'default',
+    }) as Record<string, string>,
+  ),
+  map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
+  fromEntries(),
+);
+
 const allPackagesSrcFiles = pipe(
   entries(
     import.meta.glob(
@@ -93,7 +105,11 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   ...allPackagesSrcFiles,
   ...threeModules,
   ...mediacaptureModules,
+  ...reactModules,
 
+  react: {
+    typeDef: { reroute: '@types/react/index.d.ts' },
+  },
   '@webgpu/types': {
     typeDef: { content: dtsWebGPU },
   },
@@ -143,5 +159,11 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/sort': {
     import: { reroute: 'typegpu-sort/src/index.ts' },
     typeDef: { reroute: 'typegpu-sort/src/index.ts' },
+  },
+  '@typegpu/sdf': {
+    typeDef: { reroute: 'typegpu-sdf/src/index.ts' },
+  },
+  '@typegpu/react': {
+    typeDef: { reroute: 'typegpu-react/src/index.ts' },
   },
 };
