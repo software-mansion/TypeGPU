@@ -33,10 +33,14 @@ import {
   type AnyWgslData,
   isNumericSchema,
   isVecInstance,
+  v2f,
+  v2h,
   type v2i,
   type v3f,
   type v3h,
   type v3i,
+  v4f,
+  v4h,
   type v4i,
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
@@ -657,60 +661,46 @@ export const inverseSqrt = dualImpl({
   name: 'inverseSqrt',
 });
 
-type FloatVecInstanceToIntVecInstance<T extends AnyFloatVecInstance> = {
-  'vec2f': v2i;
-  'vec3f': v3i;
-  'vec4f': v4i;
-  'vec2h': v2i;
-  'vec3h': v3i;
-  'vec4h': v4i;
-}[T['kind']];
+function cpuLdexp(e1: number, e2: number): number;
+function cpuLdexp<T extends v2f | v2h>(e1: T, e2: v2i): T;
+function cpuLdexp<T extends v3f | v3h>(e1: T, e2: v3i): T;
+function cpuLdexp<T extends v4f | v4h>(e1: T, e2: v4i): T;
+function cpuLdexp<T extends AnyFloatVecInstance | number>(
+  e1: T,
+  e2: AnyIntegerVecInstance | number,
+): T {
+  throw new Error(
+    'CPU implementation for ldexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
 
-type LdexpOverload = {
-  (e1: number, e2: number): number;
-  <T extends AnyFloatVecInstance>(
-    e1: T,
-    e2: FloatVecInstanceToIntVecInstance<T>,
-  ): T;
-};
-
-// AAA rewrite this
-export const ldexp: LdexpOverload = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(
-    e1: T,
-    e2: AnyIntegerVecInstance | number,
-  ): T => {
-    throw new Error(
-      'CPU implementation for ldexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
-  // GPU implementation
-  (e1, e2) => snip(stitch`ldexp(${e1}, ${e2})`, e1.dataType),
-  'ldexp',
-  (e1, _) => {
-    switch (e1.dataType.type) {
+export const ldexp = dualImpl({
+  signature: (e1, e2) => {
+    switch (e1.type) {
       case 'abstractFloat':
-        return [abstractFloat, abstractInt];
+        return { argTypes: [abstractFloat, abstractInt], returnType: e1 };
       case 'f32':
       case 'f16':
-        return [e1.dataType, i32];
+        return { argTypes: [e1, i32], returnType: e1 };
       case 'vec2f':
       case 'vec2h':
-        return [e1.dataType, vec2i];
+        return { argTypes: [e1, vec2i], returnType: e1 };
       case 'vec3f':
       case 'vec3h':
-        return [e1.dataType, vec3i];
+        return { argTypes: [e1, vec3i], returnType: e1 };
       case 'vec4f':
       case 'vec4h':
-        return [e1.dataType, vec4i];
+        return { argTypes: [e1, vec4i], returnType: e1 };
       default:
         throw new Error(
-          `Unsupported data type for ldexp: ${e1.dataType.type}. Supported types are abstractFloat, f32, f16, vec2f, vec2h, vec3f, vec3h, vec4f, vec4h.`,
+          `Unsupported data type for ldexp: ${e1.type}. Supported types are abstractFloat, f32, f16, vec2f, vec2h, vec3f, vec3h, vec4f, vec4h.`,
         );
     }
   },
-);
+  normalImpl: cpuLdexp,
+  codegenImpl: (e1, e2) => stitch`ldexp(${e1}, ${e2})`,
+  name: 'ldexp',
+});
 
 function cpuLength(value: number): number;
 function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
