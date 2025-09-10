@@ -124,6 +124,4 @@ onFrame(() => {
     vertexCount: 3,
     instanceCount: triangleAmount,
   });
-
-  runtime.flush();
 });

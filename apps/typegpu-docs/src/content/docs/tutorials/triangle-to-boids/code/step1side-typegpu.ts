@@ -77,6 +77,4 @@ onFrame(() => {
     ],
     vertexCount: 3,
   });
-
-  runtime.flush();
 });

@@ -292,6 +292,32 @@ describe('TgpuRoot', () => {
       expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
       expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
+
+    it('is flushed automatically', ({ root, commandEncoder }) => {
+      const group = root.createBindGroup(layout, {
+        foo: root.createBuffer(d.f32).$usage('uniform'),
+      });
+
+      const pipeline = root
+        .withVertex(mainVertexUsing, {})
+        .withFragment(mainFragment, {})
+        .createPipeline()
+        .with(layout, group);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      root.beginRenderPass(
+        {
+          colorAttachments: [],
+        },
+        (pass) => {
+          pass.setPipeline(pipeline);
+          pass.draw(1);
+        },
+      );
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
   });
 
   describe('commandEncoder', () => {

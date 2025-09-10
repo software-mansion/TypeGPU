@@ -692,6 +692,7 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
+    this[$internal].flush();
   }
 }
 
