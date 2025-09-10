@@ -45,26 +45,34 @@ import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
+function cpuAbs(value: number): number;
+function cpuAbs<T extends NumVec>(value: T): T;
+function cpuAbs<T extends NumVec | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.abs(value) as T;
+  }
+  return VectorOps.abs[value.kind](value) as T;
+}
+
 export const abs = dualImpl({
   name: 'abs',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends NumVec | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.abs(value) as T;
-    }
-    return VectorOps.abs[value.kind](value) as T;
-  },
+  normalImpl: cpuAbs,
   codegenImpl: (value) => stitch`abs(${value})`,
 });
 
+function cpuAcos(value: number): number;
+function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.acos(value) as T;
+  }
+  return VectorOps.acos[value.kind](value) as T;
+}
+
 export const acos = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.acos(value) as T;
-    }
-    return VectorOps.acos[value.kind](value) as T;
-  },
+  normalImpl: cpuAcos,
   codegenImpl: (value) => stitch`acos(${value})`,
   name: 'acos',
 });
@@ -73,14 +81,18 @@ export const acos = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#acosh-builtin
  */
+function cpuAcosh(value: number): number;
+function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.acosh(value) as T;
+  }
+  return VectorOps.acosh[value.kind](value) as T;
+}
+
 export const acosh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.acosh(value) as T;
-    }
-    return VectorOps.acosh[value.kind](value) as T;
-  },
+  normalImpl: cpuAcosh,
   codegenImpl: (value) => stitch`acosh(${value})`,
   name: 'acosh',
 });
@@ -89,14 +101,18 @@ export const acosh = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#asin-builtin
  */
+function cpuAsin(value: number): number;
+function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.asin(value) as T;
+  }
+  return VectorOps.asin[value.kind](value) as T;
+}
+
 export const asin = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.asin(value) as T;
-    }
-    return VectorOps.asin[value.kind](value) as T;
-  },
+  normalImpl: cpuAsin,
   codegenImpl: (value) => stitch`asin(${value})`,
   name: 'asin',
 });
@@ -105,14 +121,18 @@ export const asin = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#asinh-builtin
  */
+function cpuAsinh(value: number): number;
+function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.asinh(value) as T;
+  }
+  return VectorOps.asinh[value.kind](value) as T;
+}
+
 export const asinh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.asinh(value) as T;
-    }
-    return VectorOps.asinh[value.kind](value) as T;
-  },
+  normalImpl: cpuAsinh,
   codegenImpl: (value) => stitch`asinh(${value})`,
   name: 'asinh',
 });
@@ -121,14 +141,18 @@ export const asinh = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#atan-builtin
  */
+function cpuAtan(value: number): number;
+function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.atan(value) as T;
+  }
+  return VectorOps.atan[value.kind](value) as T;
+}
+
 export const atan = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.atan(value) as T;
-    }
-    return VectorOps.atan[value.kind](value) as T;
-  },
+  normalImpl: cpuAtan,
   codegenImpl: (value) => stitch`atan(${value})`,
   name: 'atan',
 });
@@ -137,17 +161,33 @@ export const atan = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#atanh-builtin
  */
+function cpuAtanh(value: number): number;
+function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.atanh(value) as T;
+  }
+  return VectorOps.atanh[value.kind](value) as T;
+}
+
 export const atanh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.atanh(value) as T;
-    }
-    return VectorOps.atanh[value.kind](value) as T;
-  },
+  normalImpl: cpuAtanh,
   codegenImpl: (value) => stitch`atanh(${value})`,
   name: 'atanh',
 });
+
+function cpuAtan2(y: number, x: number): number;
+function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
+function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
+  if (typeof y === 'number' && typeof x === 'number') {
+    return Math.atan2(y, x) as T;
+  }
+  return VectorOps.atan2[(y as AnyFloatVecInstance).kind](
+    y as never,
+    x as never,
+  ) as T;
+}
 
 export const atan2 = dualImpl({
   signature: (...args) => {
@@ -157,15 +197,7 @@ export const atan2 = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: <T extends AnyFloatVecInstance | number>(y: T, x: T): T => {
-    if (typeof y === 'number' && typeof x === 'number') {
-      return Math.atan2(y, x) as T;
-    }
-    return VectorOps.atan2[(y as AnyFloatVecInstance).kind](
-      y as never,
-      x as never,
-    ) as T;
-  },
+  normalImpl: cpuAtan2,
   codegenImpl: (y, x) => stitch`atan2(${y}, ${x})`,
   name: 'atan2',
 });
@@ -174,14 +206,18 @@ export const atan2 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
  */
+function cpuCeil(value: number): number;
+function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.ceil(value) as T;
+  }
+  return VectorOps.ceil[value.kind](value) as T;
+}
+
 export const ceil = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.ceil(value) as T;
-    }
-    return VectorOps.ceil[value.kind](value) as T;
-  },
+  normalImpl: cpuCeil,
   codegenImpl: (value) => stitch`ceil(${value})`,
   name: 'ceil',
 });
@@ -190,21 +226,25 @@ export const ceil = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#clamp
  */
+function cpuClamp(value: number, low: number, high: number): number;
+function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
+  if (typeof value === 'number') {
+    return Math.min(Math.max(low as number, value), high as number) as T;
+  }
+  return VectorOps.clamp[value.kind](
+    value,
+    low as NumVec,
+    high as NumVec,
+  ) as T;
+}
+
 export const clamp = dualImpl({
   signature: (value, low, high) => ({
     argTypes: [value, low, high],
     returnType: value,
   }),
-  normalImpl: <T extends NumVec | number>(value: T, low: T, high: T): T => {
-    if (typeof value === 'number') {
-      return Math.min(Math.max(low as number, value), high as number) as T;
-    }
-    return VectorOps.clamp[value.kind](
-      value,
-      low as NumVec,
-      high as NumVec,
-    ) as T;
-  },
+  normalImpl: cpuClamp,
   codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
   name: 'clamp',
 });
@@ -213,14 +253,18 @@ export const clamp = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#cos-builtin
  */
+function cpuCos(value: number): number;
+function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.cos(value) as T;
+  }
+  return VectorOps.cos[value.kind](value) as T;
+}
+
 export const cos = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.cos(value) as T;
-    }
-    return VectorOps.cos[value.kind](value) as T;
-  },
+  normalImpl: cpuCos,
   codegenImpl: (value) => stitch`cos(${value})`,
   name: 'cos',
 });
@@ -229,47 +273,69 @@ export const cos = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#cosh-builtin
  */
+function cpuCosh(value: number): number;
+function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.cosh(value) as T;
+  }
+  return VectorOps.cosh[value.kind](value) as T;
+}
+
 export const cosh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.cosh(value) as T;
-    }
-    return VectorOps.cosh[value.kind](value) as T;
-  },
+  normalImpl: cpuCosh,
   codegenImpl: (value) => stitch`cosh(${value})`,
   name: 'cosh',
 });
 
+function cpuCountLeadingZeros(value: number): number;
+function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const countLeadingZeros = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuCountLeadingZeros,
   codegenImpl: (value) => stitch`countLeadingZeros(${value})`,
   name: 'countLeadingZeros',
 });
 
+function cpuCountOneBits(value: number): number;
+function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const countOneBits = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuCountOneBits,
   codegenImpl: (value) => stitch`countOneBits(${value})`,
   name: 'countOneBits',
 });
 
+function cpuCountTrailingZeros(value: number): number;
+function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const countTrailingZeros = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuCountTrailingZeros,
   codegenImpl: (value) => stitch`countTrailingZeros(${value})`,
   name: 'countTrailingZeros',
 });
@@ -286,16 +352,20 @@ export const cross = dualImpl({
   name: 'cross',
 });
 
+function cpuDegrees(value: number): number;
+function cpuDegrees<T extends AnyFloatVecInstance>(value: T): T;
+function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return ((value * 180) / Math.PI) as T;
+  }
+  throw new Error(
+    'CPU implementation for degrees on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const degrees = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return ((value * 180) / Math.PI) as T;
-    }
-    throw new Error(
-      'CPU implementation for degrees on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuDegrees,
   codegenImpl: (value) => stitch`degrees(${value})`,
   name: 'degrees',
 });
@@ -312,19 +382,26 @@ export const determinant = dualImpl({
   name: 'determinant',
 });
 
+function cpuDistance(a: number, b: number): number;
+function cpuDistance<T extends AnyFloatVecInstance>(a: T, b: T): number;
+function cpuDistance<T extends AnyFloatVecInstance | number>(
+  a: T,
+  b: T,
+): number {
+  if (typeof a === 'number' && typeof b === 'number') {
+    return Math.abs(a - b);
+  }
+  return length(
+    sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
+  ) as number;
+}
+
 export const distance = dualImpl({
   signature: (lhs, rhs) => ({
     argTypes: [lhs, rhs],
     returnType: lhs.type === 'f16' || rhs.type.endsWith('h') ? f16 : f32,
   }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(a: T, b: T): number => {
-    if (typeof a === 'number' && typeof b === 'number') {
-      return Math.abs(a - b);
-    }
-    return length(
-      sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
-    ) as number;
-  },
+  normalImpl: cpuDistance,
   codegenImpl: (a, b) => stitch`distance(${a}, ${b})`,
   name: 'distance',
 });
@@ -367,14 +444,18 @@ export const dot4I8Packed = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#exp-builtin
  */
+function cpuExp(value: number): number;
+function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.exp(value) as T;
+  }
+  return VectorOps.exp[value.kind](value) as T;
+}
+
 export const exp = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.exp(value) as T;
-    }
-    return VectorOps.exp[value.kind](value) as T;
-  },
+  normalImpl: cpuExp,
   codegenImpl: (value) => stitch`exp(${value})`,
   name: 'exp',
 });
@@ -383,32 +464,44 @@ export const exp = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#exp2-builtin
  */
+function cpuExp2(value: number): number;
+function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return (2 ** value) as T;
+  }
+  return VectorOps.exp2[value.kind](value) as T;
+}
+
 export const exp2 = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return (2 ** value) as T;
-    }
-    return VectorOps.exp2[value.kind](value) as T;
-  },
+  normalImpl: cpuExp2,
   codegenImpl: (value) => stitch`exp2(${value})`,
   name: 'exp2',
 });
+
+function cpuExtractBits(e: number, offset: number, count: number): number;
+function cpuExtractBits<T extends AnyIntegerVecInstance>(
+  e: T,
+  offset: number,
+  count: number,
+): T;
+function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
+  e: T,
+  offset: number,
+  count: number,
+): T {
+  throw new Error(
+    'CPU implementation for extractBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
 
 export const extractBits = dualImpl({
   signature: (arg, offset, count) => ({
     argTypes: [arg, u32, u32],
     returnType: arg,
   }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(
-    e: T,
-    offset: number,
-    count: number,
-  ): T => {
-    throw new Error(
-      'CPU implementation for extractBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuExtractBits,
   codegenImpl: (e, offset, count) =>
     stitch`extractBits(${e}, ${offset}, ${count})`,
   name: 'extractBits',
@@ -428,24 +521,36 @@ export const faceForward = dualImpl({
   name: 'faceForward',
 });
 
+function cpuFirstLeadingBit(value: number): number;
+function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const firstLeadingBit = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuFirstLeadingBit,
   codegenImpl: (value) => stitch`firstLeadingBit(${value})`,
   name: 'firstLeadingBit',
 });
 
+function cpuFirstTrailingBit(value: number): number;
+function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const firstTrailingBit = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuFirstTrailingBit,
   codegenImpl: (value) => stitch`firstTrailingBit(${value})`,
   name: 'firstTrailingBit',
 });
@@ -454,48 +559,60 @@ export const firstTrailingBit = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#floor-builtin
  */
+function cpuFloor(value: number): number;
+function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.floor(value) as T;
+  }
+  return VectorOps.floor[value.kind](value) as T;
+}
+
 export const floor = dualImpl({
   name: 'floor',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
-  normalImpl<T extends AnyFloatVecInstance | number>(value: T): T {
-    if (typeof value === 'number') {
-      return Math.floor(value) as T;
-    }
-    return VectorOps.floor[value.kind](value) as T;
-  },
+  normalImpl: cpuFloor,
   codegenImpl: (arg) => stitch`floor(${arg})`,
 });
+
+function cpuFma(e1: number, e2: number, e3: number): number;
+function cpuFma<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+function cpuFma<T extends AnyFloatVecInstance | number>(
+  e1: T,
+  e2: T,
+  e3: T,
+): T {
+  if (typeof e1 === 'number') {
+    return (e1 * (e2 as number) + (e3 as number)) as T;
+  }
+  throw new Error(
+    'CPU implementation for fma on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
 
 export const fma = dualImpl({
   signature: (arg1, arg2, arg3) => ({
     argTypes: [arg1, arg2, arg3],
     returnType: arg1,
   }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(
-    e1: T,
-    e2: T,
-    e3: T,
-  ): T => {
-    if (typeof e1 === 'number') {
-      return (e1 * (e2 as number) + (e3 as number)) as T;
-    }
-    throw new Error(
-      'CPU implementation for fma on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuFma,
   codegenImpl: (e1, e2, e3) => stitch`fma(${e1}, ${e2}, ${e3})`,
   name: 'fma',
 });
 
+function cpuFract(value: number): number;
+function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return (value - Math.floor(value)) as T;
+  }
+  return VectorOps.fract[value.kind](value) as T;
+}
+
 export const fract = dualImpl({
   name: 'fract',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
-  normalImpl<T extends AnyFloatVecInstance | number>(a: T): T {
-    if (typeof a === 'number') {
-      return (a - Math.floor(a)) as T;
-    }
-    return VectorOps.fract[a.kind](a) as T;
-  },
+  normalImpl: cpuFract,
   codegenImpl: (a) => stitch`fract(${a})`,
 });
 
@@ -544,36 +661,54 @@ export const frexp: FrexpOverload = createDualImpl(
   'frexp',
 );
 
+function cpuInsertBits(
+  e: number,
+  newbits: number,
+  offset: number,
+  count: number,
+): number;
+function cpuInsertBits<T extends AnyIntegerVecInstance>(
+  e: T,
+  newbits: T,
+  offset: number,
+  count: number,
+): T;
+function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
+  e: T,
+  newbits: T,
+  offset: number,
+  count: number,
+): T {
+  throw new Error(
+    'CPU implementation for insertBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const insertBits = dualImpl({
   signature: (e, newbits, offset, count) => ({
     argTypes: [e, newbits, u32, u32],
     returnType: e,
   }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(
-    e: T,
-    newbits: T,
-    offset: number,
-    count: number,
-  ): T => {
-    throw new Error(
-      'CPU implementation for insertBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuInsertBits,
   codegenImpl: (e, newbits, offset, count) =>
     stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`,
   name: 'insertBits',
 });
 
+function cpuInverseSqrt(value: number): number;
+function cpuInverseSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return (1 / Math.sqrt(value)) as T;
+  }
+  throw new Error(
+    'CPU implementation for inverseSqrt on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const inverseSqrt = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return (1 / Math.sqrt(value)) as T;
-    }
-    throw new Error(
-      'CPU implementation for inverseSqrt on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuInverseSqrt,
   codegenImpl: (value) => stitch`inverseSqrt(${value})`,
   name: 'inverseSqrt',
 });
@@ -595,6 +730,7 @@ type LdexpOverload = {
   ): T;
 };
 
+// AAA rewrite this
 export const ldexp: LdexpOverload = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(
@@ -636,18 +772,22 @@ export const ldexp: LdexpOverload = createDualImpl(
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#length-builtin
  */
+function cpuLength(value: number): number;
+function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
+function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
+  if (typeof value === 'number') {
+    return Math.abs(value);
+  }
+  return VectorOps.length[value.kind](value);
+}
+
 export const length = dualImpl({
   name: 'length',
   signature: (arg) => ({
     argTypes: [arg],
     returnType: arg.type === 'f16' || arg.type.endsWith('h') ? f16 : f32,
   }),
-  normalImpl<T extends AnyFloatVecInstance | number>(arg: T): number {
-    if (typeof arg === 'number') {
-      return Math.abs(arg);
-    }
-    return VectorOps.length[arg.kind](arg);
-  },
+  normalImpl: cpuLength,
   codegenImpl: (arg) => stitch`length(${arg})`,
 });
 
@@ -655,14 +795,18 @@ export const length = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#log-builtin
  */
+function cpuLog(value: number): number;
+function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.log(value) as T;
+  }
+  return VectorOps.log[value.kind](value) as T;
+}
+
 export const log = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.log(value) as T;
-    }
-    return VectorOps.log[value.kind](value) as T;
-  },
+  normalImpl: cpuLog,
   codegenImpl: (value) => stitch`log(${value})`,
   name: 'log',
 });
@@ -671,14 +815,18 @@ export const log = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#log2-builtin
  */
+function cpuLog2(value: number): number;
+function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.log2(value) as T;
+  }
+  return VectorOps.log2[value.kind](value) as T;
+}
+
 export const log2 = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.log2(value) as T;
-    }
-    return VectorOps.log2[value.kind](value) as T;
-  },
+  normalImpl: cpuLog2,
   codegenImpl: (value) => stitch`log2(${value})`,
   name: 'log2',
 });
@@ -687,6 +835,15 @@ export const log2 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#max-float-builtin
  */
+function cpuMax(a: number, b: number): number;
+function cpuMax<T extends NumVec>(a: T, b: T): T;
+function cpuMax<T extends NumVec | number>(a: T, b: T): T {
+  if (typeof a === 'number') {
+    return Math.max(a, b as number) as T;
+  }
+  return VectorOps.max[a.kind](a, b as NumVec) as T;
+}
+
 export const max = dualImpl({
   signature: (...args) => {
     const uargs = unify(args) ?? args;
@@ -695,12 +852,7 @@ export const max = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: <T extends NumVec | number>(a: T, b: T): T => {
-    if (typeof a === 'number') {
-      return Math.max(a, b as number) as T;
-    }
-    return VectorOps.max[a.kind](a, b as NumVec) as T;
-  },
+  normalImpl: cpuMax,
   codegenImpl: (a, b) => stitch`max(${a}, ${b})`,
   name: 'max',
 });
@@ -709,6 +861,15 @@ export const max = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#min-float-builtin
  */
+function cpuMin(a: number, b: number): number;
+function cpuMin<T extends NumVec>(a: T, b: T): T;
+function cpuMin<T extends NumVec | number>(a: T, b: T): T {
+  if (typeof a === 'number') {
+    return Math.min(a, b as number) as T;
+  }
+  return VectorOps.min[a.kind](a, b as NumVec) as T;
+}
+
 export const min = dualImpl({
   signature: (...args) => {
     const uargs = unify(args) ?? args;
@@ -717,12 +878,7 @@ export const min = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: <T extends NumVec | number>(a: T, b: T): T => {
-    if (typeof a === 'number') {
-      return Math.min(a, b as number) as T;
-    }
-    return VectorOps.min[a.kind](a, b as NumVec) as T;
-  },
+  normalImpl: cpuMin,
   codegenImpl: (a, b) => stitch`min(${a}, ${b})`,
   name: 'min',
 });
@@ -837,27 +993,37 @@ export const pow = dualImpl({
   codegenImpl: (lhs, rhs) => stitch`pow(${lhs}, ${rhs})`,
 });
 
+function cpuQuantizeToF16(value: number): number;
+function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
+function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
+  value: T,
+): T {
+  throw new Error(
+    'CPU implementation for quantizeToF16 not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const quantizeToF16 = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloat32VecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for quantizeToF16 not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuQuantizeToF16,
   codegenImpl: (value) => stitch`quantizeToF16(${value})`,
   name: 'quantizeToF16',
 });
 
+function cpuRadians(value: number): number;
+function cpuRadians<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return ((value * Math.PI) / 180) as T;
+  }
+  throw new Error(
+    'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const radians = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return ((value * Math.PI) / 180) as T;
-    }
-    throw new Error(
-      'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuRadians,
   codegenImpl: (value) => stitch`radians(${value})`,
   name: 'radians',
 });
@@ -887,53 +1053,69 @@ export const refract = createDualImpl(
   ],
 );
 
+function cpuReverseBits(value: number): number;
+function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
+  throw new Error(
+    'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const reverseBits = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyIntegerVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuReverseBits,
   codegenImpl: (value) => stitch`reverseBits(${value})`,
   name: 'reverseBits',
 });
 
+function cpuRound(value: number): number;
+function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.round(value) as T;
+  }
+  throw new Error(
+    'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const round = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.round(value) as T;
-    }
-    throw new Error(
-      'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuRound,
   codegenImpl: (value) => stitch`round(${value})`,
   name: 'round',
 });
 
+function cpuSaturate(value: number): number;
+function cpuSaturate<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.max(0, Math.min(1, value)) as T;
+  }
+  throw new Error(
+    'CPU implementation for saturate on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const saturate = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.max(0, Math.min(1, value)) as T;
-    }
-    throw new Error(
-      'CPU implementation for saturate on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuSaturate,
   codegenImpl: (value) => stitch`saturate(${value})`,
   name: 'saturate',
 });
 
+function cpuSign(e: number): number;
+function cpuSign<T extends AnySignedVecInstance>(e: T): T;
+function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
+  if (typeof e === 'number') {
+    return Math.sign(e) as T;
+  }
+  return VectorOps.sign[e.kind](e) as T;
+}
+
 export const sign = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnySignedVecInstance | number>(e: T): T => {
-    if (typeof e === 'number') {
-      return Math.sign(e) as T;
-    }
-    return VectorOps.sign[e.kind](e) as T;
-  },
+  normalImpl: cpuSign,
   codegenImpl: (e) => stitch`sign(${e})`,
   name: 'sign',
 });
@@ -942,108 +1124,148 @@ export const sign = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#sin-builtin
  */
+function cpuSin(value: number): number;
+function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.sin(value) as T;
+  }
+  return VectorOps.sin[value.kind](value) as T;
+}
+
 export const sin = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.sin(value) as T;
-    }
-    return VectorOps.sin[value.kind](value) as T;
-  },
+  normalImpl: cpuSin,
   codegenImpl: (value) => stitch`sin(${value})`,
   name: 'sin',
 });
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#sinh-builtin
+ */
+function cpuSinh(value: number): number;
+function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.sinh(value) as T;
+  }
+  throw new Error(
+    'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const sinh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.sinh(value) as T;
-    }
-    throw new Error(
-      'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuSinh,
   codegenImpl: (value) => stitch`sinh(${value})`,
   name: 'sinh',
 });
+
+function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
+function cpuSmoothstep<T extends AnyFloatVecInstance>(
+  edge0: T,
+  edge1: T,
+  x: T,
+): T;
+function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
+  edge0: T,
+  edge1: T,
+  x: T,
+): T {
+  if (typeof x === 'number') {
+    return smoothstepScalar(
+      edge0 as number,
+      edge1 as number,
+      x as number,
+    ) as T;
+  }
+  return VectorOps.smoothstep[x.kind](
+    edge0 as AnyFloatVecInstance,
+    edge1 as AnyFloatVecInstance,
+    x as AnyFloatVecInstance,
+  ) as T;
+}
 
 export const smoothstep = dualImpl({
   signature: (edge0, edge1, x) => ({
     argTypes: [edge0, edge1, x],
     returnType: x,
   }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(
-    edge0: T,
-    edge1: T,
-    x: T,
-  ): T => {
-    if (typeof x === 'number') {
-      return smoothstepScalar(
-        edge0 as number,
-        edge1 as number,
-        x as number,
-      ) as T;
-    }
-    return VectorOps.smoothstep[x.kind](
-      edge0 as AnyFloatVecInstance,
-      edge1 as AnyFloatVecInstance,
-      x as AnyFloatVecInstance,
-    ) as T;
-  },
+  normalImpl: cpuSmoothstep,
   codegenImpl: (edge0, edge1, x) =>
     stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
   name: 'smoothstep',
 });
 
+function cpuSqrt(value: number): number;
+function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.sqrt(value) as T;
+  }
+  return VectorOps.sqrt[value.kind](value) as T;
+}
+
 export const sqrt = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.sqrt(value) as T;
-    }
-    return VectorOps.sqrt[value.kind](value) as T;
-  },
+  normalImpl: cpuSqrt,
   codegenImpl: (value) => stitch`sqrt(${value})`,
   name: 'sqrt',
 });
 
+function cpuStep(edge: number, x: number): number;
+function cpuStep<T extends AnyFloatVecInstance>(edge: T, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
+  if (typeof edge === 'number') {
+    return (edge <= (x as number) ? 1.0 : 0.0) as T;
+  }
+  throw new Error(
+    'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const step = dualImpl({
   signature: (edge, x) => ({ argTypes: [edge, x], returnType: edge }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(edge: T, x: T): T => {
-    if (typeof edge === 'number') {
-      return (edge <= (x as number) ? 1.0 : 0.0) as T;
-    }
-    throw new Error(
-      'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuStep,
   codegenImpl: (edge, x) => stitch`step(${edge}, ${x})`,
   name: 'step',
 });
 
+function cpuTan(value: number): number;
+function cpuTan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.tan(value) as T;
+  }
+  throw new Error(
+    'CPU implementation for tan on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const tan = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.tan(value) as T;
-    }
-    throw new Error(
-      'CPU implementation for tan on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuTan,
   codegenImpl: (value) => stitch`tan(${value})`,
   name: 'tan',
 });
 
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#tanh-builtin
+ */
+function cpuTanh(value: number): number;
+function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return Math.tanh(value) as T;
+  }
+  return VectorOps.tanh[value.kind](value) as T;
+}
+
 export const tanh = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return Math.tanh(value) as T;
-    }
-    return VectorOps.tanh[value.kind](value) as T;
-  },
+  normalImpl: cpuTanh,
   codegenImpl: (value) => stitch`tanh(${value})`,
   name: 'tanh',
 });
@@ -1059,13 +1281,17 @@ export const transpose = dualImpl({
   name: 'transpose',
 });
 
+function cpuTrunc(value: number): number;
+function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
+  throw new Error(
+    'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
 export const trunc = dualImpl({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: <T extends AnyFloatVecInstance | number>(value: T): T => {
-    throw new Error(
-      'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl: cpuTrunc,
   codegenImpl: (value) => stitch`trunc(${value})`,
   name: 'trunc',
 });
