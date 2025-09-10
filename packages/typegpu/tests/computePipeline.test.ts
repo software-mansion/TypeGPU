@@ -8,6 +8,7 @@ import tgpu, {
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse, parseResolved } from './utils/parseResolved.ts';
+import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -441,5 +442,93 @@ describe('TgpuComputePipeline', () => {
         },
       });
     });
+  });
+
+  it('enables language extensions when their corresponding feature is enabled', ({ root, device }) => {
+    Object.defineProperty(root, 'enabledFeatures', {
+      value: new Set<GPUFeatureName>(['shader-f16', 'subgroups']),
+      writable: true,
+    });
+
+    const fn = tgpu['~unstable'].computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })(({ gid }) => {
+      const a = d.arrayOf(d.f32, 3)();
+    });
+
+    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+
+    pipeline.dispatchWorkgroups(1);
+
+    expect(
+      (device.mock.createShaderModule.mock.calls[0] as {
+        label?: string;
+        code: string;
+      }[])[0]?.code,
+    ).toMatchInlineSnapshot(`
+      "enable f16;
+      enable subgroups;
+
+      struct fn_Input_1 {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+        var a = array<f32, 3>();
+      }"
+    `);
+  });
+
+  it('performs extension based pruning', ({ root, device }) => {
+    Object.defineProperty(root, 'enabledFeatures', {
+      value: new Set<GPUFeatureName>(['shader-f16', 'subgroups']),
+      writable: true,
+    });
+
+    const fn = tgpu['~unstable'].computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })(({ gid }) => {
+      const a = d.arrayOf(d.f16, 3)();
+      if (extensionEnabled('subgroups')) {
+        a[0] = gid.x;
+      }
+      if (extensionEnabled('f16')) {
+        a[1] = d.f16(1.0);
+      }
+      if (extensionEnabled('primitive_index')) {
+        a[2] = d.f16(2.0);
+      }
+    });
+
+    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+
+    pipeline.dispatchWorkgroups(1);
+
+    expect(
+      (device.mock.createShaderModule.mock.calls[0] as {
+        label?: string;
+        code: string;
+      }[])[0]?.code,
+    ).toMatchInlineSnapshot(`
+      "enable f16;
+      enable subgroups;
+
+      struct fn_Input_1 {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+        var a = array<f16, 3>();
+        {
+          a[0] = f16(_arg_0.gid.x);
+        }
+        {
+          a[1] = 1;
+        }
+
+      }"
+    `);
   });
 });

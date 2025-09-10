@@ -45,6 +45,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import type { WgslExtension } from './wgslExtensions.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -196,6 +197,7 @@ export type ExecState =
 export interface ResolutionCtx {
   readonly names: NameRegistry;
   readonly mode: ExecState;
+  readonly enableExtensions: WgslExtension[] | undefined;
 
   addDeclaration(declaration: string): void;
   withResetIndentLevel<T>(callback: () => T): T;

@@ -1,103 +1,106 @@
-import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import {
+  ioLayout,
+  type LayerData,
+  type Network,
+  weightsBiasesLayout,
+} from './data.ts';
+import { downloadLayers } from './helpers.ts';
 
 const SIZE = 28;
 
 const root = await tgpu.init({
   device: {
-    optionalFeatures: ['timestamp-query'],
+    optionalFeatures: ['timestamp-query', 'subgroups'],
   },
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-const device = root.device;
+const hasSubgroups = root.enabledFeatures.has('subgroups');
+let useSubgroups = hasSubgroups;
+
 const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
-// Shader code
+// Shaders
 
-const layerShader = `
-  @binding(0) @group(0) var<storage, read> input: array<f32>;
-  @binding(1) @group(0) var<storage, read_write> output: array<f32>;
+const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
-  @binding(0) @group(1) var<storage, read> weights: array<f32>;
-  @binding(1) @group(1) var<storage, read> biases: array<f32>;
-
-  fn relu(x: f32) -> f32 {
-    return max(0.0, x);
-  }
-
-  @compute @workgroup_size(1)
-  fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let inputSize = arrayLength( &input );
-
-    let i = gid.x;
-
-    let weightsOffset = i * inputSize;
-    var sum = 0.0;
-
-    for (var j = 0u; j < inputSize; j = j + 1) {
-      sum = sum + input[j] * weights[weightsOffset + j];
-    }
-
-    sum = sum + biases[i];
-    output[i] = relu(sum);
-  }
-`;
-
-const ReadonlyFloats = {
-  storage: d.arrayOf(d.f32),
-  access: 'readonly',
-} as const;
-
-const MutableFloats = {
-  storage: d.arrayOf(d.f32),
-  access: 'mutable',
-} as const;
-
-const ioLayout = tgpu.bindGroupLayout({
-  input: ReadonlyFloats,
-  output: MutableFloats,
-});
-
-const weightsBiasesLayout = tgpu.bindGroupLayout({
-  weights: ReadonlyFloats,
-  biases: ReadonlyFloats,
-});
-
-const pipeline = device.createComputePipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
-  }),
-  compute: {
-    module: device.createShaderModule({
-      code: layerShader,
-    }),
+const defaultCompute = tgpu['~unstable'].computeFn({
+  in: {
+    gid: d.builtin.globalInvocationId,
   },
+  workgroupSize: [1],
+})(({ gid }) => {
+  const inputSize = ioLayout.$.input.length;
+
+  const i = gid.x;
+  const weightsOffset = i * inputSize;
+  let sum = d.f32();
+
+  for (let j = d.u32(); j < inputSize; j++) {
+    sum = std.fma(
+      ioLayout.$.input[j],
+      weightsBiasesLayout.$.weights[weightsOffset + j],
+      sum,
+    );
+  }
+
+  const total = sum + weightsBiasesLayout.$.biases[i];
+  ioLayout.$.output[i] = relu(total);
 });
+
+const workgroupSize = tgpu['~unstable'].const(d.u32, 128);
+const subgroupCompute = tgpu['~unstable'].computeFn({
+  in: {
+    lid: d.builtin.localInvocationId,
+    wid: d.builtin.workgroupId,
+    sid: d.builtin.subgroupInvocationId,
+    ssize: d.builtin.subgroupSize,
+  },
+  workgroupSize: [128],
+})(({ lid, wid, sid, ssize }) => {
+  const subgroupId = d.u32(lid.x / ssize);
+  const outputsPerWG = d.u32(workgroupSize.$ / ssize);
+  const neuronIndex = wid.x * outputsPerWG + subgroupId;
+
+  const outLen = ioLayout.$.output.length;
+  const valid = neuronIndex < outLen;
+
+  const inputSize = ioLayout.$.input.length;
+
+  let partial = d.f32();
+
+  if (valid) {
+    const weightsOffset = neuronIndex * inputSize;
+    for (let j = sid; j < inputSize; j += ssize) {
+      partial = std.fma(
+        ioLayout.$.input[j],
+        weightsBiasesLayout.$.weights[weightsOffset + j],
+        partial,
+      );
+    }
+  }
+
+  const sum = std.subgroupAdd(partial);
+
+  if (valid && sid === 0) {
+    ioLayout.$.output[neuronIndex] = relu(
+      sum + weightsBiasesLayout.$.biases[neuronIndex],
+    );
+  }
+});
+
+const pipelines = {
+  default: root['~unstable'].withCompute(defaultCompute).createPipeline(),
+  subgroup: root.enabledFeatures.has('subgroups')
+    ? root['~unstable'].withCompute(subgroupCompute).createPipeline()
+    : null,
+};
 
 // Definitions for the network
 
-interface LayerData {
-  shape: readonly [number] | readonly [number, number];
-  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-}
-
-interface Layer {
-  weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  state: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-}
-
-interface Network {
-  layers: Layer[];
-  input: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  output: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-
-  inference(data: number[]): Promise<number[]>;
-}
-
-const querySet = hasTimestampQuery
-  ? root.createQuerySet('timestamp', 2)
-  : undefined;
+const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 
 /**
  * Creates a network from a list of pairs of weights and biases
@@ -152,44 +155,39 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     }
     input.write(data);
 
-    // Run the network
-    const encoder = device.createCommandEncoder();
+    const pipeline = useSubgroups && pipelines.subgroup
+      ? pipelines.subgroup
+      : pipelines.default;
 
+    // Run the network
     for (let i = 0; i < buffers.length; i++) {
       const isFirstLayer = i === 0;
       const isLastLayer = i === buffers.length - 1;
 
-      const timestampWrites = querySet && isFirstLayer
-        ? { querySet: root.unwrap(querySet), beginningOfPassWriteIndex: 0 }
-        : querySet && isLastLayer
-        ? { querySet: root.unwrap(querySet), endOfPassWriteIndex: 1 }
-        : undefined;
+      let boundPipeline = pipeline
+        .with(ioLayout, ioBindGroups[i])
+        .with(weightsBiasesLayout, weightsBindGroups[i]);
 
-      const passDescriptor = timestampWrites ? { timestampWrites } : undefined;
-      const pass = encoder.beginComputePass(passDescriptor);
+      if (querySet && (isFirstLayer || isLastLayer)) {
+        const descriptor = {
+          querySet,
+          beginningOfPassWriteIndex: isFirstLayer ? 0 : undefined,
+          endOfPassWriteIndex: isLastLayer ? 1 : undefined,
+        };
+        boundPipeline = boundPipeline.withTimestampWrites(descriptor);
+      }
 
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
-      pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
-      pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
-      pass.end();
+      boundPipeline.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
     }
-
-    device.queue.submit([encoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
 
     if (querySet?.available) {
       querySet.resolve();
       const results = await querySet.read();
-      const timeInMs = Number(results[1] - results[0]) / 1_000_000;
-      const formattedTimeInMs = timeInMs.toFixed(2);
-      const predictionLabel = document.querySelector<HTMLDivElement>(
-        '.predictions-label',
-      );
-      if (!predictionLabel) {
-        throw new Error('Missing prediction label.');
-      }
-      predictionLabel.innerText = `Predictions (${formattedTimeInMs}ms)`;
+      const inferenceTimeMs = Number(results[1] - results[0]) / 1_000_000;
+
+      inferenceTimeEl.textContent = `${inferenceTimeMs.toFixed(2)} ms`;
+    } else {
+      inferenceTimeEl.textContent = 'N/A';
     }
 
     // Read the output
@@ -204,80 +202,20 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
   };
 }
 
-const network = createNetwork(await downloadLayers());
+const network = createNetwork(await downloadLayers(root));
 
-// #region Downloading weights & biases
-
-/**
- * Create a LayerData object from a layer ArrayBuffer
- *
- * The function extracts the header, shape and data from the layer
- * If there are any issues with the layer, an error is thrown
- *
- * Automatically creates appropriate buffer initialized with the data
- */
-function getLayerData(layer: ArrayBuffer): LayerData {
-  const headerLen = new Uint16Array(layer.slice(8, 10));
-
-  const header = new TextDecoder().decode(
-    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
-  );
-
-  // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
-  const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
-  if (!shapeMatch) {
-    throw new Error('Shape not found in header');
-  }
-
-  // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
-  const X = Number.parseInt(shapeMatch[1]);
-  const Y = Number.parseInt(shapeMatch[2]);
-  const shape = Number.isNaN(Y) ? ([X] as const) : ([Y, X] as const);
-
-  const data = new Float32Array(layer.slice(10 + headerLen[0]));
-
-  // Verify the length of the data matches the shape
-  if (data.length !== shape[0] * (shape[1] || 1)) {
-    throw new Error(`Data length ${data.length} does not match shape ${shape}`);
-  }
-
-  const buffer = root
-    .createBuffer(d.arrayOf(d.f32, data.length), [...data])
-    .$usage('storage');
-
-  return {
-    shape,
-    buffer,
-  };
-}
-
-function downloadLayers(): Promise<[LayerData, LayerData][]> {
-  const downloadLayer = async (fileName: string): Promise<LayerData> => {
-    const buffer = await fetch(
-      `/TypeGPU/assets/mnist-weights/${fileName}`,
-    ).then((res) => res.arrayBuffer());
-
-    return getLayerData(buffer);
-  };
-
-  return Promise.all(
-    [0, 1, 2, 3, 4, 5, 6, 7].map((layer) =>
-      Promise.all([
-        downloadLayer(`layer${layer}.weight.npy`),
-        downloadLayer(`layer${layer}.bias.npy`),
-      ])
-    ),
-  );
-}
-
-// #endregion
-
-// #region User Interface
+// #region Example controls and cleanup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
+const subgroupsEl = document.getElementById(
+  'subgroups-status',
+) as HTMLSpanElement;
+const inferenceTimeEl = document.getElementById(
+  'inference-time',
+) as HTMLSpanElement;
 
 const uiState = {
   isDrawing: false,
@@ -335,6 +273,20 @@ function run() {
 }
 
 document.querySelector('.loading')?.classList.add('loaded');
+
+function updateSubgroupsStatus() {
+  const text = !hasSubgroups
+    ? 'Not Supported'
+    : useSubgroups
+    ? 'Enabled'
+    : 'Disabled';
+  const cls = !hasSubgroups || !useSubgroups ? 'disabled' : 'enabled';
+  subgroupsEl.textContent = text;
+  subgroupsEl.className = cls;
+}
+
+updateSubgroupsStatus();
+
 run();
 
 canvas.addEventListener('mousedown', () => {
@@ -463,11 +415,25 @@ export const controls = {
   Reset: {
     onButtonClick: resetDrawing,
   },
+  'Use Subgroups': hasSubgroups && {
+    initial: hasSubgroups,
+    onToggleChange: (value: boolean) => {
+      useSubgroups = value;
+      updateSubgroupsStatus();
+    },
+  },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () =>
+      [defaultCompute, subgroupCompute]
+        .map((fn) =>
+          tgpu.resolve({
+            externals: { fn },
+            enableExtensions: ['subgroups'],
+          })
+        )
+        .map((r) => root.device.createShaderModule({ code: r })),
+  },
 };
-
-// #endregion
-
-// #region Resource cleanup
 
 export function onCleanup() {
   disposed = true;

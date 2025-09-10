@@ -23,7 +23,7 @@ export const abstractFloat = {
 } as AbstractFloat;
 
 const boolCast = dualImpl({
-  name: 'boolCast',
+  name: 'bool',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
@@ -60,7 +60,7 @@ export const bool: Bool = Object.assign(boolCast, {
 }) as unknown as Bool;
 
 const u32Cast = dualImpl({
-  name: 'u32Cast',
+  name: 'u32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: u32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
@@ -99,7 +99,7 @@ export const u32: U32 = Object.assign(u32Cast, {
 }) as unknown as U32;
 
 const i32Cast = dualImpl({
-  name: 'i32Cast',
+  name: 'i32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: i32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
@@ -141,7 +141,7 @@ export const i32: I32 = Object.assign(i32Cast, {
 }) as unknown as I32;
 
 const f32Cast = dualImpl({
-  name: 'f32Cast',
+  name: 'f32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
@@ -266,7 +266,7 @@ function roundToF16(x: number): number {
 }
 
 const f16Cast = dualImpl({
-  name: 'f16Cast',
+  name: 'f16',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {

@@ -27,6 +27,8 @@ import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
   GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
+  GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
   it('names bound elements', () => {
@@ -158,7 +160,7 @@ describe('TgpuBindGroupLayout', () => {
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.COMPUTE,
+          visibility: DEFAULT_MUTABLE_VISIBILITY_FLAGS,
           buffer: {
             type: 'storage',
           },
