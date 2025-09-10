@@ -1,0 +1,45 @@
+{
+  "name": "@typegpu/react",
+  "type": "module",
+  "version": "0.7.0",
+  "description": "The best way to integrate TypeGPU into your React app.",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "peerDependencies": {
+    "typegpu": "^0.7.0",
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@webgpu/types": "catalog:types",
+    "@types/react": "^18.0.0",
+    "tsdown": "catalog:build",
+    "typegpu": "workspace:*",
+    "typescript": "catalog:types",
+    "unplugin-typegpu": "workspace:*"
+  }
+}
