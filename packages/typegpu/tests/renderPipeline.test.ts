@@ -935,7 +935,7 @@ describe('TgpuRenderPipeline', () => {
       },
     });
   });
-  it('should flush after draw', ({ root }) => {
+  describe('Flush', () => {
     const vertexFn = tgpu['~unstable'].vertexFn({
       out: { pos: d.builtin.position },
     })('');
@@ -944,50 +944,73 @@ describe('TgpuRenderPipeline', () => {
       out: { color: d.vec4f },
     })('');
 
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
-      .withColorAttachment({
-        color: {
-          view: {} as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      });
+    it('flushes after draw', ({ root }) => {
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        });
 
-    vi.spyOn(root.device.queue, 'submit');
+      vi.spyOn(root[$internal], 'flush');
 
-    expect(root.device.queue.submit).toHaveBeenCalledTimes(0);
+      pipeline.draw(3);
 
-    pipeline.draw(3);
+      expect(root[$internal].flush).toHaveBeenCalledTimes(1);
+    });
+    it('flushes after draw with performance callback', ({ root }) => {
+      const callback = vi.fn();
 
-    expect(root.device.queue.submit).toHaveBeenCalledTimes(1);
-  });
-  it('root internal command encoder should be null before and after draw', ({ root }) => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
-      out: { pos: d.builtin.position },
-    })('');
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withPerformanceCallback(callback);
 
-    const fragmentFn = tgpu['~unstable'].fragmentFn({
-      out: { color: d.vec4f },
-    })('');
+      vi.spyOn(root[$internal], 'flush');
 
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
-      .withColorAttachment({
-        color: {
-          view: {} as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      });
+      pipeline.draw(3);
 
-    // expect(root[$internal].commandEncoder).toBeNull();
-    pipeline.draw(3);
-    expect(root[$internal].commandEncoder).toBeNull();
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+    it('flushes after draw with timestamp writes', ({ root }) => {
+      const querySet = root.createQuerySet('timestamp', 4);
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.draw(3);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
   });
 });
 

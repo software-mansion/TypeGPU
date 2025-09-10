@@ -318,6 +318,12 @@ describe('TgpuRoot', () => {
   });
 
   describe('flush', () => {
+    it('should not throw when called without initializing a commandEncoder', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      root[$internal].flush();
+    });
     it('submits commandEncoder', ({ device }) => {
       const root = tgpu.initFromDevice({
         device: device as unknown as GPUDevice,
