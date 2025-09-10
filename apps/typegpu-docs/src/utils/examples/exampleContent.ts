@@ -82,7 +82,10 @@ const metaFiles = R.pipe(
 );
 
 const readonlyTsFiles = R.pipe(
-  import.meta.glob('../../content/examples/**/*.ts', {
+  import.meta.glob([
+    '../../content/examples/**/*.ts',
+    '../../content/examples/**/*.tsx',
+  ], {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -91,7 +94,10 @@ const readonlyTsFiles = R.pipe(
 );
 
 const tsFilesImportFunctions = R.pipe(
-  import.meta.glob('../../content/examples/**/index.ts') as Record<
+  import.meta.glob([
+    '../../content/examples/**/index.ts',
+    '../../content/examples/**/index.tsx',
+  ]) as Record<
     string,
     () => Promise<unknown>
   >,

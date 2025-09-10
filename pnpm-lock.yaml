@@ -167,6 +167,9 @@ importers:
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
+      '@typegpu/react':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-react
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
