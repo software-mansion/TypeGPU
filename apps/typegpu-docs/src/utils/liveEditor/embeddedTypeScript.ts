@@ -11,6 +11,7 @@ export const tsnotoverCompilerOptions: languages.typescript.CompilerOptions = {
   skipLibCheck: true,
   exactOptionalPropertyTypes: true,
   baseUrl: '.',
+  jsx: languages.typescript.JsxEmit.React,
   lib: ['dom', 'es2021'],
 };
 
