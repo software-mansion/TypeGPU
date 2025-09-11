@@ -99,6 +99,91 @@ const complex = tgpu['~unstable'].computeFn({
   level4Fn,
 });
 
+const processElement = tgpu.fn([d.u32, d.u32], d.u32)((value, index) => {
+  return add(multiply(value, 2), index);
+});
+
+const conditionalProcess = tgpu.fn([d.u32, d.u32], d.u32)(
+  (value, threshold) => {
+    if (value > threshold) {
+      return multiply(value, 3);
+    }
+    return add(value, 1);
+  },
+);
+
+const branchingOperations = tgpu['~unstable'].computeFn({
+  workgroupSize: [1],
+  in: {
+    gid: d.builtin.globalInvocationId,
+  },
+})`{
+  let bufferValue = targetBuffer[in.gid.x];
+  var result = bufferValue;
+
+  for (var i = 0u; i < 10u; i++) {
+    result = processElement(result, i);
+
+    if (result > 100u) {
+      result = conditionalProcess(result, 50u);
+    } else {
+      result = add(result, multiply(i, 2));
+    }
+
+    for (var j = 0u; j < 5u; j++) {
+      if (j % 2u == 0u) {
+        result = multiply(result, 2);
+      } else {
+        result = add(result, j);
+      }
+    }
+  }
+
+  targetBuffer[in.gid.x] = result;
+}`.$uses({
+  targetBuffer: benchmarkLayout.bound.buffer,
+  add,
+  multiply,
+  processElement,
+  conditionalProcess,
+});
+
+const branchingOperationsInlined = tgpu['~unstable'].computeFn({
+  workgroupSize: [1],
+  in: {
+    gid: d.builtin.globalInvocationId,
+  },
+})`{
+  let bufferValue = targetBuffer[in.gid.x];
+  var result = bufferValue;
+
+  for (var i = 0u; i < 10u; i++) {
+    result = (result * 2) + i;
+
+    if (result > 100u) {
+      if (result > 50u) {
+        result = result * 3;
+      } else {
+        result = result + 1;
+      }
+    } else {
+      result = result + (i * 2);
+    }
+
+    for (var j = 0u; j < 5u; j++) {
+      if (j % 2u == 0u) {
+        result = result * 2;
+      } else {
+        result = result + j;
+      }
+    }
+  }
+
+  targetBuffer[in.gid.x] = result;
+}`.$uses({
+  targetBuffer: benchmarkLayout.bound.buffer,
+});
+
 const benchmarkPairs = {
   'Basic Operations': {
     'Function Calls': {
@@ -120,9 +205,22 @@ const benchmarkPairs = {
       entrypoint: complexInlined,
     },
   },
+  'Branching Operations': {
+    'Function Calls': {
+      name: 'With Function Calls',
+      entrypoint: branchingOperations,
+    },
+    'Inlined': {
+      name: 'Inlined Operations',
+      entrypoint: branchingOperationsInlined,
+    },
+  },
 };
 
-async function createBenchmarkSetup(entrypoint: TgpuComputeFn) {
+async function createBenchmarkSetup(
+  entrypoint: TgpuComputeFn,
+  initialData?: number[],
+) {
   const root = await tgpu.init({
     device: {
       requiredFeatures: ['timestamp-query'],
@@ -132,6 +230,10 @@ async function createBenchmarkSetup(entrypoint: TgpuComputeFn) {
   const targetBuffer = root.createBuffer(d.arrayOf(d.u32, BUFFER_SIZE)).$usage(
     'storage',
   );
+  if (initialData) {
+    targetBuffer.write(initialData);
+  }
+
   const bindGroup = root.createBindGroup(benchmarkLayout, {
     buffer: targetBuffer,
   });
@@ -193,6 +295,11 @@ async function runInterleavedBenchmarkPair(
 
   console.log(`\nSetting up benchmark pair: ${pairName}`);
 
+  const initialData = Array.from(
+    { length: BUFFER_SIZE },
+    () => Math.floor(Math.random() * 101),
+  );
+
   const setups = {} as Record<
     string,
     Awaited<ReturnType<typeof createBenchmarkSetup>>
@@ -207,7 +314,7 @@ async function runInterleavedBenchmarkPair(
     console.log(tgpu.resolve({ externals: { pipeline: config.entrypoint } }));
     console.groupEnd();
 
-    setups[key] = await createBenchmarkSetup(config.entrypoint);
+    setups[key] = await createBenchmarkSetup(config.entrypoint, initialData);
     results[key] = { measurements: [], runningAverage: 0, runs: 0 };
 
     if (warmup) {
