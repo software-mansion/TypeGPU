@@ -87,7 +87,11 @@ export function logDataFromGPU(resources: LogResources) {
       .map(({ id, serializedData }) => {
         const argTypes = logIdToArgTypes.get(id) as (AnyWgslData | string)[];
         const result = deserializeAndStringify(serializedData, argTypes);
-        console.log(`${options.messagePrefix}${result}`);
+        console.log(
+          `${options.messagePrefix}${result}`,
+          'background: #936ff5; color: white;',
+          '',
+        );
       });
   });
 

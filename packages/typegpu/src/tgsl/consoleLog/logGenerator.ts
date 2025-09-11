@@ -30,7 +30,7 @@ import type {
 const defaultOptions: Required<LogGeneratorOptions> = {
   logCountLimit: 64,
   logSizeLimit: 60,
-  messagePrefix: '[GPU] ',
+  messagePrefix: '%c GPU %c ',
 };
 
 export class LogGeneratorNullImpl implements LogGenerator {
