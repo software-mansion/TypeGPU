@@ -111,16 +111,19 @@ The callback is not called if the global invocation id of a thread would exceed 
 :::
 
 ## *batch*
-By default TypeGPU pipelines and render passes are submitted to the GPU immediatelly.
-If you want to give the GPU an opportunity to utilize its resources, you can use the `batch` function.
+By default, TypeGPU pipelines and render passes are submitted to the GPU immediatelly.
+If you want to give the GPU an opportunity to better utilize its resources,
+you can use the `batch` function.
 
 The `batch` function allows you to submit multiple pipelines and renderPasses to the GPU in a single call.
-Under the hood it creates `GPUCommandEncoder`,
-writes relative commands from the passed function to it and submits created `GPUCommandBuffer` to the device.
+Under the hood, it creates `GPUCommandEncoder`,
+records the commands from the provided callback function,
+and submits the resulting `GPUCommandBuffer` to the device.
 
 :::caution
-Calling pipeline with performance callback always flushes the command encoder. Also read-write operations on buffers flush the command encoder.
-I prepared table that tells you when flush is called (ergo new command encoder is created). Keep that in mind when using `batch`.
+Calling a pipeline with a performance callback always flushes the command encoder.
+Similarly, read–write operations on buffers also flush the command encoder.
+We've prepared a table showing when a flush occurs (i.e., when a new command encoder is created). Keep this in mind when using `batch`.
 :::
 
 | Invocation                        | Inside batch env   | Outside batch env  |
@@ -135,7 +138,6 @@ I prepared table that tells you when flush is called (ergo new command encoder i
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-
 
 const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [7] })(() => {});
 const vertexFn = tgpu['~unstable'].vertexFn({
@@ -171,8 +173,8 @@ const render = () => {
   // more operations...
 
   renderPipelineWithPerformanceCallback.draw(777);
+  // force flush caused by renderPipelineWithPerformanceCallback
   // new command encoder
-  // force flush from renderPipelineWithPerformanceCallback
 };
 
 root['~unstable'].batch(render);
@@ -180,5 +182,6 @@ root['~unstable'].batch(render);
 
 :::note
 The calls in the batch callback have to be made synchronously.
-This may seem limiting, but our reasoning is that if you need to wait for something inside of a batch, just split the batch in two!
+This may seem limiting, but our reasoning is that if you need to wait for something inside
+a batch, just split the batch in two.
 :::
