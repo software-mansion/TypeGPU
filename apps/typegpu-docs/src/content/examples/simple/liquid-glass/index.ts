@@ -11,7 +11,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const mousePosUniform = root.createUniform(d.vec2f);
+const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 
 const { sampledView, sampler } = await loadExternalImageWithMipmaps(
   root,
@@ -28,6 +28,8 @@ const Params = d.struct({
   blur: d.f32,
   edgeFeather: d.f32,
   edgeBlurMultiplier: d.f32,
+  tintStrength: d.f32,
+  tintColor: d.vec3f,
 });
 const defaultParams: d.Infer<typeof Params> = {
   rectDims: d.vec2f(0.13, 0.01),
@@ -39,6 +41,8 @@ const defaultParams: d.Infer<typeof Params> = {
   blur: 1.2,
   edgeFeather: 2.0,
   edgeBlurMultiplier: 0.7,
+  tintStrength: 0.05,
+  tintColor: d.vec3f(0.58, 0.44, 0.96),
 };
 
 const paramsUniform = root.createUniform(Params, defaultParams);
@@ -85,6 +89,8 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const start = paramsUniform.$.start;
   const end = paramsUniform.$.end;
   const blurStrength = paramsUniform.$.blur;
+  const tintColor = paramsUniform.$.tintColor;
+  const tintStrength = paramsUniform.$.tintStrength;
 
   const sdfDist = sdRoundedBox2d(
     posInBoxSpace,
@@ -113,18 +119,28 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const dim = d.vec2f(std.textureDimensions(sampledView, 0));
   const featherUV = paramsUniform.$.edgeFeather / std.max(dim.x, dim.y);
 
-  const insideBlurWeight = 1.0 -
+  const insideBlurWeight = 1 -
     std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outsideWeight = std.smoothstep(
     end - featherUV,
     end + featherUV,
     sdfDist,
   );
-  const ringWeight = std.max(0.0, 1.0 - insideBlurWeight - outsideWeight);
+  const ringWeight = std.max(0, 1 - insideBlurWeight - outsideWeight);
 
-  const ringColor = d.vec4f(refractedColor, 1.0);
-  return blurSampled.mul(insideBlurWeight)
-    .add(ringColor.mul(ringWeight))
+  const tintedBlurSampled = std.mix(
+    d.vec4f(blurSampled.xyz, 1),
+    d.vec4f(tintColor, 1),
+    tintStrength,
+  );
+  const tintedRingColor = std.mix(
+    d.vec4f(refractedColor, 1),
+    d.vec4f(tintColor, 1),
+    tintStrength,
+  );
+
+  return tintedBlurSampled.mul(insideBlurWeight)
+    .add(tintedRingColor.mul(ringWeight))
     .add(sampled.mul(outsideWeight));
 });
 
@@ -136,23 +152,44 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 let isRectangleFixed = false;
-function updateMousePos(event: MouseEvent) {
+
+function updatePosition(clientX: number, clientY: number) {
   if (isRectangleFixed) {
     return;
   }
   const rect = canvas.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width;
-  const y = (event.clientY - rect.top) / rect.height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) {
-    return;
-  }
-  mousePosUniform.write(d.vec2f(x, y));
+  const x = (clientX - rect.left) / rect.width;
+  const y = (clientY - rect.top) / rect.height;
+  mousePosUniform.write(
+    std.clamp(d.vec2f(x, y), d.vec2f(), d.vec2f(1)),
+  );
 }
-canvas.addEventListener('mousemove', updateMousePos);
-canvas.addEventListener('click', (e) => {
+
+function handleMouseMove(event: MouseEvent) {
+  updatePosition(event.clientX, event.clientY);
+}
+
+function handleTouchMove(event: TouchEvent) {
+  event.preventDefault();
+  const touch = event.touches[0];
+  updatePosition(touch.clientX, touch.clientY);
+}
+
+function handleClick(event: MouseEvent) {
   isRectangleFixed = !isRectangleFixed;
-  updateMousePos(e);
-});
+  updatePosition(event.clientX, event.clientY);
+}
+
+function handleTouchStart(event: TouchEvent) {
+  isRectangleFixed = !isRectangleFixed;
+  const touch = event.touches[0];
+  updatePosition(touch.clientX, touch.clientY);
+}
+
+window.addEventListener('mousemove', handleMouseMove);
+canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
+canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+canvas.addEventListener('click', handleClick);
 
 let frameId: number;
 function render() {
@@ -259,11 +296,30 @@ export const controls = {
       paramsUniform.writePartial({ edgeFeather: v });
     },
   },
+  'Tint strength': {
+    initial: defaultParams.tintStrength,
+    min: 0.0,
+    max: 1.0,
+    step: 0.01,
+    onSliderChange: (v: number) => {
+      paramsUniform.writePartial({ tintStrength: v });
+    },
+  },
+  'Tint color': {
+    initial: defaultParams.tintColor,
+    onColorChange: (rgb: [number, number, number]) => {
+      paramsUniform.writePartial({ tintColor: d.vec3f(...rgb) });
+    },
+  },
 };
 
 export function onCleanup() {
   if (frameId) {
     cancelAnimationFrame(frameId);
   }
+  window.removeEventListener('mousemove', handleMouseMove);
+  canvas.removeEventListener('touchmove', handleTouchMove);
+  canvas.removeEventListener('click', handleClick);
+  canvas.removeEventListener('touchstart', handleTouchStart);
   root.destroy();
 }
