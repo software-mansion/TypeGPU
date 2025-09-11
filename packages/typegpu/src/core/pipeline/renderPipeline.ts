@@ -59,7 +59,6 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
-import { BatchFlag } from '../../batch.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -567,15 +566,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    console.log(1234);
-    console.log(BatchFlag.insideBatch);
-
     internals.priors.performanceCallback
       ? triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
       })
-      : (BatchFlag.insideBatch ? (() => {})() : branch[$internal].flush());
+      : branch[$internal].ongoingBatch
+      ? ({})
+      : branch[$internal].flush();
   }
 
   drawIndexed(

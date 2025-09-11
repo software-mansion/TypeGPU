@@ -622,6 +622,10 @@ export interface TgpuRoot extends Unwrapper {
 }
 export interface TgpuRootInternals {
   /**
+   * This state is used to determine if we should submit command buffer immediately to the device queue.
+   */
+  ongoingBatch: boolean;
+  /**
    * The current command encoder. This property will
    * hold the same value throughout the entire `batch()` invocation.
    * In case of single `draw()` or `dispatchWorkgroups()` call, getter will be used
@@ -679,4 +683,19 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
+
+  /**
+   * Executes a batch of GPU computations.
+   *
+   * Commands inside `callback` are stored in a single command buffer,
+   * then submitted to the device queue at once.
+   *
+   * There is one exception, pipelines with
+   * performance callbacks/timestamp writes are flushed immediately.
+   *
+   * @param callback A function with GPU computations to be batched.
+   *
+   * Returns a Promise that resolves when the batch is completed.
+   */
+  batch(callback: () => void): Promise<undefined>;
 }

@@ -2,7 +2,6 @@
  * @module typegpu
  */
 
-import { batch } from './batch.ts';
 import { constant } from './core/constant/tgpuConstant.ts';
 import { declare } from './core/declare/tgpuDeclare.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
@@ -33,7 +32,6 @@ export const tgpu = {
   resolveWithContext,
 
   '~unstable': {
-    batch,
     /**
      * @deprecated This feature is now stable, use tgpu.fn.
      */

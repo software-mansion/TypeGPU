@@ -109,7 +109,6 @@ import type {
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
-import { BatchFlag } from '../../batch.ts';
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -294,6 +293,7 @@ class TgpuRootImpl extends WithBindingImpl
     this[$internal] = new class {
       readonly device: GPUDevice;
       #commandEncoder: GPUCommandEncoder | null = null;
+      #ongoingBatch = false;
 
       constructor(device: GPUDevice) {
         this.device = device;
@@ -307,6 +307,14 @@ class TgpuRootImpl extends WithBindingImpl
         return this.#commandEncoder;
       }
 
+      get ongoingBatch() {
+        return this.#ongoingBatch;
+      }
+
+      set ongoingBatch(value: boolean) {
+        this.#ongoingBatch = value;
+      }
+
       flush() {
         if (!this.#commandEncoder) {
           return;
@@ -316,6 +324,17 @@ class TgpuRootImpl extends WithBindingImpl
         this.#commandEncoder = null;
       }
     }(device);
+  }
+
+  batch(callback: () => void): Promise<undefined> {
+    this[$internal].ongoingBatch = true;
+    try {
+      callback();
+    } finally {
+      this[$internal].ongoingBatch = false;
+      this[$internal].flush();
+    }
+    return this.device.queue.onSubmittedWorkDone();
   }
 
   get enabledFeatures() {
@@ -693,7 +712,9 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-    BatchFlag.insideBatch ? (() => {})() : this[$internal].flush();
+    if (!this[$internal].ongoingBatch) {
+      this[$internal].flush();
+    }
   }
 }
 
