@@ -169,7 +169,7 @@ export function createFnCore(
         const args: Snippet[] = [];
         const argAliases: [string, Snippet][] = [];
 
-        argTypes.forEach((argType, i) => {
+        for (const [i, argType] of argTypes.entries()) {
           const astParam = ast.params[i];
 
           switch (astParam?.type) {
