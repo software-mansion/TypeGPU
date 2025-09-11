@@ -8,7 +8,7 @@ const benchmarkLayout = tgpu.bindGroupLayout({
 });
 
 // Compute functions
-const basicCompute = tgpu['~unstable'].computeFn({
+const basicInlined = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -26,7 +26,7 @@ const basicCompute = tgpu['~unstable'].computeFn({
 
 const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => a + b);
 
-const functionCallCompute = tgpu['~unstable'].computeFn({
+const basic = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -43,7 +43,7 @@ const functionCallCompute = tgpu['~unstable'].computeFn({
   add,
 });
 
-const inlinedMathCompute = tgpu['~unstable'].computeFn({
+const complexInlined = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -59,7 +59,6 @@ const inlinedMathCompute = tgpu['~unstable'].computeFn({
   targetBuffer: benchmarkLayout.bound.buffer,
 });
 
-// Nested function calls (4 levels deep)
 const multiply = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => a * b);
 
 const level4Fn = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => {
@@ -78,7 +77,7 @@ const level1Fn = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => {
   return level2Fn(level3Fn(a, b), level4Fn(b, a));
 });
 
-const nestedFunctionCompute = tgpu['~unstable'].computeFn({
+const complex = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -100,41 +99,36 @@ const nestedFunctionCompute = tgpu['~unstable'].computeFn({
   level4Fn,
 });
 
-// Pipeline configurations
-const pipelines = {
-  basic: {
-    name: 'Basic Arithmetic',
-    entrypoint: basicCompute,
+const benchmarkPairs = {
+  'Basic Operations': {
+    'Function Calls': {
+      name: 'With Function Calls',
+      entrypoint: basic,
+    },
+    'Inlined': {
+      name: 'Inlined Operations',
+      entrypoint: basicInlined,
+    },
   },
-  functionCall: {
-    name: 'Function Call',
-    entrypoint: functionCallCompute,
+  'Complex Operations': {
+    'Function Calls': {
+      name: 'With Function Calls',
+      entrypoint: complex,
+    },
+    'Inlined': {
+      name: 'Inlined Operations',
+      entrypoint: complexInlined,
+    },
   },
-  nestedFunction: {
-    name: 'Nested Function Calls',
-    entrypoint: nestedFunctionCompute,
-  },
-  inlinedMath: {
-    name: 'Inlined Nested Function Calls',
-    entrypoint: inlinedMathCompute,
-  },
-} as const;
+};
 
-async function runBenchmark(
-  entrypoint: TgpuComputeFn,
-  name: string,
-  options?: {
-    iterations?: number;
-    times?: number;
-    warmup?: boolean;
-    timeLimitMs?: number;
-  },
-) {
+async function createBenchmarkSetup(entrypoint: TgpuComputeFn) {
   const root = await tgpu.init({
     device: {
       requiredFeatures: ['timestamp-query'],
     },
   });
+
   const targetBuffer = root.createBuffer(d.arrayOf(d.u32, BUFFER_SIZE)).$usage(
     'storage',
   );
@@ -144,6 +138,52 @@ async function runBenchmark(
   const pipeline = root['~unstable'].withCompute(entrypoint).createPipeline()
     .with(benchmarkLayout, bindGroup);
 
+  const querySet = root.createQuerySet('timestamp', 2);
+
+  return { root, pipeline, querySet };
+}
+
+async function runSingleMeasurement(
+  setup: Awaited<ReturnType<typeof createBenchmarkSetup>>,
+  iterations = 1_000,
+) {
+  const { root, pipeline, querySet } = setup;
+
+  pipeline.withTimestampWrites({
+    querySet,
+    beginningOfPassWriteIndex: 0,
+  }).dispatchWorkgroups(BUFFER_SIZE);
+
+  for (let j = 1; j < iterations - 1; j++) {
+    pipeline.dispatchWorkgroups(BUFFER_SIZE);
+  }
+
+  pipeline.withTimestampWrites({
+    querySet,
+    endOfPassWriteIndex: 1,
+  }).dispatchWorkgroups(BUFFER_SIZE);
+
+  root['~unstable'].flush();
+
+  querySet.resolve();
+  const [start, end] = await querySet.read();
+  return Number(end - start);
+}
+
+type BenchmarkOptions = {
+  iterations?: number;
+  times?: number;
+  warmup?: boolean;
+  timeLimitMs?: number;
+};
+
+type PipelineConfig = { name: string; entrypoint: TgpuComputeFn };
+
+async function runInterleavedBenchmarkPair(
+  pairName: string,
+  pipelineConfigs: Record<string, PipelineConfig>,
+  options?: BenchmarkOptions,
+) {
   const {
     iterations = 1_000,
     times = 100_000,
@@ -151,84 +191,160 @@ async function runBenchmark(
     timeLimitMs = 10_000,
   } = options || {};
 
-  console.groupCollapsed(`Pipeline Details: ${name}`);
-  console.log(tgpu.resolve({ externals: { pipeline } }));
-  console.groupEnd();
+  console.log(`\nSetting up benchmark pair: ${pairName}`);
 
-  if (warmup) {
-    for (let i = 0; i < Math.floor(times / 2); i++) {
-      pipeline.dispatchWorkgroups(BUFFER_SIZE);
+  const setups = {} as Record<
+    string,
+    Awaited<ReturnType<typeof createBenchmarkSetup>>
+  >;
+  const results = {} as Record<
+    string,
+    { measurements: number[]; runningAverage: number; runs: number }
+  >;
+
+  for (const [key, config] of Object.entries(pipelineConfigs)) {
+    console.groupCollapsed(`Pipeline Details: ${config.name}`);
+    console.log(tgpu.resolve({ externals: { pipeline: config.entrypoint } }));
+    console.groupEnd();
+
+    setups[key] = await createBenchmarkSetup(config.entrypoint);
+    results[key] = { measurements: [], runningAverage: 0, runs: 0 };
+
+    if (warmup) {
+      for (let i = 0; i < Math.floor(times / 10); i++) {
+        await runSingleMeasurement(setups[key], iterations);
+      }
     }
   }
 
-  const querySet = root.createQuerySet('timestamp', 2);
-  let runningAverage = 0;
-  const startTime = Date.now();
+  const startTime = performance.now();
+  const pipelineKeys = Object.keys(pipelineConfigs);
 
-  let actualTimes = 0;
-  for (let i = 0; i < times && (Date.now() - startTime) < timeLimitMs; i++) {
-    pipeline.withTimestampWrites({
-      querySet,
-      beginningOfPassWriteIndex: 0,
-    }).dispatchWorkgroups(BUFFER_SIZE);
+  let totalRuns = 0;
+  for (
+    let i = 0;
+    i < times && (performance.now() - startTime) < timeLimitMs;
+    i++
+  ) {
+    for (const key of pipelineKeys) {
+      if ((performance.now() - startTime) >= timeLimitMs) break;
 
-    for (let j = 1; j < iterations - 1; j++) {
-      pipeline.dispatchWorkgroups(BUFFER_SIZE);
+      const measurement = await runSingleMeasurement(setups[key], iterations);
+      results[key].measurements.push(measurement);
+      results[key].runs++;
+
+      results[key].runningAverage = results[key].runningAverage +
+        (measurement - results[key].runningAverage) / results[key].runs;
+
+      totalRuns++;
     }
-
-    pipeline.withTimestampWrites({
-      querySet,
-      endOfPassWriteIndex: 1,
-    }).dispatchWorkgroups(BUFFER_SIZE);
-
-    root['~unstable'].flush();
-
-    querySet.resolve();
-    const [start, end] = await querySet.read();
-    const currentTime = Number(end - start);
-
-    actualTimes++;
-    runningAverage = runningAverage +
-      (currentTime - runningAverage) / actualTimes;
   }
 
-  const avgTimeMs = runningAverage / 1_000_000;
-
-  root.destroy();
-
-  return {
-    averageTimeNs: runningAverage,
-    averageTimeMs: avgTimeMs,
-    runs: actualTimes,
-  };
-}
-
-async function runAllBenchmarks(options?: Parameters<typeof runBenchmark>[2]) {
-  console.log(`Running ${Object.keys(pipelines).length} benchmarks...`);
-
-  const results: Record<string, Awaited<ReturnType<typeof runBenchmark>>> = {};
-
-  for (const [key, { name, entrypoint }] of Object.entries(pipelines)) {
-    results[key] = await runBenchmark(entrypoint, name, options);
+  for (const setup of Object.values(setups)) {
+    setup.root.destroy();
   }
 
-  return results;
+  const finalResults = {} as Record<string, {
+    name: string;
+    averageTimeNs: number;
+    averageTimeMs: number;
+    runs: number;
+    minTimeMs: number;
+    maxTimeMs: number;
+    stdDevMs: number;
+  }>;
+
+  for (const [key, result] of Object.entries(results)) {
+    const avgNs = result.runningAverage;
+    const avgMs = avgNs / 1_000_000;
+    const measurementsMs = result.measurements.map((m) => m / 1_000_000);
+    const minMs = Math.min(...measurementsMs);
+    const maxMs = Math.max(...measurementsMs);
+    const variance = measurementsMs.reduce((acc, val) =>
+      acc + (val - avgMs) ** 2, 0) / measurementsMs.length;
+    const stdDevMs = Math.sqrt(variance);
+
+    finalResults[key] = {
+      name: pipelineConfigs[key].name,
+      averageTimeNs: avgNs,
+      averageTimeMs: avgMs,
+      runs: result.runs,
+      minTimeMs: minMs,
+      maxTimeMs: maxMs,
+      stdDevMs: stdDevMs,
+    };
+  }
+
+  return { pairName, results: finalResults, totalRuns };
 }
 
-// Run benchmarks
-const results = await runAllBenchmarks();
+async function runAllBenchmarkPairs(options?: BenchmarkOptions) {
+  console.log(
+    `Running ${Object.keys(benchmarkPairs).length} benchmark pairs...`,
+  );
 
-console.log('\nBenchmark Results:');
-console.table(Object.fromEntries(
-  Object.entries(results).map(([key, result]) => [
-    pipelines[key as keyof typeof pipelines].name,
-    {
-      'Avg Time (ms)': result.averageTimeMs.toFixed(3),
-      'Runs': result.runs,
-      'Avg Time (ns)': result.averageTimeNs.toFixed(0),
-    },
-  ]),
-));
+  const allResults = [];
+
+  for (const [pairName, pipelineConfigs] of Object.entries(benchmarkPairs)) {
+    const pairResult = await runInterleavedBenchmarkPair(
+      pairName,
+      pipelineConfigs,
+      options,
+    );
+    allResults.push(pairResult);
+  }
+
+  return allResults;
+}
+
+function displayResults(
+  allResults: Awaited<ReturnType<typeof runAllBenchmarkPairs>>,
+) {
+  console.log('\n=== Benchmark Results ===');
+
+  for (const { pairName, results, totalRuns } of allResults) {
+    console.log(`\n${pairName} (${totalRuns} total measurements)`);
+    console.log('-'.repeat(60));
+
+    const tableData = Object.fromEntries(
+      Object.entries(results).map(([key, result]) => [
+        result.name,
+        {
+          'Avg Time (ms)': result.averageTimeMs.toFixed(3),
+          'Min (ms)': result.minTimeMs.toFixed(3),
+          'Max (ms)': result.maxTimeMs.toFixed(3),
+          'Std Dev (ms)': result.stdDevMs.toFixed(3),
+          'Runs': result.runs,
+        },
+      ]),
+    );
+
+    console.table(tableData);
+
+    const resultEntries = Object.entries(results);
+    if (resultEntries.length === 2) {
+      const [first, second] = resultEntries;
+      const [, firstResult] = first;
+      const [, secondResult] = second;
+
+      const ratio = firstResult.averageTimeMs / secondResult.averageTimeMs;
+      const faster = ratio > 1 ? secondResult.name : firstResult.name;
+      const slower = ratio > 1 ? firstResult.name : secondResult.name;
+      const speedup = Math.abs(ratio - 1) * 100;
+
+      console.log(`${faster} is ${speedup.toFixed(1)}% faster than ${slower}`);
+    }
+  }
+}
+
+const allResults = await runAllBenchmarkPairs({
+  iterations: 1000,
+  times: 1000,
+  warmup: true,
+  timeLimitMs: 10_000,
+});
+
+displayResults(allResults);
 
 export function onCleanup() {
 }
