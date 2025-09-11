@@ -82,7 +82,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const mousePos = mousePosUniform.value;
+  const mousePos = mousePosUniform.$;
   const posInBoxSpace = uv.sub(mousePos);
 
   const rectDims = paramsUniform.$.rectDims;

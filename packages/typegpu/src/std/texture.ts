@@ -160,13 +160,7 @@ type TextureSampleBiasOverload = {
     bias: number,
     offset: v2i,
   ): v4f;
-  <T extends TgpuSampledTexture<'3d', F32>>(
-    texture: T,
-    sampler: TgpuSampler,
-    coords: v3f,
-    bias: number,
-  ): v4f;
-  <T extends TgpuSampledTexture<'cube', F32>>(
+  <T extends TgpuSampledTexture<'3d', F32> | TgpuSampledTexture<'cube', F32>>(
     texture: T,
     sampler: TgpuSampler,
     coords: v3f,
