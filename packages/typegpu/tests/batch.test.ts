@@ -9,9 +9,7 @@ describe('Batch', () => {
   const vertexFn = tgpu['~unstable'].vertexFn({
     out: { pos: d.builtin.position },
   })(() => {
-    return {
-      pos: d.vec4f(),
-    };
+    return { pos: d.vec4f() };
   });
   const fragmentFn = tgpu['~unstable'].fragmentFn({
     out: d.vec4f,

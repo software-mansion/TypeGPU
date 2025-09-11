@@ -109,3 +109,76 @@ The default workgroup sizes are:
 
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
+
+## *batch*
+By default TypeGPU pipelines and render passes are submitted to the GPU immediatelly.
+If you want to give the GPU an opportunity to utilize its resources, you can use the `batch` function.
+
+The `batch` function allows you to submit multiple pipelines and renderPasses to the GPU in a single call.
+Under the hood it creates `GPUCommandEncoder`,
+writes relative commands from the passed function to it and submits created `GPUCommandBuffer` to the device.
+
+:::caution
+Calling pipeline with performance callback always flushes the command encoder. Also read-write operations on buffers flush the command encoder.
+I prepared table that tells you when flush is called (ergo new command encoder is created). Keep that in mind when using `batch`.
+:::
+
+| Invocation                        | Inside batch env   | Outside batch env  |
+|-----------------------------------|--------------------|--------------------|
+| raw pipeline                      | No Flush ❌        | Flush ✅           |
+| pipeline with performance callback| Flush ✅           | Flush ✅           |
+| pipeline with timestamp writes    | No Flush ❌        | Flush ✅           |
+| beginRenderPass                   | No Flush ❌        | Flush ✅           |
+| write                             | Flush ✅           | Flush ✅           |
+| read                              | Flush ✅           | Flush ✅           |
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+
+const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [7] })(() => {});
+const vertexFn = tgpu['~unstable'].vertexFn({
+  out: { pos: d.builtin.position },
+})(() => {
+  return { pos: d.vec4f() };
+});
+const fragmentFn = tgpu['~unstable'].fragmentFn({
+  out: d.vec4f,
+})(() => d.vec4f());
+
+const root = await tgpu.init();
+
+const renderPipeline = root['~unstable']
+  .withVertex(vertexFn, {})
+  .withFragment(fragmentFn, { format: 'rgba8unorm' })
+  .createPipeline();
+
+const renderPipelineWithPerformanceCallback = root['~unstable']
+  .withVertex(vertexFn, {})
+  .withFragment(fragmentFn, { format: 'rgba8unorm' })
+  .createPipeline()
+  .withPerformanceCallback(() => {});
+
+const computePipeline = root['~unstable']
+  .withCompute(entryFn)
+  .createPipeline();
+
+// ---cut---
+const render = () => {
+  computePipeline.dispatchWorkgroups(7, 7, 7);
+  renderPipeline.draw(777);
+  // more operations...
+
+  renderPipelineWithPerformanceCallback.draw(777);
+  // new command encoder
+  // force flush from renderPipelineWithPerformanceCallback
+};
+
+root['~unstable'].batch(render);
+```
+
+:::note
+The calls in the batch callback have to be made synchronously.
+This may seem limiting, but our reasoning is that if you need to wait for something inside of a batch, just split the batch in two!
+:::
