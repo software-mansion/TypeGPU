@@ -43,7 +43,6 @@ const functionCallCompute = tgpu['~unstable'].computeFn({
   add,
 });
 
-// Inlined complex math operations
 const inlinedMathCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
   in: {
@@ -51,13 +50,11 @@ const inlinedMathCompute = tgpu['~unstable'].computeFn({
   },
 })`{
   let bufferValue = targetBuffer[in.gid.x];
-  var a = (in.gid.x * 3 + 7) * bufferValue + 15;
-  var b = ((a * 2 + 9) * (bufferValue + 4)) - (a * 3);
-  var c = (b * b + a * a) / (a + 1);
-  var d = ((c + b) * (a - b + 1)) + ((c * 2) * (a + 5));
-  var e = (d * d + c * c + b * b + a * a) / (bufferValue + 1);
-  var f = e * (d + c + b + a) + (e * e) / (d + 1);
-  targetBuffer[in.gid.x] = f;
+  var a = ((((in.gid.x + bufferValue) + (bufferValue * 2)) * 3 + (in.gid.x + bufferValue) * 2 + 7) * ((bufferValue * 2) * 3 + (in.gid.x + bufferValue) + 7) + ((((in.gid.x + bufferValue) + (bufferValue * 2)) * 3 + (in.gid.x + bufferValue) * 2 + 7) * 3 + ((bufferValue * 2) * 3 + (in.gid.x + bufferValue) + 7) + 7)) * 3 + (((in.gid.x + bufferValue) + (bufferValue * 2)) * 3 + (in.gid.x + bufferValue) * 2 + 7) * ((bufferValue * 2) * 3 + (in.gid.x + bufferValue) + 7) * 2 + 7;
+  var b = a + ((bufferValue * in.gid.x + bufferValue * 3 + in.gid.x + 7) * 3 + bufferValue * in.gid.x * 2 + 7);
+  var c = b * ((in.gid.x + 5) * 3 + in.gid.x * 2 + 7);
+  var d = c + (a * 3 + bufferValue + 7);
+  targetBuffer[in.gid.x] = d;
 }`.$uses({
   targetBuffer: benchmarkLayout.bound.buffer,
 });
@@ -88,11 +85,11 @@ const nestedFunctionCompute = tgpu['~unstable'].computeFn({
   },
 })`{
   let bufferValue = targetBuffer[in.gid.x];
-  var result = level1Fn(add(in.gid.x, bufferValue), multiply(bufferValue, 2));
-  result = add(result, level2Fn(bufferValue, in.gid.x));
-  result = multiply(result, level3Fn(in.gid.x, 5));
-  result = add(result, level4Fn(result, bufferValue));
-  targetBuffer[in.gid.x] = result;
+  var a = level1Fn(add(in.gid.x, bufferValue), multiply(bufferValue, 2));
+  var b = add(a, level2Fn(bufferValue, in.gid.x));
+  var c = multiply(b, level3Fn(in.gid.x, 5));
+  var d = add(c, level4Fn(a, bufferValue));
+  targetBuffer[in.gid.x] = d;
 }`.$uses({
   targetBuffer: benchmarkLayout.bound.buffer,
   add,
@@ -118,7 +115,7 @@ const pipelines = {
     entrypoint: nestedFunctionCompute,
   },
   inlinedMath: {
-    name: 'Inlined Complex Math',
+    name: 'Inlined Nested Function Calls',
     entrypoint: inlinedMathCompute,
   },
 } as const;
