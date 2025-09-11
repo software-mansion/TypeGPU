@@ -21,6 +21,7 @@ import {
   vec4f,
   vec4h,
   vec4i,
+  vecTypeToElement,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -372,7 +373,10 @@ export const distance = dualImpl({
 
 export const dot = dualImpl({
   name: 'dot',
-  signature: (...argTypes) => ({ argTypes, returnType: f32 }),
+  signature: (e1, e2) => ({
+    argTypes: [e1, e2],
+    returnType: vecTypeToElement[e1.type as keyof typeof vecTypeToElement],
+  }),
   normalImpl: <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   codegenImpl: (lhs, rhs) => stitch`dot(${lhs}, ${rhs})`,

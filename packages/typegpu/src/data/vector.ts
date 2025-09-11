@@ -1,6 +1,7 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
+import { type AnyData, undecorate } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -44,7 +45,6 @@ import type {
   Vec4u,
 } from './wgslTypes.ts';
 import { isVec } from './wgslTypes.ts';
-import { type AnyData, undecorate } from './dataTypes.ts';
 
 // ----------
 // Public API
@@ -271,6 +271,24 @@ export const vecTypeToConstructor = {
   vec4i,
   vec4u,
   'vec4<bool>': vec4b,
+} as const;
+
+export const vecTypeToElement = {
+  vec2f: f32,
+  vec2h: f16,
+  vec2i: i32,
+  vec2u: u32,
+  'vec2<bool>': bool,
+  vec3f: f32,
+  vec3h: f16,
+  vec3i: i32,
+  vec3u: u32,
+  'vec3<bool>': bool,
+  vec4f: f32,
+  vec4h: f16,
+  vec4i: i32,
+  vec4u: u32,
+  'vec4<bool>': bool,
 } as const;
 
 type VecSchemaBase<TValue> = {

@@ -4,7 +4,6 @@ import {
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -15,6 +14,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -31,11 +31,13 @@ import {
   vec4h,
   vec4i,
   vec4u,
+  vecTypeToElement,
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
   hasInternalDataType,
   isMatInstance,
+  isNumericSchema,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -43,7 +45,6 @@ import {
 } from '../data/wgslTypes.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { isNumericSchema } from '../data/wgslTypes.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -106,21 +107,7 @@ const kindToSchema = {
 } as const;
 
 const indexableTypeToResult = {
-  vec2f: f32,
-  vec2h: f16,
-  vec2i: i32,
-  vec2u: u32,
-  'vec2<bool>': bool,
-  vec3f: f32,
-  vec3h: f16,
-  vec3i: i32,
-  vec3u: u32,
-  'vec3<bool>': bool,
-  vec4f: f32,
-  vec4h: f16,
-  vec4i: i32,
-  vec4u: u32,
-  'vec4<bool>': bool,
+  ...vecTypeToElement,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,

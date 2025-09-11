@@ -296,18 +296,16 @@ export const isCloseTo = dualImpl({
   },
 });
 
+function cpuSelect(f: boolean, t: boolean, cond: boolean): boolean;
 function cpuSelect(f: number, t: number, cond: boolean): number;
-function cpuSelect<T extends boolean | AnyVecInstance>(
-  f: T,
-  t: T,
-  cond: boolean,
-): T;
 function cpuSelect<T extends AnyVecInstance>(
   f: T,
   t: T,
-  cond: T extends AnyVec2Instance ? v2b
-    : T extends AnyVec3Instance ? v3b
-    : v4b,
+  cond:
+    | boolean
+    | (T extends AnyVec2Instance ? v2b
+      : T extends AnyVec3Instance ? v3b
+      : v4b),
 ): T;
 function cpuSelect<T extends number | boolean | AnyVecInstance>(
   f: T,
