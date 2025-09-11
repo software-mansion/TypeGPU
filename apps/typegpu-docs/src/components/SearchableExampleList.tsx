@@ -12,6 +12,9 @@ function ExamplesGrid({ examples }: { examples: Example[] }) {
   );
 }
 
+const DEV = globalThis.process.env.NODE_ENV === 'development';
+const TEST = globalThis.process.env.NODE_ENV === 'test';
+
 export function SearchableExampleList(
   { excludeTags = [], scrollContainerRef }: {
     excludeTags?: string[];
@@ -23,7 +26,8 @@ export function SearchableExampleList(
   const allExamples = useMemo(
     () =>
       Object.values(examples).filter((ex) =>
-        !ex.metadata.tags?.some((tag) => excludeTags.includes(tag))
+        !ex.metadata.tags?.some((tag) => excludeTags.includes(tag)) &&
+        (DEV || TEST || !ex.metadata.dev)
       ),
     [excludeTags],
   );
