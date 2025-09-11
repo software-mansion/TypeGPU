@@ -1,5 +1,6 @@
 {
   "title": "WGSL Resolution",
   "category": "tests",
-  "tags": ["experimental"]
+  "tags": ["experimental"],
+  "dev": true
 }
