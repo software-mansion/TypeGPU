@@ -5,6 +5,7 @@ export const ExampleMetadata = type({
   title: 'string',
   category: 'string',
   'tags?': 'string[]',
+  'dev?': 'boolean',
 });
 
 export const exampleCategories = [
