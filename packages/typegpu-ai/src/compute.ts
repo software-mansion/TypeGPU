@@ -18,8 +18,11 @@ export const nnCompute = tgpu['~unstable'].computeFn({
 })(({ gid, nwg, wid }) => {
   const globalIdx = calculateIndex(gid, nwg);
   const i = globalIdx;
-
-  const inputSize = ioLayout.$.input.length;
+  const inputSize = ioLayout.$.inLength;
+  const outSize = ioLayout.$.outLength;
+  if (i >= outSize) {
+    return;
+  }
   const weightsOffset = i * inputSize;
 
   let sum = d.f32(0);

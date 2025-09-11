@@ -12,6 +12,7 @@ import {
 } from './schemas.ts';
 import { identity, relu } from './activationFunctions.ts';
 
+// TODO: delegate calcing maxBufferSize to OnnxLoader
 export function createDenseReluNetwork(
   root: TgpuRoot,
   model: OnnxModel,
@@ -53,11 +54,11 @@ export function createDenseReluNetwork(
 
     let weightsData = weightTensor.data as Float32Array;
 
-    const transBAttr = node.attributes.find((a) => a.name === 'transB'); //pytorch transpose
-    const transB = transBAttr ? Number(transBAttr.value as any) === 1 : false;
-    if (transB) {
-      weightsData = transposeFloat32(weightsData, outDim, inDim);
-    }
+    // const transBAttr = node.attributes.find((a) => a.name === 'transB'); //pytorch transpose
+    // const transB = transBAttr ? Number(transBAttr.value as any) === 1 : false;
+    // if (transB) {
+    //   weightsData = transposeFloat32(weightsData, outDim, inDim);
+    // }
 
     layerSpecs.push({
       weights: weightsData,
@@ -114,9 +115,13 @@ export function createDenseReluNetwork(
       d.arrayOf(d.f32, biases.length),
       [...biases] as number[],
     ).$usage('storage');
+    const inLenBuf = root.createBuffer(d.u32, inSize).$usage('uniform');
+    const outLenBuf = root.createBuffer(d.u32, outSize).$usage('uniform');
     const ioBindGroup = root.createBindGroup(ioLayout, {
       input: currentInputBuffer,
       output: currentOutputBuffer,
+      inLength: inLenBuf,
+      outLength: outLenBuf,
     });
     const wbBindGroup = root.createBindGroup(weightsBiasesLayout, {
       weights: weightsBuffer,
@@ -163,7 +168,7 @@ export function createDenseReluNetwork(
     }
 
     // result in: if layer count odd -> bufferB else -> bufferA (because of last swap rule)
-    const finalBuffer = (layers.length % 2 === 0) ? bufferA : bufferB; // after loop, if even layers we swapped last iteration leaving output in initial input buffer
+    const finalBuffer = (layers.length % 2 === 1) ? bufferB : bufferA;
     const outFull = await finalBuffer.read();
     const finalSize = layers[layers.length - 1]!.outSize;
     // only apply softmax over the actual output slice

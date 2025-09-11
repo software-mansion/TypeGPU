@@ -24,6 +24,8 @@ const MutableFloats = {
 export const ioLayout = tgpu.bindGroupLayout({
   input: ReadonlyFloats,
   output: MutableFloats,
+  inLength: { uniform: d.u32 }, // per dispatch
+  outLength: { uniform: d.u32 },
 });
 
 export const weightsBiasesLayout = tgpu.bindGroupLayout({
