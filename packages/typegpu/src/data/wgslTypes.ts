@@ -1844,3 +1844,17 @@ export function isNumericSchema(
       type === 'u32')
   );
 }
+
+export function isHalfPrecisionSchema(
+  schema: unknown,
+): schema is F16 | Vec2h | Vec3h | Vec4h {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    !!(schema as BaseData)?.[$internal] &&
+    (type === 'f16' ||
+      type === 'vec2h' ||
+      type === 'vec3h' ||
+      type === 'vec4h')
+  );
+}

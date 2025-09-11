@@ -32,6 +32,7 @@ import {
   type AnyNumericVecInstance,
   type AnySignedVecInstance,
   type AnyWgslData,
+  isHalfPrecisionSchema,
   isNumericSchema,
   isVecInstance,
   type v2f,
@@ -365,7 +366,7 @@ export const distance = dualImpl({
   name: 'distance',
   signature: (lhs, rhs) => ({
     argTypes: [lhs, rhs],
-    returnType: lhs.type === 'f16' || rhs.type.endsWith('h') ? f16 : f32,
+    returnType: isHalfPrecisionSchema(lhs) ? f16 : f32,
   }),
   normalImpl: cpuDistance,
   codegenImpl: (a, b) => stitch`distance(${a}, ${b})`,
@@ -719,7 +720,7 @@ export const length = dualImpl({
   name: 'length',
   signature: (arg) => ({
     argTypes: [arg],
-    returnType: arg.type === 'f16' || arg.type.endsWith('h') ? f16 : f32,
+    returnType: isHalfPrecisionSchema(arg) ? f16 : f32,
   }),
   normalImpl: cpuLength,
   codegenImpl: (arg) => stitch`length(${arg})`,
@@ -975,7 +976,7 @@ export const refract = createDualImpl(
   (e1, e2, e3) => [
     e1.dataType as AnyWgslData,
     e2.dataType as AnyWgslData,
-    e1.dataType.type === 'f16' || e1.dataType.type.endsWith('h') ? f16 : f32,
+    isHalfPrecisionSchema(e1) ? f16 : f32,
   ],
 );
 
