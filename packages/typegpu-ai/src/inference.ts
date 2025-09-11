@@ -1,7 +1,7 @@
 import type { TgpuRoot } from 'typegpu';
 import type { OnnxModel, Tensor } from './onnx/types.ts';
 import * as d from 'typegpu/data';
-import { nnCompute } from './compute.ts';
+import { nnCompute } from './compute/compute.ts';
 import {
   activationFunctionSlot,
   DenseLayerGpu,
@@ -10,56 +10,23 @@ import {
   weightsBiasesLayout,
   workgroupSize,
 } from './schemas.ts';
-import { identity, relu } from './activationFunctions.ts';
+import { identity, relu } from './compute/activationFunctions.ts';
+import { extractGemmLayerSpecs, computeMaxBufferSize } from './layers/gemm.ts';
+import { validateLayerSizes } from './sizeMismatch.ts';
 
 // TODO: delegate calcing maxBufferSize to OnnxLoader
 export function createDenseReluNetwork(
   root: TgpuRoot,
   model: OnnxModel,
 ): NetworkRunner {
-  const initMap = model.tensorMap;
-
-  // extract layers
-  const layerSpecs: { weights: Float32Array; biases: Float32Array }[] = [];
-  for (const node of model.graph.nodes) {
-    if (node.opType !== 'Gemm') continue;
-    // Gemm inputs: [A, B, C?] — B is weights, C optional bias
-    const weightTensor = initMap.get(node.inputs[1] as string);
-    const biasName = node.inputs[2] as string;
-    const biasTensor = biasName ? initMap.get(biasName) : undefined;
-
-    if (!weightTensor || !biasTensor) continue;
-    if (
-      !(weightTensor.data instanceof Float32Array) ||
-      !(biasTensor.data instanceof Float32Array)
-    ) continue;
-    if (weightTensor.dims.length !== 2 || biasTensor.dims.length !== 1) {
-      continue;
-    }
-    let weightsData = weightTensor.data as Float32Array;
-
-    // const transBAttr = node.attributes.find((a) => a.name === 'transB'); //pytorch transpose
-    // const transB = transBAttr ? Number(transBAttr.value as any) === 1 : false;
-    // if (transB) {
-    //   weightsData = transposeFloat32(weightsData, outDim, inDim);
-    // }
-
-    layerSpecs.push({
-      weights: weightsData,
-      biases: biasTensor.data as Float32Array,
-    });
-  }
+  const layerSpecs = extractGemmLayerSpecs(model);
 
   console.log('before shader', layerSpecs);
   const device = root.device;
   const layers: DenseLayerGpu[] = [];
 
-  // buffers
-  const maxOut = Math.max(...layerSpecs.map((l) => l.biases.length));
-  const maxIn = Math.max(
-    ...layerSpecs.map((l) => Math.floor(l.weights.length / l.biases.length)),
-  );
-  const bufferSize = Math.max(maxOut, maxIn);
+  // buffers sized to the max required by GEMM layers
+  const bufferSize = computeMaxBufferSize(layerSpecs);
   const bufferA = root.createBuffer(d.arrayOf(d.f32, bufferSize)).$usage(
     'storage',
   );
@@ -74,22 +41,11 @@ export function createDenseReluNetwork(
   const idPipeline = root['~unstable'].with(activationFunctionSlot, identity)
     .withCompute(nnCompute).createPipeline();
 
-  let prevOut = null;
+  let prevOut: number | null = null;
   for (let idx = 0; idx < layerSpecs.length; idx++) {
     const { weights, biases } = layerSpecs[idx]!;
-    const outSize = biases.length;
-    const inSize = weights.length / outSize;
-    if (inSize * outSize !== weights.length) {
-      throw new Error(
-        `Layer ${idx} weight length mismatch: got ${weights.length} vs ${inSize}*${outSize}`,
-      );
-    }
+    const { inSize, outSize } = validateLayerSizes(weights, biases, idx, prevOut);
     if (idx === 0) prevOut = inSize; // initial input size
-    if (inSize !== prevOut) {
-      throw new Error(
-        `Layer ${idx} input size ${inSize} != previous output size ${prevOut}`,
-      );
-    }
 
     const weightsBuffer = root.createBuffer(
       d.arrayOf(d.f32, weights.length),

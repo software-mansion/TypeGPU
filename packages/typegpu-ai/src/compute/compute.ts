@@ -5,8 +5,8 @@ import {
   activationFunctionSlot,
   ioLayout,
   weightsBiasesLayout,
-} from './schemas.ts';
-import { calculateIndex, workgroupSize } from './schemas.ts';
+} from '../schemas.ts';
+import { calculateIndex, workgroupSize } from '../schemas.ts';
 
 export const nnCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [workgroupSize],

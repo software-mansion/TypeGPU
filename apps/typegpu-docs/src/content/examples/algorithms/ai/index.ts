@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import OnnxLoader, { createDenseReluNetwork } from '@typegpu/ai';
+import { createDenseReluNetwork, OnnxLoader } from '@typegpu/ai';
 import type { NetworkRunner } from '../../../../../../../packages/typegpu-ai/src/schemas';
 import {
   exampleKMNISTInput0,
@@ -8,6 +8,7 @@ import {
   exampleKMNISTInput4,
   exampleKMNISTInput9,
 } from './KMNIST_example.ts';
+import { summarizeModel } from '../../../../../../../packages/typegpu-ai/src/onnx/onnxLoader.ts';
 
 const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
@@ -21,10 +22,7 @@ let network: NetworkRunner | undefined;
 try {
   const loader = await OnnxLoader.fromPath(MODEL_PATH);
   network = createDenseReluNetwork(root, loader.model);
-  console.log(
-    '[AI Example] Dense network layers:',
-    network.layers.map((l) => ({ in: l.inSize, out: l.outSize })),
-  );
+  console.log(summarizeModel(loader.model));
   runExampleInference();
 } catch (err) {}
 
@@ -34,7 +32,7 @@ export const controls = {
 
 async function runExampleInference() {
   if (!network) return;
-  const out = await network.run(exampleKMNISTInput1);
+  const out = await network.run(exampleKMNISTInput9);
   console.log(
     '[AI Example] Inference output:',
     out,
