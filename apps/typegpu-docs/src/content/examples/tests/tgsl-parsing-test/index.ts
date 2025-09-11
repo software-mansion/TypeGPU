@@ -34,20 +34,17 @@ async function runTests() {
   return await result.read();
 }
 
+const table = document.querySelector<HTMLDivElement>('.result');
+if (!table) {
+  throw new Error('Nowhere to display the results');
+}
+runTests().then((result) => {
+  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
+});
+
 // #region Example controls and cleanup
 
 export const controls = {
-  'Run tests': {
-    async onButtonClick() {
-      const table = document.querySelector<HTMLDivElement>('.result');
-      if (!table) {
-        throw new Error('Nowhere to display the results');
-      }
-      table.innerText = (await runTests())
-        ? 'Tests succeeded!'
-        : 'Tests failed.';
-    },
-  },
   'Log resolved pipeline': {
     async onButtonClick() {
       console.log(tgpu.resolve({ externals: { pipeline } }));

@@ -199,7 +199,7 @@ export function createFnCore(
             case undefined:
               args.push(snip(`_arg_${i}`, argType));
           }
-        });
+        }
 
         const { head, body } = ctx.fnToWgsl({
           args,

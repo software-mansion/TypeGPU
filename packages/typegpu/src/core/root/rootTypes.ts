@@ -31,8 +31,15 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type {
+  TgpuBufferShorthand,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -56,12 +63,6 @@ import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type {
-  TgpuBufferShorthand,
-  TgpuMutable,
-  TgpuReadonly,
-  TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -620,6 +621,9 @@ export interface TgpuRoot extends Unwrapper {
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly nameRegistry: NameRegistry;
+  readonly shaderGenerator?:
+    | ShaderGenerator
+    | undefined;
   /**
    * The current command encoder. This property will
    * hold the same value until `flush()` is called.
