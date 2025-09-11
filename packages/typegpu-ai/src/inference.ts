@@ -17,21 +17,9 @@ export function createDenseReluNetwork(
   root: TgpuRoot,
   model: OnnxModel,
 ): NetworkRunner {
-  // Build an initializer map for quick lookup (prefer model.tensorMap if present)
   const initMap = model.tensorMap;
 
-  function transposeFloat32(data: Float32Array, rows: number, cols: number) {
-    const out = new Float32Array(data.length);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const srcIdx = r * cols + c;
-        out[c * rows + r] = data[srcIdx] as number;
-      }
-    }
-    return out;
-  }
-
-  // Extract layers by scanning graph nodes in order (Gemm only for now)
+  // extract layers
   const layerSpecs: { weights: Float32Array; biases: Float32Array }[] = [];
   for (const node of model.graph.nodes) {
     if (node.opType !== 'Gemm') continue;
@@ -48,10 +36,6 @@ export function createDenseReluNetwork(
     if (weightTensor.dims.length !== 2 || biasTensor.dims.length !== 1) {
       continue;
     }
-
-    const outDim = Number(weightTensor.dims[0]);
-    const inDim = Number(weightTensor.dims[1]);
-
     let weightsData = weightTensor.data as Float32Array;
 
     // const transBAttr = node.attributes.find((a) => a.name === 'transB'); //pytorch transpose
@@ -70,7 +54,7 @@ export function createDenseReluNetwork(
   const device = root.device;
   const layers: DenseLayerGpu[] = [];
 
-  // Determine buffer size: must fit the largest input or output dimension used by any layer
+  // buffers
   const maxOut = Math.max(...layerSpecs.map((l) => l.biases.length));
   const maxIn = Math.max(
     ...layerSpecs.map((l) => Math.floor(l.weights.length / l.biases.length)),
@@ -147,7 +131,7 @@ export function createDenseReluNetwork(
   }
 
   async function run(input: number[] | Float32Array): Promise<number[]> {
-    // Write initial input into bufferA
+    // initial input into bufferA
     bufferA.write(Array.isArray(input) ? input : Array.from(input));
 
     for (let i = 0; i < layers.length; i++) {
