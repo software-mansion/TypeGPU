@@ -12,8 +12,9 @@
 import { hsvToRgb } from '@typegpu/color';
 import { useFrame, useRender, useUniformValue } from '@typegpu/react';
 
-const App = () => {
-  const time = useUniformValue(0);
+const App = (props: Props) => {
+  const time = useUniformValue(d.f32, 0);
+  const color = useMirroredUniform(d.vec3f, props.color);
 
   // Runs each frame on the CPU 🤖
   useFrame(() => {
@@ -22,9 +23,9 @@ const App = () => {
 
   const { ref } = useRender({
     // Runs each frame on the GPU 🌈
-    fragment: () => {
+    fragment: ({ uv }) => {
       'kernel';
-      return hsvToRgb(time.value, 1, 1);
+      return hsvToRgb(time.$, uv.x, uv.y) * color.$;
     },
   });
 

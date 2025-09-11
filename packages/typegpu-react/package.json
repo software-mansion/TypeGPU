@@ -31,12 +31,12 @@
   "license": "MIT",
   "peerDependencies": {
     "typegpu": "^0.7.0",
-    "react": "^18.0.0"
+    "react": "^19.0.0"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
-    "@types/react": "^18.0.0",
+    "@types/react": "^19.0.0",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
