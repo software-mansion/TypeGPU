@@ -256,55 +256,57 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
+  root['~unstable'].batch(() => {
+    computePipeline
+      .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
+      .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .withDepthStencilAttachment({
-      view: depthTexture.createView(),
-      depthClearValue: 1,
-      depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    })
-    .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
-    .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
-    .draw(oceanFloorModel.polygonCount, 1);
+    renderPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [
+          p.backgroundColor.x,
+          p.backgroundColor.y,
+          p.backgroundColor.z,
+          1,
+        ],
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .withDepthStencilAttachment({
+        view: depthTexture.createView(),
+        depthClearValue: 1,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+      })
+      .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
+      .with(renderInstanceLayout, oceanFloorDataBuffer)
+      .with(renderBindGroupLayout, renderOceanFloorBindGroup)
+      .draw(oceanFloorModel.polygonCount, 1);
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
-      loadOp: 'load',
-      storeOp: 'store',
-    })
-    .withDepthStencilAttachment({
-      view: depthTexture.createView(),
-      depthClearValue: 1,
-      depthLoadOp: 'load',
-      depthStoreOp: 'store',
-    })
-    .with(modelVertexLayout, fishModel.vertexBuffer)
-    .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
-    .draw(fishModel.polygonCount, p.fishAmount);
+    renderPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [
+          p.backgroundColor.x,
+          p.backgroundColor.y,
+          p.backgroundColor.z,
+          1,
+        ],
+        loadOp: 'load',
+        storeOp: 'store',
+      })
+      .withDepthStencilAttachment({
+        view: depthTexture.createView(),
+        depthClearValue: 1,
+        depthLoadOp: 'load',
+        depthStoreOp: 'store',
+      })
+      .with(modelVertexLayout, fishModel.vertexBuffer)
+      .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
+      .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
+      .draw(fishModel.polygonCount, p.fishAmount);
+  });
 
   requestAnimationFrame(frame);
 }

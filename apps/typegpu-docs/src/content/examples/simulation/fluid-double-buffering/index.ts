@@ -586,10 +586,12 @@ onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
-    for (let i = 0; i < stepsPerTick; ++i) {
-      tick();
-    }
-    primary.render();
+    root['~unstable'].batch(() => {
+      for (let i = 0; i < stepsPerTick; ++i) {
+        tick();
+      }
+      primary.render();
+    });
     msSinceLastTick -= timestep;
   }
 });

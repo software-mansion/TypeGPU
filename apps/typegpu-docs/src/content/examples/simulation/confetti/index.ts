@@ -210,16 +210,18 @@ onFrame((dt) => {
   deltaTime.write(dt);
   aspectRatio.write(canvas.width / canvas.height);
 
-  computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
+  root['~unstable'].batch(() => {
+    computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    })
-    .draw(4, PARTICLE_AMOUNT);
+    renderPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear' as const,
+        storeOp: 'store' as const,
+      })
+      .draw(4, PARTICLE_AMOUNT);
+  });
 });
 
 // example controls and cleanup

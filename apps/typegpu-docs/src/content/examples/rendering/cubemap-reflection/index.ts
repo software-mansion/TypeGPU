@@ -312,7 +312,7 @@ function loop() {
   if (exampleDestroyed) {
     return;
   }
-  render();
+  root['~unstable'].batch(render);
   requestAnimationFrame(loop);
 }
 

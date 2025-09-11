@@ -199,7 +199,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
-  render();
+  root['~unstable'].batch(render);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
