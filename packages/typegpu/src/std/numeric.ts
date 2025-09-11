@@ -33,14 +33,14 @@ import {
   type AnyWgslData,
   isNumericSchema,
   isVecInstance,
-  v2f,
-  v2h,
+  type v2f,
+  type v2h,
   type v2i,
   type v3f,
   type v3h,
   type v3i,
-  v4f,
-  v4h,
+  type v4f,
+  type v4h,
   type v4i,
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
