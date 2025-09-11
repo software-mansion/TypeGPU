@@ -76,10 +76,10 @@ function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const acos = dualImpl({
+  name: 'acos',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAcos,
   codegenImpl: (value) => stitch`acos(${value})`,
-  name: 'acos',
 });
 
 function cpuAcosh(value: number): number;
@@ -92,10 +92,10 @@ function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const acosh = dualImpl({
+  name: 'acosh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAcosh,
   codegenImpl: (value) => stitch`acosh(${value})`,
-  name: 'acosh',
 });
 
 function cpuAsin(value: number): number;
@@ -108,10 +108,10 @@ function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const asin = dualImpl({
+  name: 'asin',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAsin,
   codegenImpl: (value) => stitch`asin(${value})`,
-  name: 'asin',
 });
 
 function cpuAsinh(value: number): number;
@@ -124,10 +124,10 @@ function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const asinh = dualImpl({
+  name: 'asinh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAsinh,
   codegenImpl: (value) => stitch`asinh(${value})`,
-  name: 'asinh',
 });
 
 function cpuAtan(value: number): number;
@@ -140,10 +140,10 @@ function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const atan = dualImpl({
+  name: 'atan',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAtan,
   codegenImpl: (value) => stitch`atan(${value})`,
-  name: 'atan',
 });
 
 function cpuAtanh(value: number): number;
@@ -156,10 +156,10 @@ function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const atanh = dualImpl({
+  name: 'atanh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuAtanh,
   codegenImpl: (value) => stitch`atanh(${value})`,
-  name: 'atanh',
 });
 
 function cpuAtan2(y: number, x: number): number;
@@ -175,6 +175,7 @@ function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
 }
 
 export const atan2 = dualImpl({
+  name: 'atan2',
   signature: (...args) => {
     const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
     return ({
@@ -184,7 +185,6 @@ export const atan2 = dualImpl({
   },
   normalImpl: cpuAtan2,
   codegenImpl: (y, x) => stitch`atan2(${y}, ${x})`,
-  name: 'atan2',
 });
 
 function cpuCeil(value: number): number;
@@ -197,10 +197,10 @@ function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const ceil = dualImpl({
+  name: 'ceil',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCeil,
   codegenImpl: (value) => stitch`ceil(${value})`,
-  name: 'ceil',
 });
 
 function cpuClamp(value: number, low: number, high: number): number;
@@ -217,13 +217,13 @@ function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
 }
 
 export const clamp = dualImpl({
+  name: 'clamp',
   signature: (value, low, high) => ({
     argTypes: [value, low, high],
     returnType: value,
   }),
   normalImpl: cpuClamp,
   codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
-  name: 'clamp',
 });
 
 function cpuCos(value: number): number;
@@ -236,10 +236,10 @@ function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const cos = dualImpl({
+  name: 'cos',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCos,
   codegenImpl: (value) => stitch`cos(${value})`,
-  name: 'cos',
 });
 
 function cpuCosh(value: number): number;
@@ -252,10 +252,10 @@ function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const cosh = dualImpl({
+  name: 'cosh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCosh,
   codegenImpl: (value) => stitch`cosh(${value})`,
-  name: 'cosh',
 });
 
 function cpuCountLeadingZeros(value: number): number;
@@ -269,10 +269,10 @@ function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
 }
 
 export const countLeadingZeros = dualImpl({
+  name: 'countLeadingZeros',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCountLeadingZeros,
   codegenImpl: (value) => stitch`countLeadingZeros(${value})`,
-  name: 'countLeadingZeros',
 });
 
 function cpuCountOneBits(value: number): number;
@@ -286,10 +286,10 @@ function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
 }
 
 export const countOneBits = dualImpl({
+  name: 'countOneBits',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCountOneBits,
   codegenImpl: (value) => stitch`countOneBits(${value})`,
-  name: 'countOneBits',
 });
 
 function cpuCountTrailingZeros(value: number): number;
@@ -303,18 +303,18 @@ function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
 }
 
 export const countTrailingZeros = dualImpl({
+  name: 'countTrailingZeros',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuCountTrailingZeros,
   codegenImpl: (value) => stitch`countTrailingZeros(${value})`,
-  name: 'countTrailingZeros',
 });
 
 export const cross = dualImpl({
+  name: 'cross',
   signature: (lhs, rhs) => ({ argTypes: [lhs, rhs], returnType: lhs }),
   normalImpl: <T extends v3f | v3h>(a: T, b: T): T =>
     VectorOps.cross[a.kind](a, b),
   codegenImpl: (a, b) => stitch`cross(${a}, ${b})`,
-  name: 'cross',
 });
 
 function cpuDegrees(value: number): number;
@@ -329,13 +329,14 @@ function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const degrees = dualImpl({
+  name: 'degrees',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuDegrees,
   codegenImpl: (value) => stitch`degrees(${value})`,
-  name: 'degrees',
 });
 
 export const determinant = dualImpl({
+  name: 'determinant',
   // TODO: The return type is potentially wrong here, it should return whatever the matrix element type is.
   signature: (arg) => ({ argTypes: [arg], returnType: f32 }),
   normalImpl: (value: AnyMatInstance): number => {
@@ -344,7 +345,6 @@ export const determinant = dualImpl({
     );
   },
   codegenImpl: (value) => stitch`determinant(${value})`,
-  name: 'determinant',
 });
 
 function cpuDistance(a: number, b: number): number;
@@ -362,13 +362,13 @@ function cpuDistance<T extends AnyFloatVecInstance | number>(
 }
 
 export const distance = dualImpl({
+  name: 'distance',
   signature: (lhs, rhs) => ({
     argTypes: [lhs, rhs],
     returnType: lhs.type === 'f16' || rhs.type.endsWith('h') ? f16 : f32,
   }),
   normalImpl: cpuDistance,
   codegenImpl: (a, b) => stitch`distance(${a}, ${b})`,
-  name: 'distance',
 });
 
 export const dot = dualImpl({
@@ -383,6 +383,7 @@ export const dot = dualImpl({
 });
 
 export const dot4U8Packed = dualImpl({
+  name: 'dot4U8Packed',
   signature: (lhs, rhs) => ({ argTypes: [u32, u32], returnType: u32 }),
   normalImpl: (e1: number, e2: number): number => {
     throw new Error(
@@ -390,10 +391,10 @@ export const dot4U8Packed = dualImpl({
     );
   },
   codegenImpl: (e1, e2) => stitch`dot4U8Packed(${e1}, ${e2})`,
-  name: 'dot4U8Packed',
 });
 
 export const dot4I8Packed = dualImpl({
+  name: 'dot4I8Packed',
   signature: (lhs, rhs) => ({ argTypes: [u32, u32], returnType: i32 }),
   normalImpl: (e1: number, e2: number): number => {
     throw new Error(
@@ -401,7 +402,6 @@ export const dot4I8Packed = dualImpl({
     );
   },
   codegenImpl: (e1, e2) => stitch`dot4I8Packed(${e1}, ${e2})`,
-  name: 'dot4I8Packed',
 });
 
 function cpuExp(value: number): number;
@@ -414,10 +414,10 @@ function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const exp = dualImpl({
+  name: 'exp',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuExp,
   codegenImpl: (value) => stitch`exp(${value})`,
-  name: 'exp',
 });
 
 function cpuExp2(value: number): number;
@@ -430,10 +430,10 @@ function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const exp2 = dualImpl({
+  name: 'exp2',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuExp2,
   codegenImpl: (value) => stitch`exp2(${value})`,
-  name: 'exp2',
 });
 
 function cpuExtractBits(e: number, offset: number, count: number): number;
@@ -453,6 +453,7 @@ function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
 }
 
 export const extractBits = dualImpl({
+  name: 'extractBits',
   signature: (arg, offset, count) => ({
     argTypes: [arg, u32, u32],
     returnType: arg,
@@ -460,10 +461,10 @@ export const extractBits = dualImpl({
   normalImpl: cpuExtractBits,
   codegenImpl: (e, offset, count) =>
     stitch`extractBits(${e}, ${offset}, ${count})`,
-  name: 'extractBits',
 });
 
 export const faceForward = dualImpl({
+  name: 'faceForward',
   signature: (arg1, arg2, arg3) => ({
     argTypes: [arg1, arg2, arg3],
     returnType: arg1,
@@ -474,7 +475,6 @@ export const faceForward = dualImpl({
     );
   },
   codegenImpl: (e1, e2, e3) => stitch`faceForward(${e1}, ${e2}, ${e3})`,
-  name: 'faceForward',
 });
 
 function cpuFirstLeadingBit(value: number): number;
@@ -488,10 +488,10 @@ function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
 }
 
 export const firstLeadingBit = dualImpl({
+  name: 'firstLeadingBit',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuFirstLeadingBit,
   codegenImpl: (value) => stitch`firstLeadingBit(${value})`,
-  name: 'firstLeadingBit',
 });
 
 function cpuFirstTrailingBit(value: number): number;
@@ -505,10 +505,10 @@ function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
 }
 
 export const firstTrailingBit = dualImpl({
+  name: 'firstTrailingBit',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuFirstTrailingBit,
   codegenImpl: (value) => stitch`firstTrailingBit(${value})`,
-  name: 'firstTrailingBit',
 });
 
 function cpuFloor(value: number): number;
@@ -543,13 +543,13 @@ function cpuFma<T extends AnyFloatVecInstance | number>(
 }
 
 export const fma = dualImpl({
+  name: 'fma',
   signature: (arg1, arg2, arg3) => ({
     argTypes: [arg1, arg2, arg3],
     returnType: arg1,
   }),
   normalImpl: cpuFma,
   codegenImpl: (e1, e2, e3) => stitch`fma(${e1}, ${e2}, ${e3})`,
-  name: 'fma',
 });
 
 function cpuFract(value: number): number;
@@ -637,6 +637,7 @@ function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
 }
 
 export const insertBits = dualImpl({
+  name: 'insertBits',
   signature: (e, newbits, offset, count) => ({
     argTypes: [e, newbits, u32, u32],
     returnType: e,
@@ -644,7 +645,6 @@ export const insertBits = dualImpl({
   normalImpl: cpuInsertBits,
   codegenImpl: (e, newbits, offset, count) =>
     stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`,
-  name: 'insertBits',
 });
 
 function cpuInverseSqrt(value: number): number;
@@ -659,10 +659,10 @@ function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const inverseSqrt = dualImpl({
+  name: 'inverseSqrt',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuInverseSqrt,
   codegenImpl: (value) => stitch`inverseSqrt(${value})`,
-  name: 'inverseSqrt',
 });
 
 function cpuLdexp(e1: number, e2: number): number;
@@ -679,6 +679,7 @@ function cpuLdexp<T extends AnyFloatVecInstance | number>(
 }
 
 export const ldexp = dualImpl({
+  name: 'ldexp',
   signature: (e1, e2) => {
     switch (e1.type) {
       case 'abstractFloat':
@@ -703,7 +704,6 @@ export const ldexp = dualImpl({
   },
   normalImpl: cpuLdexp,
   codegenImpl: (e1, e2) => stitch`ldexp(${e1}, ${e2})`,
-  name: 'ldexp',
 });
 
 function cpuLength(value: number): number;
@@ -735,10 +735,10 @@ function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const log = dualImpl({
+  name: 'log',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuLog,
   codegenImpl: (value) => stitch`log(${value})`,
-  name: 'log',
 });
 
 function cpuLog2(value: number): number;
@@ -751,10 +751,10 @@ function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const log2 = dualImpl({
+  name: 'log2',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuLog2,
   codegenImpl: (value) => stitch`log2(${value})`,
-  name: 'log2',
 });
 
 function cpuMax(a: number, b: number): number;
@@ -767,6 +767,7 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
 }
 
 export const max = dualImpl({
+  name: 'max',
   signature: (...args) => {
     const uargs = unify(args) ?? args;
     return ({
@@ -776,7 +777,6 @@ export const max = dualImpl({
   },
   normalImpl: cpuMax,
   codegenImpl: (a, b) => stitch`max(${a}, ${b})`,
-  name: 'max',
 });
 
 function cpuMin(a: number, b: number): number;
@@ -789,6 +789,7 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
 }
 
 export const min = dualImpl({
+  name: 'min',
   signature: (...args) => {
     const uargs = unify(args) ?? args;
     return ({
@@ -798,7 +799,6 @@ export const min = dualImpl({
   },
   normalImpl: cpuMin,
   codegenImpl: (a, b) => stitch`min(${a}, ${b})`,
-  name: 'min',
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
@@ -864,6 +864,7 @@ function cpuModf<T extends AnyFloatVecInstance | number>(
 }
 
 export const modf: ModfOverload = dualImpl({
+  name: 'modf',
   signature: (e) => {
     const returnType = ModfResult[e.type as keyof typeof ModfResult];
 
@@ -877,15 +878,14 @@ export const modf: ModfOverload = dualImpl({
   },
   normalImpl: cpuModf,
   codegenImpl: (value) => stitch`modf(${value})`,
-  name: 'modf',
 });
 
 export const normalize = dualImpl({
+  name: 'normalize',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T =>
     VectorOps.normalize[v.kind](v),
   codegenImpl: (v) => stitch`normalize(${v})`,
-  name: 'normalize',
 });
 
 function powCpu(base: number, exponent: number): number;
@@ -930,10 +930,10 @@ function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
 }
 
 export const quantizeToF16 = dualImpl({
+  name: 'quantizeToF16',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuQuantizeToF16,
   codegenImpl: (value) => stitch`quantizeToF16(${value})`,
-  name: 'quantizeToF16',
 });
 
 function cpuRadians(value: number): number;
@@ -948,18 +948,18 @@ function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const radians = dualImpl({
+  name: 'radians',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuRadians,
   codegenImpl: (value) => stitch`radians(${value})`,
-  name: 'radians',
 });
 
 export const reflect = dualImpl({
+  name: 'reflect',
   signature: (lhs, rhs) => ({ argTypes: [lhs, rhs], returnType: lhs }),
   normalImpl: <T extends AnyFloatVecInstance>(e1: T, e2: T): T =>
     sub(e1, mul(2 * dot(e2, e1), e2)),
   codegenImpl: (e1, e2) => stitch`reflect(${e1}, ${e2})`,
-  name: 'reflect',
 });
 
 export const refract = createDualImpl(
@@ -988,10 +988,10 @@ function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
 }
 
 export const reverseBits = dualImpl({
+  name: 'reverseBits',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuReverseBits,
   codegenImpl: (value) => stitch`reverseBits(${value})`,
-  name: 'reverseBits',
 });
 
 function cpuRound(value: number): number;
@@ -1006,10 +1006,10 @@ function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const round = dualImpl({
+  name: 'round',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuRound,
   codegenImpl: (value) => stitch`round(${value})`,
-  name: 'round',
 });
 
 function cpuSaturate(value: number): number;
@@ -1024,10 +1024,10 @@ function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const saturate = dualImpl({
+  name: 'saturate',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuSaturate,
   codegenImpl: (value) => stitch`saturate(${value})`,
-  name: 'saturate',
 });
 
 function cpuSign(e: number): number;
@@ -1040,10 +1040,10 @@ function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
 }
 
 export const sign = dualImpl({
+  name: 'sign',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuSign,
   codegenImpl: (e) => stitch`sign(${e})`,
-  name: 'sign',
 });
 
 function cpuSin(value: number): number;
@@ -1056,10 +1056,10 @@ function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const sin = dualImpl({
+  name: 'sin',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuSin,
   codegenImpl: (value) => stitch`sin(${value})`,
-  name: 'sin',
 });
 
 function cpuSinh(value: number): number;
@@ -1074,10 +1074,10 @@ function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const sinh = dualImpl({
+  name: 'sinh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuSinh,
   codegenImpl: (value) => stitch`sinh(${value})`,
-  name: 'sinh',
 });
 
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
@@ -1106,6 +1106,7 @@ function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
 }
 
 export const smoothstep = dualImpl({
+  name: 'smoothstep',
   signature: (edge0, edge1, x) => ({
     argTypes: [edge0, edge1, x],
     returnType: x,
@@ -1113,7 +1114,6 @@ export const smoothstep = dualImpl({
   normalImpl: cpuSmoothstep,
   codegenImpl: (edge0, edge1, x) =>
     stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
-  name: 'smoothstep',
 });
 
 function cpuSqrt(value: number): number;
@@ -1126,10 +1126,10 @@ function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const sqrt = dualImpl({
+  name: 'sqrt',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuSqrt,
   codegenImpl: (value) => stitch`sqrt(${value})`,
-  name: 'sqrt',
 });
 
 function cpuStep(edge: number, x: number): number;
@@ -1144,10 +1144,10 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
 }
 
 export const step = dualImpl({
+  name: 'step',
   signature: (edge, x) => ({ argTypes: [edge, x], returnType: edge }),
   normalImpl: cpuStep,
   codegenImpl: (edge, x) => stitch`step(${edge}, ${x})`,
-  name: 'step',
 });
 
 function cpuTan(value: number): number;
@@ -1162,10 +1162,10 @@ function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const tan = dualImpl({
+  name: 'tan',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuTan,
   codegenImpl: (value) => stitch`tan(${value})`,
-  name: 'tan',
 });
 
 function cpuTanh(value: number): number;
@@ -1178,13 +1178,14 @@ function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const tanh = dualImpl({
+  name: 'tanh',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuTanh,
   codegenImpl: (value) => stitch`tanh(${value})`,
-  name: 'tanh',
 });
 
 export const transpose = dualImpl({
+  name: 'transpose',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: (e: AnyMatInstance) => {
     throw new Error(
@@ -1192,7 +1193,6 @@ export const transpose = dualImpl({
     );
   },
   codegenImpl: (e) => stitch`transpose(${e})`,
-  name: 'transpose',
 });
 
 function cpuTrunc(value: number): number;
@@ -1204,8 +1204,8 @@ function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
 }
 
 export const trunc = dualImpl({
+  name: 'trunc',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuTrunc,
   codegenImpl: (value) => stitch`trunc(${value})`,
-  name: 'trunc',
 });
