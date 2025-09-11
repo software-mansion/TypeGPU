@@ -52,29 +52,27 @@ context.configure({
 const sampleWithChromaticAberration = tgpu.fn(
   [d.vec2f, d.f32, d.vec2f, d.f32],
   d.vec3f,
-)(
-  (uv, offset, dir, blur) => {
-    const red = std.textureSampleBias(
-      sampledView,
-      sampler,
-      uv.add(dir.mul(offset)),
-      blur,
-    );
-    const green = std.textureSampleBias(
-      sampledView,
-      sampler,
-      uv,
-      blur,
-    );
-    const blue = std.textureSampleBias(
-      sampledView,
-      sampler,
-      uv.sub(dir.mul(offset)),
-      blur,
-    );
-    return d.vec3f(red.x, green.y, blue.z);
-  },
-);
+)((uv, offset, dir, blur) => {
+  const red = std.textureSampleBias(
+    sampledView,
+    sampler,
+    uv.add(dir.mul(offset)),
+    blur,
+  );
+  const green = std.textureSampleBias(
+    sampledView,
+    sampler,
+    uv,
+    blur,
+  );
+  const blue = std.textureSampleBias(
+    sampledView,
+    sampler,
+    uv.sub(dir.mul(offset)),
+    blur,
+  );
+  return d.vec3f(red.x, green.y, blue.z);
+});
 
 const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -164,7 +162,6 @@ function render() {
     loadOp: 'clear',
     storeOp: 'store',
   }).draw(3);
-  root['~unstable'].flush();
 }
 frameId = requestAnimationFrame(render);
 
