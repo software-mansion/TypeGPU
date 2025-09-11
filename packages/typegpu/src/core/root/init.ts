@@ -326,7 +326,7 @@ class TgpuRootImpl extends WithBindingImpl
     }(device);
   }
 
-  batch(callback: () => void): Promise<undefined> {
+  batch(callback: () => void) {
     this[$internal].ongoingBatch = true;
     try {
       callback();
@@ -334,7 +334,6 @@ class TgpuRootImpl extends WithBindingImpl
       this[$internal].ongoingBatch = false;
       this[$internal].flush();
     }
-    return this.device.queue.onSubmittedWorkDone();
   }
 
   get enabledFeatures() {

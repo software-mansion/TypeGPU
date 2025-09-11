@@ -621,6 +621,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         root: branch,
         priors: internals.priors,
       })
+      : branch[$internal].ongoingBatch
+      ? ({})
       : branch[$internal].flush();
   }
 }

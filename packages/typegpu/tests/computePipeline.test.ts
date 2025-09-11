@@ -563,7 +563,7 @@ describe('TgpuComputePipeline', () => {
       expect(root[$internal].flush).toBeCalledTimes(1);
     });
     it('flushes after draw with timestamp writes', ({ root }) => {
-      const querySet = root.createQuerySet('timestamp', 4);
+      const querySet = root.createQuerySet('timestamp', 2);
 
       const pipeline = root
         .withCompute(entryFn)

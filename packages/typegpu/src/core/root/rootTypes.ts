@@ -626,16 +626,17 @@ export interface TgpuRootInternals {
    */
   ongoingBatch: boolean;
   /**
-   * The current command encoder. This property will
-   * hold the same value throughout the entire `batch()` invocation.
-   * In case of single `draw()` or `dispatchWorkgroups()` call, getter will be used
+   * The current command encoder. This property
+   * holds the same value throughout the entire `batch()` invocation,
+   * unless you use pipeline with performance callback.
+   * In case of single `draw()` or `drawIndexed()` or `dispatchWorkgroups()` call, getter will be used
    * to create a single-use command encoder.
    */
   readonly commandEncoder: GPUCommandEncoder;
   /**
    * Causes all commands enqueued by pipelines to be
    * submitted to the GPU.
-   * If a single `draw()` or `dispatchWorkgroups()` is called, `flush()` is executed after each command.
+   * If a single `draw()` or `drawIndexed()` or `dispatchWorkgroups()` is called, `flush()` is executed after each command.
    */
   flush(): void;
 }
@@ -694,8 +695,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * performance callbacks/timestamp writes are flushed immediately.
    *
    * @param callback A function with GPU computations to be batched.
-   *
-   * Returns a Promise that resolves when the batch is completed.
    */
-  batch(callback: () => void): Promise<undefined>;
+  batch(callback: () => void): void;
 }
