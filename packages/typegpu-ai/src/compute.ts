@@ -16,17 +16,15 @@ export const nnCompute = tgpu['~unstable'].computeFn({
     wid: d.builtin.workgroupId,
   },
 })(({ gid, nwg, wid }) => {
-  const globalIdx = calculateIndex(gid, nwg);
-  const i = globalIdx;
-  const inputSize = ioLayout.$.inLength;
-  const outSize = ioLayout.$.outLength;
-  if (i >= outSize) {
+  const i = calculateIndex(gid, nwg);
+  if (i >= ioLayout.$.outLength) {
     return;
   }
-  const weightsOffset = i * inputSize;
+
+  const weightsOffset = i * ioLayout.$.inLength;
 
   let sum = d.f32(0);
-  for (let j = d.u32(0); j < inputSize; j = j + d.u32(1)) {
+  for (let j = d.u32(0); j < ioLayout.$.inLength; j = j + d.u32(1)) {
     sum = sum +
       (ioLayout.$.input[j] as number) *
         (weightsBiasesLayout.$.weights[weightsOffset + j] as number);
