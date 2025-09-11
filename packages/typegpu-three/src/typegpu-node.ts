@@ -1,7 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isTgpuFn, type TgpuFn } from 'typegpu';
+import tgpu, { isTgpuFn, type TgpuFn, TgpuVar } from 'typegpu';
 import type * as d from 'typegpu/data';
 
 /**
@@ -93,7 +93,7 @@ export function toTSL(
 class TSLAccessor<T extends d.AnyWgslData> {
   readonly #node: TSL.ShaderNodeObject<THREE.Node>;
   readonly #dataType: T;
-  readonly #varNode: TSL.ShaderNodeObject<THREE.Node>;
+  readonly #var: TgpuVar<'private', T>;
 
   constructor(
     node: TSL.ShaderNodeObject<THREE.Node>,
@@ -101,14 +101,11 @@ class TSLAccessor<T extends d.AnyWgslData> {
   ) {
     this.#node = node;
     this.#dataType = dataType;
-    this.#varNode = TSL.vec2(node);
-    // this.#varNode.assign(node);
+    this.#var = tgpu['~unstable'].privateVar(dataType);
   }
 
-  get $(): d.Infer<T> {
-    console.log(this.#varNode);
-    // TODO: Return something that works here
-    return TSL.vec2() as unknown as d.Infer<T>;
+  get $(): d.InferGPU<T> {
+    return this.#var.$;
   }
 }
 

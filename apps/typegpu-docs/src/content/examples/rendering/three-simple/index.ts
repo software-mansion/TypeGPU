@@ -30,9 +30,9 @@ camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
 
-const uv = tgpu3.fromTSL(TSL.uv(), { type: d.vec2f });
+// material.colorNode = TSL.uv().x.add(TSL.time).mul(5).fract();
 
-// material.colorNode = uv().x.add(time).mul(5).fract();
+const uv = tgpu3.fromTSL(TSL.uv(), { type: d.vec2f });
 material.colorNode = tgpu3.toTSL(
   tgpu.fn([], d.vec4f)(() => {
     return d.vec4f(uv.$, 0.5, 1);
