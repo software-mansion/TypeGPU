@@ -1,3 +1,3 @@
-export { useFrame } from './useFrame.ts';
-export { useRender } from './useRender.ts';
-export { useUniformValue } from './useUniformValue.ts';
+export { useFrame } from './use-frame.ts';
+export { useRender } from './use-render.ts';
+export { useUniformValue } from './use-uniform-value.ts';
