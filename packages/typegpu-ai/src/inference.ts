@@ -139,15 +139,10 @@ export function createDenseReluNetwork(
       const isLast = i === layers.length - 1;
       const pipeline = isLast ? idPipeline : reluPipeline;
 
-      const encoder = device.createCommandEncoder();
-      const pass = encoder.beginComputePass();
-      pass.setPipeline(root.unwrap(pipeline));
-      pass.setBindGroup(0, root.unwrap(layer.ioBindGroup));
-      pass.setBindGroup(1, root.unwrap(layer.wbBindGroup));
-      const wgCount = Math.ceil(layer.outSize / workgroupSize);
-      pass.dispatchWorkgroups(wgCount);
-      pass.end();
-      device.queue.submit([encoder.finish()]);
+      pipeline.with(ioLayout, layer.ioBindGroup)
+      .with(weightsBiasesLayout, layer.wbBindGroup)
+      .dispatchWorkgroups(Math.ceil(layer.outSize / workgroupSize));
+  
       await device.queue.onSubmittedWorkDone();
     }
 
