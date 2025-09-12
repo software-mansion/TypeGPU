@@ -141,18 +141,12 @@ class TgpuFixedBufferImpl<
   }
 
   [$gpuValueOf](): InferGPU<TData> {
-    // biome-ignore lint/style/noNonNullAssertion: it's there
-    const ctx = getResolutionCtx()!;
-
     return new Proxy(
       {
         [$internal]: true,
         [$runtimeResource]: true,
         [$wgslDataType]: this.buffer.dataType,
-        [$ownSnippet]: snip(
-          ctx.resolve(this, this.buffer.dataType),
-          this.buffer.dataType,
-        ),
+        [$ownSnippet]: (ctx) => snip(ctx.resolve(this), this.buffer.dataType),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
@@ -269,7 +263,8 @@ export class TgpuLaidOutBufferImpl<
         [$internal]: true,
         [$runtimeResource]: true,
         [$wgslDataType]: this.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) =>
+          snip(ctx.resolve(this), this.dataType as unknown as AnyData),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,

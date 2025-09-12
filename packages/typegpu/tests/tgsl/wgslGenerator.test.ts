@@ -1007,9 +1007,9 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-      "var<workgroup> index: u32;
+      "var<workgroup> matrix: mat4x4f;
 
-      var<workgroup> matrix: mat4x4f;
+      var<workgroup> index: u32;
 
       fn testFn() {
         var element = matrix[index];

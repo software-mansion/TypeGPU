@@ -1,6 +1,6 @@
-import { snip } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
+import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
@@ -21,7 +21,7 @@ import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
-import type { TgpuAccessor, TgpuSlot, UnwrapSlot } from './slotTypes.ts';
+import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
 // Public API
@@ -70,25 +70,24 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   [$gpuValueOf](): InferGPU<T> {
-    // biome-ignore lint/style/noNonNullAssertion: it's there
-    const ctx = getResolutionCtx()!;
-    let value: UnwrapSlot<typeof this.slot> | string = ctx.unwrap(this.slot);
-
-    if (isTgpuFn(value)) {
-      value = `${ctx.resolve(value, this.schema)}()`;
-    }
-
-    if (isBufferUsage(value) || isBufferShorthand(value)) {
-      value = ctx.resolve(value, this.schema);
-    }
-
     return new Proxy(
       {
         [$internal]: true,
         [$runtimeResource]: true,
         [$wgslDataType]: this.schema,
-        [$ownSnippet]: snip(value, this.schema),
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) => {
+          const value = ctx.unwrap(this.slot);
+
+          if (isTgpuFn(value)) {
+            return value[$internal].gpuImpl();
+          }
+
+          if (isBufferUsage(value) || isBufferShorthand(value)) {
+            return snip(ctx.resolve(value), this.schema);
+          }
+
+          return snip(value, this.schema);
+        },
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,

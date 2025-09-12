@@ -4,12 +4,7 @@ import {
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import {
-  getOwnSnippet,
-  isSnippet,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -47,7 +42,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
+import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
@@ -227,16 +222,16 @@ export type GenerationCtx = ResolutionCtx & {
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
 
-export function coerceToSnippet(value: unknown): Snippet {
+export function coerceToSnippet(ctx: ResolutionCtx, value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
     return value;
   }
 
   // Maybe the value can tell us what snippet it is
-  const internalsSnippet = getOwnSnippet(value);
-  if (internalsSnippet) {
-    return internalsSnippet;
+  const ownSnippet = getOwnSnippet(ctx, value);
+  if (ownSnippet) {
+    return ownSnippet;
   }
 
   if (hasInternalDataType(value)) {

@@ -289,7 +289,7 @@ ${this.ctx.pre}}`;
         const propValue = (target.value as any)[property];
 
         // We try to extract any type information based on the prop's value
-        return coerceToSnippet(propValue);
+        return coerceToSnippet(this.ctx, propValue);
       }
 
       if (wgsl.isPtr(target.dataType)) {
@@ -317,7 +317,7 @@ ${this.ctx.pre}}`;
       ) {
         // We're operating on a vector that's known at resolution time
         // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
-        return coerceToSnippet((target.value as any)[property]);
+        return coerceToSnippet(this.ctx, (target.value as any)[property]);
       }
 
       return snip(
@@ -348,6 +348,7 @@ ${this.ctx.pre}}`;
           Array.isArray(propertyNode) && propertyNode[0] === NODE.numericLiteral
         ) {
           return coerceToSnippet(
+            this.ctx,
             // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
             (target.value as any)[propertyNode[1] as number],
           );

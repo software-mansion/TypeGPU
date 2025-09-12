@@ -51,6 +51,7 @@ import type {
 } from './types.ts';
 import {
   CodegenState,
+  getOwnSnippet,
   isMarkedInternal,
   isSelfResolvable,
   NormalState,
@@ -213,7 +214,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  getSnippetById(id: string): Snippet | undefined {
+  getSnippetById(ctx: ResolutionCtx, id: string): Snippet | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -230,7 +231,7 @@ class ItemStateStackImpl implements ItemStateStack {
         const external = layer.externalMap[id];
 
         if (external !== undefined && external !== null) {
-          return coerceToSnippet(external);
+          return coerceToSnippet(ctx, external);
         }
 
         // Since functions cannot access resources from the calling scope, we
@@ -398,7 +399,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getById(id: string): Snippet | null {
-    const item = this._itemStateStack.getSnippetById(id);
+    const item = this._itemStateStack.getSnippetById(this, id);
 
     if (item === undefined) {
       return null;
@@ -634,7 +635,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown, schema?: AnyData | undefined, exact = false): string {
+  resolve(
+    item: unknown,
+    schema?: AnyData | UnknownData | undefined,
+    exact = false,
+  ): string {
     if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
@@ -652,6 +657,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         item[$providing].pairs,
         () => this.resolve(item[$providing].inner, schema),
       );
+    }
+
+    // Comes with it's own snippet
+    const ownSnippet = getOwnSnippet(this, item);
+    if (ownSnippet) {
+      return this.resolve(ownSnippet.value, ownSnippet.dataType);
     }
 
     if (isMarkedInternal(item)) {
