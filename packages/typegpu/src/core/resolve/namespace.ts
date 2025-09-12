@@ -27,7 +27,7 @@ export interface NamespaceInternal {
   >;
 
   listeners: {
-    name: Set<(event: NamespaceEventMap['name']) => void>;
+    [K in keyof NamespaceEventMap]: Set<(event: NamespaceEventMap[K]) => void>;
   };
 }
 
@@ -64,10 +64,14 @@ class NamespaceImpl implements Namespace {
     event: TEvent,
     listener: (event: NamespaceEventMap[TEvent]) => void,
   ): DetachListener {
-    const listeners = this[$internal].listeners.name;
-    listeners.add(listener);
+    if (event === 'name') {
+      const listeners = this[$internal].listeners.name;
+      listeners.add(listener);
 
-    return () => listeners.delete(listener);
+      return () => listeners.delete(listener);
+    }
+
+    throw new Error(`Unsupported event: ${event}`);
   }
 }
 
