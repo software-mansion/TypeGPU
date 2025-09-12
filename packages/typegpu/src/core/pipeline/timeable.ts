@@ -151,7 +151,7 @@ export function triggerPerformanceCallback({
     );
   }
 
-  root.commandEncoder.resolveQuerySet(
+  root[$internal].commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
     querySet.count,
@@ -159,7 +159,7 @@ export function triggerPerformanceCallback({
     0,
   );
 
-  root.flush();
+  root[$internal].flush();
   root.device.queue.onSubmittedWorkDone().then(async () => {
     if (!querySet.available) {
       return;

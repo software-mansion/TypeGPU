@@ -166,7 +166,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...setupTimestampWrites(this._priors, branch),
     };
 
-    const pass = branch.commandEncoder.beginComputePass(passDescriptor);
+    const pass = branch[$internal].commandEncoder.beginComputePass(
+      passDescriptor,
+    );
 
     pass.setPipeline(memo.pipeline);
 
@@ -198,6 +200,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         root: branch,
         priors: this._priors,
       });
+    } else if (!branch[$internal].ongoingBatch) {
+      branch[$internal].flush();
     }
   }
 

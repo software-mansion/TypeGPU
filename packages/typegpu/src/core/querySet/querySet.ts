@@ -134,7 +134,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   }
 
   async read(): Promise<bigint[]> {
-    this._group.flush();
+    this._group[$internal].flush();
     if (!this._resolveBuffer) {
       throw new Error('QuerySet must be resolved before reading.');
     }

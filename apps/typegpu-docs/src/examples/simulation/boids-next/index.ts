@@ -294,20 +294,22 @@ function frame() {
 
   even = !even;
 
-  computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
-    .dispatchWorkgroups(triangleAmount);
+  root['~unstable'].batch(() => {
+    computePipeline
+      .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
+      .dispatchWorkgroups(triangleAmount);
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    })
-    .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
-    .with(renderLayout, renderBindGroups[even ? 1 : 0])
-    .draw(3, triangleAmount);
+    renderPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [1, 1, 1, 1],
+        loadOp: 'clear' as const,
+        storeOp: 'store' as const,
+      })
+      .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
+      .with(renderLayout, renderBindGroups[even ? 1 : 0])
+      .draw(3, triangleAmount);
+  });
 
   requestAnimationFrame(frame);
 }

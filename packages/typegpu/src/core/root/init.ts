@@ -103,6 +103,7 @@ import type {
   ExperimentalTgpuRoot,
   RenderPass,
   TgpuRoot,
+  TgpuRootInternals,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -267,6 +268,7 @@ interface Disposable {
  */
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
+  readonly [$internal]: TgpuRootInternals;
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 
   private _disposables: Disposable[] = [];
@@ -278,8 +280,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
@@ -289,14 +289,41 @@ class TgpuRootImpl extends WithBindingImpl
     super(() => this, []);
 
     this['~unstable'] = this;
+
+    let commandEncoder: GPUCommandEncoder | undefined;
+    this[$internal] = {
+      ongoingBatch: false,
+
+      get commandEncoder() {
+        if (!commandEncoder) {
+          commandEncoder = device.createCommandEncoder();
+        }
+
+        return commandEncoder;
+      },
+
+      flush() {
+        if (!commandEncoder) {
+          return;
+        }
+
+        device.queue.submit([commandEncoder.finish()]);
+        commandEncoder = undefined;
+      },
+    };
   }
 
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
+  batch(callback: () => void) {
+    const nestedBatch = this[$internal].ongoingBatch;
+    this[$internal].ongoingBatch = true;
+    try {
+      callback();
+    } finally {
+      if (!nestedBatch) {
+        this[$internal].ongoingBatch = false;
+        this[$internal].flush();
+      }
     }
-
-    return this._commandEncoder;
   }
 
   get enabledFeatures() {
@@ -527,7 +554,7 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const pass = this[$internal].commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -674,15 +701,9 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-  }
-
-  flush() {
-    if (!this._commandEncoder) {
-      return;
+    if (!this[$internal].ongoingBatch) {
+      this[$internal].flush();
     }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
   }
 }
 
