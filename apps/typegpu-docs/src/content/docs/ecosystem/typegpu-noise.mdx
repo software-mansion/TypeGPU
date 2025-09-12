@@ -80,6 +80,7 @@ Does this mean we allow object access inside of WGSL shaders?... yes, yes we do 
 The `@typegpu/noise` package provides a pseudo-random number generator (PRNG) that generates uniformly distributed random numbers in the range `[0, 1)`.
 Each call to `randf.sample` returns the next random float in the sequence, allowing for predictable and repeatable results. The seed can be set or reset
 using a set of `randf.seedN` functions, where `N` is the number of components our seed has.
+
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -100,10 +101,43 @@ const main = tgpu['~unstable'].fragmentFn({
 });
 ```
 
-There are higher-level utilities built on top of `randf.sample`:
+:::tip
+Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
+:::
+
+There are higher-level utilities built on top of `randf.sample`. Most of the distributions can be derived from the fact that cumulative distribution functions (CDFs) are uniformly distributed on`[0, 1]` and can be easily inverted to generate random variables. We provide insights for probability enthusiasts. Let's assume $U \sim \mathrm{Uniform}[0, 1) \sim \mathrm{randf.sample}$ :
+
+### Discrete
+- `bernoulli` - returns 1 with probability `p`, and 0 otherwise. You can think of it as the flip of a biased coin. `p` must be in the range `[0, 1]`
+$$
+\mathrm{Bernoulli}(p) = \begin{cases}
+1 & \text{if } U \leq p \\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+### Continuous
+- `sampleExclusive` - works the same as `sample`, but returns a value strictly between 0 and 1
+- `exponential` - returns a number based on the exponential distribution with a given `rate`. The `rate` must be greater than 0. It is commonly used for modeling the time until an event occurs
+$$
+\mathrm{Exponential}(\lambda) = -\frac{1}{\lambda} \ln(1 - U)
+$$
+
+- `normal` - returns a number based on the normal (Gaussian) distribution with a given mean (`mu`) and standard deviation (`sigma`). `sigma` must be `> 0`. Following transformation is called Box-Muller transform
+$$
+\mathrm{Normal}(\mu, \sigma) = \mu + \sigma \sin(2 \pi U_1) \sqrt{-2 \ln(U_2)}
+$$
+
+- `cauchy` - returns a number based on the Cauchy distribution with a given origin point (`x0`, `gamma`). `gamma` must be `> 0`. It can be interpreted as the probability distribution of the x-intercept of a light ray from the origin.
+
+### Geometric
 - `inUnitCircle` - returns a random 2D vector uniformly distributed inside a unit circle
+- `onUnitCircle` - returns a random 2D vector uniformly distributed on the perimeter of a unit circle
 - `inUnitCube` - returns a random 3D vector uniformly distributed inside a unit cube
-- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of the upper hemisphere oriented accordingly to given normal vector
+- `onUnitCube` - returns a random 3D vector uniformly distributed on the surface of a unit cube
+- `inHemisphere` - returns a random 3D vector uniformly distributed inside an upper hemisphere oriented according to a given normal vector
+- `onHemisphere` - returns a random 3D vector uniformly distributed on the surface of an upper hemisphere oriented according to a given normal vector
+- `inUnitSphere` - returns a random 3D vector uniformly distributed inside a unit sphere. Thanks to the nature of the normal distribution, we can derive this distribution by sampling three coordinates from the $\mathrm{Normal}(0, 1)$ and normalizing the result (this gives us a direction vector). Finally, we choose the radius as $\sqrt[3]{U}$
 - `onUnitSphere` - returns a random 3D vector uniformly distributed on the surface of a unit sphere
 
 ## Perlin noise
