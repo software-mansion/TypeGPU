@@ -41,6 +41,7 @@ import {
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 import { unify } from '../tgsl/conversion.ts';
+import { CodegenState } from '../types.ts';
 import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -1027,20 +1028,26 @@ export const sqrt = createDualImpl(
   'sqrt',
 );
 
-export const step = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(edge: T, x: T): T => {
-    if (typeof edge === 'number') {
-      return (edge <= (x as number) ? 1.0 : 0.0) as T;
-    }
-    throw new Error(
-      'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
+function cpuStep(edge: number, x: number): number;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
+  if (typeof edge === 'number') {
+    return (edge <= (x as number) ? 1.0 : 0.0) as T;
+  }
+  throw new Error(
+    'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const step = dualImpl({
+  name: 'step',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
   },
-  // GPU implementation
-  (edge, x) => snip(stitch`step(${edge}, ${x})`, edge.dataType),
-  'step',
-);
+  normalImpl: cpuStep,
+  codegenImpl: (edge, x) => stitch`step(${edge}, ${x})`,
+});
 
 export const tan = createDualImpl(
   // CPU implementation
