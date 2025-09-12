@@ -3,12 +3,15 @@ import {
   RandomNameRegistry,
   StrictNameRegistry,
 } from '../../nameRegistry.ts';
+import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { TgpuDerived, TgpuSlot } from '../slot/slotTypes.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
 export interface NamespaceInternal {
+  nameRegistry: NameRegistry;
+
   memoizedResolves: WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -23,11 +26,24 @@ export interface NamespaceInternal {
     { slotToValueMap: SlotToValueMap; result: unknown }[]
   >;
 
-  nameRegistry: NameRegistry;
+  listeners: {
+    name: Set<(event: NamespaceEventMap['name']) => void>;
+  };
 }
+
+type NamespaceEventMap = {
+  'name': { target: object; name: string };
+};
+
+type DetachListener = () => void;
 
 export interface Namespace {
   readonly [$internal]: NamespaceInternal;
+
+  on<TEvent extends keyof NamespaceEventMap>(
+    event: TEvent,
+    listener: (event: NamespaceEventMap[TEvent]) => void,
+  ): DetachListener;
 }
 
 class NamespaceImpl implements Namespace {
@@ -35,15 +51,39 @@ class NamespaceImpl implements Namespace {
 
   constructor(nameRegistry: NameRegistry) {
     this[$internal] = {
+      nameRegistry,
       memoizedResolves: new WeakMap(),
       memoizedDerived: new WeakMap(),
-      nameRegistry,
+      listeners: {
+        name: new Set(),
+      },
     };
+  }
+
+  on<TEvent extends keyof NamespaceEventMap>(
+    event: TEvent,
+    listener: (event: NamespaceEventMap[TEvent]) => void,
+  ): DetachListener {
+    const listeners = this[$internal].listeners.name;
+    listeners.add(listener);
+
+    return () => listeners.delete(listener);
   }
 }
 
 export interface NamespaceOptions {
   names?: 'random' | 'strict' | undefined;
+}
+
+export function requestUniqueName(
+  namespace: NamespaceInternal,
+  resource: object,
+): string {
+  const name = namespace.nameRegistry.makeUnique(getName(resource));
+  for (const listener of namespace.listeners.name) {
+    listener({ target: resource, name });
+  }
+  return name;
 }
 
 export function namespace(options?: NamespaceOptions | undefined): Namespace {

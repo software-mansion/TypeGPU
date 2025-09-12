@@ -501,7 +501,7 @@ class TgpuFixedStorageTextureImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.requestUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       {
         storageTexture: this._format,
@@ -549,7 +549,7 @@ export class TgpuLaidOutStorageTextureImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.requestUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
@@ -613,7 +613,7 @@ class TgpuFixedSampledTextureImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.requestUniqueName(this);
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
     const { group, binding } = ctx.allocateFixedEntry(
@@ -667,7 +667,7 @@ export class TgpuLaidOutSampledTextureImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.requestUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     const type = this._multisampled

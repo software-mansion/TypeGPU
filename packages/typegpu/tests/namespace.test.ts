@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import tgpu from '../src/index.ts';
 import * as d from '../src/data/index.ts';
 import { it } from './utils/extendedIt.ts';
@@ -73,5 +73,39 @@ describe('tgpu.namespace', () => {
         (*boid).pos.x += 1;
       }"
     `);
+  });
+
+  it('fires "name" event', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+    });
+
+    const names = tgpu['~unstable'].namespace();
+
+    const listener = vi.fn((event) => {});
+    names.on('name', listener);
+
+    const code = tgpu.resolve({
+      names,
+      externals: { Boid },
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith({ name: 'Boid_0', target: Boid });
+
+    expect(code).toMatchInlineSnapshot(`
+      "struct Boid_0 {
+        pos: vec3f,
+      }"
+    `);
+
+    const code2 = tgpu.resolve({
+      names,
+      externals: { Boid },
+    });
+
+    // No more events
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(code2).toMatchInlineSnapshot(`""`);
   });
 });

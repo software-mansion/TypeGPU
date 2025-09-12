@@ -1,5 +1,9 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
+import {
+  type Namespace,
+  type NamespaceInternal,
+  requestUniqueName,
+} from './core/resolve/namespace.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -24,7 +28,6 @@ import {
   WgslTypeError,
 } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
-import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal, $providing } from './shared/symbols.ts';
@@ -364,8 +367,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#namespace = opts.namespace[$internal];
   }
 
-  public get names(): NameRegistry {
-    return this.#namespace.nameRegistry;
+  requestUniqueName(resource: object): string {
+    return requestUniqueName(this.#namespace, resource);
   }
 
   get pre(): string {
