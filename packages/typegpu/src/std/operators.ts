@@ -242,14 +242,18 @@ export const mod: ModOverload = dualImpl({
   codegenImpl: (lhs, rhs) => stitch`(${lhs} % ${rhs})`,
 });
 
+function cpuNeg(value: number): number;
+function cpuNeg<T extends NumVec>(value: T): T;
+function cpuNeg(value: NumVec | number): NumVec | number {
+  if (typeof value === 'number') {
+    return -value;
+  }
+  return VectorOps.neg[value.kind](value);
+}
+
 export const neg = dualImpl({
   name: 'neg',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl<T extends NumVec | number>(value: T): T {
-    if (typeof value === 'number') {
-      return -value as T;
-    }
-    return VectorOps.neg[value.kind](value) as T;
-  },
+  normalImpl: cpuNeg,
   codegenImpl: (arg) => stitch`-(${arg})`,
 });

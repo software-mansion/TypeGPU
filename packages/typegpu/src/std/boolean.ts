@@ -270,7 +270,7 @@ export const isCloseTo = dualImpl({
     lhs: T,
     rhs: T,
     precision = 0.01,
-  ) => {
+  ): boolean => {
     if (typeof lhs === 'number' && typeof rhs === 'number') {
       return Math.abs(lhs - rhs) < precision;
     }
