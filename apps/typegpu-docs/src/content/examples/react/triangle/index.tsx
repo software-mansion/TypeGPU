@@ -1,16 +1,22 @@
-import { vec4f } from 'typegpu/data';
-import { useRender } from '@typegpu/react';
+import * as d from 'typegpu/data';
+import { useFrame, useRender, useUniformValue } from '@typegpu/react';
+import { hsvToRgb } from '@typegpu/color';
 
 function App() {
-  const { ref } = useRender({
-    fragment: ({ uv }) => {
-      'kernel';
-      return vec4f(uv.x, uv.y, 1, 1);
-    },
+  const time = useUniformValue(d.f32, 0);
+
+  useFrame(() => {
+    time.value = performance.now() / 1000;
   });
 
-  // TODO: Provide a time variable to the shader with useUniformValue
-  // TODO: Make the gradient shift colors over time using hsvToRgb from @typegpu/color
+  const { ref } = useRender({
+    fragment: () => {
+      'kernel';
+      const t = time.$;
+      const rgb = hsvToRgb(d.vec3f(t * 0.5, 1, 1));
+      return d.vec4f(rgb, 1);
+    },
+  });
 
   return (
     <main>
