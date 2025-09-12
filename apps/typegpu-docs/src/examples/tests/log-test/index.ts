@@ -77,8 +77,8 @@ export const controls = {
       const logCountUniform = root.createUniform(d.u32);
       const dispatch = prepareDispatch(root, () => {
         'kernel';
-        for (let i = 0; i < logCountUniform.$; i++) {
-          console.log('Log index', d.u32(i), 'out of', logCountUniform.$);
+        for (let i = d.u32(); i < logCountUniform.$; i++) {
+          console.log('Log index', d.u32(i) + 1, 'out of', logCountUniform.$);
         }
       });
       logCountUniform.write(3);
