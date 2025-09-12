@@ -1,8 +1,14 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
-import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
+import {
+  getExecMode,
+  getResolutionCtx,
+  inCodegenMode,
+  isInsideTgpuFn,
+} from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -11,6 +17,7 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $repr,
   $runtimeResource,
   $wgslDataType,
@@ -134,12 +141,18 @@ class TgpuFixedBufferImpl<
   }
 
   [$gpuValueOf](): InferGPU<TData> {
+    // biome-ignore lint/style/noNonNullAssertion: it's there
+    const ctx = getResolutionCtx()!;
+
     return new Proxy(
       {
         [$internal]: true,
         [$runtimeResource]: true,
         [$wgslDataType]: this.buffer.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: snip(
+          ctx.resolve(this, this.buffer.dataType),
+          this.buffer.dataType,
+        ),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,

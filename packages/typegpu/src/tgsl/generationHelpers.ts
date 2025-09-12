@@ -4,7 +4,12 @@ import {
   isUnstruct,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  getOwnSnippet,
+  isSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -226,6 +231,12 @@ export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
     return value;
+  }
+
+  // Maybe the value can tell us what snippet it is
+  const internalsSnippet = getOwnSnippet(value);
+  if (internalsSnippet) {
+    return internalsSnippet;
   }
 
   if (hasInternalDataType(value)) {

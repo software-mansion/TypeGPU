@@ -31,6 +31,11 @@ export function isRuntimeResource(value: unknown): boolean {
     ?.[$runtimeResource];
 }
 
+/**
+ * Objects can provide the snippet that represents them.
+ */
+export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
+
 //
 // Type tokens
 //

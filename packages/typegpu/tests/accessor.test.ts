@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
@@ -170,11 +170,26 @@ describe('tgpu.accessor', () => {
           var color2 = redUniform;
           var color3 = getColor();
 
-          var colorX = vec3f(1, 0, 0).x;
+          var colorX = 1;
           var color2X = redUniform.x;
           var color3X = getColor().x;
         }
     `),
     );
+  });
+
+  it('retains type information', ({ root }) => {
+    // Typed as f32, but literal could be automatically inferred as an i32
+    const fooAccess = tgpu['~unstable'].accessor(d.f32, 1);
+
+    const main = tgpu.fn([])(() => {
+      const foo = fooAccess.$;
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
+        var foo = 1f;
+      }"
+    `);
   });
 });

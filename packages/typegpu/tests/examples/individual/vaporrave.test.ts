@@ -91,68 +91,72 @@ describe('vaporrave example', () => {
         glow: vec3f,
       }
 
-      fn rotateXY_20(angle: f32) -> mat2x2f {
+      @group(0) @binding(1) var<uniform> floorAngleUniform_19: f32;
+
+      fn rotateXY_21(angle: f32) -> mat2x2f {
         return mat2x2f(vec2f(cos(angle), sin(angle)), vec2f(-sin(angle), cos(angle)));
       }
 
-      fn circles_19(uv: vec2f, angle: f32) -> vec3f {
-        var uvRotated = (rotateXY_20(angle) * vec2f(uv.x, (uv.y - 12)));
+      fn circles_20(uv: vec2f, angle: f32) -> vec3f {
+        var uvRotated = (rotateXY_21(angle) * vec2f(uv.x, (uv.y - 12)));
         var uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2));
         var diff2 = pow((vec2f(0.5) - uvNormalized), vec2f(2));
         var distO = pow((diff2.x + diff2.y), 0.5);
         return mix(vec3f(), vec3f(0.9200000166893005, 0.20999999344348907, 0.9599999785423279), exp((-5 * distO)));
       }
 
-      @group(0) @binding(1) var<uniform> floorAngleUniform_21: f32;
-
       fn sdPlane_22(p: vec3f, n: vec3f, h: f32) -> f32 {
         return (dot(p, n) + h);
       }
 
-      fn rotateAroundZ_24(angle: f32) -> mat3x3f {
+      @group(0) @binding(2) var<uniform> sphereColorUniform_23: vec3f;
+
+      @group(0) @binding(3) var<uniform> sphereAngleUniform_24: f32;
+
+      fn rotateAroundZ_26(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(cos(angle), sin(angle), 0), vec3f(-sin(angle), cos(angle), 0), vec3f(0, 0, 1));
       }
 
-      fn rotateAroundX_25(angle: f32) -> mat3x3f {
+      fn rotateAroundX_27(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(1, 0, 0), vec3f(0, cos(angle), sin(angle)), vec3f(0, -sin(angle), cos(angle)));
       }
 
-      fn sdSphere_26(p: vec3f, radius: f32) -> f32 {
+      fn sdSphere_28(p: vec3f, radius: f32) -> f32 {
         return (length(p) - radius);
       }
 
-      @group(0) @binding(2) var<storage, read> memoryBuffer_30: array<vec3f, 343>;
+      @group(0) @binding(4) var<storage, read> memoryBuffer_32: array<vec3f, 343>;
 
-      fn getJunctionGradient_29(pos: vec3i) -> vec3f {
+      fn getJunctionGradient_31(pos: vec3i) -> vec3f {
         var size_i = vec3i(7);
         var x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         var y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         var z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
-        return memoryBuffer_30[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+        return memoryBuffer_32[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
       }
 
-      fn dotProdGrid_28(pos: vec3f, junction: vec3f) -> f32 {
+      fn dotProdGrid_30(pos: vec3f, junction: vec3f) -> f32 {
         var relative = (pos - junction);
-        var gridVector = getJunctionGradient_29(vec3i(junction));
+        var gridVector = getJunctionGradient_31(vec3i(junction));
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolation3_31(t: vec3f) -> vec3f {
+      fn quinticInterpolation3_33(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
-      fn sample_27(pos: vec3f) -> f32 {
+      fn sample_29(pos: vec3f) -> f32 {
         var minJunction = floor(pos);
-        var xyz = dotProdGrid_28(pos, minJunction);
-        var xyZ = dotProdGrid_28(pos, (minJunction + vec3f(0, 0, 1)));
-        var xYz = dotProdGrid_28(pos, (minJunction + vec3f(0, 1, 0)));
-        var xYZ = dotProdGrid_28(pos, (minJunction + vec3f(0, 1, 1)));
-        var Xyz = dotProdGrid_28(pos, (minJunction + vec3f(1, 0, 0)));
-        var XyZ = dotProdGrid_28(pos, (minJunction + vec3f(1, 0, 1)));
-        var XYz = dotProdGrid_28(pos, (minJunction + vec3f(1, 1, 0)));
-        var XYZ = dotProdGrid_28(pos, (minJunction + vec3f(1)));
+        var xyz = dotProdGrid_30(pos, minJunction);
+        var xyZ = dotProdGrid_30(pos, (minJunction + vec3f(0, 0, 1)));
+        var xYz = dotProdGrid_30(pos, (minJunction + vec3f(0, 1, 0)));
+        var xYZ = dotProdGrid_30(pos, (minJunction + vec3f(0, 1, 1)));
+        var Xyz = dotProdGrid_30(pos, (minJunction + vec3f(1, 0, 0)));
+        var XyZ = dotProdGrid_30(pos, (minJunction + vec3f(1, 0, 1)));
+        var XYz = dotProdGrid_30(pos, (minJunction + vec3f(1, 1, 0)));
+        var XYZ = dotProdGrid_30(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation3_31(partial);
+        var smoothPartial = quinticInterpolation3_33(partial);
         var xy = mix(xyz, xyZ, smoothPartial.z);
         var xY = mix(xYz, xYZ, smoothPartial.z);
         var Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -162,31 +166,27 @@ describe('vaporrave example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn getSphere_23(p: vec3f, sphereColor: vec3f, sphereCenter: vec3f, angle: f32) -> Ray_17 {
+      fn getSphere_25(p: vec3f, sphereColor: vec3f, sphereCenter: vec3f, angle: f32) -> Ray_17 {
         var localP = (p - sphereCenter);
-        var rotMatZ = rotateAroundZ_24((-angle * 0.3));
-        var rotMatX = rotateAroundX_25((-angle * 0.7));
+        var rotMatZ = rotateAroundZ_26((-angle * 0.3));
+        var rotMatX = rotateAroundX_27((-angle * 0.7));
         var rotatedP = ((localP * rotMatZ) * rotMatX);
         var radius = (3 + sin(angle));
-        var rawDist = sdSphere_26(rotatedP, radius);
+        var rawDist = sdSphere_28(rotatedP, radius);
         var noise = 0f;
         if ((rawDist < 1)) {
-          noise += sample_27((rotatedP + angle));
+          noise += sample_29((rotatedP + angle));
         }
         return Ray_17(sphereColor, (rawDist + noise));
       }
-
-      @group(0) @binding(3) var<uniform> sphereColorUniform_32: vec3f;
-
-      @group(0) @binding(4) var<uniform> sphereAngleUniform_33: f32;
 
       fn rayUnion_34(a: Ray_17, b: Ray_17) -> Ray_17 {
         return Ray_17(select(a.color, b.color, (a.dist > b.dist)), min(a.dist, b.dist));
       }
 
       fn getSceneRay_18(p: vec3f) -> Ray_17 {
-        var floor = Ray_17(circles_19(p.xz, floorAngleUniform_21), sdPlane_22(p, vec3f(0, 1, 0), 1));
-        var sphere = getSphere_23(p, sphereColorUniform_32, vec3f(0, 6, 12), sphereAngleUniform_33);
+        var floor = Ray_17(circles_20(p.xz, floorAngleUniform_19), sdPlane_22(p, vec3f(0, 1, 0), 1));
+        var sphere = getSphere_25(p, sphereColorUniform_23, vec3f(0, 6, 12), sphereAngleUniform_24);
         return rayUnion_34(floor, sphere);
       }
 
@@ -197,8 +197,8 @@ describe('vaporrave example', () => {
         for (var i = 0; (i < 1000); i++) {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay_18(p);
-          var sphereDist = getSphere_23(p, sphereColorUniform_32, vec3f(0, 6, 12), sphereAngleUniform_33);
-          glow = ((vec3f(sphereColorUniform_32) * exp(-sphereDist.dist)) + glow);
+          var sphereDist = getSphere_25(p, sphereColorUniform_23, vec3f(0, 6, 12), sphereAngleUniform_24);
+          glow = ((vec3f(sphereColorUniform_23) * exp(-sphereDist.dist)) + glow);
           distOrigin += scene.dist;
           if ((distOrigin > 19)) {
             result.dist = 19;

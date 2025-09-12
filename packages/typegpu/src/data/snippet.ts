@@ -2,6 +2,7 @@ import { undecorate } from './dataTypes.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { isNumericSchema } from './wgslTypes.ts';
+import { $ownSnippet } from '../shared/symbols.ts';
 
 export interface Snippet {
   readonly value: unknown;
@@ -27,6 +28,12 @@ export function isSnippet(value: unknown): value is Snippet {
 
 export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
+}
+
+export function getOwnSnippet(
+  value: unknown,
+): Snippet {
+  return (value as { [$ownSnippet]: Snippet })?.[$ownSnippet];
 }
 
 export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet {

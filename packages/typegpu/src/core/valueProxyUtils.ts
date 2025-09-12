@@ -1,4 +1,5 @@
 import type { AnyData } from '../data/dataTypes.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
 import {
   extractGpuValueGetter,
@@ -7,20 +8,29 @@ import {
 import { getName } from '../shared/meta.ts';
 import {
   $internal,
+  $ownSnippet,
   $providing,
   $runtimeResource,
   $wgslDataType,
 } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
-import type { ResolutionCtx, SelfResolvable } from '../types.ts';
+import type { ResolutionCtx } from '../types.ts';
+import { stitch } from './resolve/stitch.ts';
 
-export const valueProxyHandler: ProxyHandler<
-  & SelfResolvable
-  & { readonly [$wgslDataType]: BaseData; readonly [$runtimeResource]: true }
-> = {
+export const valueProxyHandler: ProxyHandler<{
+  readonly [$internal]: unknown;
+  readonly [$wgslDataType]: BaseData;
+  readonly [$runtimeResource]: true;
+  readonly [$ownSnippet]?: Snippet | undefined;
+  toString(): string;
+}> = {
   get(target, prop) {
     if (prop in target) {
       return Reflect.get(target, prop);
+    }
+
+    if (prop === $ownSnippet) {
+      return undefined;
     }
 
     if (prop === $providing) {
@@ -35,21 +45,23 @@ export const valueProxyHandler: ProxyHandler<
       return () => target.toString();
     }
 
+    const propType = getTypeForPropAccess(
+      target[$wgslDataType] as AnyData,
+      String(prop),
+    ) as AnyData;
+
     return new Proxy(
       {
         [$internal]: true,
         [$runtimeResource]: true,
 
-        '~resolve': (ctx: ResolutionCtx) =>
-          `${ctx.resolve(target)}.${String(prop)}`,
-
         toString: () =>
           `.value(...).${String(prop)}:${getName(target) ?? '<unnamed>'}`,
 
-        [$wgslDataType]: getTypeForPropAccess(
-          target[$wgslDataType] as AnyData,
-          String(prop),
-        ) as BaseData,
+        [$wgslDataType]: propType,
+        get [$ownSnippet]() {
+          return snip(stitch`${target[$ownSnippet]}.${String(prop)}`, propType);
+        },
       },
       valueProxyHandler,
     );
