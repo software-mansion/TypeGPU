@@ -13,11 +13,6 @@ import {
 } from '../../src/data/vector.ts';
 
 describe('bitcast', () => {
-  it('checksEndian', () => {
-    // this may break bitcast on big-endian systems
-    const endian = std.checkEndian();
-    expect(endian).toBe('little endian'); // for ARM Macs
-  });
   it('bitcastU32toF32', () => {
     // 1.0 in f32
     //0 01111111 00000000000000000000000
@@ -25,14 +20,14 @@ describe('bitcast', () => {
     expect(f).toBeCloseTo(1.0);
 
     // -1 in f32
-    //1 11111111 00000000000000000000000
+    //1 01111111 00000000000000000000000
     const f2 = std.bitcastU32toF32(3212836864);
     expect(f2).toBeCloseTo(-1.0);
   });
 
   it('bitcastU32toI32', () => {
     // -1 in i32
-    // 11111111111111111111111111111111
+    // 1111111111111111111111111111111
     const i = std.bitcastU32toI32(4294967295);
     expect(i).toBe(-1);
 
@@ -128,7 +123,7 @@ describe('bitcast', () => {
     // Vectors
     const v3 = vec3u(0x00000000, 0x80000000, 0xffffffff);
     const c3 = std.bitcastU32toI32(v3);
-    expect(c3).toEqual(vec3i(0, 2147483648, -1));
+    expect(c3).toEqual(vec3i(0, -2147483648, -1));
 
     const v4 = vec4u(0x80000000, 0x00000001, 0x00000000, 0x7fffffff);
     const c4 = std.bitcastU32toI32(v4);

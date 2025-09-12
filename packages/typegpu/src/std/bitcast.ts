@@ -50,14 +50,3 @@ export const bitcastU32toI32 = dualImpl({
   codegenImpl: (n) => stitch`bitcast<i32>(${n})`,
   signature: { argTypes: [u32], returnType: i32 },
 });
-
-export function checkEndian() {
-  const arrayBuffer = new ArrayBuffer(2);
-  const uint8Array = new Uint8Array(arrayBuffer);
-  const uint16array = new Uint16Array(arrayBuffer);
-  uint8Array[0] = 0xAA;
-  uint8Array[1] = 0xBB;
-  if (uint16array[0] === 0xBBAA) return 'little endian';
-  if (uint16array[0] === 0xAABB) return 'big endian';
-  throw new Error('Something crazy just happened');
-}
