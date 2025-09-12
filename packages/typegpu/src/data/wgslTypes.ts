@@ -655,6 +655,8 @@ export type AnyFloat16VecInstance = v2h | v3h | v4h;
 
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
+export type AnyUnsignedVecInstance = v2u | v3u | v4u;
+
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
