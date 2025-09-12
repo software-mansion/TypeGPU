@@ -89,20 +89,19 @@ export function createLoggingFunction(
     );
   }
 
-  const usedSerializers: [string, unknown][] = [];
+  const usedSerializers: Record<string, unknown> = {};
   let index = 0;
   const innerForLoops = argTypes.map((arg, i) => {
     const serializer = serializerMap[arg.type];
     if (!serializer) {
       throw new Error(`Cannot serialize data of type ${arg.type}`);
     }
-    usedSerializers.push([`serializer${i}`, serializer]);
+    usedSerializers[`serializer${i}`] = serializer;
     const size = Math.ceil(sizeOf(arg) / 4);
     const instructions = generateDataCopyingInstructions(index, size, i);
     index += size;
     return instructions;
   });
-  const uses = Object.fromEntries(usedSerializers);
 
   return fn(argTypes)`(${argTypes.map((_, i) => `_arg_${i}`).join(', ')}) {
   var index = atomicAdd(&indexBuffer, 1);
@@ -113,7 +112,7 @@ export function createLoggingFunction(
 
 ${innerForLoops.join('\n')}
 }`.$uses({
-      ...uses,
+      ...usedSerializers,
       indexBuffer: indexBuffer,
       dataBuffer: dataBuffer,
     }).$name(`log${id}`);

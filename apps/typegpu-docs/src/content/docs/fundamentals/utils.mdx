@@ -128,8 +128,12 @@ const dispatch = prepareDispatch(root, () => {
   console.log('Call number', callCountMutable.$);
 });
 
-dispatch(); // [GPU] Call number 1
-dispatch(); // [GPU] Call number 2
+dispatch(); 
+dispatch();
+
+// Eventually...
+// "[GPU] Call number 1"
+// "[GPU] Call number 2"
 ```
 
 Under the hood, TypeGPU translates `console.log` to a series of serializing functions that write the logged arguments to a buffer that is read and deserialized after every draw/dispatch call.
