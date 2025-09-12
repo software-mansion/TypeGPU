@@ -72,6 +72,21 @@ export const controls = {
       }
     },
   },
+  'Varying size logs': {
+    onButtonClick: async () => {
+      const logCountUniform = root.createUniform(d.u32);
+      const dispatch = prepareDispatch(root, () => {
+        'kernel';
+        for (let i = 0; i < logCountUniform.$; i++) {
+          console.log('Log index', d.u32(i), 'out of', logCountUniform.$);
+        }
+      });
+      logCountUniform.write(3);
+      dispatch();
+      logCountUniform.write(1);
+      dispatch();
+    },
+  },
   'Render pipeline': {
     onButtonClick: () => {
       const mainVertex = tgpu['~unstable'].vertexFn({
