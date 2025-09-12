@@ -2,7 +2,10 @@ import { isTgpuFn } from './core/function/tgpuFn.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
-import type { Configurable } from './core/root/rootTypes.ts';
+import type {
+  Configurable,
+  ExperimentalTgpuRoot,
+} from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isDerived,
@@ -34,6 +37,11 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import {
+  LogGeneratorImpl,
+  LogGeneratorNullImpl,
+} from './tgsl/consoleLog/logGenerator.ts';
+import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
 import {
   coerceToSnippet,
   numericLiteralToSnippet,
@@ -72,6 +80,8 @@ export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
   readonly enableExtensions?: WgslExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
+  readonly config?: ((cfg: Configurable) => Configurable) | undefined;
+  readonly root?: ExperimentalTgpuRoot | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -342,6 +352,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
+  private readonly _logGenerator: LogGenerator;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -375,6 +386,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
+    this._logGenerator = opts.root
+      ? new LogGeneratorImpl(opts.root)
+      : new LogGeneratorNullImpl();
   }
 
   get pre(): string {
@@ -417,6 +431,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.popBlockScope();
+  }
+
+  generateLog(args: Snippet[]): Snippet {
+    return this._logGenerator.generateLog(this, args);
+  }
+
+  get logResources(): LogResources | undefined {
+    return this._logGenerator.logResources;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
@@ -766,22 +788,23 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  */
 export interface ResolutionResult {
   code: string;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logResources: LogResources | undefined;
 }
 
 export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
-  config?: (cfg: Configurable) => Configurable,
 ): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
-  let code = config
+  let code = options.config
     ? ctx.withSlots(
-      config(new ConfigurableImpl([])).bindings,
+      options.config(new ConfigurableImpl([])).bindings,
       () => ctx.resolve(item),
     )
     : ctx.resolve(item);
@@ -841,6 +864,7 @@ export function resolve(
     code,
     usedBindGroupLayouts,
     catchall,
+    logResources: ctx.logResources,
   };
 }
 

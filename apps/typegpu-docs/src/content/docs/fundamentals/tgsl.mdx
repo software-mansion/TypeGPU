@@ -115,7 +115,8 @@ Keep in mind that you cannot execute entry-point functions in JavaScript.
 
 * **TGSL limitations** --
 For a function to be valid TGSL, it must consist only of supported JS syntax (again, see [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts)), possibly including references to bound buffers, constant variables defined outside the function, other TGSL functions etc.
-This means that, for example, `console.log()` calls will not work on the GPU.
+This means that, for example, `Math.sqrt(n)` calls will not work on the GPU.
+One exception to this is `console.log()`, about which you can read more [here](/TypeGPU/fundamentals/utils/#consolelog).
 
 * **Differences between JS on the CPU and GPU** --
 TGSL is developed to work on the GPU the same as on the CPU as much as possible,
