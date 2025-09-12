@@ -659,12 +659,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    // Comes with it's own snippet
-    const ownSnippet = getOwnSnippet(this, item);
-    if (ownSnippet) {
-      return this.resolve(ownSnippet.value, ownSnippet.dataType);
-    }
-
     if (isMarkedInternal(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {

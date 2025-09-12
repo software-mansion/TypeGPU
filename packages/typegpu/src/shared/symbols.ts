@@ -5,10 +5,6 @@ import { version } from '../../package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
 /**
- * A value's data type as seen by the WGSL generator
- */
-export const $wgslDataType = Symbol(`typegpu:${version}:$wgslDataType`);
-/**
  * The getter to the value of this resource, accessible on the GPU
  */
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);

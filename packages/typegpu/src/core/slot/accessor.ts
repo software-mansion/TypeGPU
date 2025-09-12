@@ -9,7 +9,6 @@ import {
   $internal,
   $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
   isBufferUsage,
@@ -74,7 +73,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.schema,
         [$ownSnippet]: (ctx) => {
           const value = ctx.unwrap(this.slot);
 

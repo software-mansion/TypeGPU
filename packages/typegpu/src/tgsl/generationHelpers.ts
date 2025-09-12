@@ -34,14 +34,12 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  hasInternalDataType,
   isMatInstance,
   isVec,
   isVecInstance,
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
 import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
 import { isNumericSchema } from '../data/wgslTypes.ts';
 
@@ -232,11 +230,6 @@ export function coerceToSnippet(ctx: ResolutionCtx, value: unknown): Snippet {
   const ownSnippet = getOwnSnippet(ctx, value);
   if (ownSnippet) {
     return ownSnippet;
-  }
-
-  if (hasInternalDataType(value)) {
-    // The value knows better about what type it is
-    return snip(value, value[$wgslDataType] as AnyData);
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {

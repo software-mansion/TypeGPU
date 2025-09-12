@@ -10,7 +10,6 @@ import {
   $internal,
   $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -122,7 +121,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.#dataType,
         [$ownSnippet]: (ctx) => snip(ctx.resolve(this), this.#dataType),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },

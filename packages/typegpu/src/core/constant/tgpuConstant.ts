@@ -9,7 +9,6 @@ import {
   $internal,
   $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -80,7 +79,6 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.dataType,
         [$ownSnippet]: (ctx) => snip(ctx.resolve(this), this.dataType),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },

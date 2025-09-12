@@ -1,9 +1,14 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import { snip, Snippet } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $internal, $wgslDataType } from '../../shared/symbols.ts';
+import { $internal, $ownSnippet } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type {
+  ResolutionCtx,
+  SelfResolvable,
+  WithOwnSnippet,
+} from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 
 interface SamplerInternals {
@@ -140,17 +145,20 @@ export function isComparisonSampler(
 // Implementation
 // --------------
 
-export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
+export class TgpuLaidOutSamplerImpl
+  implements TgpuSampler, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
   constructor(private readonly _membership: LayoutMembership) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {};
     setName(this, _membership.key);
+  }
+
+  [$ownSnippet](ctx: ResolutionCtx): Snippet {
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(ctx.resolve(this), this as any);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -170,17 +178,19 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 }
 
 export class TgpuLaidOutComparisonSamplerImpl
-  implements TgpuComparisonSampler, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
+  implements TgpuComparisonSampler, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   constructor(private readonly _membership: LayoutMembership) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {};
     setName(this, _membership.key);
+  }
+
+  [$ownSnippet](ctx: ResolutionCtx): Snippet {
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(ctx.resolve(this), this as any);
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
@@ -199,8 +209,8 @@ export class TgpuLaidOutComparisonSamplerImpl
   }
 }
 
-class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
+class TgpuFixedSamplerImpl
+  implements TgpuFixedSampler, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler';
 
@@ -208,9 +218,6 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: SamplerProps) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {
       unwrap: (branch) => {
         if (!this._sampler) {
@@ -228,6 +235,12 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
     this._filtering = _props.minFilter === 'linear' ||
       _props.magFilter === 'linear' ||
       _props.mipmapFilter === 'linear';
+  }
+
+  [$ownSnippet](ctx: ResolutionCtx): Snippet {
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(ctx.resolve(this), this as any);
   }
 
   $name(label: string) {
@@ -258,17 +271,13 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 }
 
 class TgpuFixedComparisonSamplerImpl
-  implements TgpuFixedComparisonSampler, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
+  implements TgpuFixedComparisonSampler, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: SamplerInternals;
   public readonly resourceType = 'sampler-comparison';
 
   private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: ComparisonSamplerProps) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {
       unwrap: (branch) => {
         if (!this._sampler) {
@@ -281,6 +290,12 @@ class TgpuFixedComparisonSamplerImpl
         return this._sampler;
       },
     };
+  }
+
+  [$ownSnippet](ctx: ResolutionCtx): Snippet {
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(ctx.resolve(this), this as any);
   }
 
   $name(label: string) {
