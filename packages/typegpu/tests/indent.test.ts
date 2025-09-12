@@ -405,7 +405,7 @@ describe('indents', () => {
 
       @vertex fn someVertex_0(input: someVertex_Input_1) -> someVertex_Output_2 {
         var uniBoid = boids_3;
-        for (var i = 0; (i < floor(sin(123))); i++) {
+        for (var i = 0; (i < -1); i++) {
           var someVal = textureSample(smoothRender_5, sampler_6, vec2f());
           if ((someVal.x > 0.5)) {
             var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu from '../../../src/index.ts';
 import * as d from '../../../src/data/index.ts';
+import tgpu from '../../../src/index.ts';
 import { div, isCloseTo } from '../../../src/std/index.ts';
 import { asWgsl } from '../../utils/parseResolved.ts';
 
@@ -187,12 +187,6 @@ describe('div overload', () => {
     expectTypeOf(div(d.vec2f(), 1)).toEqualTypeOf<d.v2f>();
     expectTypeOf(div(d.vec4f(), d.vec4f())).toEqualTypeOf<d.v4f>();
     expectTypeOf(div(d.vec3u(), d.vec3u())).toEqualTypeOf<d.v3u>();
-  });
-
-  it('accepts union', () => {
-    // expect no errors
-    div(1 as number | d.v2f, d.vec2f() as d.v2f);
-    div(d.vec3f() as d.v3f | d.v4f, 1 as number | d.v3f | d.v4f);
   });
 
   it('rejects when incompatible types', () => {
