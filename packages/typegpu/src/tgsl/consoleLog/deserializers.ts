@@ -73,6 +73,15 @@ export function deserializeAndStringify(
   return deserialize(serializedData, argTypes).join(' ');
 }
 
+/**
+ * Reads and deserializes log data from GPU buffers, logging results to the console.
+ *
+ * @remarks
+ * - Log entries with falsy IDs are filtered out.
+ * - Console messages are styled with purple background and white text.
+ * - A warning is displayed if the log count exceeds the configured limit.
+ * - The index buffer is reset to 0 after processing.
+ */
 export function logDataFromGPU(resources: LogResources) {
   const {
     indexBuffer,
@@ -104,4 +113,6 @@ export function logDataFromGPU(resources: LogResources) {
       );
     }
   });
+
+  indexBuffer.write(0);
 }

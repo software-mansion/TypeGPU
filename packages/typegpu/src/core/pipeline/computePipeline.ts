@@ -194,7 +194,6 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     if (memo.logResources) {
       logDataFromGPU(memo.logResources);
-      memo.logResources.indexBuffer.write(0);
     }
 
     if (this._priors.performanceCallback) {

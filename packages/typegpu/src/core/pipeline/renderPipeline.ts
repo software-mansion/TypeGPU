@@ -566,7 +566,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     if (logResources) {
       logDataFromGPU(logResources);
-      logResources.indexBuffer.write(0);
     }
 
     internals.priors.performanceCallback
