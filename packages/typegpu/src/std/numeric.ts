@@ -190,27 +190,33 @@ export const ceil = createDualImpl(
   'ceil',
 );
 
+function cpuClamp(value: number, low: number, high: number): number;
+function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
+  if (typeof value === 'number') {
+    return Math.min(Math.max(low as number, value), high as number) as T;
+  }
+  return VectorOps.clamp[value.kind](
+    value,
+    low as NumVec,
+    high as NumVec,
+  ) as T;
+}
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#clamp
  */
-export const clamp = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(value: T, low: T, high: T): T => {
-    if (typeof value === 'number') {
-      return Math.min(Math.max(low as number, value), high as number) as T;
-    }
-    return VectorOps.clamp[value.kind](
-      value,
-      low as NumVec,
-      high as NumVec,
-    ) as T;
+export const clamp = dualImpl({
+  name: 'clamp',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
   },
-  // GPU implementation
-  (value, low, high) =>
-    snip(stitch`clamp(${value}, ${low}, ${high})`, value.dataType),
-  'clamp',
-);
+  normalImpl: cpuClamp,
+  codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
+});
 
 /**
  * @privateRemarks
@@ -851,6 +857,7 @@ export const quantizeToF16 = createDualImpl(
 );
 
 function cpuRadians(value: number): number;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * Math.PI) / 180) as T;
