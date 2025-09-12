@@ -71,7 +71,7 @@ describe('wgslGenerator with console.log', () => {
 
       struct SerializedLogData {
         id: u32,
-        serializedData: array<u32, 15>,
+        serializedData: array<u32, 63>,
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
@@ -119,7 +119,7 @@ describe('wgslGenerator with console.log', () => {
 
       struct SerializedLogData {
         id: u32,
-        serializedData: array<u32, 15>,
+        serializedData: array<u32, 63>,
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
@@ -167,7 +167,7 @@ describe('wgslGenerator with console.log', () => {
 
       struct SerializedLogData {
         id: u32,
-        serializedData: array<u32, 15>,
+        serializedData: array<u32, 63>,
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
@@ -235,7 +235,7 @@ describe('wgslGenerator with console.log', () => {
 
       struct SerializedLogData {
         id: u32,
-        serializedData: array<u32, 15>,
+        serializedData: array<u32, 63>,
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
@@ -268,12 +268,24 @@ describe('wgslGenerator with console.log', () => {
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
-      // default limit is 60 bytes
+      // default limit is 252 bytes
       console.log(
-        d.vec4u(12, 13, 14, 15),
-        d.vec4u(22, 23, 24, 25),
-        d.vec4u(32, 33, 34, 35),
-        d.vec4u(42, 43, 44, 45),
+        d.vec4u(912, 913, 914, 915),
+        d.vec4u(922, 923, 924, 925),
+        d.vec4u(932, 933, 934, 935),
+        d.vec4u(942, 943, 944, 945),
+        d.vec4u(812, 813, 814, 815),
+        d.vec4u(822, 823, 824, 825),
+        d.vec4u(832, 833, 834, 835),
+        d.vec4u(842, 843, 844, 845),
+        d.vec4u(712, 713, 714, 715),
+        d.vec4u(722, 723, 724, 725),
+        d.vec4u(732, 733, 734, 735),
+        d.vec4u(742, 743, 744, 745),
+        d.vec4u(612, 613, 614, 615),
+        d.vec4u(622, 623, 624, 625),
+        d.vec4u(632, 633, 634, 635),
+        d.vec4u(642, 643, 644, 645),
       );
     });
 
@@ -287,7 +299,7 @@ describe('wgslGenerator with console.log', () => {
       - computePipeline:pipeline
       - computePipelineCore
       - computeFn:fn
-      - undefined: Logged data needs to fit in 60 bytes (one of the logs requires 64 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - undefined: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
 });

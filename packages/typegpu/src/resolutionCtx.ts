@@ -382,15 +382,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public expectedType: AnyData | undefined;
   readonly #shaderGenerator: ShaderGenerator;
 
-  constructor(
-    opts: ResolutionCtxImplOptions,
-    root?: ExperimentalTgpuRoot,
-  ) {
+  constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this._logGenerator = root
-      ? new LogGeneratorImpl(root)
+    this._logGenerator = opts.root
+      ? new LogGeneratorImpl(opts.root)
       : new LogGeneratorNullImpl();
   }
 
@@ -804,7 +801,7 @@ export function resolve(
   item: Wgsl,
   options: ResolutionCtxImplOptions,
 ): ResolutionResult {
-  const ctx = new ResolutionCtxImpl(options, options.root);
+  const ctx = new ResolutionCtxImpl(options);
   let code = options.config
     ? ctx.withSlots(
       options.config(new ConfigurableImpl([])).bindings,
