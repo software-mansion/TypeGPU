@@ -77,10 +77,10 @@ export function deserializeAndStringify(
  * Reads and deserializes log data from GPU buffers, logging results to the console.
  *
  * @remarks
- * - Log entries with falsy IDs are filtered out.
- * - Console messages are styled with purple background and white text.
- * - A warning is displayed if the log count exceeds the configured limit.
- * - The index buffer is reset to 0 after processing.
+ * - Log entries with IDs equal to 0 are filtered out.
+ * - Console messages are prepended with options.messagePrefix styled with purple background and white text.
+ * - A warning is displayed if the log count exceeds the limit passed in options.
+ * - The index buffer is set to 0 after reading the data.
  */
 export function logDataFromGPU(resources: LogResources) {
   const {
