@@ -41,7 +41,6 @@ import {
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 import { unify } from '../tgsl/conversion.ts';
-import { CodegenState } from '../types.ts';
 import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
