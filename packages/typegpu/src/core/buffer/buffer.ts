@@ -1,6 +1,7 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
@@ -33,7 +34,6 @@ import {
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
 } from './bufferUsage.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -127,6 +127,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   compileWriter(): void;
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
+  clear(): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
@@ -360,6 +361,23 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
         );
       }
     }
+  }
+
+  public clear(): void {
+    const gpuBuffer = this.buffer;
+    const device = this._group.device;
+
+    if (gpuBuffer.mapState === 'mapped') {
+      new Uint8Array(gpuBuffer.getMappedRange()).fill(0);
+      return;
+    }
+
+    // Flushing any commands yet to be encoded.
+    this._group.flush();
+
+    const encoder = device.createCommandEncoder();
+    encoder.clearBuffer(gpuBuffer);
+    device.queue.submit([encoder.finish()]);
   }
 
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {

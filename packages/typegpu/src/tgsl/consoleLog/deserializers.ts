@@ -80,7 +80,7 @@ export function deserializeAndStringify(
  * - Log entries with IDs equal to 0 are filtered out.
  * - Console messages are prepended with options.messagePrefix styled with purple background and white text.
  * - A warning is displayed if the log count exceeds the limit passed in options.
- * - The index buffer is set to 0 after reading the data.
+ * - After processing, the index buffer and the data buffer are cleared.
  */
 export function logDataFromGPU(resources: LogResources) {
   const {
@@ -114,5 +114,6 @@ export function logDataFromGPU(resources: LogResources) {
     }
   });
 
-  indexBuffer.write(0);
+  dataBuffer.buffer.clear();
+  indexBuffer.buffer.clear();
 }
