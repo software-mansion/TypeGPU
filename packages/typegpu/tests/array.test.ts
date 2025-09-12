@@ -4,7 +4,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
+import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
@@ -81,7 +81,7 @@ describe('array', () => {
     expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray))
       .toThrow();
 
-    const opts = { names: new StrictNameRegistry() };
+    const opts = { namespace: namespace({ names: 'strict' }) };
 
     expect(resolve(TestArray, opts).code).toContain('array<vec3f>');
   });

@@ -12,7 +12,6 @@ import type {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type { NameRegistry } from '../../nameRegistry.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -620,7 +619,7 @@ export interface TgpuRoot extends Unwrapper {
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly nameRegistry: NameRegistry;
+  readonly nameRegistrySetting: 'strict' | 'random';
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;

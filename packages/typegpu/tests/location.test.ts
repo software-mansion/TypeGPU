@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
+import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 
 describe('d.location', () => {
@@ -22,7 +22,7 @@ describe('d.location', () => {
     >();
 
     const opts = {
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
     };
 
     expect(resolve(s1, opts).code).toContain('@location(3) b: u32,');

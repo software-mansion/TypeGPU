@@ -18,11 +18,6 @@ import {
   MissingVertexBuffersError,
 } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
-import {
-  type NameRegistry,
-  RandomNameRegistry,
-  StrictNameRegistry,
-} from '../../nameRegistry.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
@@ -282,7 +277,7 @@ class TgpuRootImpl extends WithBindingImpl
 
   constructor(
     public readonly device: GPUDevice,
-    public readonly nameRegistry: NameRegistry,
+    public readonly nameRegistrySetting: 'random' | 'strict',
     private readonly _ownDevice: boolean,
     public readonly shaderGenerator?: ShaderGenerator,
   ) {
@@ -771,15 +766,12 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     }
   }
 
-  return new TgpuRootImpl(
-    await adapter.requestDevice({
-      ...deviceOpt,
-      requiredFeatures: availableFeatures,
-    }),
-    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    true,
-    options?.shaderGenerator,
-  );
+  const device = await adapter.requestDevice({
+    ...deviceOpt,
+    requiredFeatures: availableFeatures,
+  });
+
+  return new TgpuRootImpl(device, names, true, options?.shaderGenerator);
 }
 
 /**
@@ -797,10 +789,5 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     unstable_names: names = 'random',
   } = options ?? {};
 
-  return new TgpuRootImpl(
-    device,
-    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
-    false,
-    options?.shaderGenerator,
-  );
+  return new TgpuRootImpl(device, names, false, options?.shaderGenerator);
 }

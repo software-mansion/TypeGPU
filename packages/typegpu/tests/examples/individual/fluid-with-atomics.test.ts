@@ -195,22 +195,22 @@ describe('fluid with atomics example', () => {
         decideWaterLevel_2(input.gid.x, input.gid.y);
       }
 
-      struct vertex_Input_25 {
+      struct vertex_Input_1 {
         @location(0) squareData: vec2f,
         @location(1) currentStateData: u32,
         @builtin(instance_index) idx: u32,
       }
 
-      struct vertex_Output_26 {
+      struct vertex_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) cell: f32,
       }
 
-      @group(0) @binding(0) var<uniform> size_27: vec2u;
+      @group(0) @binding(0) var<uniform> size_3: vec2u;
 
-      @vertex fn vertex_24(input: vertex_Input_25) -> vertex_Output_26 {
-        var w = size_27.x;
-        var h = size_27.y;
+      @vertex fn vertex_0(input: vertex_Input_1) -> vertex_Output_2 {
+        var w = size_3.x;
+        var h = size_3.y;
         var gridX = (input.idx % w);
         var gridY = u32((f32(input.idx) / f32(w)));
         var maxDim = max(w, h);
@@ -227,14 +227,14 @@ describe('fluid with atomics example', () => {
         if ((cellFlags == 3)) {
           cell = -3;
         }
-        return vertex_Output_26(vec4f(x, y, 0, 1), cell);
+        return vertex_Output_2(vec4f(x, y, 0, 1), cell);
       }
 
-      struct fragment_Input_29 {
+      struct fragment_Input_5 {
         @location(0) cell: f32,
       }
 
-      @fragment fn fragment_28(input: fragment_Input_29) -> @location(0) vec4f {
+      @fragment fn fragment_4(input: fragment_Input_5) -> @location(0) vec4f {
         if ((input.cell == -1)) {
           return vec4f(0.5, 0.5, 0.5, 1);
         }

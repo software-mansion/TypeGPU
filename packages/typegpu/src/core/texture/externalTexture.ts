@@ -37,7 +37,7 @@ export class TgpuExternalTextureImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.requestUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
