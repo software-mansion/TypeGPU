@@ -236,4 +236,19 @@ describe('Batch', () => {
     });
     expect(root[$internal].flush).toBeCalledTimes(1);
   });
+
+  it('flushes immediately after read-write operation', ({ root }) => {
+    const wBuffer = root.createBuffer(d.u32);
+    const rBuffer = root.createBuffer(d.u32, 7);
+
+    vi.spyOn(root[$internal], 'flush');
+
+    root.batch(() => {
+      wBuffer.write(1929);
+      expect(root[$internal].flush).toBeCalledTimes(1);
+      rBuffer.read();
+      expect(root[$internal].flush).toBeCalledTimes(2);
+    });
+    expect(root[$internal].flush).toBeCalledTimes(3);
+  });
 });
