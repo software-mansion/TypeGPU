@@ -195,14 +195,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    this._priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (this._priors.performanceCallback) {
+      triggerPerformanceCallback({
         root: branch,
         priors: this._priors,
-      })
-      : branch[$internal].ongoingBatch
-      ? ({})
-      : branch[$internal].flush();
+      });
+    } else if (!branch[$internal].ongoingBatch) {
+      branch[$internal].flush();
+    }
   }
 
   $name(label: string): this {

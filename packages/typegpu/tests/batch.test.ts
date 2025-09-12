@@ -52,7 +52,7 @@ describe('Batch', () => {
     expect(root[$internal].flush).toBeCalledTimes(1);
   });
 
-  it('flushes immediatelly when used with performance callback', ({ root }) => {
+  it('flushes immediately when used with performance callback', ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
     const callback = vi.fn();
 

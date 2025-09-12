@@ -548,6 +548,7 @@ describe('TgpuComputePipeline', () => {
 
       expect(root[$internal].flush).toBeCalledTimes(1);
     });
+
     it('flushes after dispatchWorkgroups with performance callback', ({ root }) => {
       const callback = vi.fn();
 
@@ -562,6 +563,7 @@ describe('TgpuComputePipeline', () => {
 
       expect(root[$internal].flush).toBeCalledTimes(1);
     });
+
     it('flushes after draw with timestamp writes', ({ root }) => {
       const querySet = root.createQuerySet('timestamp', 2);
 

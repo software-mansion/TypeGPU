@@ -111,7 +111,7 @@ The callback is not called if the global invocation id of a thread would exceed 
 :::
 
 ## *batch*
-By default, TypeGPU pipelines and render passes are submitted to the GPU immediatelly.
+By default, TypeGPU pipelines and render passes are submitted to the GPU immediately.
 If you want to give the GPU an opportunity to better utilize its resources,
 you can use the `batch` function.
 
@@ -156,10 +156,7 @@ const renderPipeline = root['~unstable']
   .withFragment(fragmentFn, { format: 'rgba8unorm' })
   .createPipeline();
 
-const renderPipelineWithPerformanceCallback = root['~unstable']
-  .withVertex(vertexFn, {})
-  .withFragment(fragmentFn, { format: 'rgba8unorm' })
-  .createPipeline()
+const renderPipelineWithPerformanceCallback = renderPipeline
   .withPerformanceCallback(() => {});
 
 const computePipeline = root['~unstable']

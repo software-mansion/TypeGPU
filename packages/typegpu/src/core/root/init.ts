@@ -290,49 +290,39 @@ class TgpuRootImpl extends WithBindingImpl
 
     this['~unstable'] = this;
 
-    this[$internal] = new class {
-      readonly device: GPUDevice;
-      #commandEncoder: GPUCommandEncoder | null = null;
-      #ongoingBatch = false;
-
-      constructor(device: GPUDevice) {
-        this.device = device;
-      }
+    let commandEncoder: GPUCommandEncoder | undefined;
+    this[$internal] = {
+      ongoingBatch: false,
 
       get commandEncoder() {
-        if (!this.#commandEncoder) {
-          this.#commandEncoder = this.device.createCommandEncoder();
+        if (!commandEncoder) {
+          commandEncoder = device.createCommandEncoder();
         }
 
-        return this.#commandEncoder;
-      }
-
-      get ongoingBatch() {
-        return this.#ongoingBatch;
-      }
-
-      set ongoingBatch(value: boolean) {
-        this.#ongoingBatch = value;
-      }
+        return commandEncoder;
+      },
 
       flush() {
-        if (!this.#commandEncoder) {
+        if (!commandEncoder) {
           return;
         }
 
-        this.device.queue.submit([this.#commandEncoder.finish()]);
-        this.#commandEncoder = null;
-      }
-    }(device);
+        device.queue.submit([commandEncoder.finish()]);
+        commandEncoder = undefined;
+      },
+    };
   }
 
   batch(callback: () => void) {
+    const nestedBatch = this[$internal].ongoingBatch;
     this[$internal].ongoingBatch = true;
     try {
       callback();
     } finally {
-      this[$internal].ongoingBatch = false;
-      this[$internal].flush();
+      if (!nestedBatch) {
+        this[$internal].ongoingBatch = false;
+        this[$internal].flush();
+      }
     }
   }
 
