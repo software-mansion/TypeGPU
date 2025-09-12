@@ -850,20 +850,25 @@ export const quantizeToF16 = createDualImpl(
   'quantizeToF16',
 );
 
-export const radians = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return ((value * Math.PI) / 180) as T;
-    }
-    throw new Error(
-      'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
+function cpuRadians(value: number): number;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return ((value * Math.PI) / 180) as T;
+  }
+  throw new Error(
+    'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const radians = dualImpl({
+  name: 'radians',
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return ({ argTypes: uargs, returnType: uargs[0] });
   },
-  // GPU implementation
-  (value) => snip(stitch`radians(${value})`, value.dataType),
-  'radians',
-);
+  normalImpl: cpuRadians,
+  codegenImpl: (value) => stitch`radians(${value})`,
+});
 
 export const reflect = createDualImpl(
   // CPU implementation
