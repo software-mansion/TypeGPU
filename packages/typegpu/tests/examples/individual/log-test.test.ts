@@ -442,8 +442,8 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_75(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        for (var i = 0; (i < i32(logCountUniform_76)); i++) {
-          log1_77(u32(i), logCountUniform_76);
+        for (var i = 0u; (i < logCountUniform_76); i++) {
+          log1_77((i + 1), logCountUniform_76);
         }
       }
 
