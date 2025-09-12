@@ -39,7 +39,6 @@ import {
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
-import type { NameRegistry } from './nameRegistry.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
