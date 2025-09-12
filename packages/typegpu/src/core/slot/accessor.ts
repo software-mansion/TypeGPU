@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';

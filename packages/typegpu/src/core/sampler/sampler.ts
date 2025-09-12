@@ -1,5 +1,4 @@
-import type { AnyData } from '../../data/dataTypes.ts';
-import { snip, Snippet } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $internal, $ownSnippet } from '../../shared/symbols.ts';

@@ -51,7 +51,6 @@ import type {
 } from './types.ts';
 import {
   CodegenState,
-  getOwnSnippet,
   isMarkedInternal,
   isSelfResolvable,
   NormalState,
