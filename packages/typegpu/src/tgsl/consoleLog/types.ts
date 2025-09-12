@@ -22,7 +22,7 @@ export interface LogGeneratorOptions {
   /**
    * The total number of bytes reserved for each log call.
    * If this number is exceeded, an exception is thrown during resolution.
-   * @default 60
+   * @default 252
    */
   logSizeLimit?: number;
   /**
