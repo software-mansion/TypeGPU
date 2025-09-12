@@ -17,7 +17,7 @@ export default (rawOptions: Options): BunPlugin => {
   }
 
   return {
-    name: 'TypeGPU',
+    name: 'unplugin-typegpu',
     setup(build) {
       build.onLoad({ filter: include }, async (args) => {
         const text = await Bun.file(args.path).text();
