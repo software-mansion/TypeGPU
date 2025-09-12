@@ -161,7 +161,9 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    return this.ctx.defineVariable(id, dataType);
+    const snippet = snip(this.ctx.names.makeValid(id), dataType);
+    this.ctx.defineVariable(id, snippet);
+    return snippet;
   }
 
   public identifier(id: string): Snippet {
@@ -674,12 +676,12 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      this.blockVariable(
+      const snippet = this.blockVariable(
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      const id = this.identifier(rawId);
-      return stitchWithExactTypes`${this.ctx.pre}var ${id} = ${eq};`;
+      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+        .value as string} = ${eq};`;
     }
 
     if (statement[0] === NODE.block) {
