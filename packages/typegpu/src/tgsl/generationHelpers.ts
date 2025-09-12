@@ -31,7 +31,6 @@ import {
   vec4h,
   vec4i,
   vec4u,
-  vecTypeToElement,
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
@@ -106,13 +105,6 @@ const kindToSchema = {
   mat4x4f: mat4x4f,
 } as const;
 
-const indexableTypeToResult = {
-  ...vecTypeToElement,
-  mat2x2f: vec2f,
-  mat3x3f: vec3f,
-  mat4x4f: vec4f,
-} as const;
-
 export function getTypeForPropAccess(
   targetType: AnyData,
   propName: string,
@@ -145,6 +137,12 @@ export function getTypeForPropAccess(
   return UnknownData;
 }
 
+const indexableTypeToResult = {
+  mat2x2f: vec2f,
+  mat3x3f: vec3f,
+  mat4x4f: vec4f,
+} as const;
+
 export function getTypeForIndexAccess(
   dataType: AnyData,
 ): AnyData | UnknownData {
@@ -153,7 +151,12 @@ export function getTypeForIndexAccess(
     return dataType.elementType as AnyData;
   }
 
-  // vector or matrix
+  // vector
+  if (isVec(dataType)) {
+    return dataType.primitive;
+  }
+
+  // matrix
   if (dataType.type in indexableTypeToResult) {
     return indexableTypeToResult[
       dataType.type as keyof typeof indexableTypeToResult

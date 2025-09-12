@@ -273,24 +273,6 @@ export const vecTypeToConstructor = {
   'vec4<bool>': vec4b,
 } as const;
 
-export const vecTypeToElement = {
-  vec2f: f32,
-  vec2h: f16,
-  vec2i: i32,
-  vec2u: u32,
-  'vec2<bool>': bool,
-  vec3f: f32,
-  vec3h: f16,
-  vec3i: i32,
-  vec3u: u32,
-  'vec3<bool>': bool,
-  vec4f: f32,
-  vec4h: f16,
-  vec4i: i32,
-  vec4u: u32,
-  'vec4<bool>': bool,
-} as const;
-
 type VecSchemaBase<TValue> = {
   readonly type: string;
   readonly [$repr]: TValue;

@@ -21,7 +21,6 @@ import {
   vec4f,
   vec4h,
   vec4i,
-  vecTypeToElement,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -44,6 +43,7 @@ import {
   type v4f,
   type v4h,
   type v4i,
+  type VecData,
 } from '../data/wgslTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 import { unify } from '../tgsl/conversion.ts';
@@ -376,7 +376,7 @@ export const dot = dualImpl({
   name: 'dot',
   signature: (e1, e2) => ({
     argTypes: [e1, e2],
-    returnType: vecTypeToElement[e1.type as keyof typeof vecTypeToElement],
+    returnType: (e1 as VecData).primitive,
   }),
   normalImpl: <T extends NumVec>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
