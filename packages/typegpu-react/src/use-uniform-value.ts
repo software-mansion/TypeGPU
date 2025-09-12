@@ -13,7 +13,7 @@ export function useUniformValue<
   TValue extends d.Infer<TSchema>,
 >(
   schema: TSchema,
-  initialValue?: TValue | undefined
+  initialValue?: TValue | undefined,
 ): UniformValue<TSchema, TValue> {
   const root = useRoot();
 
