@@ -31,7 +31,7 @@ export interface UseRenderOptions {
    * A kernel function that runs per-vertex on the GPU.
    */
   vertex: (input: VertexFnInput) => VertexFnOutput;
-  
+
   /**
    * A kernel function that runs per-pixel on the GPU.
    */
@@ -72,7 +72,7 @@ export function useRender(options: UseRenderOptions) {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { format: presentationFormat })
       .createPipeline();
-  }, [root, fragmentFn]);
+  }, [root, vertexFn, fragmentFn]);
 
   useFrame(() => {
     const canvas = ref.current;
