@@ -680,10 +680,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       invariant(realSchema, 'Schema has to be defined for resolving numbers');
 
       if (realSchema.type === 'abstractInt') {
-        return (schema?.type === 'f32' || schema?.type === 'f16' ||
-            schema?.type === 'abstractFloat')
-          ? `${item}.`
-          : `${item}`;
+        return `${item}`;
       }
       if (realSchema.type === 'u32') {
         return `${item}u`;
