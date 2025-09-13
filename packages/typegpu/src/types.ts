@@ -40,7 +40,7 @@ import {
   isWgslData,
 } from './data/wgslTypes.ts';
 import type { NameRegistry } from './nameRegistry.ts';
-import { $internal } from './shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -106,7 +106,7 @@ export interface ItemStateStack {
   topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
-  getSnippetById(id: string): Snippet | undefined;
+  getSnippetById(ctx: ResolutionCtx, id: string): Snippet | undefined;
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
 
@@ -275,6 +275,21 @@ export interface SelfResolvable {
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
   return isMarkedInternal(value) &&
     typeof (value as SelfResolvable)?.['~resolve'] === 'function';
+}
+
+export interface WithGPUValue<T> {
+  [$gpuValueOf](ctx: ResolutionCtx): T;
+}
+
+export interface WithOwnSnippet {
+  [$ownSnippet](ctx: ResolutionCtx): Snippet;
+}
+
+export function getOwnSnippet(
+  ctx: ResolutionCtx,
+  value: unknown,
+): Snippet {
+  return (value as WithOwnSnippet)?.[$ownSnippet]?.(ctx);
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

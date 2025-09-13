@@ -5,10 +5,6 @@ import { version } from '../../package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
 /**
- * A value's data type as seen by the WGSL generator
- */
-export const $wgslDataType = Symbol(`typegpu:${version}:$wgslDataType`);
-/**
  * The getter to the value of this resource, accessible on the GPU
  */
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);
@@ -30,6 +26,11 @@ export function isRuntimeResource(value: unknown): boolean {
   return !!(value as { readonly [$runtimeResource]?: boolean | undefined })
     ?.[$runtimeResource];
 }
+
+/**
+ * Objects can provide the snippet that represents them.
+ */
+export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
 
 //
 // Type tokens

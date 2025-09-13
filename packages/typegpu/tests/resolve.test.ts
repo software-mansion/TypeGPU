@@ -4,12 +4,13 @@ import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
 import {
   $internal,
+  $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
+import { snip } from '../src/data/snippet.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -56,7 +57,7 @@ describe('tgpu resolve', () => {
         return {
           [$internal]: true,
           [$runtimeResource]: true,
-          [$wgslDataType]: d.f32,
+          [$ownSnippet]: (ctx: ResolutionCtx) => snip(ctx.resolve(this), d.f32),
           '~resolve'(ctx: ResolutionCtx) {
             return ctx.resolve(intensity);
           },

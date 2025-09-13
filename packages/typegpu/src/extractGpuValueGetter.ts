@@ -1,14 +1,12 @@
 import { $gpuValueOf } from './shared/symbols.ts';
-import type { ResolutionCtx } from './types.ts';
-
-export type GpuValueGetter = (ctx: ResolutionCtx) => unknown;
+import type { WithGPUValue } from './types.ts';
 
 export function extractGpuValueGetter(
   object: unknown,
-): GpuValueGetter | undefined {
+): WithGPUValue<unknown>[typeof $gpuValueOf] | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value
   if (typeof (object as any)?.[$gpuValueOf] === 'function') {
-    return (object as { [$gpuValueOf]: GpuValueGetter })[$gpuValueOf].bind(
+    return (object as WithGPUValue<unknown>)[$gpuValueOf].bind(
       object,
     );
   }

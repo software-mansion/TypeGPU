@@ -128,16 +128,16 @@ describe('perlin noise example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn exponentialSharpen_23(n: f32, sharpness2: f32) -> f32 {
+      @group(0) @binding(2) var<uniform> sharpness_23: f32;
+
+      fn exponentialSharpen_24(n: f32, sharpness2: f32) -> f32 {
         return (sign(n) * pow(abs(n), (1 - sharpness2)));
       }
-
-      @group(0) @binding(2) var<uniform> sharpness_24: f32;
 
       @fragment fn mainFragment_13(input: mainFragment_Input_14) -> @location(0) vec4f {
         var uv = (gridSize_15 * input.uv);
         var n = sample_17(vec3f(uv, time_16));
-        var sharp = exponentialSharpen_23(n, sharpness_24);
+        var sharp = exponentialSharpen_24(n, sharpness_23);
         var n01 = ((sharp * 0.5) + 0.5);
         var dark = vec3f(0, 0.20000000298023224, 1);
         var light = vec3f(1, 0.30000001192092896, 0.5);

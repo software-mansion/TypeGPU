@@ -190,27 +190,33 @@ export const ceil = createDualImpl(
   'ceil',
 );
 
+function cpuClamp(value: number, low: number, high: number): number;
+function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
+  if (typeof value === 'number') {
+    return Math.min(Math.max(low as number, value), high as number) as T;
+  }
+  return VectorOps.clamp[value.kind](
+    value,
+    low as NumVec,
+    high as NumVec,
+  ) as T;
+}
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#clamp
  */
-export const clamp = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(value: T, low: T, high: T): T => {
-    if (typeof value === 'number') {
-      return Math.min(Math.max(low as number, value), high as number) as T;
-    }
-    return VectorOps.clamp[value.kind](
-      value,
-      low as NumVec,
-      high as NumVec,
-    ) as T;
+export const clamp = dualImpl({
+  name: 'clamp',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
   },
-  // GPU implementation
-  (value, low, high) =>
-    snip(stitch`clamp(${value}, ${low}, ${high})`, value.dataType),
-  'clamp',
-);
+  normalImpl: cpuClamp,
+  codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
+});
 
 /**
  * @privateRemarks
@@ -850,20 +856,26 @@ export const quantizeToF16 = createDualImpl(
   'quantizeToF16',
 );
 
-export const radians = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return ((value * Math.PI) / 180) as T;
-    }
-    throw new Error(
-      'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
+function cpuRadians(value: number): number;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (typeof value === 'number') {
+    return ((value * Math.PI) / 180) as T;
+  }
+  throw new Error(
+    'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const radians = dualImpl({
+  name: 'radians',
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return ({ argTypes: uargs, returnType: uargs[0] });
   },
-  // GPU implementation
-  (value) => snip(stitch`radians(${value})`, value.dataType),
-  'radians',
-);
+  normalImpl: cpuRadians,
+  codegenImpl: (value) => stitch`radians(${value})`,
+});
 
 export const reflect = createDualImpl(
   // CPU implementation
@@ -1015,20 +1027,26 @@ export const sqrt = createDualImpl(
   'sqrt',
 );
 
-export const step = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance | number>(edge: T, x: T): T => {
-    if (typeof edge === 'number') {
-      return (edge <= (x as number) ? 1.0 : 0.0) as T;
-    }
-    throw new Error(
-      'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
+function cpuStep(edge: number, x: number): number;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
+  if (typeof edge === 'number') {
+    return (edge <= (x as number) ? 1.0 : 0.0) as T;
+  }
+  throw new Error(
+    'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const step = dualImpl({
+  name: 'step',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
   },
-  // GPU implementation
-  (edge, x) => snip(stitch`step(${edge}, ${x})`, edge.dataType),
-  'step',
-);
+  normalImpl: cpuStep,
+  codegenImpl: (edge, x) => stitch`step(${edge}, ${x})`,
+});
 
 export const tan = createDualImpl(
   // CPU implementation

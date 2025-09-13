@@ -1,3 +1,4 @@
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
@@ -6,8 +7,8 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import {
   isBufferUsage,
@@ -72,8 +73,19 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.schema,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) => {
+          const value = ctx.unwrap(this.slot);
+
+          if (isTgpuFn(value)) {
+            return value[$internal].gpuImpl();
+          }
+
+          if (isBufferUsage(value) || isBufferShorthand(value)) {
+            return snip(ctx.resolve(value), this.schema);
+          }
+
+          return snip(value, this.schema);
+        },
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
@@ -98,11 +110,11 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     const value = ctx.unwrap(this.slot);
 
     if (isBufferUsage(value) || isBufferShorthand(value)) {
-      return ctx.resolve(value);
+      return ctx.resolve(value, this.schema);
     }
 
     if (isTgpuFn(value)) {
-      return `${ctx.resolve(value)}()`;
+      return `${ctx.resolve(value, this.schema)}()`;
     }
 
     return ctx.resolve(value, this.schema);

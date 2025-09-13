@@ -1,5 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
@@ -11,9 +12,9 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $repr,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -138,8 +139,7 @@ class TgpuFixedBufferImpl<
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.buffer.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) => snip(ctx.resolve(this), this.buffer.dataType),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
@@ -255,8 +255,8 @@ export class TgpuLaidOutBufferImpl<
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) =>
+          snip(ctx.resolve(this), this.dataType as unknown as AnyData),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,

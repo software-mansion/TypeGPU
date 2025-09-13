@@ -1,4 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -7,8 +8,8 @@ import type { InferGPU } from '../../shared/repr.ts';
 import {
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $runtimeResource,
-  $wgslDataType,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -120,8 +121,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       {
         [$internal]: true,
         [$runtimeResource]: true,
-        [$wgslDataType]: this.#dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        [$ownSnippet]: (ctx) => snip(ctx.resolve(this), this.#dataType),
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
