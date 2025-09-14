@@ -365,7 +365,7 @@ describe('tgpu resolve', () => {
     const resolved = tgpu.resolve({
       template: `
       fn main () {
-        let c = functions.getColor() * layout.intensity;
+        let c = functions.getColor() * layout.bound.intensity;
         let i = function.getWater();
       }`,
       externals: {

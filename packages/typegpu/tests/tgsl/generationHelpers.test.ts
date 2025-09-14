@@ -183,9 +183,7 @@ describe('generationHelpers', () => {
       expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
       expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
       expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
-      expect(coerceToSnippet(undefined)).toEqual(
-        snip(undefined, UnknownData),
-      );
+      expect(coerceToSnippet(undefined)).toEqual(snip(undefined, UnknownData));
       const fn = () => {};
       expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
     });
