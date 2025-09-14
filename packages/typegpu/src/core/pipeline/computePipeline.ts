@@ -3,7 +3,7 @@ import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -104,7 +104,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this[$getNameForward] = _core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     return ctx.resolve(this._core);
   }
 
@@ -217,7 +217,7 @@ class ComputePipelineCore implements SelfResolvable {
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
-  '~resolve'(ctx: ResolutionCtx) {
+  [$resolve](ctx: ResolutionCtx) {
     return ctx.withSlots(this._slotBindings, () => {
       ctx.resolve(this._entryFn);
       return '';

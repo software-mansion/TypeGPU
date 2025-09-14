@@ -14,7 +14,7 @@ import {
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
-import { snip, type Snippet } from './data/snippet.ts';
+import { isSnippet, snip, type Snippet } from './data/snippet.ts';
 import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
   invariant,
@@ -26,7 +26,8 @@ import { provideCtx, topLevelState } from './execMode.ts';
 import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal, $providing } from './shared/symbols.ts';
+import { safeStringify } from './shared/safeStringify.ts';
+import { $internal, $providing, $resolve } from './shared/symbols.ts';
 import {
   bindGroupLayout,
   type TgpuBindGroup,
@@ -213,7 +214,7 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  getSnippetById(ctx: ResolutionCtx, id: string): Snippet | undefined {
+  getSnippetById(id: string): Snippet | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
@@ -230,7 +231,7 @@ class ItemStateStackImpl implements ItemStateStack {
         const external = layer.externalMap[id];
 
         if (external !== undefined && external !== null) {
-          return coerceToSnippet(ctx, external);
+          return coerceToSnippet(external);
         }
 
         // Since functions cannot access resources from the calling scope, we
@@ -398,7 +399,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getById(id: string): Snippet | null {
-    const item = this._itemStateStack.getSnippetById(this, id);
+    const item = this._itemStateStack.getSnippetById(id);
 
     if (item === undefined) {
       return null;
@@ -604,12 +605,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
-        result = item['~resolve'](this);
+        result = item[$resolve](this);
       } else {
         throw new TypeError(
-          `Unresolvable internal value: ${item} (as json: ${
-            JSON.stringify(item)
-          })`,
+          `Unresolvable internal value: ${safeStringify(item)}`,
         );
       }
 
@@ -639,6 +638,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     schema?: AnyData | UnknownData | undefined,
     exact = false,
   ): string {
+    if (isSnippet(item)) {
+      if (!schema) {
+        // biome-ignore lint/style/noParameterAssign: it's fine
+        schema = item.dataType;
+      }
+      // biome-ignore lint/style/noParameterAssign: it's fine
+      item = item.value;
+    }
+
     if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
@@ -654,7 +662,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema),
+        () => this.resolve(item[$providing].inner, schema, exact),
       );
     }
 
@@ -742,7 +750,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new WgslTypeError(
-      `Value ${item} (as json: ${JSON.stringify(item)}) is not resolvable${
+      `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
         schema ? ` to type ${schema}` : ''
       }`,
     );

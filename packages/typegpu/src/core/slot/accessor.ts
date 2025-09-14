@@ -1,24 +1,18 @@
-import { snip } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
   $internal,
-  $ownSnippet,
-  $runtimeResource,
+  $resolve,
 } from '../../shared/symbols.ts';
-import {
-  isBufferUsage,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../../types.ts';
-import { isBufferShorthand } from '../buffer/bufferShorthand.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
@@ -59,6 +53,19 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     this[$getNameForward] = this.slot;
   }
 
+  get [$gpuValueOf](): InferGPU<T> {
+    // biome-ignore lint/style/noNonNullAssertion: it's there
+    const ctx = getResolutionCtx()!;
+    const value = getGpuValueRecursively(ctx.unwrap(this.slot));
+
+    if (isTgpuFn(value)) {
+      // It's a snippet, btw
+      return value() as InferGPU<T>;
+    }
+
+    return snip(value, this.schema) as InferGPU<T>;
+  }
+
   $name(label: string) {
     this.slot.$name(label);
     return this;
@@ -68,33 +75,9 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return `accessor:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](): InferGPU<T> {
-    return new Proxy(
-      {
-        [$internal]: true,
-        [$runtimeResource]: true,
-        [$ownSnippet]: (ctx) => {
-          const value = ctx.unwrap(this.slot);
-
-          if (isTgpuFn(value)) {
-            return value[$internal].gpuImpl();
-          }
-
-          if (isBufferUsage(value) || isBufferShorthand(value)) {
-            return snip(ctx.resolve(value), this.schema);
-          }
-
-          return snip(value, this.schema);
-        },
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<T>;
-  }
-
   get value(): InferGPU<T> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     throw new Error(
@@ -106,17 +89,13 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this.value;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const value = ctx.unwrap(this.slot);
-
-    if (isBufferUsage(value) || isBufferShorthand(value)) {
-      return ctx.resolve(value, this.schema);
-    }
-
-    if (isTgpuFn(value)) {
-      return `${ctx.resolve(value, this.schema)}()`;
-    }
-
-    return ctx.resolve(value, this.schema);
+  /**
+   * This resolve is used when an accessor is referenced directly as an
+   * external in a WGSL template. In other cases, it's the GPU value that
+   * gets resolved.
+   */
+  [$resolve](ctx: ResolutionCtx): string {
+    const snippet = this[$gpuValueOf] as Snippet;
+    return ctx.resolve(snippet.value, this.schema);
   }
 }

@@ -21,24 +21,24 @@ describe('fluid with atomics example', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @group(0) @binding(0) var<storage, read_write> nextState_5: array<atomic<u32>, 1048576>;
+      @group(0) @binding(0) var<uniform> size_6: vec2u;
 
-      @group(0) @binding(1) var<uniform> size_7: vec2u;
-
-      fn getIndex_6(x: u32, y: u32) -> u32 {
-        var h = size_7.y;
-        var w = size_7.x;
+      fn getIndex_5(x: u32, y: u32) -> u32 {
+        var h = size_6.y;
+        var w = size_6.x;
         return (((y % h) * w) + (x % w));
       }
 
+      @group(0) @binding(1) var<storage, read_write> nextState_7: array<atomic<u32>, 1048576>;
+
       fn updateCell_4(x: u32, y: u32, value: u32) {
-        atomicStore(&nextState_5[getIndex_6(x, y)], value);
+        atomicStore(&nextState_7[getIndex_5(x, y)], value);
       }
 
       @group(0) @binding(2) var<storage, read> currentStateBuffer_10: array<u32, 1048576>;
 
       fn getCell_9(x: u32, y: u32) -> u32 {
-        return currentStateBuffer_10[getIndex_6(x, y)];
+        return currentStateBuffer_10[getIndex_5(x, y)];
       }
 
       fn isClearCell_8(x: u32, y: u32) -> bool {
@@ -59,14 +59,14 @@ describe('fluid with atomics example', () => {
       }
 
       fn getCellNext_15(x: u32, y: u32) -> u32 {
-        return atomicLoad(&nextState_5[getIndex_6(x, y)]);
+        return atomicLoad(&nextState_7[getIndex_5(x, y)]);
       }
 
       fn addToCell_14(x: u32, y: u32, value: u32) {
         var cell = getCellNext_15(x, y);
         var waterLevel = (cell & MAX_WATER_LEVEL_12);
         var newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL_12);
-        atomicAdd(&nextState_5[getIndex_6(x, y)], (newWaterLevel - waterLevel));
+        atomicAdd(&nextState_7[getIndex_5(x, y)], (newWaterLevel - waterLevel));
       }
 
       fn isWaterSource_16(x: u32, y: u32) -> bool {
@@ -77,15 +77,15 @@ describe('fluid with atomics example', () => {
         return ((getCell_9(x, y) >> 24) == 3);
       }
 
-      fn subtractFromCell_18(x: u32, y: u32, value: u32) {
+      fn getWaterLevel_18(x: u32, y: u32) -> u32 {
+        return (getCell_9(x, y) & MAX_WATER_LEVEL_12);
+      }
+
+      fn subtractFromCell_19(x: u32, y: u32, value: u32) {
         var cell = getCellNext_15(x, y);
         var waterLevel = (cell & MAX_WATER_LEVEL_12);
         var newWaterLevel = max((waterLevel - min(value, waterLevel)), 0);
-        atomicSub(&nextState_5[getIndex_6(x, y)], (waterLevel - newWaterLevel));
-      }
-
-      fn getWaterLevel_19(x: u32, y: u32) -> u32 {
-        return (getCell_9(x, y) & MAX_WATER_LEVEL_12);
+        atomicSub(&nextState_7[getIndex_5(x, y)], (waterLevel - newWaterLevel));
       }
 
       fn checkForFlagsAndBounds_3(x: u32, y: u32) -> bool {
@@ -107,8 +107,8 @@ describe('fluid with atomics example', () => {
           updateCell_4(x, y, (3 << 24));
           return true;
         }
-        if (((((y == 0) || (y == (size_7.y - 1))) || (x == 0)) || (x == (size_7.x - 1)))) {
-          subtractFromCell_18(x, y, getWaterLevel_19(x, y));
+        if (((((y == 0) || (y == (size_6.y - 1))) || (x == 0)) || (x == (size_6.x - 1)))) {
+          subtractFromCell_19(x, y, getWaterLevel_18(x, y));
           return true;
         }
         return false;
@@ -135,17 +135,17 @@ describe('fluid with atomics example', () => {
         if (checkForFlagsAndBounds_3(x, y)) {
           return;
         }
-        var remainingWater = getWaterLevel_19(x, y);
+        var remainingWater = getWaterLevel_18(x, y);
         if ((remainingWater == 0)) {
           return;
         }
         if (!isWall_13(x, (y - 1))) {
-          var waterLevelBelow = getWaterLevel_19(x, (y - 1));
+          var waterLevelBelow = getWaterLevel_18(x, (y - 1));
           var stable = getStableStateBelow_20(remainingWater, waterLevelBelow);
           if ((waterLevelBelow < stable)) {
             var change = (stable - waterLevelBelow);
             var flow = min(change, viscosity_23);
-            subtractFromCell_18(x, y, flow);
+            subtractFromCell_19(x, y, flow);
             addToCell_14(x, (y - 1), flow);
             remainingWater -= flow;
           }
@@ -155,11 +155,11 @@ describe('fluid with atomics example', () => {
         }
         var waterLevelBefore = remainingWater;
         if (!isWall_13((x - 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_19((x - 1), y)));
+          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x - 1), y)));
           if ((flowRaw > 0)) {
             var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
             var flow = min(change, viscosity_23);
-            subtractFromCell_18(x, y, flow);
+            subtractFromCell_19(x, y, flow);
             addToCell_14((x - 1), y, flow);
             remainingWater -= flow;
           }
@@ -168,11 +168,11 @@ describe('fluid with atomics example', () => {
           return;
         }
         if (!isWall_13((x + 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_19((x + 1), y)));
+          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x + 1), y)));
           if ((flowRaw > 0)) {
             var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
             var flow = min(change, viscosity_23);
-            subtractFromCell_18(x, y, flow);
+            subtractFromCell_19(x, y, flow);
             addToCell_14((x + 1), y, flow);
             remainingWater -= flow;
           }
@@ -181,10 +181,10 @@ describe('fluid with atomics example', () => {
           return;
         }
         if (!isWall_13(x, (y + 1))) {
-          var stable = getStableStateBelow_20(getWaterLevel_19(x, (y + 1)), remainingWater);
+          var stable = getStableStateBelow_20(getWaterLevel_18(x, (y + 1)), remainingWater);
           if ((stable < remainingWater)) {
             var flow = min((remainingWater - stable), viscosity_23);
-            subtractFromCell_18(x, y, flow);
+            subtractFromCell_19(x, y, flow);
             addToCell_14(x, (y + 1), flow);
             remainingWater -= flow;
           }

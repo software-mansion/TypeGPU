@@ -1,4 +1,4 @@
-import { $internal, $ownSnippet } from '../../shared/symbols.ts';
+import { $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
@@ -6,7 +6,7 @@ import type {
   SelfResolvable,
   WithOwnSnippet,
 } from '../../types.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 
 // ----------
 // Public API
@@ -35,13 +35,11 @@ export class TgpuExternalTextureImpl
     setName(this, _membership.key);
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 

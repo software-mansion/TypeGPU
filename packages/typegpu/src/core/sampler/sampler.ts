@@ -1,7 +1,7 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $internal, $ownSnippet } from '../../shared/symbols.ts';
+import { $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type {
   ResolutionCtx,
@@ -154,13 +154,11 @@ export class TgpuLaidOutSamplerImpl
     setName(this, _membership.key);
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -186,13 +184,11 @@ export class TgpuLaidOutComparisonSamplerImpl
     setName(this, _membership.key);
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -236,18 +232,11 @@ class TgpuFixedSamplerImpl
       _props.mipmapFilter === 'linear';
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  $name(label: string) {
-    setName(this, label);
-    return this;
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
 
     const { group, binding } = ctx.allocateFixedEntry(
@@ -262,6 +251,11 @@ class TgpuFixedSamplerImpl
     );
 
     return id;
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
   }
 
   toString() {
@@ -291,18 +285,11 @@ class TgpuFixedComparisonSamplerImpl
     };
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  $name(label: string) {
-    setName(this, label);
-    return this;
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
@@ -314,6 +301,11 @@ class TgpuFixedComparisonSamplerImpl
     );
 
     return id;
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
   }
 
   toString() {

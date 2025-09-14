@@ -220,14 +220,14 @@ export type GenerationCtx = ResolutionCtx & {
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };
 
-export function coerceToSnippet(ctx: ResolutionCtx, value: unknown): Snippet {
+export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
     return value;
   }
 
   // Maybe the value can tell us what snippet it is
-  const ownSnippet = getOwnSnippet(ctx, value);
+  const ownSnippet = getOwnSnippet(value);
   if (ownSnippet) {
     return ownSnippet;
   }

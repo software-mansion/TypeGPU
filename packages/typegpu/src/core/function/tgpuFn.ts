@@ -12,6 +12,7 @@ import {
   $getNameForward,
   $internal,
   $providing,
+  $resolve,
   $runtimeResource,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
@@ -21,7 +22,6 @@ import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
-import { stitch } from '../resolve/stitch.ts';
 import {
   type Eventual,
   isAccessor,
@@ -191,7 +191,7 @@ function createFn<ImplSchema extends AnyFn>(
       ]);
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
         addArgTypesToExternals(
           implementation,
@@ -329,11 +329,15 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this[$getNameForward] = fn;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-    return ctx.withResetIndentLevel(() =>
-      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
-    );
+    return ctx.withResetIndentLevel(() => {
+      // Resolving parameters first so the order of definitions is more consistent.
+      const params = this.#params.map((param) =>
+        ctx.resolve(param.value, param.dataType)
+      );
+      return `${ctx.resolve(this.#fn)}(${params.join(', ')})`;
+    });
   }
 
   toString() {

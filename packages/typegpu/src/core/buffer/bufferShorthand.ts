@@ -7,7 +7,6 @@ import {
   $gpuValueOf,
   $internal,
 } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 import type { TgpuBufferUsage } from './bufferUsage.ts';
 
@@ -25,7 +24,7 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // ---
 
   // Accessible on the GPU
-  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<TData>;
+  readonly [$gpuValueOf]: InferGPU<TData>;
   // ---
 }
 
@@ -80,7 +79,7 @@ export function isBufferShorthand<TData extends BaseData>(
 export class TgpuBufferShorthandImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
-> implements SelfResolvable {
+> {
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
   readonly #usage: TgpuBufferUsage<TData, TType>;
@@ -113,7 +112,7 @@ export class TgpuBufferShorthandImpl<
     return this.buffer.read();
   }
 
-  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<TData> {
+  get [$gpuValueOf](): InferGPU<TData> {
     return this.#usage.$;
   }
 
@@ -123,9 +122,5 @@ export class TgpuBufferShorthandImpl<
 
   get value(): InferGPU<TData> {
     return this.$;
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
-    return ctx.resolve(this.#usage);
   }
 }

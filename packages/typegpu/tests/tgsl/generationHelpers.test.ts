@@ -142,52 +142,52 @@ describe('generationHelpers', () => {
     const arr = arrayOf(f32, 2);
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(mockCtx, 1)).toEqual(snip(1, abstractInt));
-      expect(coerceToSnippet(mockCtx, 2.5)).toEqual(snip(2.5, abstractFloat));
-      expect(coerceToSnippet(mockCtx, -10)).toEqual(snip(-10, abstractInt));
-      expect(coerceToSnippet(mockCtx, 0.0)).toEqual(snip(0, abstractInt));
+      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
+      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
+      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt));
+      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt));
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(mockCtx, true)).toEqual(snip(true, bool));
-      expect(coerceToSnippet(mockCtx, false)).toEqual(snip(false, bool));
+      expect(coerceToSnippet(true)).toEqual(snip(true, bool));
+      expect(coerceToSnippet(false)).toEqual(snip(false, bool));
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
-      expect(coerceToSnippet(mockCtx, f32)).toEqual(snip(f32, UnknownData));
-      expect(coerceToSnippet(mockCtx, vec3i)).toEqual(snip(vec3i, UnknownData));
-      expect(coerceToSnippet(mockCtx, arr)).toEqual(snip(arr, UnknownData));
+      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
+      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
+      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
     });
 
     it('coerces arrays to unknown', () => {
-      const resInt = coerceToSnippet(mockCtx, [1, 2, 3]);
+      const resInt = coerceToSnippet([1, 2, 3]);
       expect(resInt.dataType.type).toBe('unknown');
 
-      const resFloat = coerceToSnippet(mockCtx, [1.0, 2.5, -0.5]);
+      const resFloat = coerceToSnippet([1.0, 2.5, -0.5]);
       expect(resFloat.dataType.type).toBe('unknown');
     });
 
     it('returns UnknownData for arrays of incompatible types', () => {
-      const res = coerceToSnippet(mockCtx, [1, true, 'hello']);
+      const res = coerceToSnippet([1, true, 'hello']);
       expect(res.dataType).toBe(UnknownData);
       expect(res.value).toEqual([1, true, 'hello']); // Original array value
     });
 
     it('returns UnknownData for empty arrays', () => {
-      const res = coerceToSnippet(mockCtx, []);
+      const res = coerceToSnippet([]);
       expect(res.dataType).toBe(UnknownData);
       expect(res.value).toEqual([]);
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet(mockCtx, 'foo')).toEqual(snip('foo', UnknownData));
-      expect(coerceToSnippet(mockCtx, {})).toEqual(snip({}, UnknownData));
-      expect(coerceToSnippet(mockCtx, null)).toEqual(snip(null, UnknownData));
-      expect(coerceToSnippet(mockCtx, undefined)).toEqual(
+      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
+      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
+      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
+      expect(coerceToSnippet(undefined)).toEqual(
         snip(undefined, UnknownData),
       );
       const fn = () => {};
-      expect(coerceToSnippet(mockCtx, fn)).toEqual(snip(fn, UnknownData));
+      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
     });
   });
 });

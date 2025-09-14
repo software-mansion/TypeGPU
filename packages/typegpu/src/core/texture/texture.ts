@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type {
   F32,
   I32,
@@ -14,6 +14,7 @@ import {
   $getNameForward,
   $internal,
   $ownSnippet,
+  $resolve,
   $runtimeResource,
 } from '../../shared/symbols.ts';
 import type {
@@ -495,18 +496,16 @@ class TgpuFixedStorageTextureImpl
     this.texelDataType = texelFormatToDataType[this._format];
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
   $name(label: string): this {
     this._texture.$name(label);
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -550,13 +549,11 @@ export class TgpuLaidOutStorageTextureImpl
     setName(this, _membership.key);
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
@@ -611,18 +608,11 @@ class TgpuFixedSampledTextureImpl
     this.channelDataType = texelFormatToChannelType[this._format];
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  $name(label: string): this {
-    this._texture.$name(label);
-    return this;
-  }
-
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
@@ -650,6 +640,11 @@ class TgpuFixedSampledTextureImpl
     return id;
   }
 
+  $name(label: string): this {
+    this._texture.$name(label);
+    return this;
+  }
+
   toString() {
     return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
@@ -672,13 +667,11 @@ export class TgpuLaidOutSampledTextureImpl
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 
-  [$ownSnippet](ctx: ResolutionCtx): Snippet {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(ctx.resolve(this), this as any);
-  }
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 

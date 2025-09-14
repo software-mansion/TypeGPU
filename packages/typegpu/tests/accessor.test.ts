@@ -97,10 +97,10 @@ describe('tgpu.accessor', () => {
     // overriding to green
     const getColorWithGreen = getColor.with(colorAccess, d.vec3f(0, 1, 0));
 
-    const main = tgpu.fn([])(`() {
-        return getColorWithGreen();
-      }`)
-      .$uses({ getColorWithGreen });
+    const main = tgpu.fn([])`() {
+      return getColorWithGreen();
+    }
+    `.$uses({ getColorWithGreen });
 
     expect(parseResolved({ main })).toBe(
       parse(/* wgsl */ `

@@ -32,6 +32,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -289,7 +290,7 @@ ${this.ctx.pre}}`;
         const propValue = (target.value as any)[property];
 
         // We try to extract any type information based on the prop's value
-        return coerceToSnippet(this.ctx, propValue);
+        return coerceToSnippet(propValue);
       }
 
       if (wgsl.isPtr(target.dataType)) {
@@ -317,7 +318,7 @@ ${this.ctx.pre}}`;
       ) {
         // We're operating on a vector that's known at resolution time
         // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
-        return coerceToSnippet(this.ctx, (target.value as any)[property]);
+        return coerceToSnippet((target.value as any)[property]);
       }
 
       return snip(
@@ -348,7 +349,6 @@ ${this.ctx.pre}}`;
           Array.isArray(propertyNode) && propertyNode[0] === NODE.numericLiteral
         ) {
           return coerceToSnippet(
-            this.ctx,
             // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
             (target.value as any)[propertyNode[1] as number],
           );
@@ -731,7 +731,7 @@ ${this.ctx.pre}else ${alternate}`;
 
 function assertExhaustive(value: never): never {
   throw new Error(
-    `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
+    `'${safeStringify(value)}' was not handled by the WGSL generator.`,
   );
 }
 
