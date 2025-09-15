@@ -13,14 +13,14 @@ export function useUniformValue<
   TSchema extends d.AnyWgslData,
   TValue extends d.Infer<TSchema>,
 >(
-  schema: TSchema,
+  schema: ValidateUniformSchema<TSchema>,
   initialValue?: TValue | undefined,
 ): UniformValue<TSchema, TValue> {
   const root = useRoot();
 
   const [uniformBuffer] = useState(() => {
     return root.createUniform(
-      schema as ValidateUniformSchema<TSchema>,
+      schema,
       initialValue,
     );
   });
@@ -51,5 +51,5 @@ export function useUniformValue<
     };
   }, []);
 
-  return uniformValue;
+  return uniformValue as UniformValue<TSchema, TValue>;
 }
