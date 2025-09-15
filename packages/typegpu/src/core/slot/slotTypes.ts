@@ -64,8 +64,6 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
  */
 export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 
-export type UnwrapSlot<T> = T extends TgpuSlot<infer U> ? U : T;
-
 export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
 export type Providing = {

@@ -609,6 +609,11 @@ class TgpuFixedSampledTextureImpl
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
   [$ownSnippet] = snip(this, this as any);
 
+  $name(label: string): this {
+    this._texture.$name(label);
+    return this;
+  }
+
   [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
 
@@ -635,11 +640,6 @@ class TgpuFixedSampledTextureImpl
     );
 
     return id;
-  }
-
-  $name(label: string): this {
-    this._texture.$name(label);
-    return this;
   }
 
   toString() {

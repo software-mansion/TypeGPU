@@ -267,9 +267,9 @@ export interface ResolutionCtx {
 }
 
 /**
- * Houses a method on the symbol '$resolve` that returns a snippet
- * representing it, as opposed to offloading the resolution
- * to another mechanism.
+ * Houses a method on the symbol '$resolve` that returns a
+ * code string representing it, as opposed to offloading the
+ * resolution to another mechanism.
  */
 export interface SelfResolvable {
   [$internal]: unknown;

@@ -89,6 +89,30 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     this.#initialValue = initialValue;
   }
 
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.names.makeUnique(getName(this));
+    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)}`;
+
+    if (this.#initialValue) {
+      ctx.addDeclaration(
+        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType)};`,
+      );
+    } else {
+      ctx.addDeclaration(`${pre};`);
+    }
+
+    return id;
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
+  }
+
+  toString() {
+    return `var:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
     const accessPath = `var:${getName(this) ?? '<unnamed>'}.$`;
@@ -101,15 +125,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
     }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
-  }
-
-  $name(label: string) {
-    setName(this, label);
-    return this;
-  }
-
-  toString() {
-    return `var:${getName(this) ?? '<unnamed>'}`;
   }
 
   get $(): InferGPU<TDataType> {
@@ -174,20 +189,5 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   set value(v: InferGPU<TDataType>) {
     this.$ = v;
-  }
-
-  [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
-    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)}`;
-
-    if (this.#initialValue) {
-      ctx.addDeclaration(
-        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType)};`,
-      );
-    } else {
-      ctx.addDeclaration(`${pre};`);
-    }
-
-    return id;
   }
 }

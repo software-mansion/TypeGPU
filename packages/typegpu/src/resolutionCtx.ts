@@ -14,7 +14,7 @@ import {
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from './data/snippet.ts';
+import { snip, type Snippet } from './data/snippet.ts';
 import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
 import {
   invariant,
@@ -638,15 +638,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     schema?: AnyData | UnknownData | undefined,
     exact = false,
   ): string {
-    if (isSnippet(item)) {
-      if (!schema) {
-        // biome-ignore lint/style/noParameterAssign: it's fine
-        schema = item.dataType;
-      }
-      // biome-ignore lint/style/noParameterAssign: it's fine
-      item = item.value;
-    }
-
     if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
