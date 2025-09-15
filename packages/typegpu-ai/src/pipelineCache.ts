@@ -1,16 +1,13 @@
 import { TgpuComputePipeline } from '../../typegpu/src/core/pipeline/computePipeline';
 import { TgpuRoot } from '../../typegpu/src/core/root/rootTypes';
-import type { TgpuFn } from 'typegpu';
+import type { TgpuComputeFn, TgpuFn } from 'typegpu';
 import { nnCompute } from './compute/compute';
 import { activationFunctionSlot } from './schemas';
 import { relu } from './compute/activationFunctions';
 
 export type Layer =
-  | { kind: 'Gemm' }
-  | { kind: 'Conv' }
-  | { kind: 'Relu' }
-  | { kind: 'Sigmoid' };
-
+  | { kind: 'Gemm', compute: TgpuComputeFn }
+  | { kind: 'Conv', compute: TgpuComputeFn  };
 export type Activation =
   | { kind: 'relu'; fn: TgpuFn }
   | { kind: 'identity'; fn: TgpuFn }
@@ -38,7 +35,7 @@ export class PipelineCache {
     if (!pipeline) {
       pipeline = this.root['~unstable']
         .with(activationFunctionSlot, activation.fn)
-        .withCompute(nnCompute)
+        .withCompute(layer.compute)
         .createPipeline();
       layerObj.set(activation, pipeline);
     }

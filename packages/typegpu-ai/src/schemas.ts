@@ -2,9 +2,11 @@ import tgpu, {
   type StorageFlag,
   TgpuBindGroup,
   type TgpuBuffer,
+  TgpuComputeFn,
   TgpuFn,
 } from 'typegpu';
 import * as d from 'typegpu/data';
+import { Layer, type Activation } from './pipelineCache';
 
 export const calculateIndex = tgpu.fn([d.vec3u, d.vec3u], d.u32)((id, nwg) =>
   id.x + id.y * nwg.x + id.z * nwg.x * nwg.y
@@ -35,16 +37,33 @@ export const weightsBiasesLayout = tgpu.bindGroupLayout({
 
 export const activationFunctionSlot = tgpu.slot<TgpuFn>();
 
-export interface DenseLayerGpu {
-  inSize: number;
-  outSize: number;
-  weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-  ioBindGroup: TgpuBindGroup;
-  wbBindGroup: TgpuBindGroup;
-}
+// Generic GPU layer representation (will expand with Conv, etc.)
+export type GpuLayer =
+  | {
+    kind: 'Gemm';
+    inSize: number;
+    outSize: number;
+    weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    io: TgpuBindGroup;            // input/output buffers + sizes
+    params: TgpuBindGroup;        // weights + biases
+    compute: TgpuComputeFn;            // compute function descriptor (for pipeline cache)
+    activation: Activation;       // activation to apply (identity for final layer)
+  }
+  | {
+    kind: 'Conv';
+    // Example fields (to be fleshed out when Conv implemented):
+    // inChannels: number;
+    // outChannels: number;
+    // kernelSize: [number, number];
+    // stride: [number, number];
+    // padding: [number, number];
+    // weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    // biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    descriptor: Layer;
+    activation: Activation;
+  };
 
 export interface NetworkRunner {
   run(input: number[] | Float32Array): Promise<number[]>;
-  readonly layers: DenseLayerGpu[];
 }
