@@ -623,8 +623,12 @@ export interface TgpuRoot extends Unwrapper {
 export interface TgpuRootInternals {
   /**
    * This state is used to determine if we should submit command buffer immediately to the device queue.
+   * Also, it holds performance callbacks to invoke after flushing.
    */
-  ongoingBatch: boolean;
+  readonly batchState: {
+    ongoingBatch: boolean;
+    performanceCallbacks: (() => void)[];
+  };
   /**
    * The current command encoder. This property
    * holds the same value throughout the entire `batch()` invocation,

@@ -40,21 +40,29 @@ describe('Batch', () => {
       .withCompute(entryFn)
       .createPipeline();
 
-    vi.spyOn(root[$internal], 'flush');
+    const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root.batch(() => {
       renderPipeline1.draw(7);
       computePipeline.dispatchWorkgroups(7);
       renderPipeline2.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
     });
 
-    expect(root[$internal].flush).toBeCalledTimes(1);
+    expect(flushMock).toBeCalledTimes(1);
   });
 
-  it('flushes immediately when used with performance callback', ({ root }) => {
+  it('flushes only once when used with performance callbacks and callbacks are invoked', async ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
-    const callback = vi.fn();
+
+    let resolve: () => void;
+    let donePerformancing: Promise<void>;
+    donePerformancing = new Promise<void>((r) => {
+      resolve = r;
+    });
+    const callback = vi.fn(() => {
+      resolve();
+    });
 
     const renderPipelineWithPerformance = root
       .withVertex(vertexFn, {})
@@ -86,48 +94,75 @@ describe('Batch', () => {
       .withCompute(entryFn)
       .createPipeline();
 
-    vi.spyOn(root[$internal], 'flush');
+    const flushMock = vi.spyOn(root[$internal], 'flush');
 
     // trying different permutations
     root.batch(() => {
       computePipeline.dispatchWorkgroups(7);
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithPerformance.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithTimestampWrites.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
+      expect(callback).toBeCalledTimes(0);
     });
-    expect(root[$internal].flush).toBeCalledTimes(2);
 
-    vi.spyOn(root[$internal], 'flush');
+    expect(flushMock).toBeCalledTimes(1);
+    await donePerformancing;
+    expect(callback).toBeCalledTimes(1);
+
+    flushMock.mockClear();
+    callback.mockClear();
+    donePerformancing = new Promise<void>((r) => {
+      resolve = r;
+    });
 
     root.batch(() => {
       renderPipelineWithPerformance.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
       computePipeline.dispatchWorkgroups(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithTimestampWrites.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
+      expect(callback).toBeCalledTimes(0);
     });
-    expect(root[$internal].flush).toBeCalledTimes(2);
 
-    vi.spyOn(root[$internal], 'flush');
+    expect(flushMock).toBeCalledTimes(1);
+    await donePerformancing;
+    expect(callback).toBeCalledTimes(1);
+
+    flushMock.mockClear();
+    callback.mockClear();
+    donePerformancing = new Promise<void>((r) => {
+      resolve = r;
+    });
 
     root.batch(() => {
       renderPipelineWithTimestampWrites.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
       computePipeline.dispatchWorkgroups(7);
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithPerformance.draw(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
+      expect(callback).toBeCalledTimes(0);
     });
-    expect(root[$internal].flush).toBeCalledTimes(2);
+
+    expect(flushMock).toBeCalledTimes(1);
+    await donePerformancing;
+    expect(callback).toBeCalledTimes(1);
   });
 
-  it('flushes properly with drawIndexed', ({ root }) => {
-    const callback = vi.fn();
+  it('flushes properly with drawIndexed', async ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
+
+    let resolve: () => void;
+    const donePerformancing = new Promise<void>((r) => {
+      resolve = r;
+    });
+    const callback = vi.fn(() => {
+      resolve();
+    });
 
     const renderPipeline1 = root
       .withVertex(vertexFn, {})
@@ -168,18 +203,21 @@ describe('Batch', () => {
       })
       .withIndexBuffer(indexBuffer);
 
-    vi.spyOn(root[$internal], 'flush');
+    const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root.batch(() => {
       renderPipeline1.drawIndexed(7);
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipeline2.drawIndexed(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
       renderPipeline3.drawIndexed(7);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(0);
+      expect(callback).toBeCalledTimes(0);
     });
 
-    expect(root[$internal].flush).toBeCalledTimes(2);
+    expect(flushMock).toBeCalledTimes(1);
+    await donePerformancing;
+    expect(callback).toBeCalledTimes(1);
   });
 
   it('flushes properly when used with beginRenderPass', ({ root }) => {
@@ -191,7 +229,7 @@ describe('Batch', () => {
     const bindGroupLayout = tgpu.bindGroupLayout({});
     const bindGroup = root.createBindGroup(bindGroupLayout, {});
 
-    vi.spyOn(root[$internal], 'flush');
+    const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root['~unstable'].beginRenderPass(
       { colorAttachments: [] },
@@ -201,7 +239,7 @@ describe('Batch', () => {
         pass.draw(7);
       },
     );
-    expect(root[$internal].flush).toBeCalledTimes(1);
+    expect(flushMock).toBeCalledTimes(1);
     root['~unstable'].beginRenderPass(
       { colorAttachments: [] },
       (pass) => {
@@ -210,9 +248,9 @@ describe('Batch', () => {
         pass.draw(7);
       },
     );
-    expect(root[$internal].flush).toBeCalledTimes(2);
+    expect(flushMock).toBeCalledTimes(2);
 
-    vi.spyOn(root[$internal], 'flush');
+    flushMock.mockClear();
 
     root['~unstable'].batch(() => {
       root['~unstable'].beginRenderPass(
@@ -223,7 +261,7 @@ describe('Batch', () => {
           pass.draw(7);
         },
       );
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
       root['~unstable'].beginRenderPass(
         { colorAttachments: [] },
         (pass) => {
@@ -232,23 +270,49 @@ describe('Batch', () => {
           pass.draw(7);
         },
       );
-      expect(root[$internal].flush).toBeCalledTimes(0);
+      expect(flushMock).toBeCalledTimes(0);
     });
-    expect(root[$internal].flush).toBeCalledTimes(1);
+    expect(flushMock).toBeCalledTimes(1);
   });
 
   it('flushes immediately after read-write operation', ({ root }) => {
     const wBuffer = root.createBuffer(d.u32);
     const rBuffer = root.createBuffer(d.u32, 7);
 
-    vi.spyOn(root[$internal], 'flush');
+    const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root.batch(() => {
       wBuffer.write(1929);
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      expect(flushMock).toBeCalledTimes(1);
       rBuffer.read();
-      expect(root[$internal].flush).toBeCalledTimes(2);
+      expect(flushMock).toBeCalledTimes(2);
     });
-    expect(root[$internal].flush).toBeCalledTimes(3);
+    expect(flushMock).toBeCalledTimes(3);
+  });
+
+  it('handles nesting itself with flushNestedBatch flag set to false', ({ root }) => {
+    const computePipeline = root
+      .withCompute(entryFn)
+      .createPipeline();
+
+    const flushMock = vi.spyOn(root[$internal], 'flush');
+
+    root.batch(() => {
+      root.batch(() => {
+        computePipeline.dispatchWorkgroups(1);
+      });
+      expect(flushMock).toBeCalledTimes(0);
+
+      root.batch(() => {
+        computePipeline.dispatchWorkgroups(1);
+      });
+      expect(flushMock).toBeCalledTimes(0);
+
+      root.batch(() => {
+        computePipeline.dispatchWorkgroups(1);
+      });
+      expect(flushMock).toBeCalledTimes(0);
+    });
+    expect(flushMock).toBeCalledTimes(1);
   });
 });

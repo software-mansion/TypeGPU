@@ -292,7 +292,7 @@ class TgpuRootImpl extends WithBindingImpl
 
     let commandEncoder: GPUCommandEncoder | undefined;
     this[$internal] = {
-      ongoingBatch: false,
+      batchState: { ongoingBatch: false, performanceCallbacks: [] },
 
       get commandEncoder() {
         if (!commandEncoder) {
@@ -313,15 +313,23 @@ class TgpuRootImpl extends WithBindingImpl
     };
   }
 
-  batch(callback: () => void) {
-    const nestedBatch = this[$internal].ongoingBatch;
-    this[$internal].ongoingBatch = true;
+  batch(callback: () => void, flushNestedBatch = false) {
+    const nestedBatch = this[$internal].batchState.ongoingBatch;
+    this[$internal].batchState.ongoingBatch = true;
     try {
       callback();
     } finally {
-      if (!nestedBatch) {
-        this[$internal].ongoingBatch = false;
+      if (flushNestedBatch) {
+      } else if (!nestedBatch) {
+        this[$internal].batchState.ongoingBatch = false;
         this[$internal].flush();
+        for (
+          const performanceCallback of this[$internal].batchState
+            .performanceCallbacks
+        ) {
+          performanceCallback();
+        }
+        this[$internal].batchState.performanceCallbacks = [];
       }
     }
   }
@@ -701,7 +709,7 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-    if (!this[$internal].ongoingBatch) {
+    if (!this[$internal].batchState.ongoingBatch) {
       this[$internal].flush();
     }
   }

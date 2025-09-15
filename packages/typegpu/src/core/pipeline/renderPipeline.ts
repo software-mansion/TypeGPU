@@ -566,14 +566,28 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (
+      internals.priors.performanceCallback &&
+      branch[$internal].batchState.ongoingBatch
+    ) {
+      branch[$internal].batchState.performanceCallbacks.push(() =>
+        triggerPerformanceCallback({ root: branch, priors: internals.priors })
+      );
+    } else if (
+      internals.priors.performanceCallback &&
+      !branch[$internal].batchState.ongoingBatch
+    ) {
+      branch[$internal].flush();
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch[$internal].ongoingBatch
-      ? ({})
-      : branch[$internal].flush();
+      });
+    } else if (
+      !branch[$internal].batchState.ongoingBatch &&
+      !internals.priors.performanceCallback
+    ) {
+      branch[$internal].flush();
+    }
   }
 
   drawIndexed(
@@ -616,14 +630,28 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (
+      internals.priors.performanceCallback &&
+      branch[$internal].batchState.ongoingBatch
+    ) {
+      branch[$internal].batchState.performanceCallbacks.push(() =>
+        triggerPerformanceCallback({ root: branch, priors: internals.priors })
+      );
+    } else if (
+      internals.priors.performanceCallback &&
+      !branch[$internal].batchState.ongoingBatch
+    ) {
+      branch[$internal].flush();
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch[$internal].ongoingBatch
-      ? ({})
-      : branch[$internal].flush();
+      });
+    } else if (
+      !branch[$internal].batchState.ongoingBatch &&
+      !internals.priors.performanceCallback
+    ) {
+      branch[$internal].flush();
+    }
   }
 }
 

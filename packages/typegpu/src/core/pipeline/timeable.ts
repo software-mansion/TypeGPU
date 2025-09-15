@@ -159,11 +159,7 @@ export function triggerPerformanceCallback({
     0,
   );
 
-  root[$internal].flush();
-  root.device.queue.onSubmittedWorkDone().then(async () => {
-    if (!querySet.available) {
-      return;
-    }
+  (async () => {
     const result = await querySet.read();
     const start =
       result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
@@ -174,5 +170,5 @@ export function triggerPerformanceCallback({
     }
 
     await callback(start, end);
-  });
+  })();
 }
