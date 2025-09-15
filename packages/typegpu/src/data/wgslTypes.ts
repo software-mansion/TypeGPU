@@ -655,6 +655,8 @@ export type AnyFloat16VecInstance = v2h | v3h | v4h;
 
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
+export type AnyUnsignedVecInstance = v2u | v3u | v4u;
+
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
@@ -1842,5 +1844,19 @@ export function isNumericSchema(
       type === 'f16' ||
       type === 'i32' ||
       type === 'u32')
+  );
+}
+
+export function isHalfPrecisionSchema(
+  schema: unknown,
+): schema is F16 | Vec2h | Vec3h | Vec4h {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    !!(schema as BaseData)?.[$internal] &&
+    (type === 'f16' ||
+      type === 'vec2h' ||
+      type === 'vec3h' ||
+      type === 'vec4h')
   );
 }
