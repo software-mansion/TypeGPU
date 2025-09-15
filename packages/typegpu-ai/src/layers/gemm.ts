@@ -1,4 +1,3 @@
-
 import type { OnnxModel } from '../onnx/types.ts';
 
 export interface GemmLayerSpec {
@@ -34,7 +33,10 @@ export function extractGemmLayerSpecs(model: OnnxModel): GemmLayerSpec[] {
     //   weightsData = transposeFloat32(weightsData, outDim, inDim);
     // }
 
-    specs.push({ weights: weightsData, biases: biasTensor.data as Float32Array });
+    specs.push({
+      weights: weightsData,
+      biases: biasTensor.data as Float32Array,
+    });
   }
   return specs;
 }
@@ -46,4 +48,3 @@ export function computeMaxBufferSize(specs: GemmLayerSpec[]): number {
   );
   return Math.max(maxOut, maxIn);
 }
-

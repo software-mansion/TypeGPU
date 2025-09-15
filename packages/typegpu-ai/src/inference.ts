@@ -11,7 +11,7 @@ import {
   workgroupSize,
 } from './schemas.ts';
 import { identity, relu } from './compute/activationFunctions.ts';
-import { extractGemmLayerSpecs, computeMaxBufferSize } from './layers/gemm.ts';
+import { computeMaxBufferSize, extractGemmLayerSpecs } from './layers/gemm.ts';
 import { validateLayerSizes } from './sizeMismatch.ts';
 
 // TODO: delegate calcing maxBufferSize to OnnxLoader
@@ -44,7 +44,12 @@ export function createDenseReluNetwork(
   let prevOut: number | null = null;
   for (let idx = 0; idx < layerSpecs.length; idx++) {
     const { weights, biases } = layerSpecs[idx]!;
-    const { inSize, outSize } = validateLayerSizes(weights, biases, idx, prevOut);
+    const { inSize, outSize } = validateLayerSizes(
+      weights,
+      biases,
+      idx,
+      prevOut,
+    );
     if (idx === 0) prevOut = inSize; // initial input size
 
     const weightsBuffer = root.createBuffer(
@@ -96,9 +101,9 @@ export function createDenseReluNetwork(
       const pipeline = isLast ? idPipeline : reluPipeline;
 
       pipeline.with(ioLayout, layer.ioBindGroup)
-      .with(weightsBiasesLayout, layer.wbBindGroup)
-      .dispatchWorkgroups(Math.ceil(layer.outSize / workgroupSize));
-  
+        .with(weightsBiasesLayout, layer.wbBindGroup)
+        .dispatchWorkgroups(Math.ceil(layer.outSize / workgroupSize));
+
       await device.queue.onSubmittedWorkDone();
     }
 

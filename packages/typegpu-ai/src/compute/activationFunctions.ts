@@ -42,6 +42,7 @@ export const softmaxCompute = tgpu['~unstable'].computeFn({
 
   // 3) Outputs
   for (let i = d.u32(0); i < length; i = i + d.u32(1)) {
-    ioLayout.$.output[i] = std.exp((ioLayout.$.input[i] as number) - maxVal) / denom;
+    ioLayout.$.output[i] = std.exp((ioLayout.$.input[i] as number) - maxVal) /
+      denom;
   }
 });
