@@ -126,7 +126,7 @@ describe('caustics example', () => {
       }
 
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_4) -> @location(0) vec4f {
-        var skewMat = mat2x2f(vec2f(cos(0.2), sin(0.2)), vec2f(((-sin(0.2) * 10) + (_arg_0.uv.x * 3)), (cos(0.2) * 5)));
+        var skewMat = mat2x2f(vec2f(0.9800665974617004, 0.19866932928562164), vec2f(((-0.19866933079506122 * 10) + (_arg_0.uv.x * 3)), 4.900332889206208));
         var skewedUv = (skewMat * _arg_0.uv);
         var tile = tilePattern_6((skewedUv * tileDensity_5));
         var albedo = mix(vec3f(0.10000000149011612), vec3f(1), tile);
