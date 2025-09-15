@@ -386,7 +386,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this._logGenerator = opts.root
+    this.#logGenerator = opts.root
       ? new LogGeneratorImpl(opts.root)
       : new LogGeneratorNullImpl();
   }
@@ -434,11 +434,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   generateLog(args: Snippet[]): Snippet {
-    return this._logGenerator.generateLog(this, args);
+    return this.#logGenerator.generateLog(this, args);
   }
 
   get logResources(): LogResources | undefined {
-    return this._logGenerator.logResources;
+    return this.#logGenerator.logResources;
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
