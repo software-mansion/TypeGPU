@@ -124,7 +124,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
+    }, valueProxyHandler) as InferGPU<TDataType>;
   }
 
   get $(): InferGPU<TDataType> {

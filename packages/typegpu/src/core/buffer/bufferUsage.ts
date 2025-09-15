@@ -145,7 +145,7 @@ class TgpuFixedBufferImpl<
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => accessPath,
-    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TData>;
+    }, valueProxyHandler) as InferGPU<TData>;
   }
 
   get $(): InferGPU<TData> {
@@ -265,7 +265,7 @@ export class TgpuLaidOutBufferImpl<
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => accessPath,
-    }, valueProxyHandler(accessPath, schema)) as InferGPU<TData>;
+    }, valueProxyHandler) as InferGPU<TData>;
   }
 
   get $(): InferGPU<TData> {

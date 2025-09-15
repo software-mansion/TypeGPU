@@ -72,7 +72,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
         return ctx.resolve(self);
       },
       toString: () => accessPath,
-    }, valueProxyHandler(accessPath, this.schema)) as InferGPU<T>;
+    }, valueProxyHandler) as InferGPU<T>;
   }
 
   /**

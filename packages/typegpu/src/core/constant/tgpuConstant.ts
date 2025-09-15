@@ -85,7 +85,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => accessPath,
-    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
+    }, valueProxyHandler) as InferGPU<TDataType>;
   }
 
   get value(): InferGPU<TDataType> {
