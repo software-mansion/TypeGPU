@@ -88,8 +88,8 @@ class TgpuFixedBufferImpl<
   TUsage extends BindableBufferUsage,
 > implements
   TgpuBufferUsage<TData, TUsage>,
-  TgpuFixedBufferUsage<TData>,
-  SelfResolvable {
+  SelfResolvable,
+  TgpuFixedBufferUsage<TData> {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
   readonly resourceType = 'buffer-usage' as const;
@@ -102,6 +102,35 @@ class TgpuFixedBufferImpl<
   ) {
     this[$internal] = { dataType: buffer.dataType };
     this[$getNameForward] = buffer;
+  }
+
+  $name(label: string) {
+    this.buffer.$name(label);
+    return this;
+  }
+
+  [$resolve](ctx: ResolutionCtx): string {
+    const dataType = this.buffer.dataType;
+    const id = ctx.names.makeUnique(getName(this));
+    const { group, binding } = ctx.allocateFixedEntry(
+      this.usage === 'uniform'
+        ? { uniform: dataType }
+        : { storage: dataType, access: this.usage },
+      this.buffer,
+    );
+    const usageTemplate = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${binding}) var<${usageTemplate}> ${id}: ${
+        ctx.resolve(dataType)
+      };`,
+    );
+
+    return id;
+  }
+
+  toString(): string {
+    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
@@ -117,15 +146,6 @@ class TgpuFixedBufferImpl<
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => accessPath,
     }, valueProxyHandler(accessPath, dataType)) as InferGPU<TData>;
-  }
-
-  $name(label: string) {
-    this.buffer.$name(label);
-    return this;
-  }
-
-  toString(): string {
-    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
   get $(): InferGPU<TData> {
@@ -194,26 +214,6 @@ class TgpuFixedBufferImpl<
   set value(value: InferGPU<TData>) {
     this.$ = value;
   }
-
-  [$resolve](ctx: ResolutionCtx): string {
-    const dataType = this.buffer.dataType;
-    const id = ctx.names.makeUnique(getName(this));
-    const { group, binding } = ctx.allocateFixedEntry(
-      this.usage === 'uniform'
-        ? { uniform: dataType }
-        : { storage: dataType, access: this.usage },
-      this.buffer,
-    );
-    const usageTemplate = usageToVarTemplateMap[this.usage];
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usageTemplate}> ${id}: ${
-        ctx.resolve(dataType)
-      };`,
-    );
-
-    return id;
-  }
 }
 
 export class TgpuLaidOutBufferImpl<
@@ -236,6 +236,24 @@ export class TgpuLaidOutBufferImpl<
     setName(this, membership.key);
   }
 
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.names.makeUnique(getName(this));
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
+    const usageTemplate = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${this.#membership.idx}) var<${usageTemplate}> ${id}: ${
+        ctx.resolve(this.dataType)
+      };`,
+    );
+
+    return id;
+  }
+
+  toString(): string {
+    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get [$gpuValueOf](): InferGPU<TData> {
     const schema = this.dataType as unknown as AnyData;
     const accessPath = `${this.usage}:${getName(this) ?? '<unnamed>'}.$`;
@@ -250,10 +268,6 @@ export class TgpuLaidOutBufferImpl<
     }, valueProxyHandler(accessPath, schema)) as InferGPU<TData>;
   }
 
-  toString(): string {
-    return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
-  }
-
   get $(): InferGPU<TData> {
     if (inCodegenMode()) {
       return this[$gpuValueOf];
@@ -266,20 +280,6 @@ export class TgpuLaidOutBufferImpl<
 
   get value(): InferGPU<TData> {
     return this.$;
-  }
-
-  [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
-    const group = ctx.allocateLayoutEntry(this.#membership.layout);
-    const usageTemplate = usageToVarTemplateMap[this.usage];
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var<${usageTemplate}> ${id}: ${
-        ctx.resolve(this.dataType)
-      };`,
-    );
-
-    return id;
   }
 }
 

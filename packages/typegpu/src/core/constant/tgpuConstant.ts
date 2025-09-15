@@ -55,6 +55,25 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     this.#value = value;
   }
 
+  $name(label: string) {
+    setName(this, label);
+    return this;
+  }
+
+  [$resolve](ctx: ResolutionCtx) {
+    const id = ctx.names.makeUnique(getName(this));
+    const resolvedDataType = ctx.resolve(this.dataType);
+    const resolvedValue = ctx.resolve(this.#value, this.dataType);
+
+    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
+
+    return id;
+  }
+
+  toString() {
+    return `const:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.dataType;
     const accessPath = `const:${getName(this) ?? '<unnamed>'}.$`;
@@ -69,15 +88,6 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
   }
 
-  $name(label: string) {
-    setName(this, label);
-    return this;
-  }
-
-  toString() {
-    return `const:${getName(this) ?? '<unnamed>'}`;
-  }
-
   get value(): InferGPU<TDataType> {
     if (inCodegenMode()) {
       return this[$gpuValueOf];
@@ -88,15 +98,5 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
   get $(): InferGPU<TDataType> {
     return this.value;
-  }
-
-  [$resolve](ctx: ResolutionCtx) {
-    const id = ctx.names.makeUnique(getName(this));
-    const resolvedDataType = ctx.resolve(this.dataType);
-    const resolvedValue = ctx.resolve(this.#value, this.dataType);
-
-    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
-
-    return id;
   }
 }

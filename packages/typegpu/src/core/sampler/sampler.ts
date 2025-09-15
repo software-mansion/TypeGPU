@@ -289,6 +289,11 @@ class TgpuFixedComparisonSamplerImpl
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
   [$ownSnippet] = snip(this, this as any);
 
+  $name(label: string) {
+    setName(this, label);
+    return this;
+  }
+
   [$resolve](ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(getName(this));
     const { group, binding } = ctx.allocateFixedEntry(
@@ -301,11 +306,6 @@ class TgpuFixedComparisonSamplerImpl
     );
 
     return id;
-  }
-
-  $name(label: string) {
-    setName(this, label);
-    return this;
   }
 
   toString() {
