@@ -115,21 +115,21 @@ By default, TypeGPU pipelines and render passes are submitted to the GPU immedia
 If you want to give the GPU an opportunity to better utilize its resources,
 you can use the `batch` function.
 
-The `batch` function allows you to submit multiple pipelines and renderPasses to the GPU in a single call.
+The `batch` function allows you to submit multiple pipelines and render passes to the GPU in a single call.
 Under the hood, it creates `GPUCommandEncoder`,
 records the commands from the provided callback function,
 and submits the resulting `GPUCommandBuffer` to the device.
 
 :::caution
-Calling a pipeline with a performance callback always flushes the command encoder.
-Similarly, read–write operations on buffers also flush the command encoder.
+Read–write operations always flush the command encoder.
+When you call a pipeline with a performance callback, the callback is invoked at the end of the batch.
 We've prepared a table showing when a flush occurs (i.e., when a new command encoder is created). Keep this in mind when using `batch`.
 :::
 
 | Invocation                        | Inside batch env   | Outside batch env  |
 |-----------------------------------|--------------------|--------------------|
 | raw pipeline                      | No Flush ❌        | Flush ✅           |
-| pipeline with performance callback| Flush ✅           | Flush ✅           |
+| pipeline with performance callback| Flush ❌ / ⚠️        | Flush ✅           |
 | pipeline with timestamp writes    | No Flush ❌        | Flush ✅           |
 | beginRenderPass                   | No Flush ❌        | Flush ✅           |
 | write                             | Flush ✅           | Flush ✅           |
@@ -156,12 +156,11 @@ const renderPipeline = root['~unstable']
   .withFragment(fragmentFn, { format: 'rgba8unorm' })
   .createPipeline();
 
-const renderPipelineWithPerformanceCallback = renderPipeline
-  .withPerformanceCallback(() => {});
-
 const computePipeline = root['~unstable']
   .withCompute(entryFn)
   .createPipeline();
+
+const buffer = root.createBuffer(d.arrayOf(d.f32, 1024));
 
 // ---cut---
 const render = () => {
@@ -169,9 +168,8 @@ const render = () => {
   renderPipeline.draw(777);
   // more operations...
 
-  renderPipelineWithPerformanceCallback.draw(777);
-  // force flush caused by renderPipelineWithPerformanceCallback
-  // new command encoder
+  buffer.write(Array.from({ length: 1024 }, () => Math.random()));
+  // force flush caused by write, new command encoder
 };
 
 root['~unstable'].batch(render);
@@ -181,4 +179,8 @@ root['~unstable'].batch(render);
 The calls in the batch callback have to be made synchronously.
 This may seem limiting, but our reasoning is that if you need to wait for something inside
 a batch, just split the batch in two.
+:::
+
+:::danger
+Nested batching is not supported and will result in a runtime error.
 :::

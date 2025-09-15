@@ -292,7 +292,10 @@ class TgpuRootImpl extends WithBindingImpl
 
     let commandEncoder: GPUCommandEncoder | undefined;
     this[$internal] = {
-      batchState: { ongoingBatch: false, performanceCallbacks: [] },
+      batchState: {
+        ongoingBatch: false,
+        performanceCallbacks: [],
+      },
 
       get commandEncoder() {
         if (!commandEncoder) {
@@ -313,24 +316,26 @@ class TgpuRootImpl extends WithBindingImpl
     };
   }
 
-  batch(callback: () => void, flushNestedBatch = false) {
+  batch(callback: () => void) {
     const nestedBatch = this[$internal].batchState.ongoingBatch;
+    if (nestedBatch) {
+      throw new Error('Nested batch is not allowed');
+    }
+
     this[$internal].batchState.ongoingBatch = true;
+
     try {
       callback();
     } finally {
-      if (flushNestedBatch) {
-      } else if (!nestedBatch) {
-        this[$internal].batchState.ongoingBatch = false;
-        this[$internal].flush();
-        for (
-          const performanceCallback of this[$internal].batchState
-            .performanceCallbacks
-        ) {
-          performanceCallback();
-        }
-        this[$internal].batchState.performanceCallbacks = [];
+      this[$internal].flush();
+      for (
+        const performanceCallback of this[$internal].batchState
+          .performanceCallbacks
+      ) {
+        performanceCallback();
       }
+      this[$internal].batchState.ongoingBatch = false;
+      this[$internal].batchState.performanceCallbacks = [];
     }
   }
 
