@@ -89,7 +89,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.requestUniqueName(this);
+    const id = ctx.getUniqueName(this);
 
     if (this.#initialValue) {
       ctx.addDeclaration(

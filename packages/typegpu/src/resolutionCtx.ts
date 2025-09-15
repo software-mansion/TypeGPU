@@ -1,8 +1,8 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import {
+  getUniqueName,
   type Namespace,
   type NamespaceInternal,
-  requestUniqueName,
 } from './core/resolve/namespace.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
@@ -367,8 +367,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#namespace = opts.namespace[$internal];
   }
 
-  requestUniqueName(resource: object): string {
-    return requestUniqueName(this.#namespace, resource);
+  getUniqueName(resource: object): string {
+    return getUniqueName(this.#namespace, resource);
   }
 
   get pre(): string {

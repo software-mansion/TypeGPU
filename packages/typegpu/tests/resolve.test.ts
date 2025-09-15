@@ -64,7 +64,7 @@ describe('tgpu resolve', () => {
       },
 
       '~resolve'(ctx: ResolutionCtx) {
-        const name = ctx.requestUniqueName(this);
+        const name = ctx.getUniqueName(this);
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );

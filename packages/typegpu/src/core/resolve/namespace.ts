@@ -79,7 +79,7 @@ export interface NamespaceOptions {
   names?: 'random' | 'strict' | undefined;
 }
 
-export function requestUniqueName(
+export function getUniqueName(
   namespace: NamespaceInternal,
   resource: object,
 ): string {

@@ -259,7 +259,7 @@ export interface ResolutionCtx {
 
   get varyingLocations(): Record<string, number> | undefined;
 
-  requestUniqueName(resource: object): string;
+  getUniqueName(resource: object): string;
 }
 
 /**

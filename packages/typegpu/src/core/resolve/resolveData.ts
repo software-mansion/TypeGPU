@@ -127,7 +127,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   if (struct[$internal].isAbstruct) {
     throw new Error('Cannot resolve abstract struct types to WGSL.');
   }
-  const id = ctx.requestUniqueName(struct);
+  const id = ctx.getUniqueName(struct);
 
   ctx.addDeclaration(`\
 struct ${id} {
@@ -157,7 +157,7 @@ ${
  * ```
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
-  const id = ctx.requestUniqueName(unstruct);
+  const id = ctx.getUniqueName(unstruct);
 
   ctx.addDeclaration(`\
 struct ${id} {
