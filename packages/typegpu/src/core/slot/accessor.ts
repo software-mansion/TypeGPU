@@ -61,32 +61,37 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
 
   get [$gpuValueOf](): InferGPU<T> {
     const self = this;
-    const schema = this.schema;
     const accessPath = `accessor:${getName(this) ?? '<unnamed>'}.$`;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet](): Snippet {
-        // biome-ignore lint/style/noNonNullAssertion: it's there
-        const ctx = getResolutionCtx()!;
-        const value = getGpuValueRecursively(ctx.unwrap(self.slot));
-
-        if (isBufferUsage(value) || isBufferShorthand(value)) {
-          return snip(value, schema);
-        }
-
-        if (isTgpuFn(value)) {
-          return value[$internal].gpuImpl();
-        }
-
-        return snip(value, schema);
+        return self.#createSnippet();
       },
       [$resolve](ctx: ResolutionCtx) {
-        const snippet = this[$ownSnippet] as Snippet;
-        return ctx.resolve(snippet.value, snippet.dataType);
+        return ctx.resolve(self);
       },
       toString: () => accessPath,
-    }, valueProxyHandler(accessPath, schema)) as InferGPU<T>;
+    }, valueProxyHandler(accessPath, this.schema)) as InferGPU<T>;
+  }
+
+  /**
+   * @returns A snippet representing the accessor.
+   */
+  #createSnippet() {
+    // biome-ignore lint/style/noNonNullAssertion: it's there
+    const ctx = getResolutionCtx()!;
+    const value = getGpuValueRecursively(ctx.unwrap(this.slot));
+
+    if (isBufferUsage(value) || isBufferShorthand(value)) {
+      return snip(value, this.schema);
+    }
+
+    if (isTgpuFn(value)) {
+      return value[$internal].gpuImpl();
+    }
+
+    return snip(value, this.schema);
   }
 
   $name(label: string) {
@@ -112,12 +117,8 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this.value;
   }
 
-  /**
-   * This resolve is used when an accessor is referenced directly as an
-   * external in a WGSL template. In other cases, it's the GPU value that
-   * gets resolved.
-   */
   [$resolve](ctx: ResolutionCtx): string {
-    return ctx.resolve(this[$gpuValueOf], this.schema);
+    const snippet = this.#createSnippet();
+    return ctx.resolve(snippet.value, snippet.dataType);
   }
 }
