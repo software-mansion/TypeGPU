@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type {
   F32,
   I32,
