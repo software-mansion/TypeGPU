@@ -1,5 +1,5 @@
 import { createJiti } from 'jiti';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 import { imagetools } from 'vite-imagetools';
 import type TypeGPUPlugin from 'unplugin-typegpu/vite';
 
@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [
     typegpu({ include: [/\.m?[jt]sx?/] }),
     /** @type {any} */ imagetools(),
-  ],
+  ] as Plugin[],
   server: {
     proxy: {
       '/TypeGPU': {
