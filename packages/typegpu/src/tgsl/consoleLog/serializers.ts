@@ -1,7 +1,7 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { arrayOf } from '../../data/array.ts';
-import { bool, u32 } from '../../data/numeric.ts';
+import { bool, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
 import type {
@@ -18,6 +18,14 @@ import type { LogGeneratorOptions, SerializedLogCallData } from './types.ts';
 
 const serializeBool = fn([bool], arrayOf(u32, 1))`(b) => {
   return array<u32, 1>(u32(b));
+}`;
+
+const serializeF32 = fn([f32], arrayOf(u32, 1))`(n) => {
+  return array<u32, 1>(bitcast<u32>(n));
+}`;
+
+const serializeI32 = fn([i32], arrayOf(u32, 1))`(n) => {
+  return array<u32, 1>(bitcast<u32>(n));
 }`;
 
 const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
@@ -48,6 +56,8 @@ type SerializerMap = {
 
 export const serializerMap: SerializerMap = {
   bool: serializeBool,
+  f32: serializeF32,
+  i32: serializeI32,
   u32: serializeU32,
   vec2u: serializeVec2u,
   vec3u: serializeVec3u,

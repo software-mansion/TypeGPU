@@ -37,6 +37,8 @@ export const controls = {
       prepareDispatch(root, () => {
         'kernel';
         console.log(d.bool(true));
+        console.log(d.f32(3.14));
+        console.log(d.i32(-2_000_000_000));
         console.log(d.u32(3_000_000_000));
         console.log(d.vec2u(1, 2));
         console.log(d.vec3u(1, 2, 3));

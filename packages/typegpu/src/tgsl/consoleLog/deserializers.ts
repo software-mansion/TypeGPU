@@ -2,6 +2,7 @@ import { sizeOf } from '../../data/sizeOf.ts';
 import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
 import { type AnyWgslData, isWgslData } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
+import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
 import type { LogResources } from './types.ts';
 
 // -------------
@@ -9,6 +10,10 @@ import type { LogResources } from './types.ts';
 // -------------
 
 const deserializeBool = (data: number[]) => !!data[0];
+
+const deserializeF32 = (data: number[]) => bitcastU32toF32(data[0] ?? 0);
+
+const deserializeI32 = (data: number[]) => bitcastU32toI32(data[0] ?? 0);
 
 const deserializeU32 = (data: number[]) => data[0] ?? 0;
 
@@ -36,6 +41,8 @@ type DeserializerMap = {
 
 const deserializerMap: DeserializerMap = {
   bool: deserializeBool,
+  f32: deserializeF32,
+  i32: deserializeI32,
   u32: deserializeU32,
   vec2u: deserializeVec2u,
   vec3u: deserializeVec3u,
