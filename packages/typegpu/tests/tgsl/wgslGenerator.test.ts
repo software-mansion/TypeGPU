@@ -537,18 +537,17 @@ describe('wgslGenerator', () => {
       const arr = [
         d.vec2u(1, 2),
         d.vec2u(3, 4),
-        std.min(d.vec2u(5, 6), d.vec2u(7, 8)),
+        std.min(d.vec2u(5, 8), d.vec2u(7, 6)),
       ] as [d.v2u, d.v2u, d.v2u];
       return arr[1].x;
     });
 
-    expect(parseResolved({ testFn })).toEqual(
-      parse(`
-      fn testFn() -> u32 {
-        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), min(vec2u(5, 6), vec2u(7, 8)));
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), vec2u(5, 6));
         return arr[1].x;
-      }`),
-    );
+      }"
+    `);
   });
 
   it('does not autocast lhs of an assignment', () => {

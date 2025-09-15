@@ -1,6 +1,12 @@
 import { $internal } from '../shared/symbols.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import { clamp, divInteger, smoothstepScalar } from './numberOps.ts';
+import {
+  bitcastU32toF32Impl,
+  bitcastU32toI32Impl,
+  clamp,
+  divInteger,
+  smoothstepScalar,
+} from './numberOps.ts';
 import * as vectorConstructors from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
@@ -1253,4 +1259,54 @@ export const VectorOps = {
     vec4f: unary4f(Math.tanh),
     vec4h: unary4h(Math.tanh),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  bitcastU32toF32: {
+    vec2u: (n: wgsl.v2u) =>
+      vec2f(bitcastU32toF32Impl(n.x), bitcastU32toF32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3f(
+        bitcastU32toF32Impl(n.x),
+        bitcastU32toF32Impl(n.y),
+        bitcastU32toF32Impl(n.z),
+      ),
+    vec4u: (n: wgsl.v4u) =>
+      vec4f(
+        bitcastU32toF32Impl(n.x),
+        bitcastU32toF32Impl(n.y),
+        bitcastU32toF32Impl(n.z),
+        bitcastU32toF32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2f
+      : T extends wgsl.v3u ? wgsl.v3f
+      : wgsl.v4f
+  >,
+
+  bitcastU32toI32: {
+    vec2u: (n: wgsl.v2u) =>
+      vec2i(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3i(
+        bitcastU32toI32Impl(n.x),
+        bitcastU32toI32Impl(n.y),
+        bitcastU32toI32Impl(n.z),
+      ),
+    vec4u: (n: wgsl.v4u) =>
+      vec4i(
+        bitcastU32toI32Impl(n.x),
+        bitcastU32toI32Impl(n.y),
+        bitcastU32toI32Impl(n.z),
+        bitcastU32toI32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2i
+      : T extends wgsl.v3u ? wgsl.v3i
+      : wgsl.v4i
+  >,
 };
