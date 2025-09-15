@@ -1,4 +1,4 @@
-import { snip } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../data/snippet.ts';
 import type {
   F32,
   I32,
@@ -15,7 +15,6 @@ import {
   $internal,
   $ownSnippet,
   $resolve,
-  $runtimeResource,
 } from '../../shared/symbols.ts';
 import type {
   Default,
@@ -458,7 +457,6 @@ const dimensionToCodeMap = {
 
 class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, TgpuNamable, WithOwnSnippet {
-  readonly [$runtimeResource] = true;
   readonly [$internal]: TextureViewInternals;
   readonly [$getNameForward]: TgpuTexture<TextureProps>;
   readonly resourceType = 'texture-storage-view';
@@ -533,7 +531,6 @@ class TgpuFixedStorageTextureImpl
 
 export class TgpuLaidOutStorageTextureImpl
   implements TgpuStorageTexture, SelfResolvable, WithOwnSnippet {
-  readonly [$runtimeResource] = true;
   readonly [$internal]: TextureViewInternals;
   readonly resourceType = 'texture-storage-view';
   readonly texelDataType: TexelData;
@@ -651,7 +648,7 @@ class TgpuFixedSampledTextureImpl
 }
 
 export class TgpuLaidOutSampledTextureImpl
-  implements TgpuSampledTexture, SelfResolvable {
+  implements TgpuSampledTexture, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;

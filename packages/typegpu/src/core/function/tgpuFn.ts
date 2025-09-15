@@ -11,9 +11,9 @@ import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
+  $ownSnippet,
   $providing,
   $resolve,
-  $runtimeResource,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -40,6 +40,7 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
+import { stitch } from '../resolve/stitch.ts';
 
 // ----------
 // Public API
@@ -315,7 +316,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$internal] = true;
-  readonly [$runtimeResource] = true;
+  readonly [$ownSnippet]: Snippet;
   readonly [$getNameForward]: unknown;
   readonly #fn: TgpuFnBase<ImplSchema>;
   readonly #params: Snippet[];
@@ -327,16 +328,14 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this.#fn = fn;
     this.#params = params;
     this[$getNameForward] = fn;
+    this[$ownSnippet] = snip(this, this.#fn.shell.returnType);
   }
 
   [$resolve](ctx: ResolutionCtx): string {
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
     return ctx.withResetIndentLevel(() => {
-      // Resolving parameters first so the order of definitions is more consistent.
-      const params = this.#params.map((param) =>
-        ctx.resolve(param.value, param.dataType)
-      );
-      return `${ctx.resolve(this.#fn)}(${params.join(', ')})`;
+      // TODO: Resolve the params first, then the function (just for consistency)
+      return stitch`${ctx.resolve(this.#fn)}(${this.#params})`;
     });
   }
 

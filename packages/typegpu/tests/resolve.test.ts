@@ -7,7 +7,6 @@ import {
   $internal,
   $ownSnippet,
   $resolve,
-  $runtimeResource,
 } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
@@ -57,18 +56,19 @@ describe('tgpu resolve', () => {
 
       [$gpuValueOf]: {
         [$internal]: true,
-        [$runtimeResource]: true,
         get [$ownSnippet]() {
           return snip(this, d.f32);
         },
-        [$resolve](ctx: ResolutionCtx) {
-          const name = ctx.names.makeUnique('intensity');
-          ctx.addDeclaration(
-            `@group(0) @binding(0) var<uniform> ${name}: f32;`,
-          );
-          return name;
-        },
+        [$resolve]: (ctx: ResolutionCtx) => ctx.resolve(intensity),
       } as unknown as number,
+
+      [$resolve](ctx: ResolutionCtx) {
+        const name = ctx.names.makeUnique('intensity');
+        ctx.addDeclaration(
+          `@group(0) @binding(0) var<uniform> ${name}: f32;`,
+        );
+        return name;
+      },
 
       get value(): number {
         return this[$gpuValueOf];

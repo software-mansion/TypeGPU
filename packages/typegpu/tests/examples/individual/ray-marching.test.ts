@@ -43,13 +43,11 @@ describe('ray-marching example', () => {
         dist: f32,
       }
 
-      @group(0) @binding(1) var<uniform> time_9: f32;
-
-      fn sdSphere_11(p: vec3f, radius: f32) -> f32 {
+      fn sdSphere_10(p: vec3f, radius: f32) -> f32 {
         return (length(p) - radius);
       }
 
-      fn sdBoxFrame3d_12(p: vec3f, size: vec3f, thickness: f32) -> f32 {
+      fn sdBoxFrame3d_11(p: vec3f, size: vec3f, thickness: f32) -> f32 {
         var p1 = (abs(p) - size);
         var q = (abs((p1 + thickness)) - vec3f(thickness));
         var d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0));
@@ -58,7 +56,7 @@ describe('ray-marching example', () => {
         return min(min(d1, d2), d3);
       }
 
-      fn smoothShapeUnion_13(a: Shape_7, b: Shape_7, k: f32) -> Shape_7 {
+      fn smoothShapeUnion_12(a: Shape_7, b: Shape_7, k: f32) -> Shape_7 {
         var h = (max((k - abs((a.dist - b.dist))), 0) / k);
         var m = (h * h);
         var dist = (min(a.dist, b.dist) - ((m * k) * 0.25));
@@ -67,7 +65,7 @@ describe('ray-marching example', () => {
         return Shape_7(color, dist);
       }
 
-      fn getMorphingShape_10(p: vec3f, t: f32) -> Shape_7 {
+      fn getMorphingShape_9(p: vec3f, t: f32) -> Shape_7 {
         var center = vec3f(0, 2, 6);
         var localP = (p - center);
         var rotMatZ = mat4x4f(cos(-t), sin(-t), 0, 0, -sin(-t), cos(-t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -76,12 +74,14 @@ describe('ray-marching example', () => {
         var boxSize = vec3f(0.699999988079071);
         var sphere1Offset = vec3f((cos((t * 2)) * 0.8), (sin((t * 3)) * 0.3), (sin((t * 2)) * 0.8));
         var sphere2Offset = vec3f((cos(((t * 2) + 3.14)) * 0.8), (sin(((t * 3) + 1.57)) * 0.3), (sin(((t * 2) + 3.14)) * 0.8));
-        var sphere1 = Shape_7(vec3f(0.4000000059604645, 0.5, 1), sdSphere_11((localP - sphere1Offset), 0.5));
-        var sphere2 = Shape_7(vec3f(1, 0.800000011920929, 0.20000000298023224), sdSphere_11((localP - sphere2Offset), 0.3));
-        var box = Shape_7(vec3f(1, 0.30000001192092896, 0.30000001192092896), sdBoxFrame3d_12(rotatedP, boxSize, 0.1));
-        var spheres = smoothShapeUnion_13(sphere1, sphere2, 0.1);
-        return smoothShapeUnion_13(spheres, box, 0.2);
+        var sphere1 = Shape_7(vec3f(0.4000000059604645, 0.5, 1), sdSphere_10((localP - sphere1Offset), 0.5));
+        var sphere2 = Shape_7(vec3f(1, 0.800000011920929, 0.20000000298023224), sdSphere_10((localP - sphere2Offset), 0.3));
+        var box = Shape_7(vec3f(1, 0.30000001192092896, 0.30000001192092896), sdBoxFrame3d_11(rotatedP, boxSize, 0.1));
+        var spheres = smoothShapeUnion_12(sphere1, sphere2, 0.1);
+        return smoothShapeUnion_12(spheres, box, 0.2);
       }
+
+      @group(0) @binding(1) var<uniform> time_13: f32;
 
       fn checkerBoard_14(uv: vec2f) -> f32 {
         var fuv = floor(uv);
@@ -97,7 +97,7 @@ describe('ray-marching example', () => {
       }
 
       fn getSceneDist_8(p: vec3f) -> Shape_7 {
-        var shape = getMorphingShape_10(p, time_9);
+        var shape = getMorphingShape_9(p, time_13);
         var floor = Shape_7(mix(vec3f(1), vec3f(0.20000000298023224), checkerBoard_14((p.xz * 2))), sdPlane_15(p, vec3f(0, 1, 0), 0));
         return shapeUnion_16(shape, floor);
       }
@@ -158,7 +158,7 @@ describe('ray-marching example', () => {
         var fog = pow(min((march.dist / 30f), 1), 0.7);
         var p = (ro + (rd * march.dist));
         var n = getNormal_17(p);
-        var lightPos = getOrbitingLightPos_18(time_9);
+        var lightPos = getOrbitingLightPos_18(time_13);
         var l = normalize((lightPos - p));
         var diff = max(dot(n, l), 0);
         var shadowRo = p;

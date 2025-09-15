@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -8,8 +8,8 @@ import type { InferGPU } from '../../shared/repr.ts';
 import {
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $resolve,
-  $runtimeResource,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -75,8 +75,8 @@ export function isVariable<T extends TgpuVar>(
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   readonly [$internal] = {};
-  readonly [$gpuValueOf]: InferGPU<TDataType>;
   readonly #scope: TScope;
+  readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
 
   constructor(
@@ -85,32 +85,22 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     initialValue?: InferGPU<TDataType> | undefined,
   ) {
     this.#scope = scope;
+    this.#dataType = dataType;
     this.#initialValue = initialValue;
+  }
 
-    this[$gpuValueOf] = snip(
-      new Proxy({
-        [$internal]: true,
-        [$runtimeResource]: true,
-        resourceType: 'access-proxy',
+  get [$gpuValueOf](): InferGPU<TDataType> {
+    const dataType = this.#dataType;
+    const accessPath = `var:${getName(this) ?? '<unnamed>'}.$`;
 
-        [$resolve]: (ctx) => {
-          const id = ctx.names.makeUnique(getName(this));
-          const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(dataType)}`;
-
-          if (initialValue) {
-            ctx.addDeclaration(
-              `${pre} = ${ctx.resolve(initialValue, dataType)};`,
-            );
-          } else {
-            ctx.addDeclaration(`${pre};`);
-          }
-
-          return id;
-        },
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-      }, valueProxyHandler(dataType)),
-      dataType,
-    ) as InferGPU<TDataType>;
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, dataType);
+      },
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
   }
 
   $name(label: string) {
@@ -187,7 +177,17 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const snippet = this[$gpuValueOf] as Snippet;
-    return ctx.resolve(snippet.value, snippet.dataType);
+    const id = ctx.names.makeUnique(getName(this));
+    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)}`;
+
+    if (this.#initialValue) {
+      ctx.addDeclaration(
+        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType)};`,
+      );
+    } else {
+      ctx.addDeclaration(`${pre};`);
+    }
+
+    return id;
   }
 }

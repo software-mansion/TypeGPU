@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
@@ -12,9 +12,9 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $repr,
   $resolve,
-  $runtimeResource,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -95,7 +95,6 @@ class TgpuFixedBufferImpl<
   readonly resourceType = 'buffer-usage' as const;
   readonly [$internal]: { readonly dataType: TData };
   readonly [$getNameForward]: TgpuBuffer<TData>;
-  readonly [$gpuValueOf]: InferGPU<TData>;
 
   constructor(
     public readonly usage: TUsage,
@@ -103,35 +102,21 @@ class TgpuFixedBufferImpl<
   ) {
     this[$internal] = { dataType: buffer.dataType };
     this[$getNameForward] = buffer;
+  }
 
-    this[$gpuValueOf] = snip(
-      new Proxy({
-        [$internal]: true,
-        [$runtimeResource]: true,
-        resourceType: 'access-proxy',
+  get [$gpuValueOf](): InferGPU<TData> {
+    const dataType = this.buffer.dataType;
+    const name = getName(this);
+    const accessPath = `${this.usage}:${name ?? '<unnamed>'}`;
 
-        [$resolve]: (ctx: ResolutionCtx) => {
-          const id = ctx.names.makeUnique(getName(this));
-          const { group, binding } = ctx.allocateFixedEntry(
-            this.usage === 'uniform'
-              ? { uniform: buffer.dataType }
-              : { storage: buffer.dataType, access: this.usage },
-            buffer,
-          );
-          const usageTemplate = usageToVarTemplateMap[usage];
-
-          ctx.addDeclaration(
-            `@group(${group}) @binding(${binding}) var<${usageTemplate}> ${id}: ${
-              ctx.resolve(buffer.dataType)
-            };`,
-          );
-
-          return id;
-        },
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-      }, valueProxyHandler(buffer.dataType)),
-      buffer.dataType,
-    ) as InferGPU<TData>;
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, dataType);
+      },
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => accessPath,
+    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TData>;
   }
 
   $name(label: string) {
@@ -211,8 +196,23 @@ class TgpuFixedBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const snippet = this[$gpuValueOf] as Snippet;
-    return ctx.resolve(snippet.value, snippet.dataType);
+    const dataType = this.buffer.dataType;
+    const id = ctx.names.makeUnique(getName(this));
+    const { group, binding } = ctx.allocateFixedEntry(
+      this.usage === 'uniform'
+        ? { uniform: dataType }
+        : { storage: dataType, access: this.usage },
+      this.buffer,
+    );
+    const usageTemplate = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${binding}) var<${usageTemplate}> ${id}: ${
+        ctx.resolve(dataType)
+      };`,
+    );
+
+    return id;
   }
 }
 
@@ -222,45 +222,32 @@ export class TgpuLaidOutBufferImpl<
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
-  readonly resourceType = 'buffer-usage' as const;
   readonly [$internal]: { readonly dataType: TData };
-  readonly [$gpuValueOf]: InferGPU<TData>;
+  readonly resourceType = 'buffer-usage' as const;
+  readonly #membership: LayoutMembership;
 
   constructor(
     public readonly usage: TUsage,
     public readonly dataType: TData,
-    private readonly _membership: LayoutMembership,
+    membership: LayoutMembership,
   ) {
     this[$internal] = { dataType };
-    setName(this, _membership.key);
+    this.#membership = membership;
+    setName(this, membership.key);
+  }
 
-    const schema = dataType as unknown as AnyData;
+  get [$gpuValueOf](): InferGPU<TData> {
+    const schema = this.dataType as unknown as AnyData;
+    const accessPath = `${this.usage}:${getName(this) ?? '<unnamed>'}.$`;
 
-    this[$gpuValueOf] = snip(
-      new Proxy({
-        [$internal]: true,
-        [$runtimeResource]: true,
-        resourceType: 'access-proxy',
-
-        [$resolve]: (ctx: ResolutionCtx) => {
-          const id = ctx.names.makeUnique(getName(this));
-          const group = ctx.allocateLayoutEntry(_membership.layout);
-          const usageTemplate = usageToVarTemplateMap[usage];
-
-          ctx.addDeclaration(
-            `@group(${group}) @binding(${_membership.idx}) var<${usageTemplate}> ${id}: ${
-              ctx.resolve(
-                dataType,
-              )
-            };`,
-          );
-
-          return id;
-        },
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-      }, valueProxyHandler(schema)),
-      schema,
-    ) as InferGPU<TData>;
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, schema);
+      },
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => accessPath,
+    }, valueProxyHandler(accessPath, schema)) as InferGPU<TData>;
   }
 
   toString(): string {
@@ -282,8 +269,17 @@ export class TgpuLaidOutBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const snippet = this[$gpuValueOf] as Snippet;
-    return ctx.resolve(snippet.value, snippet.dataType);
+    const id = ctx.names.makeUnique(getName(this));
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
+    const usageTemplate = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${this.#membership.idx}) var<${usageTemplate}> ${id}: ${
+        ctx.resolve(this.dataType)
+      };`,
+    );
+
+    return id;
   }
 }
 

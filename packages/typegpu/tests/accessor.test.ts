@@ -126,7 +126,8 @@ describe('tgpu.accessor', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
-        - accessor:color: Missing value for 'slot:color']
+        - accessor:color
+        - accessor:color.$: Missing value for 'slot:color']
       `);
   });
 

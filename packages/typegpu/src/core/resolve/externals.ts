@@ -1,6 +1,7 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, isNamable } from '../../shared/meta.ts';
+import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -100,11 +101,13 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
-    if (isWgsl(external) || isLooseData(external)) {
-      return acc.replaceAll(externalRegex, ctx.resolve(external));
+    // TODO: Might not be necessary
+    const value = coerceToSnippet(external).value;
+    if (isWgsl(value) || isLooseData(value)) {
+      return acc.replaceAll(externalRegex, ctx.resolve(value));
     }
 
-    if (external !== null && typeof external === 'object') {
+    if (value !== null && typeof value === 'object') {
       const foundProperties = [
         ...wgsl.matchAll(
           new RegExp(
@@ -119,12 +122,11 @@ export function replaceExternalsInWgsl(
 
       return uniqueProperties.reduce(
         (innerAcc: string, prop) =>
-          prop && prop in external
+          prop && prop in value
             ? replaceExternalsInWgsl(
               ctx,
               {
-                [`${externalName}.${prop}`]:
-                  external[prop as keyof typeof external],
+                [`${externalName}.${prop}`]: value[prop as keyof typeof value],
               },
               innerAcc,
             )

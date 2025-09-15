@@ -1,4 +1,3 @@
-import type { Snippet } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
@@ -128,7 +127,6 @@ export class TgpuBufferShorthandImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const snippet = this[$gpuValueOf] as Snippet;
-    return ctx.resolve(snippet.value, snippet.dataType);
+    return ctx.resolve(this.#usage);
   }
 }

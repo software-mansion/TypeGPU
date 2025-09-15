@@ -14,20 +14,6 @@ export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
  */
 export const $providing = Symbol(`typegpu:${version}:$providing`);
 
-// TODO: Might not be necessary with $ownSnippet
-/**
- * Marks objects that represent values at runtime GPU execution time), and don't have an inherent value
- * at comp-time (resolution time).
- * @example
- * readonly [$runtimeResource]: true
- */
-export const $runtimeResource = Symbol(`typegpu:${version}:$runtimeResource`);
-
-export function isRuntimeResource(value: unknown): boolean {
-  return !!(value as { readonly [$runtimeResource]?: boolean | undefined })
-    ?.[$runtimeResource];
-}
-
 /**
  * Objects can provide the snippet that represents them.
  */

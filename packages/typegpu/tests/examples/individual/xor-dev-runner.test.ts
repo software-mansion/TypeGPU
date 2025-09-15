@@ -47,11 +47,11 @@ describe('xor dev runner example', () => {
         return fract(v / a) * a;
       }
 
-      @group(0) @binding(4) var<uniform> shift_10: f32;
-
-      fn rotateXZ_11(angle: f32) -> mat3x3f {
+      fn rotateXZ_10(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(cos(angle), 0, sin(angle)), vec3f(0, 1, 0), vec3f(-sin(angle), 0, cos(angle)));
       }
+
+      @group(0) @binding(4) var<uniform> shift_11: f32;
 
       fn safeTanh_12(v: f32) -> f32 {
         return select(tanh(v), sign(v), (abs(v) > 10));
@@ -73,7 +73,7 @@ describe('xor dev runner example', () => {
             q = ((i * 0.9) - abs((mod_9(q, (i + i)) - i)));
             var minQ = min(min(q.x, q.y), q.z);
             prox = max(prox, minQ);
-            q = (q * rotateXZ_11(shift_10));
+            q = (q * rotateXZ_10(shift_11));
           }
           z += prox;
           acc = (acc + ((icolor - safeTanh_12((p.y + 4))) * ((0.1 * prox) / (1 + z))));

@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -7,10 +7,10 @@ import type { InferGPU } from '../../shared/repr.ts';
 import {
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $resolve,
-  $runtimeResource,
 } from '../../shared/symbols.ts';
-import type { ResolutionCtx } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -47,34 +47,26 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
   readonly #value: InferGPU<TDataType>;
-  readonly [$gpuValueOf]: InferGPU<TDataType>;
 
   constructor(
     public readonly dataType: TDataType,
     value: InferGPU<TDataType>,
   ) {
     this.#value = value;
-    this[$gpuValueOf] = snip(
-      new Proxy({
-        [$internal]: true,
-        [$runtimeResource]: true,
-        resourceType: 'access-proxy',
+  }
 
-        [$resolve]: (ctx: ResolutionCtx) => {
-          const id = ctx.names.makeUnique(getName(this));
-          const resolvedValue = ctx.resolve(value, dataType);
-          const resolvedDataType = ctx.resolve(dataType);
+  get [$gpuValueOf](): InferGPU<TDataType> {
+    const dataType = this.dataType;
+    const accessPath = `const:${getName(this) ?? '<unnamed>'}.$`;
 
-          ctx.addDeclaration(
-            `const ${id}: ${resolvedDataType} = ${resolvedValue};`,
-          );
-
-          return id;
-        },
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
-      }, valueProxyHandler(dataType)),
-      dataType,
-    ) as InferGPU<TDataType>;
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, dataType);
+      },
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => accessPath,
+    }, valueProxyHandler(accessPath, dataType)) as InferGPU<TDataType>;
   }
 
   $name(label: string) {
@@ -99,7 +91,12 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   }
 
   [$resolve](ctx: ResolutionCtx) {
-    const snippet = this[$gpuValueOf] as Snippet;
-    return ctx.resolve(snippet.value, this.dataType);
+    const id = ctx.names.makeUnique(getName(this));
+    const resolvedDataType = ctx.resolve(this.dataType);
+    const resolvedValue = ctx.resolve(this.#value, this.dataType);
+
+    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
+
+    return id;
   }
 }

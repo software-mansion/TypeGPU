@@ -234,9 +234,7 @@ describe('3d fish example', () => {
         normal: vec3f,
       }
 
-      @group(0) @binding(4) var<uniform> currentTime_31: f32;
-
-      fn applySinWave_32(index: u32, vertex: PosAndNormal_30, time: f32) -> PosAndNormal_30 {
+      fn applySinWave_31(index: u32, vertex: PosAndNormal_30, time: f32) -> PosAndNormal_30 {
         var a = -60.1;
         var b = 0.8;
         var c = 6.1;
@@ -249,6 +247,8 @@ describe('3d fish example', () => {
         var wavedPosition = (vertex.position + positionModification);
         return PosAndNormal_30(wavedPosition, wavedNormal);
       }
+
+      @group(0) @binding(4) var<uniform> currentTime_32: f32;
 
       struct Camera_34 {
         position: vec4f,
@@ -263,7 +263,7 @@ describe('3d fish example', () => {
         var currentModelData = ModelData_29(modelData_28[input.instanceIndex].position, modelData_28[input.instanceIndex].direction, modelData_28[input.instanceIndex].scale, modelData_28[input.instanceIndex].variant, modelData_28[input.instanceIndex].applySinWave, modelData_28[input.instanceIndex].applySeaFog, modelData_28[input.instanceIndex].applySeaDesaturation);
         var wavedVertex = PosAndNormal_30(input.modelPosition, input.modelNormal);
         if ((currentModelData.applySinWave == 1)) {
-          wavedVertex = applySinWave_32(input.instanceIndex, PosAndNormal_30(input.modelPosition, input.modelNormal), currentTime_31);
+          wavedVertex = applySinWave_31(input.instanceIndex, PosAndNormal_30(input.modelPosition, input.modelNormal), currentTime_32);
         }
         var direction = normalize(currentModelData.direction);
         var yaw = (-atan2(direction.z, direction.x) + 3.141592653589793);
