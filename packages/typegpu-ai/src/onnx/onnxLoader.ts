@@ -4,7 +4,6 @@
 import { dataTypeName } from './decode/convert.ts';
 import { decodeModel } from './decode/decode.ts';
 import { fetchOrRead } from './decode/io.ts';
-import type { ProtobuffReader } from './protobuf.ts';
 import {
   defaultLoadOptions,
   type Node,

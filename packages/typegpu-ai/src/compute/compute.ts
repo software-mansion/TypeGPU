@@ -1,6 +1,5 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import {
   activationFunctionSlot,
   ioLayout,
@@ -13,9 +12,8 @@ export const nnCompute = tgpu['~unstable'].computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
     nwg: d.builtin.numWorkgroups,
-    wid: d.builtin.workgroupId,
   },
-})(({ gid, nwg, wid }) => {
+})(({ gid, nwg }) => {
   const i = calculateIndex(gid, nwg);
   if (i >= ioLayout.$.outLength) {
     return;

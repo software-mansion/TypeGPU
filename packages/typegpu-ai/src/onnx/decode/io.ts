@@ -1,4 +1,4 @@
-import { ProtobuffReader } from '../protobuf';
+import type { ProtobuffReader } from '../protobuf';
 
 export function readFloatFromVarint(r: ProtobuffReader): number { // not actually varint encoded; placeholder (ONNX uses length-delimited repeated packed?). Simplify.
   return Number(r.varint());

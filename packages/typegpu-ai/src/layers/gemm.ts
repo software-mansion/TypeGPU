@@ -1,8 +1,5 @@
-import type { StorageFlag, TgpuRoot, TgpuBuffer } from 'typegpu';
-import * as d from 'typegpu/data';
+
 import type { OnnxModel } from '../onnx/types.ts';
-import { DenseLayerGpu, ioLayout, weightsBiasesLayout } from '../schemas.ts';
-import { validateLayerSizes } from '../sizeMismatch.ts';
 
 export interface GemmLayerSpec {
   weights: Float32Array;
@@ -32,7 +29,7 @@ export function extractGemmLayerSpecs(model: OnnxModel): GemmLayerSpec[] {
     // const transBAttr = node.attributes.find((a) => a.name === 'transB');
     // const transB = transBAttr ? Number(transBAttr.value as any) === 1 : false;
 
-    let weightsData = weightTensor.data as Float32Array;
+    const weightsData = weightTensor.data as Float32Array;
     // if (transB) {
     //   weightsData = transposeFloat32(weightsData, outDim, inDim);
     // }
