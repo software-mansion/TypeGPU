@@ -1,4 +1,4 @@
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
@@ -60,18 +60,11 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   get [$gpuValueOf](): InferGPU<T> {
-    const self = this;
-    const accessPath = `accessor:${getName(this) ?? '<unnamed>'}.$`;
-
     return new Proxy({
       [$internal]: true,
-      get [$ownSnippet](): Snippet {
-        return self.#createSnippet();
-      },
-      [$resolve](ctx: ResolutionCtx) {
-        return ctx.resolve(self);
-      },
-      toString: () => accessPath,
+      [$ownSnippet]: this.#createSnippet(),
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => `accessor:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<T>;
   }
 

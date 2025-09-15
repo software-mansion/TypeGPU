@@ -115,7 +115,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const accessPath = `var:${getName(this) ?? '<unnamed>'}.$`;
 
     return new Proxy({
       [$internal]: true,
@@ -123,7 +122,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
         return snip(this, dataType);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+      toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TDataType>;
   }
 

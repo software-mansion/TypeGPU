@@ -9,43 +9,44 @@ import {
   type WithOwnSnippet,
 } from '../types.ts';
 
-export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> =
-  {
-    get(target, prop) {
-      if (prop in target) {
-        return Reflect.get(target, prop);
-      }
+export const valueProxyHandler: ProxyHandler<
+  SelfResolvable & WithOwnSnippet
+> = {
+  get(target, prop) {
+    if (prop in target) {
+      return Reflect.get(target, prop);
+    }
 
-      if (
-        prop === 'toString' ||
-        prop === Symbol.toStringTag ||
-        prop === Symbol.toPrimitive
-      ) {
-        return () => target.toString();
-      }
+    if (
+      prop === 'toString' ||
+      prop === Symbol.toStringTag ||
+      prop === Symbol.toPrimitive
+    ) {
+      return () => target.toString();
+    }
 
-      if (typeof prop === 'symbol') {
-        return undefined;
-      }
+    if (typeof prop === 'symbol') {
+      return undefined;
+    }
 
-      const targetSnippet = getOwnSnippet(target) as Snippet;
-      const targetDataType = targetSnippet.dataType as AnyData;
-      const propType = getTypeForPropAccess(targetDataType, String(prop));
-      if (propType.type === 'unknown') {
-        // Prop was not found, must be missing from this object
-        return undefined;
-      }
+    const targetSnippet = getOwnSnippet(target) as Snippet;
+    const targetDataType = targetSnippet.dataType as AnyData;
+    const propType = getTypeForPropAccess(targetDataType, String(prop));
+    if (propType.type === 'unknown') {
+      // Prop was not found, must be missing from this object
+      return undefined;
+    }
 
-      return new Proxy({
-        [$internal]: true,
-        [$resolve]: (ctx) => `${ctx.resolve(target)}.${String(prop)}`,
-        get [$ownSnippet]() {
-          return snip(this, propType);
-        },
-        toString: () => `${String(target)}.${prop}`,
-      }, valueProxyHandler);
-    },
-  };
+    return new Proxy({
+      [$internal]: true,
+      [$resolve]: (ctx) => `${ctx.resolve(target)}.${String(prop)}`,
+      get [$ownSnippet]() {
+        return snip(this, propType);
+      },
+      toString: () => `${String(target)}.${prop}`,
+    }, valueProxyHandler);
+  },
+};
 
 export function getGpuValueRecursively<T>(value: unknown): T {
   let unwrapped = value;

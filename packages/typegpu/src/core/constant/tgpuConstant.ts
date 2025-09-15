@@ -76,7 +76,6 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.dataType;
-    const accessPath = `const:${getName(this) ?? '<unnamed>'}.$`;
 
     return new Proxy({
       [$internal]: true,
@@ -84,7 +83,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
         return snip(this, dataType);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => accessPath,
+      toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TDataType>;
   }
 
