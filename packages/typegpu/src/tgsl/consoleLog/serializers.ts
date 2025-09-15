@@ -1,16 +1,19 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { arrayOf } from '../../data/array.ts';
-import { bool, f32, i32, u32 } from '../../data/numeric.ts';
+import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2f,
+  vec2h,
   vec2i,
   vec2u,
   vec3f,
+  vec3h,
   vec3i,
   vec3u,
   vec4f,
+  vec4h,
   vec4i,
   vec4u,
 } from '../../data/vector.ts';
@@ -34,6 +37,10 @@ const serializeF32 = fn([f32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(bitcast<u32>(n));
 }`;
 
+const serializeF16 = fn([f16], arrayOf(u32, 1))`(n) => {
+  return array<u32, 1>(pack2x16float(vec2f(f32(n))));
+}`;
+
 const serializeI32 = fn([i32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(bitcast<u32>(n));
 }`;
@@ -52,6 +59,24 @@ const serializeVec3f = fn([vec3f], arrayOf(u32, 3))`(v) => {
 
 const serializeVec4f = fn([vec4f], arrayOf(u32, 4))`(v) => {
   return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
+}`;
+
+const serializeVec2h = fn([vec2h], arrayOf(u32, 1))`(v) => {
+  return array<u32, 1>(pack2x16float(vec2f(f32(v.x), f32(v.y))));
+}`;
+
+const serializeVec3h = fn([vec3h], arrayOf(u32, 2))`(v) => {
+  return array<u32, 2>(
+    pack2x16float(vec2f(f32(v.x), f32(v.y))),
+    pack2x16float(vec2f(f32(v.z), 0))
+  );
+}`;
+
+const serializeVec4h = fn([vec4h], arrayOf(u32, 2))`(v) => {
+  return array<u32, 2>(
+    pack2x16float(vec2f(f32(v.x), f32(v.y))),
+    pack2x16float(vec2f(f32(v.z), f32(v.w)))
+  );
 }`;
 
 const serializeVec2i = fn([vec2i], arrayOf(u32, 2))`(v) => {
@@ -91,11 +116,15 @@ type SerializerMap = {
 export const serializerMap: SerializerMap = {
   bool: serializeBool,
   f32: serializeF32,
+  f16: serializeF16,
   i32: serializeI32,
   u32: serializeU32,
   vec2f: serializeVec2f,
   vec3f: serializeVec3f,
   vec4f: serializeVec4f,
+  vec2h: serializeVec2h,
+  vec3h: serializeVec3h,
+  vec4h: serializeVec4h,
   vec2i: serializeVec2i,
   vec3i: serializeVec3i,
   vec4i: serializeVec4i,

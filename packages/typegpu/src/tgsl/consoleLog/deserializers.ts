@@ -1,18 +1,22 @@
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2f,
+  vec2h,
   vec2i,
   vec2u,
   vec3f,
+  vec3h,
   vec3i,
   vec3u,
   vec4f,
+  vec4h,
   vec4i,
   vec4u,
 } from '../../data/vector.ts';
 import { type AnyWgslData, isWgslData } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
+import { unpack2x16float } from '../../std/packing.ts';
 import type { LogResources } from './types.ts';
 
 // -------------
@@ -22,6 +26,8 @@ import type { LogResources } from './types.ts';
 const deserializeBool = (data: number[]) => !!data[0];
 
 const deserializeF32 = (data: number[]) => bitcastU32toF32(data[0] ?? 0);
+
+const deserializeF16 = (data: number[]) => unpack2x16float(data[0] ?? 0).x;
 
 const deserializeI32 = (data: number[]) => bitcastU32toI32(data[0] ?? 0);
 
@@ -53,6 +59,29 @@ const deserializeVec4f = (
     bitcastU32toF32(data[2] ?? 0),
     bitcastU32toF32(data[3] ?? 0),
   );
+
+const deserializeVec2h = (
+  data: number[],
+) => {
+  const unpackedXY = unpack2x16float(data[0] ?? 0);
+  return vec2h(unpackedXY.x, unpackedXY.y);
+};
+
+const deserializeVec3h = (
+  data: number[],
+) => {
+  const unpackedXY = unpack2x16float(data[0] ?? 0);
+  const unpackedZ = unpack2x16float(data[1] ?? 0);
+  return vec3h(unpackedXY.x, unpackedXY.y, unpackedZ.x);
+};
+
+const deserializeVec4h = (
+  data: number[],
+) => {
+  const unpackedXY = unpack2x16float(data[0] ?? 0);
+  const unpackedZW = unpack2x16float(data[1] ?? 0);
+  return vec4h(unpackedXY.x, unpackedXY.y, unpackedZW.x, unpackedZW.y);
+};
 
 const deserializeVec2i = (
   data: number[],
@@ -106,11 +135,15 @@ type DeserializerMap = {
 const deserializerMap: DeserializerMap = {
   bool: deserializeBool,
   f32: deserializeF32,
+  f16: deserializeF16,
   i32: deserializeI32,
   u32: deserializeU32,
   vec2f: deserializeVec2f,
   vec3f: deserializeVec3f,
   vec4f: deserializeVec4f,
+  vec2h: deserializeVec2h,
+  vec3h: deserializeVec3h,
+  vec4h: deserializeVec4h,
   vec2i: deserializeVec2i,
   vec3i: deserializeVec3i,
   vec4i: deserializeVec4i,
