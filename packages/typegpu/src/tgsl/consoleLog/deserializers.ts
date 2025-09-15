@@ -1,5 +1,15 @@
 import { sizeOf } from '../../data/sizeOf.ts';
-import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
+import {
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
+} from '../../data/vector.ts';
 import { type AnyWgslData, isWgslData } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
@@ -16,6 +26,60 @@ const deserializeF32 = (data: number[]) => bitcastU32toF32(data[0] ?? 0);
 const deserializeI32 = (data: number[]) => bitcastU32toI32(data[0] ?? 0);
 
 const deserializeU32 = (data: number[]) => data[0] ?? 0;
+
+const deserializeVec2f = (
+  data: number[],
+) =>
+  vec2f(
+    bitcastU32toF32(data[0] ?? 0),
+    bitcastU32toF32(data[1] ?? 0),
+  );
+
+const deserializeVec3f = (
+  data: number[],
+) =>
+  vec3f(
+    bitcastU32toF32(data[0] ?? 0),
+    bitcastU32toF32(data[1] ?? 0),
+    bitcastU32toF32(data[2] ?? 0),
+  );
+
+const deserializeVec4f = (
+  data: number[],
+) =>
+  vec4f(
+    bitcastU32toF32(data[0] ?? 0),
+    bitcastU32toF32(data[1] ?? 0),
+    bitcastU32toF32(data[2] ?? 0),
+    bitcastU32toF32(data[3] ?? 0),
+  );
+
+const deserializeVec2i = (
+  data: number[],
+) =>
+  vec2i(
+    bitcastU32toI32(data[0] ?? 0),
+    bitcastU32toI32(data[1] ?? 0),
+  );
+
+const deserializeVec3i = (
+  data: number[],
+) =>
+  vec3i(
+    bitcastU32toI32(data[0] ?? 0),
+    bitcastU32toI32(data[1] ?? 0),
+    bitcastU32toI32(data[2] ?? 0),
+  );
+
+const deserializeVec4i = (
+  data: number[],
+) =>
+  vec4i(
+    bitcastU32toI32(data[0] ?? 0),
+    bitcastU32toI32(data[1] ?? 0),
+    bitcastU32toI32(data[2] ?? 0),
+    bitcastU32toI32(data[3] ?? 0),
+  );
 
 const deserializeVec2u = (
   data: number[],
@@ -44,6 +108,12 @@ const deserializerMap: DeserializerMap = {
   f32: deserializeF32,
   i32: deserializeI32,
   u32: deserializeU32,
+  vec2f: deserializeVec2f,
+  vec3f: deserializeVec3f,
+  vec4f: deserializeVec4f,
+  vec2i: deserializeVec2i,
+  vec3i: deserializeVec3i,
+  vec4i: deserializeVec4i,
   vec2u: deserializeVec2u,
   vec3u: deserializeVec3u,
   vec4u: deserializeVec4u,

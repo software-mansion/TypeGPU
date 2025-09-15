@@ -3,7 +3,17 @@ import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { arrayOf } from '../../data/array.ts';
 import { bool, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
+import {
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
+} from '../../data/vector.ts';
 import type {
   AnyWgslData,
   Atomic,
@@ -30,6 +40,30 @@ const serializeI32 = fn([i32], arrayOf(u32, 1))`(n) => {
 
 const serializeU32 = fn([u32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(n);
+}`;
+
+const serializeVec2f = fn([vec2f], arrayOf(u32, 2))`(v) => {
+  return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+}`;
+
+const serializeVec3f = fn([vec3f], arrayOf(u32, 3))`(v) => {
+  return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
+}`;
+
+const serializeVec4f = fn([vec4f], arrayOf(u32, 4))`(v) => {
+  return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
+}`;
+
+const serializeVec2i = fn([vec2i], arrayOf(u32, 2))`(v) => {
+  return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+}`;
+
+const serializeVec3i = fn([vec3i], arrayOf(u32, 3))`(v) => {
+  return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
+}`;
+
+const serializeVec4i = fn([vec4i], arrayOf(u32, 4))`(v) => {
+  return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
 }`;
 
 const serializeVec2u = fn([vec2u], arrayOf(u32, 2))`(v) => {
@@ -59,6 +93,12 @@ export const serializerMap: SerializerMap = {
   f32: serializeF32,
   i32: serializeI32,
   u32: serializeU32,
+  vec2f: serializeVec2f,
+  vec3f: serializeVec3f,
+  vec4f: serializeVec4f,
+  vec2i: serializeVec2i,
+  vec3i: serializeVec3i,
+  vec4i: serializeVec4i,
   vec2u: serializeVec2u,
   vec3u: serializeVec3u,
   vec4u: serializeVec4u,
