@@ -352,7 +352,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
-  private readonly _logGenerator: LogGenerator;
+  readonly #logGenerator: LogGenerator;
 
   get varyingLocations() {
     return this._varyingLocations;
