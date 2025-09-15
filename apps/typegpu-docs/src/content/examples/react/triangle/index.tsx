@@ -34,7 +34,7 @@ const reactRoot = createRoot(
 reactRoot.render(<App />);
 
 export function onCleanup() {
-  reactRoot.unmount();
+  setTimeout(() => reactRoot.unmount(), 0);
 }
 
 // #endregion
