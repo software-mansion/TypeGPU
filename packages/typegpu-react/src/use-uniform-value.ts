@@ -1,6 +1,7 @@
 import type * as d from 'typegpu/data';
 import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useState } from 'react';
+import type { ValidateUniformSchema } from 'typegpu';
 
 interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
@@ -19,8 +20,7 @@ export function useUniformValue<
 
   const [uniformBuffer] = useState(() => {
     return root.createUniform(
-      // biome-ignore lint/suspicious/noExplicitAny: Constraint validation issue with ValidateUniformSchema
-      schema as any,
+      schema as ValidateUniformSchema<TSchema>,
       initialValue,
     );
   });
