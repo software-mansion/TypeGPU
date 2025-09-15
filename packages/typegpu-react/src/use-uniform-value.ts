@@ -29,8 +29,7 @@ export function useUniformValue<
     return () => {
       uniformBuffer.buffer.destroy();
     };
-  }, [uniformBuffer]); 
-
+  }, [uniformBuffer]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: This value needs to be stable
   const uniformValue = useMemo(() => {
