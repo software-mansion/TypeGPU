@@ -136,7 +136,6 @@ class TgpuFixedBufferImpl<
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
     const name = getName(this);
-    const accessPath = `${this.usage}:${name ?? '<unnamed>'}`;
 
     return new Proxy({
       [$internal]: true,
@@ -144,7 +143,7 @@ class TgpuFixedBufferImpl<
         return snip(this, dataType);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => accessPath,
+      toString: () => `${this.usage}:${name ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TData>;
   }
 
@@ -256,7 +255,6 @@ export class TgpuLaidOutBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const schema = this.dataType as unknown as AnyData;
-    const accessPath = `${this.usage}:${getName(this) ?? '<unnamed>'}.$`;
 
     return new Proxy({
       [$internal]: true,
@@ -264,7 +262,7 @@ export class TgpuLaidOutBufferImpl<
         return snip(this, schema);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => accessPath,
+      toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TData>;
   }
 
