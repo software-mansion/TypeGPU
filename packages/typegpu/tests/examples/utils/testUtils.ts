@@ -4,9 +4,9 @@ export function getExampleURLs(category: string, name: string): {
 } {
   return {
     html:
-      `../../../../../apps/typegpu-docs/src/content/examples/${category}/${name}/index.html?raw`,
+      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
     ts:
-      `../../../../../apps/typegpu-docs/src/content/examples/${category}/${name}/index.ts`,
+      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
   };
 }
 
