@@ -690,7 +690,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
 
         expect(() => texture.generateMipmaps())
           .toThrowErrorMatchingInlineSnapshot(
-            `[Error: generateMipmaps called without specifying 'render' usage]`,
+            `[Error: generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.]`,
           );
       });
     });
