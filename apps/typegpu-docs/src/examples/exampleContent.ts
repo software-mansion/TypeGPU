@@ -76,7 +76,7 @@ const metaFiles = R.pipe(
 );
 
 const readonlyTsFiles = R.pipe(
-  import.meta.glob('./**/*.ts', {
+  import.meta.glob(['./**/*.ts', './**/*.tsx'], {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -85,7 +85,7 @@ const readonlyTsFiles = R.pipe(
 );
 
 const tsFilesImportFunctions = R.pipe(
-  import.meta.glob('./**/index.ts') as Record<
+  import.meta.glob(['./**/index.ts', './**/index.tsx']) as Record<
     string,
     () => Promise<unknown>
   >,
