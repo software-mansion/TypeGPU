@@ -6,8 +6,8 @@ import { activationFunctionSlot } from './schemas';
 import { relu } from './compute/activationFunctions';
 
 export type Layer =
-  | { kind: 'Gemm', compute: TgpuComputeFn }
-  | { kind: 'Conv', compute: TgpuComputeFn  };
+  | { kind: 'Gemm'; compute: TgpuComputeFn }
+  | { kind: 'Conv'; compute: TgpuComputeFn };
 export type Activation =
   | { kind: 'relu'; fn: TgpuFn }
   | { kind: 'identity'; fn: TgpuFn }
