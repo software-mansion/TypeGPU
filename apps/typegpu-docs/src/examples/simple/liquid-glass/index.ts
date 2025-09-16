@@ -318,8 +318,5 @@ export function onCleanup() {
     cancelAnimationFrame(frameId);
   }
   window.removeEventListener('mousemove', handleMouseMove);
-  canvas.removeEventListener('touchmove', handleTouchMove);
-  canvas.removeEventListener('click', handleClick);
-  canvas.removeEventListener('touchstart', handleTouchStart);
   root.destroy();
 }
