@@ -7,7 +7,7 @@ import {
   CLOUD_DETALIZATION,
   DARK,
   FLIGHT_SPEED,
-  LIGHT_ABSORBTION,
+  LIGHT_ABSORPTION,
   MARCH_SIZE,
   MAX_ITERATIONS,
   sampledViewSlot,
@@ -65,9 +65,9 @@ export const raymarch = tgpu.fn(
         density,
       );
 
-      res = std.add(res, std.mul(premul, LIGHT_ABSORBTION - res.w));
+      res = std.add(res, std.mul(premul, LIGHT_ABSORPTION - res.w));
 
-      if (res.w >= LIGHT_ABSORBTION - 1e-3) {
+      if (res.w >= LIGHT_ABSORPTION - 1e-3) {
         break;
       }
     }
