@@ -203,13 +203,21 @@ export type GenerationCtx = ResolutionCtx & {
    */
   expectedType: AnyData | undefined;
 
-  readonly topFunctionReturnType: AnyData;
+  readonly topFunctionReturnType: AnyData | undefined;
+
   indent(): string;
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
+
+  /**
+   * Types that are used in `return` statements are
+   * reported using this function, and used to infer
+   * the return type of the owning function.
+   */
+  reportReturnType(dataType: AnyData): void;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {

@@ -13,7 +13,7 @@ import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { ResolutionError, WgslTypeError } from '../errors.ts';
-import { getName } from '../shared/meta.ts';
+import { getMetaData, getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
@@ -430,6 +430,10 @@ ${this.ctx.pre}}`;
         return callee.value.operator(callee.value.lhs, rhs);
       }
 
+      const meta = getMetaData(callee.value);
+      if (meta) {
+      }
+
       if (!isMarkedInternal(callee.value)) {
         throw new Error(
           `Function ${String(callee.value)} ${
@@ -620,9 +624,10 @@ ${this.ctx.pre}}`;
       const returnNode = statement[1];
 
       if (returnNode !== undefined) {
+        const expectedReturnType = this.ctx.topFunctionReturnType;
         const returnSnippet = this.typedExpression(
           returnNode,
-          this.ctx.topFunctionReturnType,
+          expectedReturnType,
         );
         return stitch`${this.ctx.pre}return ${returnSnippet};`;
       }

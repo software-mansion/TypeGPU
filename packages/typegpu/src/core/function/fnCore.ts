@@ -24,7 +24,11 @@ export interface FnCore {
   resolve(
     ctx: ResolutionCtx,
     argTypes: AnyData[],
-    returnType: AnyData,
+    /**
+     * The return type of the function. If undefined, the type should be inferred
+     * from the implementation (relevant for shellless functions).
+     */
+    returnType: AnyData | undefined,
   ): string;
 }
 
@@ -48,7 +52,7 @@ export function createFnCore(
     resolve(
       ctx: ResolutionCtx,
       argTypes: AnyData[],
-      returnType: AnyData,
+      returnType: AnyData | undefined,
     ): string {
       const externalMap: ExternalMap = {};
 
@@ -159,7 +163,8 @@ export function createFnCore(
           applyExternals(
             externalMap,
             {
-              [maybeSecondArg.name]: undecorate(returnType),
+              // biome-ignore lint/style/noNonNullAssertion: entry functions cannot be shellless
+              [maybeSecondArg.name]: undecorate(returnType!),
             },
           );
         }

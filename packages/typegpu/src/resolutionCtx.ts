@@ -15,7 +15,7 @@ import {
 import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, type UnknownData } from './data/dataTypes.ts';
 import { snip, type Snippet } from './data/snippet.ts';
-import { isWgslArray, isWgslStruct } from './data/wgslTypes.ts';
+import { isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -44,6 +44,7 @@ import type {
   ExecMode,
   ExecState,
   FnToWgslOptions,
+  FunctionScopeLayer,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
@@ -81,14 +82,6 @@ type SlotBindingLayer = {
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
 };
 
-type FunctionScopeLayer = {
-  type: 'functionScope';
-  args: Snippet[];
-  argAliases: Record<string, Snippet>;
-  externalMap: Record<string, unknown>;
-  returnType: AnyData;
-};
-
 type BlockScopeLayer = {
   type: 'blockScope';
   declarations: Map<string, AnyData | UnknownData>;
@@ -115,12 +108,8 @@ class ItemStateStackImpl implements ItemStateStack {
     return state;
   }
 
-  get topFunctionReturnType(): AnyData {
-    const scope = this._stack.findLast((e) => e.type === 'functionScope');
-    if (!scope) {
-      throw new Error('Internal error, expected function scope to be present.');
-    }
-    return scope.returnType;
+  get topFunctionScope(): FunctionScopeLayer | undefined {
+    return this._stack.findLast((e) => e.type === 'functionScope');
   }
 
   pushItem() {
@@ -149,16 +138,20 @@ class ItemStateStackImpl implements ItemStateStack {
   pushFunctionScope(
     args: Snippet[],
     argAliases: Record<string, Snippet>,
-    returnType: AnyData,
+    returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
-  ) {
-    this._stack.push({
+  ): FunctionScopeLayer {
+    const scope: FunctionScopeLayer = {
       type: 'functionScope',
       args,
       argAliases,
       returnType,
       externalMap,
-    });
+      reportedReturnTypes: [],
+    };
+
+    this._stack.push(scope);
+    return scope;
   }
 
   popFunctionScope() {
@@ -382,7 +375,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   get topFunctionReturnType() {
-    return this._itemStateStack.topFunctionReturnType;
+    const scope = this._itemStateStack.topFunctionScope;
+    if (!scope) {
+      throw new Error('Internal error, expected function scope to be present.');
+    }
+    return scope.returnType;
   }
 
   indent(): string {
@@ -411,6 +408,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
+  reportReturnType(dataType: AnyData) {
+    const scope = this._itemStateStack.topFunctionScope;
+    if (!scope) {
+      throw new Error('Internal error, expected function scope to be present.');
+    }
+    scope.reportedReturnTypes.push(dataType);
+  }
+
   pushBlockScope() {
     this._itemStateStack.pushBlockScope();
   }
@@ -420,7 +425,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
-    this._itemStateStack.pushFunctionScope(
+    const scope = this._itemStateStack.pushFunctionScope(
       options.args,
       options.argAliases,
       options.returnType,
@@ -429,9 +434,25 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       this.#shaderGenerator.initGenerator(this);
+      const body = this.#shaderGenerator.functionDefinition(options.body);
+
+      let returnType = options.returnType;
+      if (!returnType) {
+        const uniqueReturnTypes = new Set(scope.reportedReturnTypes);
+        if (uniqueReturnTypes.size === 0) {
+          returnType = Void;
+        } else if (uniqueReturnTypes.size === 1) {
+          returnType = scope.reportedReturnTypes[0] as AnyData;
+        } else {
+          throw new Error(
+            `Expected function to have a single return type, got ${uniqueReturnTypes}. Cast explicitly to the desired type.`,
+          );
+        }
+      }
+
       return {
-        head: resolveFunctionHeader(this, options.args, options.returnType),
-        body: this.#shaderGenerator.functionDefinition(options.body),
+        head: resolveFunctionHeader(this, options.args, returnType),
+        body,
       };
     } finally {
       this._itemStateStack.popFunctionScope();
