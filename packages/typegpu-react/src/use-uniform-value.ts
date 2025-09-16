@@ -5,8 +5,18 @@ import type { ValidateUniformSchema } from 'typegpu';
 
 interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
-  value: TValue | undefined;
+  value: TValue;
   readonly $: d.InferGPU<TSchema>;
+}
+
+function initialValueFromSchema<T extends d.AnyWgslData>(
+  schema: ValidateUniformSchema<T>,
+): d.Infer<T> {
+  if (typeof schema !== 'function') {
+    throw new Error('Cannot use a non-callable schema with `useUniformValue`');
+  }
+
+  return schema() as d.Infer<T>;
 }
 
 export function useUniformValue<
@@ -40,17 +50,15 @@ export function useUniformValue<
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: This value needs to be stable
   const uniformValue = useMemo(() => {
-    let currentValue = initialValue;
+    let currentValue = initialValue ?? initialValueFromSchema(schema) as TValue;
     return {
       schema,
       get value() {
         return currentValue;
       },
-      set value(newValue: TValue | undefined) {
+      set value(newValue: TValue) {
         currentValue = newValue;
-        if (newValue !== undefined) {
-          uniformBuffer.write(newValue);
-        }
+        uniformBuffer.write(newValue);
       },
       get $() {
         return uniformBuffer.$;
