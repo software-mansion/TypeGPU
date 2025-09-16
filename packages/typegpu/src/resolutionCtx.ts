@@ -329,7 +329,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
-  readonly shelllessRepo = new ShelllessRepository();
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -377,6 +376,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       throw new Error('Internal error, expected function scope to be present.');
     }
     return scope.returnType;
+  }
+
+  get shelllessRepo() {
+    return this.#namespace.shelllessRepo;
   }
 
   indent(): string {

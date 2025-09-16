@@ -7,9 +7,7 @@ import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('shellless', () => {
   it('is callable from shelled function', () => {
-    type vf = d.v2f | d.v3f | d.v4f;
-
-    const dot2 = (a: vf) => {
+    const dot2 = (a: d.v2f) => {
       'kernel';
       return std.dot(a, a);
     };
@@ -28,12 +26,42 @@ describe('shellless', () => {
         return dot(a, a);
       }
 
-      fn dot2_1(a: vec2f) -> f32 {
+      fn foo() -> f32 {
+        return (dot2(vec2f(1, 2)) + dot2(vec2f(3, 4)));
+      }
+
+      fn main() -> f32 {
+        return foo();
+      }"
+    `);
+  });
+
+  it('is generic based on arguments', () => {
+    const dot2 = (a: d.v2f | d.v3f) => {
+      'kernel';
+      return std.dot(a, a);
+    };
+
+    const foo = () => {
+      'kernel';
+      return dot2(d.vec2f(1, 2)) + dot2(d.vec3f(3, 4, 5));
+    };
+
+    const main = tgpu.fn([], d.f32)(() => {
+      return foo();
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn dot2(a: vec2f) -> f32 {
+        return dot(a, a);
+      }
+
+      fn dot2_1(a: vec3f) -> f32 {
         return dot(a, a);
       }
 
       fn foo() -> f32 {
-        return (dot2(vec2f(1, 2)) + dot2_1(vec2f(3, 4)));
+        return (dot2(vec2f(1, 2)) + dot2_1(vec3f(3, 4, 5)));
       }
 
       fn main() -> f32 {
