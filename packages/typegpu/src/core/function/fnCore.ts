@@ -56,7 +56,7 @@ export function createFnCore(
         applyExternals(externalMap, externals);
       }
 
-      const id = ctx.names.makeUnique(getName(this));
+      const id = ctx.getUniqueName(this);
 
       if (typeof implementation === 'string') {
         const replacedImpl = replaceExternalsInWgsl(
