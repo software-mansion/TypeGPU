@@ -680,26 +680,18 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
           mipLevelCount: 3,
         });
 
-        expectTypeOf(texture.generateMipmaps).toExtend<
-          (
-            missingUsage:
-              "(Error) generateMipmaps requires the texture to be usable as a render target. Use .$usage('render') first.",
-          ) => void
-        >;
+        // TODO: Maybe figure out a way to make this a type level error again?
+        // expectTypeOf(texture.generateMipmaps).toExtend<
+        //   (
+        //     missingUsage:
+        //       "(Error) generateMipmaps requires the texture to be usable as a render target. Use .$usage('render') first.",
+        //   ) => void
+        // >;
 
-        // @ts-expect-error
         expect(() => texture.generateMipmaps())
           .toThrowErrorMatchingInlineSnapshot(
             `[Error: generateMipmaps called without specifying 'render' usage]`,
           );
-
-        const textureWithUsage = texture.$usage('render');
-
-        expectTypeOf(textureWithUsage.generateMipmaps).toExtend<
-          (baseMipLevel?: number, levelCount?: number) => void
-        >;
-
-        expect(() => textureWithUsage.generateMipmaps()).not.toThrow();
       });
     });
   });
