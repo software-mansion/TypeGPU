@@ -1,6 +1,6 @@
 import type * as d from 'typegpu/data';
 import { useRoot } from './root-context.tsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
 
 interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
@@ -25,9 +25,16 @@ export function useUniformValue<
     );
   });
 
+  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (cleanupRef.current) {
+      clearTimeout(cleanupRef.current);
+    }
+    
     return () => {
-      uniformBuffer.buffer.destroy();
+      cleanupRef.current = setTimeout(() => {
+        uniformBuffer.buffer.destroy();
+      }, 200);
     };
   }, [uniformBuffer]);
 
