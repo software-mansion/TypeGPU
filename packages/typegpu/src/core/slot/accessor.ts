@@ -1,3 +1,4 @@
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
@@ -94,7 +95,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this.value;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const value = ctx.unwrap(this.slot);
 
     if (isBufferUsage(value) || isBufferShorthand(value)) {
@@ -102,7 +103,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     }
 
     if (isTgpuFn(value)) {
-      return `${ctx.resolve(value)}()`;
+      return snip(`${ctx.resolve(value).value}()`, value.shell.returnType);
     }
 
     return ctx.resolve(value, this.schema);

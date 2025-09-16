@@ -16,7 +16,7 @@ export class ShelllessRepository {
 
     const argTypes = argSnippets.map((s) => s.dataType) as AnyData[];
 
-    // TODO: Cache shellless implementations
+    // TODO: Cache shell-less implementations
     const shellless = createShelllessImpl(argTypes, fn);
     return shellless;
   }

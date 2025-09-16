@@ -1,4 +1,5 @@
 import type { AnyData } from '../data/dataTypes.ts';
+import { snip } from '../data/snippet.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
 import {
   extractGpuValueGetter,
@@ -35,21 +36,23 @@ export const valueProxyHandler: ProxyHandler<
       return () => target.toString();
     }
 
+    const propType = getTypeForPropAccess(
+      target[$wgslDataType] as AnyData,
+      String(prop),
+    ) as AnyData;
+
     return new Proxy(
       {
         [$internal]: true,
         [$runtimeResource]: true,
 
         '~resolve': (ctx: ResolutionCtx) =>
-          `${ctx.resolve(target)}.${String(prop)}`,
+          snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
 
         toString: () =>
           `.value(...).${String(prop)}:${getName(target) ?? '<unnamed>'}`,
 
-        [$wgslDataType]: getTypeForPropAccess(
-          target[$wgslDataType] as AnyData,
-          String(prop),
-        ) as BaseData,
+        [$wgslDataType]: propType,
       },
       valueProxyHandler,
     );

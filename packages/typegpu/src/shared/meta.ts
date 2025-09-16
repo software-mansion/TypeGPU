@@ -73,6 +73,13 @@ export function setName(definition: object, name: string): void {
   setMetaData(definition, { name });
 }
 
+export function setNameForward(definition: object, name: string): void {
+  if (isForwarded(definition)) {
+    setNameForward(definition[$getNameForward] as object, name);
+  }
+  setMetaData(definition, { name });
+}
+
 /**
  * Can be assigned a name. Not to be confused with
  * being able to HAVE a name.

@@ -1,5 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
+import { ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
@@ -108,25 +109,24 @@ class TgpuFixedBufferImpl<
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+    const dataType = this.buffer.dataType;
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
-        ? { uniform: this.buffer.dataType }
-        : { storage: this.buffer.dataType, access: this.usage },
+        ? { uniform: dataType }
+        : { storage: dataType, access: this.usage },
       this.buffer,
     );
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${
-        ctx.resolve(
-          this.buffer.dataType,
-        )
+        ctx.resolve(dataType).value
       };`,
     );
 
-    return id;
+    return snip(id, dataType);
   }
 
   toString(): string {
@@ -232,18 +232,19 @@ export class TgpuLaidOutBufferImpl<
     setName(this, _membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+    const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(this.dataType)
+        ctx.resolve(dataType).value
       };`,
     );
 
-    return id;
+    return snip(id, dataType);
   }
 
   toString(): string {

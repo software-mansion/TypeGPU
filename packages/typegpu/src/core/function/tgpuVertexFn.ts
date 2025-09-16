@@ -3,6 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
   Decorated,
   Interpolate,
@@ -195,7 +196,7 @@ function createVertexFn(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
       const outputWithLocation = createIoSchema(
         shell.out,
         ctx.varyingLocations,

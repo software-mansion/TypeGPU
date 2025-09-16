@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { ResolvedSnippet, snip, type Snippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
@@ -191,7 +191,7 @@ function createFn<ImplSchema extends AnyFn>(
       ]);
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
         addArgTypesToExternals(
           implementation,
@@ -329,10 +329,13 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this[$getNameForward] = fn;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
     return ctx.withResetIndentLevel(() =>
-      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
+      snip(
+        stitch`${ctx.resolve(this.#fn).value}(${this.#params})`,
+        this.#fn.shell.returnType,
+      )
     );
   }
 

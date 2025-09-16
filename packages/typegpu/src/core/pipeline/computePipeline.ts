@@ -26,6 +26,8 @@ import {
 } from './timeable.ts';
 import { PERF } from '../../shared/meta.ts';
 import { namespace } from '../resolve/namespace.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { Void } from '../../data/wgslTypes.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -105,7 +107,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this[$getNameForward] = _core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this._core);
   }
 
@@ -221,7 +223,7 @@ class ComputePipelineCore implements SelfResolvable {
   '~resolve'(ctx: ResolutionCtx) {
     return ctx.withSlots(this._slotBindings, () => {
       ctx.resolve(this._entryFn);
-      return '';
+      return snip('', Void);
     });
   }
 

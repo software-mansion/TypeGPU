@@ -1,3 +1,4 @@
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -59,14 +60,14 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const resolvedValue = ctx.resolve(this.#value, this.dataType);
-    const resolvedDataType = ctx.resolve(this.dataType);
+    const resolvedValue = ctx.resolve(this.#value, this.dataType).value;
+    const resolvedDataType = ctx.resolve(this.dataType).value;
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
-    return id;
+    return snip(id, this.dataType);
   }
 
   toString() {

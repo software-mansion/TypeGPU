@@ -1,3 +1,4 @@
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import {
   type NameRegistry,
   RandomNameRegistry,
@@ -16,7 +17,7 @@ export interface NamespaceInternal {
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
-    { slotToValueMap: SlotToValueMap; result: string }[]
+    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet }[]
   >;
 
   memoizedDerived: WeakMap<

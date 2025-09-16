@@ -1,3 +1,4 @@
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
@@ -125,7 +126,7 @@ export class TgpuBufferShorthandImpl<
     return this.$;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this.#usage);
   }
 }

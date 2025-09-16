@@ -31,7 +31,7 @@ import type {
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
-import type { Snippet } from './data/snippet.ts';
+import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -258,7 +258,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   /**
-   * Returns the WGSL code representing `item`.
+   * Returns the snippet representing `item`.
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
@@ -269,11 +269,12 @@ export interface ResolutionCtx {
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
     exact?: boolean | undefined,
-  ): string;
+  ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
+    returnType: AnyData;
   };
 
   withVaryingLocations<T>(
@@ -293,7 +294,7 @@ export interface ResolutionCtx {
  */
 export interface SelfResolvable {
   [$internal]: unknown;
-  '~resolve'(ctx: ResolutionCtx): string;
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet;
   toString(): string;
 }
 

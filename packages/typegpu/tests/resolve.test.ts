@@ -10,6 +10,7 @@ import {
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
 import { parse } from './utils/parseResolved.ts';
+import { snip } from '../src/data/snippet.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
@@ -68,7 +69,7 @@ describe('tgpu resolve', () => {
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return name;
+        return snip(name, d.f32);
       },
     };
     setName(intensity, 'intensity');

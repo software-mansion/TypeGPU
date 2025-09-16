@@ -12,6 +12,7 @@ import {
   isWgslData,
   type U16,
   type U32,
+  Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import {
@@ -60,6 +61,7 @@ import {
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
 import { namespace } from '../resolve/namespace.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -309,7 +311,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$getNameForward] = core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this[$internal].core);
   }
 
@@ -647,7 +649,7 @@ class RenderPipelineCore implements SelfResolvable {
       : [null];
   }
 
-  '~resolve'(ctx: ResolutionCtx) {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const {
       vertexFn,
       fragmentFn,
@@ -669,7 +671,7 @@ class RenderPipelineCore implements SelfResolvable {
           if (fragmentFn) {
             ctx.resolve(fragmentFn);
           }
-          return '';
+          return snip('', Void);
         }),
     );
   }

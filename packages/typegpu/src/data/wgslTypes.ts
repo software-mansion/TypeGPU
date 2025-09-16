@@ -120,6 +120,9 @@ export interface Void extends BaseData {
 export const Void = {
   [$internal]: true,
   type: 'void',
+  toString() {
+    return 'void';
+  },
 } as Void;
 
 // #region Instance Types

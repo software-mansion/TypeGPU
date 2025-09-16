@@ -1,4 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
+import { ResolvedSnippet } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -177,7 +178,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(
         ctx,
         shell.argTypes,

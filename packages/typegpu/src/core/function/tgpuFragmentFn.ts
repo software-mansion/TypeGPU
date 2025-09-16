@@ -3,6 +3,7 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
   Decorated,
   Interpolate,
@@ -215,7 +216,7 @@ function createFragmentFn(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
       const inputWithLocation = shell.in
         ? createIoSchema(shell.in, ctx.varyingLocations)
           .$name(`${getName(this) ?? ''}_Input`)

@@ -1,4 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import { ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { $internal, $wgslDataType } from '../../shared/symbols.ts';
@@ -153,7 +154,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
     setName(this, _membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -161,7 +162,9 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: sampler;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -183,7 +186,7 @@ export class TgpuLaidOutComparisonSamplerImpl
     setName(this, _membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -191,7 +194,9 @@ export class TgpuLaidOutComparisonSamplerImpl
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: sampler_comparison;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -235,7 +240,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
 
     const { group, binding } = ctx.allocateFixedEntry(
@@ -249,7 +254,9 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
       `@group(${group}) @binding(${binding}) var ${id}: sampler;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -288,7 +295,7 @@ class TgpuFixedComparisonSamplerImpl
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
@@ -299,7 +306,9 @@ class TgpuFixedComparisonSamplerImpl
       `@group(${group}) @binding(${binding}) var ${id}: sampler_comparison;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
+    return snip(id, this as any);
   }
 
   toString() {
