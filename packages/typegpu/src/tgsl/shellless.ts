@@ -5,6 +5,7 @@ import {
 import type { AnyData } from '../data/dataTypes.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { getMetaData } from '../shared/meta.ts';
+import { concretize } from './generationHelpers.ts';
 
 interface ShelllessVariant {
   argTypes: AnyData[];
@@ -20,7 +21,7 @@ export class ShelllessRepository {
     const meta = getMetaData(fn);
     if (!meta?.ast) return undefined;
 
-    const argTypes = argSnippets.map((s) => s.dataType) as AnyData[];
+    const argTypes = argSnippets.map((s) => concretize(s.dataType as AnyData));
 
     let cache = this.cache.get(fn);
     if (cache) {
