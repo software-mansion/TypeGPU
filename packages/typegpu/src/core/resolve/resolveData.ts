@@ -42,7 +42,6 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -137,7 +136,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   if (struct[$internal].isAbstruct) {
     throw new Error('Cannot resolve abstract struct types to WGSL.');
   }
-  const id = ctx.names.makeUnique(getName(struct));
+  const id = ctx.getUniqueName(struct);
 
   ctx.addDeclaration(`\
 struct ${id} {
@@ -167,7 +166,7 @@ ${
  * ```
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
-  const id = ctx.names.makeUnique(getName(unstruct));
+  const id = ctx.getUniqueName(unstruct);
 
   ctx.addDeclaration(`\
 struct ${id} {

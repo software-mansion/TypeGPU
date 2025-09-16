@@ -83,11 +83,11 @@ describe('3d fish example', () => {
           wrappedCallback_2(in.id.x, in.id.y, in.id.z);
         }
 
-      struct computeShader_Input_14 {
+      struct computeShader_Input_1 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      struct ModelData_16 {
+      struct ModelData_3 {
         position: vec3f,
         direction: vec3f,
         scale: f32,
@@ -97,9 +97,9 @@ describe('3d fish example', () => {
         applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(0) var<storage, read> currentFishData_15: array<ModelData_16>;
+      @group(0) @binding(0) var<storage, read> currentFishData_2: array<ModelData_3>;
 
-      struct FishBehaviorParams_18 {
+      struct FishBehaviorParams_5 {
         separationDist: f32,
         separationStr: f32,
         alignmentDist: f32,
@@ -108,34 +108,34 @@ describe('3d fish example', () => {
         cohesionStr: f32,
       }
 
-      @group(0) @binding(4) var<uniform> fishBehavior_17: FishBehaviorParams_18;
+      @group(0) @binding(4) var<uniform> fishBehavior_4: FishBehaviorParams_5;
 
-      struct Line3_21 {
+      struct Line3_8 {
         origin: vec3f,
         dir: vec3f,
       }
 
-      struct MouseRay_20 {
+      struct MouseRay_7 {
         activated: u32,
-        line: Line3_21,
+        line: Line3_8,
       }
 
-      @group(0) @binding(2) var<uniform> mouseRay_19: MouseRay_20;
+      @group(0) @binding(2) var<uniform> mouseRay_6: MouseRay_7;
 
-      fn projectPointOnLine_22(point: vec3f, line: Line3_21) -> vec3f {
+      fn projectPointOnLine_9(point: vec3f, line: Line3_8) -> vec3f {
         var pointVector = (point - line.origin);
         var projection = dot(pointVector, line.dir);
         var closestPoint = (line.origin + (projection * line.dir));
         return closestPoint;
       }
 
-      @group(0) @binding(3) var<uniform> timePassed_23: f32;
+      @group(0) @binding(3) var<uniform> timePassed_10: f32;
 
-      @group(0) @binding(1) var<storage, read_write> nextFishData_24: array<ModelData_16>;
+      @group(0) @binding(1) var<storage, read_write> nextFishData_11: array<ModelData_3>;
 
-      @compute @workgroup_size(256) fn computeShader_13(input: computeShader_Input_14) {
+      @compute @workgroup_size(256) fn computeShader_0(input: computeShader_Input_1) {
         var fishIndex = input.gid.x;
-        var fishData = ModelData_16(currentFishData_15[fishIndex].position, currentFishData_15[fishIndex].direction, currentFishData_15[fishIndex].scale, currentFishData_15[fishIndex].variant, currentFishData_15[fishIndex].applySinWave, currentFishData_15[fishIndex].applySeaFog, currentFishData_15[fishIndex].applySeaDesaturation);
+        var fishData = ModelData_3(currentFishData_2[fishIndex].position, currentFishData_2[fishIndex].direction, currentFishData_2[fishIndex].scale, currentFishData_2[fishIndex].variant, currentFishData_2[fishIndex].applySinWave, currentFishData_2[fishIndex].applySeaFog, currentFishData_2[fishIndex].applySeaDesaturation);
         var separation = vec3f();
         var alignment = vec3f();
         var alignmentCount = 0;
@@ -147,16 +147,16 @@ describe('3d fish example', () => {
           if ((u32(i) == fishIndex)) {
             continue;
           }
-          var other = ModelData_16(currentFishData_15[i].position, currentFishData_15[i].direction, currentFishData_15[i].scale, currentFishData_15[i].variant, currentFishData_15[i].applySinWave, currentFishData_15[i].applySeaFog, currentFishData_15[i].applySeaDesaturation);
+          var other = ModelData_3(currentFishData_2[i].position, currentFishData_2[i].direction, currentFishData_2[i].scale, currentFishData_2[i].variant, currentFishData_2[i].applySinWave, currentFishData_2[i].applySeaFog, currentFishData_2[i].applySeaDesaturation);
           var dist = length((fishData.position - other.position));
-          if ((dist < fishBehavior_17.separationDist)) {
+          if ((dist < fishBehavior_4.separationDist)) {
             separation = (separation + (fishData.position - other.position));
           }
-          if ((dist < fishBehavior_17.alignmentDist)) {
+          if ((dist < fishBehavior_4.alignmentDist)) {
             alignment = (alignment + other.direction);
             alignmentCount = (alignmentCount + 1);
           }
-          if ((dist < fishBehavior_17.cohesionDist)) {
+          if ((dist < fishBehavior_4.cohesionDist)) {
             cohesion = (cohesion + other.position);
             cohesionCount = (cohesionCount + 1);
           }
@@ -182,32 +182,32 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (str * repulsion));
           }
         }
-        if ((mouseRay_19.activated == 1)) {
-          var proj = projectPointOnLine_22(fishData.position, mouseRay_19.line);
+        if ((mouseRay_6.activated == 1)) {
+          var proj = projectPointOnLine_9(fishData.position, mouseRay_6.line);
           var diff = (fishData.position - proj);
           var limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);
           rayRepulsion = (str * normalize(diff));
         }
-        fishData.direction = (fishData.direction + (fishBehavior_17.separationStr * separation));
-        fishData.direction = (fishData.direction + (fishBehavior_17.alignmentStr * alignment));
-        fishData.direction = (fishData.direction + (fishBehavior_17.cohesionStr * cohesion));
+        fishData.direction = (fishData.direction + (fishBehavior_4.separationStr * separation));
+        fishData.direction = (fishData.direction + (fishBehavior_4.alignmentStr * alignment));
+        fishData.direction = (fishData.direction + (fishBehavior_4.cohesionStr * cohesion));
         fishData.direction = (fishData.direction + (1e-4 * wallRepulsion));
         fishData.direction = (fishData.direction + (5e-4 * rayRepulsion));
         fishData.direction = (clamp(length(fishData.direction), 0, 0.01) * normalize(fishData.direction));
-        var translation = ((min(999, timePassed_23) / 8f) * fishData.direction);
+        var translation = ((min(999, timePassed_10) / 8f) * fishData.direction);
         fishData.position = (fishData.position + translation);
-        nextFishData_24[fishIndex] = fishData;
+        nextFishData_11[fishIndex] = fishData;
       }
 
-      struct vertexShader_Input_26 {
+      struct vertexShader_Input_1 {
         @location(0) modelPosition: vec3f,
         @location(1) modelNormal: vec3f,
         @location(2) textureUV: vec2f,
         @builtin(instance_index) instanceIndex: u32,
       }
 
-      struct vertexShader_Output_27 {
+      struct vertexShader_Output_2 {
         @location(0) worldPosition: vec3f,
         @location(1) worldNormal: vec3f,
         @builtin(position) canvasPosition: vec4f,
@@ -217,7 +217,7 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      struct ModelData_29 {
+      struct ModelData_4 {
         position: vec3f,
         direction: vec3f,
         scale: f32,
@@ -227,14 +227,14 @@ describe('3d fish example', () => {
         applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(0) var<storage, read> modelData_28: array<ModelData_29>;
+      @group(0) @binding(0) var<storage, read> modelData_3: array<ModelData_4>;
 
-      struct PosAndNormal_30 {
+      struct PosAndNormal_5 {
         position: vec3f,
         normal: vec3f,
       }
 
-      fn applySinWave_31(index: u32, vertex: PosAndNormal_30, time: f32) -> PosAndNormal_30 {
+      fn applySinWave_6(index: u32, vertex: PosAndNormal_5, time: f32) -> PosAndNormal_5 {
         var a = -60.1;
         var b = 0.8;
         var c = 6.1;
@@ -245,25 +245,25 @@ describe('3d fish example', () => {
         var newNormalXZ = ((vertex.normal.x * newOX) + (vertex.normal.z * newOZ));
         var wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
         var wavedPosition = (vertex.position + positionModification);
-        return PosAndNormal_30(wavedPosition, wavedNormal);
+        return PosAndNormal_5(wavedPosition, wavedNormal);
       }
 
-      @group(0) @binding(4) var<uniform> currentTime_32: f32;
+      @group(0) @binding(4) var<uniform> currentTime_7: f32;
 
-      struct Camera_34 {
+      struct Camera_9 {
         position: vec4f,
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }
 
-      @group(0) @binding(2) var<uniform> camera_33: Camera_34;
+      @group(0) @binding(2) var<uniform> camera_8: Camera_9;
 
-      @vertex fn vertexShader_25(input: vertexShader_Input_26) -> vertexShader_Output_27 {
-        var currentModelData = ModelData_29(modelData_28[input.instanceIndex].position, modelData_28[input.instanceIndex].direction, modelData_28[input.instanceIndex].scale, modelData_28[input.instanceIndex].variant, modelData_28[input.instanceIndex].applySinWave, modelData_28[input.instanceIndex].applySeaFog, modelData_28[input.instanceIndex].applySeaDesaturation);
-        var wavedVertex = PosAndNormal_30(input.modelPosition, input.modelNormal);
+      @vertex fn vertexShader_0(input: vertexShader_Input_1) -> vertexShader_Output_2 {
+        var currentModelData = ModelData_4(modelData_3[input.instanceIndex].position, modelData_3[input.instanceIndex].direction, modelData_3[input.instanceIndex].scale, modelData_3[input.instanceIndex].variant, modelData_3[input.instanceIndex].applySinWave, modelData_3[input.instanceIndex].applySeaFog, modelData_3[input.instanceIndex].applySeaDesaturation);
+        var wavedVertex = PosAndNormal_5(input.modelPosition, input.modelNormal);
         if ((currentModelData.applySinWave == 1)) {
-          wavedVertex = applySinWave_31(input.instanceIndex, PosAndNormal_30(input.modelPosition, input.modelNormal), currentTime_32);
+          wavedVertex = applySinWave_6(input.instanceIndex, PosAndNormal_5(input.modelPosition, input.modelNormal), currentTime_7);
         }
         var direction = normalize(currentModelData.direction);
         var yaw = (-atan2(direction.z, direction.x) + 3.141592653589793);
@@ -275,11 +275,11 @@ describe('3d fish example', () => {
         var worldPosition = (translationMatrix * (yawMatrix * (pitchMatrix * (scaleMatrix * vec4f(wavedVertex.position, 1)))));
         var worldNormal = normalize((yawMatrix * (pitchMatrix * vec4f(wavedVertex.normal, 1))).xyz);
         var worldPositionUniform = worldPosition;
-        var canvasPosition = (camera_33.projection * (camera_33.view * worldPositionUniform));
-        return vertexShader_Output_27(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
+        var canvasPosition = (camera_8.projection * (camera_8.view * worldPositionUniform));
+        return vertexShader_Output_2(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
       }
 
-      struct fragmentShader_Input_36 {
+      struct fragmentShader_Input_11 {
         @location(0) worldPosition: vec3f,
         @location(1) worldNormal: vec3f,
         @builtin(position) canvasPosition: vec4f,
@@ -289,11 +289,11 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(1) var modelTexture_37: texture_2d<f32>;
+      @group(0) @binding(1) var modelTexture_12: texture_2d<f32>;
 
-      @group(0) @binding(3) var sampler_38: sampler;
+      @group(0) @binding(3) var sampler_13: sampler;
 
-      fn rgbToHsv_39(rgb: vec3f) -> vec3f {
+      fn rgbToHsv_14(rgb: vec3f) -> vec3f {
         var r = rgb.x;
         var g = rgb.y;
         var b = rgb.z;
@@ -340,7 +340,7 @@ describe('3d fish example', () => {
         return vec3f(h, s, v);
       }
 
-      fn hsvToRgb_40(hsv: vec3f) -> vec3f {
+      fn hsvToRgb_15(hsv: vec3f) -> vec3f {
         var h = hsv.x;
         var s = hsv.y;
         var v = hsv.z;
@@ -393,26 +393,26 @@ describe('3d fish example', () => {
         return vec3f(r, g, b);
       }
 
-      @fragment fn fragmentShader_35(input: fragmentShader_Input_36) -> @location(0) vec4f {
-        var textureColorWithAlpha = textureSample(modelTexture_37, sampler_38, input.textureUV);
+      @fragment fn fragmentShader_10(input: fragmentShader_Input_11) -> @location(0) vec4f {
+        var textureColorWithAlpha = textureSample(modelTexture_12, sampler_13, input.textureUV);
         var textureColor = textureColorWithAlpha.xyz;
         var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
         var diffuse = (max(0, cosTheta) * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
-        var viewSource = normalize((camera_33.position.xyz - input.worldPosition));
+        var viewSource = normalize((camera_8.position.xyz - input.worldPosition));
         var reflectSource = normalize(reflect((-1 * vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972)), input.worldNormal));
         var specularStrength = pow(max(0, dot(viewSource, reflectSource)), 16);
         var specular = (specularStrength * vec3f(0.800000011920929, 0.800000011920929, 1));
         var lightedColor = (ambient + (diffuse + specular));
-        var distanceFromCamera = length((camera_33.position.xyz - input.worldPosition));
+        var distanceFromCamera = length((camera_8.position.xyz - input.worldPosition));
         var desaturatedColor = lightedColor;
         if ((input.applySeaDesaturation == 1)) {
           var desaturationFactor = (-atan2(((distanceFromCamera - 5) / 10f), 1) / 3f);
-          var hsv = rgbToHsv_39(desaturatedColor);
+          var hsv = rgbToHsv_14(desaturatedColor);
           hsv.y += (desaturationFactor / 2f);
           hsv.z += desaturationFactor;
           hsv.x += ((input.variant - 0.5) * 0.2);
-          desaturatedColor = hsvToRgb_40(hsv);
+          desaturatedColor = hsvToRgb_15(hsv);
         }
         var foggedColor = desaturatedColor;
         if ((input.applySeaFog == 1)) {

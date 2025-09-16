@@ -126,6 +126,64 @@ export const textureSample = dualImpl({
   },
 });
 
+function sampleBiasCpu<T extends WgslTexture1d>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: number,
+  bias: number,
+): v4f;
+function sampleBiasCpu<T extends WgslTexture2d>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: v2f,
+  bias: number,
+  offset?: v2i,
+): v4f;
+function sampleBiasCpu<T extends WgslTexture2dArray>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: v2f,
+  arrayIndex: number,
+  bias: number,
+  offset?: v2i,
+): v4f;
+function sampleBiasCpu<T extends WgslTexture3d | WgslTextureCube>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: v3f,
+  bias: number,
+  offset?: v3i,
+): v4f;
+function sampleBiasCpu<T extends WgslTextureCubeArray>(
+  texture: T,
+  sampler: TgpuSampler,
+  coords: v3f,
+  arrayIndex: number,
+  bias: number,
+): v4f;
+function sampleBiasCpu(
+  _texture: WgslTexture,
+  _sampler: TgpuSampler,
+  _coords: number | v2f | v3f,
+  _biasOrArrayIndex: number,
+  _biasOrOffset?: number | v2i | v3i,
+  _maybeOffset?: v2i | v3i,
+): v4f {
+  throw new Error(
+    'Texture sampling with bias relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureSampleBias = dualImpl({
+  name: 'textureSampleBias',
+  normalImpl: sampleBiasCpu,
+  codegenImpl: (...args) => stitch`textureSampleBias(${args})`,
+  signature: (...args) => ({
+    argTypes: args as AnyData[],
+    returnType: vec4f,
+  }),
+});
+
 function sampleLevelCpu<T extends WgslTexture1d>(
   texture: T,
   sampler: TgpuSampler,

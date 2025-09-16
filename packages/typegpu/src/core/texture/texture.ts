@@ -667,7 +667,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       isWgslStorageTexture(this.schema)
         ? {
@@ -714,7 +714,7 @@ export class TgpuLaidOutTextureViewImpl<
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(

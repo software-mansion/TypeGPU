@@ -75,31 +75,31 @@ describe('blur example', () => {
         }
       }
 
-      struct fullScreenTriangle_Input_10 {
+      struct fullScreenTriangle_Input_1 {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      struct fullScreenTriangle_Output_11 {
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle_9(input: fullScreenTriangle_Input_10) -> fullScreenTriangle_Output_11 {
+      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
         var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output_11(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
+        return fullScreenTriangle_Output_2(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
       }
 
-      struct renderFragment_Input_13 {
+      struct renderFragment_Input_4 {
         @location(0) uv: vec2f,
       }
 
-      @group(0) @binding(0) var item_14: texture_2d<f32>;
+      @group(0) @binding(0) var item_5: texture_2d<f32>;
 
-      @group(0) @binding(1) var sampler_15: sampler;
+      @group(0) @binding(1) var sampler_6: sampler;
 
-      @fragment fn renderFragment_12(input: renderFragment_Input_13) -> @location(0) vec4f {
-        return textureSample(item_14, sampler_15, input.uv);
+      @fragment fn renderFragment_3(input: renderFragment_Input_4) -> @location(0) vec4f {
+        return textureSample(item_5, sampler_6, input.uv);
       }"
     `);
   });
