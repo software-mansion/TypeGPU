@@ -12,7 +12,7 @@ import {
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { ResolutionError, WgslTypeError } from '../errors.ts';
+import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
@@ -430,11 +430,19 @@ ${this.ctx.pre}}`;
         return callee.value.operator(callee.value.lhs, rhs);
       }
 
-      const meta = getMetaData(callee.value);
-      if (meta) {
-      }
-
       if (!isMarkedInternal(callee.value)) {
+        const snippets = argNodes.map((arg) => this.expression(arg));
+        const shellless = this.ctx.shelllessRepo.get(
+          callee.value as any,
+          snippets,
+        );
+        if (shellless) {
+          return snip(
+            stitch`${this.ctx.resolve(shellless)}(${snippets})`,
+            shellless.returnType,
+          );
+        }
+
         throw new Error(
           `Function ${String(callee.value)} ${
             getName(callee.value)
@@ -625,10 +633,19 @@ ${this.ctx.pre}}`;
 
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
-        const returnSnippet = this.typedExpression(
-          returnNode,
-          expectedReturnType,
+        const returnSnippet = expectedReturnType
+          ? this.typedExpression(
+            returnNode,
+            expectedReturnType,
+          )
+          : this.expression(returnNode);
+
+        invariant(
+          returnSnippet.dataType.type !== 'unknown',
+          'Return type should be known',
         );
+
+        this.ctx.reportReturnType(returnSnippet.dataType);
         return stitch`${this.ctx.pre}return ${returnSnippet};`;
       }
 

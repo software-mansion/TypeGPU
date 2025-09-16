@@ -4,7 +4,7 @@ import { $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore } from './fnCore.ts';
 
-interface ShelllessImpl extends SelfResolvable {
+export interface ShelllessImpl extends SelfResolvable {
   readonly resourceType: 'shellless-function';
 }
 

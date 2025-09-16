@@ -1,11 +1,23 @@
-import type { TgpuFn } from '../core/function/tgpuFn.ts';
+import {
+  createShelllessImpl,
+  type ShelllessImpl,
+} from '../core/function/shelllessImpl.ts';
+import type { AnyData } from '../data/dataTypes.ts';
+import type { Snippet } from '../data/snippet.ts';
 import { getMetaData } from '../shared/meta.ts';
 
 export class ShelllessRepository {
-  constructor() {
-  }
+  get(
+    fn: (...args: never[]) => unknown,
+    argSnippets: Snippet[],
+  ): ShelllessImpl | undefined {
+    const meta = getMetaData(fn);
+    if (!meta) return undefined;
 
-  getShelled(fn: (...args: never[]) => unknown): TgpuFn | undefined {
-    const meta = getMetaData();
+    const argTypes = argSnippets.map((s) => s.dataType) as AnyData[];
+
+    // TODO: Cache shellless implementations
+    const shellless = createShelllessImpl(argTypes, fn);
+    return shellless;
   }
 }

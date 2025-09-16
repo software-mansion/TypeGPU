@@ -44,6 +44,7 @@ import {
 } from '../data/wgslTypes.ts';
 import { $wgslDataType } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
+import type { ShelllessRepository } from './shellless.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -218,6 +219,8 @@ export type GenerationCtx = ResolutionCtx & {
    * the return type of the owning function.
    */
   reportReturnType(dataType: AnyData): void;
+
+  readonly shelllessRepo: ShelllessRepository;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {
