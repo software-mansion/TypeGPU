@@ -1,8 +1,4 @@
-import tgpu, {
-  type TgpuBindGroup,
-  type TgpuBuffer,
-  type VertexFlag,
-} from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import * as std from 'typegpu/std';
@@ -27,7 +23,6 @@ const Vertex = d.struct({
 });
 
 const Camera = d.struct({
-  position: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
 });
@@ -41,36 +36,66 @@ const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 // == SCENE ==
 const aspect = canvas.clientWidth / canvas.clientHeight;
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(12, 5, 12, 1);
+const cameraInitialPos = d.vec4f(12, 7, 12, 1);
 
 const cameraInitial: d.Infer<typeof Camera> = {
-  position: cameraInitialPos,
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
 };
 
 // == GEOMETRY ==
-const getColor = (_: number): d.Infer<typeof Vertex>['color'] => {
-  return d.vec4f(d.vec3f(Math.random()), 1);
+const heightScale = 4;
+const getColor = (height: number): d.Infer<typeof Vertex>['color'] => {
+  return d.vec4f(d.vec3f(1 - height / heightScale), 1);
 };
 
-const hardcodedTwoTriangles = [
-  [-1, 0, 1, 1],
-  [1, 0, 1, 1],
-  [1, 0, -1, 1],
-  [-1, 0, 1, 1],
-  [1, 0, -1, 1],
-  [-1, 0, -1, 1],
-];
+const createPlane = (n: number, m: number): d.Infer<typeof Vertex>[] => {
+  const nSideLength = 2;
+  const mSideLength = 2;
+  const nSubdivisionLength = nSideLength / (n - 1);
+  const mSubdivisionLength = mSideLength / (m - 1);
 
-const createPlane = (
-  width: number,
-  height: number,
-): d.Infer<typeof Vertex>[] => {
-  return hardcodedTwoTriangles.map((pos) => ({
-    position: d.vec4f(...(pos as [number, number, number, number])),
-    color: getColor(0),
+  const indices = Array.from(
+    { length: n },
+    (_, i) => Array.from({ length: m }, (_, j) => [i, j] as [number, number]),
+  );
+  const coords = indices.map((ar) =>
+    ar.map((e) => {
+      const [i, j] = e;
+      return [-1 + j * mSubdivisionLength, 1 - i * nSubdivisionLength];
+    })
+  );
+  const heights = Array.from(
+    { length: n * m },
+    () => heightScale * Math.random(),
+  );
+  const vertices = coords.flat().map((e, i) => ({
+    position: d.vec4f(e[0], heights[i], e[1], 1),
+    color: getColor(heights[i]),
   }));
+
+  return vertices;
+};
+
+const getPlaneIndexArray = (
+  n: number,
+  m: number,
+): number[] => {
+  const indices: number[] = [];
+
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < m - 1; j++) {
+      const topLeft = i * m + j;
+      const topRight = i * m + (j + 1);
+      const bottomLeft = (i + 1) * m + j;
+      const bottomRight = (i + 1) * m + (j + 1);
+
+      indices.push(topLeft, bottomLeft, bottomRight);
+      indices.push(topLeft, bottomRight, topRight);
+    }
+  }
+
+  return indices;
 };
 
 const getPlaneTransform = (
@@ -86,12 +111,34 @@ const getPlaneTransform = (
   };
 };
 
+// == TEMP CONST ==
+// these 2 below must be greater than 1 each
+const futureNumOfReleases = 49;
+const futureNumOfSamples = 49;
+
 // == BUFFERS ==
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 const planeBuffer = root
-  .createBuffer(vertexLayout.schemaForCount(6), createPlane(0, 0))
+  .createBuffer(
+    vertexLayout.schemaForCount(futureNumOfReleases * futureNumOfSamples),
+    createPlane(futureNumOfReleases, futureNumOfSamples),
+  )
   .$usage('vertex');
+
+const planeIndexBuffer = root
+  .createBuffer(
+    d.arrayOf(d.u16, (futureNumOfReleases - 1) * (futureNumOfSamples - 1) * 6),
+    getPlaneIndexArray(futureNumOfReleases, futureNumOfSamples),
+  )
+  .$usage('index');
+
+console.log(
+  createPlane(futureNumOfReleases, futureNumOfSamples).map((vertex) =>
+    vertex.position.join(',')
+  ),
+);
+console.log(getPlaneIndexArray(futureNumOfSamples, futureNumOfReleases));
 
 const planeTransformBuffer = root
   .createBuffer(
@@ -176,38 +223,130 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 // == RENDER LOOP ==
-const drawObject = (
-  buffer: TgpuBuffer<d.WgslArray<typeof Vertex>> & VertexFlag,
-  group: TgpuBindGroup<typeof layout.entries>,
-  vertexCount: number,
-  loadOp: 'clear' | 'load',
-) => {
+const drawPlane = () => {
   pipeline
     .withColorAttachment({
       view: msaaTextureView,
       resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
-      loadOp: loadOp,
+      loadOp: 'clear',
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTextureView,
       depthClearValue: 1,
-      depthLoadOp: loadOp,
+      depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(vertexLayout, buffer)
-    .with(layout, group)
-    .draw(vertexCount);
+    .with(vertexLayout, planeBuffer)
+    .with(layout, planeBindGroup)
+    .withIndexBuffer(planeIndexBuffer)
+    .drawIndexed((futureNumOfReleases - 1) * (futureNumOfSamples - 1) * 6);
 };
 
-function render() {
-  drawObject(planeBuffer, planeBindGroup, 6, 'clear');
-}
+const render = drawPlane;
 
-function frame() {
-  render();
+const frame = () => {
   requestAnimationFrame(frame);
-}
+  render();
+};
 
 frame();
+
+// #region Example controls and cleanup
+
+let isDragging = false;
+let prevX = 0;
+let prevY = 0;
+let orbitRadius = Math.sqrt(
+  cameraInitialPos.x * cameraInitialPos.x +
+    cameraInitialPos.y * cameraInitialPos.y +
+    cameraInitialPos.z * cameraInitialPos.z,
+);
+
+// Yaw and pitch angles facing the origin.
+let orbitYaw = Math.atan2(cameraInitialPos.x, cameraInitialPos.z);
+let orbitPitch = Math.asin(cameraInitialPos.y / orbitRadius);
+
+const updateCameraOrbit = (dx: number, dy: number) => {
+  const orbitSensitivity = 0.005;
+  orbitYaw += -dx * orbitSensitivity;
+  orbitPitch += dy * orbitSensitivity;
+  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
+  const maxPitch = Math.PI / 2 - 0.01;
+  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
+  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
+  // basically converting spherical coordinates to cartesian.
+  // like sampling points on a unit sphere and then scaling them by the radius.
+  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
+  const newCamY = orbitRadius * Math.sin(orbitPitch);
+  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
+  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+
+  const newView = m.mat4.lookAt(
+    newCameraPos,
+    target,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  );
+  cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+};
+
+canvas.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
+canvas.addEventListener('wheel', (event: WheelEvent) => {
+  event.preventDefault();
+  const zoomSensitivity = 0.05;
+  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
+  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
+  const newCamY = orbitRadius * Math.sin(orbitPitch);
+  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
+  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  const newView = m.mat4.lookAt(
+    newCameraPos,
+    target,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  );
+  cameraBuffer.writePartial({ view: newView });
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (event) => {
+  if (event.button === 0) {
+    // Left Mouse Button controls Camera Orbit.
+    isDragging = true;
+  }
+  prevX = event.clientX;
+  prevY = event.clientY;
+});
+
+const mouseUpEventListener = () => {
+  isDragging = false;
+};
+window.addEventListener('mouseup', mouseUpEventListener);
+
+canvas.addEventListener('mousemove', (event) => {
+  const dx = event.clientX - prevX;
+  const dy = event.clientY - prevY;
+  prevX = event.clientX;
+  prevY = event.clientY;
+
+  if (isDragging) {
+    updateCameraOrbit(dx, dy);
+  }
+});
+
+const resizeObserver = new ResizeObserver(() => {
+  createDepthAndMsaaTextures();
+});
+resizeObserver.observe(canvas);
+
+export function onCleanup() {
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  resizeObserver.disconnect();
+  root.destroy();
+}
+
+// #endregion
