@@ -30,7 +30,7 @@ export function useUniformValue<
     if (cleanupRef.current) {
       clearTimeout(cleanupRef.current);
     }
-    
+
     return () => {
       cleanupRef.current = setTimeout(() => {
         uniformBuffer.buffer.destroy();
