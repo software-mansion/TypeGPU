@@ -454,9 +454,9 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Function ${String(callee.value)} ${
-            getName(callee.value)
-          } is not marked with a 'kernel' directive and cannot be used in a shader`,
+          `Function '${
+            getName(callee.value) ?? String(callee.value)
+          }' is not marked with the 'kernel' directive and cannot be used in a shader`,
         );
       }
 

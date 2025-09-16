@@ -265,6 +265,28 @@ export function unify<T extends (AnyData | UnknownData)[]>(
   };
 }
 
+export function unifyAuto<T extends (AnyData | UnknownData)[]>(
+  inTypes: T,
+  restrictTo?: AnyData[] | undefined,
+): { [K in keyof T]: AnyWgslData } | undefined {
+  if (inTypes.some((type) => type.type === 'unknown')) {
+    return undefined;
+  }
+
+  const conversion = getBestConversion(inTypes as AnyData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  if (conversion.actions.some((a) => a.action !== 'none')) {
+    return undefined;
+  }
+
+  return inTypes.map(() => conversion.targetType) as {
+    [K in keyof T]: AnyWgslData;
+  };
+}
+
 export function convertToCommonType<T extends Snippet[]>(
   values: T,
   restrictTo?: AnyData[] | undefined,

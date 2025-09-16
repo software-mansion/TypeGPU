@@ -1830,6 +1830,16 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
   );
 }
 
+export function isAbstract(
+  value: unknown,
+): value is AbstractFloat | AbstractInt {
+  return isAbstractFloat(value) || isAbstractInt(value);
+}
+
+export function isConcrete(value: unknown): boolean {
+  return !isAbstract(value);
+}
+
 export function isVoid(value: unknown): value is Void {
   return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }

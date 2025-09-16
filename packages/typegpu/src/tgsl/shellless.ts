@@ -18,7 +18,7 @@ export class ShelllessRepository {
 
   get(fn: AnyFn, argSnippets: Snippet[]): ShelllessImpl | undefined {
     const meta = getMetaData(fn);
-    if (!meta) return undefined;
+    if (!meta?.ast) return undefined;
 
     const argTypes = argSnippets.map((s) => s.dataType) as AnyData[];
 

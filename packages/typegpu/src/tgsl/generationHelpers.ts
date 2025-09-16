@@ -34,7 +34,9 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
+  F32,
   hasInternalDataType,
+  I32,
   isMatInstance,
   isNumericSchema,
   isVec,
@@ -181,7 +183,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat);
 }
 
-export function concretize(type: AnyWgslData): AnyWgslData {
+export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }

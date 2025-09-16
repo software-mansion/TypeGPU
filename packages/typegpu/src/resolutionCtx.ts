@@ -21,7 +21,12 @@ import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import { isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import {
+  isConcrete,
+  isWgslArray,
+  isWgslStruct,
+  Void,
+} from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -39,8 +44,10 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
+import { unifyAuto } from './tgsl/conversion.ts';
 import {
   coerceToSnippet,
+  concretize,
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
@@ -439,18 +446,27 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let returnType = options.returnType;
       if (!returnType) {
-        const uniqueReturnTypes = new Set(scope.reportedReturnTypes);
-        if (uniqueReturnTypes.size === 0) {
+        const uniqueReturnTypes = [...new Set(scope.reportedReturnTypes)];
+        const concreteTypes = [...uniqueReturnTypes].filter(isConcrete);
+        if (uniqueReturnTypes.length === 0) {
           returnType = Void;
-        } else if (uniqueReturnTypes.size === 1) {
-          returnType = scope.reportedReturnTypes[0] as AnyData;
-        } else {
+        } else if (concreteTypes.length <= 1) {
+          // Trying to find a common type for the return values
+          returnType = unifyAuto(
+            uniqueReturnTypes,
+            concreteTypes.length > 0 ? concreteTypes : undefined,
+          )?.[0];
+        }
+
+        if (!returnType) {
           throw new Error(
             `Expected function to have a single return type, got [${
-              [...uniqueReturnTypes].join(', ')
+              uniqueReturnTypes.join(', ')
             }]. Cast explicitly to the desired type.`,
           );
         }
+
+        returnType = concretize(returnType);
       }
 
       return {
