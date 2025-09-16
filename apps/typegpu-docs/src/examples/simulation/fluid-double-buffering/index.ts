@@ -31,13 +31,15 @@ const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
 
-const isValidCoord = tgpu.fn([d.i32, d.i32], d.bool)((x, y) =>
-  x < gridSize && x >= 0 && y < gridSize && y >= 0
-);
+const isValidCoord = (x: number, y: number): boolean => {
+  'kernel';
+  return x < gridSize && x >= 0 && y < gridSize && y >= 0;
+};
 
-const coordsToIndex = tgpu.fn([d.i32, d.i32], d.i32)((x, y) =>
-  x + y * gridSize
-);
+const coordsToIndex = (x: number, y: number) => {
+  'kernel';
+  return x + y * gridSize;
+};
 
 const getCell = tgpu.fn([d.i32, d.i32], d.vec4f)((x, y) =>
   inputGridSlot.$[coordsToIndex(x, y)]
@@ -59,34 +61,33 @@ const addDensity = tgpu.fn([d.i32, d.i32, d.f32])((x, y, density) => {
   outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
 });
 
-const flowFromCell = tgpu.fn([d.i32, d.i32, d.i32, d.i32], d.f32)(
-  (myX, myY, x, y) => {
-    if (!isValidCoord(x, y)) {
-      return 0;
-    }
-    const src = getCell(x, y);
-
-    const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
-    const dest = getCell(destPos.x, destPos.y);
-    const diff = src.z - dest.z;
-    let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
-
-    if (std.length(src.xy) < 0.5) {
-      outFlow = 0;
-    }
-
-    if (myX === x && myY === y) {
-      // 'src.z - outFlow' is how much is left in the src
-      return src.z - outFlow;
-    }
-
-    if (destPos.x === myX && destPos.y === myY) {
-      return outFlow;
-    }
-
+const flowFromCell = (myX: number, myY: number, x: number, y: number) => {
+  'kernel';
+  if (!isValidCoord(x, y)) {
     return 0;
-  },
-);
+  }
+  const src = getCell(x, y);
+
+  const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
+  const dest = getCell(destPos.x, destPos.y);
+  const diff = src.z - dest.z;
+  let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
+
+  if (std.length(src.xy) < 0.5) {
+    outFlow = 0;
+  }
+
+  if (myX === x && myY === y) {
+    // 'src.z - outFlow' is how much is left in the src
+    return src.z - outFlow;
+  }
+
+  if (destPos.x === myX && destPos.y === myY) {
+    return outFlow;
+  }
+
+  return 0;
+};
 
 const root = await tgpu.init();
 
