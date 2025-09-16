@@ -1,14 +1,17 @@
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
+  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec4b,
   vec4f,
   vec4h,
   vec4i,
@@ -35,11 +38,11 @@ type DeserializerMap = {
 };
 
 const deserializerMap: DeserializerMap = {
-  bool: (d: number[]) => !!d[0],
   f32: (d: number[]) => toF(d[0]),
   f16: (d: number[]) => unpack(d[0]).x,
   i32: (d: number[]) => toI(d[0]),
   u32: (d: number[]) => d[0] ?? 0,
+  bool: (d: number[]) => !!d[0],
   vec2f: (d: number[]) => vec2f(toF(d[0]), toF(d[1])),
   vec3f: (d: number[]) => vec3f(toF(d[0]), toF(d[1]), toF(d[2])),
   vec4f: (d: number[]) => vec4f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
@@ -63,6 +66,9 @@ const deserializerMap: DeserializerMap = {
   vec2u: (d: number[]) => vec2u(d[0] ?? 0, d[1] ?? 0),
   vec3u: (d: number[]) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
   vec4u: (d: number[]) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
+  'vec2<bool>': (d: number[]) => vec2b(!!d[0], !!d[1]),
+  'vec3<bool>': (d: number[]) => vec3b(!!d[0], !!d[1], !!d[2]),
+  'vec4<bool>': (d: number[]) => vec4b(!!d[0], !!d[1], !!d[2], !!d[3]),
   mat2x2f: (d: number[]) => mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
   mat3x3f: (d: number[]) =>
     // deno-fmt-ignore

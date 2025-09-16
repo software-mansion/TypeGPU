@@ -5,14 +5,17 @@ import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
+  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec4b,
   vec4f,
   vec4h,
   vec4i,
@@ -37,9 +40,6 @@ type SerializerMap = {
 };
 
 export const serializerMap: SerializerMap = {
-  bool: fn([bool], arrayOf(u32, 1))`(b) => {
-  return array<u32, 1>(u32(b));
-}`,
   f32: fn([f32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(bitcast<u32>(n));
 }`,
@@ -51,6 +51,9 @@ export const serializerMap: SerializerMap = {
 }`,
   u32: fn([u32], arrayOf(u32, 1))`(n) => {
   return array<u32, 1>(n);
+}`,
+  bool: fn([bool], arrayOf(u32, 1))`(b) => {
+  return array<u32, 1>(u32(b));
 }`,
   vec2f: fn([vec2f], arrayOf(u32, 2))`(v) => {
   return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
@@ -93,6 +96,15 @@ export const serializerMap: SerializerMap = {
 }`,
   vec4u: fn([vec4u], arrayOf(u32, 4))`(v) => {
   return array<u32, 4>(v.x, v.y, v.z, v.w);
+}`,
+  'vec2<bool>': fn([vec2b], arrayOf(u32, 2))`(v) => {
+  return array<u32, 2>(u32(v.x), u32(v.y));
+}`,
+  'vec3<bool>': fn([vec3b], arrayOf(u32, 3))`(v) => {
+  return array<u32, 3>(u32(v.x), u32(v.y), u32(v.z));
+}`,
+  'vec4<bool>': fn([vec4b], arrayOf(u32, 4))`(v) => {
+  return array<u32, 4>(u32(v.x), u32(v.y), u32(v.z), u32(v.w));
 }`,
   mat2x2f: fn([mat2x2f], arrayOf(u32, 4))`(m) => {
   return array<u32, 4>(
