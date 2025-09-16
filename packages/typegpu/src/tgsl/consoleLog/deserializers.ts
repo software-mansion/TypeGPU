@@ -19,108 +19,9 @@ import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
 import type { LogResources } from './types.ts';
 
-// -------------
-// Deserializers
-// -------------
-
-const deserializeBool = (data: number[]) => !!data[0];
-
-const deserializeF32 = (data: number[]) => bitcastU32toF32(data[0] ?? 0);
-
-const deserializeF16 = (data: number[]) => unpack2x16float(data[0] ?? 0).x;
-
-const deserializeI32 = (data: number[]) => bitcastU32toI32(data[0] ?? 0);
-
-const deserializeU32 = (data: number[]) => data[0] ?? 0;
-
-const deserializeVec2f = (
-  data: number[],
-) =>
-  vec2f(
-    bitcastU32toF32(data[0] ?? 0),
-    bitcastU32toF32(data[1] ?? 0),
-  );
-
-const deserializeVec3f = (
-  data: number[],
-) =>
-  vec3f(
-    bitcastU32toF32(data[0] ?? 0),
-    bitcastU32toF32(data[1] ?? 0),
-    bitcastU32toF32(data[2] ?? 0),
-  );
-
-const deserializeVec4f = (
-  data: number[],
-) =>
-  vec4f(
-    bitcastU32toF32(data[0] ?? 0),
-    bitcastU32toF32(data[1] ?? 0),
-    bitcastU32toF32(data[2] ?? 0),
-    bitcastU32toF32(data[3] ?? 0),
-  );
-
-const deserializeVec2h = (
-  data: number[],
-) => {
-  const unpackedXY = unpack2x16float(data[0] ?? 0);
-  return vec2h(unpackedXY.x, unpackedXY.y);
-};
-
-const deserializeVec3h = (
-  data: number[],
-) => {
-  const unpackedXY = unpack2x16float(data[0] ?? 0);
-  const unpackedZ = unpack2x16float(data[1] ?? 0);
-  return vec3h(unpackedXY.x, unpackedXY.y, unpackedZ.x);
-};
-
-const deserializeVec4h = (
-  data: number[],
-) => {
-  const unpackedXY = unpack2x16float(data[0] ?? 0);
-  const unpackedZW = unpack2x16float(data[1] ?? 0);
-  return vec4h(unpackedXY.x, unpackedXY.y, unpackedZW.x, unpackedZW.y);
-};
-
-const deserializeVec2i = (
-  data: number[],
-) =>
-  vec2i(
-    bitcastU32toI32(data[0] ?? 0),
-    bitcastU32toI32(data[1] ?? 0),
-  );
-
-const deserializeVec3i = (
-  data: number[],
-) =>
-  vec3i(
-    bitcastU32toI32(data[0] ?? 0),
-    bitcastU32toI32(data[1] ?? 0),
-    bitcastU32toI32(data[2] ?? 0),
-  );
-
-const deserializeVec4i = (
-  data: number[],
-) =>
-  vec4i(
-    bitcastU32toI32(data[0] ?? 0),
-    bitcastU32toI32(data[1] ?? 0),
-    bitcastU32toI32(data[2] ?? 0),
-    bitcastU32toI32(data[3] ?? 0),
-  );
-
-const deserializeVec2u = (
-  data: number[],
-) => vec2u(data[0] ?? 0, data[1] ?? 0);
-
-const deserializeVec3u = (
-  data: number[],
-) => vec3u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0);
-
-const deserializeVec4u = (
-  data: number[],
-) => vec4u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0, data[3] ?? 0);
+const toF = (n: number | undefined) => bitcastU32toF32(n ?? 0);
+const toI = (n: number | undefined) => bitcastU32toI32(n ?? 0);
+const unpack = (n: number | undefined) => unpack2x16float(n ?? 0);
 
 // ----------------
 // Deserializer map
@@ -133,23 +34,34 @@ type DeserializerMap = {
 };
 
 const deserializerMap: DeserializerMap = {
-  bool: deserializeBool,
-  f32: deserializeF32,
-  f16: deserializeF16,
-  i32: deserializeI32,
-  u32: deserializeU32,
-  vec2f: deserializeVec2f,
-  vec3f: deserializeVec3f,
-  vec4f: deserializeVec4f,
-  vec2h: deserializeVec2h,
-  vec3h: deserializeVec3h,
-  vec4h: deserializeVec4h,
-  vec2i: deserializeVec2i,
-  vec3i: deserializeVec3i,
-  vec4i: deserializeVec4i,
-  vec2u: deserializeVec2u,
-  vec3u: deserializeVec3u,
-  vec4u: deserializeVec4u,
+  bool: (d: number[]) => !!d[0],
+  f32: (d: number[]) => toF(d[0]),
+  f16: (d: number[]) => unpack(d[0]).x,
+  i32: (d: number[]) => toI(d[0]),
+  u32: (d: number[]) => d[0] ?? 0,
+  vec2f: (d: number[]) => vec2f(toF(d[0]), toF(d[1])),
+  vec3f: (d: number[]) => vec3f(toF(d[0]), toF(d[1]), toF(d[2])),
+  vec4f: (d: number[]) => vec4f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  vec2h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    return vec2h(xyVec.x, xyVec.y);
+  },
+  vec3h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    const z = unpack(d[1]);
+    return vec3h(xyVec.x, xyVec.y, z.x);
+  },
+  vec4h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    const zwVec = unpack(d[1]);
+    return vec4h(xyVec.x, xyVec.y, zwVec.x, zwVec.y);
+  },
+  vec2i: (d: number[]) => vec2i(toI(d[0]), toI(d[1])),
+  vec3i: (d: number[]) => vec3i(toI(d[0]), toI(d[1]), toI(d[2])),
+  vec4i: (d: number[]) => vec4i(toI(d[0]), toI(d[1]), toI(d[2]), toI(d[3])),
+  vec2u: (d: number[]) => vec2u(d[0] ?? 0, d[1] ?? 0),
+  vec3u: (d: number[]) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
+  vec4u: (d: number[]) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
 };
 
 // -------
