@@ -1,6 +1,7 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { arrayOf } from '../../data/array.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
@@ -92,6 +93,27 @@ export const serializerMap: SerializerMap = {
 }`,
   vec4u: fn([vec4u], arrayOf(u32, 4))`(v) => {
   return array<u32, 4>(v.x, v.y, v.z, v.w);
+}`,
+  mat2x2f: fn([mat2x2f], arrayOf(u32, 4))`(m) => {
+  return array<u32, 4>(
+    bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]),
+    bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1])
+  );
+}`,
+  mat3x3f: fn([mat3x3f], arrayOf(u32, 12))`(m) => {
+  return array<u32, 12>(
+    bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), 0,
+    bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), 0,
+    bitcast<u32>(m[2][0]), bitcast<u32>(m[2][1]), bitcast<u32>(m[2][2]), 0
+  );
+}`,
+  mat4x4f: fn([mat4x4f], arrayOf(u32, 16))`(m) => {
+  return array<u32, 16>(
+    bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), bitcast<u32>(m[0][3]),
+    bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), bitcast<u32>(m[1][3]),
+    bitcast<u32>(m[2][0]), bitcast<u32>(m[2][1]), bitcast<u32>(m[2][2]), bitcast<u32>(m[2][3]),
+    bitcast<u32>(m[3][0]), bitcast<u32>(m[3][1]), bitcast<u32>(m[3][2]), bitcast<u32>(m[3][3])
+  );
 }`,
 };
 

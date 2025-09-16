@@ -1,3 +1,4 @@
+import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2f,
@@ -48,8 +49,8 @@ const deserializerMap: DeserializerMap = {
   },
   vec3h(d: number[]) {
     const xyVec = unpack(d[0]);
-    const z = unpack(d[1]);
-    return vec3h(xyVec.x, xyVec.y, z.x);
+    const zVec = unpack(d[1]);
+    return vec3h(xyVec.x, xyVec.y, zVec.x);
   },
   vec4h(d: number[]) {
     const xyVec = unpack(d[0]);
@@ -62,6 +63,22 @@ const deserializerMap: DeserializerMap = {
   vec2u: (d: number[]) => vec2u(d[0] ?? 0, d[1] ?? 0),
   vec3u: (d: number[]) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
   vec4u: (d: number[]) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
+  mat2x2f: (d: number[]) => mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  mat3x3f: (d: number[]) =>
+    // deno-fmt-ignore
+    mat3x3f(
+      toF(d[0]), toF(d[1]), toF(d[2]),
+      toF(d[4]), toF(d[5]), toF(d[6]),
+      toF(d[8]), toF(d[9]), toF(d[10]),
+    ),
+  mat4x4f: (d: number[]) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      toF(d[0]),  toF(d[1]),  toF(d[2]),  toF(d[3]),
+      toF(d[4]),  toF(d[5]),  toF(d[6]),  toF(d[7]),
+      toF(d[8]),  toF(d[9]),  toF(d[10]), toF(d[11]),
+      toF(d[12]), toF(d[13]), toF(d[14]), toF(d[15]),
+    ),
 };
 
 // -------

@@ -4,7 +4,7 @@ import * as d from 'typegpu/data';
 const root = await tgpu.init({
   unstable_logOptions: {
     logCountLimit: 32,
-    logSizeLimit: 32,
+    logSizeLimit: 128,
   },
   device: {
     optionalFeatures: ['shader-f16'],
@@ -45,6 +45,7 @@ export const controls = {
         console.log(d.f16(3.14));
         console.log(d.i32(-2_000_000_000));
         console.log(d.u32(3_000_000_000));
+        console.log();
         console.log('--- vectors ---');
         console.log(d.vec2f(1.1, -2.2));
         console.log(d.vec3f(10.1, -20.2, 30.3));
@@ -61,6 +62,12 @@ export const controls = {
         console.log(d.vec2u(1, 2));
         console.log(d.vec3u(1, 2, 3));
         console.log(d.vec4u(1, 2, 3, 4));
+        console.log();
+        console.log('--- matrices ---');
+        console.log(d.mat2x2f(0, 0.25, 0.5, 0.75));
+        console.log(d.mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
+        // deno-fmt-ignore
+        console.log(d.mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
       })(),
   },
   'Two logs': {
@@ -168,7 +175,7 @@ export const controls = {
     onButtonClick: () => {
       const dispatch = prepareDispatch(root, () => {
         'kernel';
-        console.log(d.vec3u(), d.vec3u(), d.vec3u());
+        console.log(d.mat4x4f(), d.mat4x4f(), 1);
       });
       try {
         dispatch();
