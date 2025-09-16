@@ -16,13 +16,19 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
     const scaleX = std.max(aspect, 1.0);
     const scaleY = std.max(1.0, std.div(1.0, aspect));
     new_uv = d.vec2f(std.mul(new_uv.x, scaleX), std.mul(new_uv.y, scaleY));
+
     const sunDirection = std.normalize(SUN_DIRECTION);
-    const ro = d.vec3f(0.0, 0.0, -3.0);
-    const rd = std.normalize(d.vec3f(new_uv.x, new_uv.y, ANGLE_DISTORTION));
-    const sun = std.clamp(std.dot(rd, sunDirection), 0.0, 1.0);
+    const rayOrigin = d.vec3f(0.0, 0.0, -3.0);
+    const rayDirection = std.normalize(
+      d.vec3f(new_uv.x, new_uv.y, ANGLE_DISTORTION),
+    );
+    const sun = std.clamp(std.dot(rayDirection, sunDirection), 0.0, 1.0);
 
     let color = d.vec3f(0.75, 0.66, 0.9);
-    color = std.sub(color, std.mul(0.35 * rd.y, d.vec3f(1, 0.7, 0.43)));
+    color = std.sub(
+      color,
+      std.mul(0.35 * rayDirection.y, d.vec3f(1, 0.7, 0.43)),
+    );
 
     color = std.add(
       color,
@@ -32,7 +38,7 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
       ),
     );
 
-    const marchRes = raymarchSlot.$(ro, rd, sunDirection);
+    const marchRes = raymarchSlot.$(rayOrigin, rayDirection, sunDirection);
     color = std.add(std.mul(color, 1.1 - marchRes.w), marchRes.xyz);
     return d.vec4f(color, 1.0);
   }
