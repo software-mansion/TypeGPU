@@ -63,7 +63,7 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
-      fn serializeU32(n: u32) -> array<u32,1>{
+      fn u32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -83,7 +83,7 @@ describe('wgslGenerator with console.log', () => {
         }
         dataBuffer[index].id = 1;
 
-        var serializedData0 = serializeU32(_arg_0);
+        var serializedData0 = u32(_arg_0);
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
@@ -111,7 +111,7 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      fn serializeU32(n: u32) -> array<u32,1>{
+      fn u32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -131,7 +131,7 @@ describe('wgslGenerator with console.log', () => {
         }
         dataBuffer[index].id = 1;
 
-        var serializedData0 = serializeU32(_arg_0);
+        var serializedData0 = u32(_arg_0);
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
@@ -159,7 +159,7 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      fn serializeU32(n: u32) -> array<u32,1>{
+      fn u32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -179,7 +179,7 @@ describe('wgslGenerator with console.log', () => {
         }
         dataBuffer[index].id = 1;
 
-        var serializedData0 = serializeU32(_arg_0);
+        var serializedData0 = u32(_arg_0);
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
@@ -190,7 +190,7 @@ describe('wgslGenerator with console.log', () => {
         }
         dataBuffer[index].id = 2;
 
-        var serializedData0 = serializeU32(_arg_0);
+        var serializedData0 = u32(_arg_0);
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
@@ -223,11 +223,11 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      fn serializeU32(n: u32) -> array<u32,1>{
+      fn u32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
-      fn serializeVec3u(v: vec3u) -> array<u32,3>{
+      fn vec3u(v: vec3u) -> array<u32,3>{
         return array<u32, 3>(v.x, v.y, v.z);
       }
 
@@ -247,13 +247,13 @@ describe('wgslGenerator with console.log', () => {
         }
         dataBuffer[index].id = 1;
 
-        var serializedData0 = serializeU32(_arg_0);
+        var serializedData0 = u32(_arg_0);
         dataBuffer[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = serializeVec3u(_arg_1);
+        var serializedData1 = vec3u(_arg_1);
         dataBuffer[index].serializedData[1] = serializedData1[0];
         dataBuffer[index].serializedData[2] = serializedData1[1];
         dataBuffer[index].serializedData[3] = serializedData1[2];
-        var serializedData2 = serializeU32(_arg_2);
+        var serializedData2 = u32(_arg_2);
         dataBuffer[index].serializedData[4] = serializedData2[0];
       }
 

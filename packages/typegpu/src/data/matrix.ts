@@ -1,8 +1,9 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import type { $repr } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
+import type { AnyData } from './dataTypes.ts';
 import { snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import type {
@@ -21,7 +22,6 @@ import type {
   v4f,
   VecKind,
 } from './wgslTypes.ts';
-import type { AnyData } from './dataTypes.ts';
 
 // --------------
 // Implementation
@@ -177,6 +177,10 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
         .join(', ')
     })`;
   }
+
+  toString() {
+    return this['~resolve']();
+  }
 }
 
 class mat2x2fImpl extends mat2x2Impl<v2f> {
@@ -318,6 +322,10 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
     return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
       this[5]
     }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
+  }
+
+  toString() {
+    return this['~resolve']();
   }
 }
 
@@ -509,6 +517,10 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
         .map((_, i) => this[i])
         .join(', ')
     })`;
+  }
+
+  toString() {
+    return this['~resolve']();
   }
 }
 
