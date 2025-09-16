@@ -27,11 +27,7 @@ export class Inference {
     for (const node of this.model.graph.nodes) {
       switch (node.opType) {
         case 'Flatten':
-          continue; // no-op for Flatten in this simple implementation
-        case 'Relu':
-        case 'Sigmoid':
-        case 'Softmax':
-          continue;
+          continue; 
         case 'Gemm': {
           const weightTensor = this.model.tensorMap.get(
             node.inputs[1] as string,
@@ -68,11 +64,10 @@ export class Inference {
           break;
         }
         case 'Conv': {
-          // handle Conv node
           break;
         }
         default:
-          throw new Error(`Unsupported node type: ${node.opType}`);
+          continue; // activation node
       }
     }
 
