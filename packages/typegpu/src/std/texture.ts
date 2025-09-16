@@ -131,6 +131,76 @@ export const textureSample: TextureSampleOverload = createDualImpl(
   'textureSample',
 );
 
+type TextureSampleBiasOverload = {
+  <T extends TgpuSampledTexture<'2d', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    bias: number,
+  ): v4f;
+  <T extends TgpuSampledTexture<'2d', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    bias: number,
+    offset: v2i,
+  ): v4f;
+  <T extends TgpuSampledTexture<'2d-array', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    arrayIndex: number,
+    bias: number,
+  ): v4f;
+  <T extends TgpuSampledTexture<'2d-array', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v2f,
+    arrayIndex: number,
+    bias: number,
+    offset: v2i,
+  ): v4f;
+  <T extends TgpuSampledTexture<'3d', F32> | TgpuSampledTexture<'cube', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v3f,
+    bias: number,
+  ): v4f;
+  <T extends TgpuSampledTexture<'3d', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v3f,
+    bias: number,
+    offset: v3i,
+  ): v4f;
+  <T extends TgpuSampledTexture<'cube-array', F32>>(
+    texture: T,
+    sampler: TgpuSampler,
+    coords: v3f,
+    arrayIndex: number,
+    bias: number,
+  ): v4f;
+};
+
+export const textureSampleBias: TextureSampleBiasOverload = createDualImpl(
+  // CPU implementation
+  (
+    _texture: TgpuSampledTexture,
+    _sampler: TgpuSampler,
+    _coords: v2f | v3f,
+    _biasOrArrayIndex: number,
+    _biasOrOffset?: number | v2i | v3i,
+    _maybeOffset?: v2i | v3i,
+  ) => {
+    throw new Error(
+      'Texture sampling with bias relies on GPU resources and cannot be executed outside of a draw call',
+    );
+  },
+  // CODEGEN implementation
+  (...args) => snip(stitch`textureSampleBias(${args})`, vec4f),
+  'textureSampleBias',
+);
+
 type TextureSampleLevelOverload = {
   <T extends TgpuSampledTexture<'2d'>>(
     texture: T,
