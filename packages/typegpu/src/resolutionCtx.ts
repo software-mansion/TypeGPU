@@ -44,7 +44,6 @@ import {
   numericLiteralToSnippet,
 } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import { ShelllessRepository } from './tgsl/shellless.ts';
 import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,

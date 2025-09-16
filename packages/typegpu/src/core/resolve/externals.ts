@@ -1,11 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import {
-  getName,
-  isNamable,
-  setName,
-  setNameForward,
-} from '../../shared/meta.ts';
+import { getName, setNameForward } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**

@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import {
   getName,

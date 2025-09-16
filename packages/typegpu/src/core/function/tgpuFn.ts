@@ -1,6 +1,10 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
-import { ResolvedSnippet, snip, type Snippet } from '../../data/snippet.ts';
+import {
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
