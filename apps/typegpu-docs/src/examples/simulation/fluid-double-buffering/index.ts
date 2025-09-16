@@ -41,25 +41,29 @@ const coordsToIndex = (x: number, y: number) => {
   return x + y * gridSize;
 };
 
-const getCell = tgpu.fn([d.i32, d.i32], d.vec4f)((x, y) =>
-  inputGridSlot.$[coordsToIndex(x, y)]
-);
+const getCell = (x: number, y: number): d.v4f => {
+  'kernel';
+  return inputGridSlot.$[coordsToIndex(x, y)];
+};
 
-const setCell = tgpu.fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
+const setCell = (x: number, y: number, value: d.v4f) => {
+  'kernel';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index] = value;
-});
+};
 
-const setVelocity = tgpu.fn([d.i32, d.i32, d.vec2f])((x, y, velocity) => {
+const setVelocity = (x: number, y: number, velocity: d.v2f) => {
+  'kernel';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].x = velocity.x;
   outputGridSlot.$[index].y = velocity.y;
-});
+};
 
-const addDensity = tgpu.fn([d.i32, d.i32, d.f32])((x, y, density) => {
+const addDensity = (x: number, y: number, density: number) => {
+  'kernel';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
-});
+};
 
 const flowFromCell = (myX: number, myY: number, x: number, y: number) => {
   'kernel';
@@ -97,7 +101,8 @@ const prevObstacles = root.createReadonly(BoxObstacleArray);
 const obstacles = root.createReadonly(BoxObstacleArray);
 const time = root.createUniform(d.f32);
 
-const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+const isInsideObstacle = (x: number, y: number): boolean => {
+  'kernel';
   for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
     const obs = obstacles.$[obsIdx];
 
@@ -116,9 +121,10 @@ const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
   }
 
   return false;
-});
+};
 
-const isValidFlowOut = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+const isValidFlowOut = (x: number, y: number): boolean => {
+  'kernel';
   if (!isValidCoord(x, y)) {
     return false;
   }
@@ -128,9 +134,10 @@ const isValidFlowOut = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
   }
 
   return true;
-});
+};
 
-const computeVelocity = tgpu.fn([d.i32, d.i32], d.vec2f)((x, y) => {
+const computeVelocity = (x: number, y: number): d.v2f => {
+  'kernel';
   const gravityCost = 0.5;
 
   const neighborOffsets = [
@@ -173,7 +180,7 @@ const computeVelocity = tgpu.fn([d.i32, d.i32], d.vec2f)((x, y) => {
   const leastCostDir =
     dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
   return leastCostDir;
-});
+};
 
 const mainInitWorld = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
@@ -317,7 +324,8 @@ const sourceParams = root.createUniform(d.struct({
   intensity: d.f32,
 }));
 
-const getMinimumInFlow = tgpu.fn([d.i32, d.i32], d.f32)((x, y) => {
+const getMinimumInFlow = (x: number, y: number): number => {
+  'kernel';
   const gridSizeF = d.f32(gridSize);
   const sourceRadius = std.max(1, sourceParams.$.radius * gridSizeF);
   const sourcePos = d.vec2f(
@@ -330,7 +338,7 @@ const getMinimumInFlow = tgpu.fn([d.i32, d.i32], d.f32)((x, y) => {
   }
 
   return 0;
-});
+};
 
 const mainCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
