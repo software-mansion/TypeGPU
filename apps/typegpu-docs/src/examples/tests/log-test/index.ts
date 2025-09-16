@@ -35,6 +35,14 @@ export const controls = {
         console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
       })(),
   },
+  'Two logs': {
+    onButtonClick: () =>
+      prepareDispatch(root, () => {
+        'kernel';
+        console.log('First log.');
+        console.log('Second log.');
+      })(),
+  },
   'Different types': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
@@ -72,14 +80,6 @@ export const controls = {
         console.log(d.mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
         // deno-fmt-ignore
         console.log(d.mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
-      })(),
-  },
-  'Two logs': {
-    onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
-        console.log('First log.');
-        console.log('Second log.');
       })(),
   },
   'Two threads': {
