@@ -412,7 +412,7 @@ describe('indents', () => {
 
       @vertex fn someVertex_0(input: someVertex_Input_1) -> someVertex_Output_2 {
         var uniBoid = boids_3;
-        for (var i = 0u; (i < floor(sin(123))); i++) {
+        for (var i = 0u; (i < -1); i++) {
           var sampled = textureSample(sampled_5, sampler_6, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender_7, vec2i(), 0);
           if (((someVal.x + sampled.x) > 0.5)) {
