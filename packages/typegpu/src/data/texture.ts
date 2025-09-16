@@ -3,13 +3,13 @@ import { $internal, $repr } from '../shared/symbols.ts';
 import type { Default, WithDefaults } from '../shared/utilityTypes.ts';
 import { f32 } from './numeric.ts';
 import type { F32 } from './wgslTypes.ts';
-import type { BaseData, PrimitiveNumericData } from './wgslTypes.ts';
+import type { BaseData, TextureSampleTypes } from './wgslTypes.ts';
 
 export type StorageTextureDimension = '1d' | '2d' | '2d-array' | '3d';
 
 export type WgslTextureProps = {
   dimension: GPUTextureViewDimension;
-  sampleType: PrimitiveNumericData;
+  sampleType: TextureSampleTypes;
   multisampled: boolean;
 };
 
@@ -77,7 +77,7 @@ export interface WgslExternalTexture extends BaseData {
 }
 
 export interface WgslTexture1d<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: '1d';
@@ -88,7 +88,7 @@ export interface WgslTexture1d<
 }
 
 export interface WgslTexture2d<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: '2d';
@@ -99,7 +99,7 @@ export interface WgslTexture2d<
 }
 
 export interface WgslTextureMultisampled2d<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: '2d';
@@ -110,7 +110,7 @@ export interface WgslTextureMultisampled2d<
 }
 
 export interface WgslTexture2dArray<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: '2d-array';
@@ -121,7 +121,7 @@ export interface WgslTexture2dArray<
 }
 
 export interface WgslTextureCube<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: 'cube';
@@ -132,7 +132,7 @@ export interface WgslTextureCube<
 }
 
 export interface WgslTextureCubeArray<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: 'cube-array';
@@ -143,7 +143,7 @@ export interface WgslTextureCubeArray<
 }
 
 export interface WgslTexture3d<
-  TSample extends PrimitiveNumericData = PrimitiveNumericData,
+  TSample extends TextureSampleTypes = TextureSampleTypes,
 > extends
   WgslTexture<{
     dimension: '3d';
@@ -414,11 +414,11 @@ function getOrCreate<
   return cached;
 }
 
-export function texture1d<T extends PrimitiveNumericData>(
+export function texture1d<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTexture1d<T>;
 export function texture1d(): WgslTexture1d<F32>;
-export function texture1d<T extends PrimitiveNumericData>(sampleType?: T) {
+export function texture1d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_1d<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -429,11 +429,11 @@ export function texture1d<T extends PrimitiveNumericData>(sampleType?: T) {
     }));
 }
 
-export function texture2d<T extends PrimitiveNumericData>(
+export function texture2d<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTexture2d<T>;
 export function texture2d(): WgslTexture2d<F32>;
-export function texture2d<T extends PrimitiveNumericData>(sampleType?: T) {
+export function texture2d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_2d<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -444,11 +444,11 @@ export function texture2d<T extends PrimitiveNumericData>(sampleType?: T) {
     }));
 }
 
-export function textureMultisampled2d<T extends PrimitiveNumericData>(
+export function textureMultisampled2d<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTextureMultisampled2d<T>;
 export function textureMultisampled2d(): WgslTextureMultisampled2d<F32>;
-export function textureMultisampled2d<T extends PrimitiveNumericData>(
+export function textureMultisampled2d<T extends TextureSampleTypes>(
   sampleType?: T,
 ) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -461,11 +461,11 @@ export function textureMultisampled2d<T extends PrimitiveNumericData>(
     }));
 }
 
-export function texture2dArray<T extends PrimitiveNumericData>(
+export function texture2dArray<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTexture2dArray<T>;
 export function texture2dArray(): WgslTexture2dArray<F32>;
-export function texture2dArray<T extends PrimitiveNumericData>(sampleType?: T) {
+export function texture2dArray<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_2d_array<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -476,11 +476,11 @@ export function texture2dArray<T extends PrimitiveNumericData>(sampleType?: T) {
     }));
 }
 
-export function textureCube<T extends PrimitiveNumericData>(
+export function textureCube<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTextureCube<T>;
 export function textureCube(): WgslTextureCube<F32>;
-export function textureCube<T extends PrimitiveNumericData>(sampleType?: T) {
+export function textureCube<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_cube<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -491,11 +491,11 @@ export function textureCube<T extends PrimitiveNumericData>(sampleType?: T) {
     }));
 }
 
-export function textureCubeArray<T extends PrimitiveNumericData>(
+export function textureCubeArray<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTextureCubeArray<T>;
 export function textureCubeArray(): WgslTextureCubeArray<F32>;
-export function textureCubeArray<T extends PrimitiveNumericData>(
+export function textureCubeArray<T extends TextureSampleTypes>(
   sampleType?: T,
 ) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -508,11 +508,11 @@ export function textureCubeArray<T extends PrimitiveNumericData>(
     }));
 }
 
-export function texture3d<T extends PrimitiveNumericData>(
+export function texture3d<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTexture3d<T>;
 export function texture3d(): WgslTexture3d<F32>;
-export function texture3d<T extends PrimitiveNumericData>(sampleType?: T) {
+export function texture3d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_3d<${actualSampleType.type}>`;
   return getOrCreate(key, () =>

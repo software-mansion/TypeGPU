@@ -1,5 +1,6 @@
 {
   "title": "Texture Test",
   "category": "tests",
-  "tags": ["experimental"]
+  "tags": ["experimental"],
+  "dev": true
 }

@@ -147,11 +147,29 @@ export type DepthFormats = 'depth16unorm' | 'depth24plus' | 'depth32float';
 export type StencilFormats = 'stencil8';
 
 export type AspectsForFormat<T extends GPUTextureFormat> =
-  GPUTextureFormat extends T ? TextureAspect
-    : T extends DepthStencilFormats ? 'depth' | 'stencil'
-    : never | T extends DepthFormats ? 'depth'
-    : never | T extends StencilFormats ? 'stencil'
-    : never | 'color';
+  GPUTextureFormat extends T ? TextureAspect[]
+    : T extends DepthStencilFormats ? ('depth' | 'stencil')[]
+    : T extends DepthFormats ? 'depth'[]
+    : T extends StencilFormats ? 'stencil'[]
+    : 'color'[];
+
+function getAspectsForFormat<T extends GPUTextureFormat>(
+  format: T,
+): AspectsForFormat<T> {
+  if (format === 'depth24plus-stencil8' || format === 'depth32float-stencil8') {
+    return ['depth', 'stencil'] as AspectsForFormat<T>;
+  }
+  if (
+    format === 'depth16unorm' || format === 'depth24plus' ||
+    format === 'depth32float'
+  ) {
+    return ['depth'] as AspectsForFormat<T>;
+  }
+  if (format === 'stencil8') {
+    return ['stencil'] as AspectsForFormat<T>;
+  }
+  return ['color'] as AspectsForFormat<T>;
+}
 
 type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   size: T['size'];
@@ -167,7 +185,7 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   readonly [$internal]: TextureInternals;
   readonly resourceType: 'texture';
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
-  readonly aspects: AspectsForFormat<TProps['format']>[];
+  readonly aspects: AspectsForFormat<TProps['format']>;
   readonly destroyed: boolean;
 
   // Extensions
@@ -249,7 +267,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   implements TgpuTexture<TProps> {
   readonly [$internal]: TextureInternals;
   readonly resourceType = 'texture';
-  readonly aspects: AspectsForFormat<this['props']['format']>[];
+  readonly aspects: AspectsForFormat<this['props']['format']>;
   usableAsSampled = false;
   usableAsStorage = false;
   usableAsRender = false;
@@ -265,23 +283,14 @@ class TgpuTextureImpl<TProps extends TextureProps>
     public readonly props: TProps,
     branch: ExperimentalTgpuRoot,
   ) {
-    const format = this.props.format;
+    const format = props.format as TProps['format'];
 
     this.#branch = branch;
     this.#formatInfo = textureFormats[format];
-    this.#byteSize = this.props.size[0] as number *
-      (this.props.size[1] ?? 1) *
-      (this.props.size[2] ?? 1) * this.#formatInfo.texelSize;
-    this.aspects = (
-      format === 'depth24plus-stencil8' || format === 'depth32float-stencil8'
-        ? ['depth', 'stencil']
-        : format === 'depth16unorm' || format === 'depth24plus' ||
-            format === 'depth32float'
-        ? ['depth']
-        : format === 'stencil8'
-        ? ['stencil']
-        : ['color']
-    ) as AspectsForFormat<this['props']['format']>[];
+    this.#byteSize = props.size[0] as number *
+      (props.size[1] ?? 1) *
+      (props.size[2] ?? 1) * this.#formatInfo.texelSize;
+    this.aspects = getAspectsForFormat(format);
 
     this[$internal] = {
       unwrap: () => {
@@ -290,15 +299,15 @@ class TgpuTextureImpl<TProps extends TextureProps>
         }
 
         if (!this.#texture) {
-          this.#texture = this.#branch.device.createTexture({
+          this.#texture = branch.device.createTexture({
             label: getName(this) ?? '<unnamed>',
-            format: this.props.format,
-            size: this.props.size,
+            format: props.format,
+            size: props.size,
             usage: this.#flags,
-            dimension: this.props.dimension ?? '2d',
-            viewFormats: this.props.viewFormats ?? [],
-            mipLevelCount: this.props.mipLevelCount ?? 1,
-            sampleCount: this.props.sampleCount ?? 1,
+            dimension: props.dimension ?? '2d',
+            viewFormats: props.viewFormats ?? [],
+            mipLevelCount: props.mipLevelCount ?? 1,
+            sampleCount: props.sampleCount ?? 1,
           });
         }
 

@@ -1558,7 +1558,7 @@ export type FlatInterpolatableData =
   | FlatInterpolatableAdditionalBaseType
   | Decorated<FlatInterpolatableAdditionalBaseType>;
 
-export type PrimitiveNumericData =
+export type TextureSampleTypes =
   | F32
   | I32
   | U32;
