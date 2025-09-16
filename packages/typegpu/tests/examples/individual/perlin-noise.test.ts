@@ -63,58 +63,58 @@ describe('perlin noise example', () => {
         memory_2[idx] = computeJunctionGradient_3(vec3i(input.gid.xyz));
       }
 
-      struct fullScreenTriangle_Output_11 {
+      struct fullScreenTriangle_Output_1 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input_12 {
+      struct fullScreenTriangle_Input_2 {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn fullScreenTriangle_10(input: fullScreenTriangle_Input_12) -> fullScreenTriangle_Output_11 {
+      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
         var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangle_Output_11(vec4f(pos[input.vertexIndex], 0, 1), (0.5 * pos[input.vertexIndex]));
+        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), (0.5 * pos[input.vertexIndex]));
       }
 
-      @group(0) @binding(0) var<uniform> gridSize_14: f32;
+      @group(0) @binding(0) var<uniform> gridSize_4: f32;
 
-      @group(0) @binding(1) var<uniform> time_15: f32;
+      @group(0) @binding(1) var<uniform> time_5: f32;
 
-      @group(1) @binding(0) var<uniform> perlin3dCache__size_19: vec4u;
+      @group(1) @binding(0) var<uniform> perlin3dCache__size_9: vec4u;
 
-      @group(1) @binding(1) var<storage, read> perlin3dCache__memory_20: array<vec3f>;
+      @group(1) @binding(1) var<storage, read> perlin3dCache__memory_10: array<vec3f>;
 
-      fn getJunctionGradient_18(pos: vec3i) -> vec3f {
-        var size = vec3i(perlin3dCache__size_19.xyz);
+      fn getJunctionGradient_8(pos: vec3i) -> vec3f {
+        var size = vec3i(perlin3dCache__size_9.xyz);
         var x = (((pos.x % size.x) + size.x) % size.x);
         var y = (((pos.y % size.y) + size.y) % size.y);
         var z = (((pos.z % size.z) + size.z) % size.z);
-        return perlin3dCache__memory_20[((x + (y * size.x)) + ((z * size.x) * size.y))];
+        return perlin3dCache__memory_10[((x + (y * size.x)) + ((z * size.x) * size.y))];
       }
 
-      fn dotProdGrid_17(pos: vec3f, junction: vec3f) -> f32 {
+      fn dotProdGrid_7(pos: vec3f, junction: vec3f) -> f32 {
         var relative = (pos - junction);
-        var gridVector = getJunctionGradient_18(vec3i(junction));
+        var gridVector = getJunctionGradient_8(vec3i(junction));
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolation3_21(t: vec3f) -> vec3f {
+      fn quinticInterpolation3_11(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
-      fn sample_16(pos: vec3f) -> f32 {
+      fn sample_6(pos: vec3f) -> f32 {
         var minJunction = floor(pos);
-        var xyz = dotProdGrid_17(pos, minJunction);
-        var xyZ = dotProdGrid_17(pos, (minJunction + vec3f(0, 0, 1)));
-        var xYz = dotProdGrid_17(pos, (minJunction + vec3f(0, 1, 0)));
-        var xYZ = dotProdGrid_17(pos, (minJunction + vec3f(0, 1, 1)));
-        var Xyz = dotProdGrid_17(pos, (minJunction + vec3f(1, 0, 0)));
-        var XyZ = dotProdGrid_17(pos, (minJunction + vec3f(1, 0, 1)));
-        var XYz = dotProdGrid_17(pos, (minJunction + vec3f(1, 1, 0)));
-        var XYZ = dotProdGrid_17(pos, (minJunction + vec3f(1)));
+        var xyz = dotProdGrid_7(pos, minJunction);
+        var xyZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 0, 1)));
+        var xYz = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 0)));
+        var xYZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 1)));
+        var Xyz = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 0)));
+        var XyZ = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 1)));
+        var XYz = dotProdGrid_7(pos, (minJunction + vec3f(1, 1, 0)));
+        var XYZ = dotProdGrid_7(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation3_21(partial);
+        var smoothPartial = quinticInterpolation3_11(partial);
         var xy = mix(xyz, xyZ, smoothPartial.z);
         var xY = mix(xYz, xYZ, smoothPartial.z);
         var Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -124,20 +124,20 @@ describe('perlin noise example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn exponentialSharpen_22(n: f32, sharpness2: f32) -> f32 {
+      fn exponentialSharpen_12(n: f32, sharpness2: f32) -> f32 {
         return (sign(n) * pow(abs(n), (1 - sharpness2)));
       }
 
-      @group(0) @binding(2) var<uniform> sharpness_23: f32;
+      @group(0) @binding(2) var<uniform> sharpness_13: f32;
 
-      struct mainFragment_Input_24 {
+      struct mainFragment_Input_14 {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment_13(input: mainFragment_Input_24) -> @location(0) vec4f {
-        var uv = (gridSize_14 * input.uv);
-        var n = sample_16(vec3f(uv, time_15));
-        var sharp = exponentialSharpen_22(n, sharpness_23);
+      @fragment fn mainFragment_3(input: mainFragment_Input_14) -> @location(0) vec4f {
+        var uv = (gridSize_4 * input.uv);
+        var n = sample_6(vec3f(uv, time_5));
+        var sharp = exponentialSharpen_12(n, sharpness_13);
         var n01 = ((sharp * 0.5) + 0.5);
         var dark = vec3f(0, 0.20000000298023224, 1);
         var light = vec3f(1, 0.30000001192092896, 0.5);

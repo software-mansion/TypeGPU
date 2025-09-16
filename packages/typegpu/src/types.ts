@@ -39,7 +39,6 @@ import {
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
-import type { NameRegistry } from './nameRegistry.ts';
 import { $internal } from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
@@ -219,7 +218,10 @@ export type ExecState =
  * and up the tree.
  */
 export interface ResolutionCtx {
-  readonly names: NameRegistry;
+  [$internal]: {
+    itemStateStack: ItemStateStack;
+  };
+
   readonly mode: ExecState;
   readonly enableExtensions: WgslExtension[] | undefined;
 
@@ -278,11 +280,10 @@ export interface ResolutionCtx {
     locations: Record<string, number>,
     callback: () => T,
   ): T;
+
   get varyingLocations(): Record<string, number> | undefined;
 
-  [$internal]: {
-    itemStateStack: ItemStateStack;
-  };
+  getUniqueName(resource: object): string;
 }
 
 /**

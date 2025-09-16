@@ -89,73 +89,73 @@ describe('cubemap reflection example', () => {
         }
       }
 
-      struct Camera_12 {
+      struct Camera_2 {
         view: mat4x4f,
         projection: mat4x4f,
         position: vec4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_11: Camera_12;
+      @group(0) @binding(0) var<uniform> camera_1: Camera_2;
 
-      struct cubeVertexFn_Output_13 {
+      struct cubeVertexFn_Output_3 {
         @builtin(position) pos: vec4f,
         @location(0) texCoord: vec3f,
       }
 
-      struct cubeVertexFn_Input_14 {
+      struct cubeVertexFn_Input_4 {
         @location(0) position: vec3f,
         @location(1) uv: vec2f,
       }
 
-      @vertex fn cubeVertexFn_10(input: cubeVertexFn_Input_14) -> cubeVertexFn_Output_13 {
-        var viewPos = (camera_11.view * vec4f(input.position.xyz, 0)).xyz;
-        return cubeVertexFn_Output_13((camera_11.projection * vec4f(viewPos, 1)), input.position.xyz);
+      @vertex fn cubeVertexFn_0(input: cubeVertexFn_Input_4) -> cubeVertexFn_Output_3 {
+        var viewPos = (camera_1.view * vec4f(input.position.xyz, 0)).xyz;
+        return cubeVertexFn_Output_3((camera_1.projection * vec4f(viewPos, 1)), input.position.xyz);
       }
 
-      @group(1) @binding(0) var cubemap_16: texture_cube<f32>;
+      @group(1) @binding(0) var cubemap_6: texture_cube<f32>;
 
-      @group(1) @binding(1) var texSampler_17: sampler;
+      @group(1) @binding(1) var texSampler_7: sampler;
 
-      struct cubeFragmentFn_Input_18 {
+      struct cubeFragmentFn_Input_8 {
         @location(0) texCoord: vec3f,
       }
 
-      @fragment fn cubeFragmentFn_15(input: cubeFragmentFn_Input_18) -> @location(0) vec4f {
-        return textureSample(cubemap_16, texSampler_17, normalize(input.texCoord));
+      @fragment fn cubeFragmentFn_5(input: cubeFragmentFn_Input_8) -> @location(0) vec4f {
+        return textureSample(cubemap_6, texSampler_7, normalize(input.texCoord));
       }
 
-      struct Camera_21 {
+      struct Camera_2 {
         view: mat4x4f,
         projection: mat4x4f,
         position: vec4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_20: Camera_21;
+      @group(0) @binding(0) var<uniform> camera_1: Camera_2;
 
-      struct vertexFn_Output_22 {
+      struct vertexFn_Output_3 {
         @builtin(position) pos: vec4f,
         @location(0) normal: vec4f,
         @location(1) worldPos: vec4f,
       }
 
-      struct vertexFn_Input_23 {
+      struct vertexFn_Input_4 {
         @location(0) position: vec4f,
         @location(1) normal: vec4f,
       }
 
-      @vertex fn vertexFn_19(input: vertexFn_Input_23) -> vertexFn_Output_22 {
-        return vertexFn_Output_22((camera_20.projection * (camera_20.view * input.position)), input.normal, input.position);
+      @vertex fn vertexFn_0(input: vertexFn_Input_4) -> vertexFn_Output_3 {
+        return vertexFn_Output_3((camera_1.projection * (camera_1.view * input.position)), input.normal, input.position);
       }
 
-      struct DirectionalLight_26 {
+      struct DirectionalLight_7 {
         direction: vec3f,
         color: vec3f,
         intensity: f32,
       }
 
-      @group(0) @binding(1) var<uniform> light_25: DirectionalLight_26;
+      @group(0) @binding(1) var<uniform> light_6: DirectionalLight_7;
 
-      struct Material_28 {
+      struct Material_9 {
         ambient: vec3f,
         diffuse: vec3f,
         specular: vec3f,
@@ -163,31 +163,31 @@ describe('cubemap reflection example', () => {
         reflectivity: f32,
       }
 
-      @group(0) @binding(2) var<uniform> material_27: Material_28;
+      @group(0) @binding(2) var<uniform> material_8: Material_9;
 
-      @group(1) @binding(0) var cubemap_29: texture_cube<f32>;
+      @group(1) @binding(0) var cubemap_10: texture_cube<f32>;
 
-      @group(1) @binding(1) var texSampler_30: sampler;
+      @group(1) @binding(1) var texSampler_11: sampler;
 
-      struct fragmentFn_Input_31 {
+      struct fragmentFn_Input_12 {
         @location(0) normal: vec4f,
         @location(1) worldPos: vec4f,
       }
 
-      @fragment fn fragmentFn_24(input: fragmentFn_Input_31) -> @location(0) vec4f {
+      @fragment fn fragmentFn_5(input: fragmentFn_Input_12) -> @location(0) vec4f {
         var normalizedNormal = normalize(input.normal.xyz);
-        var normalizedLightDir = normalize(light_25.direction);
-        var ambientLight = (material_27.ambient * (light_25.intensity * light_25.color));
+        var normalizedLightDir = normalize(light_6.direction);
+        var ambientLight = (material_8.ambient * (light_6.intensity * light_6.color));
         var diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0);
-        var diffuseLight = (diffuseFactor * (material_27.diffuse * (light_25.intensity * light_25.color)));
-        var viewDirection = normalize((camera_20.position.xyz - input.worldPos.xyz));
+        var diffuseLight = (diffuseFactor * (material_8.diffuse * (light_6.intensity * light_6.color)));
+        var viewDirection = normalize((camera_1.position.xyz - input.worldPos.xyz));
         var reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
-        var specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0), material_27.shininess);
-        var specularLight = (specularFactor * (material_27.specular * (light_25.intensity * light_25.color)));
+        var specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0), material_8.shininess);
+        var specularLight = (specularFactor * (material_8.specular * (light_6.intensity * light_6.color)));
         var reflectionVector = reflect(-(viewDirection), normalizedNormal);
-        var environmentColor = textureSample(cubemap_29, texSampler_30, reflectionVector);
+        var environmentColor = textureSample(cubemap_10, texSampler_11, reflectionVector);
         var directLighting = (ambientLight + (diffuseLight + specularLight));
-        var finalColor = mix(directLighting, environmentColor.xyz, material_27.reflectivity);
+        var finalColor = mix(directLighting, environmentColor.xyz, material_8.reflectivity);
         return vec4f(finalColor, 1);
       }"
     `);

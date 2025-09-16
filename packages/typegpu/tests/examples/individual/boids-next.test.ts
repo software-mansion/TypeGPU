@@ -95,43 +95,43 @@ describe('boids next example', () => {
         nextTrianglePos_5[index] = instanceInfo;
       }
 
-      fn getRotationFromVelocity_8(velocity: vec2f) -> f32 {
+      fn getRotationFromVelocity_1(velocity: vec2f) -> f32 {
         return -atan2(velocity.x, velocity.y);
       }
 
-      fn rotate_9(v: vec2f, angle: f32) -> vec2f {
+      fn rotate_2(v: vec2f, angle: f32) -> vec2f {
         var cos = cos(angle);
         var sin = sin(angle);
         return vec2f(((v.x * cos) - (v.y * sin)), ((v.x * sin) + (v.y * cos)));
       }
 
-      @group(0) @binding(0) var<uniform> colorPalette_10: vec3f;
+      @group(0) @binding(0) var<uniform> colorPalette_3: vec3f;
 
-      struct mainVert_Output_11 {
+      struct mainVert_Output_4 {
         @builtin(position) position: vec4f,
         @location(0) color: vec4f,
       }
 
-      struct mainVert_Input_12 {
+      struct mainVert_Input_5 {
         @location(0) v: vec2f,
         @location(1) center: vec2f,
         @location(2) velocity: vec2f,
       }
 
-      @vertex fn mainVert_7(input: mainVert_Input_12) -> mainVert_Output_11 {
-        var angle = getRotationFromVelocity_8(input.velocity);
-        var rotated = rotate_9(input.v, angle);
+      @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
+        var angle = getRotationFromVelocity_1(input.velocity);
+        var rotated = rotate_2(input.v, angle);
         var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
-        var color = vec4f(((sin((angle + colorPalette_10.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_10.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_10.z)) * 0.45) + 0.45), 1);
-        return mainVert_Output_11(pos, color);
+        var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.z)) * 0.45) + 0.45), 1);
+        return mainVert_Output_4(pos, color);
       }
 
-      struct mainFrag_Input_14 {
+      struct mainFrag_Input_7 {
         @builtin(position) position: vec4f,
         @location(0) color: vec4f,
       }
 
-      @fragment fn mainFrag_13(input: mainFrag_Input_14) -> @location(0) vec4f {
+      @fragment fn mainFrag_6(input: mainFrag_Input_7) -> @location(0) vec4f {
         return input.color;
       }"
     `);
