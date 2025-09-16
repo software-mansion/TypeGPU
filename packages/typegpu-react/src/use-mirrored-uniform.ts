@@ -44,7 +44,7 @@ export function useMirroredUniform<
     get $() {
       return uniformBuffer.$;
     },
-}), []);
+  }), []);
 
   return mirroredValue as MirroredValue<TSchema>;
 }
