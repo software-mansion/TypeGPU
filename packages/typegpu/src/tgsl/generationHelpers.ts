@@ -34,9 +34,9 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  F32,
+  type F32,
   hasInternalDataType,
-  I32,
+  type I32,
   isMatInstance,
   isNumericSchema,
   isVec,
