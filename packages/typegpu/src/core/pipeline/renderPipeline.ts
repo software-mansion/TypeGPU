@@ -59,6 +59,7 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
+import { namespace } from '../resolve/namespace.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -694,10 +695,11 @@ class RenderPipelineCore implements SelfResolvable {
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
+      const ns = namespace({ names: branch.nameRegistrySetting });
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
         });
@@ -706,7 +708,7 @@ class RenderPipelineCore implements SelfResolvable {
         });
       } else {
         resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
         });

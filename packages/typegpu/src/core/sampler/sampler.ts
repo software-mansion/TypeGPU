@@ -159,7 +159,7 @@ export class TgpuLaidOutSamplerImpl
   [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -189,7 +189,7 @@ export class TgpuLaidOutComparisonSamplerImpl
   [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -237,7 +237,7 @@ class TgpuFixedSamplerImpl
   [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
 
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -295,7 +295,7 @@ class TgpuFixedComparisonSamplerImpl
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
       this,

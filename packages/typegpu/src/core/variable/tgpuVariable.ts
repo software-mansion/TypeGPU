@@ -90,7 +90,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)}`;
 
     if (this.#initialValue) {

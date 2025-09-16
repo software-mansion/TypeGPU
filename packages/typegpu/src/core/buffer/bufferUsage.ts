@@ -111,7 +111,7 @@ class TgpuFixedBufferImpl<
 
   [$resolve](ctx: ResolutionCtx): string {
     const dataType = this.buffer.dataType;
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
         ? { uniform: dataType }
@@ -236,12 +236,12 @@ export class TgpuLaidOutBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
-    const usageTemplate = usageToVarTemplateMap[this.usage];
+    const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var<${usageTemplate}> ${id}: ${
+      `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
         ctx.resolve(this.dataType)
       };`,
     );

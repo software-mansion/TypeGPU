@@ -40,7 +40,7 @@ export class TgpuExternalTextureImpl
   [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(

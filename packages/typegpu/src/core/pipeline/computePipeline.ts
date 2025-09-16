@@ -25,6 +25,7 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import { PERF } from '../../shared/meta.ts';
+import { namespace } from '../resolve/namespace.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -239,10 +240,11 @@ class ComputePipelineCore implements SelfResolvable {
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
+      const ns = namespace({ names: this.branch.nameRegistrySetting });
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
         });
@@ -251,7 +253,7 @@ class ComputePipelineCore implements SelfResolvable {
         });
       } else {
         resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
         });
