@@ -129,6 +129,13 @@ export const serializerMap: SerializerMap = {
 }`,
 };
 
+// rename the functions
+Object.entries(serializerMap).forEach(([name, serializer]) =>
+  serializer.$name(
+    `serialize${(name[0] as string).toLocaleUpperCase()}${name.slice(1)}`,
+  )
+);
+
 // -------
 // Helpers
 // -------

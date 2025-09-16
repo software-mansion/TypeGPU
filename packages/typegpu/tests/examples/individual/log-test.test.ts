@@ -32,7 +32,7 @@ describe('console log example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      fn u32_4(n: u32) -> array<u32,1>{
+      fn serializeU32_4(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -52,7 +52,7 @@ describe('console log example', () => {
         }
         dataBuffer_6[index].id = 1;
 
-        var serializedData0 = u32_4(_arg_0);
+        var serializedData0 = serializeU32_4(_arg_0);
         dataBuffer_6[index].serializedData[0] = serializedData0[0];
       }
 
@@ -73,11 +73,11 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform_10: vec3u;
 
-      fn u32_13(n: u32) -> array<u32,1>{
+      fn serializeU32_13(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
-      fn vec3u_14(v: vec3u) -> array<u32,3>{
+      fn serializeVec3u_14(v: vec3u) -> array<u32,3>{
         return array<u32, 3>(v.x, v.y, v.z);
       }
 
@@ -97,15 +97,15 @@ describe('console log example', () => {
         }
         dataBuffer_16[index].id = 1;
 
-        var serializedData0 = u32_13(_arg_0);
+        var serializedData0 = serializeU32_13(_arg_0);
         dataBuffer_16[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = vec3u_14(_arg_1);
+        var serializedData1 = serializeVec3u_14(_arg_1);
         dataBuffer_16[index].serializedData[1] = serializedData1[0];
         dataBuffer_16[index].serializedData[2] = serializedData1[1];
         dataBuffer_16[index].serializedData[3] = serializedData1[2];
-        var serializedData2 = u32_13(_arg_2);
+        var serializedData2 = serializeU32_13(_arg_2);
         dataBuffer_16[index].serializedData[4] = serializedData2[0];
-        var serializedData3 = u32_13(_arg_3);
+        var serializedData3 = serializeU32_13(_arg_3);
         dataBuffer_16[index].serializedData[5] = serializedData3[0];
       }
 
@@ -126,7 +126,7 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform_20: vec3u;
 
-      fn u32_23(n: u32) -> array<u32,1>{
+      fn serializeU32_23(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -146,11 +146,11 @@ describe('console log example', () => {
         }
         dataBuffer_25[index].id = 1;
 
-        var serializedData0 = u32_23(_arg_0);
+        var serializedData0 = serializeU32_23(_arg_0);
         dataBuffer_25[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = u32_23(_arg_1);
+        var serializedData1 = serializeU32_23(_arg_1);
         dataBuffer_25[index].serializedData[1] = serializedData1[0];
-        var serializedData2 = u32_23(_arg_2);
+        var serializedData2 = serializeU32_23(_arg_2);
         dataBuffer_25[index].serializedData[2] = serializedData2[0];
       }
 
@@ -190,7 +190,7 @@ describe('console log example', () => {
 
       }
 
-      fn f32_36(n: f32) -> array<u32,1>{
+      fn serializeF32_36(n: f32) -> array<u32,1>{
         return array<u32, 1>(bitcast<u32>(n));
       }
 
@@ -201,11 +201,11 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 2;
 
-        var serializedData0 = f32_36(_arg_0);
+        var serializedData0 = serializeF32_36(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
-      fn f16_38(n: f16) -> array<u32,1>{
+      fn serializeF16_38(n: f16) -> array<u32,1>{
         return array<u32, 1>(pack2x16float(vec2f(f32(n))));
       }
 
@@ -216,11 +216,11 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 3;
 
-        var serializedData0 = f16_38(_arg_0);
+        var serializedData0 = serializeF16_38(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
-      fn i32_40(n: i32) -> array<u32,1>{
+      fn serializeI32_40(n: i32) -> array<u32,1>{
         return array<u32, 1>(bitcast<u32>(n));
       }
 
@@ -231,11 +231,11 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 4;
 
-        var serializedData0 = i32_40(_arg_0);
+        var serializedData0 = serializeI32_40(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
-      fn u32_42(n: u32) -> array<u32,1>{
+      fn serializeU32_42(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -246,11 +246,11 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 5;
 
-        var serializedData0 = u32_42(_arg_0);
+        var serializedData0 = serializeU32_42(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
-      fn bool_44(b: bool) -> array<u32,1>{
+      fn serializeBool_44(b: bool) -> array<u32,1>{
         return array<u32, 1>(u32(b));
       }
 
@@ -261,7 +261,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 6;
 
-        var serializedData0 = bool_44(_arg_0);
+        var serializedData0 = serializeBool_44(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
@@ -285,7 +285,7 @@ describe('console log example', () => {
 
       }
 
-      fn vec2f_48(v: vec2f) -> array<u32,2>{
+      fn serializeVec2f_48(v: vec2f) -> array<u32,2>{
         return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
       }
 
@@ -296,12 +296,12 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 9;
 
-        var serializedData0 = vec2f_48(_arg_0);
+        var serializedData0 = serializeVec2f_48(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
 
-      fn vec3f_50(v: vec3f) -> array<u32,3>{
+      fn serializeVec3f_50(v: vec3f) -> array<u32,3>{
         return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
       }
 
@@ -312,13 +312,13 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 10;
 
-        var serializedData0 = vec3f_50(_arg_0);
+        var serializedData0 = serializeVec3f_50(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
       }
 
-      fn vec4f_52(v: vec4f) -> array<u32,4>{
+      fn serializeVec4f_52(v: vec4f) -> array<u32,4>{
         return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
       }
 
@@ -329,7 +329,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 11;
 
-        var serializedData0 = vec4f_52(_arg_0);
+        var serializedData0 = serializeVec4f_52(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -346,7 +346,7 @@ describe('console log example', () => {
 
       }
 
-      fn vec2h_55(v: vec2h) -> array<u32,1>{
+      fn serializeVec2h_55(v: vec2h) -> array<u32,1>{
         return array<u32, 1>(pack2x16float(vec2f(f32(v.x), f32(v.y))));
       }
 
@@ -357,11 +357,11 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 13;
 
-        var serializedData0 = vec2h_55(_arg_0);
+        var serializedData0 = serializeVec2h_55(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
       }
 
-      fn vec3h_57(v: vec3h) -> array<u32,2>{
+      fn serializeVec3h_57(v: vec3h) -> array<u32,2>{
         return array<u32, 2>(
           pack2x16float(vec2f(f32(v.x), f32(v.y))),
           pack2x16float(vec2f(f32(v.z), 0))
@@ -375,12 +375,12 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 14;
 
-        var serializedData0 = vec3h_57(_arg_0);
+        var serializedData0 = serializeVec3h_57(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
 
-      fn vec4h_59(v: vec4h) -> array<u32,2>{
+      fn serializeVec4h_59(v: vec4h) -> array<u32,2>{
         return array<u32, 2>(
           pack2x16float(vec2f(f32(v.x), f32(v.y))),
           pack2x16float(vec2f(f32(v.z), f32(v.w)))
@@ -394,7 +394,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 15;
 
-        var serializedData0 = vec4h_59(_arg_0);
+        var serializedData0 = serializeVec4h_59(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
@@ -409,7 +409,7 @@ describe('console log example', () => {
 
       }
 
-      fn vec2i_62(v: vec2i) -> array<u32,2>{
+      fn serializeVec2i_62(v: vec2i) -> array<u32,2>{
         return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
       }
 
@@ -420,12 +420,12 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 17;
 
-        var serializedData0 = vec2i_62(_arg_0);
+        var serializedData0 = serializeVec2i_62(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
 
-      fn vec3i_64(v: vec3i) -> array<u32,3>{
+      fn serializeVec3i_64(v: vec3i) -> array<u32,3>{
         return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
       }
 
@@ -436,13 +436,13 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 18;
 
-        var serializedData0 = vec3i_64(_arg_0);
+        var serializedData0 = serializeVec3i_64(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
       }
 
-      fn vec4i_66(v: vec4i) -> array<u32,4>{
+      fn serializeVec4i_66(v: vec4i) -> array<u32,4>{
         return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
       }
 
@@ -453,7 +453,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 19;
 
-        var serializedData0 = vec4i_66(_arg_0);
+        var serializedData0 = serializeVec4i_66(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -470,7 +470,7 @@ describe('console log example', () => {
 
       }
 
-      fn vec2u_69(v: vec2u) -> array<u32,2>{
+      fn serializeVec2u_69(v: vec2u) -> array<u32,2>{
         return array<u32, 2>(v.x, v.y);
       }
 
@@ -481,12 +481,12 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 21;
 
-        var serializedData0 = vec2u_69(_arg_0);
+        var serializedData0 = serializeVec2u_69(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
 
-      fn vec3u_71(v: vec3u) -> array<u32,3>{
+      fn serializeVec3u_71(v: vec3u) -> array<u32,3>{
         return array<u32, 3>(v.x, v.y, v.z);
       }
 
@@ -497,13 +497,13 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 22;
 
-        var serializedData0 = vec3u_71(_arg_0);
+        var serializedData0 = serializeVec3u_71(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
       }
 
-      fn vec4u_73(v: vec4u) -> array<u32,4>{
+      fn serializeVec4u_73(v: vec4u) -> array<u32,4>{
         return array<u32, 4>(v.x, v.y, v.z, v.w);
       }
 
@@ -514,7 +514,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 23;
 
-        var serializedData0 = vec4u_73(_arg_0);
+        var serializedData0 = serializeVec4u_73(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -531,7 +531,7 @@ describe('console log example', () => {
 
       }
 
-      fn serializer0_76(v: vec2<bool>) -> array<u32,2>{
+      fn serializeVec2bool_76(v: vec2<bool>) -> array<u32,2>{
         return array<u32, 2>(u32(v.x), u32(v.y));
       }
 
@@ -542,12 +542,12 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 25;
 
-        var serializedData0 = serializer0_76(_arg_0);
+        var serializedData0 = serializeVec2bool_76(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
       }
 
-      fn serializer0_78(v: vec3<bool>) -> array<u32,3>{
+      fn serializeVec3bool_78(v: vec3<bool>) -> array<u32,3>{
         return array<u32, 3>(u32(v.x), u32(v.y), u32(v.z));
       }
 
@@ -558,13 +558,13 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 26;
 
-        var serializedData0 = serializer0_78(_arg_0);
+        var serializedData0 = serializeVec3bool_78(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
       }
 
-      fn serializer0_80(v: vec4<bool>) -> array<u32,4>{
+      fn serializeVec4bool_80(v: vec4<bool>) -> array<u32,4>{
         return array<u32, 4>(u32(v.x), u32(v.y), u32(v.z), u32(v.w));
       }
 
@@ -575,7 +575,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 27;
 
-        var serializedData0 = serializer0_80(_arg_0);
+        var serializedData0 = serializeVec4bool_80(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -602,7 +602,7 @@ describe('console log example', () => {
 
       }
 
-      fn mat2x2f_84(m: mat2x2f) -> array<u32,4>{
+      fn serializeMat2x2f_84(m: mat2x2f) -> array<u32,4>{
         return array<u32, 4>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]),
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1])
@@ -616,14 +616,14 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 30;
 
-        var serializedData0 = mat2x2f_84(_arg_0);
+        var serializedData0 = serializeMat2x2f_84(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
         dataBuffer_33[index].serializedData[3] = serializedData0[3];
       }
 
-      fn mat3x3f_86(m: mat3x3f) -> array<u32,12>{
+      fn serializeMat3x3f_86(m: mat3x3f) -> array<u32,12>{
         return array<u32, 12>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), 0,
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), 0,
@@ -638,7 +638,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 31;
 
-        var serializedData0 = mat3x3f_86(_arg_0);
+        var serializedData0 = serializeMat3x3f_86(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -653,7 +653,7 @@ describe('console log example', () => {
         dataBuffer_33[index].serializedData[11] = serializedData0[11];
       }
 
-      fn mat4x4f_88(m: mat4x4f) -> array<u32,16>{
+      fn serializeMat4x4f_88(m: mat4x4f) -> array<u32,16>{
         return array<u32, 16>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), bitcast<u32>(m[0][3]),
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), bitcast<u32>(m[1][3]),
@@ -669,7 +669,7 @@ describe('console log example', () => {
         }
         dataBuffer_33[index].id = 32;
 
-        var serializedData0 = mat4x4f_88(_arg_0);
+        var serializedData0 = serializeMat4x4f_88(_arg_0);
         dataBuffer_33[index].serializedData[0] = serializedData0[0];
         dataBuffer_33[index].serializedData[1] = serializedData0[1];
         dataBuffer_33[index].serializedData[2] = serializedData0[2];
@@ -783,7 +783,7 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform_100: vec3u;
 
-      fn u32_103(n: u32) -> array<u32,1>{
+      fn serializeU32_103(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -803,7 +803,7 @@ describe('console log example', () => {
         }
         dataBuffer_105[index].id = 1;
 
-        var serializedData0 = u32_103(_arg_0);
+        var serializedData0 = serializeU32_103(_arg_0);
         dataBuffer_105[index].serializedData[0] = serializedData0[0];
       }
 
@@ -824,7 +824,7 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform_109: vec3u;
 
-      fn u32_112(n: u32) -> array<u32,1>{
+      fn serializeU32_112(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -844,7 +844,7 @@ describe('console log example', () => {
         }
         dataBuffer_114[index].id = 1;
 
-        var serializedData0 = u32_112(_arg_0);
+        var serializedData0 = serializeU32_112(_arg_0);
         dataBuffer_114[index].serializedData[0] = serializedData0[0];
       }
 
@@ -869,7 +869,7 @@ describe('console log example', () => {
 
       @group(0) @binding(1) var<uniform> logCountUniform_121: u32;
 
-      fn u32_123(n: u32) -> array<u32,1>{
+      fn serializeU32_123(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -889,9 +889,9 @@ describe('console log example', () => {
         }
         dataBuffer_125[index].id = 1;
 
-        var serializedData0 = u32_123(_arg_0);
+        var serializedData0 = serializeU32_123(_arg_0);
         dataBuffer_125[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = u32_123(_arg_1);
+        var serializedData1 = serializeU32_123(_arg_1);
         dataBuffer_125[index].serializedData[1] = serializedData1[0];
       }
 
@@ -929,7 +929,7 @@ describe('console log example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      fn u32_134(n: u32) -> array<u32,1>{
+      fn serializeU32_134(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -949,9 +949,9 @@ describe('console log example', () => {
         }
         dataBuffer_136[index].id = 1;
 
-        var serializedData0 = u32_134(_arg_0);
+        var serializedData0 = serializeU32_134(_arg_0);
         dataBuffer_136[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = u32_134(_arg_1);
+        var serializedData1 = serializeU32_134(_arg_1);
         dataBuffer_136[index].serializedData[1] = serializedData1[0];
       }
 
@@ -962,7 +962,7 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform_139: vec3u;
 
-      fn u32_142(n: u32) -> array<u32,1>{
+      fn serializeU32_142(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -982,7 +982,7 @@ describe('console log example', () => {
         }
         dataBuffer_144[index].id = 1;
 
-        var serializedData0 = u32_142(_arg_0);
+        var serializedData0 = serializeU32_142(_arg_0);
         dataBuffer_144[index].serializedData[0] = serializedData0[0];
       }
 
@@ -993,7 +993,7 @@ describe('console log example', () => {
         }
         dataBuffer_144[index].id = 2;
 
-        var serializedData0 = u32_142(_arg_0);
+        var serializedData0 = serializeU32_142(_arg_0);
         dataBuffer_144[index].serializedData[0] = serializedData0[0];
       }
 
@@ -1004,7 +1004,7 @@ describe('console log example', () => {
         }
         dataBuffer_144[index].id = 3;
 
-        var serializedData0 = u32_142(_arg_0);
+        var serializedData0 = serializeU32_142(_arg_0);
         dataBuffer_144[index].serializedData[0] = serializedData0[0];
       }
 
