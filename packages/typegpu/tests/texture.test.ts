@@ -374,7 +374,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
           size: [64, 64],
           format: 'rgba8unorm',
           mipLevelCount: 4,
-        });
+        }).$usage('render');
 
         texture.generateMipmaps();
 
@@ -456,7 +456,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
           size: [32, 32],
           format: 'rgba8unorm',
           mipLevelCount: 5,
-        });
+        }).$usage('render');
 
         texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
 
@@ -636,7 +636,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
           size: [32, 32],
           format: 'rgba8unorm',
           mipLevelCount: 3,
-        });
+        }).$usage('render');
 
         const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
           () => {},
@@ -657,7 +657,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
           size: [32, 32],
           format: 'rgba8unorm',
           mipLevelCount: 3,
-        });
+        }).$usage('render');
 
         const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
           () => {},
@@ -671,6 +671,35 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
         );
 
         consoleSpy.mockRestore();
+      });
+
+      it('throws an error and warns on the type level when the required render usage is missing', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        expectTypeOf(texture.generateMipmaps).toExtend<
+          (
+            missingUsage:
+              "(Error) generateMipmaps requires the texture to be usable as a render target. Use .$usage('render') first.",
+          ) => void
+        >;
+
+        // @ts-expect-error
+        expect(() => texture.generateMipmaps())
+          .toThrowErrorMatchingInlineSnapshot(
+            `[Error: generateMipmaps called without specifying 'render' usage]`,
+          );
+
+        const textureWithUsage = texture.$usage('render');
+
+        expectTypeOf(textureWithUsage.generateMipmaps).toExtend<
+          (baseMipLevel?: number, levelCount?: number) => void
+        >;
+
+        expect(() => textureWithUsage.generateMipmaps()).not.toThrow();
       });
     });
   });
