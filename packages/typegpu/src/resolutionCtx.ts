@@ -446,7 +446,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           returnType = scope.reportedReturnTypes[0] as AnyData;
         } else {
           throw new Error(
-            `Expected function to have a single return type, got ${uniqueReturnTypes}. Cast explicitly to the desired type.`,
+            `Expected function to have a single return type, got [${
+              [...uniqueReturnTypes].join(', ')
+            }]. Cast explicitly to the desired type.`,
           );
         }
       }

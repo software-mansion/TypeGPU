@@ -6,7 +6,7 @@ import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore } from './fnCore.ts';
 
 export interface ShelllessImpl extends SelfResolvable {
-  readonly resourceType: 'shellless-function';
+  readonly resourceType: 'shellless-impl';
   readonly [$getNameForward]: unknown;
 }
 
@@ -19,7 +19,7 @@ export function createShelllessImpl(
   return {
     [$internal]: true,
     [$getNameForward]: core,
-    resourceType: 'shellless-function' as const,
+    resourceType: 'shellless-impl' as const,
 
     '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(ctx, argTypes, undefined);
