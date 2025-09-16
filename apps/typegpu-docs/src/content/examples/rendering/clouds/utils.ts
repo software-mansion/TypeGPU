@@ -5,14 +5,18 @@ import {
   CLOUD_CORE_DENSITY,
   CLOUD_DENSITY,
   CLOUD_DETALIZATION,
+  DARK,
   FLIGHT_SPEED,
   LIGHT_ABSORBTION,
   MARCH_SIZE,
   MAX_ITERATIONS,
   sampledViewSlot,
   samplerSlot,
+  SKY,
+  SUN,
   SUN_INTENSITY,
   timeAccess,
+  WHITE,
 } from './consts.ts';
 
 export const raymarch = tgpu.fn(
@@ -25,11 +29,6 @@ export const raymarch = tgpu.fn(
     std.sin(std.dot(rd.xy, d.vec2f(12.9898, 78.233))) * 43758.5453,
   );
   let depth = hash * MARCH_SIZE;
-
-  const white = d.vec3f(1.0, 1.0, 1.0);
-  const dark = d.vec3f(0.2, 0.2, 0.2);
-  const skyAmbient = d.vec3f(0.6, 0.45, 0.75);
-  const sunTint = d.vec3f(1.0, 0.7, 0.3);
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const p = std.add(ro, std.mul(rd, depth));
@@ -48,11 +47,11 @@ export const raymarch = tgpu.fn(
       diffuse = std.mix(0.3, 1.0, diffuse);
 
       const lighting = std.add(
-        std.mul(skyAmbient, 1.1),
-        std.mul(sunTint, diffuse * SUN_INTENSITY),
+        std.mul(SKY, 1.1),
+        std.mul(SUN, diffuse * SUN_INTENSITY),
       );
 
-      const albedo = std.mix(white, dark, density);
+      const albedo = std.mix(WHITE, DARK, density);
 
       const lit = d.vec3f(
         albedo.x * lighting.x,
@@ -90,7 +89,7 @@ const fractalBrownianMotion = tgpu.fn(
       timeAccess.$ * FLIGHT_SPEED,
     ),
   );
-  let sum = d.f32(0.0);
+  let sum = d.f32();
   let amplitude = d.f32(CLOUD_CORE_DENSITY);
   let frequency = d.f32(CLOUD_DETALIZATION);
 

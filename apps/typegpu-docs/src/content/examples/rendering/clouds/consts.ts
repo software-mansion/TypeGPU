@@ -16,6 +16,11 @@ export const CLOUD_CORE_DENSITY = 1.0; //0.0 - 10.0
 export const FLIGHT_SPEED = 3.0; // 1.0 - 10.0
 export const CLOUD_DETALIZATION = 2.23; // 0.0 - 4.0
 
+export const WHITE = d.vec3f(1.0, 1.0, 1.0);
+export const DARK = d.vec3f(0.2, 0.2, 0.2);
+export const SKY = d.vec3f(0.6, 0.45, 0.75);
+export const SUN = d.vec3f(1.0, 0.7, 0.3);
+
 export const raymarchSlot = tgpu.slot<TgpuFn>();
 export const sampledViewSlot = tgpu.slot<TgpuSampledTexture<'2d', d.F32>>();
 export const samplerSlot = tgpu.slot<TgpuSampler>();
