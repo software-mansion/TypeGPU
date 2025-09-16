@@ -212,14 +212,7 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   ): TgpuTextureView<T>;
 
   clear(mipLevel?: number | 'all'): void;
-  generateMipmaps(
-    ...args: this['usableAsRender'] extends true
-      ? [baseMipLevel?: number, mipLevels?: number]
-      : [
-        missingUsage:
-          "(Error) generateMipmaps requires the texture to be usable as a render target. Use .$usage('render') first.",
-      ]
-  ): void;
+  generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
   write(
     source: Required<TProps['dimension']> extends '3d' ? ExternalImageSource[]
       : ExternalImageSource,
@@ -400,10 +393,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
     }
   }
 
-  generateMipmaps(baseMipLevel: string | number = 0, mipLevels?: number) {
-    if (typeof baseMipLevel === 'string' || this.usableAsRender === false) {
+  generateMipmaps(baseMipLevel = 0, mipLevels?: number) {
+    if (this.usableAsRender === false) {
       throw new Error(
-        "generateMipmaps called without specifying 'render' usage",
+        "generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.",
       );
     }
 
