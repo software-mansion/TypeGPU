@@ -94,6 +94,8 @@ export type {
   Configurable,
   TgpuRoot,
   ValidateBufferSchema,
+  ValidateStorageSchema,
+  ValidateUniformSchema,
   WithBinding,
   WithCompute,
   WithFragment,
