@@ -1,5 +1,5 @@
 import type { AnyAttribute } from './attributes.ts';
-import { isLooseData, isUnstruct } from './dataTypes.ts';
+import { isDisarray, isLooseData, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
@@ -87,7 +87,33 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
   }
 
   if (isUnstruct(a) && isUnstruct(b)) {
-    return deepEqual(a, b);
+    const aProps = a.propTypes;
+    const bProps = b.propTypes;
+    const aKeys = Object.keys(aProps);
+    const bKeys = Object.keys(bProps);
+
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+
+    // For unstructs, order of properties matters.
+    if (aKeys.join() !== bKeys.join()) {
+      return false;
+    }
+
+    for (const key of aKeys) {
+      if (!deepEqual(aProps[key], bProps[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (isDisarray(a) && isDisarray(b)) {
+    return (
+      a.elementCount === b.elementCount &&
+      deepEqual(a.elementType as AnyData, b.elementType as AnyData)
+    );
   }
 
   if (isLooseData(a) && isLooseData(b)) {
