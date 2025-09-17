@@ -7,7 +7,7 @@ import type {
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
-import { sizeOf } from '../../data/index.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
 import {
   type AnyWgslData,
   isWgslData,
