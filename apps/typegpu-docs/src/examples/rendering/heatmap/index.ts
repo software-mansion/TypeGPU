@@ -5,12 +5,7 @@ import * as std from 'typegpu/std';
 
 import { Camera, Transform, Vertex } from './structures.ts';
 import * as c from './constants.ts';
-import {
-  createSurface,
-  getPlaneIndexArray,
-  getPlaneTransform,
-  mistyMountains,
-} from './surface.ts';
+import { getSurfaceIndexArray, getSurfaceTransform } from './surface.ts';
 
 // == BORING ROOT STUFF ==
 const root = await tgpu.init();
@@ -42,32 +37,39 @@ const cameraInitial: d.Infer<typeof Camera> = {
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-const rowsNumber = mistyMountains.n;
-const columnsNumber = mistyMountains.m;
-
-const planeBuffer = root
+// == THIS IS THE PLACE TO DECIDE WHAT FUNCTION TO PLOT ==
+import { xs, ys, zs } from './functions/log.ts';
+import { createSurfaceFromArrays } from './surface.ts';
+const rowsNumber = zs.length;
+const columnsNumber = xs.length;
+const surfaceBuffer = root
   .createBuffer(
     vertexLayout.schemaForCount(
       rowsNumber * columnsNumber,
     ),
-    createSurface(mistyMountains),
+    createSurfaceFromArrays(
+      xs,
+      ys,
+      zs,
+      (y) => d.vec4f(d.vec3f((y + 1) / 2), 1),
+    ),
   )
   .$usage('vertex');
 
-const planeIndexBuffer = root
+const surfaceIndexBuffer = root
   .createBuffer(
     d.arrayOf(
       d.u16,
       (rowsNumber - 1) * (columnsNumber - 1) * 6,
     ),
-    getPlaneIndexArray(rowsNumber, columnsNumber),
+    getSurfaceIndexArray(rowsNumber, columnsNumber),
   )
   .$usage('index');
 
-const planeTransformBuffer = root
+const surfaceTransformBuffer = root
   .createBuffer(
     Transform,
-    getPlaneTransform(d.vec3f(0, -2, 0), d.vec3f(5, 1, 5)),
+    getSurfaceTransform(d.vec3f(0, -2, 0), d.vec3f(5, 1, 5)),
   )
   .$usage('uniform');
 
@@ -78,7 +80,7 @@ const layout = tgpu.bindGroupLayout({
 
 const bindgroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
-  transform: planeTransformBuffer,
+  transform: surfaceTransformBuffer,
 });
 
 // == TEXTURES ==
@@ -161,9 +163,9 @@ const render = () => {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(vertexLayout, planeBuffer)
+    .with(vertexLayout, surfaceBuffer)
     .with(layout, bindgroup)
-    .withIndexBuffer(planeIndexBuffer)
+    .withIndexBuffer(surfaceIndexBuffer)
     .drawIndexed(
       (rowsNumber - 1) * (columnsNumber - 1) * 6,
     );
