@@ -13,7 +13,8 @@ describe('disco example', () => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
       name: 'disco',
-      expectedCalls: 1,
+      controlTriggers: ['Test Resolution'],
+      expectedCalls: 7,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`

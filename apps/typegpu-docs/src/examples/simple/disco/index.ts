@@ -108,4 +108,21 @@ export const controls = {
       }
     },
   },
+
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () => {
+      for (const fragment of fragmentShaders) {
+        const code = tgpu.resolve({
+          externals: {
+            mainVertex,
+            fragment,
+            timeAccess,
+            resolutionAccess,
+          },
+        });
+        device.createShaderModule({ code });
+      }
+      render();
+    },
+  },
 };
