@@ -34,7 +34,6 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  hasInternalDataType,
   isMatInstance,
   isNumericSchema,
   isVec,
@@ -42,8 +41,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
+import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -225,9 +223,10 @@ export function coerceToSnippet(value: unknown): Snippet {
     return value;
   }
 
-  if (hasInternalDataType(value)) {
-    // The value knows better about what type it is
-    return snip(value, value[$wgslDataType] as AnyData);
+  // Maybe the value can tell us what snippet it is
+  const ownSnippet = getOwnSnippet(value);
+  if (ownSnippet) {
+    return ownSnippet;
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {

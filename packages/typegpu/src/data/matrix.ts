@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import type { $repr } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
@@ -170,7 +170,7 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
     yield this[3];
   }
 
-  '~resolve'(): string {
+  [$resolve](): string {
     return `${this.kind}(${
       Array.from({ length: this.length })
         .map((_, i) => this[i])
@@ -314,7 +314,7 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
     }
   }
 
-  '~resolve'(): string {
+  [$resolve](): string {
     return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
       this[5]
     }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
@@ -503,7 +503,7 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
     }
   }
 
-  '~resolve'(): string {
+  [$resolve](): string {
     return `${this.kind}(${
       Array.from({ length: this.length })
         .map((_, i) => this[i])

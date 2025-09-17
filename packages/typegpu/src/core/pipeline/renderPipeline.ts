@@ -22,7 +22,7 @@ import {
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroupLayout,
@@ -308,7 +308,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$getNameForward] = core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     return ctx.resolve(this[$internal].core);
   }
 
@@ -651,7 +651,7 @@ class RenderPipelineCore implements SelfResolvable {
       : [null];
   }
 
-  '~resolve'(ctx: ResolutionCtx) {
+  [$resolve](ctx: ResolutionCtx) {
     const {
       vertexFn,
       fragmentFn,

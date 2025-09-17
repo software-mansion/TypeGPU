@@ -33,6 +33,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -740,7 +741,7 @@ ${this.ctx.pre}else ${alternate}`;
 
 function assertExhaustive(value: never): never {
   throw new Error(
-    `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
+    `'${safeStringify(value)}' was not handled by the WGSL generator.`,
   );
 }
 
