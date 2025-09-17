@@ -101,7 +101,7 @@ export class LogGeneratorImpl implements LogGenerator {
       ),
     );
 
-    return snip(stitch`${ctx.resolve(logFn)}(${nonStringArgs})`, Void);
+    return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
   }
 
   get logResources(): LogResources | undefined {
