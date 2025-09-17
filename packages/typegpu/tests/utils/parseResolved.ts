@@ -6,11 +6,11 @@ import { type Assertion, expect } from 'vitest';
 import type { AnyData } from '../../src/data/index.ts';
 import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import { CodegenState } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 export function parse(code: string): string {
   const stream = new WeslStream(code);
@@ -62,7 +62,7 @@ export function expectDataTypeOf(
   cb: () => unknown,
 ): Assertion<AnyData | UnknownData> {
   const ctx = new ResolutionCtxImpl({
-    names: new StrictNameRegistry(),
+    namespace: namespace({ names: 'strict' }),
   });
 
   const dataType = provideCtx(

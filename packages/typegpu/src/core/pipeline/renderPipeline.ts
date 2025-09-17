@@ -41,6 +41,7 @@ import {
 import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { isTexture, type TgpuTexture } from '../texture/texture.ts';
@@ -698,10 +699,11 @@ class RenderPipelineCore implements SelfResolvable {
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
+      const ns = namespace({ names: branch.nameRegistrySetting });
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
           root: branch,
@@ -711,7 +713,7 @@ class RenderPipelineCore implements SelfResolvable {
         });
       } else {
         resolutionResult = resolve(this, {
-          names: branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
           root: branch,

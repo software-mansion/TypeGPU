@@ -1,4 +1,3 @@
-import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
@@ -10,6 +9,7 @@ import type { WgslExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
+import { type Namespace, namespace } from './namespace.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -23,9 +23,17 @@ export interface TgpuResolveOptions {
   template?: string | undefined;
   /**
    * The naming strategy used for generating identifiers for resolved externals and their dependencies.
+   *
+   * ## Namespaces
+   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
+   * custom namespace can be created with `tgpu.namespace` and passed in.
+   *
+   * This allows tracking the behavior of the resolution process, as well as
+   * sharing state between calls to `tgpu.resolve`.
+   *
    * @default 'random'
    */
-  names?: 'strict' | 'random' | undefined;
+  names?: 'strict' | 'random' | Namespace | undefined;
   /**
    * A function to configure the resolution context.
    */
@@ -83,7 +91,7 @@ export function resolveWithContext(
     externals,
     shaderGenerator,
     template,
-    names,
+    names = 'random',
     config,
     enableExtensions,
   } = options;
@@ -108,9 +116,7 @@ export function resolveWithContext(
   }
 
   return resolveImpl(resolutionObj, {
-    names: names === 'strict'
-      ? new StrictNameRegistry()
-      : new RandomNameRegistry(),
+    namespace: typeof names === 'string' ? namespace({ names }) : names,
     enableExtensions,
     shaderGenerator,
     config,

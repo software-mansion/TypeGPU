@@ -109,7 +109,7 @@ class TgpuFixedBufferImpl<
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
         ? { uniform: this.buffer.dataType }
@@ -233,7 +233,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
