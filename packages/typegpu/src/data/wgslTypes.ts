@@ -655,6 +655,16 @@ export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
 
+export type MatchingBoolInstance<T extends AnyVecInstance | number> = T extends
+  AnyVecInstance
+  ? T['kind'] extends `vec${infer TDim extends 2 | 3 | 4}${string}` ? {
+      2: v2b;
+      3: v3b;
+      4: v4b;
+    }[TDim]
+  : never
+  : boolean;
+
 export type AnySignedVecInstance =
   | v2i
   | v2f

@@ -1035,7 +1035,7 @@ export const saturate = dualImpl({
 });
 
 function cpuSign(e: number): number;
-function cpuSign<T extends AnySignedVecInstance>(e: T): T;
+function cpuSign<T extends AnySignedVecInstance | number>(e: T): T;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
   if (typeof e === 'number') {
     return Math.sign(e) as T;
@@ -1176,7 +1176,7 @@ export const tan = dualImpl({
 });
 
 function cpuTanh(value: number): number;
-function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.tanh(value) as T;
