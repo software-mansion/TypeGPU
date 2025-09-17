@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   align,
   arrayOf,
+  atomic,
   deepEqual,
   disarrayOf,
   f16,
@@ -17,6 +18,7 @@ import {
   vec2u,
   vec3f,
 } from '../../src/data/index.ts';
+import { ptrPrivate, ptrStorage, ptrWorkgroup } from '../../src/data/ptr.ts';
 
 describe('deepEqual', () => {
   it('compares simple types', () => {
@@ -97,6 +99,45 @@ describe('deepEqual', () => {
     const decorated3 = align(8, f32);
     const decorated4 = align(16, u32);
     const decorated5 = location(0, f32);
+
+    expect(deepEqual(decorated1, decorated2)).toBe(true);
+    expect(deepEqual(decorated1, decorated3)).toBe(false);
+    expect(deepEqual(decorated1, decorated4)).toBe(false);
+    expect(deepEqual(decorated1, decorated5)).toBe(false);
+  });
+
+  it('compares pointer types', () => {
+    const ptr1 = ptrPrivate(f32);
+    const ptr2 = ptrPrivate(f32);
+    const ptr3 = ptrWorkgroup(f32);
+    const ptr4 = ptrPrivate(u32);
+    const ptr5 = ptrStorage(f32, 'read');
+    const ptr6 = ptrStorage(f32, 'read-write');
+
+    expect(deepEqual(ptr1, ptr2)).toBe(true);
+    expect(deepEqual(ptr1, ptr3)).toBe(false);
+    expect(deepEqual(ptr1, ptr4)).toBe(false);
+    expect(deepEqual(ptr5, ptr6)).toBe(false);
+    expect(deepEqual(ptrStorage(f32, 'read'), ptrStorage(f32, 'read'))).toBe(
+      true,
+    );
+  });
+
+  it('compares atomic types', () => {
+    const atomic1 = atomic(u32);
+    const atomic2 = atomic(u32);
+    const atomic3 = atomic(i32);
+
+    expect(deepEqual(atomic1, atomic2)).toBe(true);
+    expect(deepEqual(atomic1, atomic3)).toBe(false);
+  });
+
+  it('compares loose decorated types', () => {
+    const decorated1 = align(16, unstruct({ a: f32 }));
+    const decorated2 = align(16, unstruct({ a: f32 }));
+    const decorated3 = align(8, unstruct({ a: f32 }));
+    const decorated4 = align(16, unstruct({ a: u32 }));
+    const decorated5 = location(0, unstruct({ a: f32 }));
 
     expect(deepEqual(decorated1, decorated2)).toBe(true);
     expect(deepEqual(decorated1, decorated3)).toBe(false);
