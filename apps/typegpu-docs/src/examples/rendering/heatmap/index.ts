@@ -3,6 +3,10 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import * as std from 'typegpu/std';
 
+import { Camera, Transform, Vertex } from './structures.ts';
+import * as c from './constants.ts';
+import { createPlane, getPlaneIndexArray, getPlaneTransform } from './plane.ts';
+
 // == BORING ROOT STUFF ==
 const root = await tgpu.init();
 const device = root.device;
@@ -16,129 +20,39 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// == DATA STRUCTURES ==
-const Vertex = d.struct({
-  position: d.vec4f,
-  color: d.vec4f,
-});
-
-const Camera = d.struct({
-  view: d.mat4x4f,
-  projection: d.mat4x4f,
-});
-
-const Transform = d.struct({
-  model: d.mat4x4f,
-});
-
-const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
-
 // == SCENE ==
 const aspect = canvas.clientWidth / canvas.clientHeight;
-const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(12, 7, 12, 1);
 
 const cameraInitial: d.Infer<typeof Camera> = {
-  view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
+  view: m.mat4.lookAt(
+    c.cameraInitialPos,
+    c.target,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
   projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
 };
 
-// == GEOMETRY ==
-const heightScale = 4;
-const getColor = (height: number): d.Infer<typeof Vertex>['color'] => {
-  return d.vec4f(d.vec3f(1 - height / heightScale), 1);
-};
-
-const createPlane = (n: number, m: number): d.Infer<typeof Vertex>[] => {
-  const nSideLength = 2;
-  const mSideLength = 2;
-  const nSubdivisionLength = nSideLength / (n - 1);
-  const mSubdivisionLength = mSideLength / (m - 1);
-
-  const indices = Array.from(
-    { length: n },
-    (_, i) => Array.from({ length: m }, (_, j) => [i, j] as [number, number]),
-  );
-  const coords = indices.map((ar) =>
-    ar.map((e) => {
-      const [i, j] = e;
-      return [-1 + j * mSubdivisionLength, 1 - i * nSubdivisionLength];
-    })
-  );
-  const heights = Array.from(
-    { length: n * m },
-    () => heightScale * Math.random(),
-  );
-  const vertices = coords.flat().map((e, i) => ({
-    position: d.vec4f(e[0], heights[i], e[1], 1),
-    color: getColor(heights[i]),
-  }));
-
-  return vertices;
-};
-
-const getPlaneIndexArray = (
-  n: number,
-  m: number,
-): number[] => {
-  const indices: number[] = [];
-
-  for (let i = 0; i < n - 1; i++) {
-    for (let j = 0; j < m - 1; j++) {
-      const topLeft = i * m + j;
-      const topRight = i * m + (j + 1);
-      const bottomLeft = (i + 1) * m + j;
-      const bottomRight = (i + 1) * m + (j + 1);
-
-      indices.push(topLeft, bottomLeft, bottomRight);
-      indices.push(topLeft, bottomRight, topRight);
-    }
-  }
-
-  return indices;
-};
-
-const getPlaneTransform = (
-  translation: d.v3f,
-  scale: d.v3f,
-): d.Infer<typeof Transform> => {
-  return {
-    model: m.mat4.scale(
-      m.mat4.translate(m.mat4.identity(d.mat4x4f()), translation, d.mat4x4f()),
-      scale,
-      d.mat4x4f(),
-    ),
-  };
-};
-
-// == TEMP CONST ==
-// these 2 below must be greater than 1 each
-const futureNumOfReleases = 49;
-const futureNumOfSamples = 49;
-
-// == BUFFERS ==
+// == BUFFERS AND LAYOUTS ==
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 const planeBuffer = root
   .createBuffer(
-    vertexLayout.schemaForCount(futureNumOfReleases * futureNumOfSamples),
-    createPlane(futureNumOfReleases, futureNumOfSamples),
+    vertexLayout.schemaForCount(c.futureNumOfReleases * c.futureNumOfSamples),
+    createPlane(c.futureNumOfReleases, c.futureNumOfSamples),
   )
   .$usage('vertex');
 
 const planeIndexBuffer = root
   .createBuffer(
-    d.arrayOf(d.u16, (futureNumOfReleases - 1) * (futureNumOfSamples - 1) * 6),
-    getPlaneIndexArray(futureNumOfReleases, futureNumOfSamples),
+    d.arrayOf(
+      d.u16,
+      (c.futureNumOfReleases - 1) * (c.futureNumOfSamples - 1) * 6,
+    ),
+    getPlaneIndexArray(c.futureNumOfReleases, c.futureNumOfSamples),
   )
   .$usage('index');
-
-console.log(
-  createPlane(futureNumOfReleases, futureNumOfSamples).map((vertex) =>
-    vertex.position.join(',')
-  ),
-);
-console.log(getPlaneIndexArray(futureNumOfSamples, futureNumOfReleases));
 
 const planeTransformBuffer = root
   .createBuffer(
@@ -152,7 +66,7 @@ const layout = tgpu.bindGroupLayout({
   transform: { uniform: Transform },
 });
 
-const planeBindGroup = root.createBindGroup(layout, {
+const bindgroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
   transform: planeTransformBuffer,
 });
@@ -163,7 +77,6 @@ let depthTextureView: GPUTextureView;
 let msaaTexture: GPUTexture;
 let msaaTextureView: GPUTextureView;
 
-// definitely not pure function
 const createDepthAndMsaaTextures = () => {
   if (depthTexture) {
     depthTexture.destroy();
@@ -223,7 +136,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 // == RENDER LOOP ==
-const drawPlane = () => {
+const render = () => {
   pipeline
     .withColorAttachment({
       view: msaaTextureView,
@@ -239,45 +152,43 @@ const drawPlane = () => {
       depthStoreOp: 'store',
     })
     .with(vertexLayout, planeBuffer)
-    .with(layout, planeBindGroup)
+    .with(layout, bindgroup)
     .withIndexBuffer(planeIndexBuffer)
-    .drawIndexed((futureNumOfReleases - 1) * (futureNumOfSamples - 1) * 6);
+    .drawIndexed((c.futureNumOfReleases - 1) * (c.futureNumOfSamples - 1) * 6);
 };
 
-const render = drawPlane;
-
 const frame = () => {
-  requestAnimationFrame(frame);
   render();
+  requestAnimationFrame(frame);
 };
 
 frame();
 
+console.log(
+  createPlane(c.futureNumOfReleases, c.futureNumOfSamples).map((vertex) =>
+    vertex.position.join(',')
+  ),
+);
+console.log(getPlaneIndexArray(c.futureNumOfSamples, c.futureNumOfReleases));
+
 // #region Example controls and cleanup
+// copied from 'Two Boxes' example
 
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
-let orbitRadius = Math.sqrt(
-  cameraInitialPos.x * cameraInitialPos.x +
-    cameraInitialPos.y * cameraInitialPos.y +
-    cameraInitialPos.z * cameraInitialPos.z,
-);
+let orbitRadius = std.length(c.cameraInitialPos.xyz);
 
-// Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(cameraInitialPos.x, cameraInitialPos.z);
-let orbitPitch = Math.asin(cameraInitialPos.y / orbitRadius);
+let orbitYaw = Math.atan2(c.cameraInitialPos.x, c.cameraInitialPos.z);
+let orbitPitch = Math.asin(c.cameraInitialPos.y / orbitRadius);
 
 const updateCameraOrbit = (dx: number, dy: number) => {
   const orbitSensitivity = 0.005;
   orbitYaw += -dx * orbitSensitivity;
   orbitPitch += dy * orbitSensitivity;
-  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
   const maxPitch = Math.PI / 2 - 0.01;
   if (orbitPitch > maxPitch) orbitPitch = maxPitch;
   if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // basically converting spherical coordinates to cartesian.
-  // like sampling points on a unit sphere and then scaling them by the radius.
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
@@ -285,7 +196,7 @@ const updateCameraOrbit = (dx: number, dy: number) => {
 
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    c.target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
@@ -299,14 +210,14 @@ canvas.addEventListener('contextmenu', (event) => {
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
-  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
+  orbitRadius = Math.max(7, orbitRadius + event.deltaY * zoomSensitivity);
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    c.target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
@@ -315,7 +226,6 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
-    // Left Mouse Button controls Camera Orbit.
     isDragging = true;
   }
   prevX = event.clientX;
