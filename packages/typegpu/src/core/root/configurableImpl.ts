@@ -9,7 +9,7 @@ import {
 } from '../slot/slotTypes.ts';
 import type { Configurable } from './rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
-import type { WgslStorageTexture, WgslTexture } from '../../data/index.ts';
+import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 
 export class ConfigurableImpl implements Configurable {
   constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}

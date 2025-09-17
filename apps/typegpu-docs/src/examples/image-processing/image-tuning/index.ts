@@ -33,10 +33,7 @@ let currentLUTTexture:
   >
   & SampledFlag;
 let imageTexture:
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba8unorm';
-  }>
+  & TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }>
   & SampledFlag;
 
 const root = await tgpu.init();

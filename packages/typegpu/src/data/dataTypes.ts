@@ -23,7 +23,7 @@ import type {
   WgslExternalTexture,
   WgslStorageTexture,
   WgslTexture,
-} from './index.ts';
+} from './texture.ts';
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';

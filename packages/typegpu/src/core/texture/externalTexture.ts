@@ -1,7 +1,6 @@
 import {
   $gpuValueOf,
   $internal,
-  $repr,
   $runtimeResource,
 } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -32,9 +31,6 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 
 export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
-  readonly [$runtimeResource] = true;
-  readonly [$wgslDataType] = {} as WgslExternalTexture;
-  readonly [$repr] = undefined as unknown as WgslExternalTexture;
   readonly resourceType = 'external-texture';
   readonly [$internal] = true;
 
