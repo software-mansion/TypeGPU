@@ -5,7 +5,12 @@ import * as std from 'typegpu/std';
 
 import { Camera, Transform, Vertex } from './structures.ts';
 import * as c from './constants.ts';
-import { createPlane, getPlaneIndexArray, getPlaneTransform } from './plane.ts';
+import {
+  createSurface,
+  getPlaneIndexArray,
+  getPlaneTransform,
+  mistyMountains,
+} from './surface.ts';
 
 // == BORING ROOT STUFF ==
 const root = await tgpu.init();
@@ -37,10 +42,15 @@ const cameraInitial: d.Infer<typeof Camera> = {
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
+const rowsNumber = mistyMountains.n;
+const columnsNumber = mistyMountains.m;
+
 const planeBuffer = root
   .createBuffer(
-    vertexLayout.schemaForCount(c.futureNumOfReleases * c.futureNumOfSamples),
-    createPlane(c.futureNumOfReleases, c.futureNumOfSamples),
+    vertexLayout.schemaForCount(
+      rowsNumber * columnsNumber,
+    ),
+    createSurface(mistyMountains),
   )
   .$usage('vertex');
 
@@ -48,9 +58,9 @@ const planeIndexBuffer = root
   .createBuffer(
     d.arrayOf(
       d.u16,
-      (c.futureNumOfReleases - 1) * (c.futureNumOfSamples - 1) * 6,
+      (rowsNumber - 1) * (columnsNumber - 1) * 6,
     ),
-    getPlaneIndexArray(c.futureNumOfReleases, c.futureNumOfSamples),
+    getPlaneIndexArray(rowsNumber, columnsNumber),
   )
   .$usage('index');
 
@@ -154,7 +164,9 @@ const render = () => {
     .with(vertexLayout, planeBuffer)
     .with(layout, bindgroup)
     .withIndexBuffer(planeIndexBuffer)
-    .drawIndexed((c.futureNumOfReleases - 1) * (c.futureNumOfSamples - 1) * 6);
+    .drawIndexed(
+      (rowsNumber - 1) * (columnsNumber - 1) * 6,
+    );
 };
 
 const frame = () => {
@@ -163,13 +175,6 @@ const frame = () => {
 };
 
 frame();
-
-console.log(
-  createPlane(c.futureNumOfReleases, c.futureNumOfSamples).map((vertex) =>
-    vertex.position.join(',')
-  ),
-);
-console.log(getPlaneIndexArray(c.futureNumOfSamples, c.futureNumOfReleases));
 
 // #region Example controls and cleanup
 // copied from 'Two Boxes' example
