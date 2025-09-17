@@ -411,9 +411,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   reportReturnType(dataType: AnyData) {
     const scope = this._itemStateStack.topFunctionScope;
-    if (!scope) {
-      throw new Error('Internal error, expected function scope to be present.');
-    }
+    invariant(scope, 'Internal error, expected function scope to be present.');
     scope.reportedReturnTypes.push(dataType);
   }
 
