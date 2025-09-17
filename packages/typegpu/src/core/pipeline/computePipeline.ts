@@ -1,5 +1,6 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';

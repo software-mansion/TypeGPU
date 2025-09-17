@@ -1,7 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { getName } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore } from './fnCore.ts';
 
@@ -21,7 +21,7 @@ export function createShelllessImpl(
     [$getNameForward]: core,
     resourceType: 'shellless-impl' as const,
 
-    '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(ctx, argTypes, undefined);
     },
 

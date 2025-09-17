@@ -193,7 +193,7 @@ describe('oklab example', () => {
       }
 
       fn gamutClipAdaptiveL05_8(lab: vec3f) -> vec3f {
-        var alpha = 0.2;
+        var alpha = 0.2f;
         var L = lab.x;
         var eps = 1e-5;
         var C = max(eps, length(lab.yz));
