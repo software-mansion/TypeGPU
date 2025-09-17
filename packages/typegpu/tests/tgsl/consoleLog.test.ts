@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, vi } from 'vitest';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -12,7 +12,7 @@ describe('wgslGenerator with console.log', () => {
   let ctx: ResolutionCtxImpl;
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
     });
     ctx.pushMode(new CodegenState());
   });
