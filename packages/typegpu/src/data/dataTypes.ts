@@ -1,4 +1,4 @@
-import type { TgpuNamable } from '../shared/meta.ts';
+import { setName, type TgpuNamable } from '../shared/meta.ts';
 import type {
   Infer,
   InferGPURecord,
@@ -241,4 +241,11 @@ export class MatrixColumnsAccess {
   constructor(
     readonly matrix: Snippet,
   ) {}
+}
+
+export class ConsoleLog {
+  [$internal] = true;
+  constructor() {
+    setName(this, 'consoleLog');
+  }
 }

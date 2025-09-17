@@ -3,6 +3,7 @@ import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
+  ConsoleLog,
   InfixDispatch,
   isData,
   isLooseData,
@@ -270,6 +271,10 @@ ${this.ctx.pre}}`;
       const [_, targetNode, property] = expression;
       const target = this.expression(targetNode);
 
+      if (target.value === console) {
+        return snip(new ConsoleLog(), UnknownData);
+      }
+
       if (
         infixKinds.includes(target.dataType.type) &&
         property in infixOperators
@@ -476,6 +481,11 @@ ${this.ctx.pre}}`;
               .map(([type, sn]) => tryConvertSnippet(sn, type));
           }
         }
+
+        if (callee.value instanceof ConsoleLog) {
+          return this.ctx.generateLog(convertedArguments);
+        }
+
         // Assuming that `callee` is callable
         const fnRes =
           (callee.value as unknown as (...args: unknown[]) => unknown)(
