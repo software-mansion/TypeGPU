@@ -1,7 +1,18 @@
 import type { AnyAttribute } from './attributes.ts';
-import { isDisarray, isLooseData, isUnstruct } from './dataTypes.ts';
+import {
+  isDisarray,
+  isLooseData,
+  isLooseDecorated,
+  isUnstruct,
+} from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
-import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import {
+  isAtomic,
+  isDecorated,
+  isPtr,
+  isWgslArray,
+  isWgslStruct,
+} from './wgslTypes.ts';
 
 /**
  * Performs a deep comparison of two TypeGPU data schemas.
@@ -63,26 +74,45 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     );
   }
 
-  if (isDecorated(a) && isDecorated(b)) {
+  if (isPtr(a) && isPtr(b)) {
+    return (
+      a.addressSpace === b.addressSpace &&
+      a.access === b.access &&
+      deepEqual(a.inner as AnyData, b.inner as AnyData)
+    );
+  }
+
+  if (isAtomic(a) && isAtomic(b)) {
+    return deepEqual(a.inner as AnyData, b.inner as AnyData);
+  }
+
+  if (
+    (isDecorated(a) && isDecorated(b)) ||
+    (isLooseDecorated(a) && isLooseDecorated(b))
+  ) {
     if (!deepEqual(a.inner as AnyData, b.inner as AnyData)) {
       return false;
     }
     if (a.attribs.length !== b.attribs.length) {
       return false;
     }
-    // TODO: A more robust comparison might be needed if attribute order is not guaranteed.
-    // For now, assuming attributes are ordered.
-    for (let i = 0; i < a.attribs.length; i++) {
-      const attrA = a.attribs[i] as AnyAttribute;
-      const attrB = b.attribs[i] as AnyAttribute;
-      if (attrA.type !== attrB.type) return false;
-      if (attrA.params?.length !== attrB.params?.length) return false;
-      if (attrA.params) {
-        for (let j = 0; j < attrA.params.length; j++) {
-          if (attrA.params[j] !== attrB.params[j]) return false;
-        }
+
+    // Create comparable string representations for each attribute and sort them
+    // to handle cases where attributes are in a different order.
+    const getAttrKey = (attr: unknown): string => {
+      const anyAttr = attr as AnyAttribute;
+      return `${anyAttr.type}(${(anyAttr.params ?? []).join(',')})`;
+    };
+
+    const sortedAttrsA = a.attribs.map(getAttrKey).sort();
+    const sortedAttrsB = b.attribs.map(getAttrKey).sort();
+
+    for (let i = 0; i < sortedAttrsA.length; i++) {
+      if (sortedAttrsA[i] !== sortedAttrsB[i]) {
+        return false;
       }
     }
+
     return true;
   }
 
