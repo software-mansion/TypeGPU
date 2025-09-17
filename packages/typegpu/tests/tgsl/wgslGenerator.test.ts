@@ -6,15 +6,15 @@ import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -30,7 +30,7 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
       shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());

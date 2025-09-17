@@ -1,4 +1,9 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
+import {
+  getUniqueName,
+  type Namespace,
+  type NamespaceInternal,
+} from './core/resolve/namespace.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
@@ -23,7 +28,6 @@ import {
   WgslTypeError,
 } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
-import type { NameRegistry } from './nameRegistry.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
 import { $internal, $providing } from './shared/symbols.ts';
@@ -69,12 +73,10 @@ import type { WgslExtension } from './wgslExtensions.ts';
 const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
-  readonly names: NameRegistry;
   readonly enableExtensions?: WgslExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
+  readonly namespace: Namespace;
 };
-
-type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
 type SlotBindingLayer = {
   type: 'slotBinding';
@@ -323,18 +325,8 @@ interface FixedBindingConfig {
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private readonly _memoizedResolves = new WeakMap<
-    // WeakMap because if the item does not exist anymore,
-    // apart from this map, there is no way to access the cached value anyway.
-    object,
-    { slotToValueMap: SlotToValueMap; result: string }[]
-  >();
-  private readonly _memoizedDerived = new WeakMap<
-    // WeakMap because if the "derived" does not exist anymore,
-    // apart from this map, there is no way to access the cached value anyway.
-    TgpuDerived<unknown>,
-    { slotToValueMap: SlotToValueMap; result: unknown }[]
-  >();
+  readonly #namespace: NamespaceInternal;
+  readonly #shaderGenerator: ShaderGenerator;
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
@@ -366,15 +358,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly names: NameRegistry;
   public readonly enableExtensions: WgslExtension[] | undefined;
   public expectedType: AnyData | undefined;
-  readonly #shaderGenerator: ShaderGenerator;
 
   constructor(opts: ResolutionCtxImplOptions) {
-    this.names = opts.names;
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
+    this.#namespace = opts.namespace[$internal];
+  }
+
+  getUniqueName(resource: object): string {
+    return getUniqueName(this.#namespace, resource);
   }
 
   get pre(): string {
@@ -527,7 +521,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   _getOrCompute<T>(derived: TgpuDerived<T>): T {
     // All memoized versions of `derived`
-    const instances = this._memoizedDerived.get(derived) ?? [];
+    const instances = this.#namespace.memoizedDerived.get(derived) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -562,7 +556,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this._memoizedDerived.set(derived, instances);
+      this.#namespace.memoizedDerived.set(derived, instances);
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
@@ -580,7 +574,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    */
   _getOrInstantiate(item: object): string {
     // All memoized versions of `item`
-    const instances = this._memoizedResolves.get(item) ?? [];
+    const instances = this.#namespace.memoizedResolves.get(item) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -620,7 +614,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this._memoizedResolves.set(item, instances);
+      this.#namespace.memoizedResolves.set(item, instances);
 
       return result;
     } catch (err) {
@@ -638,7 +632,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
-        !this._memoizedResolves.has(item)
+        !this.#namespace.memoizedResolves.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
