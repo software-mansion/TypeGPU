@@ -232,8 +232,8 @@ class TgpuFixedSamplerImpl
       _props.mipmapFilter === 'linear';
   }
 
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
   [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): string {
