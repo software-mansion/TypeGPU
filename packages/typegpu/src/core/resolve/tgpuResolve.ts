@@ -2,7 +2,7 @@ import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslExtension } from '../../wgslExtensions.ts';
@@ -101,7 +101,7 @@ export function resolveWithContext(
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
-    '~resolve'(ctx) {
+    [$resolve](ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
 

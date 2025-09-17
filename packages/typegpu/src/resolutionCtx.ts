@@ -33,7 +33,8 @@ import {
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
-import { $internal, $providing } from './shared/symbols.ts';
+import { safeStringify } from './shared/safeStringify.ts';
+import { $internal, $providing, $resolve } from './shared/symbols.ts';
 import {
   bindGroupLayout,
   type TgpuBindGroup,
@@ -620,12 +621,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
-        result = item['~resolve'](this);
+        result = item[$resolve](this);
       } else {
         throw new TypeError(
-          `Unresolvable internal value: ${item} (as json: ${
-            JSON.stringify(item)
-          })`,
+          `Unresolvable internal value: ${safeStringify(item)}`,
         );
       }
 
@@ -650,7 +649,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown, schema?: AnyData | undefined, exact = false): string {
+  resolve(
+    item: unknown,
+    schema?: AnyData | UnknownData | undefined,
+    exact = false,
+  ): string {
     if (isTgpuFn(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
@@ -666,7 +669,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema),
+        () => this.resolve(item[$providing].inner, schema, exact),
       );
     }
 
@@ -754,7 +757,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new WgslTypeError(
-      `Value ${item} (as json: ${JSON.stringify(item)}) is not resolvable${
+      `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
         schema ? ` to type ${schema}` : ''
       }`,
     );
