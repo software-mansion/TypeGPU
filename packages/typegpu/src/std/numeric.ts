@@ -1150,7 +1150,7 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
 export const step = dualImpl({
   name: 'step',
   signature: (...args) => {
-    const uargs = unify(args) ?? args;
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
     return { argTypes: uargs, returnType: uargs[0] };
   },
   normalImpl: cpuStep,
