@@ -27,7 +27,7 @@ describe('wgslGenerator with console.log', () => {
     });
 
     expect(asWgsl(fn)).toMatchInlineSnapshot(`
-      "fn fn() {
+      "fn fn_1() {
         /* console.log() */;
       }"
     `);
@@ -135,7 +135,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
-      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         log1(10);
       }"
     `);
@@ -194,7 +194,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
-      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         log1(10);
         log2(20);
       }"
@@ -257,7 +257,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[4] = serializedData2[0];
       }
 
-      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         log1(10, vec3u(2, 3, 4), 50);
       }"
     `);

@@ -214,7 +214,7 @@ export type GenerationCtx = ResolutionCtx & {
   popBlockScope(): void;
   generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
+  defineVariable(id: string, snippet: Snippet): void;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {
