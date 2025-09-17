@@ -1,21 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  align,
+  arrayOf,
   deepEqual,
+  disarrayOf,
+  f16,
   f32,
-  u32,
   i32,
-  vec2f,
-  vec3f,
-  vec2u,
+  location,
   mat2x2f,
   mat3x3f,
   struct,
+  u32,
   unstruct,
-  arrayOf,
-  disarrayOf,
-  align,
-  location,
-  f16,
+  vec2f,
+  vec2u,
+  vec3f,
 } from '../../src/data/index.ts';
 
 describe('deepEqual', () => {
