@@ -26,7 +26,7 @@ export function createShelllessImpl(
     },
 
     toString(): string {
-      return `shellless-impl:${getName(core) ?? '<unnamed>'}`;
+      return `fn*:${getName(core) ?? '<unnamed>'}`;
     },
   };
 }

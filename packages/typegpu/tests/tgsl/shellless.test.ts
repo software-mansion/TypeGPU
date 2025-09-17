@@ -69,4 +69,70 @@ describe('shellless', () => {
       }"
     `);
   });
+
+  it('handles fully abstract cases', () => {
+    const someFn = (a: number, b: number) => {
+      'kernel';
+      if (a > b) {
+        return 12.2;
+      }
+      if (b > a) {
+        return 2.2;
+      }
+      return 1;
+    };
+
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const x = someFn(1, 2);
+      return x;
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn someFn(a: i32, b: i32) -> f32 {
+        if ((a > b)) {
+          return 12.2;
+        }
+        if ((b > a)) {
+          return 2.2;
+        }
+        return 1;
+      }
+
+      fn main() -> f32 {
+        var x = someFn(1, 2);
+        return x;
+      }"
+    `);
+  });
+
+  it('throws when no single return type can be achieved', () => {
+    const someFn = (a: number, b: number) => {
+      'kernel';
+      if (a > b) {
+        return d.u32(12);
+      }
+      if (b > a) {
+        return d.i32(2);
+      }
+      return a + b;
+    };
+
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const x = someFn(1.1, 2);
+      return x;
+    });
+
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main
+      - fn*:someFn: Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
+    `);
+  });
 });

@@ -21,12 +21,7 @@ import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import {
-  isConcrete,
-  isWgslArray,
-  isWgslStruct,
-  Void,
-} from './data/wgslTypes.ts';
+import { isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -44,7 +39,7 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { unifyAuto } from './tgsl/conversion.ts';
+import { getBestConversion } from './tgsl/conversion.ts';
 import {
   coerceToSnippet,
   concretize,
@@ -446,22 +441,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let returnType = options.returnType;
       if (!returnType) {
-        const uniqueReturnTypes = [...new Set(scope.reportedReturnTypes)];
-        const concreteTypes = [...uniqueReturnTypes].filter(isConcrete);
-        if (uniqueReturnTypes.length === 0) {
+        const returnTypes = [...new Set(scope.reportedReturnTypes)];
+        if (returnTypes.length === 0) {
           returnType = Void;
-        } else if (concreteTypes.length <= 1) {
-          // Trying to find a common type for the return values
-          returnType = unifyAuto(
-            uniqueReturnTypes,
-            concreteTypes.length > 0 ? concreteTypes : undefined,
-          )?.[0];
+        } else {
+          const conversion = getBestConversion(returnTypes);
+          if (conversion && !conversion.hasImplicitConversions) {
+            returnType = conversion.targetType;
+          }
         }
 
         if (!returnType) {
           throw new Error(
             `Expected function to have a single return type, got [${
-              uniqueReturnTypes.join(', ')
+              returnTypes.join(', ')
             }]. Cast explicitly to the desired type.`,
           );
         }
