@@ -230,7 +230,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const shadowRo = p;
   const shadowRd = l;
   const shadowDist = std.length(std.sub(lightPos, p));
-  const shadow = softShadow(shadowRo, shadowRd, 0.1, shadowDist, 16);
+  const shadow = softShadow(shadowRo, shadowRd, 0.1, shadowDist, d.f32(16));
 
   // Combine lighting with shadows and color
   const litColor = std.mul(march.color, diff);
