@@ -1,19 +1,23 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import { getName, setName } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { getName, PERF, setName } from '../../shared/meta.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
+import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import {
@@ -24,14 +28,11 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import { PERF } from '../../shared/meta.ts';
-import { namespace } from '../resolve/namespace.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { Void } from '../../data/wgslTypes.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
+  readonly branch: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -66,13 +67,6 @@ export function INTERNAL_createComputePipeline(
   );
 }
 
-export function isComputePipeline(
-  value: unknown,
-): value is TgpuComputePipeline {
-  const maybe = value as TgpuComputePipeline | undefined;
-  return maybe?.resourceType === 'compute-pipeline' && !!maybe[$internal];
-}
-
 // --------------
 // Implementation
 // --------------
@@ -85,6 +79,7 @@ type Memo = {
   pipeline: GPUComputePipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logResources: LogResources | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -103,11 +98,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       get priors() {
         return _priors;
       },
+      get branch() {
+        return _core.branch;
+      },
     };
     this[$getNameForward] = _core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this._core);
   }
 
@@ -196,6 +194,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
+    if (memo.logResources) {
+      logDataFromGPU(memo.logResources);
+    }
+
     if (this._priors.performanceCallback) {
       triggerPerformanceCallback({
         root: branch,
@@ -220,7 +222,7 @@ class ComputePipelineCore implements SelfResolvable {
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
-  '~resolve'(ctx: ResolutionCtx) {
+  [$resolve](ctx: ResolutionCtx) {
     return ctx.withSlots(this._slotBindings, () => {
       ctx.resolve(this._entryFn);
       return snip('', Void);
@@ -249,6 +251,7 @@ class ComputePipelineCore implements SelfResolvable {
           namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
+          root: this.branch,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -258,10 +261,12 @@ class ComputePipelineCore implements SelfResolvable {
           namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
+          root: this.branch,
         });
       }
 
-      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } =
+        resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -287,6 +292,7 @@ class ComputePipelineCore implements SelfResolvable {
         }),
         usedBindGroupLayouts,
         catchall,
+        logResources,
       };
 
       if (PERF?.enabled) {

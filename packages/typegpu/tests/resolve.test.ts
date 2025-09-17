@@ -3,9 +3,10 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
 import {
+  $gpuValueOf,
   $internal,
-  $runtimeResource,
-  $wgslDataType,
+  $ownSnippet,
+  $resolve,
 } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
@@ -53,34 +54,33 @@ describe('tgpu resolve', () => {
     const intensity = {
       [$internal]: true,
 
-      get value(): number {
-        return {
-          [$internal]: true,
-          [$runtimeResource]: true,
-          [$wgslDataType]: d.f32,
-          '~resolve'(ctx: ResolutionCtx) {
-            return ctx.resolve(intensity);
-          },
-        } as unknown as number;
-      },
+      [$gpuValueOf]: {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, d.f32);
+        },
+        [$resolve]: (ctx: ResolutionCtx) => ctx.resolve(intensity),
+      } as unknown as number,
 
-      '~resolve'(ctx: ResolutionCtx) {
+      [$resolve](ctx: ResolutionCtx) {
         const name = ctx.getUniqueName(this);
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
         return snip(name, d.f32);
       },
+
+      get value(): number {
+        return this[$gpuValueOf];
+      },
     };
     setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1))
-      .$name('fragment1');
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1));
 
     const fragment2 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1))
-      .$name('fragment2');
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1));
 
     const resolved = tgpu.resolve({
       externals: { fragment1, fragment2 },
@@ -347,16 +347,16 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve only used object externals and ignore non-existing', () => {
-    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
-        let color = vec3f();
-        return color;
-      }`)
-      .$name('get_color');
+    const getColor = tgpu.fn([], d.vec3f)`() {
+      let color = vec3f();
+      return color;
+    }
+    `.$name('get_color');
 
-    const getIntensity = tgpu.fn([], d.vec3f)(`() -> vec3f {
-        return 1;
-      }`)
-      .$name('get_intensity');
+    const getIntensity = tgpu.fn([], d.vec3f)`() {
+      return 1;
+    }
+    `.$name('get_intensity');
 
     const layout = tgpu.bindGroupLayout({
       intensity: { uniform: d.u32 },

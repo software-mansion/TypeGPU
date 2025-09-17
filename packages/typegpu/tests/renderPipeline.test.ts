@@ -155,22 +155,22 @@ describe('TgpuRenderPipeline', () => {
         ).createPipeline();
 
       expect(parseResolved({ pipeline })).toEqual(parse(`
-        struct vertex_Output { 
+        struct vertex_Output {
           @location(0) a: vec3f,
           @location(1) b: vec2f,
           @builtin(position) pos: vec4f,
-        } 
-          
+        }
+
         @vertex fn vertex() -> vertex_Output {
           return vertex_Output();
         }
-        
-        struct fragment_Input { 
+
+        struct fragment_Input {
           @builtin(position) a: vec4f,
         }
-        
-        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f { 
-          return vec4f(1, 2, 3, 4); 
+
+        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+          return vec4f(1, 2, 3, 4);
         }
       `));
     });

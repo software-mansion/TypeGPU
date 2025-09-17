@@ -1,6 +1,6 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import {
   applyExternals,
@@ -46,7 +46,7 @@ class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const externalMap: ExternalMap = {};
 
     for (const externals of this.externalsToApply) {

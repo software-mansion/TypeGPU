@@ -12,9 +12,9 @@ import {
   $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $repr,
-  $runtimeResource,
-  $wgslDataType,
+  $resolve,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
@@ -38,7 +38,7 @@ export interface TgpuBufferUsage<
   readonly usage: TUsage;
   readonly [$repr]: Infer<TData>;
 
-  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<TData>;
+  readonly [$gpuValueOf]: InferGPU<TData>;
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
@@ -91,10 +91,10 @@ class TgpuFixedBufferImpl<
   SelfResolvable,
   TgpuFixedBufferUsage<TData> {
   /** Type-token, not available at runtime */
-  declare public readonly [$repr]: Infer<TData>;
-  public readonly resourceType = 'buffer-usage' as const;
-  public readonly [$internal]: { readonly dataType: TData };
-  public readonly [$getNameForward]: TgpuBuffer<TData>;
+  declare readonly [$repr]: Infer<TData>;
+  readonly resourceType = 'buffer-usage' as const;
+  readonly [$internal]: { readonly dataType: TData };
+  readonly [$getNameForward]: TgpuBuffer<TData>;
 
   constructor(
     public readonly usage: TUsage,
@@ -109,7 +109,7 @@ class TgpuFixedBufferImpl<
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
@@ -133,17 +133,17 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](): InferGPU<TData> {
-    return new Proxy(
-      {
-        [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.buffer.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+  get [$gpuValueOf](): InferGPU<TData> {
+    const dataType = this.buffer.dataType;
+
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, dataType);
       },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
+    }, valueProxyHandler) as InferGPU<TData>;
   }
 
   get $(): InferGPU<TData> {
@@ -161,7 +161,7 @@ class TgpuFixedBufferImpl<
     }
 
     if (mode.type === 'codegen') {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     if (mode.type === 'simulate') {
@@ -219,27 +219,29 @@ export class TgpuLaidOutBufferImpl<
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
-  declare public readonly [$repr]: Infer<TData>;
-  public readonly resourceType = 'buffer-usage' as const;
-  public readonly [$internal]: { readonly dataType: TData };
+  declare readonly [$repr]: Infer<TData>;
+  readonly [$internal]: { readonly dataType: TData };
+  readonly resourceType = 'buffer-usage' as const;
+  readonly #membership: LayoutMembership;
 
   constructor(
     public readonly usage: TUsage,
     public readonly dataType: TData,
-    private readonly _membership: LayoutMembership,
+    membership: LayoutMembership,
   ) {
     this[$internal] = { dataType };
-    setName(this, _membership.key);
+    this.#membership = membership;
+    setName(this, membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${
+      `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
         ctx.resolve(dataType).value
       };`,
     );
@@ -251,22 +253,22 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](): InferGPU<TData> {
-    return new Proxy(
-      {
-        [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+  get [$gpuValueOf](): InferGPU<TData> {
+    const schema = this.dataType as unknown as AnyData;
+
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(this, schema);
       },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
+    }, valueProxyHandler) as InferGPU<TData>;
   }
 
   get $(): InferGPU<TData> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     throw new Error(

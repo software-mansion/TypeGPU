@@ -1,31 +1,20 @@
 import type { AnyData } from '../data/dataTypes.ts';
-import { snip } from '../data/snippet.ts';
-import type { BaseData } from '../data/wgslTypes.ts';
-import {
-  extractGpuValueGetter,
-  type GpuValueGetter,
-} from '../extractGpuValueGetter.ts';
-import { getName } from '../shared/meta.ts';
-import {
-  $internal,
-  $providing,
-  $runtimeResource,
-  $wgslDataType,
-} from '../shared/symbols.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
+import { getGPUValue } from '../getGPUValue.ts';
+import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
-import type { ResolutionCtx, SelfResolvable } from '../types.ts';
+import {
+  getOwnSnippet,
+  type SelfResolvable,
+  type WithOwnSnippet,
+} from '../types.ts';
 
 export const valueProxyHandler: ProxyHandler<
-  & SelfResolvable
-  & { readonly [$wgslDataType]: BaseData; readonly [$runtimeResource]: true }
+  SelfResolvable & WithOwnSnippet
 > = {
   get(target, prop) {
     if (prop in target) {
       return Reflect.get(target, prop);
-    }
-
-    if (prop === $providing) {
-      return undefined;
     }
 
     if (
@@ -36,39 +25,39 @@ export const valueProxyHandler: ProxyHandler<
       return () => target.toString();
     }
 
-    const propType = getTypeForPropAccess(
-      target[$wgslDataType] as AnyData,
-      String(prop),
-    ) as AnyData;
+    if (typeof prop === 'symbol') {
+      return undefined;
+    }
 
-    return new Proxy(
-      {
-        [$internal]: true,
-        [$runtimeResource]: true,
+    const targetSnippet = getOwnSnippet(target) as Snippet;
+    const targetDataType = targetSnippet.dataType as AnyData;
+    const propType = getTypeForPropAccess(targetDataType, String(prop));
+    if (propType.type === 'unknown') {
+      // Prop was not found, must be missing from this object
+      return undefined;
+    }
 
-        '~resolve': (ctx: ResolutionCtx) =>
-          snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
-
-        toString: () =>
-          `.value(...).${String(prop)}:${getName(target) ?? '<unnamed>'}`,
-
-        [$wgslDataType]: propType,
+    return new Proxy({
+      [$internal]: true,
+      [$resolve]: (ctx) =>
+        snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
+      get [$ownSnippet]() {
+        return snip(this, propType);
       },
-      valueProxyHandler,
-    );
+      toString: () => `${String(target)}.${prop}`,
+    }, valueProxyHandler);
   },
 };
 
-export function getGpuValueRecursively<T>(
-  ctx: ResolutionCtx,
-  value: unknown,
-): T {
+export function getGpuValueRecursively<T>(value: unknown): T {
   let unwrapped = value;
-  let valueGetter: GpuValueGetter | undefined;
 
-  // biome-ignore lint/suspicious/noAssignInExpressions: it's exactly what we want biome
-  while (valueGetter = extractGpuValueGetter(unwrapped)) {
-    unwrapped = valueGetter(ctx);
+  while (true) {
+    const gpuValue = getGPUValue(unwrapped);
+    if (!gpuValue) {
+      break;
+    }
+    unwrapped = gpuValue;
   }
 
   return unwrapped as T;

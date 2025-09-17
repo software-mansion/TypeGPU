@@ -1,13 +1,14 @@
-import { $internal } from '../../shared/symbols.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
+import { $internal, $resolve } from '../../shared/symbols.ts';
+import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { WgslExtension } from '../../wgslExtensions.ts';
+import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
-import type { WgslExtension } from '../../wgslExtensions.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import { type Namespace, namespace } from './namespace.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
@@ -102,7 +103,7 @@ export function resolveWithContext(
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
-    '~resolve'(ctx): ResolvedSnippet {
+    [$resolve](ctx): ResolvedSnippet {
       return snip(
         replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
         Void,
@@ -112,15 +113,20 @@ export function resolveWithContext(
     toString: () => '<root>',
   };
 
-  return resolveImpl(
-    resolutionObj,
-    {
-      namespace: typeof names === 'string' ? namespace({ names }) : names,
-      enableExtensions,
-      shaderGenerator,
-    },
+  const pipelines = Object.values(externals).filter(isPipeline);
+  if (pipelines.length > 1) {
+    throw new Error(
+      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
+    );
+  }
+
+  return resolveImpl(resolutionObj, {
+    namespace: typeof names === 'string' ? namespace({ names }) : names,
+    enableExtensions,
+    shaderGenerator,
     config,
-  );
+    root: pipelines[0]?.[$internal].branch,
+  });
 }
 
 /**

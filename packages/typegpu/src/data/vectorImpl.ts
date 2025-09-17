@@ -1,4 +1,4 @@
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { AnyData } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
@@ -37,7 +37,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     return this.schema()[$internal].jsImpl;
   }
 
-  '~resolve'(): ResolvedSnippet {
+  [$resolve](): ResolvedSnippet {
     if (this.every((e) => !e)) {
       return snip(`${this.kind}()`, this.schema());
     }
@@ -48,7 +48,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   }
 
   toString() {
-    return this['~resolve']().value;
+    return this[$resolve]().value;
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }

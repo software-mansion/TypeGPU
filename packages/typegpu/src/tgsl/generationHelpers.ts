@@ -35,7 +35,6 @@ import {
 import {
   type AnyWgslData,
   type F32,
-  hasInternalDataType,
   type I32,
   isMatInstance,
   isNumericSchema,
@@ -44,8 +43,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
+import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
@@ -195,6 +193,12 @@ export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   return type;
 }
 
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map((snippet) =>
+    snip(snippet.value, concretize(snippet.dataType as AnyWgslData))
+  );
+}
+
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   /**
@@ -212,6 +216,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
+  generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 
@@ -231,9 +236,10 @@ export function coerceToSnippet(value: unknown): Snippet {
     return value;
   }
 
-  if (hasInternalDataType(value)) {
-    // The value knows better about what type it is
-    return snip(value, value[$wgslDataType] as AnyData);
+  // Maybe the value can tell us what snippet it is
+  const ownSnippet = getOwnSnippet(value);
+  if (ownSnippet) {
+    return ownSnippet;
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {

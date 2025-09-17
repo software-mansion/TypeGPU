@@ -39,7 +39,12 @@ import {
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
-import { $internal } from './shared/symbols.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -288,19 +293,30 @@ export interface ResolutionCtx {
 }
 
 /**
- * Houses a method '~resolve` that returns a code string
- * representing it, as opposed to offloading the resolution
- * to another mechanism.
+ * Houses a method on the symbol '$resolve` that returns a
+ * code string representing it, as opposed to offloading the
+ * resolution to another mechanism.
  */
 export interface SelfResolvable {
   [$internal]: unknown;
-  '~resolve'(ctx: ResolutionCtx): ResolvedSnippet;
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet;
   toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
-  return isMarkedInternal(value) &&
-    typeof (value as SelfResolvable)?.['~resolve'] === 'function';
+  return !!(value as SelfResolvable)?.[$resolve];
+}
+
+export interface WithGPUValue<T> {
+  readonly [$gpuValueOf]: T;
+}
+
+export interface WithOwnSnippet {
+  readonly [$ownSnippet]: Snippet;
+}
+
+export function getOwnSnippet(value: unknown): Snippet | undefined {
+  return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
 export function isWgsl(value: unknown): value is Wgsl {
