@@ -10,12 +10,7 @@ import {
   $ownSnippet,
   $resolve,
 } from '../../shared/symbols.ts';
-import {
-  isBufferUsage,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../../types.ts';
-import { isBufferShorthand } from '../buffer/bufferShorthand.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import {
@@ -75,10 +70,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     // biome-ignore lint/style/noNonNullAssertion: it's there
     const ctx = getResolutionCtx()!;
     const value = getGpuValueRecursively(ctx.unwrap(this.slot));
-
-    if (isBufferUsage(value) || isBufferShorthand(value)) {
-      return snip(value, this.schema);
-    }
 
     if (isTgpuFn(value)) {
       return value[$internal].gpuImpl();
