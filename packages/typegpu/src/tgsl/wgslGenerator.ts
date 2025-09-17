@@ -161,7 +161,7 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    const snippet = snip(this.ctx.names.makeValid(id), dataType);
+    const snippet = snip(this.ctx.makeNameValid(id), dataType);
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }

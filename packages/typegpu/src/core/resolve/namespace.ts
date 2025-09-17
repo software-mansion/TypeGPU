@@ -90,6 +90,13 @@ export function getUniqueName(
   return name;
 }
 
+export function makeNameValid(
+  namespace: NamespaceInternal,
+  name: string,
+): string {
+  return namespace.nameRegistry.makeValid(name);
+}
+
 export function namespace(options?: NamespaceOptions | undefined): Namespace {
   const { names = 'random' } = options || {};
 

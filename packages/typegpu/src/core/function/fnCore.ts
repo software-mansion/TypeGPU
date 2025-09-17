@@ -175,7 +175,7 @@ export function createFnCore(
           switch (astParam?.type) {
             case FuncParameterType.identifier: {
               const rawName = astParam.name;
-              const snippet = snip(ctx.names.makeValid(rawName), argType);
+              const snippet = snip(ctx.makeNameValid(rawName), argType);
               args.push(snippet);
               if (snippet.value !== rawName) {
                 argAliases.push([rawName, snippet]);

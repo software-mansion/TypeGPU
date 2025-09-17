@@ -260,6 +260,7 @@ export interface ResolutionCtx {
   get varyingLocations(): Record<string, number> | undefined;
 
   getUniqueName(resource: object): string;
+  makeNameValid(name: string): string;
 }
 
 /**
