@@ -3,13 +3,14 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init({
   unstable_logOptions: {
-    logCountLimit: 32,
+    logCountLimit: 40,
     logSizeLimit: 128,
   },
   device: {
     optionalFeatures: ['shader-f16'],
   },
 });
+const hasF16 = root.enabledFeatures.has('shader-f16');
 
 // #region Example controls and cleanup
 
@@ -49,7 +50,6 @@ export const controls = {
         'kernel';
         console.log('--- scalars ---');
         console.log(d.f32(3.14));
-        console.log(d.f16(3.14));
         console.log(d.i32(-2_000_000_000));
         console.log(d.u32(3_000_000_000));
         console.log(d.bool(true));
@@ -58,10 +58,6 @@ export const controls = {
         console.log(d.vec2f(1.1, -2.2));
         console.log(d.vec3f(10.1, -20.2, 30.3));
         console.log(d.vec4f(100.1, -200.2, 300.3, -400.4));
-        console.log();
-        console.log(d.vec2h(1.1, -2.2));
-        console.log(d.vec3h(10.1, -20.2, 30.3));
-        console.log(d.vec4h(100.1, -200.2, 300.3, -400.4));
         console.log();
         console.log(d.vec2i(-1, -2));
         console.log(d.vec3i(-1, -2, -3));
@@ -80,6 +76,16 @@ export const controls = {
         console.log(d.mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
         // deno-fmt-ignore
         console.log(d.mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
+        console.log();
+        if (hasF16) {
+          console.log('--- f16 ---');
+          console.log(d.f16(3.14));
+          console.log(d.vec2h(1.1, -2.2));
+          console.log(d.vec3h(10.1, -20.2, 30.3));
+          console.log(d.vec4h(100.1, -200.2, 300.3, -400.4));
+        } else {
+          console.log("The 'shader-f16' flag is not enabled.");
+        }
       })(),
   },
   'Two threads': {

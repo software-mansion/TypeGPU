@@ -179,7 +179,7 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
   }
 
   toString() {
-    return this['~resolve']();
+    return this[$resolve]();
   }
 }
 
@@ -325,7 +325,7 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
   }
 
   toString() {
-    return this['~resolve']();
+    return this[$resolve]();
   }
 }
 
@@ -520,7 +520,7 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
   }
 
   toString() {
-    return this['~resolve']();
+    return this[$resolve]();
   }
 }
 

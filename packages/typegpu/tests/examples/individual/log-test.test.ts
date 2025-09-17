@@ -29,6 +29,7 @@ describe('console log example', () => {
       expectedCalls: 10,
     }, device);
 
+    // the resolution variant for when 'shader-f16' is not enabled
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -43,11 +44,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
 
       fn log1_3(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 1;
@@ -88,11 +89,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 40>;
 
       fn log1_3(_arg_0: u32, _arg_1: vec3u, _arg_2: u32, _arg_3: u32) {
         var index = atomicAdd(&indexBuffer_6, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_7[index].id = 1;
@@ -137,11 +138,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
 
       fn log1_3(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 1;
@@ -178,11 +179,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
 
       fn log1_3() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 1;
@@ -196,7 +197,7 @@ describe('console log example', () => {
 
       fn log2_7(_arg_0: f32) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 2;
@@ -205,69 +206,64 @@ describe('console log example', () => {
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
       }
 
-      fn serializeF16_10(n: f16) -> array<u32,1>{
-        return array<u32, 1>(pack2x16float(vec2f(f32(n))));
+      fn serializeI32_10(n: i32) -> array<u32,1>{
+        return array<u32, 1>(bitcast<u32>(n));
       }
 
-      fn log3_9(_arg_0: f16) {
+      fn log3_9(_arg_0: i32) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 3;
 
-        var serializedData0 = serializeF16_10(_arg_0);
+        var serializedData0 = serializeI32_10(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
       }
 
-      fn serializeI32_12(n: i32) -> array<u32,1>{
-        return array<u32, 1>(bitcast<u32>(n));
+      fn serializeU32_12(n: u32) -> array<u32,1>{
+        return array<u32, 1>(n);
       }
 
-      fn log4_11(_arg_0: i32) {
+      fn log4_11(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 4;
 
-        var serializedData0 = serializeI32_12(_arg_0);
+        var serializedData0 = serializeU32_12(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
       }
 
-      fn serializeU32_14(n: u32) -> array<u32,1>{
-        return array<u32, 1>(n);
+      fn serializeBool_14(b: bool) -> array<u32,1>{
+        return array<u32, 1>(u32(b));
       }
 
-      fn log5_13(_arg_0: u32) {
+      fn log5_13(_arg_0: bool) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 5;
 
-        var serializedData0 = serializeU32_14(_arg_0);
+        var serializedData0 = serializeBool_14(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
       }
 
-      fn serializeBool_16(b: bool) -> array<u32,1>{
-        return array<u32, 1>(u32(b));
-      }
-
-      fn log6_15(_arg_0: bool) {
+      fn log6_15() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 6;
 
-        var serializedData0 = serializeBool_16(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
+
       }
 
-      fn log7_17() {
+      fn log7_16() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 7;
@@ -275,255 +271,253 @@ describe('console log example', () => {
 
       }
 
-      fn log8_18() {
+      fn serializeVec2f_18(v: vec2f) -> array<u32,2>{
+        return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+      }
+
+      fn log8_17(_arg_0: vec2f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 8;
 
-
+        var serializedData0 = serializeVec2f_18(_arg_0);
+        dataBuffer_5[index].serializedData[0] = serializedData0[0];
+        dataBuffer_5[index].serializedData[1] = serializedData0[1];
       }
 
-      fn serializeVec2f_20(v: vec2f) -> array<u32,2>{
-        return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+      fn serializeVec3f_20(v: vec3f) -> array<u32,3>{
+        return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
       }
 
-      fn log9_19(_arg_0: vec2f) {
+      fn log9_19(_arg_0: vec3f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 9;
 
-        var serializedData0 = serializeVec2f_20(_arg_0);
+        var serializedData0 = serializeVec3f_20(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
+        dataBuffer_5[index].serializedData[2] = serializedData0[2];
       }
 
-      fn serializeVec3f_22(v: vec3f) -> array<u32,3>{
-        return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
+      fn serializeVec4f_22(v: vec4f) -> array<u32,4>{
+        return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
       }
 
-      fn log10_21(_arg_0: vec3f) {
+      fn log10_21(_arg_0: vec4f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 10;
 
-        var serializedData0 = serializeVec3f_22(_arg_0);
+        var serializedData0 = serializeVec4f_22(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
+        dataBuffer_5[index].serializedData[3] = serializedData0[3];
       }
 
-      fn serializeVec4f_24(v: vec4f) -> array<u32,4>{
-        return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
-      }
-
-      fn log11_23(_arg_0: vec4f) {
+      fn log11_23() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 11;
 
-        var serializedData0 = serializeVec4f_24(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
-        dataBuffer_5[index].serializedData[2] = serializedData0[2];
-        dataBuffer_5[index].serializedData[3] = serializedData0[3];
+
       }
 
-      fn log12_25() {
+      fn serializeVec2i_25(v: vec2i) -> array<u32,2>{
+        return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+      }
+
+      fn log12_24(_arg_0: vec2i) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 12;
 
-
+        var serializedData0 = serializeVec2i_25(_arg_0);
+        dataBuffer_5[index].serializedData[0] = serializedData0[0];
+        dataBuffer_5[index].serializedData[1] = serializedData0[1];
       }
 
-      fn serializeVec2h_27(v: vec2h) -> array<u32,1>{
-        return array<u32, 1>(pack2x16float(vec2f(f32(v.x), f32(v.y))));
+      fn serializeVec3i_27(v: vec3i) -> array<u32,3>{
+        return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
       }
 
-      fn log13_26(_arg_0: vec2h) {
+      fn log13_26(_arg_0: vec3i) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 13;
 
-        var serializedData0 = serializeVec2h_27(_arg_0);
+        var serializedData0 = serializeVec3i_27(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
+        dataBuffer_5[index].serializedData[1] = serializedData0[1];
+        dataBuffer_5[index].serializedData[2] = serializedData0[2];
       }
 
-      fn serializeVec3h_29(v: vec3h) -> array<u32,2>{
-        return array<u32, 2>(
-          pack2x16float(vec2f(f32(v.x), f32(v.y))),
-          pack2x16float(vec2f(f32(v.z), 0))
-        );
+      fn serializeVec4i_29(v: vec4i) -> array<u32,4>{
+        return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
       }
 
-      fn log14_28(_arg_0: vec3h) {
+      fn log14_28(_arg_0: vec4i) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 14;
 
-        var serializedData0 = serializeVec3h_29(_arg_0);
+        var serializedData0 = serializeVec4i_29(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
+        dataBuffer_5[index].serializedData[2] = serializedData0[2];
+        dataBuffer_5[index].serializedData[3] = serializedData0[3];
       }
 
-      fn serializeVec4h_31(v: vec4h) -> array<u32,2>{
-        return array<u32, 2>(
-          pack2x16float(vec2f(f32(v.x), f32(v.y))),
-          pack2x16float(vec2f(f32(v.z), f32(v.w)))
-        );
-      }
-
-      fn log15_30(_arg_0: vec4h) {
+      fn log15_30() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 15;
 
-        var serializedData0 = serializeVec4h_31(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
+
       }
 
-      fn log16_32() {
+      fn serializeVec2u_32(v: vec2u) -> array<u32,2>{
+        return array<u32, 2>(v.x, v.y);
+      }
+
+      fn log16_31(_arg_0: vec2u) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 16;
 
-
+        var serializedData0 = serializeVec2u_32(_arg_0);
+        dataBuffer_5[index].serializedData[0] = serializedData0[0];
+        dataBuffer_5[index].serializedData[1] = serializedData0[1];
       }
 
-      fn serializeVec2i_34(v: vec2i) -> array<u32,2>{
-        return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
+      fn serializeVec3u_34(v: vec3u) -> array<u32,3>{
+        return array<u32, 3>(v.x, v.y, v.z);
       }
 
-      fn log17_33(_arg_0: vec2i) {
+      fn log17_33(_arg_0: vec3u) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 17;
 
-        var serializedData0 = serializeVec2i_34(_arg_0);
+        var serializedData0 = serializeVec3u_34(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
+        dataBuffer_5[index].serializedData[2] = serializedData0[2];
       }
 
-      fn serializeVec3i_36(v: vec3i) -> array<u32,3>{
-        return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
+      fn serializeVec4u_36(v: vec4u) -> array<u32,4>{
+        return array<u32, 4>(v.x, v.y, v.z, v.w);
       }
 
-      fn log18_35(_arg_0: vec3i) {
+      fn log18_35(_arg_0: vec4u) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 18;
 
-        var serializedData0 = serializeVec3i_36(_arg_0);
+        var serializedData0 = serializeVec4u_36(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
+        dataBuffer_5[index].serializedData[3] = serializedData0[3];
       }
 
-      fn serializeVec4i_38(v: vec4i) -> array<u32,4>{
-        return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
-      }
-
-      fn log19_37(_arg_0: vec4i) {
+      fn log19_37() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 19;
 
-        var serializedData0 = serializeVec4i_38(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
-        dataBuffer_5[index].serializedData[2] = serializedData0[2];
-        dataBuffer_5[index].serializedData[3] = serializedData0[3];
+
       }
 
-      fn log20_39() {
+      fn serializeVec2bool_39(v: vec2<bool>) -> array<u32,2>{
+        return array<u32, 2>(u32(v.x), u32(v.y));
+      }
+
+      fn log20_38(_arg_0: vec2<bool>) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 20;
 
-
-      }
-
-      fn serializeVec2u_41(v: vec2u) -> array<u32,2>{
-        return array<u32, 2>(v.x, v.y);
-      }
-
-      fn log21_40(_arg_0: vec2u) {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 21;
-
-        var serializedData0 = serializeVec2u_41(_arg_0);
+        var serializedData0 = serializeVec2bool_39(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
       }
 
-      fn serializeVec3u_43(v: vec3u) -> array<u32,3>{
-        return array<u32, 3>(v.x, v.y, v.z);
+      fn serializeVec3bool_41(v: vec3<bool>) -> array<u32,3>{
+        return array<u32, 3>(u32(v.x), u32(v.y), u32(v.z));
       }
 
-      fn log22_42(_arg_0: vec3u) {
+      fn log21_40(_arg_0: vec3<bool>) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
-        dataBuffer_5[index].id = 22;
+        dataBuffer_5[index].id = 21;
 
-        var serializedData0 = serializeVec3u_43(_arg_0);
+        var serializedData0 = serializeVec3bool_41(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
       }
 
-      fn serializeVec4u_45(v: vec4u) -> array<u32,4>{
-        return array<u32, 4>(v.x, v.y, v.z, v.w);
+      fn serializeVec4bool_43(v: vec4<bool>) -> array<u32,4>{
+        return array<u32, 4>(u32(v.x), u32(v.y), u32(v.z), u32(v.w));
       }
 
-      fn log23_44(_arg_0: vec4u) {
+      fn log22_42(_arg_0: vec4<bool>) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
-        dataBuffer_5[index].id = 23;
+        dataBuffer_5[index].id = 22;
 
-        var serializedData0 = serializeVec4u_45(_arg_0);
+        var serializedData0 = serializeVec4bool_43(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
         dataBuffer_5[index].serializedData[3] = serializedData0[3];
       }
 
-      fn log24_46() {
+      fn log23_44() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
+          return;
+        }
+        dataBuffer_5[index].id = 23;
+
+
+      }
+
+      fn log24_45() {
+        var index = atomicAdd(&indexBuffer_4, 1);
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 24;
@@ -531,99 +525,28 @@ describe('console log example', () => {
 
       }
 
-      fn serializeVec2bool_48(v: vec2<bool>) -> array<u32,2>{
-        return array<u32, 2>(u32(v.x), u32(v.y));
-      }
-
-      fn log25_47(_arg_0: vec2<bool>) {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 25;
-
-        var serializedData0 = serializeVec2bool_48(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
-      }
-
-      fn serializeVec3bool_50(v: vec3<bool>) -> array<u32,3>{
-        return array<u32, 3>(u32(v.x), u32(v.y), u32(v.z));
-      }
-
-      fn log26_49(_arg_0: vec3<bool>) {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 26;
-
-        var serializedData0 = serializeVec3bool_50(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
-        dataBuffer_5[index].serializedData[2] = serializedData0[2];
-      }
-
-      fn serializeVec4bool_52(v: vec4<bool>) -> array<u32,4>{
-        return array<u32, 4>(u32(v.x), u32(v.y), u32(v.z), u32(v.w));
-      }
-
-      fn log27_51(_arg_0: vec4<bool>) {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 27;
-
-        var serializedData0 = serializeVec4bool_52(_arg_0);
-        dataBuffer_5[index].serializedData[0] = serializedData0[0];
-        dataBuffer_5[index].serializedData[1] = serializedData0[1];
-        dataBuffer_5[index].serializedData[2] = serializedData0[2];
-        dataBuffer_5[index].serializedData[3] = serializedData0[3];
-      }
-
-      fn log28_53() {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 28;
-
-
-      }
-
-      fn log29_54() {
-        var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
-          return;
-        }
-        dataBuffer_5[index].id = 29;
-
-
-      }
-
-      fn serializeMat2x2f_56(m: mat2x2f) -> array<u32,4>{
+      fn serializeMat2x2f_47(m: mat2x2f) -> array<u32,4>{
         return array<u32, 4>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]),
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1])
         );
       }
 
-      fn log30_55(_arg_0: mat2x2f) {
+      fn log25_46(_arg_0: mat2x2f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
-        dataBuffer_5[index].id = 30;
+        dataBuffer_5[index].id = 25;
 
-        var serializedData0 = serializeMat2x2f_56(_arg_0);
+        var serializedData0 = serializeMat2x2f_47(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
         dataBuffer_5[index].serializedData[3] = serializedData0[3];
       }
 
-      fn serializeMat3x3f_58(m: mat3x3f) -> array<u32,12>{
+      fn serializeMat3x3f_49(m: mat3x3f) -> array<u32,12>{
         return array<u32, 12>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), 0,
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), 0,
@@ -631,14 +554,14 @@ describe('console log example', () => {
         );
       }
 
-      fn log31_57(_arg_0: mat3x3f) {
+      fn log26_48(_arg_0: mat3x3f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
-        dataBuffer_5[index].id = 31;
+        dataBuffer_5[index].id = 26;
 
-        var serializedData0 = serializeMat3x3f_58(_arg_0);
+        var serializedData0 = serializeMat3x3f_49(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
@@ -653,7 +576,7 @@ describe('console log example', () => {
         dataBuffer_5[index].serializedData[11] = serializedData0[11];
       }
 
-      fn serializeMat4x4f_60(m: mat4x4f) -> array<u32,16>{
+      fn serializeMat4x4f_51(m: mat4x4f) -> array<u32,16>{
         return array<u32, 16>(
           bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), bitcast<u32>(m[0][3]),
           bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), bitcast<u32>(m[1][3]),
@@ -662,14 +585,14 @@ describe('console log example', () => {
         );
       }
 
-      fn log32_59(_arg_0: mat4x4f) {
+      fn log27_50(_arg_0: mat4x4f) {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
-        dataBuffer_5[index].id = 32;
+        dataBuffer_5[index].id = 27;
 
-        var serializedData0 = serializeMat4x4f_60(_arg_0);
+        var serializedData0 = serializeMat4x4f_51(_arg_0);
         dataBuffer_5[index].serializedData[0] = serializedData0[0];
         dataBuffer_5[index].serializedData[1] = serializedData0[1];
         dataBuffer_5[index].serializedData[2] = serializedData0[2];
@@ -688,46 +611,65 @@ describe('console log example', () => {
         dataBuffer_5[index].serializedData[15] = serializedData0[15];
       }
 
+      fn log28_52() {
+        var index = atomicAdd(&indexBuffer_4, 1);
+        if (index >= 40) {
+          return;
+        }
+        dataBuffer_5[index].id = 28;
+
+
+      }
+
+      fn log29_53() {
+        var index = atomicAdd(&indexBuffer_4, 1);
+        if (index >= 40) {
+          return;
+        }
+        dataBuffer_5[index].id = 29;
+
+
+      }
+
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1_3();
         log2_7(3.140000104904175);
-        log3_9(3.140625);
-        log4_11(i32(-2000000000));
-        log5_13(3000000000);
-        log6_15(true);
-        log7_17();
-        log8_18();
-        log9_19(vec2f(1.1, -2.2));
-        log10_21(vec3f(10.1, -20.2, 30.3));
-        log11_23(vec4f(100.1, -200.2, 300.3, -400.4));
-        log12_25();
-        log13_26(vec2h(1.1, -2.2));
-        log14_28(vec3h(10.1, -20.2, 30.3));
-        log15_30(vec4h(100.1, -200.2, 300.3, -400.4));
-        log16_32();
-        log17_33(vec2i(-1, -2));
-        log18_35(vec3i(-1, -2, -3));
-        log19_37(vec4i(-1, -2, -3, -4));
-        log20_39();
-        log21_40(vec2u(1, 2));
-        log22_42(vec3u(1, 2, 3));
-        log23_44(vec4u(1, 2, 3, 4));
-        log24_46();
-        log25_47(vec2<bool>(true, false));
-        log26_49(vec3<bool>(true, false, true));
-        log27_51(vec4<bool>(true, false, true, false));
-        log28_53();
-        log29_54();
-        log30_55(mat2x2f(0, 0.25, 0.5, 0.75));
-        log31_57(mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
-        log32_59(mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
+        log3_9(i32(-2000000000));
+        log4_11(3000000000);
+        log5_13(true);
+        log6_15();
+        log7_16();
+        log8_17(vec2f(1.1, -2.2));
+        log9_19(vec3f(10.1, -20.2, 30.3));
+        log10_21(vec4f(100.1, -200.2, 300.3, -400.4));
+        log11_23();
+        log12_24(vec2i(-1, -2));
+        log13_26(vec3i(-1, -2, -3));
+        log14_28(vec4i(-1, -2, -3, -4));
+        log15_30();
+        log16_31(vec2u(1, 2));
+        log17_33(vec3u(1, 2, 3));
+        log18_35(vec4u(1, 2, 3, 4));
+        log19_37();
+        log20_38(vec2<bool>(true, false));
+        log21_40(vec3<bool>(true, false, true));
+        log22_42(vec4<bool>(true, false, true, false));
+        log23_44();
+        log24_45();
+        log25_46(mat2x2f(0, 0.25, 0.5, 0.75));
+        log26_48(mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
+        log27_50(mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
+        log28_52();
+        {
+          log29_53();
+        }
       }
 
-      struct mainCompute_Input_61 {
+      struct mainCompute_Input_54 {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_61)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_54)  {
           if (any(in.id >= sizeUniform_1)) {
             return;
           }
@@ -743,11 +685,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
 
       fn log1_3() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 1;
@@ -757,7 +699,7 @@ describe('console log example', () => {
 
       fn log2_7() {
         var index = atomicAdd(&indexBuffer_4, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_5[index].id = 2;
@@ -794,11 +736,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
 
       fn log1_3(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 1;
@@ -835,11 +777,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
 
       fn log1_3(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 1;
@@ -880,11 +822,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(3) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 32>;
+      @group(0) @binding(3) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 40>;
 
       fn log1_4(_arg_0: u32, _arg_1: u32) {
         var index = atomicAdd(&indexBuffer_6, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_7[index].id = 1;
@@ -940,11 +882,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> dataBuffer_8: array<SerializedLogData_9, 32>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer_8: array<SerializedLogData_9, 40>;
 
       fn log1_5(_arg_0: u32, _arg_1: u32) {
         var index = atomicAdd(&indexBuffer_7, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_8[index].id = 1;
@@ -973,11 +915,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 32>;
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
 
       fn log1_3(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 1;
@@ -988,7 +930,7 @@ describe('console log example', () => {
 
       fn log2_8(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 2;
@@ -999,7 +941,7 @@ describe('console log example', () => {
 
       fn log3_9(_arg_0: u32) {
         var index = atomicAdd(&indexBuffer_5, 1);
-        if (index >= 32) {
+        if (index >= 40) {
           return;
         }
         dataBuffer_6[index].id = 3;
