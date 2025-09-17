@@ -151,6 +151,7 @@ export {
   textureLoad,
   textureSample,
   textureSampleBaseClampToEdge,
+  textureSampleBias,
   textureSampleCompare,
   textureSampleLevel,
   textureStore,

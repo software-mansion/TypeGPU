@@ -16,6 +16,7 @@ import {
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import {
@@ -242,10 +243,11 @@ class ComputePipelineCore implements SelfResolvable {
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
+      const ns = namespace({ names: this.branch.nameRegistrySetting });
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
           root: this.branch,
@@ -255,7 +257,7 @@ class ComputePipelineCore implements SelfResolvable {
         });
       } else {
         resolutionResult = resolve(this, {
-          names: this.branch.nameRegistry,
+          namespace: ns,
           enableExtensions,
           shaderGenerator: this.branch.shaderGenerator,
           root: this.branch,

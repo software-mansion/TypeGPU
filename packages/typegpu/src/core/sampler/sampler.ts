@@ -154,7 +154,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -184,7 +184,7 @@ export class TgpuLaidOutComparisonSamplerImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     ctx.addDeclaration(
@@ -236,7 +236,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
 
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -289,7 +289,7 @@ class TgpuFixedComparisonSamplerImpl
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
       this,
