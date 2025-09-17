@@ -68,7 +68,7 @@ export const abs = dualImpl({
 });
 
 function cpuAcos(value: number): number;
-function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.acos(value) as T;
@@ -84,7 +84,7 @@ export const acos = dualImpl({
 });
 
 function cpuAcosh(value: number): number;
-function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.acosh(value) as T;
@@ -100,7 +100,7 @@ export const acosh = dualImpl({
 });
 
 function cpuAsin(value: number): number;
-function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.asin(value) as T;
@@ -116,7 +116,7 @@ export const asin = dualImpl({
 });
 
 function cpuAsinh(value: number): number;
-function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.asinh(value) as T;
@@ -132,7 +132,7 @@ export const asinh = dualImpl({
 });
 
 function cpuAtan(value: number): number;
-function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.atan(value) as T;
@@ -148,7 +148,7 @@ export const atan = dualImpl({
 });
 
 function cpuAtanh(value: number): number;
-function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.atanh(value) as T;
@@ -164,7 +164,7 @@ export const atanh = dualImpl({
 });
 
 function cpuAtan2(y: number, x: number): number;
-function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
+function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
   if (typeof y === 'number' && typeof x === 'number') {
     return Math.atan2(y, x) as T;
@@ -189,7 +189,7 @@ export const atan2 = dualImpl({
 });
 
 function cpuCeil(value: number): number;
-function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.ceil(value) as T;
@@ -228,7 +228,7 @@ export const clamp = dualImpl({
 });
 
 function cpuCos(value: number): number;
-function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.cos(value) as T;
@@ -244,7 +244,7 @@ export const cos = dualImpl({
 });
 
 function cpuCosh(value: number): number;
-function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.cosh(value) as T;
@@ -260,7 +260,9 @@ export const cosh = dualImpl({
 });
 
 function cpuCountLeadingZeros(value: number): number;
-function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
@@ -277,7 +279,7 @@ export const countLeadingZeros = dualImpl({
 });
 
 function cpuCountOneBits(value: number): number;
-function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(value: T): T;
 function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
@@ -294,7 +296,9 @@ export const countOneBits = dualImpl({
 });
 
 function cpuCountTrailingZeros(value: number): number;
-function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
@@ -319,7 +323,7 @@ export const cross = dualImpl({
 });
 
 function cpuDegrees(value: number): number;
-function cpuDegrees<T extends AnyFloatVecInstance>(value: T): T;
+function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * 180) / Math.PI) as T;
@@ -349,7 +353,10 @@ export const determinant = dualImpl({
 });
 
 function cpuDistance(a: number, b: number): number;
-function cpuDistance<T extends AnyFloatVecInstance>(a: T, b: T): number;
+function cpuDistance<T extends AnyFloatVecInstance | number>(
+  a: T,
+  b: T,
+): number;
 function cpuDistance<T extends AnyFloatVecInstance | number>(
   a: T,
   b: T,
@@ -406,7 +413,7 @@ export const dot4I8Packed = dualImpl({
 });
 
 function cpuExp(value: number): number;
-function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.exp(value) as T;
@@ -422,7 +429,7 @@ export const exp = dualImpl({
 });
 
 function cpuExp2(value: number): number;
-function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return (2 ** value) as T;
@@ -438,7 +445,7 @@ export const exp2 = dualImpl({
 });
 
 function cpuExtractBits(e: number, offset: number, count: number): number;
-function cpuExtractBits<T extends AnyIntegerVecInstance>(
+function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
   e: T,
   offset: number,
   count: number,
@@ -479,7 +486,9 @@ export const faceForward = dualImpl({
 });
 
 function cpuFirstLeadingBit(value: number): number;
-function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
@@ -496,7 +505,9 @@ export const firstLeadingBit = dualImpl({
 });
 
 function cpuFirstTrailingBit(value: number): number;
-function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
+  value: T,
+): T;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
@@ -513,7 +524,7 @@ export const firstTrailingBit = dualImpl({
 });
 
 function cpuFloor(value: number): number;
-function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.floor(value) as T;
@@ -529,7 +540,7 @@ export const floor = dualImpl({
 });
 
 function cpuFma(e1: number, e2: number, e3: number): number;
-function cpuFma<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+function cpuFma<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T;
 function cpuFma<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: T,
@@ -554,7 +565,7 @@ export const fma = dualImpl({
 });
 
 function cpuFract(value: number): number;
-function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return (value - Math.floor(value)) as T;
@@ -620,7 +631,7 @@ function cpuInsertBits(
   offset: number,
   count: number,
 ): number;
-function cpuInsertBits<T extends AnyIntegerVecInstance>(
+function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
   e: T,
   newbits: T,
   offset: number,
@@ -649,7 +660,7 @@ export const insertBits = dualImpl({
 });
 
 function cpuInverseSqrt(value: number): number;
-function cpuInverseSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return (1 / Math.sqrt(value)) as T;
@@ -708,7 +719,7 @@ export const ldexp = dualImpl({
 });
 
 function cpuLength(value: number): number;
-function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
+function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number;
 function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
   if (typeof value === 'number') {
     return Math.abs(value);
@@ -727,7 +738,7 @@ export const length = dualImpl({
 });
 
 function cpuLog(value: number): number;
-function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.log(value) as T;
@@ -743,7 +754,7 @@ export const log = dualImpl({
 });
 
 function cpuLog2(value: number): number;
-function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.log2(value) as T;
@@ -759,7 +770,7 @@ export const log2 = dualImpl({
 });
 
 function cpuMax(a: number, b: number): number;
-function cpuMax<T extends NumVec>(a: T, b: T): T;
+function cpuMax<T extends NumVec | number>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   if (typeof a === 'number') {
     return Math.max(a, b as number) as T;
@@ -781,7 +792,7 @@ export const max = dualImpl({
 });
 
 function cpuMin(a: number, b: number): number;
-function cpuMin<T extends NumVec>(a: T, b: T): T;
+function cpuMin<T extends NumVec | number>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   if (typeof a === 'number') {
     return Math.min(a, b as number) as T;
@@ -804,7 +815,7 @@ export const min = dualImpl({
 
 function cpuMix(e1: number, e2: number, e3: number): number;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
-function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: T,
@@ -828,7 +839,10 @@ function cpuMix<T extends AnyFloatVecInstance | number>(
 
 export const mix = dualImpl({
   name: 'mix',
-  signature: (e1, e2, e3) => ({ argTypes: [e1, e2, e3], returnType: e1 }),
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return ({ argTypes: uargs, returnType: uargs[0] });
+  },
   normalImpl: cpuMix,
   codegenImpl: (e1, e2, e3) => stitch`mix(${e1}, ${e2}, ${e3})`,
 });
@@ -845,17 +859,14 @@ const ModfResult = {
   vec4h: abstruct({ fract: vec4h, whole: vec4h }),
 } as const;
 
-type ModfOverload = {
-  (value: number): Infer<typeof ModfResult['f32']>;
-  <T extends AnyFloatVecInstance>(
-    value: T,
-  ): Infer<typeof ModfResult[T['kind']]>;
-};
+export type ModfResultFor<T> = T extends AnyFloatVecInstance
+  ? Infer<typeof ModfResult[T['kind']]>
+  : Infer<typeof ModfResult['f32']>;
 
 function cpuModf(e: number): Infer<typeof ModfResult['f32']>;
-function cpuModf<T extends AnyFloatVecInstance>(
+function cpuModf<T extends AnyFloatVecInstance | number>(
   e: T,
-): Infer<typeof ModfResult[T['kind']]>;
+): ModfResultFor<T>;
 function cpuModf<T extends AnyFloatVecInstance | number>(
   value: T,
 ): Infer<typeof ModfResult[keyof typeof ModfResult]> {
@@ -864,7 +875,7 @@ function cpuModf<T extends AnyFloatVecInstance | number>(
   );
 }
 
-export const modf: ModfOverload = dualImpl({
+export const modf = dualImpl({
   name: 'modf',
   signature: (e) => {
     const returnType = ModfResult[e.type as keyof typeof ModfResult];
@@ -890,7 +901,7 @@ export const normalize = dualImpl({
 });
 
 function powCpu(base: number, exponent: number): number;
-function powCpu<T extends AnyFloatVecInstance>(
+function powCpu<T extends AnyFloatVecInstance | number>(
   base: T,
   exponent: T,
 ): T;
@@ -921,7 +932,9 @@ export const pow = dualImpl({
 });
 
 function cpuQuantizeToF16(value: number): number;
-function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
+function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
+  value: T,
+): T;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
   value: T,
 ): T {
@@ -984,7 +997,7 @@ export const refract = createDualImpl(
 );
 
 function cpuReverseBits(value: number): number;
-function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
   throw new Error(
     'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
@@ -999,7 +1012,7 @@ export const reverseBits = dualImpl({
 });
 
 function cpuRound(value: number): number;
-function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.round(value) as T;
@@ -1017,7 +1030,7 @@ export const round = dualImpl({
 });
 
 function cpuSaturate(value: number): number;
-function cpuSaturate<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.max(0, Math.min(1, value)) as T;
@@ -1051,7 +1064,7 @@ export const sign = dualImpl({
 });
 
 function cpuSin(value: number): number;
-function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.sin(value) as T;
@@ -1067,7 +1080,7 @@ export const sin = dualImpl({
 });
 
 function cpuSinh(value: number): number;
-function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.sinh(value) as T;
@@ -1085,7 +1098,7 @@ export const sinh = dualImpl({
 });
 
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
-function cpuSmoothstep<T extends AnyFloatVecInstance>(
+function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
   edge0: T,
   edge1: T,
   x: T,
@@ -1121,7 +1134,7 @@ export const smoothstep = dualImpl({
 });
 
 function cpuSqrt(value: number): number;
-function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.sqrt(value) as T;
@@ -1158,7 +1171,7 @@ export const step = dualImpl({
 });
 
 function cpuTan(value: number): number;
-function cpuTan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.tan(value) as T;
@@ -1203,7 +1216,7 @@ export const transpose = dualImpl({
 });
 
 function cpuTrunc(value: number): number;
-function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
   throw new Error(
     'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
