@@ -152,7 +152,7 @@ class ItemStateStackImpl implements ItemStateStack {
       argAliases,
       returnType,
       externalMap,
-      reportedReturnTypes: [],
+      reportedReturnTypes: new Set(),
     };
 
     this._stack.push(scope);
@@ -410,7 +410,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   reportReturnType(dataType: AnyData) {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
-    scope.reportedReturnTypes.push(dataType);
+    scope.reportedReturnTypes.add(dataType);
   }
 
   pushBlockScope() {
@@ -437,7 +437,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let returnType = options.returnType;
       if (!returnType) {
-        const returnTypes = [...new Set(scope.reportedReturnTypes)];
+        const returnTypes = [...scope.reportedReturnTypes];
         if (returnTypes.length === 0) {
           returnType = Void;
         } else {

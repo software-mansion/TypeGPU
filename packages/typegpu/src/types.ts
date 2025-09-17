@@ -102,7 +102,7 @@ export type FunctionScopeLayer = {
   /**
    * All types used in `return` statements.
    */
-  reportedReturnTypes: AnyData[];
+  reportedReturnTypes: Set<AnyData>;
 };
 
 export interface ItemStateStack {
