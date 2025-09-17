@@ -190,6 +190,12 @@ export function concretize(type: AnyWgslData): AnyWgslData {
   return type;
 }
 
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map((snippet) =>
+    snip(snippet.value, concretize(snippet.dataType as AnyWgslData))
+  );
+}
+
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   /**
@@ -206,6 +212,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
+  generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
 };

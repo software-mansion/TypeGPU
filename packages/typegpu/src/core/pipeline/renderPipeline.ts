@@ -7,6 +7,7 @@ import type {
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -18,9 +19,9 @@ import {
   MissingBindGroupsError,
   MissingVertexBuffersError,
 } from '../../errors.ts';
-import type { TgpuNamable } from '../../shared/meta.ts';
-import { getName, setName } from '../../shared/meta.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
+import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -29,10 +30,18 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { isGPUBuffer } from '../../types.ts';
+import {
+  wgslExtensions,
+  wgslExtensionToFeatureName,
+} from '../../wgslExtensions.ts';
 import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { isTexture, type TgpuTexture } from '../texture/texture.ts';
@@ -44,8 +53,6 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
-import { isGPUBuffer } from '../../types.ts';
-import { sizeOf } from '../../data/index.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -54,16 +61,11 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
-import { PERF } from '../../shared/meta.ts';
-import {
-  wgslExtensions,
-  wgslExtensionToFeatureName,
-} from '../../wgslExtensions.ts';
-import { namespace } from '../resolve/namespace.ts';
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
   readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
+  readonly branch: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -261,11 +263,6 @@ export function INTERNAL_createRenderPipeline(
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
 }
 
-export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
-  const maybe = value as TgpuRenderPipeline | undefined;
-  return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
-}
-
 // --------------
 // Implementation
 // --------------
@@ -293,6 +290,7 @@ type Memo = {
   pipeline: GPURenderPipeline;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
+  logResources: LogResources | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -305,6 +303,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$internal] = {
       core,
       priors,
+      branch: core.options.branch,
     };
     this[$getNameForward] = core;
   }
@@ -559,11 +558,16 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const internals = this[$internal];
     const pass = this.setupRenderPass();
+    const { logResources } = internals.core.unwrap();
     const { branch } = internals.core.options;
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+    }
 
     internals.priors.performanceCallback
       ? triggerPerformanceCallback({
@@ -702,6 +706,7 @@ class RenderPipelineCore implements SelfResolvable {
           namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
+          root: branch,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -711,10 +716,12 @@ class RenderPipelineCore implements SelfResolvable {
           namespace: ns,
           enableExtensions,
           shaderGenerator: branch.shaderGenerator,
+          root: branch,
         });
       }
 
-      const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } =
+        resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -776,6 +783,7 @@ class RenderPipelineCore implements SelfResolvable {
         pipeline: device.createRenderPipeline(descriptor),
         usedBindGroupLayouts,
         catchall,
+        logResources,
       };
 
       if (PERF?.enabled) {
