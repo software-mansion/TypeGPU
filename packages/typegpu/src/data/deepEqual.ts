@@ -52,13 +52,6 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       return false;
     }
 
-    aKeys.sort();
-    bKeys.sort();
-
-    if (aKeys.join() !== bKeys.join()) {
-      return false;
-    }
-
     for (const key of aKeys) {
       if (!deepEqual(aProps[key], bProps[key])) {
         return false;
@@ -104,11 +97,11 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       return `${anyAttr.type}(${(anyAttr.params ?? []).join(',')})`;
     };
 
-    const sortedAttrsA = a.attribs.map(getAttrKey).sort();
-    const sortedAttrsB = b.attribs.map(getAttrKey).sort();
+    const attrsA = a.attribs.map(getAttrKey);
+    const attrsB = b.attribs.map(getAttrKey);
 
-    for (let i = 0; i < sortedAttrsA.length; i++) {
-      if (sortedAttrsA[i] !== sortedAttrsB[i]) {
+    for (let i = 0; i < attrsA.length; i++) {
+      if (attrsA[i] !== attrsB[i]) {
         return false;
       }
     }
@@ -123,11 +116,6 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     const bKeys = Object.keys(bProps);
 
     if (aKeys.length !== bKeys.length) {
-      return false;
-    }
-
-    // For unstructs, order of properties matters.
-    if (aKeys.join() !== bKeys.join()) {
       return false;
     }
 
