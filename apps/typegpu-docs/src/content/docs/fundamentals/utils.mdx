@@ -5,39 +5,8 @@ description: A list of various utilities provided by TypeGPU.
 
 ## *prepareDispatch*
 
-The `prepareDispatch` function simplifies running simple computations on the GPU.
-Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns a dispatch function to execute it.
-
-This can help reduce serialization overhead when initializing buffers with data.
-
-```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
-import * as d from 'typegpu/data';
-
-const root = await tgpu.init();
-
-const Boid = d.struct({
-  index: d.u32,
-  pos: d.vec3f,
-});
-
-// buffer of 2048 Boids
-const boidsMutable = root.createMutable(d.arrayOf(Boid, 2048));
-
-const dispatch = prepareDispatch(root, (x) => {
-  'kernel';
-  const boidData = Boid({ index: x, pos: d.vec3f() });
-  boidsMutable.$[x] = boidData;
-});
-// run callback for each x in range 0..2047
-dispatch(2048);
-```
-
-:::note
-Remember to mark the callback with `'kernel'` directive to let TypeGPU know that this function is TGSL.
-:::
-
-The returned dispatch function can be called multiple times.
+The `prepareDispatch` function streamlines running simple computations on the GPU.
+Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with dispatch method that executes the pipeline.
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
@@ -52,16 +21,20 @@ const doubleUp = prepareDispatch(root, (x) => {
   data.$[x] *= 2;
 });
 
-doubleUp(8);
-doubleUp(8);
-doubleUp(4);
+doubleUp.dispatch(8);
+doubleUp.dispatch(8);
+doubleUp.dispatch(4);
 
-// no need to call `onSubmittedWorkDone()` because the command encoder
-// will queue the read after `doubleUp` anyway
+// the command encoder will queue the read after `doubleUp`
 console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
 ```
 
+:::note
+Remember to mark the callback with `'kernel'` directive to let TypeGPU know that this function is TGSL.
+:::
+
 The callback can have up to three arguments (dimensions).
+`prepareDispatch` can simplify writing a pipeline helping reduce serialization overhead when initializing buffers with data.
 Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
@@ -82,22 +55,56 @@ prepareDispatch(root, (x, y) => {
   'kernel';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
-})(1024, 512);
+}).dispatch(1024, 512);
 // callback will be called for x in range 0..1023 and y in range 0..511
 
 // (optional) read values in JS
 console.log(await waterLevelMutable.read());
 ```
 
-It is highly recommended NOT to use `dispatch` for:
+Analogously to `TgpuComputePipeline`, the result of `prepareDispatch` can have bind groups bound using the `with` method.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+const root = await tgpu.init();
+// ---cut---
+const layout = tgpu.bindGroupLayout({
+  buffer: { storage: d.arrayOf(d.u32), access: 'mutable' },
+});
+const buffer1 = root
+  .createBuffer(d.arrayOf(d.u32, 3), [1, 2, 3]).$usage('storage');
+const buffer2 = root
+  .createBuffer(d.arrayOf(d.u32, 4), [2, 4, 8, 16]).$usage('storage');
+const bindGroup1 = root.createBindGroup(layout, {
+  buffer: buffer1,
+});
+const bindGroup2 = root.createBindGroup(layout, {
+  buffer: buffer2,
+});
+
+const test = prepareDispatch(root, (x) => {
+  'kernel';
+  layout.$.buffer[x] *= 2;
+});
+
+test.with(layout, bindGroup1).dispatch(3);
+test.with(layout, bindGroup2).dispatch(4);
+
+console.log(await buffer1.read()); // [2, 4, 6];
+console.log(await buffer2.read()); // [4, 8, 16, 32];
+```
+
+It is recommended NOT to use `prepareDispatch` for:
 
 - More complex compute shaders.
-When using `dispatch`, it is impossible to switch bind groups or to change workgroup sizes.
+When using `prepareDispatch`, it is impossible to change workgroup sizes or to use [slots](/TypeGPU/fundamentals/slots).
 For such cases, a manually created pipeline would be more suitable.
 
 - Small calls.
 Usually, for small data the shader creation and dispatch is more costly than serialization.
-Small buffers can be more efficiently initialized with `buffer.write()` method.
+Small buffers can be more efficiently initialized with the `buffer.write()` method.
 
 :::note
 The default workgroup sizes are:
@@ -122,14 +129,14 @@ import * as d from 'typegpu/data';
 const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
-const dispatch = prepareDispatch(root, () => {
+const compute = prepareDispatch(root, () => {
   'kernel';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);
 });
 
-dispatch(); 
-dispatch();
+compute.dispatch(); 
+compute.dispatch();
 
 // Eventually...
 // "[GPU] Call number 1"

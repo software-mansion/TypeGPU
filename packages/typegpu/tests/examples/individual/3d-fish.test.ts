@@ -77,11 +77,11 @@ describe('3d fish example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       struct ModelData_2 {
         position: vec3f,
