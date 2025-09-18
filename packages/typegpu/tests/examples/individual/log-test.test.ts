@@ -878,19 +878,11 @@ describe('console log example', () => {
         serializedData: array<u32, 32>,
       }
 
-<<<<<<< HEAD
-      @group(0) @binding(1) var<storage, read_write> dataBuffer_8: array<SerializedLogData_9, 40>;
-
-      fn log1_5(_arg_0: u32, _arg_1: u32) {
-        var index = atomicAdd(&indexBuffer_7, 1);
-        if (index >= 40) {
-=======
-      @group(0) @binding(1) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 32>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 40>;
 
       fn log1_4(_arg_0: u32, _arg_1: u32) {
         var index = atomicAdd(&indexBuffer_6, 1);
-        if (index >= 32) {
->>>>>>> origin/main
+        if (index >= 40) {
           return;
         }
         dataBuffer_7[index].id = 1;
