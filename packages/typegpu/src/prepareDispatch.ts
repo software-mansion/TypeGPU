@@ -39,16 +39,27 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
 
 class PreparedDispatch<TArgs> {
   #pipeline: TgpuComputePipeline;
+  #createDispatch: (pipeline: TgpuComputePipeline) => DispatchForArgs<TArgs>;
   constructor(
-    public readonly dispatch: DispatchForArgs<TArgs>,
+    createDispatch: (pipeline: TgpuComputePipeline) => DispatchForArgs<TArgs>,
     pipeline: TgpuComputePipeline,
   ) {
+    this.#createDispatch = createDispatch;
     this.#pipeline = pipeline;
   }
 
-  with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: TgpuBindGroup): this {
-    this.#pipeline = this.#pipeline.with(bindGroupLayout, bindGroup);
-    return this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup,
+  ): PreparedDispatch<TArgs> {
+    return new PreparedDispatch(
+      this.#createDispatch,
+      this.#pipeline.with(bindGroupLayout, bindGroup),
+    );
+  }
+
+  get dispatch(): DispatchForArgs<TArgs> {
+    return this.#createDispatch(this.#pipeline);
   }
 }
 
@@ -90,16 +101,20 @@ export function prepareDispatch<TArgs extends number[]>(
     .withCompute(mainCompute)
     .createPipeline();
 
-  const dispatch = ((...size: (number | undefined)[]) => {
-    const sanitizedSize = toVec3(size);
-    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(workgroupSize)));
-    sizeUniform.write(sanitizedSize);
-    pipeline.dispatchWorkgroups(
-      workgroupCount.x,
-      workgroupCount.y,
-      workgroupCount.z,
-    );
-    root['~unstable'].flush();
-  }) as DispatchForArgs<TArgs>;
-  return new PreparedDispatch(dispatch, pipeline);
+  const createDispatch = (pipeline: TgpuComputePipeline) =>
+    ((...size: (number | undefined)[]) => {
+      const sanitizedSize = toVec3(size);
+      const workgroupCount = ceil(
+        vec3f(sanitizedSize).div(vec3f(workgroupSize)),
+      );
+      sizeUniform.write(sanitizedSize);
+      pipeline.dispatchWorkgroups(
+        workgroupCount.x,
+        workgroupCount.y,
+        workgroupCount.z,
+      );
+      root['~unstable'].flush();
+    }) as DispatchForArgs<TArgs>;
+
+  return new PreparedDispatch(createDispatch, pipeline);
 }

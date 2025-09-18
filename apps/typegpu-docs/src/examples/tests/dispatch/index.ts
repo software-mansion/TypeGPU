@@ -92,6 +92,36 @@ async function testMultipleDispatches(): Promise<boolean> {
   return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }
 
+async function testDifferentBindGroups(): Promise<boolean> {
+  const layout = tgpu.bindGroupLayout({
+    buffer: { storage: d.arrayOf(d.u32), access: 'mutable' },
+  });
+  const buffer1 = root
+    .createBuffer(d.arrayOf(d.u32, 3), [1, 2, 3]).$usage('storage');
+  const buffer2 = root
+    .createBuffer(d.arrayOf(d.u32, 4), [2, 4, 8, 16]).$usage('storage');
+  const bindGroup1 = root.createBindGroup(layout, {
+    buffer: buffer1,
+  });
+  const bindGroup2 = root.createBindGroup(layout, {
+    buffer: buffer2,
+  });
+
+  const test = prepareDispatch(root, () => {
+    'kernel';
+    for (let i = d.u32(); i < std.arrayLength(layout.$.buffer); i++) {
+      layout.$.buffer[i] *= 2;
+    }
+  });
+
+  test.with(layout, bindGroup1).dispatch();
+  test.with(layout, bindGroup2).dispatch();
+
+  const filled1 = await buffer1.read();
+  const filled2 = await buffer2.read();
+  return isEqual(filled1, [2, 4, 6]) && isEqual(filled2, [4, 8, 16, 32]);
+}
+
 async function runTests(): Promise<boolean> {
   let result = true;
   result = await test0d() && result;
@@ -100,6 +130,7 @@ async function runTests(): Promise<boolean> {
   result = await test3d() && result;
   result = await testWorkgroupSize() && result;
   result = await testMultipleDispatches() && result;
+  result = await testDifferentBindGroups() && result;
   return result;
 }
 
