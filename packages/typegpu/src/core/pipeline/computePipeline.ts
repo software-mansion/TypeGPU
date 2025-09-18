@@ -168,7 +168,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...setupTimestampWrites(this._priors, branch),
     };
 
-    const pass = branch.commandEncoder.beginComputePass(passDescriptor);
+    const pass = branch[$internal].commandEncoder.beginComputePass(
+      passDescriptor,
+    );
 
     pass.setPipeline(memo.pipeline);
 
@@ -199,11 +201,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       logDataFromGPU(memo.logResources);
     }
 
-    if (this._priors.performanceCallback) {
-      triggerPerformanceCallback({
-        root: branch,
-        priors: this._priors,
-      });
+    const hasPerformanceCallback = !!this._priors.performanceCallback;
+    const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
+
+    if (hasPerformanceCallback && isOngoingBatch) {
+      branch[$internal].batchState.performanceCallbacks.push(() =>
+        triggerPerformanceCallback({ root: branch, priors: this._priors })
+      );
+    } else if (!isOngoingBatch) {
+      branch[$internal].flush();
+      if (hasPerformanceCallback) {
+        triggerPerformanceCallback({ root: branch, priors: this._priors });
+      }
     }
   }
 

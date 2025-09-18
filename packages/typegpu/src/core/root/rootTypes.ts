@@ -19,12 +19,12 @@ import type {
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
 import type {
   Mutable,
   OmitProps,
   Prettify,
 } from '../../shared/utilityTypes.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -439,10 +439,6 @@ export type ValidateUniformSchema<TData extends AnyData> =
     : TData;
 
 export interface TgpuRoot extends Unwrapper {
-  [$internal]: {
-    logOptions: LogGeneratorOptions;
-  };
-
   /**
    * The GPU device associated with this root.
    */
@@ -621,7 +617,34 @@ export interface TgpuRoot extends Unwrapper {
    */
   destroy(): void;
 
+  readonly [$internal]: TgpuRootInternals;
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+}
+export interface TgpuRootInternals {
+  /** */
+  logOptions: LogGeneratorOptions;
+  /**
+   * This state is used to determine if we should submit command buffer immediately to the device queue.
+   * Also, it holds performance callbacks to invoke after flushing.
+   */
+  readonly batchState: {
+    ongoingBatch: boolean;
+    performanceCallbacks: (() => void)[];
+  };
+  /**
+   * The current command encoder. This property
+   * holds the same value throughout the entire `batch()` invocation,
+   * unless you use pipeline with performance callback.
+   * In case of single `draw()` or `drawIndexed()` or `dispatchWorkgroups()` call, getter will be used
+   * to create a single-use command encoder.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
+  /**
+   * Causes all commands enqueued by pipelines to be
+   * submitted to the GPU.
+   * If a single `draw()` or `drawIndexed()` or `dispatchWorkgroups()` is called, `flush()` is executed after each command.
+   */
+  flush(): void;
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
@@ -629,11 +652,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -674,8 +692,15 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   ): void;
 
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * Executes a batch of GPU computations.
+   *
+   * Commands inside `callback` are stored in a single command buffer,
+   * then submitted to the device queue at once.
+   *
+   * There is one exception, pipelines with
+   * performance callbacks/timestamp writes are flushed immediately.
+   *
+   * @param callback A function with GPU computations to be batched.
    */
-  flush(): void;
+  batch(callback: () => void): void;
 }

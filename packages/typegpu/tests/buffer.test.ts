@@ -1,5 +1,7 @@
+import { $internal } from '../src/shared/symbols.ts';
+import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
-import { describe, expect, expectTypeOf } from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
@@ -8,7 +10,6 @@ import type {
   IsValidUniformSchema,
 } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
-import { it } from './utils/extendedIt.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -571,6 +572,22 @@ describe('TgpuBuffer', () => {
         ...('index' | 'storage' | 'uniform' | 'vertex')[],
       ]
     >();
+  });
+
+  it('should flush command encoder inside write', ({ root }) => {
+    const buffer = root.createBuffer(d.u32, 7);
+
+    vi.spyOn(root[$internal], 'flush');
+    buffer.write(1929);
+    expect(root[$internal].flush).toBeCalledTimes(1);
+  });
+
+  it('should flush command encoder inside read', ({ root }) => {
+    const buffer = root.createBuffer(d.u32, 7);
+
+    vi.spyOn(root[$internal], 'flush');
+    buffer.read();
+    expect(root[$internal].flush).toBeCalledTimes(1);
   });
 });
 

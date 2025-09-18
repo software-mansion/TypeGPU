@@ -151,7 +151,7 @@ export function triggerPerformanceCallback({
     );
   }
 
-  root.commandEncoder.resolveQuerySet(
+  root[$internal].commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
     querySet.count,
@@ -159,12 +159,7 @@ export function triggerPerformanceCallback({
     0,
   );
 
-  root.flush();
-  root.device.queue.onSubmittedWorkDone().then(async () => {
-    if (!querySet.available) {
-      return;
-    }
-    const result = await querySet.read();
+  querySet.read().then((result) => {
     const start =
       result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
     const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
@@ -173,6 +168,6 @@ export function triggerPerformanceCallback({
       throw new Error('QuerySet did not return valid timestamps.');
     }
 
-    await callback(start, end);
+    callback(start, end);
   });
 }

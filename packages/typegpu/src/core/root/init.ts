@@ -98,6 +98,7 @@ import type {
   ExperimentalTgpuRoot,
   RenderPass,
   TgpuRoot,
+  TgpuRootInternals,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -262,6 +263,7 @@ interface Disposable {
  */
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
+  readonly [$internal]: TgpuRootInternals;
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 
   private _disposables: Disposable[] = [];
@@ -275,10 +277,6 @@ class TgpuRootImpl extends WithBindingImpl
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
-  [$internal]: {
-    logOptions: LogGeneratorOptions;
-  };
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistrySetting: 'random' | 'strict',
@@ -289,17 +287,53 @@ class TgpuRootImpl extends WithBindingImpl
     super(() => this, []);
 
     this['~unstable'] = this;
+
+    let commandEncoder: GPUCommandEncoder | undefined;
     this[$internal] = {
       logOptions,
+      batchState: {
+        ongoingBatch: false,
+        performanceCallbacks: [],
+      },
+
+      get commandEncoder() {
+        commandEncoder ??= device.createCommandEncoder();
+
+        return commandEncoder;
+      },
+
+      flush() {
+        if (!commandEncoder) {
+          return;
+        }
+
+        device.queue.submit([commandEncoder.finish()]);
+        commandEncoder = undefined;
+      },
     };
   }
 
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
+  batch(callback: () => void) {
+    const { batchState } = this[$internal];
+
+    if (batchState.ongoingBatch) {
+      throw new Error('Nested batch is not allowed');
     }
 
-    return this._commandEncoder;
+    batchState.ongoingBatch = true;
+
+    try {
+      callback();
+    } finally {
+      this[$internal].flush();
+
+      for (const performanceCallback of batchState.performanceCallbacks) {
+        performanceCallback();
+      }
+
+      batchState.ongoingBatch = false;
+      batchState.performanceCallbacks = [];
+    }
   }
 
   get enabledFeatures() {
@@ -530,7 +564,7 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const pass = this[$internal].commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -677,15 +711,9 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-  }
-
-  flush() {
-    if (!this._commandEncoder) {
-      return;
+    if (!this[$internal].batchState.ongoingBatch) {
+      this[$internal].flush();
     }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
   }
 }
 

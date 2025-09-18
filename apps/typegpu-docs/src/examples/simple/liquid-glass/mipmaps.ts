@@ -83,7 +83,6 @@ export async function loadExternalImageWithMipmaps(
           source: sourceView,
         }),
       ).draw(3, 1, 0, 0);
-      root['~unstable'].flush();
 
       srcWidth = dstWidth;
       srcHeight = dstHeight;

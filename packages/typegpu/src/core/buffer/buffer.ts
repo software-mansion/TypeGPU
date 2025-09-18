@@ -331,7 +331,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
 
     // Flushing any commands yet to be encoded.
-    this._group.flush();
+    this._group[$internal].flush();
 
     this._writeToTarget(this._hostBuffer, data);
     device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
@@ -373,7 +373,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
 
     // Flushing any commands yet to be encoded.
-    this._group.flush();
+    this._group[$internal].flush();
 
     const encoder = device.createCommandEncoder();
     encoder.clearBuffer(gpuBuffer);
@@ -386,13 +386,13 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
 
     const size = sizeOf(this.dataType);
-    const encoder = this._group.commandEncoder;
+    const encoder = this._group[$internal].commandEncoder;
     encoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
   }
 
   async read(): Promise<Infer<TData>> {
     // Flushing any commands yet to be encoded.
-    this._group.flush();
+    this._group[$internal].flush();
 
     const gpuBuffer = this.buffer;
     const device = this._group.device;
