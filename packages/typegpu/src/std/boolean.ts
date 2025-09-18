@@ -164,6 +164,18 @@ export const le = dualImpl({
   codegenImpl: (lhs, rhs) => stitch`(${lhs} <= ${rhs})`,
 });
 
+function cpuGt(lhs: number, rhs: number): boolean;
+function cpuGt<T extends AnyNumericVecInstance | number>(
+  lhs: T,
+  rhs: T,
+): MatchingBoolInstance<T>;
+function cpuGt<T extends AnyNumericVecInstance | number>(
+  lhs: T,
+  rhs: T,
+): MatchingBoolInstance<T> {
+  return cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs)));
+}
+
 /**
  * Checks **component-wise** whether `lhs > rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
@@ -181,8 +193,7 @@ export const gt = dualImpl({
       returnType: correspondingBooleanVectorSchema(uargs[0]),
     });
   },
-  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-    cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs))),
+  normalImpl: cpuGt,
   codegenImpl: (lhs, rhs) => stitch`(${lhs} > ${rhs})`,
 });
 
