@@ -8,7 +8,12 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { ComputeVertex, Vertex } from './dataTypes.ts';
-import * as helpers from './helpers.ts';
+import {
+  calculateMidpoint,
+  getAverageNormal,
+  packVec2u,
+  unpackVec2u,
+} from './helpers.ts';
 
 type IcosphereBuffer = TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
 type VertexType = d.Infer<typeof Vertex>;
@@ -82,7 +87,7 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
         ...faceVertices.map((v) => Vertex({ position: v, normal: v })),
       );
     } else {
-      const normal = helpers.getAverageNormal(
+      const normal = getAverageNormal(
         faceVertices[0],
         faceVertices[1],
         faceVertices[2],
@@ -136,26 +141,26 @@ export class IcosphereGenerator {
 
       const baseIndexPrev = triangleIndex * 3;
 
-      const v1 = helpers.unpackVec2u(
+      const v1 = unpackVec2u(
         prevVertices.value[baseIndexPrev].position,
       );
-      const v2 = helpers.unpackVec2u(
+      const v2 = unpackVec2u(
         prevVertices.value[baseIndexPrev + 1].position,
       );
-      const v3 = helpers.unpackVec2u(
+      const v3 = unpackVec2u(
         prevVertices.value[baseIndexPrev + 2].position,
       );
 
       const v12 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint(v1, v2).xyz),
+        std.normalize(calculateMidpoint(v1, v2).xyz),
         1,
       );
       const v23 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint(v2, v3).xyz),
+        std.normalize(calculateMidpoint(v2, v3).xyz),
         1,
       );
       const v31 = d.vec4f(
-        std.normalize(helpers.calculateMidpoint(v3, v1).xyz),
+        std.normalize(calculateMidpoint(v3, v1).xyz),
         1,
       );
 
@@ -185,7 +190,7 @@ export class IcosphereGenerator {
         const triBase = i - (i % 3);
         let normal = reprojectedVertex;
         if (smoothFlag.value === 0) {
-          normal = helpers.getAverageNormal(
+          normal = getAverageNormal(
             newVertices[triBase],
             newVertices[triBase + 1],
             newVertices[triBase + 2],
@@ -195,8 +200,8 @@ export class IcosphereGenerator {
         const outIndex = baseIndexNext + i;
         const nextVertex = nextVertices.value[outIndex];
 
-        nextVertex.position = helpers.packVec2u(reprojectedVertex);
-        nextVertex.normal = helpers.packVec2u(normal);
+        nextVertex.position = packVec2u(reprojectedVertex);
+        nextVertex.normal = packVec2u(normal);
 
         nextVertices.value[outIndex] = nextVertex;
       }

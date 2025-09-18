@@ -47,7 +47,7 @@ describe('xor dev centrifuge example', () => {
 
       @group(0) @binding(7) var<uniform> color_11: vec3f;
 
-      fn safeTanh3_12(v: vec3f) -> vec3f {
+      fn safeTanh_12(v: vec3f) -> vec3f {
         return select(tanh(v), sign(v), (abs(v) > vec3f(10)));
       }
 
@@ -61,16 +61,16 @@ describe('xor dev centrifuge example', () => {
         var z = 0f;
         var acc = vec3f();
         for (var i = 0; (i < tunnelDepth_5); i++) {
-          var p = (z * dir);
+          var p = (dir * z);
           p.x += cameraPos_6.x;
           p.y += cameraPos_6.y;
           var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5 * time_8)), (length(p.xy) - 11));
           var coords2 = (cos((coords + cos((coords * smallStrips_10)))) - 1);
           var dd = ((length(vec4f(coords.z, coords2)) * 0.5) - 0.1);
-          acc = (acc + ((1.2 - cos((p.z * color_11))) * (1f / dd)));
+          acc = (acc + ((1.2 - cos((color_11 * p.z))) * (1f / dd)));
           z += dd;
         }
-        acc = safeTanh3_12((acc * 5e-3));
+        acc = safeTanh_12((acc * 5e-3));
         return vec4f(acc, 1);
       }"
     `);
