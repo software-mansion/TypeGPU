@@ -135,4 +135,34 @@ describe('shellless', () => {
       - fn*:someFn: Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
     `);
   });
+
+  it('handles nested shellless', () => {
+    const fn1 = () => {
+      'kernel';
+      return 4.1;
+    };
+
+    const fn2 = () => {
+      'kernel';
+      return fn1();
+    };
+
+    const main = tgpu.fn([], d.f32)(() => {
+      return fn2();
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn fn1() -> f32 {
+        return 4.1;
+      }
+
+      fn fn2() -> f32 {
+        return fn1();
+      }
+
+      fn main() -> f32 {
+        return fn2();
+      }"
+    `);
+  });
 });
