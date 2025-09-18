@@ -13,7 +13,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // deno-fmt-ignore: just a list of standard functions
-import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, tanh } from 'typegpu/std';
+import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
