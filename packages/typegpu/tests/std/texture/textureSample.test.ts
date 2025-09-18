@@ -4,6 +4,7 @@ import { textureSample } from '../../../src/std/texture.ts';
 import { fn } from '../../../src/core/function/tgpuFn.ts';
 import * as d from '../../../src/data/index.ts';
 import { sampler } from '../../../src/core/sampler/sampler.ts';
+import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
 
 describe('textureSample', () => {
   it('does not allow for raw schemas to be passed in', ({ root }) => {
@@ -18,13 +19,31 @@ describe('textureSample', () => {
       }).$usage('sampled');
       const sampledView = someTexture.createView(d.texture2d());
 
+      const someLayout = bindGroupLayout({
+        sampledCube: { 'texture': d.textureCube() },
+      });
+      const { sampledCube } = someLayout.bound;
+
       const validFn = fn([], d.vec4f)(() =>
         textureSample(sampledView.$, linSampler, d.vec2f(0.5))
+      );
+
+      const validFn2 = fn([], d.vec4f)(() =>
+        textureSample(someLayout.$.sampledCube, linSampler, d.vec3f(0.5))
+      );
+
+      const validFn3 = fn([], d.vec4f)(() =>
+        textureSample(sampledCube.$, linSampler, d.vec3f(0.5))
       );
 
       const invalidFn = fn([], d.vec4f)(() =>
         // @ts-expect-error
         textureSample(d.texture2d(), linSampler, d.vec2f(0.5))
+      );
+
+      const invalidFn2 = fn([], d.vec4f)(() =>
+        // @ts-expect-error
+        textureSample(d.textureCube(), linSampler, d.vec3f(0.5))
       );
     });
   });
