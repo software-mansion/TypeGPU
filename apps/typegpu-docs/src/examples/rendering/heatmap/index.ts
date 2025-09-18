@@ -1,11 +1,20 @@
-import tgpu from 'typegpu';
+import tgpu, {
+  type IndexFlag,
+  type TgpuBindGroup,
+  type TgpuBuffer,
+  type VertexFlag,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import * as std from 'typegpu/std';
 
 import { Camera, Transform, Vertex } from './structures.ts';
 import * as c from './constants.ts';
-import { getSurfaceIndexArray, getSurfaceTransform } from './surface.ts';
+import {
+  createSurface,
+  getSurfaceIndexArray,
+  getSurfaceTransform,
+} from './surface.ts';
 
 // == BORING ROOT STUFF ==
 const root = await tgpu.init();
@@ -38,21 +47,48 @@ const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 // == THIS IS THE PLACE TO DECIDE WHAT FUNCTION TO PLOT ==
-import { xs, ys, zs } from './functions/log.ts';
-import { createSurfaceFromArrays } from './surface.ts';
-const rowsNumber = zs.length;
-const columnsNumber = xs.length;
+// import { rippleDeformator, rippleDrawer } from './.examples/ripple.ts';
+import {
+  mistyMountainsDeformator,
+  mistyMountainsDrawer,
+} from './.examples/misty.ts';
+import { planeDeformator, planeDrawer } from './plane.ts';
+
+const currentDeformator = mistyMountainsDeformator;
+const currentDrawer = mistyMountainsDrawer;
+const rowsNumber = currentDeformator.n;
+const columnsNumber = currentDeformator.m;
+
+const planeBuffer = root
+  .createBuffer(
+    vertexLayout.schemaForCount(planeDeformator.n * planeDeformator.m),
+    createSurface(planeDeformator, planeDrawer),
+  )
+  .$usage('vertex');
+
+const planeIndexBuffer = root
+  .createBuffer(
+    d.arrayOf(
+      d.u16,
+      (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
+    ),
+    getSurfaceIndexArray(planeDeformator.n, planeDeformator.m),
+  )
+  .$usage('index');
+
+const planeTransformBuffer = root
+  .createBuffer(
+    Transform,
+    getSurfaceTransform(c.planeTranslation, c.planeScale),
+  )
+  .$usage('uniform');
+
 const surfaceBuffer = root
   .createBuffer(
     vertexLayout.schemaForCount(
       rowsNumber * columnsNumber,
     ),
-    createSurfaceFromArrays(
-      xs,
-      ys,
-      zs,
-      (y) => d.vec4f(d.vec3f((y + 1) / 2), 1),
-    ),
+    createSurface(currentDeformator, currentDrawer),
   )
   .$usage('vertex');
 
@@ -69,7 +105,7 @@ const surfaceIndexBuffer = root
 const surfaceTransformBuffer = root
   .createBuffer(
     Transform,
-    getSurfaceTransform(d.vec3f(0, -2, 0), d.vec3f(5, 1, 5)),
+    getSurfaceTransform(c.surfaceTranslation, c.surfaceScale),
   )
   .$usage('uniform');
 
@@ -78,7 +114,12 @@ const layout = tgpu.bindGroupLayout({
   transform: { uniform: Transform },
 });
 
-const bindgroup = root.createBindGroup(layout, {
+const planeBindgroup = root.createBindGroup(layout, {
+  camera: cameraBuffer,
+  transform: planeTransformBuffer,
+});
+
+const surfaceBindgroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
   transform: surfaceTransformBuffer,
 });
@@ -136,7 +177,21 @@ const fragment = tgpu['~unstable'].fragmentFn({
 
 const pipeline = root['~unstable']
   .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
+  .withFragment(fragment, {
+    format: presentationFormat,
+    blend: {
+      color: {
+        srcFactor: 'src-alpha',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+      alpha: {
+        srcFactor: 'one',
+        dstFactor: 'one-minus-src-alpha',
+        operation: 'add',
+      },
+    },
+  })
   .withDepthStencil({
     format: 'depth24plus',
     depthWriteEnabled: true,
@@ -147,28 +202,64 @@ const pipeline = root['~unstable']
   })
   .createPipeline();
 
-// == RENDER LOOP ==
-const render = () => {
+const drawObject = (
+  buffer: TgpuBuffer<d.WgslArray<typeof Vertex>> & VertexFlag,
+  group: TgpuBindGroup<typeof layout.entries>,
+  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag,
+  vertexCount: number,
+  loadOp: 'clear' | 'load',
+) => {
   pipeline
     .withColorAttachment({
       view: msaaTextureView,
       resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
+      loadOp: loadOp,
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTextureView,
       depthClearValue: 1,
-      depthLoadOp: 'clear',
+      depthLoadOp: loadOp,
       depthStoreOp: 'store',
     })
-    .with(vertexLayout, surfaceBuffer)
-    .with(layout, bindgroup)
-    .withIndexBuffer(surfaceIndexBuffer)
-    .drawIndexed(
-      (rowsNumber - 1) * (columnsNumber - 1) * 6,
+    .with(vertexLayout, buffer)
+    .with(layout, group)
+    .withIndexBuffer(indexBuffer)
+    .drawIndexed(vertexCount);
+};
+
+// == RENDER LOOP ==
+const render = () => {
+  drawObject(
+    surfaceBuffer,
+    surfaceBindgroup,
+    surfaceIndexBuffer,
+    (rowsNumber - 1) * (columnsNumber - 1) * 6,
+    'clear',
+  );
+
+  if (currentDrawer.drawXZPlane) {
+    drawObject(
+      planeBuffer,
+      planeBindgroup,
+      planeIndexBuffer,
+      (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
+      'load',
     );
+  }
+
+  // if (currentDrawer.drawYZPlane) {
+  //   drawObject(
+  //     planeBuffer,
+  //     planeBindgroup,
+  //     planeIndexBuffer,
+  //     (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
+  //     'load',
+  //   );
+  // }
+
+  // TODO: add the rest of the planes
 };
 
 const frame = () => {
