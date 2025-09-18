@@ -1,5 +1,6 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const root = await tgpu.init({
   unstable_logOptions: {
@@ -10,7 +11,6 @@ const root = await tgpu.init({
     optionalFeatures: ['shader-f16'],
   },
 });
-const hasF16 = root.enabledFeatures.has('shader-f16');
 
 // #region Example controls and cleanup
 
@@ -77,7 +77,7 @@ export const controls = {
         // deno-fmt-ignore
         console.log(d.mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
         console.log();
-        if (hasF16) {
+        if (std.extensionEnabled('f16')) {
           console.log('--- f16 ---');
           console.log(d.f16(3.14));
           console.log(d.vec2h(1.1, -2.2));
