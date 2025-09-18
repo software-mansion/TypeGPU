@@ -89,6 +89,34 @@ describe('cubemap reflection example', () => {
         }
       }
 
+
+      struct VertexOutput {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex
+      fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+        let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        var output: VertexOutput;
+        output.pos = vec4f(pos[vertexIndex], 0, 1);
+        output.uv = uv[vertexIndex];
+        return output;
+      }
+            
+
+
+      @group(0) @binding(0) var inputTexture: texture_2d<f32>;
+      @group(0) @binding(1) var inputSampler: sampler;
+
+      @fragment
+      fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+        return textureSample(inputTexture, inputSampler, uv);
+      }
+            
+
       struct Camera_2 {
         view: mat4x4f,
         projection: mat4x4f,

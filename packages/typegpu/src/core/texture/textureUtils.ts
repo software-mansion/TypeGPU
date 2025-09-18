@@ -73,6 +73,7 @@ export function generateTextureMipmaps(
     );
   }
 
+  console.log(texture.depthOrArrayLayers, texture.mipLevelCount);
   // Generate mipmaps for all layers
   for (let layer = 0; layer < texture.depthOrArrayLayers; layer++) {
     for (
@@ -306,6 +307,10 @@ function generateMipmapLevel(
 ) {
   const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
   const canFilter = [...formatInfo.sampleTypes].includes('float');
+  console.log(
+    `Generating mipmap level ${dstMipLevel} from level ${srcMipLevel}`,
+  );
+  console.log('Format info:', formatInfo);
 
   const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;
 

@@ -24,6 +24,9 @@ const navigatorMock = {
 
 const mockTexture = (descriptor: GPUTextureDescriptor) => ({
   ...descriptor,
+  with: (descriptor.size as number[])[0] ?? 1,
+  height: (descriptor.size as number[])[1] ?? 1,
+  depthOrArrayLayers: (descriptor.size as number[])[2] ?? 1,
   createView: vi.fn(() => 'view'),
   destroy: vi.fn(),
 });
