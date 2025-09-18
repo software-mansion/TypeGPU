@@ -1,11 +1,16 @@
 import { builtin } from './builtin.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
 import type { v3u } from './data/wgslTypes.ts';
 import { ceil } from './std/numeric.ts';
+import type {
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+} from './tgpuBindGroupLayout.ts';
 
 const workgroupSizeConfigs = [
   vec3u(1, 1, 1),
@@ -32,6 +37,30 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
   : never
   : never;
 
+interface Dispatch<TArgs> {
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup,
+  ): this;
+
+  dispatch: DispatchForArgs<TArgs>;
+}
+
+class DispatchImpl<TArgs> implements Dispatch<TArgs> {
+  #pipeline: TgpuComputePipeline;
+  constructor(
+    public readonly dispatch: DispatchForArgs<TArgs>,
+    pipeline: TgpuComputePipeline,
+  ) {
+    this.#pipeline = pipeline;
+  }
+
+  with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: TgpuBindGroup): this {
+    this.#pipeline = this.#pipeline.with(bindGroupLayout, bindGroup);
+    return this;
+  }
+}
+
 /**
  * Creates a dispatch function for a compute pipeline.
  *
@@ -43,7 +72,7 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
 export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
   callback: (...args: TArgs) => undefined,
-): DispatchForArgs<TArgs> {
+): Dispatch<TArgs> {
   if (callback.length >= 4) {
     throw new Error('Dispatch only supports up to three dimensions.');
   }
@@ -70,7 +99,7 @@ export function prepareDispatch<TArgs extends number[]>(
     .withCompute(mainCompute)
     .createPipeline();
 
-  return ((...size: (number | undefined)[]) => {
+  const dispatch = ((...size: (number | undefined)[]) => {
     const sanitizedSize = toVec3(size);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(workgroupSize)));
     sizeUniform.write(sanitizedSize);
@@ -81,4 +110,5 @@ export function prepareDispatch<TArgs extends number[]>(
     );
     root['~unstable'].flush();
   }) as DispatchForArgs<TArgs>;
+  return new DispatchImpl(dispatch, pipeline);
 }

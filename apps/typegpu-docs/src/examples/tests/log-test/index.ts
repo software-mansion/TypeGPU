@@ -16,21 +16,21 @@ export const controls = {
       prepareDispatch(root, () => {
         'kernel';
         console.log(d.u32(321));
-      })(),
+      }).dispatch(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
         console.log(d.u32(1), d.vec3u(2, 3, 4), d.u32(5), d.u32(6));
-      })(),
+      }).dispatch(),
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
         console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
-      })(),
+      }).dispatch(),
   },
   'Different types': {
     onButtonClick: () =>
@@ -41,7 +41,7 @@ export const controls = {
         console.log(d.vec2u(1, 2));
         console.log(d.vec3u(1, 2, 3));
         console.log(d.vec4u(1, 2, 3, 4));
-      })(),
+      }).dispatch(),
   },
   'Two logs': {
     onButtonClick: () =>
@@ -49,14 +49,14 @@ export const controls = {
         'kernel';
         console.log('First log.');
         console.log('Second log.');
-      })(),
+      }).dispatch(),
   },
   'Two threads': {
     onButtonClick: () =>
       prepareDispatch(root, (x) => {
         'kernel';
         console.log('Log from thread', x);
-      })(2),
+      }).dispatch(2),
   },
   '100 dispatches': {
     onButtonClick: async () => {
@@ -67,7 +67,7 @@ export const controls = {
       });
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
-        dispatch();
+        dispatch.dispatch();
         console.log(`dispatched ${i}`);
       }
     },
@@ -82,9 +82,9 @@ export const controls = {
         }
       });
       logCountUniform.write(3);
-      dispatch();
+      dispatch.dispatch();
       logCountUniform.write(1);
-      dispatch();
+      dispatch.dispatch(); // AAA rename dispatch to something else
     },
   },
   'Render pipeline': {
@@ -142,7 +142,7 @@ export const controls = {
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);
         console.log('Log 3 from thread', x);
-      })(16),
+      }).dispatch(16),
   },
   'Too much data': {
     onButtonClick: () => {
@@ -151,7 +151,7 @@ export const controls = {
         console.log(d.vec3u(), d.vec3u(), d.vec3u());
       });
       try {
-        dispatch();
+        dispatch.dispatch();
       } catch (err) {
         console.log(err);
       }

@@ -16,7 +16,7 @@ async function test0d(): Promise<boolean> {
   prepareDispatch(root, () => {
     'kernel';
     mutable.$ = 126;
-  })();
+  }).dispatch();
   const filled = await mutable.read();
   return isEqual(filled, 126);
 }
@@ -27,7 +27,7 @@ async function test1d(): Promise<boolean> {
   prepareDispatch(root, (x) => {
     'kernel';
     mutable.$[x] = x;
-  })(...size);
+  }).dispatch(...size);
   const filled = await mutable.read();
   return isEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
 }
@@ -40,7 +40,7 @@ async function test2d(): Promise<boolean> {
   prepareDispatch(root, (x, y) => {
     'kernel';
     mutable.$[x][y] = d.vec2u(x, y);
-  })(...size);
+  }).dispatch(...size);
   const filled = await mutable.read();
   return isEqual(filled, [
     [d.vec2u(0, 0), d.vec2u(0, 1), d.vec2u(0, 2)],
@@ -59,7 +59,7 @@ async function test3d(): Promise<boolean> {
   prepareDispatch(root, (x, y, z) => {
     'kernel';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
-  })(...size);
+  }).dispatch(...size);
   const filled = await mutable.read();
   return isEqual(filled, [
     [[d.vec3u(0, 0, 0), d.vec3u(0, 0, 1)]],
@@ -72,7 +72,7 @@ async function testWorkgroupSize(): Promise<boolean> {
   prepareDispatch(root, (x, y, z) => {
     'kernel';
     std.atomicAdd(mutable.$, 1);
-  })(4, 3, 2);
+  }).dispatch(4, 3, 2);
   const filled = await mutable.read();
   return isEqual(filled, 4 * 3 * 2);
 }
@@ -85,9 +85,9 @@ async function testMultipleDispatches(): Promise<boolean> {
     'kernel';
     mutable.$[x] *= 2;
   });
-  dispatch(6);
-  dispatch(2);
-  dispatch(4);
+  dispatch.dispatch(6);
+  dispatch.dispatch(2);
+  dispatch.dispatch(4);
   const filled = await mutable.read();
   return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }

@@ -124,7 +124,7 @@ const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsDispatch(p.fishAmount);
+  randomizeFishPositionsDispatch.dispatch(p.fishAmount);
   enqueuePresetChanges();
 };
 
