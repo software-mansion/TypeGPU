@@ -159,8 +159,7 @@ export function triggerPerformanceCallback({
     0,
   );
 
-  (async () => {
-    const result = await querySet.read();
+  querySet.read().then((result) => {
     const start =
       result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
     const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
@@ -169,6 +168,6 @@ export function triggerPerformanceCallback({
       throw new Error('QuerySet did not return valid timestamps.');
     }
 
-    await callback(start, end);
-  })();
+    callback(start, end);
+  });
 }

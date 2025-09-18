@@ -122,7 +122,7 @@ and submits the resulting `GPUCommandBuffer` to the device.
 
 :::caution
 Read–write operations always flush the command encoder.
-When you call a pipeline with a performance callback, the callback is invoked at the end of the batch.
+When you call a pipeline with a performance callback, the callback is invoked at the end of the batch. The timestamps themselves are not affected by the batching. They are still written at the beginning and/or end of the associated pipeline/render pass.
 We've prepared a table showing when a flush occurs (i.e., when a new command encoder is created). Keep this in mind when using `batch`.
 :::
 

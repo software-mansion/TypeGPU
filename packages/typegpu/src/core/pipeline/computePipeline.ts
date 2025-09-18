@@ -195,27 +195,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    if (
-      this._priors.performanceCallback &&
-      branch[$internal].batchState.ongoingBatch
-    ) {
+    const hasPerformanceCallback = !!this._priors.performanceCallback;
+    const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
+
+    if (hasPerformanceCallback && isOngoingBatch) {
       branch[$internal].batchState.performanceCallbacks.push(() =>
         triggerPerformanceCallback({ root: branch, priors: this._priors })
       );
-    } else if (
-      this._priors.performanceCallback &&
-      !branch[$internal].batchState.ongoingBatch
-    ) {
+    } else if (!isOngoingBatch) {
       branch[$internal].flush();
-      triggerPerformanceCallback({
-        root: branch,
-        priors: this._priors,
-      });
-    } else if (
-      !branch[$internal].batchState.ongoingBatch &&
-      !this._priors.performanceCallback
-    ) {
-      branch[$internal].flush();
+      if (hasPerformanceCallback) {
+        triggerPerformanceCallback({ root: branch, priors: this._priors });
+      }
     }
   }
 

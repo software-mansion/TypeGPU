@@ -298,9 +298,7 @@ class TgpuRootImpl extends WithBindingImpl
       },
 
       get commandEncoder() {
-        if (!commandEncoder) {
-          commandEncoder = device.createCommandEncoder();
-        }
+        commandEncoder ??= device.createCommandEncoder();
 
         return commandEncoder;
       },
@@ -317,25 +315,25 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   batch(callback: () => void) {
-    const nestedBatch = this[$internal].batchState.ongoingBatch;
-    if (nestedBatch) {
+    const { batchState } = this[$internal];
+
+    if (batchState.ongoingBatch) {
       throw new Error('Nested batch is not allowed');
     }
 
-    this[$internal].batchState.ongoingBatch = true;
+    batchState.ongoingBatch = true;
 
     try {
       callback();
     } finally {
       this[$internal].flush();
-      for (
-        const performanceCallback of this[$internal].batchState
-          .performanceCallbacks
-      ) {
+
+      for (const performanceCallback of batchState.performanceCallbacks) {
         performanceCallback();
       }
-      this[$internal].batchState.ongoingBatch = false;
-      this[$internal].batchState.performanceCallbacks = [];
+
+      batchState.ongoingBatch = false;
+      batchState.performanceCallbacks = [];
     }
   }
 
