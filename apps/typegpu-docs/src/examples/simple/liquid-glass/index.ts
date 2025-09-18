@@ -65,95 +65,102 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const sampleWithChromaticAberration = tgpu.fn(
-  [d.vec2f, d.f32, d.vec2f, d.f32],
-  d.vec3f,
-)((uv, offset, dir, blur) => {
-  const red = std.textureSampleBias(
-    sampledView.$,
-    sampler,
-    uv.add(dir.mul(offset)),
-    blur,
-  );
-  const green = std.textureSampleBias(
-    sampledView.$,
-    sampler,
-    uv,
-    blur,
-  );
-  const blue = std.textureSampleBias(
-    sampledView.$,
-    sampler,
-    uv.sub(dir.mul(offset)),
-    blur,
-  );
-  return d.vec3f(red.x, green.y, blue.z);
-});
+const calculateWeights = (
+  sdfDist: number,
+  start: number,
+  end: number,
+  featherUV: number,
+) => {
+  'kernel';
+  const inside = 1 -
+    std.smoothstep(start - featherUV, start + featherUV, sdfDist);
+  const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
+  const ring = std.max(0, 1 - inside - outside);
+  return d.vec3f(inside, ring, outside);
+};
+
+const applyTint = (color: d.v3f, tintColor: d.v3f, strength: number) => {
+  'kernel';
+  return std.mix(d.vec4f(color, 1), d.vec4f(tintColor, 1), strength);
+};
+
+const sampleWithChromaticAberration = (
+  tex: d.texture2d<d.F32>,
+  uv: d.v2f,
+  offset: number,
+  dir: d.v2f,
+  blur: number,
+) => {
+  'kernel';
+  const samples = d.arrayOf(d.vec3f, 3)();
+  for (let i = 0; i < 3; i++) {
+    const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
+    samples[i] =
+      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).xyz;
+  }
+  return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
+};
 
 const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const mousePos = mousePosUniform.$;
-  const posInBoxSpace = uv.sub(mousePos);
-
-  const rectDims = paramsUniform.$.rectDims;
-  const start = paramsUniform.$.start;
-  const end = paramsUniform.$.end;
-  const blurStrength = paramsUniform.$.blur;
-  const tintColor = paramsUniform.$.tintColor;
-  const tintStrength = paramsUniform.$.tintStrength;
-
+  const posInBoxSpace = uv.sub(mousePosUniform.$);
   const sdfDist = sdRoundedBox2d(
     posInBoxSpace,
-    rectDims,
+    paramsUniform.$.rectDims,
     paramsUniform.$.radius,
   );
 
-  const dir = std.normalize(posInBoxSpace.mul(rectDims.yx));
-  const normalizedDist = (sdfDist - start) / (end - start);
-  const chromaticOffset = paramsUniform.$.chromaticStrength * normalizedDist;
+  const dir = std.normalize(
+    posInBoxSpace.mul(paramsUniform.$.rectDims.yx),
+  );
+  const normalizedDist = (sdfDist - paramsUniform.$.start) /
+    (paramsUniform.$.end - paramsUniform.$.start);
 
-  const sampled = std.textureSampleLevel(sampledView.$, sampler, uv, 0);
-  const blurSampled = std.textureSampleBias(
+  const featherUV = paramsUniform.$.edgeFeather / std.max(
+    std.textureDimensions(sampledView.$, 0).x,
+    std.textureDimensions(sampledView.$, 0).y,
+  );
+
+  const weights = calculateWeights(
+    sdfDist,
+    paramsUniform.$.start,
+    paramsUniform.$.end,
+    featherUV,
+  );
+
+  const blurSample = std.textureSampleBias(
     sampledView.$,
     sampler,
     uv,
-    blurStrength,
+    paramsUniform.$.blur,
   );
-  const refractedColor = sampleWithChromaticAberration(
-    uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
-    chromaticOffset,
+  const refractedSample = sampleWithChromaticAberration(
+    sampledView.$,
+    uv.add(
+      dir.mul(paramsUniform.$.refractionStrength * normalizedDist),
+    ),
+    paramsUniform.$.chromaticStrength * normalizedDist,
     dir,
-    blurStrength * paramsUniform.$.edgeBlurMultiplier,
+    paramsUniform.$.blur * paramsUniform.$.edgeBlurMultiplier,
+  );
+  const normalSample = std.textureSampleLevel(sampledView.$, sampler, uv, 0);
+
+  const tintedBlur = applyTint(
+    blurSample.xyz,
+    paramsUniform.$.tintColor,
+    paramsUniform.$.tintStrength,
+  );
+  const tintedRing = applyTint(
+    refractedSample,
+    paramsUniform.$.tintColor,
+    paramsUniform.$.tintStrength,
   );
 
-  const dim = d.vec2f(std.textureDimensions(sampledView.$, 0));
-  const featherUV = paramsUniform.$.edgeFeather / std.max(dim.x, dim.y);
-
-  const insideBlurWeight = 1 -
-    std.smoothstep(start - featherUV, start + featherUV, sdfDist);
-  const outsideWeight = std.smoothstep(
-    end - featherUV,
-    end + featherUV,
-    sdfDist,
-  );
-  const ringWeight = std.max(0, 1 - insideBlurWeight - outsideWeight);
-
-  const tintedBlurSampled = std.mix(
-    d.vec4f(blurSampled.xyz, 1),
-    d.vec4f(tintColor, 1),
-    tintStrength,
-  );
-  const tintedRingColor = std.mix(
-    d.vec4f(refractedColor, 1),
-    d.vec4f(tintColor, 1),
-    tintStrength,
-  );
-
-  return tintedBlurSampled.mul(insideBlurWeight)
-    .add(tintedRingColor.mul(ringWeight))
-    .add(sampled.mul(outsideWeight));
+  return tintedBlur.mul(weights.x)
+    .add(tintedRing.mul(weights.y))
+    .add(normalSample.mul(weights.z));
 });
 
 const pipeline = root['~unstable']
