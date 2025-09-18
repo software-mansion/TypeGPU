@@ -50,7 +50,7 @@ describe('deepEqual', () => {
     const struct6 = struct({ a: f32 }); // different number of props
 
     expect(deepEqual(struct1, struct2)).toBe(true);
-    expect(deepEqual(struct1, struct3)).toBe(true); // property order shouldn't matter
+    expect(deepEqual(struct1, struct3)).toBe(false); // property order should matter
     expect(deepEqual(struct1, struct4)).toBe(false);
     expect(deepEqual(struct1, struct5)).toBe(false);
     expect(deepEqual(struct1, struct6)).toBe(false);
