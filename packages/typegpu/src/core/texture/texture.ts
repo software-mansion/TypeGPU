@@ -10,7 +10,7 @@ import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { ValidateTextureViewSchema } from '../../shared/repr.ts';
+import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
 import type {
   TextureFormatInfo,
   ViewDimensionToDimension,
@@ -233,9 +233,9 @@ export interface TgpuTextureView<
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
 
-  [$gpuValueOf](ctx: ResolutionCtx): TSchema;
-  value: TSchema;
-  $: TSchema;
+  [$gpuValueOf](ctx: ResolutionCtx): Infer<TSchema>;
+  value: Infer<TSchema>;
+  $: Infer<TSchema>;
 }
 
 export function INTERNAL_createTexture(
@@ -581,7 +581,6 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   readonly [$internal]: TextureViewInternals;
   readonly [$runtimeResource] = true;
   readonly [$getNameForward]: TgpuTexture;
-  readonly [$repr]: T = undefined as unknown as T;
 
   readonly resourceType = 'texture-view';
   readonly schema: T;
@@ -641,7 +640,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     this[$getNameForward] = baseTexture;
   }
 
-  [$gpuValueOf](): T {
+  [$gpuValueOf](): Infer<T> {
     return new Proxy(
       {
         [$internal]: true,
@@ -651,10 +650,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as unknown as T;
+    ) as unknown as Infer<T>;
   }
 
-  get $(): T {
+  get $(): Infer<T> {
     if (inCodegenMode()) {
       return this[$gpuValueOf]();
     }
@@ -664,7 +663,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     );
   }
 
-  get value(): T {
+  get value(): Infer<T> {
     return this.$;
   }
 
@@ -732,7 +731,7 @@ export class TgpuLaidOutTextureViewImpl<
     return id;
   }
 
-  [$gpuValueOf](): T {
+  [$gpuValueOf](): Infer<T> {
     return new Proxy(
       {
         [$internal]: true,
@@ -742,10 +741,10 @@ export class TgpuLaidOutTextureViewImpl<
         toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as unknown as T;
+    ) as unknown as Infer<T>;
   }
 
-  get $(): T {
+  get $(): Infer<T> {
     if (inCodegenMode()) {
       return this[$gpuValueOf]();
     }
@@ -755,7 +754,7 @@ export class TgpuLaidOutTextureViewImpl<
     );
   }
 
-  get value(): T {
+  get value(): Infer<T> {
     return this.$;
   }
 }

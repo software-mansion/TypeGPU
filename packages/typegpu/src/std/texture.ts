@@ -7,21 +7,7 @@ import {
   isWgslTexture,
   type WgslExternalTexture,
   type WgslStorageTexture,
-  type WgslStorageTexture1d,
-  type WgslStorageTexture2d,
-  type WgslStorageTexture2dArray,
-  type WgslStorageTexture3d,
   type WgslTexture,
-  type WgslTexture1d,
-  type WgslTexture2d,
-  type WgslTexture2dArray,
-  type WgslTexture3d,
-  type WgslTextureCube,
-  type WgslTextureCubeArray,
-  type WgslTextureDepth2d,
-  type WgslTextureDepth2dArray,
-  type WgslTextureDepthCube,
-  type WgslTextureMultisampled2d,
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
@@ -44,58 +30,76 @@ import {
   type TextureFormats,
   textureFormats,
 } from '../core/texture/textureFormats.ts';
-import type { $repr } from '../shared/symbols.ts';
-import type { AnyData } from '../data/index.ts';
+import type { $internal, $repr } from '../shared/symbols.ts';
+import type {
+  texture1d,
+  texture2d,
+  texture2dArray,
+  texture3d,
+  textureCube,
+  textureCubeArray,
+  textureDepth2d,
+  textureDepth2dArray,
+  textureDepthCube,
+  textureExternal,
+  textureMultisampled2d,
+  textureStorage1d,
+  textureStorage2d,
+  textureStorage2dArray,
+  textureStorage3d,
+} from '../data/texture.ts';
 
-function sampleCpu<T extends WgslTexture1d>(
+import type { AnyData } from '../data/dataTypes.ts';
+
+function sampleCpu<T extends texture1d>(
   texture: T,
   sampler: TgpuSampler,
   coords: number,
 ): v4f;
-function sampleCpu<T extends WgslTexture2d>(
+function sampleCpu<T extends texture2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   offset?: v2i,
 ): v4f;
-function sampleCpu<T extends WgslTexture2dArray>(
+function sampleCpu<T extends texture2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   arrayIndex: number,
   offset?: v2i,
 ): v4f;
-function sampleCpu<T extends WgslTexture3d | WgslTextureCube>(
+function sampleCpu<T extends texture3d | textureCube>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
 ): v4f;
-function sampleCpu<T extends WgslTexture3d>(
+function sampleCpu<T extends texture3d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   offset: v3i,
 ): v4f;
-function sampleCpu<T extends WgslTextureCubeArray>(
+function sampleCpu<T extends textureCubeArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   arrayIndex: number,
 ): v4f;
-function sampleCpu<T extends WgslTextureDepth2d>(
+function sampleCpu<T extends textureDepth2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   offset?: v2i,
 ): number;
-function sampleCpu<T extends WgslTextureDepth2dArray>(
+function sampleCpu<T extends textureDepth2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   arrayIndex: number,
   offset?: v2i,
 ): number;
-function sampleCpu<T extends WgslTextureDepthCube>(
+function sampleCpu<T extends textureDepthCube>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
@@ -126,20 +130,20 @@ export const textureSample = dualImpl({
   },
 });
 
-function sampleBiasCpu<T extends WgslTexture1d>(
+function sampleBiasCpu<T extends texture1d>(
   texture: T,
   sampler: TgpuSampler,
   coords: number,
   bias: number,
 ): v4f;
-function sampleBiasCpu<T extends WgslTexture2d>(
+function sampleBiasCpu<T extends texture2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   bias: number,
   offset?: v2i,
 ): v4f;
-function sampleBiasCpu<T extends WgslTexture2dArray>(
+function sampleBiasCpu<T extends texture2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
@@ -147,14 +151,14 @@ function sampleBiasCpu<T extends WgslTexture2dArray>(
   bias: number,
   offset?: v2i,
 ): v4f;
-function sampleBiasCpu<T extends WgslTexture3d | WgslTextureCube>(
+function sampleBiasCpu<T extends texture3d | textureCube>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   bias: number,
   offset?: v3i,
 ): v4f;
-function sampleBiasCpu<T extends WgslTextureCubeArray>(
+function sampleBiasCpu<T extends textureCubeArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
@@ -184,33 +188,33 @@ export const textureSampleBias = dualImpl({
   }),
 });
 
-function sampleLevelCpu<T extends WgslTexture1d>(
+function sampleLevelCpu<T extends texture1d>(
   texture: T,
   sampler: TgpuSampler,
   coords: number,
   level: number,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture2d>(
+function sampleLevelCpu<T extends texture2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   level: number,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture2d>(
+function sampleLevelCpu<T extends texture2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   level: number,
   offset: v2i,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture2dArray>(
+function sampleLevelCpu<T extends texture2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture2dArray>(
+function sampleLevelCpu<T extends texture2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
@@ -218,47 +222,47 @@ function sampleLevelCpu<T extends WgslTexture2dArray>(
   level: number,
   offset: v2i,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture3d | WgslTextureCube>(
+function sampleLevelCpu<T extends texture3d | textureCube>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   level: number,
 ): v4f;
-function sampleLevelCpu<T extends WgslTexture3d>(
+function sampleLevelCpu<T extends texture3d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   level: number,
   offset: v3i,
 ): v4f;
-function sampleLevelCpu<T extends WgslTextureCubeArray>(
+function sampleLevelCpu<T extends textureCubeArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   arrayIndex: number,
   level: number,
 ): v4f;
-function sampleLevelCpu<T extends WgslTextureDepth2d>(
+function sampleLevelCpu<T extends textureDepth2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   level: number,
 ): number;
-function sampleLevelCpu<T extends WgslTextureDepth2d>(
+function sampleLevelCpu<T extends textureDepth2d>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   level: number,
   offset: v2i,
 ): number;
-function sampleLevelCpu<T extends WgslTextureDepth2dArray>(
+function sampleLevelCpu<T extends textureDepth2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
 ): number;
-function sampleLevelCpu<T extends WgslTextureDepth2dArray>(
+function sampleLevelCpu<T extends textureDepth2dArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v2f,
@@ -266,13 +270,13 @@ function sampleLevelCpu<T extends WgslTextureDepth2dArray>(
   level: number,
   offset: v2i,
 ): number;
-function sampleLevelCpu<T extends WgslTextureDepthCube>(
+function sampleLevelCpu<T extends textureDepthCube>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
   level: number,
 ): number;
-function sampleLevelCpu<T extends WgslTextureCubeArray>(
+function sampleLevelCpu<T extends textureCubeArray>(
   texture: T,
   sampler: TgpuSampler,
   coords: v3f,
@@ -314,49 +318,49 @@ type PrimitiveToLoadedType = {
 type TexelFormatToInstanceType<T extends StorageTextureFormats> =
   TextureFormats[T]['vectorType'][typeof $repr];
 
-function textureLoadCpu<T extends WgslTexture1d>(
+function textureLoadCpu<T extends texture1d>(
   texture: T,
   coords: number,
   level: number,
-): PrimitiveToLoadedType[T['sampleType']['type']];
-function textureLoadCpu<T extends WgslTexture2d>(
+): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends texture2d>(
   texture: T,
   coords: v2i | v2u,
   level: number,
-): PrimitiveToLoadedType[T['sampleType']['type']];
-function textureLoadCpu<T extends WgslTexture2dArray>(
+): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends texture2dArray>(
   texture: T,
   coords: v2i | v2u,
   arrayIndex: number,
   level: number,
-): PrimitiveToLoadedType[T['sampleType']['type']];
-function textureLoadCpu<T extends WgslTexture3d>(
+): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends texture3d>(
   texture: T,
   coords: v3i | v3u,
   level: number,
-): PrimitiveToLoadedType[T['sampleType']['type']];
-function textureLoadCpu<T extends WgslTextureMultisampled2d>(
+): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends textureMultisampled2d>(
   texture: T,
   coords: v2i | v2u,
   sampleIndex: number,
-): PrimitiveToLoadedType[T['sampleType']['type']];
-function textureLoadCpu<T extends WgslStorageTexture1d>(
+): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends textureStorage1d>(
   texture: T,
   coords: number,
-): TexelFormatToInstanceType<T['format']>;
-function textureLoadCpu<T extends WgslStorageTexture2d>(
+): TexelFormatToInstanceType<T[typeof $internal][0]>;
+function textureLoadCpu<T extends textureStorage2d>(
   texture: T,
   coords: v2i | v2u,
-): TexelFormatToInstanceType<T['format']>;
-function textureLoadCpu<T extends WgslStorageTexture2dArray>(
+): TexelFormatToInstanceType<T[typeof $internal][0]>;
+function textureLoadCpu<T extends textureStorage2dArray>(
   texture: T,
   coords: v2i | v2u,
   arrayIndex: number,
-): TexelFormatToInstanceType<T['format']>;
-function textureLoadCpu<T extends WgslStorageTexture3d>(
+): TexelFormatToInstanceType<T[typeof $internal][0]>;
+function textureLoadCpu<T extends textureStorage3d>(
   texture: T,
   coords: v3i | v3u,
-): TexelFormatToInstanceType<T['format']>;
+): TexelFormatToInstanceType<T[typeof $internal][0]>;
 function textureLoadCpu(
   _texture: WgslTexture | WgslStorageTexture,
   _coords: number | v2i | v2u | v3i | v3u,
@@ -396,26 +400,26 @@ export const textureLoad = dualImpl({
   },
 });
 
-function textureStoreCpu<T extends WgslStorageTexture1d>(
+function textureStoreCpu<T extends textureStorage1d>(
   texture: T,
   coords: number,
-  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
+  value: TexelFormatToInstanceType<T[typeof $internal][0]>,
 ): void;
-function textureStoreCpu<T extends WgslStorageTexture2d>(
+function textureStoreCpu<T extends textureStorage2d>(
   texture: T,
   coords: v2i | v2u,
-  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
+  value: TexelFormatToInstanceType<T[typeof $internal][0]>,
 ): void;
-function textureStoreCpu<T extends WgslStorageTexture2dArray>(
+function textureStoreCpu<T extends textureStorage2dArray>(
   texture: T,
   coords: v2i | v2u,
   arrayIndex: number,
-  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
+  value: TexelFormatToInstanceType<T[typeof $internal][0]>,
 ): void;
-function textureStoreCpu<T extends WgslStorageTexture3d>(
+function textureStoreCpu<T extends textureStorage3d>(
   texture: T,
   coords: v3i | v3u,
-  value: TextureFormats[T['format']]['vectorType'][typeof $repr],
+  value: TexelFormatToInstanceType<T[typeof $internal][0]>,
 ): void;
 function textureStoreCpu(
   _texture: WgslStorageTexture,
@@ -435,34 +439,34 @@ export const textureStore = dualImpl({
   signature: (...args) => ({ argTypes: args, returnType: Void }),
 });
 
-function textureDimensionsCpu<T extends WgslTexture1d | WgslStorageTexture1d>(
+function textureDimensionsCpu<T extends texture1d | textureStorage1d>(
   texture: T,
 ): number;
-function textureDimensionsCpu<T extends WgslTexture1d>(
+function textureDimensionsCpu<T extends texture1d>(
   texture: T,
   level: number,
 ): number;
 function textureDimensionsCpu<
   T extends
-    | WgslTexture2d
-    | WgslTexture2dArray
-    | WgslTextureCube
-    | WgslTextureCubeArray
-    | WgslStorageTexture2d
-    | WgslStorageTexture2dArray
-    | WgslExternalTexture,
+    | texture2d
+    | texture2dArray
+    | textureCube
+    | textureCubeArray
+    | textureStorage2d
+    | textureStorage2dArray
+    | textureExternal,
 >(texture: T): v2u;
 function textureDimensionsCpu<
   T extends
-    | WgslTexture2d
-    | WgslTexture2dArray
-    | WgslTextureCube
-    | WgslTextureCubeArray,
+    | texture2d
+    | texture2dArray
+    | textureCube
+    | textureCubeArray,
 >(texture: T, level: number): v2u;
-function textureDimensionsCpu<T extends WgslTexture3d | WgslStorageTexture3d>(
+function textureDimensionsCpu<T extends texture3d | textureStorage3d>(
   texture: T,
 ): v3u;
-function textureDimensionsCpu<T extends WgslTexture3d>(
+function textureDimensionsCpu<T extends texture3d>(
   texture: T,
   level: number,
 ): v3u;
@@ -502,27 +506,27 @@ export const textureDimensions = dualImpl({
   },
 });
 
-function textureSampleCompareCpu<T extends WgslTextureDepth2d>(
+function textureSampleCompareCpu<T extends textureDepth2d>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v2f,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends WgslTextureDepth2d>(
+function textureSampleCompareCpu<T extends textureDepth2d>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v2f,
   depthRef: number,
   offset: v2i,
 ): number;
-function textureSampleCompareCpu<T extends WgslTextureDepth2dArray>(
+function textureSampleCompareCpu<T extends textureDepth2dArray>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v2f,
   arrayIndex: number,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends WgslTextureDepth2dArray>(
+function textureSampleCompareCpu<T extends textureDepth2dArray>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v2f,
@@ -530,13 +534,13 @@ function textureSampleCompareCpu<T extends WgslTextureDepth2dArray>(
   depthRef: number,
   offset: v2i,
 ): number;
-function textureSampleCompareCpu<T extends WgslTextureDepthCube>(
+function textureSampleCompareCpu<T extends textureDepthCube>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v3f,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends WgslTextureCubeArray>(
+function textureSampleCompareCpu<T extends textureCubeArray>(
   texture: T,
   sampler: TgpuComparisonSampler,
   coords: v3f,
@@ -567,7 +571,7 @@ export const textureSampleCompare = dualImpl({
 });
 
 function textureSampleBaseClampToEdgeCpu<
-  T extends WgslTexture2d | WgslExternalTexture,
+  T extends texture2d | textureExternal,
 >(texture: T, sampler: TgpuSampler, coords: v2f): v4f {
   throw new Error(
     'Texture sampling with base clamp to edge is not supported outside of GPU mode.',

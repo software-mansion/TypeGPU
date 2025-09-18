@@ -404,9 +404,9 @@ export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
   : T extends TgpuLayoutSampler ? TgpuSampler
   : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
-  : T extends TgpuLayoutTexture<infer TSchema> ? TSchema
-  : T extends TgpuLayoutStorageTexture<infer TSchema> ? TSchema
-  : T extends TgpuLayoutExternalTexture ? T['externalTexture']
+  : T extends TgpuLayoutTexture<infer TSchema> ? Infer<TSchema>
+  : T extends TgpuLayoutStorageTexture<infer TSchema> ? Infer<TSchema>
+  : T extends TgpuLayoutExternalTexture ? Infer<T['externalTexture']>
   : never;
 
 export type ExtractBindGroupInputFromLayout<
