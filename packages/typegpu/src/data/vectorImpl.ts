@@ -1,4 +1,4 @@
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import type { VecKind } from './wgslTypes.ts';
@@ -25,7 +25,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     w: S,
   ) => Vec4<S>;
 
-  '~resolve'(): string {
+  [$resolve](): string {
     if (this.every((e) => !e)) {
       return `${this.kind}()`;
     }
@@ -36,7 +36,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   }
 
   toString() {
-    return this['~resolve']();
+    return this[$resolve]();
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }

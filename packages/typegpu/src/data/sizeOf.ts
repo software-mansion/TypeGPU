@@ -11,6 +11,7 @@ import type { BaseData, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 const knownSizesMap: Record<string, number> = {
+  bool: 4,
   f32: 4,
   f16: 2,
   i32: 4,

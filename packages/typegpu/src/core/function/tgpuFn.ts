@@ -11,8 +11,9 @@ import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
+  $ownSnippet,
   $providing,
-  $runtimeResource,
+  $resolve,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -21,7 +22,6 @@ import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
-import { stitch } from '../resolve/stitch.ts';
 import {
   type Eventual,
   isAccessor,
@@ -40,6 +40,7 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
+import { stitch } from '../resolve/stitch.ts';
 
 // ----------
 // Public API
@@ -191,7 +192,7 @@ function createFn<ImplSchema extends AnyFn>(
       ]);
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): string {
       if (typeof implementation === 'string') {
         addArgTypesToExternals(
           implementation,
@@ -315,7 +316,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$internal] = true;
-  readonly [$runtimeResource] = true;
+  readonly [$ownSnippet]: Snippet;
   readonly [$getNameForward]: unknown;
   readonly #fn: TgpuFnBase<ImplSchema>;
   readonly #params: Snippet[];
@@ -327,13 +328,15 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this.#fn = fn;
     this.#params = params;
     this[$getNameForward] = fn;
+    this[$ownSnippet] = snip(this, this.#fn.shell.returnType);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): string {
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-    return ctx.withResetIndentLevel(() =>
-      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
-    );
+    return ctx.withResetIndentLevel(() => {
+      // TODO: Resolve the params first, then the function (just for consistency)
+      return stitch`${ctx.resolve(this.#fn)}(${this.#params})`;
+    });
   }
 
   toString() {

@@ -12,6 +12,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from './wgslTypes.ts';
+import { safeStringify } from '../shared/safeStringify.ts';
 
 const knownAlignmentMap: Record<string, number> = {
   f32: 4,
@@ -74,7 +75,7 @@ function computeAlignment(data: object): number {
   }
 
   throw new Error(
-    `Cannot determine alignment of data: ${JSON.stringify(data)}`,
+    `Cannot determine alignment of data: ${safeStringify(data)}`,
   );
 }
 
