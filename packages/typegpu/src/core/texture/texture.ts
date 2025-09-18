@@ -1,4 +1,4 @@
-import { snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
   F32,
   I32,
@@ -503,7 +503,7 @@ class TgpuFixedStorageTextureImpl
     return this;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -521,7 +521,9 @@ class TgpuFixedStorageTextureImpl
       }>;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -550,7 +552,7 @@ export class TgpuLaidOutStorageTextureImpl
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
   [$ownSnippet] = snip(this, this as any);
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
@@ -561,7 +563,9 @@ export class TgpuLaidOutStorageTextureImpl
       }>;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -614,7 +618,7 @@ class TgpuFixedSampledTextureImpl
     return this;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
@@ -635,11 +639,13 @@ class TgpuFixedSampledTextureImpl
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${type}<${
-        ctx.resolve(this.channelDataType)
+        ctx.resolve(this.channelDataType).value
       }>;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(id, this as any);
   }
 
   toString() {
@@ -668,7 +674,7 @@ export class TgpuLaidOutSampledTextureImpl
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
   [$ownSnippet] = snip(this, this as any);
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -683,16 +689,20 @@ export class TgpuLaidOutSampledTextureImpl
         `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type};`,
       );
 
-      return id;
+      // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+      // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+      return snip(id, this as any);
     }
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${
-        ctx.resolve(this.channelDataType)
+        ctx.resolve(this.channelDataType).value
       }>;`,
     );
 
-    return id;
+    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+    return snip(id, this as any);
   }
 
   toString() {

@@ -3,16 +3,17 @@ import type {
   TgpuBuffer,
   VertexFlag,
 } from '../../core/buffer/buffer.ts';
-
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import {
   type AnyWgslData,
   isWgslData,
   type U16,
   type U32,
+  Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import {
@@ -308,7 +309,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$getNameForward] = core;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this[$internal].core);
   }
 
@@ -651,7 +652,7 @@ class RenderPipelineCore implements SelfResolvable {
       : [null];
   }
 
-  [$resolve](ctx: ResolutionCtx) {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const {
       vertexFn,
       fragmentFn,
@@ -673,7 +674,7 @@ class RenderPipelineCore implements SelfResolvable {
           if (fragmentFn) {
             ctx.resolve(fragmentFn);
           }
-          return '';
+          return snip('', Void);
         }),
     );
   }
