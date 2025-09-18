@@ -458,51 +458,51 @@ describe('console log example', () => {
           wrappedCallback_2(in.id.x, in.id.y, in.id.z);
         }
 
-      struct mainVertex_Input_1 {
+      struct mainVertex_Output_1 {
+        @builtin(position) pos: vec4f,
+      }
+
+      struct mainVertex_Input_2 {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      struct mainVertex_Output_2 {
-        @builtin(position) pos: vec4f,
-      }
-
-      @vertex fn mainVertex_0(input: mainVertex_Input_1) -> mainVertex_Output_2 {
+      @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
         var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output_2(vec4f(positions[input.vertexIndex], 0, 1));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
       }
 
-      struct mainFragment_Input_4 {
-        @builtin(position) pos: vec4f,
-      }
-
-      fn serializeU32_6(n: u32) -> array<u32,1>{
+      fn serializeU32_5(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
-      @group(0) @binding(0) var<storage, read_write> indexBuffer_7: atomic<u32>;
+      @group(0) @binding(0) var<storage, read_write> indexBuffer_6: atomic<u32>;
 
-      struct SerializedLogData_9 {
+      struct SerializedLogData_8 {
         id: u32,
         serializedData: array<u32, 8>,
       }
 
-      @group(0) @binding(1) var<storage, read_write> dataBuffer_8: array<SerializedLogData_9, 32>;
+      @group(0) @binding(1) var<storage, read_write> dataBuffer_7: array<SerializedLogData_8, 32>;
 
-      fn log1_5(_arg_0: u32, _arg_1: u32) {
-        var index = atomicAdd(&indexBuffer_7, 1);
+      fn log1_4(_arg_0: u32, _arg_1: u32) {
+        var index = atomicAdd(&indexBuffer_6, 1);
         if (index >= 32) {
           return;
         }
-        dataBuffer_8[index].id = 1;
+        dataBuffer_7[index].id = 1;
 
-        var serializedData0 = serializeU32_6(_arg_0);
-        dataBuffer_8[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = serializeU32_6(_arg_1);
-        dataBuffer_8[index].serializedData[1] = serializedData1[0];
+        var serializedData0 = serializeU32_5(_arg_0);
+        dataBuffer_7[index].serializedData[0] = serializedData0[0];
+        var serializedData1 = serializeU32_5(_arg_1);
+        dataBuffer_7[index].serializedData[1] = serializedData1[0];
       }
 
-      @fragment fn mainFragment_3(_arg_0: mainFragment_Input_4) -> @location(0) vec4f {
-        log1_5(u32(_arg_0.pos.x), u32(_arg_0.pos.y));
+      struct mainFragment_Input_9 {
+        @builtin(position) pos: vec4f,
+      }
+
+      @fragment fn mainFragment_3(_arg_0: mainFragment_Input_9) -> @location(0) vec4f {
+        log1_4(u32(_arg_0.pos.x), u32(_arg_0.pos.y));
         return vec4f(0.7689999938011169, 0.3919999897480011, 1, 1);
       }
 

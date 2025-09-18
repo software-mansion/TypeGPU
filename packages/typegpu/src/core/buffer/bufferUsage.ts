@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
@@ -109,7 +109,7 @@ class TgpuFixedBufferImpl<
     return this;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
@@ -118,15 +118,15 @@ class TgpuFixedBufferImpl<
         : { storage: dataType, access: this.usage },
       this.buffer,
     );
-    const usageTemplate = usageToVarTemplateMap[this.usage];
+    const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usageTemplate}> ${id}: ${
-        ctx.resolve(dataType)
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${
+        ctx.resolve(dataType).value
       };`,
     );
 
-    return id;
+    return snip(id, dataType);
   }
 
   toString(): string {
@@ -135,7 +135,6 @@ class TgpuFixedBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
-    const name = getName(this);
 
     return new Proxy({
       [$internal]: true,
@@ -143,7 +142,7 @@ class TgpuFixedBufferImpl<
         return snip(this, dataType);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `${this.usage}:${name ?? '<unnamed>'}.$`,
+      toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TData>;
   }
 
@@ -235,18 +234,19 @@ export class TgpuLaidOutBufferImpl<
     setName(this, membership.key);
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(this.dataType)
+        ctx.resolve(dataType).value
       };`,
     );
 
-    return id;
+    return snip(id, dataType);
   }
 
   toString(): string {

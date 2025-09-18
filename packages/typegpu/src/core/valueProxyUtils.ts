@@ -39,7 +39,8 @@ export const valueProxyHandler: ProxyHandler<
 
     return new Proxy({
       [$internal]: true,
-      [$resolve]: (ctx) => `${ctx.resolve(target)}.${String(prop)}`,
+      [$resolve]: (ctx) =>
+        snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
       get [$ownSnippet]() {
         return snip(this, propType);
       },

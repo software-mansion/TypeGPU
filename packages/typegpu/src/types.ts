@@ -31,7 +31,7 @@ import type {
 } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
-import type { Snippet } from './data/snippet.ts';
+import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -80,7 +80,11 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 export interface FnToWgslOptions {
   args: Snippet[];
   argAliases: Record<string, Snippet>;
-  returnType: AnyData;
+  /**
+   * The return type of the function. If undefined, the type should be inferred
+   * from the implementation (relevant for shellless functions).
+   */
+  returnType: AnyData | undefined;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -90,9 +94,26 @@ export type ItemLayer = {
   usedSlots: Set<TgpuSlot<unknown>>;
 };
 
+export type FunctionScopeLayer = {
+  type: 'functionScope';
+  args: Snippet[];
+  argAliases: Record<string, Snippet>;
+  externalMap: Record<string, unknown>;
+  /**
+   * The return type of the function. If undefined, the type should be inferred
+   * from the implementation (relevant for shellless functions).
+   */
+  returnType: AnyData | undefined;
+  /**
+   * All types used in `return` statements.
+   */
+  reportedReturnTypes: Set<AnyData>;
+};
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
   popItem(): void;
@@ -101,13 +122,16 @@ export interface ItemStateStack {
   pushFunctionScope(
     args: Snippet[],
     argAliases: Record<string, Snippet>,
-    returnType: AnyData,
+    /**
+     * The return type of the function. If undefined, the type should be inferred
+     * from the implementation (relevant for shellless functions).
+     */
+    returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
-  ): void;
+  ): FunctionScopeLayer;
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
-  topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
@@ -239,7 +263,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   /**
-   * Returns the WGSL code representing `item`.
+   * Returns the snippet representing `item`.
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
@@ -250,11 +274,12 @@ export interface ResolutionCtx {
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
     exact?: boolean | undefined,
-  ): string;
+  ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
+    returnType: AnyData;
   };
 
   withVaryingLocations<T>(
@@ -274,7 +299,7 @@ export interface ResolutionCtx {
  */
 export interface SelfResolvable {
   [$internal]: unknown;
-  [$resolve]: (ctx: ResolutionCtx) => string;
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet;
   toString(): string;
 }
 

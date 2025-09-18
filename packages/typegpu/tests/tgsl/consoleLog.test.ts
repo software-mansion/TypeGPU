@@ -107,11 +107,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      fn serializeU32(n: u32) -> array<u32,1>{
+      "fn serializeU32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -135,6 +131,10 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
         log1(10);
       }"
@@ -155,11 +155,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      fn serializeU32(n: u32) -> array<u32,1>{
+      "fn serializeU32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -194,6 +190,10 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[0] = serializedData0[0];
       }
 
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
         log1(10);
         log2(20);
@@ -219,11 +219,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      fn serializeU32(n: u32) -> array<u32,1>{
+      "fn serializeU32(n: u32) -> array<u32,1>{
         return array<u32, 1>(n);
       }
 
@@ -255,6 +251,10 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[3] = serializedData1[2];
         var serializedData2 = serializeU32(_arg_2);
         dataBuffer[index].serializedData[4] = serializedData2[0];
+      }
+
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
       }
 
       @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
