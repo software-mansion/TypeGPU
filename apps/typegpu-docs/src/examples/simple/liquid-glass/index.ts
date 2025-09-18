@@ -65,6 +65,17 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const Weights = d.struct({
+  inside: d.f32,
+  ring: d.f32,
+  outside: d.f32,
+});
+
+const TintParams = d.struct({
+  color: d.vec3f,
+  strength: d.f32,
+});
+
 const calculateWeights = (
   sdfDist: number,
   start: number,
@@ -76,12 +87,12 @@ const calculateWeights = (
     std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
   const ring = std.max(0, 1 - inside - outside);
-  return d.vec3f(inside, ring, outside);
+  return Weights({ inside, ring, outside });
 };
 
-const applyTint = (color: d.v3f, tintColor: d.v3f, strength: number) => {
+const applyTint = (color: d.v3f, tint: d.Infer<typeof TintParams>) => {
   'kernel';
-  return std.mix(d.vec4f(color, 1), d.vec4f(tintColor, 1), strength);
+  return std.mix(d.vec4f(color, 1), d.vec4f(tint.color, 1), tint.strength);
 };
 
 const sampleWithChromaticAberration = (
@@ -111,18 +122,12 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     paramsUniform.$.rectDims,
     paramsUniform.$.radius,
   );
-
-  const dir = std.normalize(
-    posInBoxSpace.mul(paramsUniform.$.rectDims.yx),
-  );
+  const dir = std.normalize(posInBoxSpace.mul(paramsUniform.$.rectDims.yx));
   const normalizedDist = (sdfDist - paramsUniform.$.start) /
     (paramsUniform.$.end - paramsUniform.$.start);
 
-  const featherUV = paramsUniform.$.edgeFeather / std.max(
-    std.textureDimensions(sampledView.$, 0).x,
-    std.textureDimensions(sampledView.$, 0).y,
-  );
-
+  const texDim = std.textureDimensions(sampledView.$, 0);
+  const featherUV = paramsUniform.$.edgeFeather / std.max(texDim.x, texDim.y);
   const weights = calculateWeights(
     sdfDist,
     paramsUniform.$.start,
@@ -138,29 +143,24 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   );
   const refractedSample = sampleWithChromaticAberration(
     sampledView.$,
-    uv.add(
-      dir.mul(paramsUniform.$.refractionStrength * normalizedDist),
-    ),
+    uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
     paramsUniform.$.chromaticStrength * normalizedDist,
     dir,
     paramsUniform.$.blur * paramsUniform.$.edgeBlurMultiplier,
   );
   const normalSample = std.textureSampleLevel(sampledView.$, sampler, uv, 0);
 
-  const tintedBlur = applyTint(
-    blurSample.xyz,
-    paramsUniform.$.tintColor,
-    paramsUniform.$.tintStrength,
-  );
-  const tintedRing = applyTint(
-    refractedSample,
-    paramsUniform.$.tintColor,
-    paramsUniform.$.tintStrength,
-  );
+  const tint = TintParams({
+    color: paramsUniform.$.tintColor,
+    strength: paramsUniform.$.tintStrength,
+  });
 
-  return tintedBlur.mul(weights.x)
-    .add(tintedRing.mul(weights.y))
-    .add(normalSample.mul(weights.z));
+  const tintedBlur = applyTint(blurSample.xyz, tint);
+  const tintedRing = applyTint(refractedSample, tint);
+
+  return tintedBlur.mul(weights.inside)
+    .add(tintedRing.mul(weights.ring))
+    .add(normalSample.mul(weights.outside));
 });
 
 const pipeline = root['~unstable']
