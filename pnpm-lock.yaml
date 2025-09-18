@@ -192,8 +192,8 @@ importers:
         specifier: ^2.14.0
         version: 2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
       jotai-location:
-        specifier: ^0.6.1
-        version: 0.6.1(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0))
+        specifier: ^0.6.2
+        version: 0.6.2(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0))
       lucide-react:
         specifier: ^0.536.0
         version: 0.536.0(react@19.1.0)
@@ -4262,8 +4262,8 @@ packages:
     resolution: {integrity: sha512-twQoecYPiVA5K/h6SxtORw/Bs3ar+mLUtoPSc7iMXzQzK8d7eJ/R09wmTwAjiamETn1cXYPGfNnu7DMoHgu12w==}
     hasBin: true
 
-  jotai-location@0.6.1:
-    resolution: {integrity: sha512-qn7mCLcstuKckwpJwi/eCrxjimQZnN3PBjQQIIJ34UZSj/724tdSkFM8Tzd+fRflqo+ITOcB//CWRugoKTejOQ==}
+  jotai-location@0.6.2:
+    resolution: {integrity: sha512-D+fqGNNgPHpehOsGBsYsS7F3kNgml099MJrGYt8YlLumcnoTVrBdcO+Y11KyMlyzwPihEN0HPUgke9Iihz9OXw==}
     peerDependencies:
       jotai: '>=1.11.0'
 
@@ -10469,7 +10469,7 @@ snapshots:
 
   jiti@2.5.1: {}
 
-  jotai-location@0.6.1(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)):
+  jotai-location@0.6.2(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)):
     dependencies:
       jotai: 2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
 
