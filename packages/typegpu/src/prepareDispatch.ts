@@ -12,13 +12,6 @@ import type {
   TgpuBindGroupLayout,
 } from './tgpuBindGroupLayout.ts';
 
-const workgroupSizeConfigs = [
-  vec3u(1, 1, 1),
-  vec3u(256, 1, 1),
-  vec3u(16, 16, 1),
-  vec3u(8, 8, 4),
-] as const;
-
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
  */
@@ -63,6 +56,13 @@ class PreparedDispatch<TArgs> {
   }
 }
 
+const workgroupSizeConfigs = [
+  vec3u(1, 1, 1),
+  vec3u(256, 1, 1),
+  vec3u(16, 16, 1),
+  vec3u(8, 8, 4),
+] as const;
+
 /**
  * Creates a dispatch function for a compute pipeline.
  *
@@ -91,11 +91,11 @@ export function prepareDispatch<TArgs extends number[]>(
     workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
   })`{
-    if (any(in.id >= sizeUniform)) {
-      return;
-    }
-    wrappedCallback(in.id.x, in.id.y, in.id.z);
-  }`.$uses({ sizeUniform, wrappedCallback });
+  if (any(in.id >= sizeUniform)) {
+    return;
+  }
+  wrappedCallback(in.id.x, in.id.y, in.id.z);
+}`.$uses({ sizeUniform, wrappedCallback });
 
   const pipeline = root['~unstable']
     .withCompute(mainCompute)
