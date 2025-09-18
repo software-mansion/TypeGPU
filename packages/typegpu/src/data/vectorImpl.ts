@@ -1,13 +1,22 @@
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
+import type { AnyData } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import { type ResolvedSnippet, snip } from './snippet.ts';
 import type { VecKind } from './wgslTypes.ts';
+
+type VecSchema<S> = AnyData & {
+  [$internal]: {
+    jsImpl: (v?: S) => S;
+  };
+};
 
 // deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
-  public readonly [$internal] = true;
+  abstract readonly [$internal]: {
+    elementSchema: VecSchema<S>;
+  };
   abstract get kind(): VecKind;
-  abstract castElement(): (v?: S) => S;
 
   abstract get _Vec2(): new (
     x: S,
@@ -25,18 +34,23 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     w: S,
   ) => Vec4<S>;
 
-  [$resolve](): string {
+  castElement(): (v?: S) => S {
+    return this[$internal].elementSchema[$internal].jsImpl;
+  }
+
+  [$resolve](): ResolvedSnippet {
+    const schema = this[$internal].elementSchema;
     if (this.every((e) => !e)) {
-      return `${this.kind}()`;
+      return snip(`${this.kind}()`, schema);
     }
     if (this.every((e) => this[0] === e)) {
-      return `${this.kind}(${this[0]})`;
+      return snip(`${this.kind}(${this[0]})`, schema);
     }
-    return `${this.kind}(${this.join(', ')})`;
+    return snip(`${this.kind}(${this.join(', ')})`, schema);
   }
 
   toString() {
-    return this[$resolve]();
+    return this[$resolve]().value;
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }
@@ -571,9 +585,16 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 }
 
 export class Vec2fImpl extends Vec2<number> {
-  castElement() {
-    return f32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f32,
+    };
   }
+
+  schema() {
+    return f32;
+  }
+
   get kind() {
     return 'vec2f' as const;
   }
@@ -590,9 +611,12 @@ export class Vec2fImpl extends Vec2<number> {
 }
 
 export class Vec2hImpl extends Vec2<number> {
-  castElement() {
-    return f16[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f16,
+    };
   }
+
   get kind() {
     return 'vec2h' as const;
   }
@@ -609,9 +633,12 @@ export class Vec2hImpl extends Vec2<number> {
 }
 
 export class Vec2iImpl extends Vec2<number> {
-  castElement() {
-    return i32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: i32,
+    };
   }
+
   get kind() {
     return 'vec2i' as const;
   }
@@ -628,9 +655,12 @@ export class Vec2iImpl extends Vec2<number> {
 }
 
 export class Vec2uImpl extends Vec2<number> {
-  castElement() {
-    return u32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: u32,
+    };
   }
+
   get kind() {
     return 'vec2u' as const;
   }
@@ -647,9 +677,12 @@ export class Vec2uImpl extends Vec2<number> {
 }
 
 export class Vec2bImpl extends Vec2<boolean> {
-  castElement() {
-    return bool[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: bool,
+    };
   }
+
   get kind() {
     return 'vec2<bool>' as const;
   }
@@ -666,9 +699,12 @@ export class Vec2bImpl extends Vec2<boolean> {
 }
 
 export class Vec3fImpl extends Vec3<number> {
-  castElement() {
-    return f32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f32,
+    };
   }
+
   get kind() {
     return 'vec3f' as const;
   }
@@ -685,9 +721,12 @@ export class Vec3fImpl extends Vec3<number> {
 }
 
 export class Vec3hImpl extends Vec3<number> {
-  castElement() {
-    return f16[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f16,
+    };
   }
+
   get kind() {
     return 'vec3h' as const;
   }
@@ -704,9 +743,12 @@ export class Vec3hImpl extends Vec3<number> {
 }
 
 export class Vec3iImpl extends Vec3<number> {
-  castElement() {
-    return i32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: i32,
+    };
   }
+
   get kind() {
     return 'vec3i' as const;
   }
@@ -723,9 +765,12 @@ export class Vec3iImpl extends Vec3<number> {
 }
 
 export class Vec3uImpl extends Vec3<number> {
-  castElement() {
-    return u32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: u32,
+    };
   }
+
   get kind() {
     return 'vec3u' as const;
   }
@@ -742,9 +787,12 @@ export class Vec3uImpl extends Vec3<number> {
 }
 
 export class Vec3bImpl extends Vec3<boolean> {
-  castElement() {
-    return bool[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: bool,
+    };
   }
+
   get kind() {
     return 'vec3<bool>' as const;
   }
@@ -761,9 +809,12 @@ export class Vec3bImpl extends Vec3<boolean> {
 }
 
 export class Vec4fImpl extends Vec4<number> {
-  castElement() {
-    return f32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f32,
+    };
   }
+
   get kind() {
     return 'vec4f' as const;
   }
@@ -780,9 +831,12 @@ export class Vec4fImpl extends Vec4<number> {
 }
 
 export class Vec4hImpl extends Vec4<number> {
-  castElement() {
-    return f16[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: f16,
+    };
   }
+
   get kind() {
     return 'vec4h' as const;
   }
@@ -799,9 +853,12 @@ export class Vec4hImpl extends Vec4<number> {
 }
 
 export class Vec4iImpl extends Vec4<number> {
-  castElement() {
-    return i32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: i32,
+    };
   }
+
   get kind() {
     return 'vec4i' as const;
   }
@@ -818,9 +875,12 @@ export class Vec4iImpl extends Vec4<number> {
 }
 
 export class Vec4uImpl extends Vec4<number> {
-  castElement() {
-    return u32[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: u32,
+    };
   }
+
   get kind() {
     return 'vec4u' as const;
   }
@@ -837,9 +897,12 @@ export class Vec4uImpl extends Vec4<number> {
 }
 
 export class Vec4bImpl extends Vec4<boolean> {
-  castElement() {
-    return bool[$internal].jsImpl;
+  get [$internal]() {
+    return {
+      elementSchema: bool,
+    };
   }
+
   get kind() {
     return 'vec4<bool>' as const;
   }

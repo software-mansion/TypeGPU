@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -89,19 +89,21 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     this.#initialValue = initialValue;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType)}`;
+    const pre = `var<${this.#scope}> ${id}: ${
+      ctx.resolve(this.#dataType).value
+    }`;
 
     if (this.#initialValue) {
       ctx.addDeclaration(
-        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType)};`,
+        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType).value};`,
       );
     } else {
       ctx.addDeclaration(`${pre};`);
     }
 
-    return id;
+    return snip(id, this.#dataType);
   }
 
   $name(label: string) {
