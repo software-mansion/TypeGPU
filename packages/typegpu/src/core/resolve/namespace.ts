@@ -1,3 +1,4 @@
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import {
   type NameRegistry,
   RandomNameRegistry,
@@ -5,18 +6,20 @@ import {
 } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { ShelllessRepository } from '../../tgsl/shellless.ts';
 import type { TgpuDerived, TgpuSlot } from '../slot/slotTypes.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
 export interface NamespaceInternal {
-  nameRegistry: NameRegistry;
+  readonly nameRegistry: NameRegistry;
+  readonly shelllessRepo: ShelllessRepository;
 
   memoizedResolves: WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
-    { slotToValueMap: SlotToValueMap; result: string }[]
+    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet }[]
   >;
 
   memoizedDerived: WeakMap<
@@ -52,6 +55,7 @@ class NamespaceImpl implements Namespace {
   constructor(nameRegistry: NameRegistry) {
     this[$internal] = {
       nameRegistry,
+      shelllessRepo: new ShelllessRepository(),
       memoizedResolves: new WeakMap(),
       memoizedDerived: new WeakMap(),
       listeners: {
