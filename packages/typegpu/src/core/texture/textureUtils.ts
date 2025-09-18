@@ -128,21 +128,21 @@ function resampleWithRenderPipeline(
   if (!cached) {
     const vertexShader = device.createShaderModule({
       code: `
-        struct VertexOutput {
-          @builtin(position) pos: vec4f,
-          @location(0) uv: vec2f,
-        }
+struct VertexOutput {
+  @builtin(position) pos: vec4f,
+  @location(0) uv: vec2f,
+}
 
-        @vertex
-        fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-          let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-          let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+@vertex
+fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+  let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-          var output: VertexOutput;
-          output.pos = vec4f(pos[vertexIndex], 0, 1);
-          output.uv = uv[vertexIndex];
-          return output;
-        }
+  var output: VertexOutput;
+  output.pos = vec4f(pos[vertexIndex], 0, 1);
+  output.uv = uv[vertexIndex];
+  return output;
+}
       `,
     });
 
@@ -176,18 +176,18 @@ function resampleWithRenderPipeline(
 
     const fragmentShader = device.createShaderModule({
       code: `
-        @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-        @group(0) @binding(1) var inputSampler: sampler;
+@group(0) @binding(0) var inputTexture: texture_2d<f32>;
+@group(0) @binding(1) var inputSampler: sampler;
 
-        @fragment
-        fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-          ${
+@fragment
+fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  ${
         canFilter
           ? 'return textureSample(inputTexture, inputSampler, uv);'
           : `let texelCoord = vec2u(uv * vec2f(textureDimensions(inputTexture)));
-               return textureLoad(inputTexture, texelCoord, 0);`
+        return textureLoad(inputTexture, texelCoord, 0);`
       }
-        }
+}
       `,
     });
 
@@ -309,38 +309,38 @@ function generateMipmapLevel(
   if (!cached) {
     const vertexShader = device.createShaderModule({
       code: `
-        struct VertexOutput {
-          @builtin(position) pos: vec4f,
-          @location(0) uv: vec2f,
-        }
+struct VertexOutput {
+  @builtin(position) pos: vec4f,
+  @location(0) uv: vec2f,
+}
 
-        @vertex
-        fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-          let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-          let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+@vertex
+fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+  let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-          var output: VertexOutput;
-          output.pos = vec4f(pos[vertexIndex], 0, 1);
-          output.uv = uv[vertexIndex];
-          return output;
-        }
+  var output: VertexOutput;
+  output.pos = vec4f(pos[vertexIndex], 0, 1);
+  output.uv = uv[vertexIndex];
+  return output;
+}
       `,
     });
 
     const fragmentShader = device.createShaderModule({
       code: `
-        @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-        @group(0) @binding(1) var inputSampler: sampler;
+@group(0) @binding(0) var inputTexture: texture_2d<f32>;
+@group(0) @binding(1) var inputSampler: sampler;
 
-        @fragment
-        fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-          ${
+@fragment
+fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  ${
         canFilter
           ? 'return textureSample(inputTexture, inputSampler, uv);'
           : `let texelCoord = vec2u(uv * vec2f(textureDimensions(inputTexture)));
-               return textureLoad(inputTexture, texelCoord, 0);`
+        return textureLoad(inputTexture, texelCoord, 0);`
       }
-        }
+}
       `,
     });
 

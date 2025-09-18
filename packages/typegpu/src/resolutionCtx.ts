@@ -294,7 +294,7 @@ const INDENT = [
 const N = INDENT.length - 1;
 
 export class IndentController {
-  private identLevel = 0;
+  identLevel = 0;
 
   get pre(): string {
     return (
