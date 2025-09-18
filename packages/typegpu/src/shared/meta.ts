@@ -70,12 +70,8 @@ export function getName(definition: unknown): string | undefined {
 }
 
 export function setName(definition: object, name: string): void {
-  setMetaData(definition, { name });
-}
-
-export function setNameForward(definition: object, name: string): void {
   if (isForwarded(definition)) {
-    setNameForward(definition[$getNameForward] as object, name);
+    setName(definition[$getNameForward] as object, name);
   }
   setMetaData(definition, { name });
 }

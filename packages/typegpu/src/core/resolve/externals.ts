@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, setNameForward } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -27,7 +27,7 @@ export function applyExternals(
       value && (typeof value === 'object' || typeof value === 'function') &&
       getName(value) === undefined
     ) {
-      setNameForward(value, key);
+      setName(value, key);
     }
   }
 }
