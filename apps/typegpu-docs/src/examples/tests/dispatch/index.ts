@@ -81,13 +81,13 @@ async function testMultipleDispatches(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
-  const dispatch = prepareDispatch(root, (x: number) => {
+  const test = prepareDispatch(root, (x: number) => {
     'kernel';
     mutable.$[x] *= 2;
   });
-  dispatch.dispatch(6);
-  dispatch.dispatch(2);
-  dispatch.dispatch(4);
+  test.dispatch(6);
+  test.dispatch(2);
+  test.dispatch(4);
   const filled = await mutable.read();
   return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }

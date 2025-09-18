@@ -98,7 +98,7 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
+const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
   'kernel';
   randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
   const data = ModelData({
@@ -124,7 +124,7 @@ const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsDispatch.dispatch(p.fishAmount);
+  randomizeFishPositionsOnGPU.dispatch(p.fishAmount);
   enqueuePresetChanges();
 };
 

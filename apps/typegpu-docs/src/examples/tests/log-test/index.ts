@@ -61,13 +61,13 @@ export const controls = {
   '100 dispatches': {
     onButtonClick: async () => {
       const indexUniform = root.createUniform(d.u32);
-      const dispatch = prepareDispatch(root, () => {
+      const test = prepareDispatch(root, () => {
         'kernel';
         console.log('Log from dispatch', indexUniform.$);
       });
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
-        dispatch.dispatch();
+        test.dispatch();
         console.log(`dispatched ${i}`);
       }
     },
@@ -75,16 +75,16 @@ export const controls = {
   'Varying size logs': {
     onButtonClick: async () => {
       const logCountUniform = root.createUniform(d.u32);
-      const dispatch = prepareDispatch(root, () => {
+      const test = prepareDispatch(root, () => {
         'kernel';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
           console.log('Log index', d.u32(i) + 1, 'out of', logCountUniform.$);
         }
       });
       logCountUniform.write(3);
-      dispatch.dispatch();
+      test.dispatch();
       logCountUniform.write(1);
-      dispatch.dispatch(); // AAA rename dispatch to something else
+      test.dispatch();
     },
   },
   'Render pipeline': {
@@ -146,12 +146,11 @@ export const controls = {
   },
   'Too much data': {
     onButtonClick: () => {
-      const dispatch = prepareDispatch(root, () => {
-        'kernel';
-        console.log(d.vec3u(), d.vec3u(), d.vec3u());
-      });
       try {
-        dispatch.dispatch();
+        prepareDispatch(root, () => {
+          'kernel';
+          console.log(d.vec3u(), d.vec3u(), d.vec3u());
+        }).dispatch();
       } catch (err) {
         console.log(err);
       }
