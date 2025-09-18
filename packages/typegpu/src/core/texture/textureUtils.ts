@@ -1,4 +1,7 @@
-import { textureFormats } from './textureFormats.ts';
+import {
+  getDeviceTextureFormatInfo,
+  textureFormats,
+} from './textureFormats.ts';
 import type { ExternalImageSource } from './texture.ts';
 
 export function getImageSourceDimensions(
@@ -45,8 +48,14 @@ export function generateTextureMipmaps(
   baseMipLevel = 0,
   mipLevels?: number,
 ) {
+  if (texture.dimension !== '2d') {
+    throw new Error(
+      'Cannot generate mipmaps for non-2D textures: only 2D textures are currently supported.',
+    );
+  }
+
   const actualMipLevels = mipLevels ?? (texture.mipLevelCount - baseMipLevel);
-  const formatInfo = textureFormats[texture.format];
+  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
 
   const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
     type === 'float' || type === 'unfilterable-float'
@@ -64,23 +73,17 @@ export function generateTextureMipmaps(
     );
   }
 
-  const is3D = texture.dimension === '3d';
-  const depthLayers = is3D ? texture.depthOrArrayLayers : 1;
+  // Generate mipmaps for all layers
+  for (let layer = 0; layer < texture.depthOrArrayLayers; layer++) {
+    for (
+      let mip = baseMipLevel;
+      mip < baseMipLevel + actualMipLevels - 1;
+      mip++
+    ) {
+      const srcMipLevel = mip;
+      const dstMipLevel = mip + 1;
 
-  for (
-    let mip = baseMipLevel;
-    mip < baseMipLevel + actualMipLevels - 1;
-    mip++
-  ) {
-    const srcMipLevel = mip;
-    const dstMipLevel = mip + 1;
-
-    if (is3D) {
-      for (let layer = 0; layer < depthLayers; layer++) {
-        generateMipmapLevel(device, texture, srcMipLevel, dstMipLevel, layer);
-      }
-    } else {
-      generateMipmapLevel(device, texture, srcMipLevel, dstMipLevel);
+      generateMipmapLevel(device, texture, srcMipLevel, dstMipLevel, layer);
     }
   }
 }
@@ -91,6 +94,12 @@ export function resampleImage(
   image: ExternalImageSource,
   layer?: number,
 ) {
+  if (targetTexture.dimension === '3d') {
+    throw new Error(
+      'Cannot resample to 3D textures: only 2D textures are currently supported.',
+    );
+  }
+
   const formatInfo = textureFormats[targetTexture.format];
 
   const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
@@ -202,11 +211,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   const inputTexture = device.createTexture({
-    size: [
-      getImageSourceDimensions(image).width,
-      getImageSourceDimensions(image).height,
-      1,
-    ],
+    size: [...Object.values(getImageSourceDimensions(image))],
     format: 'rgba8unorm',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT |
       GPUTextureUsage.COPY_DST,
@@ -299,7 +304,7 @@ function generateMipmapLevel(
   dstMipLevel: number,
   layer?: number,
 ) {
-  const formatInfo = textureFormats[texture.format];
+  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
   const canFilter = [...formatInfo.sampleTypes].includes('float');
 
   const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;
@@ -334,12 +339,7 @@ fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  ${
-        canFilter
-          ? 'return textureSample(inputTexture, inputSampler, uv);'
-          : `let texelCoord = vec2u(uv * vec2f(textureDimensions(inputTexture)));
-        return textureLoad(inputTexture, texelCoord, 0);`
-      }
+  return textureSample(inputTexture, inputSampler, uv);
 }
       `,
     });
@@ -355,7 +355,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
           binding: 0,
           visibility: GPUShaderStage.FRAGMENT,
           texture: {
-            sampleType: 'float',
+            sampleType: canFilter ? 'float' : 'unfilterable-float',
           },
         },
         {
@@ -402,6 +402,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   const srcTextureView = texture.createView({
     baseMipLevel: srcMipLevel,
+    dimension: '2d',
     mipLevelCount: 1,
     ...(layer !== undefined && {
       baseArrayLayer: layer,
@@ -411,6 +412,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   const dstTextureView = texture.createView({
     baseMipLevel: dstMipLevel,
+    dimension: '2d',
     mipLevelCount: 1,
     ...(layer !== undefined && {
       baseArrayLayer: layer,

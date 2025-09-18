@@ -17,17 +17,19 @@ const imageBitmap = await createImageBitmap(await response.blob());
 
 const imageTexture = root['~unstable'].createTexture({
   size: [imageBitmap.width, imageBitmap.height, 1],
-  format: 'rgba8unorm',
+  format: 'rgba32float',
   mipLevelCount: 6,
 }).$usage('sampled', 'render');
 imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
-const sampledView = imageTexture.createView();
+const sampledView = imageTexture.createView(d.texture2d(), {
+  sampleType: 'unfilterable-float',
+});
 const sampler = tgpu['~unstable'].sampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-  mipmapFilter: 'linear',
+  magFilter: 'nearest',
+  minFilter: 'nearest',
+  mipmapFilter: 'nearest',
 });
 
 const Params = d.struct({

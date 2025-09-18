@@ -200,3 +200,102 @@ export type TextureFormatInfo = {
 };
 
 export type TextureFormats = typeof textureFormats;
+
+export function getDeviceTextureFormatInfo<T extends GPUTextureFormat>(
+  format: T,
+  device: GPUDevice,
+): typeof textureFormats[T] {
+  const baseInfo = textureFormats[format];
+
+  if (!baseInfo) {
+    throw new Error(`Unknown texture format: ${format}`);
+  }
+
+  let filteredInfo = { ...baseInfo } as TextureFormatInfo;
+  switch (format) {
+    case 'r32float':
+    case 'rg32float':
+    case 'rgba32float':
+      if (!device.features.has('float32-filterable')) {
+        filteredInfo = {
+          ...filteredInfo,
+          sampleTypes: baseInfo.sampleTypes.filter((type) => type !== 'float'),
+        } as TextureFormatInfo;
+      }
+      if (!device.features.has('float32-blendable')) {
+        filteredInfo = {
+          ...filteredInfo,
+          canBlend: false,
+        };
+      }
+      break;
+
+    case 'bgra8unorm':
+      if (!device.features.has('bgra8unorm-storage')) {
+        filteredInfo = {
+          ...filteredInfo,
+          storageBindings: null,
+        };
+      }
+      break;
+
+    case 'rg11b10ufloat':
+      if (!device.features.has('rg11b10ufloat-renderable')) {
+        filteredInfo = {
+          ...filteredInfo,
+          canRenderAttachment: false,
+          canBlend: false,
+          canMultisample: false,
+          canResolve: false,
+        };
+      }
+      break;
+  }
+
+  if (filteredInfo.storageBindings) {
+    const hasTexture1 = device.features.has('texture-formats-tier1');
+    const hasTexture2 = device.features.has('texture-formats-tier2');
+
+    let availableBindings = [...filteredInfo.storageBindings];
+
+    // deno-fmt-ignore
+    const tier2RequiredFormats = [
+      'r8unorm', 'r8uint', 'r8sint',
+      'r16uint', 'r16sint', 'r16float',
+      'rgba8unorm', 'rgba8uint', 'rgba8sint',
+      'rgba16uint', 'rgba16sint', 'rgba16float',
+      'r32uint', 'r32sint', 'r32float',
+      'rgba32uint', 'rgba32sint', 'rgba32float',
+    ];
+
+    // deno-fmt-ignore
+    const tier1RequiredFormats = [
+      'r8snorm',
+      'rg8unorm', 'rg8snorm', 'rg8uint', 'rg8sint',
+      'rgba8snorm',
+      'r16unorm', 'r16snorm',
+      'rg16unorm', 'rg16snorm', 'rg16uint', 'rg16sint', 'rg16float',
+      'rgba16unorm', 'rgba16snorm',
+      'rgb10a2uint', 'rgb10a2unorm', 'rg11b10ufloat',
+    ];
+
+    if (tier2RequiredFormats.includes(format) && !hasTexture2) {
+      availableBindings = availableBindings.filter((binding) =>
+        binding !== 'read-write'
+      );
+    }
+
+    if (tier1RequiredFormats.includes(format) && !hasTexture1) {
+      availableBindings = availableBindings.filter(
+        (binding) => binding !== 'write-only' && binding !== 'read-only',
+      );
+    }
+
+    filteredInfo = {
+      ...filteredInfo,
+      storageBindings: availableBindings.length > 0 ? availableBindings : null,
+    };
+  }
+
+  return filteredInfo as typeof textureFormats[T];
+}

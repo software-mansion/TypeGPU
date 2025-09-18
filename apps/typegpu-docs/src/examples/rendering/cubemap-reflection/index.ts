@@ -98,8 +98,17 @@ const materialBuffer = root
 // Textures & Samplers
 
 let chosenCubemap: CubemapNames = 'campsite';
-let cubemapTexture = await loadCubemap(root, chosenCubemap);
-let cubemap = cubemapTexture.createView(d.textureCube(d.f32));
+const size = 2048;
+const texture = root['~unstable']
+  .createTexture({
+    dimension: '2d',
+    size: [size, size, 6],
+    format: 'rgba8unorm',
+  })
+  .$usage('sampled', 'render');
+await loadCubemap(texture, chosenCubemap);
+
+const cubemap = texture.createView(d.textureCube(d.f32));
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -125,7 +134,7 @@ const textureLayout = tgpu.bindGroupLayout({
 });
 const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
 
-let textureBindGroup = root.createBindGroup(textureLayout, {
+const textureBindGroup = root.createBindGroup(textureLayout, {
   cubemap,
   texSampler: sampler,
 });
@@ -482,16 +491,7 @@ export const controls = {
     options: ['campsite', 'beach', 'chapel', 'city'],
     onSelectChange: async (value: CubemapNames) => {
       chosenCubemap = value;
-      const newCubemapTexture = await loadCubemap(root, chosenCubemap);
-      cubemap = newCubemapTexture.createView(d.textureCube(d.f32));
-
-      textureBindGroup = root.createBindGroup(textureLayout, {
-        cubemap,
-        texSampler: sampler,
-      });
-
-      cubemapTexture.destroy();
-      cubemapTexture = newCubemapTexture;
+      await loadCubemap(texture, chosenCubemap);
     },
   },
   'ambient color': {
@@ -557,7 +557,6 @@ export function onCleanup() {
   window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.unobserve(canvas);
   icosphereGenerator.destroy();
-  cubemapTexture.destroy();
   root.destroy();
 }
 

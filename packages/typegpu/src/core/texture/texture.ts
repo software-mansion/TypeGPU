@@ -218,10 +218,7 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
 
   clear(mipLevel?: number | 'all'): void;
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
-  write(
-    source: Required<TProps['dimension']> extends '3d' ? ExternalImageSource[]
-      : ExternalImageSource,
-  ): void;
+  write(source: ExternalImageSource | ExternalImageSource[]): void;
   write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
   // TODO: support copies from GPUBuffers and TgpuBuffers
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
@@ -453,25 +450,19 @@ class TgpuTextureImpl<TProps extends TextureProps>
     const dimension = this.props.dimension ?? '2d';
     const isArray = Array.isArray(source);
 
-    if (isArray && dimension !== '3d') {
-      throw new Error(
-        'Array of image sources can only be used with 3D textures',
-      );
-    }
-
     if (!isArray) {
       this.#writeSingleLayer(source, dimension === '3d' ? 0 : undefined);
       return;
     }
 
-    const depthLayers = this.props.size[2] ?? 1;
-    if (source.length > depthLayers) {
+    const layerCount = this.props.size[2] ?? 1;
+    if (source.length > layerCount) {
       console.warn(
-        `Too many image sources provided for 3D texture. Expected ${depthLayers} layers, got ${source.length}. Extra sources will be ignored.`,
+        `Too many image sources provided. Expected ${layerCount} layers, got ${source.length}. Extra sources will be ignored.`,
       );
     }
 
-    for (let layer = 0; layer < Math.min(source.length, depthLayers); layer++) {
+    for (let layer = 0; layer < Math.min(source.length, layerCount); layer++) {
       const bitmap = source[layer];
       if (bitmap) {
         this.#writeSingleLayer(bitmap, layer);
