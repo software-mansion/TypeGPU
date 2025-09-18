@@ -6,7 +6,6 @@ import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
@@ -15,6 +14,7 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -30,7 +30,7 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
       shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
@@ -537,18 +537,17 @@ describe('wgslGenerator', () => {
       const arr = [
         d.vec2u(1, 2),
         d.vec2u(3, 4),
-        std.min(d.vec2u(5, 6), d.vec2u(7, 8)),
+        std.min(d.vec2u(5, 8), d.vec2u(7, 6)),
       ] as [d.v2u, d.v2u, d.v2u];
       return arr[1].x;
     });
 
-    expect(parseResolved({ testFn })).toEqual(
-      parse(`
-      fn testFn() -> u32 {
-        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), min(vec2u(5, 6), vec2u(7, 8)));
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> u32 {
+        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), vec2u(5, 6));
         return arr[1].x;
-      }`),
-    );
+      }"
+    `);
   });
 
   it('does not autocast lhs of an assignment', () => {

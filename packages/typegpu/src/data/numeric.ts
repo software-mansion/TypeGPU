@@ -15,11 +15,17 @@ import type {
 export const abstractInt = {
   [$internal]: true,
   type: 'abstractInt',
+  toString() {
+    return 'abstractInt';
+  },
 } as AbstractInt;
 
 export const abstractFloat = {
   [$internal]: true,
   type: 'abstractFloat',
+  toString() {
+    return 'abstractFloat';
+  },
 } as AbstractFloat;
 
 const boolCast = dualImpl({

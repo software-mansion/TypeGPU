@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { examples as exampleRecord } from '../src/utils/examples/exampleContent.ts';
+import { examples as exampleRecord } from '../src/examples/exampleContent.ts';
 import { server } from '@vitest/browser/context';
 import * as Plot from '@observablehq/plot';
 import type { INTERNAL_GlobalExt } from 'typegpu';

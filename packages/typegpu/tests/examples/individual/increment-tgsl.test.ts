@@ -18,17 +18,17 @@ describe('increment tgsl example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct increment_Input_1 {
+      "@group(0) @binding(0) var<storage, read_write> counter_1: vec3f;
+
+      struct increment_Input_2 {
         @builtin(num_workgroups) num: vec3u,
       }
 
-      @group(0) @binding(0) var<storage, read_write> counter_2: vec3f;
-
-      @compute @workgroup_size(1) fn increment_0(input: increment_Input_1) {
-        var tmp = counter_2.x;
-        counter_2.x = counter_2.y;
-        counter_2.y += tmp;
-        counter_2.z += f32(input.num.x);
+      @compute @workgroup_size(1) fn increment_0(input: increment_Input_2) {
+        var tmp = counter_1.x;
+        counter_1.x = counter_1.y;
+        counter_1.y += tmp;
+        counter_1.z += f32(input.num.x);
       }"
     `);
   });

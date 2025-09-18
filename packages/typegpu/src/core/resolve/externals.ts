@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, isNamable } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -23,8 +23,11 @@ export function applyExternals(
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
-    if (isNamable(value) && getName(value) === undefined) {
-      value.$name(key);
+    if (
+      value && (typeof value === 'object' || typeof value === 'function') &&
+      getName(value) === undefined
+    ) {
+      setName(value, key);
     }
   }
 }
@@ -101,7 +104,7 @@ export function replaceExternalsInWgsl(
     }
 
     if (isWgsl(external) || isLooseData(external)) {
-      return acc.replaceAll(externalRegex, ctx.resolve(external));
+      return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
     if (external !== null && typeof external === 'object') {

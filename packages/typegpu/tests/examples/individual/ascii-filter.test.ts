@@ -17,38 +17,34 @@ describe('ascii filter example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input_1 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output_2 {
+      "struct fullScreenTriangle_Output_1 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+      struct fullScreenTriangle_Input_2 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
         var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output_2(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
+        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
       }
 
-      struct fragmentFn_Input_4 {
-        @location(0) uv: vec2f,
-      }
+      @group(0) @binding(0) var<uniform> uvTransformBuffer_4: mat2x2f;
 
-      @group(0) @binding(0) var<uniform> uvTransformBuffer_5: mat2x2f;
+      @group(1) @binding(0) var externalTexture_5: texture_external;
 
-      @group(1) @binding(0) var externalTexture_6: texture_external;
+      @group(0) @binding(1) var<uniform> glyphSize_6: u32;
 
-      @group(0) @binding(1) var<uniform> glyphSize_7: u32;
+      @group(0) @binding(2) var shaderSampler_7: sampler;
 
-      @group(0) @binding(2) var shaderSampler_8: sampler;
+      @group(0) @binding(3) var<uniform> gammaCorrection_8: f32;
 
-      @group(0) @binding(3) var<uniform> gammaCorrection_9: f32;
+      @group(0) @binding(4) var<uniform> charsetExtended_9: u32;
 
-      @group(0) @binding(4) var<uniform> charsetExtended_10: u32;
-
-      fn characterFn_11(n: u32, p: vec2f) -> f32 {
+      fn characterFn_10(n: u32, p: vec2f) -> f32 {
         var pos = floor(((p * vec2f(-4, 4)) + 2.5));
         if (((((pos.x < 0) || (pos.x > 4)) || (pos.y < 0)) || (pos.y > 4))) {
           return 0;
@@ -57,20 +53,24 @@ describe('ascii filter example', () => {
         return f32(((n >> a) & 1));
       }
 
-      @group(0) @binding(5) var<uniform> displayMode_12: u32;
+      @group(0) @binding(5) var<uniform> displayMode_11: u32;
 
-      @fragment fn fragmentFn_3(input: fragmentFn_Input_4) -> @location(0) vec4f {
-        var uv2 = ((uvTransformBuffer_5 * (input.uv - 0.5)) + 0.5);
-        var textureSize = vec2f(textureDimensions(externalTexture_6));
+      struct fragmentFn_Input_12 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentFn_3(input: fragmentFn_Input_12) -> @location(0) vec4f {
+        var uv2 = ((uvTransformBuffer_4 * (input.uv - 0.5)) + 0.5);
+        var textureSize = vec2f(textureDimensions(externalTexture_5));
         var pix = (uv2 * textureSize);
-        var cellSize = f32(glyphSize_7);
+        var cellSize = f32(glyphSize_6);
         var halfCell = (cellSize * 0.5);
         var blockCoord = ((floor((pix / cellSize)) * cellSize) / textureSize);
-        var color = textureSampleBaseClampToEdge(externalTexture_6, shaderSampler_8, blockCoord);
+        var color = textureSampleBaseClampToEdge(externalTexture_5, shaderSampler_7, blockCoord);
         var rawGray = (((0.3 * color.x) + (0.59 * color.y)) + (0.11 * color.z));
-        var gray = pow(rawGray, gammaCorrection_9);
+        var gray = pow(rawGray, gammaCorrection_8);
         var n = 4096u;
-        if ((charsetExtended_10 == 0)) {
+        if ((charsetExtended_9 == 0)) {
           if ((gray > 0.2)) {
             n = 65600;
           }
@@ -222,15 +222,15 @@ describe('ascii filter example', () => {
           }
         }
         var p = vec2f((((pix.x / halfCell) % 2) - 1), (((pix.y / halfCell) % 2) - 1));
-        var charValue = characterFn_11(n, p);
+        var charValue = characterFn_10(n, p);
         var resultColor = vec3f(1);
-        if ((displayMode_12 == 0)) {
+        if ((displayMode_11 == 0)) {
           resultColor = (color * charValue).xyz;
         }
-        if ((displayMode_12 == 1)) {
+        if ((displayMode_11 == 1)) {
           resultColor = vec3f((gray * charValue));
         }
-        if ((displayMode_12 == 2)) {
+        if ((displayMode_11 == 2)) {
           resultColor = vec3f(charValue);
         }
         return vec4f(resultColor, 1);

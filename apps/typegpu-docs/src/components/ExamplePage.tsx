@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { examples } from '../utils/examples/exampleContent.ts';
+import { examples } from '../examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 

@@ -17,18 +17,14 @@ describe('boids next example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct mainCompute_Input_1 {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      struct TriangleData_3 {
+      "struct TriangleData_2 {
         position: vec2f,
         velocity: vec2f,
       }
 
-      @group(1) @binding(0) var<storage, read> currentTrianglePos_2: array<TriangleData_3>;
+      @group(1) @binding(0) var<storage, read> currentTrianglePos_1: array<TriangleData_2>;
 
-      struct Params_5 {
+      struct Params_4 {
         separationDistance: f32,
         separationStrength: f32,
         alignmentDistance: f32,
@@ -37,32 +33,36 @@ describe('boids next example', () => {
         cohesionStrength: f32,
       }
 
-      @group(0) @binding(0) var<uniform> paramsBuffer_4: Params_5;
+      @group(0) @binding(0) var<uniform> paramsBuffer_3: Params_4;
 
-      @group(1) @binding(1) var<storage, read_write> nextTrianglePos_6: array<TriangleData_3>;
+      @group(1) @binding(1) var<storage, read_write> nextTrianglePos_5: array<TriangleData_2>;
 
-      @compute @workgroup_size(1) fn mainCompute_0(input: mainCompute_Input_1) {
+      struct mainCompute_Input_6 {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn mainCompute_0(input: mainCompute_Input_6) {
         var index = input.gid.x;
-        var instanceInfo = currentTrianglePos_2[index];
+        var instanceInfo = currentTrianglePos_1[index];
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = 0u; (i < arrayLength(&currentTrianglePos_2)); i++) {
+        for (var i = 0u; (i < arrayLength(&currentTrianglePos_1)); i++) {
           if ((i == index)) {
             continue;
           }
-          var other = currentTrianglePos_2[i];
+          var other = currentTrianglePos_1[i];
           var dist = distance(instanceInfo.position, other.position);
-          if ((dist < paramsBuffer_4.separationDistance)) {
+          if ((dist < paramsBuffer_3.separationDistance)) {
             separation = (separation + (instanceInfo.position - other.position));
           }
-          if ((dist < paramsBuffer_4.alignmentDistance)) {
+          if ((dist < paramsBuffer_3.alignmentDistance)) {
             alignment = (alignment + other.velocity);
             alignmentCount++;
           }
-          if ((dist < paramsBuffer_4.cohesionDistance)) {
+          if ((dist < paramsBuffer_3.cohesionDistance)) {
             cohesion = (cohesion + other.position);
             cohesionCount++;
           }
@@ -74,9 +74,9 @@ describe('boids next example', () => {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
           cohesion = (cohesion - instanceInfo.position);
         }
-        var velocity = (paramsBuffer_4.separationStrength * separation);
-        velocity = (velocity + (paramsBuffer_4.alignmentStrength * alignment));
-        velocity = (velocity + (paramsBuffer_4.cohesionStrength * cohesion));
+        var velocity = (paramsBuffer_3.separationStrength * separation);
+        velocity = (velocity + (paramsBuffer_3.alignmentStrength * alignment));
+        velocity = (velocity + (paramsBuffer_3.cohesionStrength * cohesion));
         instanceInfo.velocity = (instanceInfo.velocity + velocity);
         instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
         if ((instanceInfo.position.x > 1.03)) {
@@ -92,46 +92,46 @@ describe('boids next example', () => {
           instanceInfo.position.y = 1.03;
         }
         instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
-        nextTrianglePos_6[index] = instanceInfo;
+        nextTrianglePos_5[index] = instanceInfo;
       }
 
-      struct mainVert_Input_8 {
-        @location(0) v: vec2f,
-        @location(1) center: vec2f,
-        @location(2) velocity: vec2f,
-      }
-
-      struct mainVert_Output_9 {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
-      }
-
-      fn getRotationFromVelocity_10(velocity: vec2f) -> f32 {
+      fn getRotationFromVelocity_1(velocity: vec2f) -> f32 {
         return -atan2(velocity.x, velocity.y);
       }
 
-      fn rotate_11(v: vec2f, angle: f32) -> vec2f {
+      fn rotate_2(v: vec2f, angle: f32) -> vec2f {
         var cos = cos(angle);
         var sin = sin(angle);
         return vec2f(((v.x * cos) - (v.y * sin)), ((v.x * sin) + (v.y * cos)));
       }
 
-      @group(0) @binding(0) var<uniform> colorPalette_12: vec3f;
+      @group(0) @binding(0) var<uniform> colorPalette_3: vec3f;
 
-      @vertex fn mainVert_7(input: mainVert_Input_8) -> mainVert_Output_9 {
-        var angle = getRotationFromVelocity_10(input.velocity);
-        var rotated = rotate_11(input.v, angle);
-        var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
-        var color = vec4f(((sin((angle + colorPalette_12.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_12.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_12.z)) * 0.45) + 0.45), 1);
-        return mainVert_Output_9(pos, color);
-      }
-
-      struct mainFrag_Input_14 {
+      struct mainVert_Output_4 {
         @builtin(position) position: vec4f,
         @location(0) color: vec4f,
       }
 
-      @fragment fn mainFrag_13(input: mainFrag_Input_14) -> @location(0) vec4f {
+      struct mainVert_Input_5 {
+        @location(0) v: vec2f,
+        @location(1) center: vec2f,
+        @location(2) velocity: vec2f,
+      }
+
+      @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
+        var angle = getRotationFromVelocity_1(input.velocity);
+        var rotated = rotate_2(input.v, angle);
+        var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
+        var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.z)) * 0.45) + 0.45), 1);
+        return mainVert_Output_4(pos, color);
+      }
+
+      struct mainFrag_Input_7 {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn mainFrag_6(input: mainFrag_Input_7) -> @location(0) vec4f {
         return input.color;
       }"
     `);

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect } from 'vitest';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import * as d from '../../src/data/index.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
@@ -9,33 +9,24 @@ import {
 } from '../../src/tgsl/conversion.ts';
 import { it } from '../utils/extendedIt.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
-import type { GenerationCtx } from '../../src/tgsl/generationHelpers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
+import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
-const mockCtx = {
-  indent: () => '',
-  dedent: () => '',
-  pushBlockScope: () => {},
-  popBlockScope: () => {},
-  mode: new CodegenState(),
-  getById: vi.fn(),
-  defineVariable: vi.fn((id, dataType) => ({ value: id, dataType })),
-  resolve: vi.fn((val) => {
-    if (
-      (typeof val === 'function' || typeof val === 'object') &&
-      'type' in val
-    ) {
-      return val.type;
-    }
-    return val;
-  }),
-  unwrap: vi.fn((val) => val),
-  pre: '',
-} as unknown as GenerationCtx;
+const ctx = new ResolutionCtxImpl({
+  namespace: namespace({ names: 'strict' }),
+  shaderGenerator: wgslGenerator,
+});
+ctx.pushMode(new CodegenState());
 
 beforeAll(() => {
-  INTERNAL_setCtx(mockCtx);
+  INTERNAL_setCtx(ctx);
+});
+
+afterAll(() => {
+  INTERNAL_setCtx(undefined);
 });
 
 describe('getBestConversion', () => {

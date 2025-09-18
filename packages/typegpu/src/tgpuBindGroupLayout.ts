@@ -61,6 +61,7 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
+import { safeStringify } from './shared/safeStringify.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type {
   Default,
@@ -173,7 +174,7 @@ export interface TgpuBindGroupLayout<
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
-  [$gpuValueOf](): {
+  readonly [$gpuValueOf]: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
   readonly value: {
@@ -443,7 +444,7 @@ class TgpuBindGroupLayoutImpl<
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
-  [$gpuValueOf]() {
+  get [$gpuValueOf]() {
     return this.$;
   }
 
@@ -803,7 +804,7 @@ export class TgpuBindGroupImpl<
           }
 
           throw new Error(
-            `Malformed bind group entry: ${value} (${JSON.stringify(value)})`,
+            `Malformed bind group entry: ${safeStringify(value)}`,
           );
         })
         .filter((v): v is Exclude<typeof v, null> => v !== null),

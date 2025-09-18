@@ -3,6 +3,7 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
   Decorated,
   Interpolate,
@@ -16,7 +17,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -215,7 +216,7 @@ function createFragmentFn(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       const inputWithLocation = shell.in
         ? createIoSchema(shell.in, ctx.varyingLocations)
           .$name(`${getName(this) ?? ''}_Input`)

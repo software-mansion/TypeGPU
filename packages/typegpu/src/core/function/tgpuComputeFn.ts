@@ -1,4 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -6,7 +7,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
@@ -177,7 +178,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(
         ctx,
         shell.argTypes,

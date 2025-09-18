@@ -3,6 +3,7 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
   Decorated,
   Interpolate,
@@ -15,7 +16,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
@@ -195,7 +196,7 @@ function createVertexFn(
       return this;
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       const outputWithLocation = createIoSchema(
         shell.out,
         ctx.varyingLocations,

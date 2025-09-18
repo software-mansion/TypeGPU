@@ -339,8 +339,8 @@ describe('tgpu.slot', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn getColor() -> vec3f {
-          return vec3f(1, 2, 3);
-        }
+        return vec3f(1, 2, 3);
+      }
 
       fn func() {
         var pos = vec3f(1, 2, 3);
