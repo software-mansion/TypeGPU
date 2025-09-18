@@ -41,6 +41,10 @@ class PreparedDispatch<TArgs> {
     this.#pipeline = pipeline;
   }
 
+  /**
+   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with()`.
+   */
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
@@ -51,6 +55,11 @@ class PreparedDispatch<TArgs> {
     );
   }
 
+  /**
+   * Run the prepared dispatch.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
+   * this method takes in the number of threads to run in each dimension.
+   */
   get dispatch(): DispatchForArgs<TArgs> {
     return this.#createDispatch(this.#pipeline);
   }
