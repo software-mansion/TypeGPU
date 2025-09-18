@@ -22,19 +22,19 @@ export const BPETER: StatefulGenerator = (() => {
   return {
     seed: tgpu.fn([d.f32])((value) => {
       seed.value = d.vec2f(value, 0);
-    }),
+    }).$name('seed'),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
       seed.value = value;
-    }),
+    }).$name('seed2'),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
       seed.value = add(value.xy, d.vec2f(value.z));
-    }),
+    }).$name('seed3'),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
       seed.value = add(value.xy, value.zw);
-    }),
+    }).$name('seed4'),
 
     sample: randomGeneratorShell(() => {
       'kernel';
@@ -43,7 +43,7 @@ export const BPETER: StatefulGenerator = (() => {
       seed.value.x = fract(cos(a) * 136.8168);
       seed.value.y = fract(cos(b) * 534.7645);
       return seed.value.y;
-    }),
+    }).$name('sample'),
   };
 })();
 
