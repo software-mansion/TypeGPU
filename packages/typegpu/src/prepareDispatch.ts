@@ -37,16 +37,7 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
   : never
   : never;
 
-interface Dispatch<TArgs> {
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): this;
-
-  dispatch: DispatchForArgs<TArgs>;
-}
-
-class DispatchImpl<TArgs> implements Dispatch<TArgs> {
+class PreparedDispatch<TArgs> {
   #pipeline: TgpuComputePipeline;
   constructor(
     public readonly dispatch: DispatchForArgs<TArgs>,
@@ -72,7 +63,7 @@ class DispatchImpl<TArgs> implements Dispatch<TArgs> {
 export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
   callback: (...args: TArgs) => undefined,
-): Dispatch<TArgs> {
+): PreparedDispatch<TArgs> {
   if (callback.length >= 4) {
     throw new Error('Dispatch only supports up to three dimensions.');
   }
@@ -110,5 +101,5 @@ export function prepareDispatch<TArgs extends number[]>(
     );
     root['~unstable'].flush();
   }) as DispatchForArgs<TArgs>;
-  return new DispatchImpl(dispatch, pipeline);
+  return new PreparedDispatch(dispatch, pipeline);
 }
