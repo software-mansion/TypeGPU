@@ -67,7 +67,7 @@ describe('tgpu resolve', () => {
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return name;
+        return snip(name, d.f32);
       },
 
       get value(): number {

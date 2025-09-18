@@ -114,6 +114,9 @@ export interface Void extends BaseData {
 export const Void = {
   [$internal]: true,
   type: 'void',
+  toString() {
+    return 'void';
+  },
 } as Void;
 
 // #region Instance Types
@@ -1829,6 +1832,16 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
     (value as AbstractInt)?.[$internal] &&
     (value as AbstractInt).type === 'abstractInt'
   );
+}
+
+export function isAbstract(
+  value: unknown,
+): value is AbstractFloat | AbstractInt {
+  return isAbstractFloat(value) || isAbstractInt(value);
+}
+
+export function isConcrete(value: unknown): boolean {
+  return !isAbstract(value);
 }
 
 export function isVoid(value: unknown): value is Void {

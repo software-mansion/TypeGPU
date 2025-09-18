@@ -1,4 +1,4 @@
-import { snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
@@ -101,8 +101,11 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this.value;
   }
 
-  [$resolve](ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const snippet = this.#createSnippet();
-    return ctx.resolve(snippet.value, snippet.dataType);
+    return snip(
+      ctx.resolve(snippet.value, snippet.dataType).value,
+      snippet.dataType as T,
+    );
   }
 }
