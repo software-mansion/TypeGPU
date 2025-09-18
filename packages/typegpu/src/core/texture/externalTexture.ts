@@ -1,15 +1,20 @@
 import {
   $gpuValueOf,
   $internal,
-  $runtimeResource,
+  $ownSnippet,
+  $resolve,
 } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $wgslDataType } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { WgslExternalTexture } from '../../data/texture.ts';
+import {
+  textureExternal,
+  type WgslExternalTexture,
+} from '../../data/texture.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { inCodegenMode } from '../../execMode.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { Infer } from '../../shared/repr.ts';
 
 // ----------
 // Public API
@@ -33,43 +38,48 @@ export class TgpuExternalTextureImpl
   implements TgpuExternalTexture, SelfResolvable {
   readonly resourceType = 'external-texture';
   readonly [$internal] = true;
+  readonly #membership: LayoutMembership;
 
   constructor(
     public readonly schema: WgslExternalTexture,
-    private readonly _membership: LayoutMembership,
+    membership: LayoutMembership,
   ) {
-    setName(this, _membership.key);
+    this.#membership = membership;
+    setName(this, membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${
-        ctx.resolve(this.schema)
+      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
+        ctx.resolve(this.schema).value
       };`,
     );
 
-    return id;
+    return snip(id, textureExternal());
   }
 
-  [$gpuValueOf](): WgslExternalTexture {
+  get [$gpuValueOf](): Infer<WgslExternalTexture> {
+    const schema = this.schema;
+
     return new Proxy(
       {
         [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.schema,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+        get [$ownSnippet]() {
+          return snip(this, schema);
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `textureExternal:${getName(this) ?? '<unnamed>'}.$`,
       },
       valueProxyHandler,
-    ) as unknown as WgslExternalTexture;
+    ) as unknown as Infer<WgslExternalTexture>;
   }
 
-  get $(): WgslExternalTexture {
+  get $(): Infer<WgslExternalTexture> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     throw new Error(
@@ -77,11 +87,11 @@ export class TgpuExternalTextureImpl
     );
   }
 
-  get value(): WgslExternalTexture {
+  get value(): Infer<WgslExternalTexture> {
     return this.$;
   }
 
   toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+    return `textureExternal:${getName(this) ?? '<unnamed>'}`;
   }
 }

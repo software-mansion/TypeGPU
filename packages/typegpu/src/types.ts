@@ -28,7 +28,7 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
-import type { Snippet } from './data/snippet.ts';
+import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -36,7 +36,12 @@ import {
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
-import { $internal } from './shared/symbols.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from './shared/symbols.ts';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -72,7 +77,11 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 export interface FnToWgslOptions {
   args: Snippet[];
   argAliases: Record<string, Snippet>;
-  returnType: AnyData;
+  /**
+   * The return type of the function. If undefined, the type should be inferred
+   * from the implementation (relevant for shellless functions).
+   */
+  returnType: AnyData | undefined;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -82,9 +91,26 @@ export type ItemLayer = {
   usedSlots: Set<TgpuSlot<unknown>>;
 };
 
+export type FunctionScopeLayer = {
+  type: 'functionScope';
+  args: Snippet[];
+  argAliases: Record<string, Snippet>;
+  externalMap: Record<string, unknown>;
+  /**
+   * The return type of the function. If undefined, the type should be inferred
+   * from the implementation (relevant for shellless functions).
+   */
+  returnType: AnyData | undefined;
+  /**
+   * All types used in `return` statements.
+   */
+  reportedReturnTypes: Set<AnyData>;
+};
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
   popItem(): void;
@@ -93,13 +119,16 @@ export interface ItemStateStack {
   pushFunctionScope(
     args: Snippet[],
     argAliases: Record<string, Snippet>,
-    returnType: AnyData,
+    /**
+     * The return type of the function. If undefined, the type should be inferred
+     * from the implementation (relevant for shellless functions).
+     */
+    returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
-  ): void;
+  ): FunctionScopeLayer;
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
-  topFunctionReturnType: AnyData;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
@@ -231,7 +260,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   /**
-   * Returns the WGSL code representing `item`.
+   * Returns the snippet representing `item`.
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
@@ -242,11 +271,12 @@ export interface ResolutionCtx {
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
     exact?: boolean | undefined,
-  ): string;
+  ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
+    returnType: AnyData;
   };
 
   withVaryingLocations<T>(
@@ -260,19 +290,30 @@ export interface ResolutionCtx {
 }
 
 /**
- * Houses a method '~resolve` that returns a code string
- * representing it, as opposed to offloading the resolution
- * to another mechanism.
+ * Houses a method on the symbol '$resolve` that returns a
+ * code string representing it, as opposed to offloading the
+ * resolution to another mechanism.
  */
 export interface SelfResolvable {
   [$internal]: unknown;
-  '~resolve'(ctx: ResolutionCtx): string;
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet;
   toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
-  return isMarkedInternal(value) &&
-    typeof (value as SelfResolvable)?.['~resolve'] === 'function';
+  return !!(value as SelfResolvable)?.[$resolve];
+}
+
+export interface WithGPUValue<T> {
+  readonly [$gpuValueOf]: T;
+}
+
+export interface WithOwnSnippet {
+  readonly [$ownSnippet]: Snippet;
+}
+
+export function getOwnSnippet(value: unknown): Snippet | undefined {
+  return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

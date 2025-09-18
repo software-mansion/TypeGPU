@@ -52,7 +52,7 @@ import { mul, sub } from './operators.ts';
 type NumVec = AnyNumericVecInstance;
 
 function cpuAbs(value: number): number;
-function cpuAbs<T extends NumVec>(value: T): T;
+function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.abs(value) as T;
@@ -205,7 +205,7 @@ export const ceil = dualImpl({
 });
 
 function cpuClamp(value: number, low: number, high: number): number;
-function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
   if (typeof value === 'number') {
     return Math.min(Math.max(low as number, value), high as number) as T;
@@ -219,10 +219,10 @@ function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
 
 export const clamp = dualImpl({
   name: 'clamp',
-  signature: (value, low, high) => ({
-    argTypes: [value, low, high],
-    returnType: value,
-  }),
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
+  },
   normalImpl: cpuClamp,
   codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
 });
@@ -938,7 +938,7 @@ export const quantizeToF16 = dualImpl({
 });
 
 function cpuRadians(value: number): number;
-function cpuRadians<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * Math.PI) / 180) as T;
@@ -950,7 +950,10 @@ function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const radians = dualImpl({
   name: 'radians',
-  signature: (arg) => ({ argTypes: [arg], returnType: arg }),
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return ({ argTypes: uargs, returnType: uargs[0] });
+  },
   normalImpl: cpuRadians,
   codegenImpl: (value) => stitch`radians(${value})`,
 });
@@ -1134,7 +1137,7 @@ export const sqrt = dualImpl({
 });
 
 function cpuStep(edge: number, x: number): number;
-function cpuStep<T extends AnyFloatVecInstance>(edge: T, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
 function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
   if (typeof edge === 'number') {
     return (edge <= (x as number) ? 1.0 : 0.0) as T;
@@ -1146,7 +1149,10 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
 
 export const step = dualImpl({
   name: 'step',
-  signature: (edge, x) => ({ argTypes: [edge, x], returnType: edge }),
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return { argTypes: uargs, returnType: uargs[0] };
+  },
   normalImpl: cpuStep,
   codegenImpl: (edge, x) => stitch`step(${edge}, ${x})`,
 });

@@ -386,35 +386,35 @@ describe('indents', () => {
       externals: { someVertex },
     });
     expect(code).toMatchInlineSnapshot(`
-      "struct someVertex_Input_1 {
+      "struct UniBoid_2 {
+        @size(32) position: vec4f,
+        @align(64) velocity: vec4f,
+      }
+
+      @group(0) @binding(0) var<uniform> boids_1: UniBoid_2;
+
+      @group(0) @binding(3) var sampled_3: texture_2d_array<f32>;
+
+      @group(0) @binding(4) var sampler_4: sampler;
+
+      @group(0) @binding(2) var smoothRender_5: texture_multisampled_2d<f32>;
+
+      struct someVertex_Output_6 {
+        @builtin(position) position: vec4f,
+        @location(0) @interpolate(flat, either) uv: vec2f,
+      }
+
+      struct someVertex_Input_7 {
         @builtin(vertex_index) vertexIndex: u32,
         @location(0) position: vec4f,
         @location(1) something: vec4f,
       }
 
-      struct someVertex_Output_2 {
-        @builtin(position) position: vec4f,
-        @location(0) @interpolate(flat, either) uv: vec2f,
-      }
-
-      struct UniBoid_4 {
-        @size(32) position: vec4f,
-        @align(64) velocity: vec4f,
-      }
-
-      @group(0) @binding(0) var<uniform> boids_3: UniBoid_4;
-
-      @group(0) @binding(3) var sampled_5: texture_2d_array<f32>;
-
-      @group(0) @binding(4) var sampler_6: sampler;
-
-      @group(0) @binding(2) var smoothRender_7: texture_multisampled_2d<f32>;
-
-      @vertex fn someVertex_0(input: someVertex_Input_1) -> someVertex_Output_2 {
-        var uniBoid = boids_3;
+      @vertex fn someVertex_0(input: someVertex_Input_7) -> someVertex_Output_6 {
+        var uniBoid = boids_1;
         for (var i = 0u; (i < -1); i++) {
-          var sampled = textureSample(sampled_5, sampler_6, vec2f(0.5), i);
-          var someVal = textureLoad(smoothRender_7, vec2i(), 0);
+          var sampled = textureSample(sampled_3, sampler_4, vec2f(0.5), i);
+          var someVal = textureLoad(smoothRender_5, vec2i(), 0);
           if (((someVal.x + sampled.x) > 0.5)) {
             var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
           }
@@ -427,7 +427,7 @@ describe('indents', () => {
             }
           }
         }
-        return someVertex_Output_2(input.position, input.something.xy);
+        return someVertex_Output_6(input.position, input.something.xy);
       }"
     `);
   });

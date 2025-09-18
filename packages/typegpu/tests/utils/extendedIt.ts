@@ -34,6 +34,7 @@ const mockCommandEncoder = {
   },
   beginComputePass: vi.fn(() => mockComputePassEncoder),
   beginRenderPass: vi.fn(() => mockRenderPassEncoder),
+  clearBuffer: vi.fn(),
   copyBufferToBuffer: vi.fn(),
   copyBufferToTexture: vi.fn(),
   copyTextureToBuffer: vi.fn(),

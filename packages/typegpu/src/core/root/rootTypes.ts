@@ -19,6 +19,7 @@ import type {
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type {
   Mutable,
   OmitProps,
@@ -30,6 +31,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
@@ -483,6 +485,10 @@ export type ValidateUniformSchema<TData extends AnyData> =
     : TData;
 
 export interface TgpuRoot extends Unwrapper {
+  [$internal]: {
+    logOptions: LogGeneratorOptions;
+  };
+
   /**
    * The GPU device associated with this root.
    */

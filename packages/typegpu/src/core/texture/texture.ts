@@ -6,8 +6,9 @@ import {
   type WgslTexture,
   type WgslTextureProps,
 } from '../../data/texture.ts';
-import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
@@ -16,12 +17,11 @@ import type {
   ViewDimensionToDimension,
 } from './textureFormats.ts';
 import {
-  $getNameForward,
   $gpuValueOf,
   $internal,
+  $ownSnippet,
   $repr,
-  $runtimeResource,
-  $wgslDataType,
+  $resolve,
 } from '../../shared/symbols.ts';
 import type {
   Default,
@@ -108,7 +108,10 @@ type BaseDimension<T extends string> = T extends keyof ViewDimensionToDimension
   : never;
 
 type OptionalDimension<T extends string> = T extends
-  '2d' | '2d-array' | 'cube' | 'cube-array' ? { dimension?: BaseDimension<T> }
+  | '2d'
+  | '2d-array'
+  | 'cube'
+  | 'cube-array' ? { dimension?: BaseDimension<T> }
   : { dimension: BaseDimension<T> };
 
 type MultisampledProps<T extends WgslTexture> = T['multisampled'] extends true
@@ -116,9 +119,10 @@ type MultisampledProps<T extends WgslTexture> = T['multisampled'] extends true
   : OptionalDimension<T['dimension']> & { sampleCount?: 1 };
 
 export type PropsForSchema<T extends WgslTexture | WgslStorageTexture> =
-  T extends WgslTexture ?
-      & { size: readonly number[]; format: GPUTextureFormat }
-      & MultisampledProps<T>
+  T extends WgslTexture ? {
+      size: readonly number[];
+      format: GPUTextureFormat;
+    } & MultisampledProps<T>
     : T extends WgslStorageTexture ? {
         size: readonly number[];
         format: T['format'];
@@ -160,7 +164,8 @@ function getAspectsForFormat<T extends GPUTextureFormat>(
     return ['depth', 'stencil'] as AspectsForFormat<T>;
   }
   if (
-    format === 'depth16unorm' || format === 'depth24plus' ||
+    format === 'depth16unorm' ||
+    format === 'depth24plus' ||
     format === 'depth32float'
   ) {
     return ['depth'] as AspectsForFormat<T>;
@@ -233,7 +238,7 @@ export interface TgpuTextureView<
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
 
-  [$gpuValueOf](ctx: ResolutionCtx): Infer<TSchema>;
+  readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
   $: Infer<TSchema>;
 }
@@ -287,9 +292,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
 
     this.#branch = branch;
     this.#formatInfo = textureFormats[format];
-    this.#byteSize = props.size[0] as number *
+    this.#byteSize = (props.size[0] as number) *
       (props.size[1] ?? 1) *
-      (props.size[2] ?? 1) * this.#formatInfo.texelSize;
+      (props.size[2] ?? 1) *
+      this.#formatInfo.texelSize;
     this.aspects = getAspectsForFormat(format);
 
     this[$internal] = {
@@ -439,10 +445,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
       | DataView,
     mipLevel = 0,
   ) {
-    if (
-      source instanceof ArrayBuffer ||
-      ArrayBuffer.isView(source)
-    ) {
+    if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
       this.#writeBufferData(source, mipLevel);
       return;
     }
@@ -549,7 +552,9 @@ class TgpuTextureImpl<TProps extends TextureProps>
     ) {
       throw new Error(
         `Texture size mismatch. Source texture has size ${
-          source.props.size.join('x')
+          source.props.size.join(
+            'x',
+          )
         }, target texture has size ${this.props.size.join('x')}`,
       );
     }
@@ -577,13 +582,11 @@ class TgpuTextureImpl<TProps extends TextureProps>
 }
 
 class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
-  implements TgpuTextureView<T>, SelfResolvable {
+  implements TgpuTextureView<T>, SelfResolvable, TgpuNamable {
+  /** Type-token, not available at runtime */
+  declare readonly [$repr]: Infer<T>;
   readonly [$internal]: TextureViewInternals;
-  readonly [$runtimeResource] = true;
-  readonly [$getNameForward]: TgpuTexture;
-
-  readonly resourceType = 'texture-view';
-  readonly schema: T;
+  readonly resourceType = 'texture-view' as const;
 
   #baseTexture: TgpuTexture;
   #view: GPUTextureView | undefined;
@@ -595,11 +598,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     | undefined;
 
   constructor(
-    schema: T,
+    readonly schema: T,
     baseTexture: TgpuTexture,
     descriptor?: TgpuTextureViewDescriptor,
   ) {
-    this.schema = schema;
     this.#baseTexture = baseTexture;
     this.#descriptor = descriptor;
 
@@ -637,17 +639,27 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         return this.#view;
       },
     };
-    this[$getNameForward] = baseTexture;
   }
 
-  [$gpuValueOf](): Infer<T> {
+  $name(label: string) {
+    setName(this, label);
+    if (this.#view) {
+      this.#view.label = label;
+    }
+    return this;
+  }
+
+  get [$gpuValueOf](): Infer<T> {
+    const schema = this.schema;
+
     return new Proxy(
       {
         [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.schema,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+        get [$ownSnippet]() {
+          return snip(this, schema);
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `${this.toString()}.$`,
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
@@ -655,7 +667,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   get $(): Infer<T> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     throw new Error(
@@ -668,10 +680,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   }
 
   toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+    return `textureView:${getName(this) ?? '<unnamed>'}`;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       isWgslStorageTexture(this.schema)
@@ -688,57 +700,58 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${
-        ctx.resolve(this.schema)
+        ctx.resolve(this.schema).value
       };`,
     );
 
-    return id;
+    return snip(id, this.schema);
   }
 }
 
 export class TgpuLaidOutTextureViewImpl<
   T extends WgslTexture | WgslStorageTexture,
 > implements TgpuTextureView<T>, SelfResolvable {
+  /** Type-token, not available at runtime */
+  declare readonly [$repr]: Infer<T>;
   readonly [$internal] = { unwrap: undefined };
-  readonly [$runtimeResource] = true;
-  readonly [$repr]: T = undefined as unknown as T;
-
-  readonly resourceType = 'texture-view';
-  readonly schema: T;
+  readonly resourceType = 'texture-view' as const;
+  readonly #membership: LayoutMembership;
 
   constructor(
-    schema: T,
-    private readonly _membership: LayoutMembership,
+    readonly schema: T,
+    membership: LayoutMembership,
   ) {
-    this.schema = schema;
-    setName(this, _membership.key);
+    this.#membership = membership;
+    setName(this, membership.key);
   }
 
   toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+    return `textureView:${getName(this) ?? '<unnamed>'}`;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${
-        ctx.resolve(this.schema)
+      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
+        ctx.resolve(this.schema).value
       };`,
     );
 
-    return id;
+    return snip(id, this.schema);
   }
 
-  [$gpuValueOf](): Infer<T> {
+  get [$gpuValueOf](): Infer<T> {
+    const schema = this.schema;
     return new Proxy(
       {
         [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.schema,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+        get [$ownSnippet]() {
+          return snip(this, schema);
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `${this.toString()}.$`,
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
@@ -746,7 +759,7 @@ export class TgpuLaidOutTextureViewImpl<
 
   get $(): Infer<T> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     throw new Error(

@@ -121,7 +121,7 @@ function resolveStructProperty(
   [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData)
+    ctx.resolve(property as AnyWgslData).value
   },\n`;
 }
 
@@ -201,7 +201,7 @@ ${
  * ```
  */
 function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
-  const element = ctx.resolve(array.elementType as AnyWgslData);
+  const element = ctx.resolve(array.elementType as AnyWgslData).value;
 
   return array.elementCount === 0
     ? `array<${element}>`
@@ -213,7 +213,7 @@ function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
     isAttribute(disarray.elementType)
       ? formatToWGSLType[disarray.elementType.format]
       : (disarray.elementType as AnyWgslData),
-  );
+  ).value;
 
   return disarray.elementCount === 0
     ? `array<${element}>`
@@ -242,10 +242,10 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
         isAttribute(data.inner)
           ? formatToWGSLType[data.inner.format]
           : data.inner,
-      );
+      ).value;
     }
 
-    return ctx.resolve(formatToWGSLType[data.type]);
+    return ctx.resolve(formatToWGSLType[data.type]).value;
   }
 
   if (isIdentityType(data)) {
@@ -265,16 +265,16 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (data.type === 'decorated') {
-    return ctx.resolve(data.inner as AnyWgslData);
+    return ctx.resolve(data.inner as AnyWgslData).value;
   }
 
   if (data.type === 'ptr') {
     if (data.addressSpace === 'storage') {
-      return `ptr<storage, ${ctx.resolve(data.inner)}, ${
+      return `ptr<storage, ${ctx.resolve(data.inner).value}, ${
         data.access === 'read-write' ? 'read_write' : data.access
       }>`;
     }
-    return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
+    return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner).value}>`;
   }
 
   if (
