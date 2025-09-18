@@ -42,7 +42,10 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     return false;
   }
 
-  if (isWgslStruct(a) && isWgslStruct(b)) {
+  if (
+    (isWgslStruct(a) && isWgslStruct(b)) ||
+    (isUnstruct(a) && isUnstruct(b))
+  ) {
     const aProps = a.propTypes;
     const bProps = b.propTypes;
     const aKeys = Object.keys(aProps);
@@ -52,15 +55,20 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       return false;
     }
 
-    for (const key of aKeys) {
-      if (!deepEqual(aProps[key], bProps[key])) {
+    for (let i = 0; i < aKeys.length; i++) {
+      const keyA = aKeys[i];
+      const keyB = bKeys[i];
+      if (
+        keyA !== keyB || !keyA || !keyB ||
+        !deepEqual(aProps[keyA], bProps[keyB])
+      ) {
         return false;
       }
     }
     return true;
   }
 
-  if (isWgslArray(a) && isWgslArray(b)) {
+  if ((isWgslArray(a) && isWgslArray(b)) || (isDisarray(a) && isDisarray(b))) {
     return (
       a.elementCount === b.elementCount &&
       deepEqual(a.elementType as AnyData, b.elementType as AnyData)
@@ -107,31 +115,6 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     }
 
     return true;
-  }
-
-  if (isUnstruct(a) && isUnstruct(b)) {
-    const aProps = a.propTypes;
-    const bProps = b.propTypes;
-    const aKeys = Object.keys(aProps);
-    const bKeys = Object.keys(bProps);
-
-    if (aKeys.length !== bKeys.length) {
-      return false;
-    }
-
-    for (const key of aKeys) {
-      if (!deepEqual(aProps[key], bProps[key])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  if (isDisarray(a) && isDisarray(b)) {
-    return (
-      a.elementCount === b.elementCount &&
-      deepEqual(a.elementType as AnyData, b.elementType as AnyData)
-    );
   }
 
   if (isLooseData(a) && isLooseData(b)) {
