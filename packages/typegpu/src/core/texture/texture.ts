@@ -1,4 +1,4 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import type {
   F32,
   I32,
@@ -13,15 +13,19 @@ import { getName, setName } from '../../shared/meta.ts';
 import {
   $getNameForward,
   $internal,
-  $runtimeResource,
-  $wgslDataType,
+  $ownSnippet,
+  $resolve,
 } from '../../shared/symbols.ts';
 import type {
   Default,
   UnionToIntersection,
 } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import type {
+  ResolutionCtx,
+  SelfResolvable,
+  WithOwnSnippet,
+} from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
   channelFormatToSchema,
@@ -452,9 +456,7 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuFixedStorageTextureImpl
-  implements TgpuStorageTexture, SelfResolvable, TgpuNamable {
-  readonly [$runtimeResource] = true;
-  readonly [$wgslDataType]: AnyData;
+  implements TgpuStorageTexture, SelfResolvable, TgpuNamable, WithOwnSnippet {
   readonly [$internal]: TextureViewInternals;
   readonly [$getNameForward]: TgpuTexture<TextureProps>;
   readonly resourceType = 'texture-storage-view';
@@ -471,9 +473,6 @@ class TgpuFixedStorageTextureImpl
     public readonly access: StorageTextureAccess,
     private readonly _texture: TgpuTexture,
   ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {
       unwrap: () => {
         if (!this._view) {
@@ -495,13 +494,17 @@ class TgpuFixedStorageTextureImpl
     this.texelDataType = texelFormatToDataType[this._format];
   }
 
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
+
   $name(label: string): this {
     this._texture.$name(label);
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.getUniqueName(this);
     const { group, binding } = ctx.allocateFixedEntry(
       {
         storageTexture: this._format,
@@ -527,9 +530,7 @@ class TgpuFixedStorageTextureImpl
 }
 
 export class TgpuLaidOutStorageTextureImpl
-  implements TgpuStorageTexture, SelfResolvable {
-  readonly [$runtimeResource] = true;
-  readonly [$wgslDataType]: AnyData;
+  implements TgpuStorageTexture, SelfResolvable, WithOwnSnippet {
   readonly [$internal]: TextureViewInternals;
   readonly resourceType = 'texture-storage-view';
   readonly texelDataType: TexelData;
@@ -540,16 +541,17 @@ export class TgpuLaidOutStorageTextureImpl
     public readonly access: StorageTextureAccess,
     private readonly _membership: LayoutMembership,
   ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {};
     this.texelDataType = texelFormatToDataType[this._format];
     setName(this, _membership.key);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
+
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
@@ -568,8 +570,7 @@ export class TgpuLaidOutStorageTextureImpl
 }
 
 class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, SelfResolvable, TgpuNamable {
-  public readonly [$wgslDataType]: AnyData;
+  implements TgpuSampledTexture, SelfResolvable, TgpuNamable, WithOwnSnippet {
   public readonly [$internal]: TextureViewInternals;
   public readonly [$getNameForward]: TgpuTexture<TextureProps>;
   public readonly resourceType = 'texture-sampled-view';
@@ -585,9 +586,6 @@ class TgpuFixedSampledTextureImpl
       | undefined,
     private readonly _texture: TgpuTexture,
   ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {
       unwrap: () => {
         if (!this._view) {
@@ -607,13 +605,17 @@ class TgpuFixedSampledTextureImpl
     this.channelDataType = texelFormatToChannelType[this._format];
   }
 
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
+
   $name(label: string): this {
     this._texture.$name(label);
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.getUniqueName(this);
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
     const { group, binding } = ctx.allocateFixedEntry(
@@ -646,8 +648,7 @@ class TgpuFixedSampledTextureImpl
 }
 
 export class TgpuLaidOutSampledTextureImpl
-  implements TgpuSampledTexture, SelfResolvable {
-  public readonly [$wgslDataType]: AnyData;
+  implements TgpuSampledTexture, SelfResolvable, WithOwnSnippet {
   public readonly [$internal]: TextureViewInternals;
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
@@ -658,16 +659,17 @@ export class TgpuLaidOutSampledTextureImpl
     private readonly _multisampled: boolean,
     private readonly _membership: LayoutMembership,
   ) {
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    this[$wgslDataType] = this as any;
     this[$internal] = {};
     setName(this, _membership.key);
     this.channelDataType = channelFormatToSchema[sampleType];
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
+  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
+  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
+  [$ownSnippet] = snip(this, this as any);
+
+  [$resolve](ctx: ResolutionCtx): string {
+    const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
     const type = this._multisampled

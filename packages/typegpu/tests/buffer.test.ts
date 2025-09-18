@@ -1,15 +1,15 @@
-import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
-import * as d from '../src/data/index.ts';
-import { getName } from '../src/shared/meta.ts';
-import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { attest } from '@ark/attest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
+import * as d from '../src/data/index.ts';
+import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
+import { getName } from '../src/shared/meta.ts';
 import type {
   IsValidBufferSchema,
   IsValidUniformSchema,
 } from '../src/shared/repr.ts';
+import type { TypedArray } from '../src/shared/utilityTypes.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -39,6 +39,32 @@ describe('TgpuBuffer', () => {
     expect(getName(buffer)).toBe('myBuffer');
     expect(rawBuffer).toBeDefined();
     expect(rawBuffer.label).toBe('myBuffer');
+  });
+
+  it('should properly clear a buffer', ({ root, commandEncoder }) => {
+    const buffer = root.createBuffer(d.u32);
+
+    buffer.clear();
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(rawBuffer).toBeDefined();
+
+    expect(commandEncoder.mock.clearBuffer)
+      .toHaveBeenCalledExactlyOnceWith(rawBuffer);
+  });
+
+  it('should clear a mapped buffer', ({ root }) => {
+    const mappedBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
+    buffer.clear();
+
+    expect(mappedBuffer.getMappedRange).toHaveBeenCalled();
+    expect(mappedBuffer.unmap).not.toHaveBeenCalled();
   });
 
   it('should properly write to buffer', ({ root, device }) => {

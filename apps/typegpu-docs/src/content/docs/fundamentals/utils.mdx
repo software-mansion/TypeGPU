@@ -184,3 +184,85 @@ a batch, just split the batch in two.
 :::danger
 Nested batching is not supported and will result in a runtime error.
 :::
+
+## *console.log*
+
+Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
+Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const callCountMutable = root.createMutable(d.u32, 0);
+const dispatch = prepareDispatch(root, () => {
+  'kernel';
+  callCountMutable.$ += 1;
+  console.log('Call number', callCountMutable.$);
+});
+
+dispatch();
+dispatch();
+
+// Eventually...
+// "[GPU] Call number 1"
+// "[GPU] Call number 2"
+```
+
+Under the hood, TypeGPU translates `console.log` to a series of serializing functions that write the logged arguments to a buffer that is read and deserialized after every draw/dispatch call.
+
+The buffer is of fixed size, which may limit the total amount of information that can be logged; if the buffer overflows, additional logs are dropped.
+If that's an issue, you may specify the size manually when creating the `root` object.
+
+```ts twoslash
+import tgpu, { prepareDispatch } from 'typegpu';
+import * as d from 'typegpu/data';
+
+const presentationFormat = undefined as any;
+const canvas = undefined as any;
+const context = canvas.getContext('webgpu') as any;
+// ---cut---
+const root = await tgpu.init({
+  unstable_logOptions: {
+    logCountLimit: 32,
+    logSizeLimit: 8, // in bytes, enough to fit 2*u32
+  },
+});
+
+/* vertex shader */
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  // this log fits in 8 bytes
+  // static strings do not count towards the serialized log size
+  console.log('X:', d.u32(pos.x), 'Y:', d.u32(pos.y));
+  return d.vec4f(0, 1, 1, 1);
+});
+
+/* pipeline creation and draw call */
+```
+
+:::note
+The logs are written to console only after the dispatch finishes and the buffer is read.
+This may happen with a noticeable delay.
+:::
+
+:::caution
+When using `console.log`, atomic operations are injected into the WGSL code to safely synchronize logging from multiple threads.
+This synchronization can introduce overhead and significantly impact shader performance.
+:::
+
+There are some limitations (some of which we intend to alleviate in the future):
+
+- `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
+Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
+- `console.log` only works in fragment and compute shaders.
+This is due to [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
+- TypeGPU needs to handle every logged data type individually.
+Currently, the only supported types are `bool`, `u32`, `vec2u`, `vec3u` and `vec4u`.
+- `console.log` currently does not support template literals and string substitutions.
+- Other `console` methods like `clear` or `warn` are not yet supported.

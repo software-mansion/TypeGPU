@@ -12,7 +12,6 @@ import type {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type { NameRegistry } from '../../nameRegistry.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -32,6 +31,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
@@ -621,6 +621,8 @@ export interface TgpuRoot extends Unwrapper {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 }
 export interface TgpuRootInternals {
+  /** */
+  logOptions: LogGeneratorOptions;
   /**
    * This state is used to determine if we should submit command buffer immediately to the device queue.
    * Also, it holds performance callbacks to invoke after flushing.
@@ -646,7 +648,7 @@ export interface TgpuRootInternals {
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly nameRegistry: NameRegistry;
+  readonly nameRegistrySetting: 'strict' | 'random';
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
