@@ -1,17 +1,9 @@
-import tgpu from 'typegpu';
 import * as THREE from 'three/webgpu';
-import * as tgpu3 from '@typegpu/three';
+import { toTSL, uv } from '@typegpu/three';
 import * as d from 'typegpu/data';
-import * as TSL from 'three/tsl';
+// import * as TSL from 'three/tsl';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-
-// const tgpuMaterial = new tgpu3.TypeGPUMaterial(
-//   tgpu.fn([d.vec2f], d.vec4f)((uv) => {
-//     return d.vec4f(uv.x, uv.y, 0.5, 1);
-//   }),
-//   [uv()],
-// );
 
 const renderer = new THREE.WebGPURenderer({ canvas });
 await renderer.init();
@@ -30,14 +22,12 @@ camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
 
-// material.colorNode = TSL.uv().x.add(TSL.time).mul(5).fract();
+// material.colorNode = TSL.uv().x.add(hello).mul(5).fract();
 
-const uv = tgpu3.fromTSL(TSL.uv(), { type: d.vec2f });
-material.colorNode = tgpu3.toTSL(
-  tgpu.fn([], d.vec4f)(() => {
-    return d.vec4f(uv.$, 0.5, 1);
-  }),
-);
+material.colorNode = toTSL(() => {
+  'kernel';
+  return d.vec4f(uv.$, 0.5, 1);
+});
 
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
