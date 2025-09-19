@@ -127,7 +127,6 @@ export const serializerMap: SerializerMap = {
 };
 
 // rename the functions and add externals
-// (except for the `dataBuffer` since it is not known yet)
 for (const [name, serializer] of Object.entries(serializerMap)) {
   serializer.$name(
     `serialize${(name[0] as string).toLocaleUpperCase()}${name.slice(1)}`,
@@ -149,7 +148,7 @@ function createCompoundSerializer(
   const usedSerializers: Record<string, unknown> = {};
 
   const shell = fn(argTypes);
-  const header = `(${argTypes.map((_, i) => `_arg_${i}`).join(', ')})`;
+  const header = generateHeader(argTypes);
   const body = argTypes.map((arg, i) => {
     const serializer = serializerMap[arg.type];
     if (!serializer) {
@@ -180,9 +179,9 @@ export function createLoggingFunction(
   }
 
   const compoundSerializer = createCompoundSerializer(argTypes, dataBuffer);
-  const args = `${argTypes.map((_, i) => `_arg_${i}`).join(', ')}`;
+  const args = generateHeader(argTypes);
 
-  return fn(argTypes)`(${args}) {
+  return fn(argTypes)`${args} {
   dataBlockIndex = atomicAdd(&indexBuffer, 1);
   if (dataBlockIndex >= ${logOptions.logCountLimit}) {
     return;
@@ -190,7 +189,7 @@ export function createLoggingFunction(
   dataBuffer[dataBlockIndex].id = ${id};
   dataByteIndex = 0;
 
-  compoundSerializer(${args});
+  compoundSerializer${args};
 }`.$uses({
       indexBuffer,
       dataBuffer,
