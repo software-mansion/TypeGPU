@@ -165,4 +165,17 @@ describe('shellless', () => {
       }"
     `);
   });
+
+  it('resolves when accepting no arguments', () => {
+    const main = () => {
+      'kernel';
+      return 4.1;
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn item_0() -> f32 {
+        return 4.1;
+      }"
+    `);
+  });
 });
