@@ -2,9 +2,26 @@ import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';
-import { u32 } from '../../data/numeric.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
+import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { vec3u } from '../../data/vector.ts';
+import {
+  vec2b,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../../data/vector.ts';
 import {
   AnyWgslData,
   Atomic,
@@ -27,103 +44,139 @@ type SerializerMap = {
 const dataBlockIndex = privateVar(u32, 0);
 const dataByteIndex = privateVar(u32, 0);
 const dataBufferSlot = slot();
-
 const nextByteIndex = fn([], u32)`() {
   let i = dataByteIndex;
   dataByteIndex = dataByteIndex + 1u;
   return i;
 }`.$uses({ dataByteIndex });
 
+const nextU32 = `dataBuffer[dataBlockIndex].serializedData[nextByteIndex()]`;
+
 export const serializerMap: SerializerMap = {
-  //   f32: fn([f32], arrayOf(u32, 1))`(n) => {
-  //   return array<u32, 1>(bitcast<u32>(n));
-  // }`,
-  //   f16: fn([f16], arrayOf(u32, 1))`(n) => {
-  //   return array<u32, 1>(pack2x16float(vec2f(f32(n))));
-  // }`,
-  //   i32: fn([i32], arrayOf(u32, 1))`(n) => {
-  //   return array<u32, 1>(bitcast<u32>(n));
-  // }`,
+  f32: fn([f32], Void)`(n) => {
+  ${nextU32} = bitcast<u32>(n);
+}`,
+  f16: fn([f16], Void)`(n) => {
+  ${nextU32} = pack2x16float(vec2f(f32(n), 0.0));
+}`,
+  i32: fn([i32], Void)`(n) => {
+  ${nextU32} = bitcast<u32>(n);
+}`,
   u32: fn([u32], Void)`(n) => {
-  dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+  ${nextU32} = n;
 }`,
-  //   bool: fn([bool], arrayOf(u32, 1))`(b) => {
-  //   return array<u32, 1>(u32(b));
-  // }`,
-  //   vec2f: fn([vec2f], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
-  // }`,
-  //   vec3f: fn([vec3f], arrayOf(u32, 3))`(v) => {
-  //   return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
-  // }`,
-  //   vec4f: fn([vec4f], arrayOf(u32, 4))`(v) => {
-  //   return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
-  // }`,
-  //   vec2h: fn([vec2h], arrayOf(u32, 1))`(v) => {
-  //   return array<u32, 1>(pack2x16float(vec2f(f32(v.x), f32(v.y))));
-  // }`,
-  //   vec3h: fn([vec3h], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(
-  //     pack2x16float(vec2f(f32(v.x), f32(v.y))),
-  //     pack2x16float(vec2f(f32(v.z), 0))
-  //   );
-  // }`,
-  //   vec4h: fn([vec4h], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(
-  //     pack2x16float(vec2f(f32(v.x), f32(v.y))),
-  //     pack2x16float(vec2f(f32(v.z), f32(v.w)))
-  //   );
-  // }`,
-  //   vec2i: fn([vec2i], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(bitcast<u32>(v.x), bitcast<u32>(v.y));
-  // }`,
-  //   vec3i: fn([vec3i], arrayOf(u32, 3))`(v) => {
-  //   return array<u32, 3>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z));
-  // }`,
-  //   vec4i: fn([vec4i], arrayOf(u32, 4))`(v) => {
-  //   return array<u32, 4>(bitcast<u32>(v.x), bitcast<u32>(v.y), bitcast<u32>(v.z), bitcast<u32>(v.w));
-  // }`,
-  //   vec2u: fn([vec2u], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(v.x, v.y);
-  // }`,
-  vec3u: fn([vec3u])`(v) => {
-  dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.x;
-  dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.y;
-  dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.z;
+  bool: fn([bool], Void)`(b) => {
+  ${nextU32} = u32(b);
 }`,
-  //   vec4u: fn([vec4u], arrayOf(u32, 4))`(v) => {
-  //   return array<u32, 4>(v.x, v.y, v.z, v.w);
-  // }`,
-  //   'vec2<bool>': fn([vec2b], arrayOf(u32, 2))`(v) => {
-  //   return array<u32, 2>(u32(v.x), u32(v.y));
-  // }`,
-  //   'vec3<bool>': fn([vec3b], arrayOf(u32, 3))`(v) => {
-  //   return array<u32, 3>(u32(v.x), u32(v.y), u32(v.z));
-  // }`,
-  //   'vec4<bool>': fn([vec4b], arrayOf(u32, 4))`(v) => {
-  //   return array<u32, 4>(u32(v.x), u32(v.y), u32(v.z), u32(v.w));
-  // }`,
-  //   mat2x2f: fn([mat2x2f], arrayOf(u32, 4))`(m) => {
-  //   return array<u32, 4>(
-  //     bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]),
-  //     bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1])
-  //   );
-  // }`,
-  //   mat3x3f: fn([mat3x3f], arrayOf(u32, 12))`(m) => {
-  //   return array<u32, 12>(
-  //     bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), 0,
-  //     bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), 0,
-  //     bitcast<u32>(m[2][0]), bitcast<u32>(m[2][1]), bitcast<u32>(m[2][2]), 0
-  //   );
-  // }`,
-  //   mat4x4f: fn([mat4x4f], arrayOf(u32, 16))`(m) => {
-  //   return array<u32, 16>(
-  //     bitcast<u32>(m[0][0]), bitcast<u32>(m[0][1]), bitcast<u32>(m[0][2]), bitcast<u32>(m[0][3]),
-  //     bitcast<u32>(m[1][0]), bitcast<u32>(m[1][1]), bitcast<u32>(m[1][2]), bitcast<u32>(m[1][3]),
-  //     bitcast<u32>(m[2][0]), bitcast<u32>(m[2][1]), bitcast<u32>(m[2][2]), bitcast<u32>(m[2][3]),
-  //     bitcast<u32>(m[3][0]), bitcast<u32>(m[3][1]), bitcast<u32>(m[3][2]), bitcast<u32>(m[3][3])
-  //   );
-  // }`,
+  vec2f: fn([vec2f], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+}`,
+  vec3f: fn([vec3f], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+  ${nextU32} = bitcast<u32>(v.z);
+}`,
+  vec4f: fn([vec4f], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+  ${nextU32} = bitcast<u32>(v.z);
+  ${nextU32} = bitcast<u32>(v.w);
+}`,
+  vec2h: fn([vec2h], Void)`(v) => {
+  ${nextU32} = pack2x16float(vec2f(f32(v.x), f32(v.y)));
+}`,
+  vec3h: fn([vec3h], Void)`(v) => {
+  ${nextU32} = pack2x16float(vec2f(f32(v.x), f32(v.y)));
+  ${nextU32} = pack2x16float(vec2f(f32(v.z), 0.0));
+}`,
+  vec4h: fn([vec4h], Void)`(v) => {
+  ${nextU32} = pack2x16float(vec2f(f32(v.x), f32(v.y)));
+  ${nextU32} = pack2x16float(vec2f(f32(v.z), f32(v.w)));
+}`,
+  vec2i: fn([vec2i], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+}`,
+  vec3i: fn([vec3i], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+  ${nextU32} = bitcast<u32>(v.z);
+}`,
+  vec4i: fn([vec4i], Void)`(v) => {
+  ${nextU32} = bitcast<u32>(v.x);
+  ${nextU32} = bitcast<u32>(v.y);
+  ${nextU32} = bitcast<u32>(v.z);
+  ${nextU32} = bitcast<u32>(v.w);
+}`,
+  vec2u: fn([vec2u], Void)`(v) => {
+  ${nextU32} = v.x;
+  ${nextU32} = v.y;
+}`,
+  vec3u: fn([vec3u], Void)`(v) => {
+  ${nextU32} = v.x;
+  ${nextU32} = v.y;
+  ${nextU32} = v.z;
+}`,
+  vec4u: fn([vec4u], Void)`(v) => {
+  ${nextU32} = v.x;
+  ${nextU32} = v.y;
+  ${nextU32} = v.z;
+  ${nextU32} = v.w;
+}`,
+  'vec2<bool>': fn([vec2b], Void)`(v) => {
+  ${nextU32} = u32(v.x);
+  ${nextU32} = u32(v.y);
+}`,
+  'vec3<bool>': fn([vec3b], Void)`(v) => {
+  ${nextU32} = u32(v.x);
+  ${nextU32} = u32(v.y);
+  ${nextU32} = u32(v.z);
+}`,
+  'vec4<bool>': fn([vec4b], Void)`(v) => {
+  ${nextU32} = u32(v.x);
+  ${nextU32} = u32(v.y);
+  ${nextU32} = u32(v.z);
+  ${nextU32} = u32(v.w);
+}`,
+  mat2x2f: fn([mat2x2f], Void)`(m) => {
+  ${nextU32} = bitcast<u32>(m[0][0]);
+  ${nextU32} = bitcast<u32>(m[0][1]);
+  ${nextU32} = bitcast<u32>(m[1][0]);
+  ${nextU32} = bitcast<u32>(m[1][1]);
+}`,
+  mat3x3f: fn([mat3x3f], Void)`(m) => {
+  ${nextU32} = bitcast<u32>(m[0][0]);
+  ${nextU32} = bitcast<u32>(m[0][1]);
+  ${nextU32} = bitcast<u32>(m[0][2]);
+  ${nextU32} = 0u;
+  ${nextU32} = bitcast<u32>(m[1][0]);
+  ${nextU32} = bitcast<u32>(m[1][1]);
+  ${nextU32} = bitcast<u32>(m[1][2]);
+  ${nextU32} = 0u;
+  ${nextU32} = bitcast<u32>(m[2][0]);
+  ${nextU32} = bitcast<u32>(m[2][1]);
+  ${nextU32} = bitcast<u32>(m[2][2]);
+  ${nextU32} = 0u;
+}`,
+  mat4x4f: fn([mat4x4f], Void)`(m) => {
+  ${nextU32} = bitcast<u32>(m[0][0]);
+  ${nextU32} = bitcast<u32>(m[0][1]);
+  ${nextU32} = bitcast<u32>(m[0][2]);
+  ${nextU32} = bitcast<u32>(m[0][3]);
+  ${nextU32} = bitcast<u32>(m[1][0]);
+  ${nextU32} = bitcast<u32>(m[1][1]);
+  ${nextU32} = bitcast<u32>(m[1][2]);
+  ${nextU32} = bitcast<u32>(m[1][3]);
+  ${nextU32} = bitcast<u32>(m[2][0]);
+  ${nextU32} = bitcast<u32>(m[2][1]);
+  ${nextU32} = bitcast<u32>(m[2][2]);
+  ${nextU32} = bitcast<u32>(m[2][3]);
+  ${nextU32} = bitcast<u32>(m[3][0]);
+  ${nextU32} = bitcast<u32>(m[3][1]);
+  ${nextU32} = bitcast<u32>(m[3][2]);
+  ${nextU32} = bitcast<u32>(m[3][3]);
+}`,
 };
 
 // rename the functions and add externals
@@ -186,9 +239,9 @@ export function createLoggingFunction(
   }
 
   const compoundSerializer = createCompoundSerializer(argTypes, dataBuffer);
-  const args = generateHeader(argTypes);
+  const header = generateHeader(argTypes);
 
-  return fn(argTypes)`${args} {
+  return fn(argTypes)`${header} {
   dataBlockIndex = atomicAdd(&indexBuffer, 1);
   if (dataBlockIndex >= ${logOptions.logCountLimit}) {
     return;
@@ -196,7 +249,7 @@ export function createLoggingFunction(
   dataBuffer[dataBlockIndex].id = ${id};
   dataByteIndex = 0;
 
-  compoundSerializer${args};
+  compoundSerializer${header};
 }`.$uses({
       indexBuffer,
       dataBuffer,
