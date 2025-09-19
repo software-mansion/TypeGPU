@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { toTSL, uv } from '@typegpu/three';
+import { time, toTSL, uv } from '@typegpu/three';
+import { perlin3d } from '@typegpu/noise';
 import * as d from 'typegpu/data';
+import { tanh } from 'typegpu/std';
 // import * as TSL from 'three/tsl';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -22,11 +24,11 @@ camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
 
-// material.colorNode = TSL.uv().x.add(hello).mul(5).fract();
-
 material.colorNode = toTSL(() => {
   'kernel';
-  return d.vec4f(uv.$, 0.5, 1);
+  const coords = uv.$.mul(2);
+  const pattern = perlin3d.sample(d.vec3f(coords, time.$ * 0.2));
+  return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
 });
 
 const mesh = new THREE.Mesh(
@@ -46,9 +48,12 @@ const resizeObserver = new ResizeObserver((entries) => {
 });
 resizeObserver.observe(canvas);
 
-renderer.setAnimationLoop(() => {
-  mesh.rotation.x += 0.01;
-  mesh.rotation.y += 0.01;
+let prevTime: number | undefined;
+renderer.setAnimationLoop((time) => {
+  const deltaTime = (time - (prevTime ?? time)) * 0.001;
+  prevTime = time;
+  mesh.rotation.x += 0.2 * deltaTime;
+  mesh.rotation.y += 0.2 * deltaTime;
   renderer.render(scene, camera);
 });
 
