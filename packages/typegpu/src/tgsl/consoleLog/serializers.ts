@@ -25,6 +25,7 @@ import {
 import {
   AnyWgslData,
   Atomic,
+  isWgslStruct,
   U32,
   Void,
   WgslArray,
@@ -198,8 +199,17 @@ function getSerializer(
   dataType: AnyWgslData,
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
 ) {
-  if (serializerMap[dataType.type]) {
-    return serializerMap[dataType.type];
+  const maybeSerializer = serializerMap[dataType.type];
+  if (maybeSerializer) {
+    return maybeSerializer;
+  }
+  if (isWgslStruct(dataType)) {
+    const props = Object.keys(dataType.propTypes);
+    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const propSerializer = createCompoundSerializer(propTypes, dataBuffer);
+    return fn([dataType])`(arg) {
+      propSerializer(${props.map((prop) => `arg.${prop}`).join(', ')});
+    }`.$uses({ propSerializer });
   }
   throw new Error(`Cannot serialize data of type ${dataType.type}`);
 }

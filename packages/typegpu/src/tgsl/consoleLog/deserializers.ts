@@ -17,8 +17,13 @@ import {
   vec4i,
   vec4u,
 } from '../../data/vector.ts';
-import { type AnyWgslData, isWgslData } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  isWgslData,
+  isWgslStruct,
+} from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
+import { safeStringify } from '../../shared/safeStringify.ts';
 import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
 import type { LogResources } from './types.ts';
@@ -94,6 +99,26 @@ const deserializerMap: DeserializerMap = {
 
 function deserialize(
   data: Uint32Array,
+  dataType: AnyWgslData,
+): unknown {
+  const maybeDeserializer = deserializerMap[dataType.type];
+  if (maybeDeserializer) {
+    return maybeDeserializer(data);
+  }
+  if (isWgslStruct(dataType)) {
+    const props = Object.keys(dataType.propTypes);
+    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const decodedProps = deserializeCompound(data, propTypes);
+    return Object.fromEntries(
+      props.map((key, index) => [key, decodedProps[index]]),
+    );
+  }
+
+  throw new Error(`Cannot serialize data of type ${dataType.type}`);
+}
+
+function deserializeCompound(
+  data: Uint32Array,
   logInfo: (AnyWgslData | string)[],
 ): unknown[] {
   let index = 0;
@@ -101,12 +126,8 @@ function deserialize(
     if (!isWgslData(info)) {
       return info;
     }
-    const deserializer = deserializerMap[info.type];
-    if (!deserializer) {
-      throw new Error(`Cannot deserialize data of type ${info.type}`);
-    }
     const size = Math.ceil(sizeOf(info) / 4);
-    const value = deserializer(data.subarray(index, index + size));
+    const value = deserialize(data.subarray(index, index + size), info);
     index += size;
     return value;
   });
@@ -116,7 +137,8 @@ export function deserializeAndStringify(
   serializedData: Uint32Array,
   argTypes: (AnyWgslData | string)[],
 ): string {
-  return deserialize(serializedData, argTypes).join(' ');
+  return deserializeCompound(serializedData, argTypes)
+    .map((e) => safeStringify(e)).join(' ');
 }
 
 /**

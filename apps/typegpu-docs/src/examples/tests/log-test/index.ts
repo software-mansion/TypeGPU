@@ -88,6 +88,16 @@ export const controls = {
         }
       })(),
   },
+  'Compound types': {
+    onButtonClick: () => {
+      const SimpleStruct = d.struct({ vec: d.vec3u, num: d.u32 });
+      prepareDispatch(root, () => {
+        'kernel';
+        const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
+        console.log(simpleStruct);
+      })();
+    },
+  },
   'Two threads': {
     onButtonClick: () =>
       prepareDispatch(root, (x) => {
