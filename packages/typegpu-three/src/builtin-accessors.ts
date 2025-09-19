@@ -7,4 +7,4 @@ import { fromTSL } from './typegpu-node.ts';
 // };
 export const uv = fromTSL(TSL.uv(), { type: d.vec2f });
 
-export const time = fromTSL(TSL.time, { type: d.vec2f });
+export const time = fromTSL(TSL.time, { type: d.f32 });
