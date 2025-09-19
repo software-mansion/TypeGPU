@@ -60,6 +60,19 @@ export const sdBoxFrame3d = tgpu
   });
 
 /**
+ * Signed distance function for a 3D line segment
+ * @param p Point to evaluate
+ * @param a First endpoint of the line
+ * @param b Second endpoint of the line
+ */
+export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((p, a, b) => {
+  const pa = sub(p, a);
+  const ba = sub(b, a);
+  const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
+  return length(sub(pa, ba.mul(h)));
+});
+
+/**
  * Signed distance function for an infinite plane
  * @param p Point to evaluate
  * @param n Normal vector of the plane (must be normalized)
