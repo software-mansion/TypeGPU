@@ -91,7 +91,11 @@ class TgpuFnNode<T> extends THREE.CodeNode {
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
       );
-      const lastFnStart = code.lastIndexOf('\nfn') ?? 0;
+      let lastFnStart = code.lastIndexOf('\nfn');
+      if (lastFnStart === -1) {
+        // We're starting with the function declaration
+        lastFnStart = 0;
+      }
       // Including code that was resolved before the function as another node
       // that this node depends on
       const priors = TSL.code(code.slice(0, lastFnStart) ?? '');
