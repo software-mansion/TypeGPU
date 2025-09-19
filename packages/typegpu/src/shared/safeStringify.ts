@@ -11,3 +11,21 @@ export function safeStringify(item: unknown): string {
     return '<invalid json>';
   }
 }
+
+export function niceStringify(item: unknown): string {
+  const asString = String(item);
+  if (asString !== '[object Object]') {
+    return asString;
+  }
+
+  if (item && typeof item === 'object') {
+    return `{ ${
+      Object.entries(item).map(([key, value]) =>
+        `${key}: ${niceStringify(value)}`
+      ).join(', ')
+    } }`;
+  }
+
+  console.error('Error stringifying item:', item);
+  return '<invalid item>';
+}
