@@ -91,10 +91,16 @@ export const controls = {
   'Compound types': {
     onButtonClick: () => {
       const SimpleStruct = d.struct({ vec: d.vec3u, num: d.u32 });
+      const ComplexStruct = d.struct({ nested: SimpleStruct, bool: d.bool });
       prepareDispatch(root, () => {
         'kernel';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
+        const complexStruct = ComplexStruct({
+          nested: simpleStruct,
+          bool: true,
+        });
+        console.log(complexStruct);
       })();
     },
   },
