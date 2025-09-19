@@ -33,51 +33,52 @@ const unpack = (n: number | undefined) => unpack2x16float(n ?? 0);
 
 type DeserializerMap = {
   [K in AnyWgslData['type']]?: (
-    data: number[],
+    data: Uint32Array,
   ) => Infer<Extract<AnyWgslData, { type: K }>>;
 };
 
 const deserializerMap: DeserializerMap = {
-  f32: (d: number[]) => toF(d[0]),
-  f16: (d: number[]) => unpack(d[0]).x,
-  i32: (d: number[]) => toI(d[0]),
-  u32: (d: number[]) => d[0] ?? 0,
-  bool: (d: number[]) => !!d[0],
-  vec2f: (d: number[]) => vec2f(toF(d[0]), toF(d[1])),
-  vec3f: (d: number[]) => vec3f(toF(d[0]), toF(d[1]), toF(d[2])),
-  vec4f: (d: number[]) => vec4f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
-  vec2h(d: number[]) {
+  f32: (d: Uint32Array) => toF(d[0]),
+  f16: (d: Uint32Array) => unpack(d[0]).x,
+  i32: (d: Uint32Array) => toI(d[0]),
+  u32: (d: Uint32Array) => d[0] ?? 0,
+  bool: (d: Uint32Array) => !!d[0],
+  vec2f: (d: Uint32Array) => vec2f(toF(d[0]), toF(d[1])),
+  vec3f: (d: Uint32Array) => vec3f(toF(d[0]), toF(d[1]), toF(d[2])),
+  vec4f: (d: Uint32Array) => vec4f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  vec2h(d: Uint32Array) {
     const xyVec = unpack(d[0]);
     return vec2h(xyVec.x, xyVec.y);
   },
-  vec3h(d: number[]) {
+  vec3h(d: Uint32Array) {
     const xyVec = unpack(d[0]);
     const zVec = unpack(d[1]);
     return vec3h(xyVec.x, xyVec.y, zVec.x);
   },
-  vec4h(d: number[]) {
+  vec4h(d: Uint32Array) {
     const xyVec = unpack(d[0]);
     const zwVec = unpack(d[1]);
     return vec4h(xyVec.x, xyVec.y, zwVec.x, zwVec.y);
   },
-  vec2i: (d: number[]) => vec2i(toI(d[0]), toI(d[1])),
-  vec3i: (d: number[]) => vec3i(toI(d[0]), toI(d[1]), toI(d[2])),
-  vec4i: (d: number[]) => vec4i(toI(d[0]), toI(d[1]), toI(d[2]), toI(d[3])),
-  vec2u: (d: number[]) => vec2u(d[0] ?? 0, d[1] ?? 0),
-  vec3u: (d: number[]) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
-  vec4u: (d: number[]) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
-  'vec2<bool>': (d: number[]) => vec2b(!!d[0], !!d[1]),
-  'vec3<bool>': (d: number[]) => vec3b(!!d[0], !!d[1], !!d[2]),
-  'vec4<bool>': (d: number[]) => vec4b(!!d[0], !!d[1], !!d[2], !!d[3]),
-  mat2x2f: (d: number[]) => mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
-  mat3x3f: (d: number[]) =>
+  vec2i: (d: Uint32Array) => vec2i(toI(d[0]), toI(d[1])),
+  vec3i: (d: Uint32Array) => vec3i(toI(d[0]), toI(d[1]), toI(d[2])),
+  vec4i: (d: Uint32Array) => vec4i(toI(d[0]), toI(d[1]), toI(d[2]), toI(d[3])),
+  vec2u: (d: Uint32Array) => vec2u(d[0] ?? 0, d[1] ?? 0),
+  vec3u: (d: Uint32Array) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
+  vec4u: (d: Uint32Array) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
+  'vec2<bool>': (d: Uint32Array) => vec2b(!!d[0], !!d[1]),
+  'vec3<bool>': (d: Uint32Array) => vec3b(!!d[0], !!d[1], !!d[2]),
+  'vec4<bool>': (d: Uint32Array) => vec4b(!!d[0], !!d[1], !!d[2], !!d[3]),
+  mat2x2f: (d: Uint32Array) =>
+    mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  mat3x3f: (d: Uint32Array) =>
     // deno-fmt-ignore
     mat3x3f(
       toF(d[0]), toF(d[1]), toF(d[2]),
       toF(d[4]), toF(d[5]), toF(d[6]),
       toF(d[8]), toF(d[9]), toF(d[10]),
     ),
-  mat4x4f: (d: number[]) =>
+  mat4x4f: (d: Uint32Array) =>
     // deno-fmt-ignore
     mat4x4f(
       toF(d[0]),  toF(d[1]),  toF(d[2]),  toF(d[3]),
@@ -92,7 +93,7 @@ const deserializerMap: DeserializerMap = {
 // -------
 
 function deserialize(
-  data: number[],
+  data: Uint32Array,
   logInfo: (AnyWgslData | string)[],
 ): unknown[] {
   let index = 0;
@@ -105,14 +106,14 @@ function deserialize(
       throw new Error(`Cannot deserialize data of type ${info.type}`);
     }
     const size = Math.ceil(sizeOf(info) / 4);
-    const value = deserializer(data.slice(index, index + size));
+    const value = deserializer(data.subarray(index, index + size));
     index += size;
     return value;
   });
 }
 
 export function deserializeAndStringify(
-  serializedData: number[],
+  serializedData: Uint32Array,
   argTypes: (AnyWgslData | string)[],
 ): string {
   return deserialize(serializedData, argTypes).join(' ');
@@ -140,7 +141,10 @@ export function logDataFromGPU(resources: LogResources) {
       .filter((e) => e.id)
       .map(({ id, serializedData }) => {
         const argTypes = logIdToArgTypes.get(id) as (AnyWgslData | string)[];
-        const result = deserializeAndStringify(serializedData, argTypes);
+        const result = deserializeAndStringify(
+          new Uint32Array(serializedData),
+          argTypes,
+        );
         console.log(
           `${options.messagePrefix}${result}`,
           'background: #936ff5; color: white;',
