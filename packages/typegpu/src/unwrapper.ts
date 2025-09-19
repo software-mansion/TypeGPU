@@ -6,13 +6,7 @@ import type {
   TgpuComparisonSampler,
   TgpuSampler,
 } from './core/sampler/sampler.ts';
-import type {
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
-  TgpuTexture,
-  TgpuWriteonlyTexture,
-} from './core/texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData } from './data/dataTypes.ts';
 import type {
@@ -27,16 +21,11 @@ export interface Unwrapper {
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
-  unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(
-    resource:
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture,
-  ): GPUTextureView;
+  unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
   unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
+  // biome-ignore lint/suspicious/noExplicitAny: we need to supress validation
+  unwrap(resource: TgpuTexture<any>): GPUTexture;
 }

@@ -57,7 +57,7 @@ export function mockResizeObserver() {
   );
 }
 
-export function mockImageLoading() {
+export function mockImageLoading({ width = 2, height = 2 } = {}) {
   vi.stubGlobal('fetch', async (url: string) => {
     if (
       url.includes('.jpg') || url.includes('.png') ||
@@ -74,14 +74,14 @@ export function mockImageLoading() {
 
   vi.stubGlobal('createImageBitmap', async () => {
     return {
-      width: 2,
-      height: 2,
+      width,
+      height,
       close: () => {},
       getImageData: () => {
         return {
           data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
-          width: 2,
-          height: 2,
+          width,
+          height,
         };
       },
     } as ImageBitmap;
