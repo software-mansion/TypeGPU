@@ -1,5 +1,6 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
+import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';
 import { u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
@@ -25,6 +26,7 @@ type SerializerMap = {
 
 const dataBlockIndex = privateVar(u32, 0);
 const dataByteIndex = privateVar(u32, 0);
+const dataBufferSlot = slot();
 
 const nextByteIndex = fn([], u32)`() {
   let i = dataByteIndex;
@@ -129,7 +131,7 @@ export const serializerMap: SerializerMap = {
 for (const [name, serializer] of Object.entries(serializerMap)) {
   serializer.$name(
     `serialize${(name[0] as string).toLocaleUpperCase()}${name.slice(1)}`,
-  ).$uses({ dataBlockIndex, nextByteIndex });
+  ).$uses({ dataBlockIndex, nextByteIndex, dataBuffer: dataBufferSlot });
 }
 
 // -------
@@ -153,7 +155,10 @@ function createCompoundSerializer(
     if (!serializer) {
       throw new Error(`Cannot serialize data of type ${arg.type}`);
     }
-    usedSerializers[`serializer${i}`] = serializer.$uses({ dataBuffer });
+    usedSerializers[`serializer${i}`] = (serializer as TgpuFn).with(
+      dataBufferSlot,
+      dataBuffer,
+    );
     return `  serializer${i}(_arg_${i});`;
   }).join('\n');
 
