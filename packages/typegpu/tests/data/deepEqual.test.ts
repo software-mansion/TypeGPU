@@ -11,6 +11,7 @@ import {
   location,
   mat2x2f,
   mat3x3f,
+  size,
   struct,
   u32,
   unstruct,
@@ -99,11 +100,14 @@ describe('deepEqual', () => {
     const decorated3 = align(8, f32);
     const decorated4 = align(16, u32);
     const decorated5 = location(0, f32);
+    const decorated6 = size(8, align(16, u32));
+    const decorated7 = align(16, size(8, u32));
 
     expect(deepEqual(decorated1, decorated2)).toBe(true);
     expect(deepEqual(decorated1, decorated3)).toBe(false);
     expect(deepEqual(decorated1, decorated4)).toBe(false);
     expect(deepEqual(decorated1, decorated5)).toBe(false);
+    expect(deepEqual(decorated6, decorated7)).toBe(false); // decorator order should matter
   });
 
   it('compares pointer types', () => {

@@ -98,8 +98,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       return false;
     }
 
-    // Create comparable string representations for each attribute and sort them
-    // to handle cases where attributes are in a different order.
+    // Create comparable string representations for each attribute
     const getAttrKey = (attr: unknown): string => {
       const anyAttr = attr as AnyAttribute;
       return `${anyAttr.type}(${(anyAttr.params ?? []).join(',')})`;
