@@ -141,6 +141,16 @@ function generateHeader(argTypes: AnyWgslData[]): string {
   return `(${argTypes.map((_, i) => `_arg_${i}`).join(', ')})`;
 }
 
+function getSerializer(
+  dataType: AnyWgslData,
+  dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
+) {
+  if (serializerMap[dataType.type]) {
+    return serializerMap[dataType.type];
+  }
+  throw new Error(`Cannot serialize data of type ${dataType.type}`);
+}
+
 function createCompoundSerializer(
   argTypes: AnyWgslData[],
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
@@ -150,10 +160,7 @@ function createCompoundSerializer(
   const shell = fn(argTypes);
   const header = generateHeader(argTypes);
   const body = argTypes.map((arg, i) => {
-    const serializer = serializerMap[arg.type];
-    if (!serializer) {
-      throw new Error(`Cannot serialize data of type ${arg.type}`);
-    }
+    const serializer = getSerializer(arg, dataBuffer);
     usedSerializers[`serializer${i}`] = (serializer as TgpuFn).with(
       dataBufferSlot,
       dataBuffer,
