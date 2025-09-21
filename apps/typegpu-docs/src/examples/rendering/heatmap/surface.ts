@@ -56,18 +56,16 @@ export const createSurface = (
 
   const { scalerX, scalerY, scalerZ, colorCallback } = drawer;
 
-  const zs = scalerZ.scale(
-    Array.from({ length: n }, (_, i) => zRange[0] + i * dz),
-  );
-  const xs = scalerX.scale(
-    Array.from({ length: m }, (_, j) => xRange[0] + j * dx),
-  );
+  const zs = Array.from({ length: n }, (_, i) => zRange[0] + i * dz);
+  const xs = Array.from({ length: m }, (_, j) => xRange[0] + j * dx);
+  const zsScaled = scalerZ.scale(zs);
+  const xsScaled = scalerX.scale(xs);
 
-  const vertices = zs.flatMap((z) =>
-    xs.map((x) => {
+  const vertices = zs.flatMap((z, i) =>
+    xs.map((x, j) => {
       const y = yCallback(x, z);
       return {
-        position: d.vec4f(x, y, z, 1),
+        position: d.vec4f(xsScaled[j], y, zsScaled[i], 1),
         color: colorCallback(y),
       };
     })

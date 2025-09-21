@@ -13,6 +13,7 @@ export const planeDeformator: Deformator = {
   yCallback: () => 0,
 };
 
+// TODO: consider changing scalers based on surface scalers
 export const planeDrawer: Drawer = {
   scalerX: defaultDrawer.scalerX,
   scalerY: defaultDrawer.scalerY,

@@ -48,14 +48,15 @@ const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 // == THIS IS THE PLACE TO DECIDE WHAT FUNCTION TO PLOT ==
 // import { rippleDeformator, rippleDrawer } from './.examples/ripple.ts';
-import {
-  mistyMountainsDeformator,
-  mistyMountainsDrawer,
-} from './.examples/misty.ts';
+// import {
+//   mistyMountainsDeformator,
+//   mistyMountainsDrawer,
+// } from './.examples/misty.ts';
+import { normalDeformator, normalDrawer } from './.examples/normal.ts';
 import { planeDeformator, planeDrawer } from './plane.ts';
 
-const currentDeformator = mistyMountainsDeformator;
-const currentDrawer = mistyMountainsDrawer;
+const currentDeformator = normalDeformator;
+const currentDrawer = normalDrawer;
 const rowsNumber = currentDeformator.n;
 const columnsNumber = currentDeformator.m;
 
@@ -75,13 +76,6 @@ const planeIndexBuffer = root
     getSurfaceIndexArray(planeDeformator.n, planeDeformator.m),
   )
   .$usage('index');
-
-const planeTransformBuffer = root
-  .createBuffer(
-    Transform,
-    getSurfaceTransform(c.planeTranslation, c.planeScale),
-  )
-  .$usage('uniform');
 
 const surfaceBuffer = root
   .createBuffer(
@@ -114,9 +108,53 @@ const layout = tgpu.bindGroupLayout({
   transform: { uniform: Transform },
 });
 
-const planeBindgroup = root.createBindGroup(layout, {
+const XZPlaneTransformBuffer = root
+  .createBuffer(
+    Transform,
+    getSurfaceTransform(c.planeTranslation, c.planeScale),
+  )
+  .$usage('uniform');
+
+const XZPlaneBindgroup = root.createBindGroup(layout, {
   camera: cameraBuffer,
-  transform: planeTransformBuffer,
+  transform: XZPlaneTransformBuffer,
+});
+
+const YZPlaneTransformBuffer = root
+  .createBuffer(
+    Transform,
+    {
+      model: m.mat4.rotateZ(
+        getSurfaceTransform(c.planeTranslation, c.planeScale).model,
+        Math.PI / 2,
+        d.mat4x4f(),
+      ),
+    },
+  )
+  .$usage('uniform');
+
+const YZPlaneBindgroup = root.createBindGroup(layout, {
+  camera: cameraBuffer,
+  transform: YZPlaneTransformBuffer,
+});
+
+// WIP
+const XYPlaneTransformBuffer = root
+  .createBuffer(
+    Transform,
+    {
+      model: m.mat4.rotateX(
+        getSurfaceTransform(c.planeTranslation, c.planeScale).model,
+        Math.PI / 2,
+        d.mat4x4f(),
+      ),
+    },
+  )
+  .$usage('uniform');
+
+const XYPlaneBindgroup = root.createBindGroup(layout, {
+  camera: cameraBuffer,
+  transform: XYPlaneTransformBuffer,
 });
 
 const surfaceBindgroup = root.createBindGroup(layout, {
@@ -242,24 +280,32 @@ const render = () => {
   if (currentDrawer.drawXZPlane) {
     drawObject(
       planeBuffer,
-      planeBindgroup,
+      XZPlaneBindgroup,
       planeIndexBuffer,
       (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
       'load',
     );
   }
 
-  // if (currentDrawer.drawYZPlane) {
-  //   drawObject(
-  //     planeBuffer,
-  //     planeBindgroup,
-  //     planeIndexBuffer,
-  //     (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
-  //     'load',
-  //   );
-  // }
+  if (currentDrawer.drawYZPlane) {
+    drawObject(
+      planeBuffer,
+      YZPlaneBindgroup,
+      planeIndexBuffer,
+      (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
+      'load',
+    );
+  }
 
-  // TODO: add the rest of the planes
+  if (currentDrawer.drawXYPlane) {
+    drawObject(
+      planeBuffer,
+      XYPlaneBindgroup,
+      planeIndexBuffer,
+      (planeDeformator.n - 1) * (planeDeformator.m - 1) * 6,
+      'load',
+    );
+  }
 };
 
 const frame = () => {
