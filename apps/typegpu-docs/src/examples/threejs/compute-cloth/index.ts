@@ -1,6 +1,6 @@
-import { type v2f, vec4f } from 'typegpu/data';
+import { arrayOf, f32, u32, type v2f, vec2u, vec3f, vec4f } from 'typegpu/data';
 import * as THREE from 'three/webgpu';
-import { toTSL, uv } from '@typegpu/three';
+import { fromTSL, toTSL, uv } from '@typegpu/three';
 
 import {
   attribute,
@@ -277,6 +277,24 @@ function setupComputeShaders() {
 
   const vertexCount = verletVertices.length;
   const springCount = verletSprings.length;
+
+  // const index = fromTSL(instanceIndex, { type: u32 });
+
+  // const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
+  // const restLength = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });
+  // const vertexPositions = fromTSL(vertexPositions, { type: arrayOf(vec3f) });
+
+  // const testCompute = toTSL(() => {
+  //   'kernel';
+
+  //   const vertex0Position = vertexPositions.$[vertexIds.$[index.$].x];
+  //   const vertex1Position = vertexPositions.$[vertexIds.$[index.$].y];
+
+  //   const delta = vertex1Position.sub(vertex0Position).toVar();
+  //   const dist = delta.length().max(0.000001).toVar();
+  //   const force = dist.sub(restLength).mul(stiffnessUniform).mul(delta).mul(0.5)
+  //     .div(dist);
+  // });
 
   // 1. computeSpringForces:
   // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
