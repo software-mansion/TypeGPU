@@ -69,7 +69,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     const coords2 = cos(coords.add(cos(coords.mul(smallStrips.$)))).sub(1);
     const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
 
-    acc = acc.add(sub(1.2, cos(color.$.mul(p.z))).mul(1 / dd));
+    acc = acc.add(sub(1.2, cos(color.$.mul(p.z))).div(dd));
     z += dd;
   }
 

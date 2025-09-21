@@ -67,7 +67,7 @@ describe('xor dev centrifuge example', () => {
           var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5 * time_8)), (length(p.xy) - 11));
           var coords2 = (cos((coords + cos((coords * smallStrips_10)))) - 1);
           var dd = ((length(vec4f(coords.z, coords2)) * 0.5) - 0.1);
-          acc = (acc + ((1.2 - cos((color_11 * p.z))) * (1f / dd)));
+          acc = (acc + ((1.2 - cos((color_11 * p.z))) / dd));
           z += dd;
         }
         acc = safeTanh_12((acc * 5e-3));
