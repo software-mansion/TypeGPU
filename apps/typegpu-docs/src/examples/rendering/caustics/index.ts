@@ -25,7 +25,7 @@ const tilePattern = (uv: d.v2f): number => {
   const tiledUv = std.fract(uv);
   const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
   const maxProximity = std.max(proximity.x, proximity.y);
-  return std.clamp(std.pow(1 - maxProximity, 0.6) * 5, 0, 1);
+  return std.saturate(std.pow(1 - maxProximity, 0.6) * 5);
 };
 
 const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
@@ -35,11 +35,6 @@ const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
   const uv2 = std.add(uv, distortion);
   const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
   return std.pow(d.vec3f(1 - noise), profile);
-};
-
-const clamp01 = (v: number): number => {
-  'kernel';
-  return std.clamp(v, 0, 1);
 };
 
 /**
@@ -104,7 +99,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const blendCoord = d.vec3f(std.mul(uv, d.vec2f(5, 10)), time.$ * 0.2 + 5);
   // A smooth blending factor, so that caustics only appear at certain spots
-  const blend = clamp01(perlin3d.sample(blendCoord) + 0.3);
+  const blend = std.saturate(perlin3d.sample(blendCoord) + 0.3);
 
   // -- FOG --
 

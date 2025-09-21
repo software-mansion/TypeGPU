@@ -220,14 +220,14 @@ describe('3d fish example', () => {
         var a = -60.1;
         var b = 0.8;
         var c = 6.1;
-        var positionModification = vec3f();
-        positionModification.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
+        var posMod = vec3f();
+        posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var newOX = normalize(vec3f(1, 0, coeff));
         var newOZ = vec3f(-newOX.z, 0, newOX.x);
-        var newNormalXZ = ((vertex.normal.x * newOX) + (vertex.normal.z * newOZ));
+        var newNormalXZ = ((newOX * vertex.normal.x) + (newOZ * vertex.normal.z));
         var wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
-        var wavedPosition = (vertex.position + positionModification);
+        var wavedPosition = (vertex.position + posMod);
         return PosAndNormal_3(wavedPosition, wavedNormal);
       }
 
