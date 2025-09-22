@@ -92,16 +92,46 @@ export const controls = {
     onButtonClick: () => {
       const SimpleStruct = d.struct({ vec: d.vec3u, num: d.u32 });
       const ComplexStruct = d.struct({ nested: SimpleStruct, bool: d.bool });
+      const SimpleArray = d.arrayOf(d.u32, 2);
+      const ComplexArray = d.arrayOf(SimpleArray, 3);
+
       prepareDispatch(root, () => {
         'kernel';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
+
         const complexStruct = ComplexStruct({
           nested: simpleStruct,
           bool: true,
         });
         console.log(complexStruct);
+
+        const simpleArray = SimpleArray([1, 2]);
+        console.log(simpleArray);
+
+        const complexArray = ComplexArray([[3, 4], [5, 6], [7, 8]]);
+        console.log(complexArray);
       })();
+    },
+  },
+  'Runtime sized array': {
+    onButtonClick: () => {
+      const layout = tgpu.bindGroupLayout({
+        buff: {
+          storage: d.arrayOf(d.u32),
+          access: 'mutable',
+        },
+      });
+      const buffer = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
+      const bindGroup = root.createBindGroup(layout, { buff: buffer });
+
+      const cs = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+        console.log(layout.$.buff);
+      });
+
+      const pipeline = root['~unstable'].withCompute(cs).createPipeline();
+
+      pipeline.with(layout, bindGroup).dispatchWorkgroups(1);
     },
   },
   'Two threads': {

@@ -19,6 +19,7 @@ import {
 } from '../../data/vector.ts';
 import {
   type AnyWgslData,
+  isWgslArray,
   isWgslData,
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
@@ -113,8 +114,17 @@ function deserialize(
       props.map((key, index) => [key, decodedProps[index]]),
     );
   }
+  if (isWgslArray(dataType)) {
+    const elementType = dataType.elementType as AnyWgslData;
+    const length = dataType.elementCount;
+    const result = deserializeCompound(
+      data,
+      Array.from({ length }, () => elementType),
+    );
+    return result;
+  }
 
-  throw new Error(`Cannot serialize data of type ${dataType.type}`);
+  throw new Error(`Cannot deserialize data of type ${dataType.type}`);
 }
 
 function deserializeCompound(
@@ -152,12 +162,7 @@ export function deserializeAndStringify(
  * - After processing, the index buffer and the data buffer are cleared.
  */
 export function logDataFromGPU(resources: LogResources) {
-  const {
-    indexBuffer,
-    dataBuffer,
-    logIdToArgTypes,
-    options,
-  } = resources;
+  const { indexBuffer, dataBuffer, logIdToArgTypes, options } = resources;
 
   dataBuffer.read().then((data) => {
     data

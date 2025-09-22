@@ -25,6 +25,7 @@ import {
 import {
   AnyWgslData,
   Atomic,
+  isWgslArray,
   isWgslStruct,
   U32,
   Void,
@@ -195,13 +196,13 @@ function generateHeader(argTypes: AnyWgslData[]): string {
   return `(${argTypes.map((_, i) => `_arg_${i}`).join(', ')})`;
 }
 
-function getSerializer(
-  dataType: AnyWgslData,
+function getSerializer<T extends AnyWgslData>(
+  dataType: T,
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
-) {
+): TgpuFn<(args_0: T) => Void> {
   const maybeSerializer = serializerMap[dataType.type];
   if (maybeSerializer) {
-    return maybeSerializer;
+    return maybeSerializer as TgpuFn<(args_0: T) => Void>;
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
@@ -210,6 +211,16 @@ function getSerializer(
     return fn([dataType])`(arg) {
       propSerializer(${props.map((prop) => `arg.${prop}`).join(', ')});
     }`.$uses({ propSerializer });
+  }
+  if (isWgslArray(dataType)) {
+    const elementType = dataType.elementType as AnyWgslData;
+    const length = dataType.elementCount;
+    const elementSerializer = getSerializer(elementType, dataBuffer);
+    return fn([dataType])`(arg) {\n${
+      Array
+        .from({ length }, (_, i) => `  elementSerializer(arg[${i}]);`)
+        .join('\n')
+    }\n}`.$uses({ elementSerializer });
   }
   throw new Error(`Cannot serialize data of type ${dataType.type}`);
 }
