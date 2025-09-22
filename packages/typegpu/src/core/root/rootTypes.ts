@@ -621,7 +621,6 @@ export interface TgpuRoot extends Unwrapper {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 }
 export interface TgpuRootInternals {
-  /** */
   logOptions: LogGeneratorOptions;
   /**
    * This state is used to determine if we should submit command buffer immediately to the device queue.
@@ -642,7 +641,7 @@ export interface TgpuRootInternals {
   /**
    * Causes all commands enqueued by pipelines to be
    * submitted to the GPU.
-   * If a single `draw()` or `drawIndexed()` or `dispatchWorkgroups()` is called, `flush()` is executed after each command.
+   * If there is no ongoing batch, `flush()` is executed after each `draw()` or `drawIndexed()` or `dispatchWorkgroups()` command.
    */
   flush(): void;
 }

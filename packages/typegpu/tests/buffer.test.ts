@@ -574,19 +574,40 @@ describe('TgpuBuffer', () => {
     >();
   });
 
-  it('should flush command encoder inside write', ({ root }) => {
+  it('should not flush command encoder inside write', ({ root }) => {
     const buffer = root.createBuffer(d.u32, 7);
 
     vi.spyOn(root[$internal], 'flush');
     buffer.write(1929);
-    expect(root[$internal].flush).toBeCalledTimes(1);
+    expect(root[$internal].flush).toBeCalledTimes(0);
   });
 
-  it('should flush command encoder inside read', ({ root }) => {
+  it('should not flush command encoder inside writePartial', ({ root }) => {
+    const buffer = root.createBuffer(
+      d.arrayOf(d.struct({ foo: d.u32, bar: d.u32, baz: d.u32 }), 7),
+    );
+
+    vi.spyOn(root[$internal], 'flush');
+    buffer.writePartial([
+      { idx: 0, value: { foo: 7, bar: 7, baz: 7 } },
+      { idx: 3, value: { foo: 3, bar: 3, baz: 3 } },
+    ]);
+    expect(root[$internal].flush).toBeCalledTimes(0);
+  });
+
+  it('should not flush command encoder inside read', ({ root }) => {
     const buffer = root.createBuffer(d.u32, 7);
 
     vi.spyOn(root[$internal], 'flush');
     buffer.read();
+    expect(root[$internal].flush).toBeCalledTimes(0);
+  });
+
+  it('should flush command encoder inside clear', ({ root }) => {
+    const buffer = root.createBuffer(d.u32, 7);
+
+    vi.spyOn(root[$internal], 'flush');
+    buffer.clear();
     expect(root[$internal].flush).toBeCalledTimes(1);
   });
 });

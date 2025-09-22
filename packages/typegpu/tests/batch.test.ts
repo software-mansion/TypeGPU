@@ -1,8 +1,12 @@
-import { describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, type TestAPI, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, {
+  type TgpuComputePipeline,
+  type TgpuRenderPipeline,
+} from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
+import type { RenderPass } from '../src/core/root/rootTypes.ts';
 
 describe('Batch', () => {
   const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [7] })(() => {});
@@ -15,8 +19,12 @@ describe('Batch', () => {
     out: d.vec4f,
   })(() => d.vec4f());
 
-  it('flushes only once when used without performance callback', ({ root }) => {
-    const renderPipeline = root
+  let renderPipeline: TgpuRenderPipeline;
+  let computePipeline: TgpuComputePipeline;
+
+  type ExtendedTestContext<T> = T extends TestAPI<infer U> ? U : never;
+  beforeEach<ExtendedTestContext<typeof it>>(({ root }) => {
+    renderPipeline = root
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { format: 'rgba8unorm' })
       .createPipeline()
@@ -25,11 +33,12 @@ describe('Batch', () => {
         loadOp: 'clear',
         storeOp: 'store',
       });
-
-    const computePipeline = root
+    computePipeline = root
       .withCompute(entryFn)
       .createPipeline();
+  });
 
+  it('flushes only once when used without performance callback', ({ root }) => {
     const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root.batch(() => {
@@ -54,16 +63,6 @@ describe('Batch', () => {
       resolve();
     });
 
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline()
-      .withColorAttachment({
-        view: {} as unknown as GPUTextureView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      });
-
     const renderPipelineWithPerformance = renderPipeline
       .withPerformanceCallback(callback);
 
@@ -74,18 +73,12 @@ describe('Batch', () => {
         endOfPassWriteIndex: 1,
       });
 
-    const computePipeline = root
-      .withCompute(entryFn)
-      .createPipeline();
-
     const flushMock = vi.spyOn(root[$internal], 'flush');
 
     // trying different permutations
     root.batch(() => {
       computePipeline.dispatchWorkgroups(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithPerformance.draw(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithTimestampWrites.draw(7);
       expect(flushMock).toBeCalledTimes(0);
       expect(callback).toBeCalledTimes(0);
@@ -103,9 +96,7 @@ describe('Batch', () => {
 
     root.batch(() => {
       renderPipelineWithPerformance.draw(7);
-      expect(flushMock).toBeCalledTimes(0);
       computePipeline.dispatchWorkgroups(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithTimestampWrites.draw(7);
       expect(flushMock).toBeCalledTimes(0);
       expect(callback).toBeCalledTimes(0);
@@ -123,9 +114,7 @@ describe('Batch', () => {
 
     root.batch(() => {
       renderPipelineWithTimestampWrites.draw(7);
-      expect(flushMock).toBeCalledTimes(0);
       computePipeline.dispatchWorkgroups(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipelineWithPerformance.draw(7);
       expect(flushMock).toBeCalledTimes(0);
       expect(callback).toBeCalledTimes(0);
@@ -148,16 +137,6 @@ describe('Batch', () => {
       resolve();
     });
 
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline()
-      .withColorAttachment({
-        view: {} as unknown as GPUTextureView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      });
-
     const renderPipeline1 = renderPipeline.withIndexBuffer(indexBuffer);
     const renderPipeline2 = renderPipeline
       .withPerformanceCallback(callback)
@@ -174,9 +153,7 @@ describe('Batch', () => {
 
     root.batch(() => {
       renderPipeline1.drawIndexed(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipeline2.drawIndexed(7);
-      expect(flushMock).toBeCalledTimes(0);
       renderPipeline3.drawIndexed(7);
       expect(flushMock).toBeCalledTimes(0);
       expect(callback).toBeCalledTimes(0);
@@ -188,81 +165,54 @@ describe('Batch', () => {
   });
 
   it('flushes properly with beginRenderPass', ({ root }) => {
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
-
     const bindGroupLayout = tgpu.bindGroupLayout({});
     const bindGroup = root.createBindGroup(bindGroupLayout, {});
 
+    const renderPassArgs: Parameters<typeof root['beginRenderPass']> = [
+      { colorAttachments: [] },
+      (pass: RenderPass) => {
+        pass.setPipeline(renderPipeline);
+        pass.setBindGroup(bindGroupLayout, bindGroup);
+        pass.draw(7);
+      },
+    ];
+
     const flushMock = vi.spyOn(root[$internal], 'flush');
 
-    root['~unstable'].beginRenderPass(
-      { colorAttachments: [] },
-      (pass) => {
-        pass.setPipeline(renderPipeline);
-        pass.setBindGroup(bindGroupLayout, bindGroup);
-        pass.draw(7);
-      },
-    );
+    root['~unstable'].beginRenderPass(...renderPassArgs);
     expect(flushMock).toBeCalledTimes(1);
 
-    root['~unstable'].beginRenderPass(
-      { colorAttachments: [] },
-      (pass) => {
-        pass.setPipeline(renderPipeline);
-        pass.setBindGroup(bindGroupLayout, bindGroup);
-        pass.draw(7);
-      },
-    );
+    root['~unstable'].beginRenderPass(...renderPassArgs);
     expect(flushMock).toBeCalledTimes(2);
 
     flushMock.mockClear();
 
     root['~unstable'].batch(() => {
-      root['~unstable'].beginRenderPass(
-        { colorAttachments: [] },
-        (pass) => {
-          pass.setPipeline(renderPipeline);
-          pass.setBindGroup(bindGroupLayout, bindGroup);
-          pass.draw(7);
-        },
-      );
-      expect(flushMock).toBeCalledTimes(0);
-      root['~unstable'].beginRenderPass(
-        { colorAttachments: [] },
-        (pass) => {
-          pass.setPipeline(renderPipeline);
-          pass.setBindGroup(bindGroupLayout, bindGroup);
-          pass.draw(7);
-        },
-      );
+      root['~unstable'].beginRenderPass(...renderPassArgs);
+      root['~unstable'].beginRenderPass(...renderPassArgs);
       expect(flushMock).toBeCalledTimes(0);
     });
     expect(flushMock).toBeCalledTimes(1);
   });
 
   it('flushes immediately after read-write operation', ({ root }) => {
-    const wBuffer = root.createBuffer(d.u32);
+    const wBuffer = root.createBuffer(d.arrayOf(d.u32, 7));
     const rBuffer = root.createBuffer(d.u32, 7);
 
     const flushMock = vi.spyOn(root[$internal], 'flush');
 
     root.batch(() => {
-      wBuffer.write(1929);
+      wBuffer.write([1, 2, 3, 4, 5, 6, 7]);
       expect(flushMock).toBeCalledTimes(1);
-      rBuffer.read();
+      wBuffer.writePartial([{ idx: 6, value: 1882 }]);
       expect(flushMock).toBeCalledTimes(2);
+      rBuffer.read();
+      expect(flushMock).toBeCalledTimes(3);
     });
-    expect(flushMock).toBeCalledTimes(3);
+    expect(flushMock).toBeCalledTimes(4);
   });
 
   it('throws an error when encounters nested batch', ({ root }) => {
-    const computePipeline = root
-      .withCompute(entryFn)
-      .createPipeline();
-
     root.batch(() => {
       computePipeline.dispatchWorkgroups(1);
       expect(() => {
@@ -302,16 +252,6 @@ describe('Batch', () => {
     const callback4 = vi.fn(() => {
       resolve4();
     });
-
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline()
-      .withColorAttachment({
-        view: {} as unknown as GPUTextureView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      });
 
     const renderPipelineWithPerformance1 = renderPipeline
       .withPerformanceCallback(callback1);
@@ -356,9 +296,33 @@ describe('Batch', () => {
     expect(root[$internal].batchState.performanceCallbacks.length).toBe(0);
   });
 
-  it('restores auto-flush', ({ root }) => {
-    const computePipeline = root.withCompute(entryFn).createPipeline();
+  it('flushes immediately after console.log', ({ device }) => {
+    const root = tgpu.initFromDevice({
+      device,
+      unstable_logOptions: {
+        logCountLimit: 32,
+        logSizeLimit: 8,
+      },
+    });
+    const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+      console.log(d.u32(7));
+    });
+    const pipeline = root['~unstable'].withCompute(f).createPipeline();
 
+    const flushMock = vi.spyOn(root[$internal], 'flush');
+
+    pipeline.dispatchWorkgroups(1, 1, 1);
+    expect(flushMock).not.toBeCalledTimes(0);
+
+    flushMock.mockClear();
+
+    root['~unstable'].batch(() => {
+      pipeline.dispatchWorkgroups(1, 1, 1);
+      expect(flushMock).not.toBeCalledTimes(0);
+    });
+  });
+
+  it('restores auto-flush', ({ root }) => {
     const flushMock = vi.spyOn(root[$internal], 'flush');
 
     computePipeline.dispatchWorkgroups(7, 7, 7);

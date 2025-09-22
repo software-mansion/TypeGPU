@@ -197,10 +197,6 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
 
-    if (memo.logResources) {
-      logDataFromGPU(memo.logResources);
-    }
-
     const hasPerformanceCallback = !!this._priors.performanceCallback;
     const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
 
@@ -213,6 +209,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       if (hasPerformanceCallback) {
         triggerPerformanceCallback({ root: branch, priors: this._priors });
       }
+    }
+
+    if (memo.logResources) {
+      logDataFromGPU(memo.logResources);
     }
   }
 

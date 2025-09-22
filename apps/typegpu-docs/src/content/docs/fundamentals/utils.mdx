@@ -121,20 +121,28 @@ records the commands from the provided callback function,
 and submits the resulting `GPUCommandBuffer` to the device.
 
 :::caution
-Read–write operations always flush the command encoder.
-When you call a pipeline with a performance callback, the callback is invoked at the end of the batch. The timestamps themselves are not affected by the batching. They are still written at the beginning and/or end of the associated pipeline/render pass.
-We've prepared a table showing when a flush occurs (i.e., when a new command encoder is created). Keep this in mind when using `batch`.
+Read–write operations always flush the command encoder (flushing means finalizing the command encoder and submitting the resulting command buffer to the GPU) inside the batch environment. Outside they don't have to, everything is already flushed. We've prepared a table showing when a flush occurs (i.e., when a new command encoder is created). Keep this in mind when using `batch`.
 :::
 
-| Invocation                        | Inside batch env   | Outside batch env  |
-|-----------------------------------|--------------------|--------------------|
-| raw pipeline                      | No Flush ❌        | Flush ✅           |
-| pipeline with performance callback| Flush ❌ / ⚠️        | Flush ✅           |
-| pipeline with timestamp writes    | No Flush ❌        | Flush ✅           |
-| beginRenderPass                   | No Flush ❌        | Flush ✅           |
-| write                             | Flush ✅           | Flush ✅           |
-| read                              | Flush ✅           | Flush ✅           |
+| Invocation                          | Inside batch env   | Outside batch env  |
+|-------------------------------------|--------------------|--------------------|
+| `pipeline.draw`                     | No Flush ❌        | Flush ✅           |
+| `pipeline.drawIndexed`              | No Flush ❌        | Flush ✅           |
+| `pipeline.dispatchWorkgroups`       | No Flush ❌        | Flush ✅           |
+| `pipeline.withPerformanceCallback`  | No Flush ❌ / ⚠️ ⬇️| Flush ✅           |
+| `pipeline.withTimestampWrites`      | No Flush ❌        | Flush ✅           |
+| `beginRenderPass`                   | No Flush ❌        | Flush ✅           |
+| `buffer.write`                      | Flush ✅           | No Flush ❌        |
+| `buffer.writePartial`               | Flush ✅           | No Flush ❌        |
+| `buffer.read`                       | Flush ✅           | No Flush ❌        |
+| `console.log`                       | Flush ✅           | Flush ✅           |
 
+:::caution
+When you call a pipeline with a performance callback, the callback is invoked at the end of the batch. The timestamps themselves are not affected by the batching. They are still written at the beginning and/or end of the associated pipeline/render pass.
+:::
+
+
+### Example
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -176,9 +184,9 @@ root['~unstable'].batch(render);
 ```
 
 :::note
-The calls in the batch callback have to be made synchronously.
-This may seem limiting, but our reasoning is that if you need to wait for something inside
-a batch, just split the batch in two.
+The batch callback must be synchronous.
+While this constraint may appear restrictive, the recommended approach is to divide
+the batch into multiple separate batches if asynchronous operations are required.
 :::
 
 :::danger

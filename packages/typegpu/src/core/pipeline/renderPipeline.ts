@@ -568,10 +568,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    if (logResources) {
-      logDataFromGPU(logResources);
-    }
-
     const hasPerformanceCallback = !!internals.priors.performanceCallback;
     const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
 
@@ -584,6 +580,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       if (hasPerformanceCallback) {
         triggerPerformanceCallback({ root: branch, priors: internals.priors });
       }
+    }
+
+    if (logResources) {
+      logDataFromGPU(logResources);
     }
   }
 

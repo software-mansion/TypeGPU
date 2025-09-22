@@ -89,7 +89,6 @@ export function logDataFromGPU(resources: LogResources) {
     logIdToArgTypes,
     options,
   } = resources;
-
   dataBuffer.read().then((data) => {
     data
       .filter((e) => e.id)

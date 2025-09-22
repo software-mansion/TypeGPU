@@ -330,8 +330,10 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       this._hostBuffer = new ArrayBuffer(size);
     }
 
-    // Flushing any commands yet to be encoded.
-    this._group[$internal].flush();
+    if (this._group[$internal].batchState.ongoingBatch) {
+      // Flushing any commands yet to be encoded. This can happen only inside a batch.
+      this._group[$internal].flush();
+    }
 
     this._writeToTarget(this._hostBuffer, data);
     device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
@@ -351,6 +353,11 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
         mappedView.set(instruction.data, instruction.data.byteOffset);
       }
     } else {
+      if (this._group[$internal].batchState.ongoingBatch) {
+        // Flushing any commands yet to be encoded. This can happen only inside a batch.
+        this._group[$internal].flush();
+      }
+
       for (const instruction of instructions) {
         device.queue.writeBuffer(
           gpuBuffer,
@@ -391,8 +398,10 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   async read(): Promise<Infer<TData>> {
-    // Flushing any commands yet to be encoded.
-    this._group[$internal].flush();
+    if (this._group[$internal].batchState.ongoingBatch) {
+      // Flushing any commands yet to be encoded. This can happen only inside a batch.
+      this._group[$internal].flush();
+    }
 
     const gpuBuffer = this.buffer;
     const device = this._group.device;
