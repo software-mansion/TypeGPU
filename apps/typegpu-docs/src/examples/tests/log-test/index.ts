@@ -1,10 +1,14 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const root = await tgpu.init({
   unstable_logOptions: {
-    logCountLimit: 32,
-    logSizeLimit: 32,
+    logCountLimit: 40,
+    logSizeLimit: 128,
+  },
+  device: {
+    optionalFeatures: ['shader-f16'],
   },
 });
 
@@ -32,23 +36,56 @@ export const controls = {
         console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
       }).dispatch(),
   },
-  'Different types': {
-    onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
-        console.log(d.bool(true));
-        console.log(d.u32(3_000_000_000));
-        console.log(d.vec2u(1, 2));
-        console.log(d.vec3u(1, 2, 3));
-        console.log(d.vec4u(1, 2, 3, 4));
-      }).dispatch(),
-  },
   'Two logs': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
         console.log('First log.');
         console.log('Second log.');
+      }).dispatch(),
+  },
+  'Different types': {
+    onButtonClick: () =>
+      prepareDispatch(root, () => {
+        'kernel';
+        console.log('--- scalars ---');
+        console.log(d.f32(3.14));
+        console.log(d.i32(-2_000_000_000));
+        console.log(d.u32(3_000_000_000));
+        console.log(d.bool(true));
+        console.log();
+        console.log('--- vectors ---');
+        console.log(d.vec2f(1.1, -2.2));
+        console.log(d.vec3f(10.1, -20.2, 30.3));
+        console.log(d.vec4f(100.1, -200.2, 300.3, -400.4));
+        console.log();
+        console.log(d.vec2i(-1, -2));
+        console.log(d.vec3i(-1, -2, -3));
+        console.log(d.vec4i(-1, -2, -3, -4));
+        console.log();
+        console.log(d.vec2u(1, 2));
+        console.log(d.vec3u(1, 2, 3));
+        console.log(d.vec4u(1, 2, 3, 4));
+        console.log();
+        console.log(d.vec2b(true, false));
+        console.log(d.vec3b(true, false, true));
+        console.log(d.vec4b(true, false, true, false));
+        console.log();
+        console.log('--- matrices ---');
+        console.log(d.mat2x2f(0, 0.25, 0.5, 0.75));
+        console.log(d.mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
+        // deno-fmt-ignore
+        console.log(d.mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
+        console.log();
+        if (std.extensionEnabled('f16')) {
+          console.log('--- f16 ---');
+          console.log(d.f16(3.14));
+          console.log(d.vec2h(1.1, -2.2));
+          console.log(d.vec3h(10.1, -20.2, 30.3));
+          console.log(d.vec4h(100.1, -200.2, 300.3, -400.4));
+        } else {
+          console.log("The 'shader-f16' flag is not enabled.");
+        }
       }).dispatch(),
   },
   'Two threads': {
@@ -146,6 +183,10 @@ export const controls = {
   },
   'Too much data': {
     onButtonClick: () => {
+      const dispatch = prepareDispatch(root, () => {
+        'kernel';
+        console.log(d.mat4x4f(), d.mat4x4f(), 1);
+      });
       try {
         prepareDispatch(root, () => {
           'kernel';
