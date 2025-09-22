@@ -669,12 +669,12 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_16)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_54)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
