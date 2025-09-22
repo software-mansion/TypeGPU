@@ -28,7 +28,7 @@ import {
   isWgslArray,
   isWgslStruct,
   type U32,
-  Void,
+  type Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import { getName } from '../../shared/meta.ts';
