@@ -218,7 +218,7 @@ export function createFnCore(
         }
       }
 
-      const { head, body } = ctx.fnToWgsl({
+      const { head, body, returnType: actualReturnType } = ctx.fnToWgsl({
         args,
         argAliases: Object.fromEntries(argAliases),
         returnType,

@@ -194,10 +194,6 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         log1(10);
         log2(20);
@@ -255,10 +251,6 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[index].serializedData[3] = serializedData1[2];
         var serializedData2 = serializeU32(_arg_2);
         dataBuffer[index].serializedData[4] = serializedData2[0];
-      }
-
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
       }
 
       struct fn_Input {
