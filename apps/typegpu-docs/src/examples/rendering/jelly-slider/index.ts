@@ -20,10 +20,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, [-1.2, 0], [1, 0], 20);
+const slider = new Slider(root, d.vec2f(-1.2, 0), d.vec2f(1, 0), 15);
 const sliderStorage = slider.pointsBuffer.as('readonly');
+const normalsStorage = slider.normalsBuffer.as('readonly');
 
-const [width, height] = [canvas.width, canvas.height];
+const [width, height] = [canvas.width * 0.75, canvas.height * 0.75];
 const rayMarchTexture = root['~unstable'].createTexture({
   size: [width, height],
   format: 'rgba8unorm',
@@ -60,6 +61,11 @@ const lightUniform = root.createUniform(DirectionalLight, {
   color: d.vec3f(1, 1, 1),
 });
 
+const HitInfo = d.struct({
+  distance: d.f32,
+  objectType: d.i32,
+});
+
 const AMBIENT_COLOR = d.vec3f(1);
 const AMBIENT_INTENSITY = 0.5;
 const SPECULAR_POWER = 32.0;
@@ -73,6 +79,40 @@ const AO_STEPS = 5;
 const AO_RADIUS = 0.08;
 const AO_INTENSITY = 1;
 const AO_BIAS = SURF_DIST * 4.0;
+
+const LINE_RADIUS = 0.02;
+const LINE_HALF_THICK = 0.18;
+const LINE_Y_OFFSET = 0.04;
+
+const segW = tgpu['~unstable'].privateVar(d.vec2f);
+const segIdx = tgpu['~unstable'].privateVar(d.vec2i);
+
+const sdInflatedPolyline2D = (p: d.v2f) => {
+  'kernel';
+  let dmin = d.f32(1e9);
+  let bestI = d.i32(-1);
+  let bestT = d.f32(0.0);
+
+  for (let i = 1; i < sliderStorage.$.length; i++) {
+    const a = sliderStorage.$[i - 1];
+    const b = sliderStorage.$[i];
+    const ab = std.sub(b, a);
+    const ap = std.sub(p, a);
+    const t = std.saturate(std.dot(ap, ab) / std.dot(ab, ab));
+    const segUnsigned = sdf.sdLine(p, a, b);
+    const seg = segUnsigned - LINE_RADIUS;
+    if (seg < dmin) {
+      dmin = seg;
+      bestI = i;
+      bestT = t;
+    }
+  }
+
+  segIdx.$ = d.vec2i(bestI - 1, bestI);
+  segW.$ = d.vec2f(1.0 - bestT, bestT);
+
+  return dmin;
+};
 
 const getSceneDist = (position: d.v3f) => {
   'kernel';
@@ -89,19 +129,21 @@ const getSceneDist = (position: d.v3f) => {
     ),
     0.01,
   );
-  let rest = d.f32(MAX_DIST);
-  for (let i = 1; i < sliderStorage.$.length; i++) {
-    const point1 = sliderStorage.$[i - 1];
-    const point2 = sliderStorage.$[i];
-    const lineDist2d = sdf.sdLine(
-      position.xy.add(d.vec2f(0, 0.1)),
-      point1,
-      point2,
-    );
-    const extrudedLine = sdf.opExtrudeZ(position, lineDist2d, 0.16);
-    rest = sdf.opSmoothUnion(rest, extrudedLine, 0.18);
+
+  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
+  const poly2D = sdInflatedPolyline2D(p2);
+  const poly3D = sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK);
+
+  const hitInfo = HitInfo();
+
+  if (poly3D < mainScene) {
+    hitInfo.distance = poly3D;
+    hitInfo.objectType = 1; // Slider
+  } else {
+    hitInfo.distance = mainScene;
+    hitInfo.objectType = 2; // Main scene
   }
-  return sdf.opUnion(mainScene, rest);
+  return hitInfo;
 };
 
 const getNormal = (position: d.v3f) => {
@@ -110,12 +152,12 @@ const getNormal = (position: d.v3f) => {
   const xOffset = d.vec3f(epsilon, 0, 0);
   const yOffset = d.vec3f(0, epsilon, 0);
   const zOffset = d.vec3f(0, 0, epsilon);
-  const normalX = getSceneDist(std.add(position, xOffset)) -
-    getSceneDist(std.sub(position, xOffset));
-  const normalY = getSceneDist(std.add(position, yOffset)) -
-    getSceneDist(std.sub(position, yOffset));
-  const normalZ = getSceneDist(std.add(position, zOffset)) -
-    getSceneDist(std.sub(position, zOffset));
+  const normalX = getSceneDist(std.add(position, xOffset)).distance -
+    getSceneDist(std.sub(position, xOffset)).distance;
+  const normalY = getSceneDist(std.add(position, yOffset)).distance -
+    getSceneDist(std.sub(position, yOffset)).distance;
+  const normalZ = getSceneDist(std.add(position, zOffset)).distance -
+    getSceneDist(std.sub(position, zOffset)).distance;
   return std.normalize(d.vec3f(normalX, normalY, normalZ));
 };
 
@@ -128,20 +170,18 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
   for (let i = 1; i <= AO_STEPS; i++) {
     const sampleHeight = stepDistance * i;
     const samplePosition = std.add(position, std.mul(normal, sampleHeight));
-    // Bias avoids treating the surface itself as an occluder.
-    const distanceToSurface = getSceneDist(samplePosition) - AO_BIAS;
-    // Only count if the surface intrudes into the test sphere.
+    const distanceToSurface = getSceneDist(samplePosition).distance - AO_BIAS;
     const occlusionContribution = std.max(
       0.0,
       sampleHeight - distanceToSurface,
     );
     totalOcclusion += occlusionContribution * sampleWeight;
-    sampleWeight *= 0.5; // slightly favor near-field occlusion
-    // Early out if we're already very dark.
-    if (totalOcclusion > AO_RADIUS / AO_INTENSITY) break;
+    sampleWeight *= 0.5;
+    if (totalOcclusion > AO_RADIUS / AO_INTENSITY) {
+      break;
+    }
   }
 
-  // Map accumulated intrusion to [0,1] visibility.
   const rawAO = 1.0 - (AO_INTENSITY * totalOcclusion) / AO_RADIUS;
   return std.min(1.0, std.max(0.0, rawAO));
 };
@@ -149,16 +189,17 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
   let distanceFromOrigin = d.f32();
+  let hitInfo = HitInfo();
 
   for (let i = 0; i < MAX_STEPS; i++) {
     const currentPosition = std.add(
       rayOrigin,
       std.mul(rayDirection, distanceFromOrigin),
     );
-    const distanceToSurface = getSceneDist(currentPosition);
-    distanceFromOrigin += distanceToSurface;
+    hitInfo = getSceneDist(currentPosition);
+    distanceFromOrigin += hitInfo.distance;
 
-    if (distanceFromOrigin > MAX_DIST || distanceToSurface < SURF_DIST) {
+    if (distanceFromOrigin > MAX_DIST || hitInfo.distance < SURF_DIST) {
       break;
     }
   }
@@ -168,7 +209,13 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       rayOrigin,
       std.mul(rayDirection, distanceFromOrigin),
     );
-    const normal = getNormal(hitPosition);
+    let normal = getNormal(hitPosition);
+    if (hitInfo.objectType === 1) {
+      const normal2d = normalsStorage.$[segIdx.$.x]
+        .mul(segW.$.x)
+        .add(normalsStorage.$[segIdx.$.y].mul(segW.$.y));
+      normal = std.normalize(d.vec3f(normal2d, 0.0));
+    }
 
     const lightDir = std.mul(lightUniform.$.direction, -1.0);
     const diffuse = std.max(std.dot(normal, lightDir), 0.0);
@@ -223,7 +270,6 @@ const raymarchFn = tgpu['~unstable'].computeFn({
   const right = std.normalize(std.cross(forward, cameraUniform.$.up));
   const up = std.cross(right, forward);
 
-  // Calculate perspective projection
   const aspectRatio = width / height;
   const tanHalfFov = std.tan(cameraUniform.$.fov / 2.0);
 
@@ -245,7 +291,6 @@ const computePipeline = root['~unstable']
     console.log(`${Number(e - s) / 1_000_000} ms`);
   });
 
-// Simple fullscreen vertex shader
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
@@ -259,7 +304,6 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
-// Fragment shader to display the texture
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -270,7 +314,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 let mouseX = 1.0;
 let targetMouseX = 1.0;
 let isMouseDown = false;
-const mouseSmoothing = 0.08; // Lower = smoother, higher = more responsive
+const mouseSmoothing = 0.08;
 
 canvas.addEventListener('mouseup', () => {
   isMouseDown = false;
@@ -283,15 +327,17 @@ canvas.addEventListener('mouseleave', () => {
 canvas.addEventListener('mousedown', (e) => {
   isMouseDown = true;
   const rect = canvas.getBoundingClientRect();
-  // Convert mouse X to world coordinates (-1 to 1)
-  targetMouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const normalizedX = (e.clientX - rect.left) / rect.width;
+  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
+  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
 });
 
 canvas.addEventListener('mousemove', (e) => {
   if (!isMouseDown) return;
   const rect = canvas.getBoundingClientRect();
-  // Convert mouse X to world coordinates (-1 to 1)
-  targetMouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const normalizedX = (e.clientX - rect.left) / rect.width;
+  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
+  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
 });
 
 const renderPipeline = root['~unstable']
@@ -304,12 +350,8 @@ function render(timestamp: number) {
   const deltaTime = (timestamp - lastTimeStamp) * 0.001;
   lastTimeStamp = timestamp;
 
-  // Smooth mouse interpolation
   if (isMouseDown) {
     mouseX += (targetMouseX - mouseX) * mouseSmoothing;
-  } else {
-    // Gradually return to rest position when not dragging
-    mouseX += (1.0 - mouseX) * mouseSmoothing * 0.5;
   }
   slider.setDragX(mouseX);
 
