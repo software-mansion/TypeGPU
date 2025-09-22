@@ -18,6 +18,7 @@ import { slot } from './core/slot/slot.ts';
 import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
+import { namespace } from './core/resolve/namespace.ts';
 
 export const tgpu = {
   fn,
@@ -43,6 +44,7 @@ export const tgpu = {
      * @deprecated This feature is now stable, use tgpu.vertexLayout.
      */
     vertexLayout,
+    namespace,
     derived,
     /**
      * @deprecated This feature is now stable, use tgpu.slot.
@@ -94,6 +96,8 @@ export type {
   Configurable,
   TgpuRoot,
   ValidateBufferSchema,
+  ValidateStorageSchema,
+  ValidateUniformSchema,
   WithBinding,
   WithCompute,
   WithFragment,
