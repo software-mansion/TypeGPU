@@ -98,6 +98,12 @@ const deserializerMap: DeserializerMap = {
 // Helpers
 // -------
 
+/**
+ * Deserializes binary data from a Uint32Array into a JavaScript value based on the provided WGSL data type.
+ *
+ * @param data - The binary data as a Uint32Array to be deserialized
+ * @param dataType - The WGSL data type specification that determines how to interpret the binary data
+ */
 function deserialize(
   data: Uint32Array,
   dataType: AnyWgslData,
@@ -127,12 +133,19 @@ function deserialize(
   throw new Error(`Cannot deserialize data of type ${dataType.type}`);
 }
 
+/**
+ * Deserializes a list of elements from a Uint32Array buffer using provided type information.
+ * If there is a string value among the type information, it is returned as is.
+ *
+ * @param data - The Uint32Array buffer containing the serialized data
+ * @param dataTypes - The WGSL data type specification that determines how to interpret the binary data, or string literals
+ */
 function deserializeCompound(
   data: Uint32Array,
-  logInfo: (AnyWgslData | string)[],
+  dataTypes: (AnyWgslData | string)[],
 ): unknown[] {
   let index = 0;
-  return logInfo.map((info) => {
+  return dataTypes.map((info) => {
     if (!isWgslData(info)) {
       return info;
     }

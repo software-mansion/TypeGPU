@@ -26,14 +26,14 @@ export const controls = {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(1), d.vec3u(2, 3, 4), d.u32(5), d.u32(6));
+        console.log(1, d.vec3u(2, 3, 4), 5, 6);
       })(),
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
+        console.log(2, 'plus', 3, 'equals', 5);
       })(),
   },
   'Two logs': {
@@ -131,7 +131,6 @@ export const controls = {
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
         dispatch();
-        console.log(`dispatched ${i}`);
       }
     },
   },
@@ -141,7 +140,7 @@ export const controls = {
       const dispatch = prepareDispatch(root, () => {
         'kernel';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
-          console.log('Log index', d.u32(i) + 1, 'out of', logCountUniform.$);
+          console.log('Log index', i + 1, 'out of', logCountUniform.$);
         }
       });
       logCountUniform.write(3);
@@ -169,7 +168,7 @@ export const controls = {
         in: { pos: d.builtin.position },
         out: d.vec4f,
       })(({ pos }) => {
-        console.log('X:', d.u32(pos.x), 'Y:', d.u32(pos.y));
+        console.log('X:', pos.x, 'Y:', pos.y);
         return d.vec4f(0.769, 0.392, 1.0, 1);
       });
 

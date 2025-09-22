@@ -200,6 +200,14 @@ function generateHeader(argTypes: AnyWgslData[]): string {
   return `(${argTypes.map((_, i) => `_arg_${i}`).join(', ')})`;
 }
 
+/**
+ * Returns a serializer TGPU function for a given WGSL data type.
+ * If the data type is a base type, one of the preexisting functions is returned.
+ * Otherwise, a new function is generated.
+ *
+ * @param dataType - The WGSL data type descriptor to return a serializer for
+ * @param dataBuffer - A buffer to store serialized log call data (a necessary external for the returned function)
+ */
 function getSerializer<T extends AnyWgslData>(
   dataType: T,
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
@@ -233,15 +241,21 @@ function getSerializer<T extends AnyWgslData>(
   throw new Error(`Cannot serialize data of type ${dataType.type}`);
 }
 
+/**
+ * Creates a compound serializer TGPU function that serializes multiple arguments of different types to the data buffer.
+ *
+ * @param dataTypes - Array of WGSL data types that define the types of arguments to be serialized
+ * @param dataBuffer - A buffer to store serialized log call data (a necessary external for the returned function)
+ */
 function createCompoundSerializer(
-  argTypes: AnyWgslData[],
+  dataTypes: AnyWgslData[],
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
 ) {
   const usedSerializers: Record<string, unknown> = {};
 
-  const shell = fn(argTypes);
-  const header = generateHeader(argTypes);
-  const body = argTypes.map((arg, i) => {
+  const shell = fn(dataTypes);
+  const header = generateHeader(dataTypes);
+  const body = dataTypes.map((arg, i) => {
     const serializer = getSerializer(arg, dataBuffer);
     usedSerializers[`serializer${i}`] = (serializer as TgpuFn).with(
       dataBufferSlot,
@@ -255,25 +269,34 @@ function createCompoundSerializer(
     .$name('compoundSerializer');
 }
 
+/**
+ * Creates a TGPU function that serializes data to the log buffer.
+ *
+ * @param id - Identifier for this logging function instance
+ * @param dataTypes - Array of WGSL data types that will be logged by this function
+ * @param dataBuffer - Mutable buffer array to store serialized log call data
+ * @param indexBuffer - Atomic counter buffer to track the next available log data slot
+ * @param logOptions - Configuration options
+ */
 export function createLoggingFunction(
   id: number,
-  argTypes: AnyWgslData[],
+  dataTypes: AnyWgslData[],
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
   indexBuffer: TgpuMutable<Atomic<U32>>,
   logOptions: Required<LogGeneratorOptions>,
 ): TgpuFn {
-  const serializedSize = argTypes.map(sizeOf).reduce((a, b) => a + b, 0);
+  const serializedSize = dataTypes.map(sizeOf).reduce((a, b) => a + b, 0);
   if (serializedSize > logOptions.logSizeLimit) {
     throw new Error(
       `Logged data needs to fit in ${logOptions.logSizeLimit} bytes (one of the logs requires ${serializedSize} bytes). Consider increasing the limit by passing appropriate options to tgpu.init().`,
     );
   }
 
-  const compoundSerializer = createCompoundSerializer(argTypes, dataBuffer)
+  const compoundSerializer = createCompoundSerializer(dataTypes, dataBuffer)
     .$name(`log${id}serializer`);
-  const header = generateHeader(argTypes);
+  const header = generateHeader(dataTypes);
 
-  return fn(argTypes)`${header} {
+  return fn(dataTypes)`${header} {
   dataBlockIndex = atomicAdd(&indexBuffer, 1);
   if (dataBlockIndex >= ${logOptions.logCountLimit}) {
     return;
