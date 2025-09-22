@@ -215,12 +215,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         .mul(segW.$.x)
         .add(normalsStorage.$[segIdx.$.y].mul(segW.$.y));
       normal = std.normalize(d.vec3f(normal2d, 0.0));
+      return d.vec4f(normal.x * 0.5 + 0.5, normal.y * 0.5 + 0.5, 0, 1);
     }
 
     const lightDir = std.mul(lightUniform.$.direction, -1.0);
     const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
-    // Calculate specular reflection
     const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
     const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
     const specularFactor = std.pow(
