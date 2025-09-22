@@ -86,7 +86,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
       }
 
-      fn compoundSerializer(_arg_0: u32) {
+      fn log1serializer(_arg_0: u32) {
         serializeU32(_arg_0);
       }
 
@@ -98,7 +98,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-        compoundSerializer(_arg_0);
+        log1serializer(_arg_0);
       }
 
       @fragment fn fs() -> @location(0) vec4f {
@@ -144,7 +144,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
       }
 
-      fn compoundSerializer(_arg_0: u32) {
+      fn log1serializer(_arg_0: u32) {
         serializeU32(_arg_0);
       }
 
@@ -156,7 +156,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-        compoundSerializer(_arg_0);
+        log1serializer(_arg_0);
       }
 
       struct fn_Input {
@@ -206,7 +206,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
       }
 
-      fn compoundSerializer(_arg_0: u32) {
+      fn log1serializer(_arg_0: u32) {
         serializeU32(_arg_0);
       }
 
@@ -218,10 +218,10 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-        compoundSerializer(_arg_0);
+        log1serializer(_arg_0);
       }
 
-      fn compoundSerializer_1(_arg_0: u32) {
+      fn log2serializer(_arg_0: u32) {
         serializeU32(_arg_0);
       }
 
@@ -233,7 +233,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 2;
         dataByteIndex = 0;
 
-        compoundSerializer_1(_arg_0);
+        log2serializer(_arg_0);
       }
 
       struct fn_Input {
@@ -294,7 +294,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.z;
       }
 
-      fn compoundSerializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
+      fn log1serializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
         serializeU32(_arg_0);
         serializeVec3u(_arg_1);
         serializeU32(_arg_2);
@@ -308,7 +308,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-        compoundSerializer(_arg_0, _arg_1, _arg_2);
+        log1serializer(_arg_0, _arg_1, _arg_2);
       }
 
       struct fn_Input {
@@ -386,39 +386,39 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
       }
 
-      fn serializer1_1(arg: array<u32,4>) {
+      fn arraySerializer_1(arg: array<u32,4>) {
         serializeU32(arg[0]);
         serializeU32(arg[1]);
         serializeU32(arg[2]);
         serializeU32(arg[3]);
       }
 
-      fn propSerializer_1(_arg_0: u32, _arg_1: array<u32,4>) {
+      fn compoundSerializer_1(_arg_0: u32, _arg_1: array<u32,4>) {
         serializeU32(_arg_0);
-        serializer1_1(_arg_1);
+        arraySerializer_1(_arg_1);
       }
 
-      fn elementSerializer(arg: SimpleStruct) {
-            propSerializer_1(arg.id, arg.data);
-          }
-
-      fn serializer1(arg: array<SimpleStruct,3>) {
-        elementSerializer(arg[0]);
-        elementSerializer(arg[1]);
-        elementSerializer(arg[2]);
+      fn SimpleStructSerializer(arg: SimpleStruct) {
+        compoundSerializer_1(arg.id, arg.data);
       }
 
-      fn propSerializer(_arg_0: vec3f, _arg_1: array<SimpleStruct,3>) {
+      fn arraySerializer(arg: array<SimpleStruct,3>) {
+        SimpleStructSerializer(arg[0]);
+        SimpleStructSerializer(arg[1]);
+        SimpleStructSerializer(arg[2]);
+      }
+
+      fn compoundSerializer(_arg_0: vec3f, _arg_1: array<SimpleStruct,3>) {
         serializeVec3f(_arg_0);
-        serializer1(_arg_1);
+        arraySerializer(_arg_1);
       }
 
-      fn serializer0(arg: ComplexStruct) {
-            propSerializer(arg.pos, arg.data);
-          }
+      fn ComplexStructSerializer(arg: ComplexStruct) {
+        compoundSerializer(arg.pos, arg.data);
+      }
 
-      fn compoundSerializer(_arg_0: ComplexStruct) {
-        serializer0(_arg_0);
+      fn log1serializer(_arg_0: ComplexStruct) {
+        ComplexStructSerializer(_arg_0);
       }
 
       fn log1(_arg_0: ComplexStruct) {
@@ -429,7 +429,7 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-        compoundSerializer(_arg_0);
+        log1serializer(_arg_0);
       }
 
       struct fn_Input {

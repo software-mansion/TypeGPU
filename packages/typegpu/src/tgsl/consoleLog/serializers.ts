@@ -31,6 +31,7 @@ import {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
+import { getName } from '../../shared/meta.ts';
 import type { LogGeneratorOptions, SerializedLogCallData } from './types.ts';
 
 // --------------
@@ -50,7 +51,8 @@ const nextByteIndex = fn([], u32)`() {
   let i = dataByteIndex;
   dataByteIndex = dataByteIndex + 1u;
   return i;
-}`.$uses({ dataByteIndex });
+}`.$uses({ dataByteIndex })
+  .$name('nextByteIndex');
 
 const nextU32 = `dataBuffer[dataBlockIndex].serializedData[nextByteIndex()]`;
 
@@ -208,9 +210,10 @@ function getSerializer<T extends AnyWgslData>(
     const props = Object.keys(dataType.propTypes);
     const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
     const propSerializer = createCompoundSerializer(propTypes, dataBuffer);
-    return fn([dataType])`(arg) {
-      propSerializer(${props.map((prop) => `arg.${prop}`).join(', ')});
-    }`.$uses({ propSerializer });
+    return fn([dataType])`(arg) {\n  propSerializer(${
+      props.map((prop) => `arg.${prop}`).join(', ')
+    });\n}`.$uses({ propSerializer })
+      .$name(`${getName(dataType) ?? 'struct'}Serializer`);
   }
   if (isWgslArray(dataType)) {
     const elementType = dataType.elementType as AnyWgslData;
@@ -220,7 +223,9 @@ function getSerializer<T extends AnyWgslData>(
       Array
         .from({ length }, (_, i) => `  elementSerializer(arg[${i}]);`)
         .join('\n')
-    }\n}`.$uses({ elementSerializer });
+    }\n}`
+      .$uses({ elementSerializer })
+      .$name('arraySerializer');
   }
   throw new Error(`Cannot serialize data of type ${dataType.type}`);
 }
@@ -242,7 +247,9 @@ function createCompoundSerializer(
     return `  serializer${i}(_arg_${i});`;
   }).join('\n');
 
-  return shell`${header} {\n${body}\n}`.$uses(usedSerializers);
+  return shell`${header} {\n${body}\n}`
+    .$uses(usedSerializers)
+    .$name('compoundSerializer');
 }
 
 export function createLoggingFunction(
@@ -259,7 +266,8 @@ export function createLoggingFunction(
     );
   }
 
-  const compoundSerializer = createCompoundSerializer(argTypes, dataBuffer);
+  const compoundSerializer = createCompoundSerializer(argTypes, dataBuffer)
+    .$name(`log${id}serializer`);
   const header = generateHeader(argTypes);
 
   return fn(argTypes)`${header} {

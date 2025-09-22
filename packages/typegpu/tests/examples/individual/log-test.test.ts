@@ -57,7 +57,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
       }
 
-      fn compoundSerializer_9(_arg_0: u32) {
+      fn log1serializer_9(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -69,7 +69,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0);
+        log1serializer_9(_arg_0);
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -118,7 +118,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = v.z;
       }
 
-      fn compoundSerializer_9(_arg_0: u32, _arg_1: vec3u, _arg_2: u32, _arg_3: u32) {
+      fn log1serializer_9(_arg_0: u32, _arg_1: vec3u, _arg_2: u32, _arg_3: u32) {
         serializeU32_10(_arg_0);
         serializeVec3u_12(_arg_1);
         serializeU32_10(_arg_2);
@@ -133,7 +133,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0, _arg_1, _arg_2, _arg_3);
+        log1serializer_9(_arg_0, _arg_1, _arg_2, _arg_3);
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -176,7 +176,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
       }
 
-      fn compoundSerializer_9(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+      fn log1serializer_9(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         serializeU32_10(_arg_0);
         serializeU32_10(_arg_1);
         serializeU32_10(_arg_2);
@@ -190,7 +190,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0, _arg_1, _arg_2);
+        log1serializer_9(_arg_0, _arg_1, _arg_2);
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -223,7 +223,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex_8: u32;
 
-      fn compoundSerializer_9() {
+      fn log1serializer_9() {
 
       }
 
@@ -235,7 +235,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9();
+        log1serializer_9();
       }
 
       fn nextByteIndex_13() -> u32{
@@ -248,7 +248,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(n);
       }
 
-      fn compoundSerializer_11(_arg_0: f32) {
+      fn log2serializer_11(_arg_0: f32) {
         serializeF32_12(_arg_0);
       }
 
@@ -260,14 +260,14 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 2;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_11(_arg_0);
+        log2serializer_11(_arg_0);
       }
 
       fn serializeI32_16(n: i32) {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(n);
       }
 
-      fn compoundSerializer_15(_arg_0: i32) {
+      fn log3serializer_15(_arg_0: i32) {
         serializeI32_16(_arg_0);
       }
 
@@ -279,14 +279,14 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 3;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_15(_arg_0);
+        log3serializer_15(_arg_0);
       }
 
       fn serializeU32_19(n: u32) {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = n;
       }
 
-      fn compoundSerializer_18(_arg_0: u32) {
+      fn log4serializer_18(_arg_0: u32) {
         serializeU32_19(_arg_0);
       }
 
@@ -298,14 +298,14 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 4;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_18(_arg_0);
+        log4serializer_18(_arg_0);
       }
 
       fn serializeBool_22(b: bool) {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = u32(b);
       }
 
-      fn compoundSerializer_21(_arg_0: bool) {
+      fn log5serializer_21(_arg_0: bool) {
         serializeBool_22(_arg_0);
       }
 
@@ -317,10 +317,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 5;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_21(_arg_0);
+        log5serializer_21(_arg_0);
       }
 
-      fn compoundSerializer_24() {
+      fn log6serializer_24() {
 
       }
 
@@ -332,10 +332,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 6;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_24();
+        log6serializer_24();
       }
 
-      fn compoundSerializer_26() {
+      fn log7serializer_26() {
 
       }
 
@@ -347,7 +347,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 7;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_26();
+        log7serializer_26();
       }
 
       fn serializeVec2f_29(v: vec2f) {
@@ -355,7 +355,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.y);
       }
 
-      fn compoundSerializer_28(_arg_0: vec2f) {
+      fn log8serializer_28(_arg_0: vec2f) {
         serializeVec2f_29(_arg_0);
       }
 
@@ -367,7 +367,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 8;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_28(_arg_0);
+        log8serializer_28(_arg_0);
       }
 
       fn serializeVec3f_32(v: vec3f) {
@@ -376,7 +376,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.z);
       }
 
-      fn compoundSerializer_31(_arg_0: vec3f) {
+      fn log9serializer_31(_arg_0: vec3f) {
         serializeVec3f_32(_arg_0);
       }
 
@@ -388,7 +388,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 9;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_31(_arg_0);
+        log9serializer_31(_arg_0);
       }
 
       fn serializeVec4f_35(v: vec4f) {
@@ -398,7 +398,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.w);
       }
 
-      fn compoundSerializer_34(_arg_0: vec4f) {
+      fn log10serializer_34(_arg_0: vec4f) {
         serializeVec4f_35(_arg_0);
       }
 
@@ -410,10 +410,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 10;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_34(_arg_0);
+        log10serializer_34(_arg_0);
       }
 
-      fn compoundSerializer_37() {
+      fn log11serializer_37() {
 
       }
 
@@ -425,7 +425,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 11;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_37();
+        log11serializer_37();
       }
 
       fn serializeVec2i_40(v: vec2i) {
@@ -433,7 +433,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.y);
       }
 
-      fn compoundSerializer_39(_arg_0: vec2i) {
+      fn log12serializer_39(_arg_0: vec2i) {
         serializeVec2i_40(_arg_0);
       }
 
@@ -445,7 +445,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 12;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_39(_arg_0);
+        log12serializer_39(_arg_0);
       }
 
       fn serializeVec3i_43(v: vec3i) {
@@ -454,7 +454,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.z);
       }
 
-      fn compoundSerializer_42(_arg_0: vec3i) {
+      fn log13serializer_42(_arg_0: vec3i) {
         serializeVec3i_43(_arg_0);
       }
 
@@ -466,7 +466,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 13;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_42(_arg_0);
+        log13serializer_42(_arg_0);
       }
 
       fn serializeVec4i_46(v: vec4i) {
@@ -476,7 +476,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(v.w);
       }
 
-      fn compoundSerializer_45(_arg_0: vec4i) {
+      fn log14serializer_45(_arg_0: vec4i) {
         serializeVec4i_46(_arg_0);
       }
 
@@ -488,10 +488,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 14;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_45(_arg_0);
+        log14serializer_45(_arg_0);
       }
 
-      fn compoundSerializer_48() {
+      fn log15serializer_48() {
 
       }
 
@@ -503,7 +503,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 15;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_48();
+        log15serializer_48();
       }
 
       fn serializeVec2u_51(v: vec2u) {
@@ -511,7 +511,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = v.y;
       }
 
-      fn compoundSerializer_50(_arg_0: vec2u) {
+      fn log16serializer_50(_arg_0: vec2u) {
         serializeVec2u_51(_arg_0);
       }
 
@@ -523,7 +523,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 16;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_50(_arg_0);
+        log16serializer_50(_arg_0);
       }
 
       fn serializeVec3u_54(v: vec3u) {
@@ -532,7 +532,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = v.z;
       }
 
-      fn compoundSerializer_53(_arg_0: vec3u) {
+      fn log17serializer_53(_arg_0: vec3u) {
         serializeVec3u_54(_arg_0);
       }
 
@@ -544,7 +544,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 17;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_53(_arg_0);
+        log17serializer_53(_arg_0);
       }
 
       fn serializeVec4u_57(v: vec4u) {
@@ -554,7 +554,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = v.w;
       }
 
-      fn compoundSerializer_56(_arg_0: vec4u) {
+      fn log18serializer_56(_arg_0: vec4u) {
         serializeVec4u_57(_arg_0);
       }
 
@@ -566,10 +566,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 18;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_56(_arg_0);
+        log18serializer_56(_arg_0);
       }
 
-      fn compoundSerializer_59() {
+      fn log19serializer_59() {
 
       }
 
@@ -581,7 +581,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 19;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_59();
+        log19serializer_59();
       }
 
       fn serializeVec2bool_62(v: vec2<bool>) {
@@ -589,7 +589,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = u32(v.y);
       }
 
-      fn compoundSerializer_61(_arg_0: vec2<bool>) {
+      fn log20serializer_61(_arg_0: vec2<bool>) {
         serializeVec2bool_62(_arg_0);
       }
 
@@ -601,7 +601,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 20;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_61(_arg_0);
+        log20serializer_61(_arg_0);
       }
 
       fn serializeVec3bool_65(v: vec3<bool>) {
@@ -610,7 +610,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = u32(v.z);
       }
 
-      fn compoundSerializer_64(_arg_0: vec3<bool>) {
+      fn log21serializer_64(_arg_0: vec3<bool>) {
         serializeVec3bool_65(_arg_0);
       }
 
@@ -622,7 +622,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 21;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_64(_arg_0);
+        log21serializer_64(_arg_0);
       }
 
       fn serializeVec4bool_68(v: vec4<bool>) {
@@ -632,7 +632,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = u32(v.w);
       }
 
-      fn compoundSerializer_67(_arg_0: vec4<bool>) {
+      fn log22serializer_67(_arg_0: vec4<bool>) {
         serializeVec4bool_68(_arg_0);
       }
 
@@ -644,10 +644,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 22;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_67(_arg_0);
+        log22serializer_67(_arg_0);
       }
 
-      fn compoundSerializer_70() {
+      fn log23serializer_70() {
 
       }
 
@@ -659,10 +659,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 23;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_70();
+        log23serializer_70();
       }
 
-      fn compoundSerializer_72() {
+      fn log24serializer_72() {
 
       }
 
@@ -674,7 +674,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 24;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_72();
+        log24serializer_72();
       }
 
       fn serializeMat2x2f_75(m: mat2x2f) {
@@ -684,7 +684,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(m[1][1]);
       }
 
-      fn compoundSerializer_74(_arg_0: mat2x2f) {
+      fn log25serializer_74(_arg_0: mat2x2f) {
         serializeMat2x2f_75(_arg_0);
       }
 
@@ -696,7 +696,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 25;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_74(_arg_0);
+        log25serializer_74(_arg_0);
       }
 
       fn serializeMat3x3f_78(m: mat3x3f) {
@@ -714,7 +714,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = 0u;
       }
 
-      fn compoundSerializer_77(_arg_0: mat3x3f) {
+      fn log26serializer_77(_arg_0: mat3x3f) {
         serializeMat3x3f_78(_arg_0);
       }
 
@@ -726,7 +726,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 26;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_77(_arg_0);
+        log26serializer_77(_arg_0);
       }
 
       fn serializeMat4x4f_81(m: mat4x4f) {
@@ -748,7 +748,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_13()] = bitcast<u32>(m[3][3]);
       }
 
-      fn compoundSerializer_80(_arg_0: mat4x4f) {
+      fn log27serializer_80(_arg_0: mat4x4f) {
         serializeMat4x4f_81(_arg_0);
       }
 
@@ -760,10 +760,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 27;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_80(_arg_0);
+        log27serializer_80(_arg_0);
       }
 
-      fn compoundSerializer_83() {
+      fn log28serializer_83() {
 
       }
 
@@ -775,10 +775,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 28;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_83();
+        log28serializer_83();
       }
 
-      fn compoundSerializer_85() {
+      fn log29serializer_85() {
 
       }
 
@@ -790,7 +790,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 29;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_85();
+        log29serializer_85();
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -874,17 +874,17 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].serializedData[nextByteIndex_14()] = n;
       }
 
-      fn propSerializer_12(_arg_0: vec3u, _arg_1: u32) {
+      fn compoundSerializer_12(_arg_0: vec3u, _arg_1: u32) {
         serializeVec3u_13(_arg_0);
         serializeU32_15(_arg_1);
       }
 
-      fn serializer0_11(arg: SimpleStruct_3) {
-            propSerializer_12(arg.vec, arg.num);
-          }
+      fn SimpleStructSerializer_11(arg: SimpleStruct_3) {
+        compoundSerializer_12(arg.vec, arg.num);
+      }
 
-      fn compoundSerializer_10(_arg_0: SimpleStruct_3) {
-        serializer0_11(_arg_0);
+      fn log1serializer_10(_arg_0: SimpleStruct_3) {
+        SimpleStructSerializer_11(_arg_0);
       }
 
       fn log1_4(_arg_0: SimpleStruct_3) {
@@ -895,7 +895,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 1;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_10(_arg_0);
+        log1serializer_10(_arg_0);
       }
 
       struct ComplexStruct_16 {
@@ -903,30 +903,30 @@ describe('console log example', () => {
         bool: bool,
       }
 
-      fn propSerializer_22(_arg_0: vec3u, _arg_1: u32) {
+      fn compoundSerializer_22(_arg_0: vec3u, _arg_1: u32) {
         serializeVec3u_13(_arg_0);
         serializeU32_15(_arg_1);
       }
 
-      fn serializer0_21(arg: SimpleStruct_3) {
-            propSerializer_22(arg.vec, arg.num);
-          }
+      fn SimpleStructSerializer_21(arg: SimpleStruct_3) {
+        compoundSerializer_22(arg.vec, arg.num);
+      }
 
       fn serializeBool_23(b: bool) {
         dataBuffer_6[dataBlockIndex_8].serializedData[nextByteIndex_14()] = u32(b);
       }
 
-      fn propSerializer_20(_arg_0: SimpleStruct_3, _arg_1: bool) {
-        serializer0_21(_arg_0);
+      fn compoundSerializer_20(_arg_0: SimpleStruct_3, _arg_1: bool) {
+        SimpleStructSerializer_21(_arg_0);
         serializeBool_23(_arg_1);
       }
 
-      fn serializer0_19(arg: ComplexStruct_16) {
-            propSerializer_20(arg.nested, arg.bool);
-          }
+      fn ComplexStructSerializer_19(arg: ComplexStruct_16) {
+        compoundSerializer_20(arg.nested, arg.bool);
+      }
 
-      fn compoundSerializer_18(_arg_0: ComplexStruct_16) {
-        serializer0_19(_arg_0);
+      fn log2serializer_18(_arg_0: ComplexStruct_16) {
+        ComplexStructSerializer_19(_arg_0);
       }
 
       fn log2_17(_arg_0: ComplexStruct_16) {
@@ -937,16 +937,16 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 2;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_18(_arg_0);
+        log2serializer_18(_arg_0);
       }
 
-      fn serializer0_26(arg: array<u32,2>) {
+      fn arraySerializer_26(arg: array<u32,2>) {
         serializeU32_15(arg[0]);
         serializeU32_15(arg[1]);
       }
 
-      fn compoundSerializer_25(_arg_0: array<u32,2>) {
-        serializer0_26(_arg_0);
+      fn log3serializer_25(_arg_0: array<u32,2>) {
+        arraySerializer_26(_arg_0);
       }
 
       fn log3_24(_arg_0: array<u32,2>) {
@@ -957,22 +957,22 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 3;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_25(_arg_0);
+        log3serializer_25(_arg_0);
       }
 
-      fn elementSerializer_30(arg: array<u32,2>) {
+      fn arraySerializer_30(arg: array<u32,2>) {
         serializeU32_15(arg[0]);
         serializeU32_15(arg[1]);
       }
 
-      fn serializer0_29(arg: array<array<u32,2>,3>) {
-        elementSerializer_30(arg[0]);
-        elementSerializer_30(arg[1]);
-        elementSerializer_30(arg[2]);
+      fn arraySerializer_29(arg: array<array<u32,2>,3>) {
+        arraySerializer_30(arg[0]);
+        arraySerializer_30(arg[1]);
+        arraySerializer_30(arg[2]);
       }
 
-      fn compoundSerializer_28(_arg_0: array<array<u32,2>,3>) {
-        serializer0_29(_arg_0);
+      fn log4serializer_28(_arg_0: array<array<u32,2>,3>) {
+        arraySerializer_29(_arg_0);
       }
 
       fn log4_27(_arg_0: array<array<u32,2>,3>) {
@@ -983,7 +983,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 4;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_28(_arg_0);
+        log4serializer_28(_arg_0);
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -1023,7 +1023,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex_8: u32;
 
-      fn compoundSerializer_9() {
+      fn log1serializer_9() {
 
       }
 
@@ -1035,10 +1035,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9();
+        log1serializer_9();
       }
 
-      fn compoundSerializer_11() {
+      fn log2serializer_11() {
 
       }
 
@@ -1050,7 +1050,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 2;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_11();
+        log2serializer_11();
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -1094,7 +1094,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
       }
 
-      fn compoundSerializer_9(_arg_0: u32) {
+      fn log1serializer_9(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -1106,7 +1106,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0);
+        log1serializer_9(_arg_0);
       }
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
@@ -1149,7 +1149,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
       }
 
-      fn compoundSerializer_9(_arg_0: u32) {
+      fn log1serializer_9(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -1161,7 +1161,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0);
+        log1serializer_9(_arg_0);
       }
 
       @group(0) @binding(3) var<uniform> indexUniform_12: u32;
@@ -1208,7 +1208,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].serializedData[nextByteIndex_12()] = n;
       }
 
-      fn compoundSerializer_10(_arg_0: u32, _arg_1: u32) {
+      fn log1serializer_10(_arg_0: u32, _arg_1: u32) {
         serializeU32_11(_arg_0);
         serializeU32_11(_arg_1);
       }
@@ -1221,7 +1221,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 1;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_10(_arg_0, _arg_1);
+        log1serializer_10(_arg_0, _arg_1);
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
@@ -1277,7 +1277,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].serializedData[nextByteIndex_12()] = n;
       }
 
-      fn compoundSerializer_10(_arg_0: u32, _arg_1: u32) {
+      fn log1serializer_10(_arg_0: u32, _arg_1: u32) {
         serializeU32_11(_arg_0);
         serializeU32_11(_arg_1);
       }
@@ -1290,7 +1290,7 @@ describe('console log example', () => {
         dataBuffer_6[dataBlockIndex_8].id = 1;
         dataByteIndex_9 = 0;
 
-        compoundSerializer_10(_arg_0, _arg_1);
+        log1serializer_10(_arg_0, _arg_1);
       }
 
       struct mainFragment_Input_13 {
@@ -1327,7 +1327,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
       }
 
-      fn compoundSerializer_9(_arg_0: u32) {
+      fn log1serializer_9(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -1339,10 +1339,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 1;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_9(_arg_0);
+        log1serializer_9(_arg_0);
       }
 
-      fn compoundSerializer_13(_arg_0: u32) {
+      fn log2serializer_13(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -1354,10 +1354,10 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 2;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_13(_arg_0);
+        log2serializer_13(_arg_0);
       }
 
-      fn compoundSerializer_15(_arg_0: u32) {
+      fn log3serializer_15(_arg_0: u32) {
         serializeU32_10(_arg_0);
       }
 
@@ -1369,7 +1369,7 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].id = 3;
         dataByteIndex_8 = 0;
 
-        compoundSerializer_15(_arg_0);
+        log3serializer_15(_arg_0);
       }
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
