@@ -1,28 +1,31 @@
+import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { vec2u, vec3u, vec4u } from '../../data/vector.ts';
+import {
+  vec2b,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../../data/vector.ts';
 import { type AnyWgslData, isWgslData } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
+import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
+import { unpack2x16float } from '../../std/packing.ts';
 import type { LogResources } from './types.ts';
 
-// -------------
-// Deserializers
-// -------------
-
-const deserializeBool = (data: number[]) => !!data[0];
-
-const deserializeU32 = (data: number[]) => data[0] ?? 0;
-
-const deserializeVec2u = (
-  data: number[],
-) => vec2u(data[0] ?? 0, data[1] ?? 0);
-
-const deserializeVec3u = (
-  data: number[],
-) => vec3u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0);
-
-const deserializeVec4u = (
-  data: number[],
-) => vec4u(data[0] ?? 0, data[1] ?? 0, data[2] ?? 0, data[3] ?? 0);
+const toF = (n: number | undefined) => bitcastU32toF32(n ?? 0);
+const toI = (n: number | undefined) => bitcastU32toI32(n ?? 0);
+const unpack = (n: number | undefined) => unpack2x16float(n ?? 0);
 
 // ----------------
 // Deserializer map
@@ -35,11 +38,53 @@ type DeserializerMap = {
 };
 
 const deserializerMap: DeserializerMap = {
-  bool: deserializeBool,
-  u32: deserializeU32,
-  vec2u: deserializeVec2u,
-  vec3u: deserializeVec3u,
-  vec4u: deserializeVec4u,
+  f32: (d: number[]) => toF(d[0]),
+  f16: (d: number[]) => unpack(d[0]).x,
+  i32: (d: number[]) => toI(d[0]),
+  u32: (d: number[]) => d[0] ?? 0,
+  bool: (d: number[]) => !!d[0],
+  vec2f: (d: number[]) => vec2f(toF(d[0]), toF(d[1])),
+  vec3f: (d: number[]) => vec3f(toF(d[0]), toF(d[1]), toF(d[2])),
+  vec4f: (d: number[]) => vec4f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  vec2h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    return vec2h(xyVec.x, xyVec.y);
+  },
+  vec3h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    const zVec = unpack(d[1]);
+    return vec3h(xyVec.x, xyVec.y, zVec.x);
+  },
+  vec4h(d: number[]) {
+    const xyVec = unpack(d[0]);
+    const zwVec = unpack(d[1]);
+    return vec4h(xyVec.x, xyVec.y, zwVec.x, zwVec.y);
+  },
+  vec2i: (d: number[]) => vec2i(toI(d[0]), toI(d[1])),
+  vec3i: (d: number[]) => vec3i(toI(d[0]), toI(d[1]), toI(d[2])),
+  vec4i: (d: number[]) => vec4i(toI(d[0]), toI(d[1]), toI(d[2]), toI(d[3])),
+  vec2u: (d: number[]) => vec2u(d[0] ?? 0, d[1] ?? 0),
+  vec3u: (d: number[]) => vec3u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0),
+  vec4u: (d: number[]) => vec4u(d[0] ?? 0, d[1] ?? 0, d[2] ?? 0, d[3] ?? 0),
+  'vec2<bool>': (d: number[]) => vec2b(!!d[0], !!d[1]),
+  'vec3<bool>': (d: number[]) => vec3b(!!d[0], !!d[1], !!d[2]),
+  'vec4<bool>': (d: number[]) => vec4b(!!d[0], !!d[1], !!d[2], !!d[3]),
+  mat2x2f: (d: number[]) => mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  mat3x3f: (d: number[]) =>
+    // deno-fmt-ignore
+    mat3x3f(
+      toF(d[0]), toF(d[1]), toF(d[2]),
+      toF(d[4]), toF(d[5]), toF(d[6]),
+      toF(d[8]), toF(d[9]), toF(d[10]),
+    ),
+  mat4x4f: (d: number[]) =>
+    // deno-fmt-ignore
+    mat4x4f(
+      toF(d[0]),  toF(d[1]),  toF(d[2]),  toF(d[3]),
+      toF(d[4]),  toF(d[5]),  toF(d[6]),  toF(d[7]),
+      toF(d[8]),  toF(d[9]),  toF(d[10]), toF(d[11]),
+      toF(d[12]), toF(d[13]), toF(d[14]), toF(d[15]),
+    ),
 };
 
 // -------

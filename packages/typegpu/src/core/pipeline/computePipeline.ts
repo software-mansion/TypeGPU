@@ -1,9 +1,11 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -104,7 +106,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this[$getNameForward] = _core;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.resolve(this._core);
   }
 
@@ -221,10 +223,10 @@ class ComputePipelineCore implements SelfResolvable {
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
-  '~resolve'(ctx: ResolutionCtx) {
+  [$resolve](ctx: ResolutionCtx) {
     return ctx.withSlots(this._slotBindings, () => {
       ctx.resolve(this._entryFn);
-      return '';
+      return snip('', Void);
     });
   }
 

@@ -34,7 +34,8 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  hasInternalDataType,
+  type F32,
+  type I32,
   isMatInstance,
   isNumericSchema,
   isVec,
@@ -42,8 +43,8 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
+import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
+import type { ShelllessRepository } from './shellless.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -180,7 +181,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat);
 }
 
-export function concretize(type: AnyWgslData): AnyWgslData {
+export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -209,7 +210,8 @@ export type GenerationCtx = ResolutionCtx & {
    */
   expectedType: AnyData | undefined;
 
-  readonly topFunctionReturnType: AnyData;
+  readonly topFunctionReturnType: AnyData | undefined;
+
   indent(): string;
   dedent(): string;
   pushBlockScope(): void;
@@ -217,6 +219,15 @@ export type GenerationCtx = ResolutionCtx & {
   generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
+
+  /**
+   * Types that are used in `return` statements are
+   * reported using this function, and used to infer
+   * the return type of the owning function.
+   */
+  reportReturnType(dataType: AnyData): void;
+
+  readonly shelllessRepo: ShelllessRepository;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {
@@ -225,9 +236,10 @@ export function coerceToSnippet(value: unknown): Snippet {
     return value;
   }
 
-  if (hasInternalDataType(value)) {
-    // The value knows better about what type it is
-    return snip(value, value[$wgslDataType] as AnyData);
+  // Maybe the value can tell us what snippet it is
+  const ownSnippet = getOwnSnippet(value);
+  if (ownSnippet) {
+    return ownSnippet;
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {

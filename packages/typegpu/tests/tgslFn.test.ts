@@ -218,15 +218,15 @@ describe('TGSL tgpu.fn function', () => {
       .$name('vertex_fn');
 
     expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
-      "struct vertex_fn_Input {
+      "struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
-      }
-
-      struct vertex_fn_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
       }
 
       @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
@@ -263,15 +263,15 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(getName(vertexFn)).toBe('vertex_fn');
     expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
-      "struct vertex_fn_Input {
+      "struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
-      }
-
-      struct vertex_fn_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {

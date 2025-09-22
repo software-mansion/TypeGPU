@@ -2,7 +2,7 @@ import {
   type ResolutionResult,
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslExtension } from '../../wgslExtensions.ts';
@@ -10,6 +10,8 @@ import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { Void } from '../../data/wgslTypes.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -101,8 +103,11 @@ export function resolveWithContext(
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
-    '~resolve'(ctx) {
-      return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
+    [$resolve](ctx): ResolvedSnippet {
+      return snip(
+        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        Void,
+      );
     },
 
     toString: () => '<root>',
