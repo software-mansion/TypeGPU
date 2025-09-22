@@ -136,6 +136,8 @@ dispatch();
 // "[GPU] Call number 2"
 ```
 
+Currently supported data types for logging include scalars, vectors, matrices, structs, and fixed-size arrays.
+
 Under the hood, TypeGPU translates `console.log` to a series of serializing functions that write the logged arguments to a buffer that is read and deserialized after every draw/dispatch call.
 
 The buffer is of fixed size, which may limit the total amount of information that can be logged; if the buffer overflows, additional logs are dropped.
@@ -186,8 +188,6 @@ There are some limitations (some of which we intend to alleviate in the future):
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
-This is due to [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
-- TypeGPU needs to handle every logged data type individually.
-Currently, we only support scalar, vector and matrix types.
+This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
 - `console.log` currently does not support template literals and string substitutions.
 - Other `console` methods like `clear` or `warn` are not yet supported.
