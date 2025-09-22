@@ -1,7 +1,6 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import {
   getUniqueName,
-  makeNameValid,
   type Namespace,
   type NamespaceInternal,
 } from './core/resolve/namespace.ts';
@@ -383,7 +382,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   makeNameValid(name: string): string {
-    return makeNameValid(this.#namespace, name);
+    return this.#namespace.nameRegistry.makeValid(name);
   }
 
   get pre(): string {
