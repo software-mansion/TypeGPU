@@ -202,7 +202,7 @@ function generateHeader(argTypes: AnyWgslData[]): string {
 
 /**
  * Returns a serializer TGPU function for a given WGSL data type.
- * If the data type is a base type, one of the preexisting functions is returned.
+ * If the data type is a base type, one of the preexisting functions (with the `dataBufferSlot` filled) is returned.
  * Otherwise, a new function is generated.
  *
  * @param dataType - The WGSL data type descriptor to return a serializer for
@@ -214,7 +214,10 @@ function getSerializer<T extends AnyWgslData>(
 ): TgpuFn<(args_0: T) => Void> {
   const maybeSerializer = serializerMap[dataType.type];
   if (maybeSerializer) {
-    return maybeSerializer as TgpuFn<(args_0: T) => Void>;
+    return (maybeSerializer as TgpuFn<(args_0: T) => Void>).with(
+      dataBufferSlot,
+      dataBuffer,
+    );
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
@@ -256,11 +259,7 @@ function createCompoundSerializer(
   const shell = fn(dataTypes);
   const header = generateHeader(dataTypes);
   const body = dataTypes.map((arg, i) => {
-    const serializer = getSerializer(arg, dataBuffer);
-    usedSerializers[`serializer${i}`] = (serializer as TgpuFn).with(
-      dataBufferSlot,
-      dataBuffer,
-    );
+    usedSerializers[`serializer${i}`] = getSerializer(arg, dataBuffer);
     return `  serializer${i}(_arg_${i});`;
   }).join('\n');
 
