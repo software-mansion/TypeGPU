@@ -25,7 +25,6 @@ describe('console log example', () => {
         'Varying size logs',
         'Render pipeline',
         'Too many logs',
-        // 'Too much data', // this one throws an error
       ],
       expectedCalls: 11,
     }, device);

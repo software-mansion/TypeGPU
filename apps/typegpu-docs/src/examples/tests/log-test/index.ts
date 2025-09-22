@@ -207,19 +207,6 @@ export const controls = {
         console.log('Log 3 from thread', x);
       })(16),
   },
-  'Too much data': {
-    onButtonClick: () => {
-      const dispatch = prepareDispatch(root, () => {
-        'kernel';
-        console.log(d.mat4x4f(), d.mat4x4f(), 1);
-      });
-      try {
-        dispatch();
-      } catch (err) {
-        console.log(err);
-      }
-    },
-  },
 };
 
 export function onCleanup() {
