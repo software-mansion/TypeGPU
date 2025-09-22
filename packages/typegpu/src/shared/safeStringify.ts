@@ -15,7 +15,7 @@ export function safeStringify(item: unknown): string {
 }
 
 export function niceStringify(item: unknown): string {
-  if (item) {
+  if (item !== null && item !== undefined) {
     if (Array.isArray(item) && !isVecInstance(item) && !isMatInstance(item)) {
       return `[${item.map(niceStringify).join(', ')}]`;
     }

@@ -321,6 +321,128 @@ describe('wgslGenerator with console.log', () => {
     `);
   });
 
+  it('Parses console.logs with nested arrays/structs pipeline', ({ root }) => {
+    const SimpleArray = d.arrayOf(d.u32, 4);
+    const SimpleStruct = d.struct({ id: d.u32, data: SimpleArray });
+    const ComplexArray = d.arrayOf(SimpleStruct, 3);
+    const ComplexStruct = d.struct({ pos: d.vec3f, data: ComplexArray });
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      const complexStruct = ComplexStruct({
+        data: ComplexArray([
+          SimpleStruct({ id: 0, data: SimpleArray([9, 8, 7, 6]) }),
+          SimpleStruct({ id: 1, data: SimpleArray([8, 7, 6, 5]) }),
+          SimpleStruct({ id: 2, data: SimpleArray([7, 6, 5, 4]) }),
+        ]),
+        pos: d.vec3f(1, 2, 3),
+      });
+      console.log(complexStruct);
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct SimpleStruct {
+        id: u32,
+        data: array<u32, 4>,
+      }
+
+      struct ComplexStruct {
+        pos: vec3f,
+        data: array<SimpleStruct, 3>,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeVec3f(v: vec3f) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.z);
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn serializer1_1(arg: array<u32,4>) {
+        serializeU32(arg[0]);
+        serializeU32(arg[1]);
+        serializeU32(arg[2]);
+        serializeU32(arg[3]);
+      }
+
+      fn propSerializer_1(_arg_0: u32, _arg_1: array<u32,4>) {
+        serializeU32(_arg_0);
+        serializer1_1(_arg_1);
+      }
+
+      fn elementSerializer(arg: SimpleStruct) {
+            propSerializer_1(arg.id, arg.data);
+          }
+
+      fn serializer1(arg: array<SimpleStruct,3>) {
+        elementSerializer(arg[0]);
+        elementSerializer(arg[1]);
+        elementSerializer(arg[2]);
+      }
+
+      fn propSerializer(_arg_0: vec3f, _arg_1: array<SimpleStruct,3>) {
+        serializeVec3f(_arg_0);
+        serializer1(_arg_1);
+      }
+
+      fn serializer0(arg: ComplexStruct) {
+            propSerializer(arg.pos, arg.data);
+          }
+
+      fn compoundSerializer(_arg_0: ComplexStruct) {
+        serializer0(_arg_0);
+      }
+
+      fn log1(_arg_0: ComplexStruct) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        compoundSerializer(_arg_0);
+      }
+
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0, array<u32, 4>(9, 8, 7, 6)), SimpleStruct(1, array<u32, 4>(8, 7, 6, 5)), SimpleStruct(2, array<u32, 4>(7, 6, 5, 4))));
+        log1(complexStruct);
+      }"
+    `);
+  });
+
   it('Throws when not enough space to serialize console.log', ({ root }) => {
     const fn = tgpu['~unstable'].computeFn({
       workgroupSize: [1],
@@ -410,6 +532,51 @@ describe('deserializeAndStringify', () => {
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
       `"GID: vec3u(1, 2, 3) Result: 456"`,
+    );
+  });
+
+  it('works for arrays', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.u32, 4)];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"[1, 2, 3, 4]"`,
+    );
+  });
+
+  it('works for nested arrays', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.arrayOf(d.arrayOf(d.u32, 2), 2),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"[[1, 2], [3, 4]]"`,
+    );
+  });
+
+  it('works for structs', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.struct({ vec: d.vec3u, num: d.u32 }),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"{ vec: vec3u(1, 2, 3), num: 4 }"`,
+    );
+  });
+
+  it('works for nested structs', () => {
+    const data = new Uint32Array([1, 2, 3, 4, 1]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.struct({
+        nested: d.struct({ vec: d.vec3u, num: d.u32 }),
+        bool: d.bool,
+      }),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `"{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }"`,
     );
   });
 });
