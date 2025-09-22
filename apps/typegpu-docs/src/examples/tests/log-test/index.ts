@@ -183,10 +183,6 @@ export const controls = {
   },
   'Too much data': {
     onButtonClick: () => {
-      const dispatch = prepareDispatch(root, () => {
-        'kernel';
-        console.log(d.mat4x4f(), d.mat4x4f(), 1);
-      });
       try {
         prepareDispatch(root, () => {
           'kernel';
