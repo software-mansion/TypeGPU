@@ -24,7 +24,7 @@ import {
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { niceStringify } from '../../shared/safeStringify.ts';
+import { niceStringify } from '../../shared/stringify.ts';
 import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
 import type { LogResources } from './types.ts';

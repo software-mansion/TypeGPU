@@ -1,4 +1,4 @@
-import { safeStringify } from '../shared/safeStringify.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import {
   type AnyData,
   getCustomAlignment,

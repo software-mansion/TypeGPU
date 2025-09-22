@@ -23,13 +23,13 @@ import {
   vec4u,
 } from '../../data/vector.ts';
 import {
-  AnyWgslData,
-  Atomic,
+  type AnyWgslData,
+  type Atomic,
   isWgslArray,
   isWgslStruct,
-  U32,
+  type U32,
   Void,
-  WgslArray,
+  type WgslArray,
 } from '../../data/wgslTypes.ts';
 import { getName } from '../../shared/meta.ts';
 import type { LogGeneratorOptions, SerializedLogCallData } from './types.ts';
@@ -54,7 +54,7 @@ const nextByteIndex = fn([], u32)`() {
 }`.$uses({ dataByteIndex })
   .$name('nextByteIndex');
 
-const nextU32 = `dataBuffer[dataBlockIndex].serializedData[nextByteIndex()]`;
+const nextU32 = 'dataBuffer[dataBlockIndex].serializedData[nextByteIndex()]';
 
 export const serializerMap: SerializerMap = {
   f32: fn([f32], Void)`(n) => {

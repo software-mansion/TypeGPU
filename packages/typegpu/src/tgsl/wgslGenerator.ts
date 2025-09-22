@@ -15,6 +15,7 @@ import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
@@ -33,7 +34,6 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

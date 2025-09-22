@@ -61,7 +61,7 @@ import {
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { Infer, MemIdentity } from './shared/repr.ts';
-import { safeStringify } from './shared/safeStringify.ts';
+import { safeStringify } from './shared/stringify.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type {
   Default,
