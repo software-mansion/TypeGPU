@@ -1,6 +1,6 @@
 import type { Block, FuncParameter } from 'tinyest';
-import { $getNameForward, $internal } from './symbols.ts';
 import { DEV, TEST } from './env.ts';
+import { $getNameForward, $internal } from './symbols.ts';
 
 export interface MetaData {
   name?: string | undefined;
@@ -30,11 +30,18 @@ export type INTERNAL_GlobalExt = typeof globalThis & {
 };
 
 Object.assign(globalThis, {
-  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T =>
-    isNamable(exp) &&
-      (exp as unknown as { [$internal]: unknown })?.[$internal] && !getName(exp)
-      ? exp.$name(label)
-      : exp,
+  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T => {
+    if (
+      isNamable(exp) &&
+      (exp as unknown as { [$internal]: unknown })?.[$internal] &&
+      !getName(exp)
+    ) {
+      exp.$name(label);
+    } else if (typeof exp === 'function') {
+      setName(exp, label);
+    }
+    return exp;
+  },
 });
 
 const globalWithMeta = globalThis as INTERNAL_GlobalExt;

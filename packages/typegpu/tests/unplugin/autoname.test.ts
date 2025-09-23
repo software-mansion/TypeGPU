@@ -142,42 +142,39 @@ describe('autonaming', () => {
     expect(getName(mySchemas.myStruct)).toBe('myStruct');
   });
 
-  // TODO: make it work
-  // it('names arrow functions', () => {
-  //   const myFun = () => {
-  //     'kernel';
-  //     return 0;
-  //   };
+  it('names arrow functions', () => {
+    const myFun = () => {
+      'kernel';
+      return 0;
+    };
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myGpuFun');
+  });
 
-  // TODO: make it work
-  // it('names function expression', () => {
-  //   const myFun = function () {
-  //     'kernel';
-  //     return 0;
-  //   };
+  it('names function expression', () => {
+    const myFun = function () {
+      'kernel';
+      return 0;
+    };
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myGpuFun');
+  });
 
-  // TODO: make it work
-  // it('names function definition', () => {
-  //   function myFun() {
-  //     'kernel';
-  //     return 0;
-  //   }
+  it('names function definition', () => {
+    function myFun() {
+      'kernel';
+      return 0;
+    }
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myGpuFun');
+  });
 });
