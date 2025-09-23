@@ -288,61 +288,61 @@ describe('[BABEL] auto naming', () => {
       `);
   });
 
-  // it('works with functions', () => {
-  //   const code = `\
-  //     const myFun1 = () => {
-  //       'kernel';
-  //       return 0;
-  //     };
+  it('works with functions', () => {
+    const code = `\
+      const myFun1 = () => {
+        'kernel';
+        return 0;
+      };
 
-  //     const myFun2 = function () {
-  //       'kernel';
-  //       return 0;
-  //     };
+      const myFun2 = function () {
+        'kernel';
+        return 0;
+      };
 
-  //     function myFun3() {
-  //       'kernel';
-  //       return 0;
-  //     }
-  //   `;
+      function myFun3() {
+        'kernel';
+        return 0;
+      }
+    `;
 
-  //   expect(babelTransform(code, { autoNamingEnabled: true }))
-  //     .toMatchInlineSnapshot(`
-  //       "const myFun1 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-  //         'kernel';
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "const myFun1 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'kernel';
 
-  //         return 0;
-  //       }, {
-  //         v: 1,
-  //         ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-  //         get externals() {
-  //           return {};
-  //         }
-  //       }) && $.f)({}), "myFun1");
-  //       const myFun2 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function () {
-  //         'kernel';
+          return 0;
+        }, {
+          v: 1,
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          get externals() {
+            return {};
+          }
+        }) && $.f)({}), "myFun1");
+        const myFun2 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function () {
+          'kernel';
 
-  //         return 0;
-  //       }, {
-  //         v: 1,
-  //         ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-  //         get externals() {
-  //           return {};
-  //         }
-  //       }) && $.f)({}), "myFun2");
-  //       const myFun3 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
-  //         'kernel';
+          return 0;
+        }, {
+          v: 1,
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          get externals() {
+            return {};
+          }
+        }) && $.f)({}), "myFun2");
+        const myFun3 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
+          'kernel';
 
-  //         return 0;
-  //       }, {
-  //         v: 1,
-  //         ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
-  //         get externals() {
-  //           return {};
-  //         }
-  //       }) && $.f)({}), "myFun3");"
-  //     `);
-  // });
+          return 0;
+        }, {
+          v: 1,
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          get externals() {
+            return {};
+          }
+        }) && $.f)({}), "myFun3");"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
