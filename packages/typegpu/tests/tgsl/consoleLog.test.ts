@@ -377,33 +377,6 @@ describe('wgslGenerator with console.log', () => {
         return i;
       }
 
-      fn serializeU32(n: u32) {
-        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
-      }
-
-      fn serializeVec3u(v: vec3u) {
-        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.x;
-        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.y;
-        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.z;
-      }
-
-      fn log1serializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
-        serializeU32(_arg_0);
-        serializeVec3u(_arg_1);
-        serializeU32(_arg_2);
-      }
-
-      var<private> dataBlockIndex: u32;
-
-      var<private> dataByteIndex: u32;
-
-
-      fn nextByteIndex() -> u32{
-        let i = dataByteIndex;
-        dataByteIndex = dataByteIndex + 1u;
-        return i;
-      }
-
       fn serializeVec3f(v: vec3f) {
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
         dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
@@ -457,7 +430,6 @@ describe('wgslGenerator with console.log', () => {
         dataBuffer[dataBlockIndex].id = 1;
         dataByteIndex = 0;
 
-
         log1serializer(_arg_0);
       }
 
@@ -465,8 +437,7 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
-
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0, array<u32, 4>(9, 8, 7, 6)), SimpleStruct(1, array<u32, 4>(8, 7, 6, 5)), SimpleStruct(2, array<u32, 4>(7, 6, 5, 4))));
         log1(complexStruct);
       }"
@@ -588,7 +559,7 @@ describe('wgslGenerator with console.log', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0, array<u32, 4>(9, 8, 7, 6)), SimpleStruct(1, array<u32, 4>(8, 7, 6, 5)), SimpleStruct(2, array<u32, 4>(7, 6, 5, 4))));
         log1(complexStruct);
       }"
