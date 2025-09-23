@@ -20,9 +20,9 @@ canvas.addEventListener('contextmenu', (event) => {
   }
 });
 
-const MAX_WATER_LEVEL_UNPRESSURIZED = tgpu['~unstable'].const(d.u32, 0xff);
-const MAX_WATER_LEVEL = tgpu['~unstable'].const(d.u32, (1 << 24) - 1);
-const MAX_PRESSURE = tgpu['~unstable'].const(d.u32, 12);
+const MAX_WATER_LEVEL_UNPRESSURIZED = tgpu.const(d.u32, 0xff);
+const MAX_WATER_LEVEL = tgpu.const(d.u32, (1 << 24) - 1);
+const MAX_PRESSURE = tgpu.const(d.u32, 12);
 
 const options = {
   size: 32,

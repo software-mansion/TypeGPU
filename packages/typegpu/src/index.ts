@@ -32,6 +32,10 @@ export const tgpu = {
   resolve,
   resolveWithContext,
 
+  privateVar,
+  workgroupVar,
+  const: constant,
+
   '~unstable': {
     /**
      * @deprecated This feature is now stable, use tgpu.fn.
@@ -51,8 +55,17 @@ export const tgpu = {
      */
     slot,
     accessor,
+    /**
+     * @deprecated This feature is now stable, use tgpu.privateVar.
+     */
     privateVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.workgroupVar.
+     */
     workgroupVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.const.
+     */
     const: constant,
     declare,
     sampler,
