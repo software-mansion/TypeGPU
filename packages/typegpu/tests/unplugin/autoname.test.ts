@@ -155,6 +155,7 @@ describe('autonaming', () => {
   });
 
   it('names function expression', () => {
+    // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
       'kernel';
       return 0;
