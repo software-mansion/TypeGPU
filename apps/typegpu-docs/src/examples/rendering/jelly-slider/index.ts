@@ -20,11 +20,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1.2, 0), d.vec2f(1, 0), 15);
+const slider = new Slider(root, d.vec2f(-1.2, 0), d.vec2f(1, 0), 26);
 const sliderStorage = slider.pointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
+const anglesStorage = slider.anglesBuffer.as('readonly');
 
-const [width, height] = [canvas.width * 0.75, canvas.height * 0.75];
+const [width, height] = [canvas.width * 0.8, canvas.height * 0.8];
 const rayMarchTexture = root['~unstable'].createTexture({
   size: [width, height],
   format: 'rgba8unorm',
@@ -75,12 +76,19 @@ const MAX_STEPS = 100;
 const MAX_DIST = 10;
 const SURF_DIST = 0.001;
 
-const AO_STEPS = 5;
-const AO_RADIUS = 0.08;
+const JELLY_IOR = 1.42;
+const JELLY_ABSORB = d.vec3f(1.6, 3.2, 6.0).mul(15);
+const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.5, 0.15);
+const JELLY_SCATTER_STRENGTH = 0.7;
+const MAX_INTERNAL_STEPS = 20;
+const JELLY_EDGE_BLEND = 0.02;
+
+const AO_STEPS = 4;
+const AO_RADIUS = 0.14;
 const AO_INTENSITY = 1;
 const AO_BIAS = SURF_DIST * 4.0;
 
-const LINE_RADIUS = 0.02;
+const LINE_RADIUS = 0.024;
 const LINE_HALF_THICK = 0.18;
 const LINE_Y_OFFSET = 0.04;
 
@@ -96,9 +104,17 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
   for (let i = 1; i < sliderStorage.$.length; i++) {
     const a = sliderStorage.$[i - 1];
     const b = sliderStorage.$[i];
+    const anglesA = anglesStorage.$[i - 1];
+    const anglesB = anglesStorage.$[i];
+
     const ab = std.sub(b, a);
     const ap = std.sub(p, a);
-    const t = std.saturate(std.dot(ap, ab) / std.dot(ab, ab));
+    const extensionA = std.tan(anglesA.y - Math.PI / 2) * LINE_RADIUS;
+    const extensionB = std.tan(anglesB.x - Math.PI / 2) * LINE_RADIUS;
+    const abLen = std.length(ab);
+    const extendedLen = abLen + extensionA + extensionB;
+    const t = (std.dot(ap, ab) / abLen + extensionA) / extendedLen;
+
     const segUnsigned = sdf.sdLine(p, a, b);
     const seg = segUnsigned - LINE_RADIUS;
     if (seg < dmin) {
@@ -114,25 +130,30 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
   return dmin;
 };
 
-const getSceneDist = (position: d.v3f) => {
+const sliderSdf3D = (position: d.v3f) => {
   'kernel';
-  const mainScene = sdf.opSmoothDifference(
+  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
+  const poly2D = sdInflatedPolyline2D(p2);
+  return sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK);
+};
+
+const getMainSceneDist = (position: d.v3f) => {
+  'kernel';
+  return sdf.opSmoothDifference(
     sdf.sdPlane(position, d.vec3f(0, 1, 0), 0),
     sdf.opExtrudeY(
       position,
-      sdf.sdRoundedBox2d(
-        position.xz,
-        d.vec2f(1, 0.2),
-        0.2,
-      ),
+      sdf.sdRoundedBox2d(position.xz, d.vec2f(1, 0.2), 0.2),
       0.06,
     ),
     0.01,
   );
+};
 
-  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
-  const poly2D = sdInflatedPolyline2D(p2);
-  const poly3D = sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK);
+const getSceneDist = (position: d.v3f) => {
+  'kernel';
+  const mainScene = getMainSceneDist(position);
+  const poly3D = sliderSdf3D(position);
 
   const hitInfo = HitInfo();
 
@@ -161,6 +182,21 @@ const getNormal = (position: d.v3f) => {
   return std.normalize(d.vec3f(normalX, normalY, normalZ));
 };
 
+const getNormalMain = (position: d.v3f) => {
+  'kernel';
+  const epsilon = 0.0001;
+  const xOffset = d.vec3f(epsilon, 0, 0);
+  const yOffset = d.vec3f(0, epsilon, 0);
+  const zOffset = d.vec3f(0, 0, epsilon);
+  const normalX = getMainSceneDist(std.add(position, xOffset)) -
+    getMainSceneDist(std.sub(position, xOffset));
+  const normalY = getMainSceneDist(std.add(position, yOffset)) -
+    getMainSceneDist(std.sub(position, yOffset));
+  const normalZ = getMainSceneDist(std.add(position, zOffset)) -
+    getMainSceneDist(std.sub(position, zOffset));
+  return std.normalize(d.vec3f(normalX, normalY, normalZ));
+};
+
 const calculateAO = (position: d.v3f, normal: d.v3f) => {
   'kernel';
   let totalOcclusion = d.f32(0.0);
@@ -184,6 +220,102 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
 
   const rawAO = 1.0 - (AO_INTENSITY * totalOcclusion) / AO_RADIUS;
   return std.min(1.0, std.max(0.0, rawAO));
+};
+
+const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
+  'kernel';
+  const r0 = std.pow((ior1 - ior2) / (ior1 + ior2), 2.0);
+  return r0 + (1.0 - r0) * std.pow(1.0 - cosTheta, 5.0);
+};
+
+const beerLambert = (sigma: d.v3f, dist: number) => {
+  'kernel';
+  return d.vec3f(
+    std.exp(-sigma.x * dist),
+    std.exp(-sigma.y * dist),
+    std.exp(-sigma.z * dist),
+  );
+};
+
+// Interpolated curve normal blended toward ±Z near extruded edges.
+const getJellyNormal = (position: d.v3f) => {
+  'kernel';
+  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
+
+  // Evaluate 2D SDF here to lock segIdx/segW for this position
+  const d2 = sdInflatedPolyline2D(p2);
+
+  // Interpolated curve normal (smoothed "fake curve" normal)
+  let n2 = normalsStorage.$[segIdx.$.x]
+    .mul(segW.$.x)
+    .add(normalsStorage.$[segIdx.$.y].mul(segW.$.y));
+  n2 = std.normalize(n2);
+
+  // Orient to outward gradient to avoid flipping artifacts
+  const eps = 0.0005;
+  const gx = sdInflatedPolyline2D(std.add(p2, d.vec2f(eps, 0.0))) -
+    sdInflatedPolyline2D(std.sub(p2, d.vec2f(eps, 0.0)));
+  const gy = sdInflatedPolyline2D(std.add(p2, d.vec2f(0.0, eps))) -
+    sdInflatedPolyline2D(std.sub(p2, d.vec2f(0.0, eps)));
+  const grad2 = std.normalize(d.vec2f(gx, gy));
+  if (std.dot(grad2, n2) < 0.0) {
+    n2 = std.mul(n2, -1.0);
+  }
+  const Nxy = std.normalize(d.vec3f(n2, 0.0));
+
+  // Blend weights: close to 2D boundary => Nxy, close to Z side => ±Z
+  const dz = std.abs(std.abs(position.z) - LINE_HALF_THICK);
+  const wZ = std.min(1.0, std.max(0.0, 1.0 - dz / JELLY_EDGE_BLEND));
+  const wXY = std.min(1.0, std.max(0.0, 1.0 - std.abs(d2) / JELLY_EDGE_BLEND));
+  const Nz = d.vec3f(0.0, 0.0, std.sign(position.z) * 1.0);
+
+  const Nmix = std.add(std.mul(Nxy, wXY), std.mul(Nz, wZ));
+  return std.normalize(Nmix);
+};
+
+// One-hop ray march that ignores the slider
+const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
+  'kernel';
+  let distanceFromOrigin = d.f32();
+  let hit = d.f32();
+
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const p = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
+    hit = getMainSceneDist(p);
+    distanceFromOrigin += hit;
+    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) break;
+  }
+
+  if (distanceFromOrigin < MAX_DIST) {
+    const pos = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
+    const n = getNormalMain(pos);
+
+    const lightDir = std.mul(lightUniform.$.direction, -1.0);
+    const diffuse = std.max(std.dot(n, lightDir), 0.0);
+    const viewDir = std.normalize(std.sub(rayOrigin, pos));
+    const reflectDir = std.reflect(std.mul(lightDir, -1.0), n);
+    const specularFactor = std.pow(
+      std.max(std.dot(viewDir, reflectDir), 0.0),
+      SPECULAR_POWER,
+    );
+    const specular = std.mul(
+      std.mul(lightUniform.$.color, specularFactor),
+      SPECULAR_INTENSITY,
+    );
+    const baseColor = d.vec3f(0.9, 0.9, 0.9);
+    const directionalLight = std.mul(
+      std.mul(baseColor, lightUniform.$.color),
+      diffuse,
+    );
+    const ambientLight = std.mul(
+      std.mul(baseColor, AMBIENT_COLOR),
+      AMBIENT_INTENSITY,
+    );
+    const lit = std.add(std.add(directionalLight, ambientLight), specular);
+    const ao = calculateAO(pos, n);
+    return std.mul(lit, ao);
+  }
+  return d.vec3f(0.0, 0.0, 0.0);
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
@@ -211,11 +343,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
     );
     let normal = getNormal(hitPosition);
     if (hitInfo.objectType === 1) {
-      const normal2d = normalsStorage.$[segIdx.$.x]
-        .mul(segW.$.x)
-        .add(normalsStorage.$[segIdx.$.y].mul(segW.$.y));
-      normal = std.normalize(d.vec3f(normal2d, 0.0));
-      return d.vec4f(normal.x * 0.5 + 0.5, normal.y * 0.5 + 0.5, 0, 1);
+      normal = getJellyNormal(hitPosition);
     }
 
     const lightDir = std.mul(lightUniform.$.direction, -1.0);
@@ -244,10 +372,78 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
     );
     const litColor = std.add(std.add(directionalLight, ambientLight), specular);
 
+    if (hitInfo.objectType === 1) {
+      const originalSegment = segIdx.$.x;
+      const originalT = segW.$.x;
+
+      const N = getJellyNormal(hitPosition);
+      const I = rayDirection;
+      const cosi = std.min(
+        1.0,
+        std.max(0.0, std.dot(std.mul(I, -1.0), N)),
+      );
+      const F = fresnelSchlick(cosi, 1.0, JELLY_IOR);
+
+      // Reflection
+      const reflDir = std.reflect(I, N);
+      const reflOrigin = std.add(hitPosition, std.mul(N, SURF_DIST * 2.0));
+      const reflection = rayMarchNoJelly(reflOrigin, reflDir);
+
+      // Refraction
+      const eta = 1.0 / JELLY_IOR;
+      const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+      let refractedColor = d.vec3f(0.0, 0.0, 0.0);
+      if (k > 0.0) {
+        const refrDir = std.normalize(
+          std.add(
+            std.mul(I, eta),
+            std.mul(N, eta * cosi - std.sqrt(k)),
+          ),
+        );
+        // March inside jelly to exit
+        let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
+        let insideLen = d.f32();
+        for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
+          const dIn = sliderSdf3D(p); // negative inside, ~0 at boundary
+          const step = std.max(SURF_DIST, std.abs(dIn));
+          p = std.add(p, std.mul(refrDir, step));
+          insideLen += step;
+          if (dIn >= 0.0) break; // exited
+        }
+        const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
+        const env = rayMarchNoJelly(exitPos, refrDir);
+        const T = beerLambert(
+          JELLY_ABSORB.mul(
+            std.min(
+              1.0,
+              std.pow(
+                (originalSegment + 1 - originalT) / sliderStorage.$.length,
+                3,
+              ),
+            ),
+          ),
+          insideLen,
+        );
+        // Subtle forward-scatter glow
+        const forward = std.max(0.0, std.dot(lightDir, refrDir));
+        const scatter = std.mul(
+          JELLY_SCATTER_TINT,
+          JELLY_SCATTER_STRENGTH * forward,
+        );
+        refractedColor = std.add(std.mul(env, T), scatter);
+      }
+
+      const jelly = std.add(
+        std.mul(reflection, F),
+        std.mul(refractedColor, 1.0 - F),
+      );
+      return d.vec4f(jelly, 1.0);
+    }
+
     const ao = calculateAO(hitPosition, normal);
     const finalColor = std.mul(litColor, ao);
 
-    return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1.0);
+    return d.vec4f(finalColor, 1.0);
   }
   return d.vec4f();
 };
@@ -338,6 +534,31 @@ canvas.addEventListener('mousemove', (e) => {
   const normalizedX = (e.clientX - rect.left) / rect.width;
   const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
   targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  isMouseDown = true;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const normalizedX = (touch.clientX - rect.left) / rect.width;
+  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
+  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!isMouseDown) return;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const normalizedX = (touch.clientX - rect.left) / rect.width;
+  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
+  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  isMouseDown = false;
 });
 
 const renderPipeline = root['~unstable']

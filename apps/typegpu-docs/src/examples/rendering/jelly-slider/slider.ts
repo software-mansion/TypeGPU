@@ -9,9 +9,11 @@ export class Slider {
   #prev: Float32Array;
   #invMass: Float32Array;
   #targetX: number;
+  #angles: Float32Array;
 
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   normalsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
+  anglesBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
 
   readonly n: number;
   readonly totalLength: number;
@@ -20,15 +22,15 @@ export class Slider {
   readonly anchor: d.v2f;
 
   // Physics parameters
-  iterations = 8;
-  substeps = 2;
-  damping = 0.04;
+  iterations = 12;
+  substeps = 3;
+  damping = 0.02;
   bendingStrength = 0.8;
-  archStrength = 40;
-  endFlatCount = 2;
-  endFlatStiffness = 0.9;
-  bendingExponent = 3;
-  archEdgeDeadzone = 0.2;
+  archStrength = 30;
+  endFlatCount = 4;
+  endFlatStiffness = 0.6;
+  bendingExponent = 0.2;
+  archEdgeDeadzone = 0.4;
 
   constructor(root: TgpuRoot, start: d.v2f, end: d.v2f, numPoints: number) {
     this.#root = root;
@@ -46,6 +48,7 @@ export class Slider {
     this.#normals = new Float32Array(this.n * 2);
     this.#prev = new Float32Array(this.n * 2);
     this.#invMass = new Float32Array(this.n);
+    this.#angles = new Float32Array(this.n * 2);
 
     for (let i = 0; i < this.n; i++) {
       const t = i / (this.n - 1);
@@ -74,6 +77,13 @@ export class Slider {
         Array.from({ length: this.n }, () => d.vec2f(0, 1)),
       )
       .$usage('storage');
+
+    this.anglesBuffer = this.#root
+      .createBuffer(
+        d.arrayOf(d.vec2f, this.n),
+        Array.from({ length: this.n }, () => d.vec2f(0, 0)),
+      )
+      .$usage('storage');
   }
 
   setDragX(x: number) {
@@ -98,6 +108,7 @@ export class Slider {
     }
 
     this.#computeNormals();
+    this.#computeAngles();
     this.#updateGPUBuffer();
   }
 
@@ -171,7 +182,7 @@ export class Slider {
         for (let i = 1; i <= count; i++) {
           this.#projectLineY(i, this.baseY, this.endFlatStiffness);
         }
-        for (let i = this.n - 1 - count; i < this.n - 1; i++) {
+        for (let i = this.n - 1 - count / 2; i < this.n - 1; i++) {
           this.#projectLineY(i, this.baseY, this.endFlatStiffness);
         }
       }
@@ -244,6 +255,79 @@ export class Slider {
     }
   }
 
+  // fix the angle calculation (currently they always sum to 180 degrees which is wrong (there are situations (when we have high curvature))
+  #computeAngles() {
+    for (let i = 0; i < this.n; i++) {
+      let angleAB = 0;
+      let angleBC = 0;
+
+      const normalX = this.#normals[2 * i];
+      const normalY = this.#normals[2 * i + 1];
+
+      // Angle between AB and normal
+      if (i > 0) {
+        const abX = this.#pos[2 * i] - this.#pos[2 * (i - 1)];
+        const abY = this.#pos[2 * i + 1] - this.#pos[2 * (i - 1) + 1];
+
+        const A = [this.#pos[2 * (i - 1)], this.#pos[2 * (i - 1) + 1]];
+        const B = [this.#pos[2 * i], this.#pos[2 * i + 1]];
+        const BA = [A[0] - B[0], A[1] - B[1]];
+
+        const NORMAL = [normalX, normalY];
+
+        const BA_len = Math.hypot(BA[0], BA[1]);
+        const NORMAL_len = Math.hypot(NORMAL[0], NORMAL[1]);
+
+        const dotProduct = BA[0] * NORMAL[0] + BA[1] * NORMAL[1];
+        const temp = dotProduct / (BA_len * NORMAL_len);
+        const angle = Math.acos(temp);
+
+        const abLen = Math.hypot(abX, abY);
+        if (abLen > 1e-8) {
+          const abNormX = abX / abLen;
+          const abNormY = abY / abLen;
+          angleAB = Math.atan2(
+            abNormX * normalY - abNormY * normalX,
+            abNormX * normalX + abNormY * normalY,
+          );
+        }
+        angleAB = angle;
+      }
+
+      // Angle between normal and BC
+      if (i < this.n - 1) {
+        const bcX = this.#pos[2 * (i + 1)] - this.#pos[2 * i];
+        const bcY = this.#pos[2 * (i + 1) + 1] - this.#pos[2 * i + 1];
+
+        const B = [this.#pos[2 * i], this.#pos[2 * i + 1]];
+        const C = [this.#pos[2 * (i + 1)], this.#pos[2 * (i + 1) + 1]];
+        const BC = [C[0] - B[0], C[1] - B[1]];
+
+        const NORMAL = [normalX, normalY];
+
+        const BC_len = Math.hypot(BC[0], BC[1]);
+        const NORMAL_len = Math.hypot(NORMAL[0], NORMAL[1]);
+
+        const dotProduct = BC[0] * NORMAL[0] + BC[1] * NORMAL[1];
+        const temp = dotProduct / (BC_len * NORMAL_len);
+        const angle = Math.acos(temp);
+        const bcLen = Math.hypot(bcX, bcY);
+        if (bcLen > 1e-8) {
+          const bcNormX = bcX / bcLen;
+          const bcNormY = bcY / bcLen;
+          angleBC = Math.atan2(
+            normalX * bcNormY - normalY * bcNormX,
+            normalX * bcNormX + normalY * bcNormY,
+          );
+        }
+        angleBC = angle;
+      }
+
+      this.#angles[2 * i] = angleAB;
+      this.#angles[2 * i + 1] = angleBC;
+    }
+  }
+
   #updateGPUBuffer() {
     this.pointsBuffer.write(
       Array.from(
@@ -256,6 +340,13 @@ export class Slider {
       Array.from(
         { length: this.n },
         (_, i) => d.vec2f(this.#normals[2 * i], this.#normals[2 * i + 1]),
+      ),
+    );
+
+    this.anglesBuffer.write(
+      Array.from(
+        { length: this.n },
+        (_, i) => d.vec2f(this.#angles[2 * i], this.#angles[2 * i + 1]),
       ),
     );
   }
