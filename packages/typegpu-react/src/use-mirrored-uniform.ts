@@ -1,4 +1,4 @@
-import type * as d from 'typegpu/data';
+import * as d from 'typegpu/data';
 import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
@@ -16,16 +16,24 @@ export function useMirroredUniform<
   value: TValue,
 ): MirroredValue<TSchema> {
   const root = useRoot();
-
-  const [uniformBuffer] = useState(() => {
+  const [uniformBuffer, setUniformBuffer] = useState(() => {
     return root.createUniform(schema, value);
   });
+  const prevSchemaRef = useRef(schema);
+  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    uniformBuffer.write(value);
-  }, [value, uniformBuffer]);
+    let currentBuffer = uniformBuffer;
+    if (!d.deepEqual(prevSchemaRef.current as d.AnyData, schema as d.AnyData)) {
+      currentBuffer.buffer.destroy();
+      currentBuffer = root.createUniform(schema, value);
+      setUniformBuffer(currentBuffer);
+      prevSchemaRef.current = schema;
+    }
 
-  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    currentBuffer.write(value);
+  }, [schema, value, root, uniformBuffer]);
+
   useEffect(() => {
     if (cleanupRef.current) {
       clearTimeout(cleanupRef.current);
@@ -38,13 +46,15 @@ export function useMirroredUniform<
     };
   }, [uniformBuffer]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This value needs to be stable
-  const mirroredValue = useMemo(() => ({
-    schema,
-    get $() {
-      return uniformBuffer.$;
-    },
-  }), []);
+  const mirroredValue = useMemo(
+    () => ({
+      schema,
+      get $() {
+        return uniformBuffer.$;
+      },
+    }),
+    [schema, uniformBuffer],
+  );
 
   return mirroredValue as MirroredValue<TSchema>;
 }
