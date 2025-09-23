@@ -119,6 +119,11 @@ export default defineConfig({
               slug: 'fundamentals/buffers',
             },
             {
+              label: 'Variables',
+              slug: 'fundamentals/variables',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Data Schemas',
               slug: 'fundamentals/data-schemas',
             },

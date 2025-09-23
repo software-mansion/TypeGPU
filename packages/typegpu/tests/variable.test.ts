@@ -84,12 +84,10 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
     const a = d.arrayOf(s, 2);
 
     test(
-      tgpu['~unstable']
-        .privateVar(a, [
-          { x: 1, y: d.vec2i(2, 3) },
-          { x: 4, y: d.vec2i(5, 6) },
-        ])
-        .$name('x'),
+      tgpu.privateVar(a, [
+        { x: 1, y: d.vec2i(2, 3) },
+        { x: 4, y: d.vec2i(5, 6) },
+      ]).$name('x'),
       `
       struct s {
         x: u32,
