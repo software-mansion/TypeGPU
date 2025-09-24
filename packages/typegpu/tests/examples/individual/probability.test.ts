@@ -11,7 +11,7 @@ describe('probability distribution plot example', () => {
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
-      category: 'simple',
+      category: 'algorithms',
       name: 'probability',
       controlTriggers: ['Test Resolution'],
       expectedCalls: 13,
