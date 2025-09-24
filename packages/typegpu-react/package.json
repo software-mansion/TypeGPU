@@ -30,13 +30,16 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.7.0",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "typegpu": "^0.7.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "@webgpu/types": "catalog:types",
-    "@types/react": "^19.0.0",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
