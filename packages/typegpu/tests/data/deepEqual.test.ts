@@ -14,6 +14,9 @@ import {
   size,
   struct,
   u32,
+  uint16x2,
+  uint32,
+  uint8x4,
   unstruct,
   vec2f,
   vec2u,
@@ -162,6 +165,20 @@ describe('deepEqual', () => {
     expect(deepEqual(unstruct1, unstruct3)).toBe(false);
     expect(deepEqual(disarray1, disarray2)).toBe(true);
     expect(deepEqual(disarray1, disarray3)).toBe(false);
+  });
+
+  it('compares vertex formats', () => {
+    expect(deepEqual(uint16x2, uint8x4)).toBe(false);
+    expect(deepEqual(uint16x2, uint32)).toBe(false);
+    expect(deepEqual(uint16x2, uint16x2)).toBe(true);
+  });
+
+  it('compares unstructs with vertex formats', () => {
+    const unstruct1 = unstruct({ a: uint16x2 });
+    const unstruct2 = unstruct({ a: uint16x2 });
+    const unstruct3 = unstruct({ a: uint32 });
+    expect(deepEqual(unstruct1, unstruct2)).toBe(true);
+    expect(deepEqual(unstruct1, unstruct3)).toBe(false);
   });
 
   it('compares different kinds of types', () => {

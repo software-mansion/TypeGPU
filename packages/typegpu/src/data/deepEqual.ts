@@ -1,10 +1,5 @@
 import type { AnyAttribute } from './attributes.ts';
-import {
-  isDisarray,
-  isLooseData,
-  isLooseDecorated,
-  isUnstruct,
-} from './dataTypes.ts';
+import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
 import {
   isAtomic,
@@ -112,14 +107,8 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
         return false;
       }
     }
-
-    return true;
   }
 
-  if (isLooseData(a) && isLooseData(b)) {
-    // TODO: This is a simplified check. A a more detailed comparison might be necessary.
-    return JSON.stringify(a) === JSON.stringify(b);
-  }
-
+  // All other types have been checked for equality at the start
   return true;
 }
