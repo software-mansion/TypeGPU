@@ -135,7 +135,7 @@ export interface ItemStateStack {
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
+  defineBlockVariable(id: string, snippet: Snippet): void;
 }
 
 /**
@@ -290,6 +290,7 @@ export interface ResolutionCtx {
   get varyingLocations(): Record<string, number> | undefined;
 
   getUniqueName(resource: object): string;
+  makeNameValid(name: string): string;
 }
 
 /**
