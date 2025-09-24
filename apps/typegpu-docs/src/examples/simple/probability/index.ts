@@ -29,21 +29,28 @@ const canvas = document.getElementById('canvas') as HTMLDivElement;
 const helpInfo = document.getElementById('help') as HTMLDivElement;
 
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
 canvas.addEventListener('mouseover', () => {
   helpInfo.style.opacity = '0';
 });
-canvas.addEventListener('mouseout', () =>
+
+canvas.addEventListener('mouseout', () => {
   setTimeout(() => {
     helpInfo.style.opacity = '1';
-  }, c.popupCooldown));
+  }, c.popupCooldown);
+});
+
 // handle mobile devices
+
 canvas.addEventListener('touchstart', () => {
   helpInfo.style.opacity = '0';
 }, { passive: true });
-canvas.addEventListener('touchend', () =>
+
+canvas.addEventListener('touchend', () => {
   setTimeout(() => {
     helpInfo.style.opacity = '1';
-  }, c.popupCooldown));
+  }, c.popupCooldown);
+});
 
 plotter.resetView(getCameraPosition(currentDistribution));
 
