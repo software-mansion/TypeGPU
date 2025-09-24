@@ -17,8 +17,8 @@ catalogs:
       version: 3.5.0
   default:
     arktype:
-      specifier: ^2.1.20
-      version: 2.1.20
+      specifier: ^2.1.22
+      version: 2.1.22
   example:
     wgpu-matrix:
       specifier: ^3.4.0
@@ -175,7 +175,7 @@ importers:
         version: 19.1.6(@types/react@19.1.8)
       arktype:
         specifier: 'catalog:'
-        version: 2.1.20
+        version: 2.1.22
       astro:
         specifier: ^5.13.7
         version: 5.13.7(@types/node@24.3.0)(jiti@2.5.1)(lightningcss@1.30.1)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.8.0)
@@ -305,7 +305,7 @@ importers:
         version: 5.0.2
       arktype:
         specifier: 'catalog:'
-        version: 2.1.20
+        version: 2.1.22
       consola:
         specifier: ^3.4.0
         version: 3.4.0
@@ -441,7 +441,7 @@ importers:
         version: 0.1.63
       arktype:
         specifier: 'catalog:'
-        version: 2.1.20
+        version: 2.1.22
       jiti:
         specifier: catalog:build
         version: 2.4.2
@@ -623,8 +623,14 @@ packages:
   '@ark/schema@0.46.0':
     resolution: {integrity: sha512-c2UQdKgP2eqqDArfBqQIJppxJHvNNXuQPeuSPlDML4rjw+f1cu0qAlzOG4b8ujgm9ctIDWwhpyw6gjG5ledIVQ==}
 
+  '@ark/schema@0.49.0':
+    resolution: {integrity: sha512-GphZBLpW72iS0v4YkeUtV3YIno35Gimd7+ezbPO9GwEi9kzdUrPVjvf6aXSBAfHikaFc/9pqZOpv3pOXnC71tw==}
+
   '@ark/util@0.46.0':
     resolution: {integrity: sha512-JPy/NGWn/lvf1WmGCPw2VGpBg5utZraE84I7wli18EDF3p3zc/e9WolT35tINeZO3l7C77SjqRJeAUoT0CvMRg==}
+
+  '@ark/util@0.49.0':
+    resolution: {integrity: sha512-/BtnX7oCjNkxi2vi6y1399b+9xd1jnCrDYhZ61f0a+3X8x8DxlK52VgEEzyuC2UQMPACIfYrmHkhD3lGt2GaMA==}
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -3052,6 +3058,9 @@ packages:
 
   arktype@2.1.20:
     resolution: {integrity: sha512-IZCEEXaJ8g+Ijd59WtSYwtjnqXiwM8sWQ5EjGamcto7+HVN9eK0C4p0zDlCuAwWhpqr6fIBkxPuYDl4/Mcj/+Q==}
+
+  arktype@2.1.22:
+    resolution: {integrity: sha512-xdzl6WcAhrdahvRRnXaNwsipCgHuNoLobRqhiP8RjnfL9Gp947abGlo68GAIyLtxbD+MLzNyH2YR4kEqioMmYQ==}
 
   array-iterate@2.0.1:
     resolution: {integrity: sha512-I1jXZMjAgCMmxT4qxXfPXa6SthSoE8h6gkSI9BGGNv8mP8G/v0blc+qFnZu6K42vTOiuME596QaLO0TP3Lk0xg==}
@@ -6643,7 +6652,13 @@ snapshots:
     dependencies:
       '@ark/util': 0.46.0
 
+  '@ark/schema@0.49.0':
+    dependencies:
+      '@ark/util': 0.49.0
+
   '@ark/util@0.46.0': {}
+
+  '@ark/util@0.49.0': {}
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
@@ -8908,6 +8923,11 @@ snapshots:
     dependencies:
       '@ark/schema': 0.46.0
       '@ark/util': 0.46.0
+
+  arktype@2.1.22:
+    dependencies:
+      '@ark/schema': 0.49.0
+      '@ark/util': 0.49.0
 
   array-iterate@2.0.1: {}
 

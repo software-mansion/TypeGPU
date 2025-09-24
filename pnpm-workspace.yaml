@@ -3,7 +3,7 @@ packages:
   - 'apps/*'
 
 catalog:
-  arktype: ^2.1.20
+  arktype: ^2.1.22
 
 catalogs:
   build:
