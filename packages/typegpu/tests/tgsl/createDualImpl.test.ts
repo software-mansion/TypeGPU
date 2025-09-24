@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createDualImpl, dualImpl } from '../../src/core/function/dualImpl.ts';
+import {
+  createDualImpl,
+  dualImpl,
+  NotImplementedError,
+} from '../../src/core/function/dualImpl.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.ts';
@@ -45,7 +49,7 @@ describe('dualImpl', () => {
   it('fallbacks to codegenImpl', () => {
     const dual = dualImpl({
       normalImpl: (a: number) => {
-        throw new Error('Not implemented yet.');
+        throw new NotImplementedError('Not implemented yet.');
       },
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (snippet) => `fallback(${snippet.value})`,
@@ -56,6 +60,33 @@ describe('dualImpl', () => {
       const a = dual(2);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot();
+    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+      "fn myFn() {
+        var a = fallback(2);
+      }"
+    `);
+  });
+
+  it('rethrows errors other than NotImplementedError', () => {
+    const dual = dualImpl({
+      normalImpl: (a: number) => {
+        if (a === 0) throw new Error('Division by zero');
+        return 1 / a;
+      },
+      signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
+      codegenImpl: (snippet) => `(1 / ${snippet.value})`,
+      name: 'myDualImpl',
+    });
+
+    const myFn = tgpu.fn([])(() => {
+      const a = dual(0);
+    });
+
+    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn
+      - myDualImpl: Division by zero]
+    `);
   });
 });

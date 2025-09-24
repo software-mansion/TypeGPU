@@ -55,6 +55,8 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
+export class NotImplementedError extends Error {}
+
 export function dualImpl<T extends (...args: never[]) => unknown>(
   options: DualImplOptions<T>,
 ): DualFn<T> {
@@ -75,10 +77,18 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     ) as MapValueToSnippet<Parameters<T>>;
 
     if (converted.every((s) => isKnownAtComptime(s.value))) {
-      return snip(
-        options.normalImpl(...converted.map((s) => s.value) as never[]),
-        returnType,
-      );
+      try {
+        return snip(
+          options.normalImpl(...converted.map((s) => s.value) as never[]),
+          returnType,
+        );
+      } catch (e) {
+        // if cpuImpl is not yet implemented, fallback to codegenImpl
+        // otherwise, rethrow error
+        if (!(e instanceof NotImplementedError)) {
+          throw e;
+        }
+      }
     }
 
     return snip(options.codegenImpl(...converted), returnType);
