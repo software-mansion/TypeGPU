@@ -1176,7 +1176,6 @@ export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl:
     'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-
   codegenImpl: (e) => stitch`transpose(${e})`,
 });
 
