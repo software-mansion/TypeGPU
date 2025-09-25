@@ -5,6 +5,13 @@ import {
   isLooseData,
   type Unstruct,
 } from '../../data/dataTypes.ts';
+import {
+  accessModeMap,
+  isWgslStorageTexture,
+  isWgslTexture,
+  type WgslExternalTexture,
+} from '../../data/texture.ts';
+
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
@@ -69,6 +76,7 @@ const identityTypes = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'texture_external',
 ];
 
 type IdentityType =
@@ -94,7 +102,8 @@ type IdentityType =
   | Vec4b
   | Mat2x2f
   | Mat3x3f
-  | Mat4x4f;
+  | Mat4x4f
+  | WgslExternalTexture;
 
 function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
@@ -275,10 +284,22 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (
-    data.type === 'abstractInt' || data.type === 'abstractFloat' ||
-    data.type === 'void' || data.type === 'u16'
+    data.type === 'abstractInt' ||
+    data.type === 'abstractFloat' ||
+    data.type === 'void' ||
+    data.type === 'u16'
   ) {
     throw new Error(`${data.type} has no representation in WGSL`);
+  }
+
+  if (isWgslStorageTexture(data)) {
+    return `${data.type}<${data.format}, ${accessModeMap[data.access]}>`;
+  }
+
+  if (isWgslTexture(data)) {
+    return data.type.startsWith('texture_depth')
+      ? data.type
+      : `${data.type}<${data.sampleType.type}>`;
   }
 
   assertExhaustive(data, 'resolveData');

@@ -447,6 +447,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
     return value;
   },
+  // TODO: Move texture IO logic here after we expand repr to have in/out variants
 } satisfies CompleteDataWriters as Record<
   string,
   (output: ISerialOutput, schema: unknown, value: unknown) => void
@@ -802,6 +803,7 @@ const dataReaders = {
     input.seekTo(beginning + sizeOf(schema));
     return value;
   },
+  // TODO: Move texture IO logic here after we expand repr to have in/out variants
 } satisfies CompleteDataReaders;
 
 export function readData<TData extends wgsl.BaseData>(
