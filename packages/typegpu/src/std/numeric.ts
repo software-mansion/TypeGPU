@@ -1,7 +1,7 @@
 import {
   createDualImpl,
   dualImpl,
-  NotImplementedError,
+  MissingCpuImplError,
 } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
@@ -268,7 +268,7 @@ function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('countLeadingZeros');
+  throw new MissingCpuImplError('countLeadingZeros');
 }
 
 export const countLeadingZeros = dualImpl<typeof cpuCountLeadingZeros>({
@@ -284,7 +284,7 @@ function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('countOneBits');
+  throw new MissingCpuImplError('countOneBits');
 }
 
 export const countOneBits = dualImpl<typeof cpuCountOneBits>({
@@ -300,7 +300,7 @@ function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('countTrailingZeros');
+  throw new MissingCpuImplError('countTrailingZeros');
 }
 
 export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
@@ -325,7 +325,7 @@ function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * 180) / Math.PI) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for degrees on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -440,7 +440,7 @@ function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new NotImplementedError('extractBits');
+  throw new MissingCpuImplError('extractBits');
 }
 
 export const extractBits = dualImpl<typeof cpuExtractBits>({
@@ -473,7 +473,7 @@ function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('firstLeadingBit');
+  throw new MissingCpuImplError('firstLeadingBit');
 }
 
 export const firstLeadingBit = dualImpl<typeof cpuFirstLeadingBit>({
@@ -489,7 +489,7 @@ function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('firstTrailingBit');
+  throw new MissingCpuImplError('firstTrailingBit');
 }
 
 export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
@@ -526,7 +526,7 @@ function cpuFma<T extends AnyFloatVecInstance | number>(
   if (typeof e1 === 'number') {
     return (e1 * (e2 as number) + (e3 as number)) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for fma on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -582,7 +582,7 @@ export const frexp: FrexpOverload = createDualImpl(
     fract: number;
     exp: number;
   } => {
-    throw new NotImplementedError(
+    throw new MissingCpuImplError(
       'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
@@ -620,7 +620,7 @@ function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new NotImplementedError('insertBits');
+  throw new MissingCpuImplError('insertBits');
 }
 
 export const insertBits = dualImpl<typeof cpuInsertBits>({
@@ -641,7 +641,7 @@ function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return (1 / Math.sqrt(value)) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for inverseSqrt on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -661,7 +661,7 @@ function cpuLdexp<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: AnyIntegerVecInstance | number,
 ): T {
-  throw new NotImplementedError('ldexp');
+  throw new MissingCpuImplError('ldexp');
 }
 
 export const ldexp = dualImpl<typeof cpuLdexp>({
@@ -844,7 +844,7 @@ function cpuModf<T extends AnyFloatVecInstance>(
 function cpuModf<T extends AnyFloatVecInstance | number>(
   value: T,
 ): Infer<typeof ModfResult[keyof typeof ModfResult]> {
-  throw new NotImplementedError('modf');
+  throw new MissingCpuImplError('modf');
 }
 
 export const modf: ModfOverload = dualImpl<typeof cpuModf>({
@@ -908,7 +908,7 @@ function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
   value: T,
 ): T {
-  throw new NotImplementedError('quantizeToF16');
+  throw new MissingCpuImplError('quantizeToF16');
 }
 
 export const quantizeToF16 = dualImpl<typeof cpuQuantizeToF16>({
@@ -925,7 +925,7 @@ function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * Math.PI) / 180) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -951,7 +951,7 @@ export const reflect = dualImpl({
 export const refract = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T => {
-    throw new NotImplementedError(
+    throw new MissingCpuImplError(
       'CPU implementation for refract not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
@@ -967,7 +967,7 @@ export const refract = createDualImpl(
 function cpuReverseBits(value: number): number;
 function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
-  throw new NotImplementedError('reverseBits');
+  throw new MissingCpuImplError('reverseBits');
 }
 
 export const reverseBits = dualImpl<typeof cpuReverseBits>({
@@ -984,7 +984,7 @@ function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.round(value) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1002,7 +1002,7 @@ function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.max(0, Math.min(1, value)) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for saturate on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1052,7 +1052,7 @@ function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.sinh(value) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1122,7 +1122,7 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
   if (typeof edge === 'number') {
     return (edge <= (x as number) ? 1.0 : 0.0) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1143,7 +1143,7 @@ function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.tan(value) as T;
   }
-  throw new NotImplementedError(
+  throw new MissingCpuImplError(
     'CPU implementation for tan on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1183,7 +1183,7 @@ export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
 function cpuTrunc(value: number): number;
 function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
-  throw new NotImplementedError('trunc');
+  throw new MissingCpuImplError('trunc');
 }
 
 export const trunc = dualImpl<typeof cpuTrunc>({

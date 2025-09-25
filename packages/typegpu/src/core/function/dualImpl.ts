@@ -55,7 +55,12 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
-export class NotImplementedError extends Error {}
+export class MissingCpuImplError extends Error {
+  constructor(message: string | undefined) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
 
 export function dualImpl<T extends (...args: never[]) => unknown>(
   options: DualImplOptions<T>,
@@ -88,7 +93,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       } catch (e) {
         // if cpuImpl is not yet implemented, fallback to codegenImpl
         // otherwise, rethrow error
-        if (!(e instanceof NotImplementedError)) {
+        if (!(e instanceof MissingCpuImplError)) {
           throw e;
         }
       }
@@ -102,7 +107,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
     }
     if (typeof options.normalImpl === 'string') {
-      throw new NotImplementedError(options.normalImpl);
+      throw new MissingCpuImplError(options.normalImpl);
     }
     return options.normalImpl(...args);
   }) as T;

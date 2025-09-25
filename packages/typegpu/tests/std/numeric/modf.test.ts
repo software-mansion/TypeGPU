@@ -27,7 +27,7 @@ describe('modf', () => {
       err = error as Error;
     }
     expect(err).toMatchInlineSnapshot(
-      '[Error: CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
+      `[MissingCpuImplError: CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]`,
     );
   });
 });

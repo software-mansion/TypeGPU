@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   createDualImpl,
   dualImpl,
-  NotImplementedError,
+  MissingCpuImplError,
 } from '../../src/core/function/dualImpl.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
-import { subgroupAdd } from '../../src/std/subgroup.ts';
 
 describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
@@ -56,13 +55,13 @@ describe('dualImpl', () => {
     });
 
     expect(() => dual(2)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Not implemented yet.]`,
+      `[MissingCpuImplError: Not implemented yet.]`,
     );
   });
 
   it('fallbacks to codegenImpl on missing cpuImpl', () => {
     const f = (a: number) => {
-      throw new NotImplementedError('Not implemented yet.');
+      throw new MissingCpuImplError('Not implemented yet.');
     };
 
     const dual = dualImpl<typeof f>({
@@ -86,7 +85,7 @@ describe('dualImpl', () => {
   it('fallbacks to codegenImpl on error', () => {
     const dual = dualImpl({
       normalImpl: (a: number) => {
-        throw new NotImplementedError('Not implemented yet.');
+        throw new MissingCpuImplError('Not implemented yet.');
       },
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (snippet) => `fallback(${snippet.value})`,
