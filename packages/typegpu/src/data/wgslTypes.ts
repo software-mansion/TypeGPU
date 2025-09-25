@@ -23,7 +23,7 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal, $wgslDataType } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
 
@@ -81,12 +81,6 @@ export interface matInfixNotation<T extends AnyMatInstance> {
   mul(other: T): T;
 }
 
-export function hasInternalDataType(
-  value: unknown,
-): value is { [$wgslDataType]: BaseData } {
-  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
-}
-
 /**
  * Represents a 64-bit integer.
  */
@@ -120,6 +114,9 @@ export interface Void extends BaseData {
 export const Void = {
   [$internal]: true,
   type: 'void',
+  toString() {
+    return 'void';
+  },
 } as Void;
 
 // #region Instance Types
@@ -654,6 +651,8 @@ export type AnyFloat32VecInstance = v2f | v3f | v4f;
 export type AnyFloat16VecInstance = v2h | v3h | v4h;
 
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
+
+export type AnyUnsignedVecInstance = v2u | v3u | v4u;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
@@ -1825,6 +1824,16 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
   );
 }
 
+export function isAbstract(
+  value: unknown,
+): value is AbstractFloat | AbstractInt {
+  return isAbstractFloat(value) || isAbstractInt(value);
+}
+
+export function isConcrete(value: unknown): boolean {
+  return !isAbstract(value);
+}
+
 export function isVoid(value: unknown): value is Void {
   return (value as Void)?.[$internal] && (value as Void).type === 'void';
 }
@@ -1842,5 +1851,19 @@ export function isNumericSchema(
       type === 'f16' ||
       type === 'i32' ||
       type === 'u32')
+  );
+}
+
+export function isHalfPrecisionSchema(
+  schema: unknown,
+): schema is F16 | Vec2h | Vec3h | Vec4h {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    !!(schema as BaseData)?.[$internal] &&
+    (type === 'f16' ||
+      type === 'vec2h' ||
+      type === 'vec3h' ||
+      type === 'vec4h')
   );
 }

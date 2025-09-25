@@ -1,5 +1,6 @@
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -12,9 +13,8 @@ import {
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
 import { $internal } from '../shared/symbols.ts';
-import { abstractFloat, f16, f32 } from '../data/numeric.ts';
+import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -161,9 +161,9 @@ export const mul = dualImpl({
 });
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
-function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
-function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
-function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
+function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
+function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs / rhs;
@@ -242,14 +242,18 @@ export const mod: ModOverload = dualImpl({
   codegenImpl: (lhs, rhs) => stitch`(${lhs} % ${rhs})`,
 });
 
+function cpuNeg(value: number): number;
+function cpuNeg<T extends NumVec>(value: T): T;
+function cpuNeg(value: NumVec | number): NumVec | number {
+  if (typeof value === 'number') {
+    return -value;
+  }
+  return VectorOps.neg[value.kind](value);
+}
+
 export const neg = dualImpl({
   name: 'neg',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl<T extends NumVec | number>(value: T): T {
-    if (typeof value === 'number') {
-      return -value as T;
-    }
-    return VectorOps.neg[value.kind](value) as T;
-  },
+  normalImpl: cpuNeg,
   codegenImpl: (arg) => stitch`-(${arg})`,
 });

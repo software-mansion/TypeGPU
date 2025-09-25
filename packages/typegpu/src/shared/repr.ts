@@ -64,8 +64,9 @@ export type InferGPURecord<
   [Key in keyof T]: InferGPU<T[Key]>;
 };
 
-export type GPUValueOf<T> = T extends
-  { [$gpuValueOf](...args: never[]): infer TValue } ? TValue : T;
+export type GPUValueOf<T> = T extends { readonly [$gpuValueOf]: infer TValue }
+  ? TValue
+  : T;
 
 export type MemIdentity<T> = T extends { readonly [$memIdent]: infer TMemIdent }
   ? TMemIdent

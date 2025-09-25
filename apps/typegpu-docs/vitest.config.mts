@@ -1,7 +1,7 @@
 import { createJiti } from 'jiti';
-import { defineConfig } from 'vitest/config';
-import { imagetools } from 'vite-imagetools';
 import type TypeGPUPlugin from 'unplugin-typegpu/vite';
+import { imagetools } from 'vite-imagetools';
+import { defineConfig, type Plugin } from 'vitest/config';
 
 const jiti = createJiti(import.meta.url);
 const typegpu = await jiti.import<typeof TypeGPUPlugin>(
@@ -12,8 +12,8 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 export default defineConfig({
   plugins: [
     typegpu({ include: [/\.m?[jt]sx?/] }),
-    /** @type {any} */ imagetools(),
-  ],
+    imagetools(),
+  ] as Plugin[],
   server: {
     proxy: {
       '/TypeGPU': {

@@ -151,6 +151,7 @@ export {
   textureLoad,
   textureSample,
   textureSampleBaseClampToEdge,
+  textureSampleBias,
   textureSampleCompare,
   textureSampleLevel,
   textureStore,
@@ -181,3 +182,5 @@ export {
 } from './subgroup.ts';
 
 export { extensionEnabled } from './extensions.ts';
+
+export { bitcastU32toF32, bitcastU32toI32 } from './bitcast.ts';
