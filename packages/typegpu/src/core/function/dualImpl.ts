@@ -45,7 +45,7 @@ type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
 interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly name: string;
-  readonly normalImpl: T;
+  readonly normalImpl: T | string;
   readonly codegenImpl: (...args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
     | { argTypes: AnyData[]; returnType: AnyData }
@@ -76,7 +76,10 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       )
     ) as MapValueToSnippet<Parameters<T>>;
 
-    if (converted.every((s) => isKnownAtComptime(s.value))) {
+    if (
+      converted.every((s) => isKnownAtComptime(s.value)) &&
+      typeof options.normalImpl === 'function'
+    ) {
       try {
         return snip(
           options.normalImpl(...converted.map((s) => s.value) as never[]),
@@ -97,6 +100,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   const impl = ((...args: Parameters<T>) => {
     if (inCodegenMode()) {
       return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
+    }
+    if (typeof options.normalImpl === 'string') {
+      throw new NotImplementedError(options.normalImpl);
     }
     return options.normalImpl(...args);
   }) as T;

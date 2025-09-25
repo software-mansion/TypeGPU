@@ -8,6 +8,7 @@ import { getName } from '../../src/shared/meta.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
+import { subgroupAdd } from '../../src/std/subgroup.ts';
 
 describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
@@ -46,7 +47,43 @@ describe('dualImpl', () => {
     `);
   });
 
-  it('fallbacks to codegenImpl', () => {
+  it('throws on missing cpuImpl in cpu mode', () => {
+    const dual = dualImpl<(a: number) => number>({
+      normalImpl: 'Not implemented yet.',
+      signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
+      codegenImpl: (snippet) => `fallback(${snippet.value})`,
+      name: 'myDualImpl',
+    });
+
+    expect(() => dual(2)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Not implemented yet.]`,
+    );
+  });
+
+  it('fallbacks to codegenImpl on missing cpuImpl', () => {
+    const f = (a: number) => {
+      throw new NotImplementedError('Not implemented yet.');
+    };
+
+    const dual = dualImpl<typeof f>({
+      normalImpl: 'Not implemented yet.',
+      signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
+      codegenImpl: (snippet) => `fallback(${snippet.value})`,
+      name: 'myDualImpl',
+    });
+
+    const myFn = tgpu.fn([])(() => {
+      const a = dual(2);
+    });
+
+    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+      "fn myFn() {
+        var a = fallback(2);
+      }"
+    `);
+  });
+
+  it('fallbacks to codegenImpl on error', () => {
     const dual = dualImpl({
       normalImpl: (a: number) => {
         throw new NotImplementedError('Not implemented yet.');
