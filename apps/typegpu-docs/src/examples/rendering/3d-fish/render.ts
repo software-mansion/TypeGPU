@@ -1,5 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu from 'typegpu';
+import tgpu, { type VertexInput } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
@@ -11,10 +11,8 @@ import {
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
-export const vertexShader = tgpu['~unstable'].vertexFn({
-  in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
-  out: ModelVertexOutput,
-})((input) => {
+export vertexFn = (input: VertexInput<typeof ModelVertexInput>): VertexOutput<typeof ModelVertexOutput> => {
+  'kernel';
   // rotate the model so that it aligns with model's direction of movement
   // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
   // TODO: replace it with struct copy when Chromium is fixed
@@ -91,6 +89,13 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
     applySeaDesaturation: currentModelData.applySeaDesaturation,
     variant: currentModelData.variant,
   };
+};
+
+export const vertexShader = tgpu['~unstable'].vertexFn({
+  in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
+  out: ModelVertexOutput,
+})((input) => {
+
 });
 
 const sampleTexture = tgpu.fn([d.vec2f], d.vec4f)`(uv) {
@@ -109,7 +114,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
   const textureColor = textureColorWithAlpha.xyz;
 
-  const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
+  const ambient = textureColor.mul(p.lightColor).mul(0.5);
 
   const cosTheta = std.dot(input.worldNormal, p.lightDirection);
   const diffuse = std.mul(
@@ -118,22 +123,22 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   );
 
   const viewSource = std.normalize(
-    std.sub(layout.$.camera.position.xyz, input.worldPosition),
+    layout.$.camera.position.xyz.sub(input.worldPosition),
   );
   const reflectSource = std.normalize(
-    std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
+    std.reflect(p.lightDirection.mul(-1), input.worldNormal),
   );
   const specularStrength = std.pow(
     std.max(0, std.dot(viewSource, reflectSource)),
     16,
   );
-  const specular = std.mul(specularStrength, p.lightColor);
+  const specular = p.lightColor.mul(specularStrength);
 
   const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
   // apply desaturation
   const distanceFromCamera = std.length(
-    std.sub(layout.$.camera.position.xyz, input.worldPosition),
+    layout.$.camera.position.xyz.sub(input.worldPosition),
   );
 
   let desaturatedColor = lightedColor;

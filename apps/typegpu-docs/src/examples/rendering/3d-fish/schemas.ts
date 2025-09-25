@@ -45,8 +45,8 @@ export const ModelVertexOutput = {
   canvasPosition: d.builtin.position,
   variant: d.f32,
   textureUV: d.vec2f,
-  applySeaFog: d.interpolate('flat', d.u32), // bool
-  applySeaDesaturation: d.interpolate('flat', d.u32), // bool
+  applySeaFog: d.u32, // bool
+  applySeaDesaturation: d.u32, // bool
 } as const;
 
 export const MouseRay = d.struct({
