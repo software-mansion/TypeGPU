@@ -174,31 +174,6 @@ function frame() {
 
 frame();
 ```
-<Aside type="danger" title="The code above draws nothing!">
-  The `renderPipeline.execute(...)` method encodes all the necessary commands, but they will not be queued until we either read from a buffer or call `root.flush()`.
-</Aside>
-
-```diff lang=ts
-function frame() {
-  renderPipeline.execute({
-    colorAttachments: [
-      {
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-    vertexCount: 3,
-  });
-
-+  root.flush();
-
-  requestAnimationFrame(frame);
-}
-
-frame();
-```
 
 ## TypeGPU and WebGPU comparison
 Now that we have a working example, let's compare the TypeGPU code with the WebGPU code.
@@ -503,8 +478,6 @@ Let's explore both options.
       vertexCount: 3,
 +    instanceCount: triangleAmount,
     });
-
-    runtime.flush();
   });
   ```
 
@@ -562,8 +535,6 @@ Let's explore both options.
       vertexCount: 3,
 +    instanceCount: triangleAmount,
     });
-
-    runtime.flush();
   });
   ```
 
@@ -610,8 +581,6 @@ onFrame(() => {
     vertexCount: 3,
     instanceCount: triangleAmount,
   });
-
-  runtime.flush();
 });
 ```
 
@@ -812,8 +781,6 @@ onFrame(() => {
     vertexCount: 3,
     instanceCount: triangleAmount,
   });
-
-  runtime.flush();
 });
 ```
 
@@ -946,8 +913,6 @@ onFrame(() => {
     vertexCount: 3,
     instanceCount: triangleAmount,
   });
-
-  runtime.flush();
 });
 ```
 
@@ -1127,8 +1092,6 @@ onFrame(() => {
     vertexCount: 3,
     instanceCount: triangleAmount,
   });
-
-  runtime.flush();
 });
 ```
 
@@ -1500,4 +1463,3 @@ import step9webgpu from 'code/step9-webgpu.ts?raw';
 
 Congratulations! You've successfully implemented the boids flocking algorithm in WebGPU using TypeGPU.
 Along the way, you learned about creating and using a TypeGPU runtime, writing shader code, managing buffers, creating pipelines, and using slots. For more information, refer to the TypeGPU documentation. Thank you for following along and happy coding!
-
