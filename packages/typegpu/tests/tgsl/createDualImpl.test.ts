@@ -55,7 +55,7 @@ describe('dualImpl', () => {
     });
 
     expect(() => dual(2)).toThrowErrorMatchingInlineSnapshot(
-      `[MissingCpuImplError: Not implemented yet.]`,
+      '[MissingCpuImplError: Not implemented yet.]',
     );
   });
 

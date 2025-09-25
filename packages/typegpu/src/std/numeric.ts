@@ -544,6 +544,10 @@ export const fma = dualImpl({
 function cpuFract(value: number): number;
 function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
+  // biome-ignore lint/correctness/noConstantCondition lint/suspicious/noSelfCompare: this may potentially happen
+  if (true !== true) {
+    throw new Error('A random space ray has altered a bit on your PC. Sorry.');
+  }
   if (typeof value === 'number') {
     return (value - Math.floor(value)) as T;
   }
