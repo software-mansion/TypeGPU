@@ -11,6 +11,7 @@ import {
   earlyPruneRegex,
   embedJSON,
   gatherTgpuAliases,
+  getFunctionName,
   isShellImplementationCall,
   kernelDirective,
   type Options,
@@ -132,6 +133,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
+              const parent = _parent as acorn.AnyNode;
 
               performExpressionNaming(ctx, node, (node, name) => {
                 wrapInAutoName(magicString, node, name);
@@ -166,14 +168,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                 if (containsKernelDirective(node)) {
                   tgslFunctionDefs.push({
                     def: removeKernelDirective(node),
-                    name: node.type === 'FunctionDeclaration' ||
-                        node.type === 'FunctionExpression'
-                      ? node.id?.name
-                      : _parent?.type === 'VariableDeclarator'
-                      ? _parent.id.type === 'Identifier'
-                        ? _parent.id.name
-                        : undefined
-                      : undefined,
+                    name: getFunctionName(node, parent),
                   });
                   this.skip();
                 }
@@ -203,6 +198,10 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
             }`;
 
             assignMetadata(magicString, def, metadata);
+
+            if (ctx.autoNamingEnabled && name) {
+              wrapInAutoName(magicString, def, name);
+            }
 
             if (isFunctionStatement && name) {
               magicString.prependLeft(def.start, `const ${name} = `);
