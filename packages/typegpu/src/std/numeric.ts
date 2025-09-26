@@ -268,7 +268,7 @@ function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('countLeadingZeros');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const countLeadingZeros = dualImpl<typeof cpuCountLeadingZeros>({
@@ -284,7 +284,7 @@ function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('countOneBits');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const countOneBits = dualImpl<typeof cpuCountOneBits>({
@@ -300,7 +300,7 @@ function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('countTrailingZeros');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
@@ -440,7 +440,7 @@ function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new MissingCpuImplError('extractBits');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const extractBits = dualImpl<typeof cpuExtractBits>({
@@ -473,7 +473,7 @@ function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('firstLeadingBit');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const firstLeadingBit = dualImpl<typeof cpuFirstLeadingBit>({
@@ -489,7 +489,7 @@ function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('firstTrailingBit');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
@@ -620,7 +620,7 @@ function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new MissingCpuImplError('insertBits');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const insertBits = dualImpl<typeof cpuInsertBits>({
@@ -661,7 +661,7 @@ function cpuLdexp<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: AnyIntegerVecInstance | number,
 ): T {
-  throw new MissingCpuImplError('ldexp');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const ldexp = dualImpl<typeof cpuLdexp>({
@@ -844,7 +844,7 @@ function cpuModf<T extends AnyFloatVecInstance>(
 function cpuModf<T extends AnyFloatVecInstance | number>(
   value: T,
 ): Infer<typeof ModfResult[keyof typeof ModfResult]> {
-  throw new MissingCpuImplError('modf');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const modf: ModfOverload = dualImpl<typeof cpuModf>({
@@ -908,7 +908,7 @@ function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
   value: T,
 ): T {
-  throw new MissingCpuImplError('quantizeToF16');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const quantizeToF16 = dualImpl<typeof cpuQuantizeToF16>({
@@ -967,7 +967,7 @@ export const refract = createDualImpl(
 function cpuReverseBits(value: number): number;
 function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
-  throw new MissingCpuImplError('reverseBits');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const reverseBits = dualImpl<typeof cpuReverseBits>({
@@ -1182,7 +1182,7 @@ export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
 function cpuTrunc(value: number): number;
 function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
-  throw new MissingCpuImplError('trunc');
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
 export const trunc = dualImpl<typeof cpuTrunc>({
