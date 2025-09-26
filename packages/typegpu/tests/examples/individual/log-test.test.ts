@@ -66,11 +66,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_8)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -119,11 +119,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_9)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -164,11 +164,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_8)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -670,11 +670,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_54)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -717,11 +717,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_8)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -758,11 +758,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_8)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -801,11 +801,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_9)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
@@ -848,11 +848,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_9)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       struct mainVertex_Output_1 {
         @builtin(position) pos: vec4f,
@@ -961,11 +961,11 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_10)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
-        }"
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }"
     `);
   });
 });
