@@ -26,14 +26,14 @@ export const controls = {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(1), d.vec3u(2, 3, 4), d.u32(5), d.u32(6));
+        console.log(1, d.vec3u(2, 3, 4), 5, 6);
       }).dispatch(),
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
+        console.log(2, 'plus', 3, 'equals', 5);
       }).dispatch(),
   },
   'Two logs': {
@@ -212,7 +212,7 @@ export const controls = {
       try {
         prepareDispatch(root, () => {
           'kernel';
-          console.log(d.vec3u(), d.vec3u(), d.vec3u());
+          console.log(d.mat4x4f(), d.mat4x4f(), 1);
         }).dispatch();
       } catch (err) {
         console.log(err);

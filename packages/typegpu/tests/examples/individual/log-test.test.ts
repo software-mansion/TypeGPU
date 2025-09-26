@@ -107,8 +107,8 @@ describe('console log example', () => {
         return i;
       }
 
-      fn serializeU32_10(n: u32) {
-        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
+      fn serializeI32_10(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
       }
 
       fn serializeVec3u_12(v: vec3u) {
@@ -117,14 +117,14 @@ describe('console log example', () => {
         dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = v.z;
       }
 
-      fn log1serializer_9(_arg_0: u32, _arg_1: vec3u, _arg_2: u32, _arg_3: u32) {
-        serializeU32_10(_arg_0);
+      fn log1serializer_9(_arg_0: i32, _arg_1: vec3u, _arg_2: i32, _arg_3: i32) {
+        serializeI32_10(_arg_0);
         serializeVec3u_12(_arg_1);
-        serializeU32_10(_arg_2);
-        serializeU32_10(_arg_3);
+        serializeI32_10(_arg_2);
+        serializeI32_10(_arg_3);
       }
 
-      fn log1_3(_arg_0: u32, _arg_1: vec3u, _arg_2: u32, _arg_3: u32) {
+      fn log1_3(_arg_0: i32, _arg_1: vec3u, _arg_2: i32, _arg_3: i32) {
         dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
         if (dataBlockIndex_7 >= 40) {
           return;
@@ -171,17 +171,17 @@ describe('console log example', () => {
         return i;
       }
 
-      fn serializeU32_10(n: u32) {
-        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = n;
+      fn serializeI32_10(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
       }
 
-      fn log1serializer_9(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        serializeU32_10(_arg_0);
-        serializeU32_10(_arg_1);
-        serializeU32_10(_arg_2);
+      fn log1serializer_9(_arg_0: i32, _arg_1: i32, _arg_2: i32) {
+        serializeI32_10(_arg_0);
+        serializeI32_10(_arg_1);
+        serializeI32_10(_arg_2);
       }
 
-      fn log1_3(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+      fn log1_3(_arg_0: i32, _arg_1: i32, _arg_2: i32) {
         dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
         if (dataBlockIndex_7 >= 40) {
           return;
