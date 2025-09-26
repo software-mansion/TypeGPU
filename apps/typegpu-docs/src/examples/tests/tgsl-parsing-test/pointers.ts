@@ -17,18 +17,18 @@ const modifyStructFn = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
   ptr.vec.x += 1;
 });
 
-const privateNum = tgpu['~unstable'].privateVar(d.u32);
+const privateNum = tgpu.privateVar(d.u32);
 const modifyNumPrivate = tgpu.fn([d.ptrPrivate(d.u32)])((ptr) => {
   // biome-ignore lint/style/noParameterAssign: it's just a test
   ptr += 1;
 });
 
-const privateVec = tgpu['~unstable'].privateVar(d.vec2f);
+const privateVec = tgpu.privateVar(d.vec2f);
 const modifyVecPrivate = tgpu.fn([d.ptrPrivate(d.vec2f)])((ptr) => {
   ptr.x += 1;
 });
 
-const privateStruct = tgpu['~unstable'].privateVar(SimpleStruct);
+const privateStruct = tgpu.privateVar(SimpleStruct);
 const modifyStructPrivate = tgpu.fn([d.ptrPrivate(SimpleStruct)])((ptr) => {
   ptr.vec.x += 1;
 });
