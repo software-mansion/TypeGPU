@@ -11,10 +11,12 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 export default defineConfig({
   plugins: [typegpu({ forceTgpuAlias: 'tgpu', earlyPruning: false })],
   test: {
+    name: 'examples',
     globalSetup: ['setupVitest.ts'],
+    include: [
+      '**/tests/examples/**/*.{test,spec}.ts',
+    ],
     exclude: [
-      // Exclude example tests from unit tests
-      '**/tests/examples/**',
       '**/node_modules/**',
       '**/dist/**',
     ],
