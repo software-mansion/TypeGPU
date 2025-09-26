@@ -140,7 +140,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
 
     this._available = false;
     try {
-      const commandEncoder = this._group.device.createCommandEncoder();
+      const commandEncoder = this._group[$internal].commandEncoder;
       commandEncoder.copyBufferToBuffer(
         this[$internal].resolveBuffer,
         0,
@@ -148,10 +148,11 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
         0,
         this.count * BigUint64Array.BYTES_PER_ELEMENT,
       );
-      this._group.device.queue.submit([commandEncoder.finish()]);
+      this._group[$internal].flush();
       await this._group.device.queue.onSubmittedWorkDone();
 
       const readBuffer = this[$internal].readBuffer;
+      // TODO: Check if this already checks for submitted work done in the WebGPU spec
       await readBuffer.mapAsync(GPUMapMode.READ);
       const data = new BigUint64Array(readBuffer.getMappedRange().slice());
       readBuffer.unmap();
