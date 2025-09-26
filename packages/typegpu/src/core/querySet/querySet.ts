@@ -152,7 +152,6 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       await this._group.device.queue.onSubmittedWorkDone();
 
       const readBuffer = this[$internal].readBuffer;
-      // TODO: Check if this already checks for submitted work done in the WebGPU spec
       await readBuffer.mapAsync(GPUMapMode.READ);
       const data = new BigUint64Array(readBuffer.getMappedRange().slice());
       readBuffer.unmap();
