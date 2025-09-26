@@ -58,7 +58,7 @@ export function extractShaderCodes(
     [GPUShaderModuleDescriptor, { label?: string }]
   >;
   if (expectedCalls !== undefined && calls.length !== expectedCalls) {
-    console.warn(
+    throw new Error(
       `Expected ${expectedCalls} shader module creation calls, but got ${calls.length}.`,
     );
   }

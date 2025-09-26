@@ -42,6 +42,8 @@
   "scripts": {
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "test:examples": "vitest run --config vitest.examples.config.mts",
+    "test:examples:watch": "vitest --config vitest.examples.config.mts",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "engines": {
