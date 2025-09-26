@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../../../src/data/index.ts';
 import { lt } from '../../../src/std/index.ts';
+import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('lt', () => {
   it('compares numbers', () => {
@@ -37,5 +38,14 @@ describe('lt', () => {
     const a = 1 as number | d.v3f;
     const b = 0 as number | d.v3f;
     expect(lt(a, b)).toStrictEqual(false);
+  });
+});
+
+describe('lt (on GPU)', () => {
+  it('works', () => {
+    expect(asWgsl(() => {
+      'kernel';
+      return lt(1, 0);
+    })).toMatchInlineSnapshot(`""`);
   });
 });

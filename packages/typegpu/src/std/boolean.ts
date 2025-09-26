@@ -123,11 +123,16 @@ function cpuLt<T extends AnyNumericVecInstance | number>(
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
- * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
- * @example
+ * @example ```ts
  * lt(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, true)
  * lt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
  * all(lt(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
+ * ```
+ *
+ * Also accepts scalar values for the sake of generic use, but it's better to use the `<` operator.
+ * @example ```ts
+ * lt(1, 2) // returns true
+ * ```
  */
 export const lt = dualImpl({
   name: 'lt',

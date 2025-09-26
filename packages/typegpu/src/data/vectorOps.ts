@@ -1239,9 +1239,7 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(
       f: T,
       t: T,
-      c: T extends wgsl.AnyVec2Instance ? wgsl.v2b
-        : T extends wgsl.AnyVec3Instance ? wgsl.v3b
-        : wgsl.v4b,
+      c: wgsl.MatchingBoolInstance<T>,
     ) => T
   >,
 
