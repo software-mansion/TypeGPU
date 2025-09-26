@@ -22,7 +22,7 @@ export interface PlotConfig {
 }
 
 export interface ISurface {
-  getVertexBufferData: () => typeof s.Vertex[];
+  getVertexBufferData: () => d.Infer<typeof s.Vertex>[];
   getIndexBufferData: () => number[];
 }
 
@@ -40,6 +40,9 @@ export interface CameraConfig {
   fov: number;
   near: number;
   far: number;
+  orbitSensitivity: number;
+  zoomSensitivity: number;
+  maxZoom: number;
 }
 
 export interface GridConfig {
@@ -47,6 +50,8 @@ export interface GridConfig {
   nz: number;
   xRange: Range;
   zRange: Range;
+  yCallback: (x: number, z: number) => number;
+  colorCallback: (y: number) => d.v4f;
 }
 
 export interface Range {

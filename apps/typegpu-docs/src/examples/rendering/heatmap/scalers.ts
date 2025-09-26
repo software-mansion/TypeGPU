@@ -1,5 +1,3 @@
-import { EPS } from './constants.ts';
-
 export const minmaxScaler = {
   scale: (arr: number[]): number[] => {
     const [min, max] = arr.reduce(
@@ -7,7 +5,7 @@ export const minmaxScaler = {
       [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
     );
     const range = max - min;
-    return arr.map((e) => (2 * (e - min)) / (range + EPS) - 1);
+    return arr.map((e) => (2 * (e - min)) / (range + 1e-6) - 1);
   },
 };
 
@@ -17,6 +15,6 @@ export const signPreservingScaler = {
       (acc, val) => Math.max(Math.abs(acc), Math.abs(val)),
       0,
     );
-    return arr.map((e) => e / (absMax + EPS));
+    return arr.map((e) => e / (absMax + 1e-6));
   },
 };

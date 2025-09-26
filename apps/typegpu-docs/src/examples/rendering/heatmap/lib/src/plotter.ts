@@ -5,42 +5,46 @@ import type {
   TgpuBuffer,
   TgpuRenderPipeline,
   TgpuRoot,
-  UniformFlag,
   VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import * as m from 'wgpu-matrix';
 
 import type { CameraConfig, IPlotter, ISurface, PlotConfig } from './types.ts';
-import * as s from './structures.ts';
 import { fragmentFn, vertexFn } from './shaders.ts';
 import { layout, vertexLayout } from './layouts.ts';
-import {
-  createGrid,
-  createGridIndexArray,
-  createTransformMatrix,
-} from './helpers.ts';
 import * as c from './constants.ts';
+import { EventHandler } from './event-handler.ts';
+import { ResourceKeeper } from './resource-keeper.ts';
+import type * as s from './structures.ts';
+
+interface SurfaceResources {
+  vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
+  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
+}
 
 export class Plotter implements IPlotter {
   readonly #context: GPUCanvasContext;
   readonly #canvas: HTMLCanvasElement;
-  #presentationFormat!: GPUTextureFormat;
+  #presentationFormat: GPUTextureFormat;
+  #cameraConfig: CameraConfig;
+  #eventHandler: EventHandler;
+  #surfaceStack: SurfaceResources[] = [];
   #root!: TgpuRoot;
-  #renderPipeline!: TgpuRenderPipeline;
-  #cameraConfig!: CameraConfig;
   #resources!: ResourceKeeper;
+  #renderPipeline!: TgpuRenderPipeline;
   #plotConfig!: PlotConfig;
+  #bindedFrameFunction!: () => void;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, cameraConfig?: CameraConfig) {
     this.#canvas = canvas;
     this.#context = canvas.getContext('webgpu') as GPUCanvasContext;
+    this.#presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+    this.#cameraConfig = cameraConfig ?? c.DEFAULT_CAMERA_CONFIG;
+    this.#eventHandler = new EventHandler(this.#canvas, this.#cameraConfig);
   }
 
   async init(): Promise<void> {
     this.#root = await tgpu.init();
-
-    this.#presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
     this.#context.configure({
       device: this.#root.device,
@@ -54,16 +58,79 @@ export class Plotter implements IPlotter {
       this.#presentationFormat,
     );
 
-    this.updateCamera(c.DEFAULT_CAMERA_CONFIG);
+    this.updateCamera(this.#cameraConfig);
 
     this.#createRenderPipeline();
   }
 
   plot(surfaces: ISurface[], options: PlotConfig): void {
+    if (surfaces.length !== 0) {
+      for (const resource of this.#surfaceStack) {
+        resource.vertexBuffer.destroy();
+        resource.indexBuffer.destroy();
+      }
+    }
+
+    const root = this.#root;
+
     this.#plotConfig = options;
+
+    for (const surface of surfaces) {
+      const vertices = surface.getVertexBufferData();
+      const indices = surface.getIndexBufferData();
+      this.#surfaceStack.push(
+        {
+          vertexBuffer: root.createBuffer(
+            vertexLayout.schemaForCount(vertices.length),
+            vertices,
+          ).$usage('vertex'),
+
+          indexBuffer: root.createBuffer(
+            d.arrayOf(d.u16, indices.length),
+            indices,
+          ).$usage('index'),
+        },
+      );
+    }
   }
 
   startRenderLoop(): void {
+    this.#eventHandler.setup();
+
+    const resizeObserver = new ResizeObserver(() =>
+      this.#resources.updateDepthAndMsaa()
+    );
+    resizeObserver.observe(this.#canvas);
+    this.#canvas;
+
+    if (!this.#bindedFrameFunction) {
+      this.#bindedFrameFunction = this.#frame.bind(this);
+    }
+    this.#frame();
+  }
+
+  stopRenderLoop(): void {
+  }
+
+  updateCamera(cameraConfig: CameraConfig): void {
+    this.#cameraConfig = cameraConfig;
+    this.#resources.updateCameraUniform(
+      this.#cameraConfig,
+      this.#canvas.clientWidth / this.#canvas.clientHeight,
+    );
+  }
+
+  #frame() {
+    if (this.#eventHandler.cameraChanged) {
+      this.#resources.updateCameraView(this.#eventHandler.cameraViewMatrix);
+      this.#eventHandler.resetCameraChangedFlag();
+    }
+
+    this.#render();
+    requestAnimationFrame(this.#bindedFrameFunction);
+  }
+
+  #render() {
     const planes = this.#resources.planes;
     this.#drawObject(
       planes.vertexBuffer,
@@ -104,17 +171,6 @@ export class Plotter implements IPlotter {
     }
   }
 
-  stopRenderLoop(): void {
-  }
-
-  updateCamera(cameraConfig: CameraConfig): void {
-    this.#cameraConfig = cameraConfig;
-    this.#resources.updateCameraUniform(
-      this.#cameraConfig,
-      this.#canvas.clientWidth / this.#canvas.clientHeight,
-    );
-  }
-
   #drawObject(
     buffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag,
     group: TgpuBindGroup<typeof layout.entries>,
@@ -122,16 +178,17 @@ export class Plotter implements IPlotter {
     vertexCount: number,
     loadOp: 'clear' | 'load',
   ): void {
+    const resources = this.#resources;
     this.#renderPipeline
       .withColorAttachment({
-        view: this.#resources.depthAndMsaa.msaaTextureView,
+        view: resources.depthAndMsaa.msaaTextureView,
         resolveTarget: this.#context.getCurrentTexture().createView(),
         clearValue: [0, 0, 0, 0],
         loadOp: loadOp,
         storeOp: 'store',
       })
       .withDepthStencilAttachment({
-        view: this.#resources.depthAndMsaa.depthTextureView,
+        view: resources.depthAndMsaa.depthTextureView,
         depthClearValue: 1,
         depthLoadOp: loadOp,
         depthStoreOp: 'store',
@@ -172,205 +229,7 @@ export class Plotter implements IPlotter {
   }
 
   destroy(): void {
+    this.#eventHandler.destroy();
     this.#root.destroy();
-  }
-}
-
-type DepthAndMsaa = {
-  depthTexture: GPUTexture;
-  depthTextureView: GPUTextureView;
-  msaaTexture: GPUTexture;
-  msaaTextureView: GPUTextureView;
-};
-
-type PlanesResources = {
-  vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
-  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
-  xZero: {
-    transformUniform: TgpuBuffer<typeof s.Transform> & UniformFlag;
-    bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
-  };
-  yZero: {
-    transformUniform: TgpuBuffer<typeof s.Transform> & UniformFlag;
-    bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
-  };
-  zZero: {
-    transformUniform: TgpuBuffer<typeof s.Transform> & UniformFlag;
-    bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
-  };
-};
-
-class ResourceKeeper {
-  #root: TgpuRoot;
-  #cameraUniform: TgpuBuffer<typeof s.Camera> & UniformFlag;
-  #planes: PlanesResources;
-  #depthAndMsaa: DepthAndMsaa;
-
-  constructor(
-    root: TgpuRoot,
-    canvas: HTMLCanvasElement,
-    presentationFormat: GPUTextureFormat,
-  ) {
-    this.#root = root;
-
-    this.#cameraUniform = root.createBuffer(s.Camera).$usage('uniform');
-
-    this.#planes = this.#initPlanes();
-
-    this.#depthAndMsaa = this.#createDepthAndMsaaTextures(
-      canvas,
-      presentationFormat,
-    );
-  }
-
-  get planes(): PlanesResources {
-    return this.#planes;
-  }
-
-  get depthAndMsaa(): DepthAndMsaa {
-    return this.#depthAndMsaa;
-  }
-
-  updateCameraUniform(cameraConfig: CameraConfig, aspect: number): void {
-    const camera = {
-      view: m.mat4.lookAt(
-        cameraConfig.position,
-        cameraConfig.target,
-        cameraConfig.up,
-        d.mat4x4f(),
-      ),
-      projection: m.mat4.perspective(
-        cameraConfig.fov,
-        aspect,
-        cameraConfig.near,
-        cameraConfig.far,
-        d.mat4x4f(),
-      ),
-    };
-    this.#cameraUniform.write(camera);
-  }
-
-  #initPlanes(): PlanesResources {
-    const gridVertices = createGrid(c.PLANE_GRID_CONFIG)
-      .map((vertex) => ({
-        position: vertex.position,
-        color: c.DEFAULT_PLANE_COLOR,
-      }));
-
-    const gridIndices = createGridIndexArray(
-      c.PLANE_GRID_CONFIG.nx,
-      c.PLANE_GRID_CONFIG.nz,
-    );
-
-    const vertexBuffer = this.#root.createBuffer(
-      vertexLayout.schemaForCount(4),
-      gridVertices,
-    ).$usage('vertex');
-
-    const indexBuffer = this.#root.createBuffer(
-      d.arrayOf(d.u16, 6),
-      gridIndices,
-    ).$usage('index');
-
-    const defaultTransform = createTransformMatrix(
-      c.DEFAULT_PLANE_TRANSLATION,
-      c.DEFAULT_PLANE_SCALE,
-    );
-
-    const xTransform = this.#root
-      .createBuffer(
-        s.Transform,
-        {
-          model: m.mat4.rotateZ(
-            defaultTransform.model,
-            Math.PI / 2,
-            d.mat4x4f(),
-          ),
-        },
-      )
-      .$usage('uniform');
-
-    const xBindgroup = this.#root.createBindGroup(layout, {
-      camera: this.#cameraUniform,
-      transform: xTransform,
-    });
-
-    const yTransform = this.#root
-      .createBuffer(s.Transform, defaultTransform)
-      .$usage('uniform');
-
-    const yBindgroup = this.#root.createBindGroup(layout, {
-      camera: this.#cameraUniform,
-      transform: yTransform,
-    });
-
-    const zTransform = this.#root
-      .createBuffer(
-        s.Transform,
-        {
-          model: m.mat4.rotateX(
-            defaultTransform.model,
-            Math.PI / 2,
-            d.mat4x4f(),
-          ),
-        },
-      )
-      .$usage('uniform');
-
-    const zBindgroup = this.#root.createBindGroup(layout, {
-      camera: this.#cameraUniform,
-      transform: zTransform,
-    });
-
-    return {
-      vertexBuffer: vertexBuffer,
-      indexBuffer: indexBuffer,
-
-      xZero: {
-        transformUniform: xTransform,
-        bindgroup: xBindgroup,
-      },
-      yZero: {
-        transformUniform: yTransform,
-        bindgroup: yBindgroup,
-      },
-      zZero: {
-        transformUniform: zTransform,
-        bindgroup: zBindgroup,
-      },
-    };
-  }
-
-  #createDepthAndMsaaTextures(
-    canvas: HTMLCanvasElement,
-    presentationFormat: GPUTextureFormat,
-  ): DepthAndMsaa {
-    if (this.#depthAndMsaa?.depthTexture) {
-      this.#depthAndMsaa.depthTexture.destroy();
-    }
-    if (this.#depthAndMsaa?.msaaTexture) {
-      this.#depthAndMsaa.msaaTexture.destroy();
-    }
-
-    const depthTexture = this.#root.device.createTexture({
-      size: [canvas.width, canvas.height, 1],
-      format: 'depth24plus',
-      sampleCount: 4,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    const msaaTexture = this.#root.device.createTexture({
-      size: [canvas.width, canvas.height, 1],
-      format: presentationFormat,
-      sampleCount: 4,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    return {
-      depthTexture,
-      depthTextureView: depthTexture.createView(),
-      msaaTexture,
-      msaaTextureView: msaaTexture.createView(),
-    };
   }
 }
