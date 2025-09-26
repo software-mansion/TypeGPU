@@ -26,25 +26,15 @@ export const controls = {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-<<<<<<< HEAD
-        console.log(1, d.vec3u(2, 3, 4), 5, 6);
-      })(),
-=======
         console.log(d.u32(1), d.vec3u(2, 3, 4), d.u32(5), d.u32(6));
       }).dispatch(),
->>>>>>> origin/main
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-<<<<<<< HEAD
-        console.log(2, 'plus', 3, 'equals', 5);
-      })(),
-=======
         console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
       }).dispatch(),
->>>>>>> origin/main
   },
   'Two logs': {
     onButtonClick: () =>
@@ -121,7 +111,7 @@ export const controls = {
 
         const complexArray = ComplexArray([[3, 4], [5, 6], [7, 8]]);
         console.log(complexArray);
-      })();
+      }).dispatch();
     },
   },
   'Two threads': {
@@ -140,12 +130,8 @@ export const controls = {
       });
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
-<<<<<<< HEAD
-        dispatch();
-=======
         test.dispatch();
         console.log(`dispatched ${i}`);
->>>>>>> origin/main
       }
     },
   },
@@ -221,8 +207,6 @@ export const controls = {
         console.log('Log 3 from thread', x);
       }).dispatch(16),
   },
-<<<<<<< HEAD
-=======
   'Too much data': {
     onButtonClick: () => {
       try {
@@ -235,7 +219,6 @@ export const controls = {
       }
     },
   },
->>>>>>> origin/main
 };
 
 export function onCleanup() {
