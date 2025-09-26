@@ -34,7 +34,7 @@ import {
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import type { Infer } from './shared/repr.ts';
-import { safeStringify } from './shared/safeStringify.ts';
+import { safeStringify } from './shared/stringify.ts';
 import { $internal, $providing, $resolve } from './shared/symbols.ts';
 import {
   bindGroupLayout,
