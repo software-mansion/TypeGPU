@@ -1,5 +1,6 @@
 import type { AnyData } from '../data/dataTypes.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
+import { isNaturallyRef } from '../data/wgslTypes.ts';
 import { getGPUValue } from '../getGPUValue.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
@@ -37,12 +38,14 @@ export const valueProxyHandler: ProxyHandler<
       return undefined;
     }
 
+    const ref = targetSnippet.ref && isNaturallyRef(propType);
+
     return new Proxy({
       [$internal]: true,
       [$resolve]: (ctx) =>
-        snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
+        snip(`${ctx.resolve(target).value}.${String(prop)}`, propType, ref),
       get [$ownSnippet]() {
-        return snip(this, propType);
+        return snip(this, propType, ref);
       },
       toString: () => `${String(target)}.${prop}`,
     }, valueProxyHandler);

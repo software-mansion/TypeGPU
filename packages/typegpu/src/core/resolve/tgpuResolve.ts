@@ -107,6 +107,7 @@ export function resolveWithContext(
       return snip(
         replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
         Void,
+        /* ref */ false,
       );
     },
 

@@ -64,30 +64,32 @@ describe('generationHelpers', () => {
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
       expect(numericLiteralToSnippet(1)).toEqual(
-        snip(1, abstractInt),
+        snip(1, abstractInt, false),
       );
 
       expect(numericLiteralToSnippet(1.1)).toEqual(
-        snip(1.1, abstractFloat),
+        snip(1.1, abstractFloat, false),
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractInt),
+        snip(1e10, abstractInt, false),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
-        snip(0.5, abstractFloat),
+        snip(0.5, abstractFloat, false),
       );
 
       expect(numericLiteralToSnippet(-45)).toEqual(
-        snip(-45, abstractInt),
+        snip(-45, abstractInt, false),
       );
 
       expect(numericLiteralToSnippet(0x1A)).toEqual(
-        snip(0x1A, abstractInt),
+        snip(0x1A, abstractInt, false),
       );
 
-      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt));
+      expect(numericLiteralToSnippet(0b101)).toEqual(
+        snip(5, abstractInt, false),
+      );
     });
   });
 
@@ -142,21 +144,21 @@ describe('generationHelpers', () => {
     const arr = arrayOf(f32, 2);
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
-      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
-      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt));
-      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt));
+      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt, false));
+      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat, false));
+      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt, false));
+      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt, false));
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual(snip(true, bool));
-      expect(coerceToSnippet(false)).toEqual(snip(false, bool));
+      expect(coerceToSnippet(true)).toEqual(snip(true, bool, false));
+      expect(coerceToSnippet(false)).toEqual(snip(false, bool, false));
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
-      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
-      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
-      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
+      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData, true));
+      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData, true));
+      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData, true));
     });
 
     it('coerces arrays to unknown', () => {
@@ -180,12 +182,14 @@ describe('generationHelpers', () => {
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
-      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
-      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
-      expect(coerceToSnippet(undefined)).toEqual(snip(undefined, UnknownData));
+      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData, true));
+      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData, true));
+      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData, true));
+      expect(coerceToSnippet(undefined)).toEqual(
+        snip(undefined, UnknownData, true),
+      );
       const fn = () => {};
-      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
+      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData, true));
     });
   });
 });

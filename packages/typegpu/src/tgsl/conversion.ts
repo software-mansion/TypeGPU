@@ -229,14 +229,20 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return snip(snippet.value, targetType);
+    return snip(
+      snippet.value,
+      targetType,
+      // if it was a ref, then it's still a ref
+      /* ref */ snippet.ref,
+    );
   }
 
   switch (action.action) {
     case 'ref':
-      return snip(stitch`&${snippet}`, targetType);
+      return snip(stitch`&${snippet}`, targetType, /* ref */ true);
     case 'deref':
-      return snip(stitch`*${snippet}`, targetType);
+      // Dereferencing a pointer does not return a copy of the value, it's still a reference.
+      return snip(stitch`*${snippet}`, targetType, /* ref */ true);
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
       return (targetType as unknown as (val: Snippet) => Snippet)(snippet);
@@ -313,12 +319,16 @@ export function tryConvertSnippet(
   verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType);
+    return snip(snippet.value, targetDataType, /* ref */ snippet.ref);
   }
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(stitch`${snip(snippet.value, targetDataType)}`, targetDataType);
+    return snip(
+      stitch`${snip(snippet.value, targetDataType, /* ref */ snippet.ref)}`,
+      targetDataType,
+      /* ref */ snippet.ref,
+    );
   }
 
   const converted = convertToCommonType([snippet], [targetDataType], verbose);

@@ -41,12 +41,12 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   [$resolve](): ResolvedSnippet {
     const schema = this[$internal].elementSchema;
     if (this.every((e) => !e)) {
-      return snip(`${this.kind}()`, schema);
+      return snip(`${this.kind}()`, schema, /* ref */ false);
     }
     if (this.every((e) => this[0] === e)) {
-      return snip(`${this.kind}(${this[0]})`, schema);
+      return snip(`${this.kind}(${this[0]})`, schema, /* ref */ false);
     }
-    return snip(`${this.kind}(${this.join(', ')})`, schema);
+    return snip(`${this.kind}(${this.join(', ')})`, schema, /* ref */ false);
   }
 
   toString() {

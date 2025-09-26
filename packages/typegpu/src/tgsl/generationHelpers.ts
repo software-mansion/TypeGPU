@@ -2,6 +2,7 @@ import {
   type AnyData,
   isDisarray,
   isUnstruct,
+  undecorate,
   UnknownData,
 } from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
@@ -111,7 +112,8 @@ export function getTypeForPropAccess(
   propName: string,
 ): AnyData | UnknownData {
   if (isWgslStruct(targetType) || isUnstruct(targetType)) {
-    return targetType.propTypes[propName] as AnyData ?? UnknownData;
+    const propType = targetType.propTypes[propName];
+    return propType ? undecorate(propType) as AnyData : UnknownData;
   }
 
   if (targetType === bool || isNumericSchema(targetType)) {
@@ -176,9 +178,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt);
+    return snip(value, abstractInt, /* ref */ false);
   }
-  return snip(value, abstractFloat);
+  return snip(value, abstractFloat, /* ref */ false);
 }
 
 export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
@@ -195,7 +197,11 @@ export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
 
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
   return args.map((snippet) =>
-    snip(snippet.value, concretize(snippet.dataType as AnyWgslData))
+    snip(
+      snippet.value,
+      concretize(snippet.dataType as AnyWgslData),
+      /* ref */ snippet.ref,
+    )
   );
 }
 
@@ -243,7 +249,8 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, kindToSchema[value.kind]);
+    // It's a reference to an external value, so `ref` is true
+    return snip(value, kindToSchema[value.kind], /* ref */ true);
   }
 
   if (
@@ -252,7 +259,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData);
+    return snip(value, UnknownData, /* ref */ true);
   }
 
   if (typeof value === 'number') {
@@ -260,8 +267,10 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool);
+    // It's a primitive, so `ref` is false
+    return snip(value, bool, /* ref */ false);
   }
 
-  return snip(value, UnknownData);
+  // Hard to determine referentiality, so let's assume it's true
+  return snip(value, UnknownData, /* ref */ true);
 }

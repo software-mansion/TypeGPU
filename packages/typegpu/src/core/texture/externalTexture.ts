@@ -37,7 +37,7 @@ export class TgpuExternalTextureImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any);
+  [$ownSnippet] = snip(this, this as any, /* ref */ true);
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -49,7 +49,7 @@ export class TgpuExternalTextureImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any);
+    return snip(id, this as any, /* ref */ true);
   }
 
   toString() {

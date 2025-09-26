@@ -41,7 +41,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
-    return snip('/* console.log() */', Void);
+    return snip('/* console.log() */', Void, /* ref */ false);
   }
 }
 
@@ -101,7 +101,11 @@ export class LogGeneratorImpl implements LogGenerator {
       ),
     );
 
-    return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
+    return snip(
+      stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`,
+      Void,
+      /* ref */ false,
+    );
   }
 
   get logResources(): LogResources | undefined {

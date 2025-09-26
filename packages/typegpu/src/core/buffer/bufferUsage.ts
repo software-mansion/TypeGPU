@@ -1,7 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isNaturallyRef,
+} from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -126,7 +130,7 @@ class TgpuFixedBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(id, dataType, /* ref */ isNaturallyRef(dataType));
   }
 
   toString(): string {
@@ -139,7 +143,7 @@ class TgpuFixedBufferImpl<
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType);
+        return snip(this, dataType, /* ref */ isNaturallyRef(dataType));
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -246,7 +250,7 @@ export class TgpuLaidOutBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(id, dataType, /* ref */ isNaturallyRef(dataType));
   }
 
   toString(): string {
@@ -259,7 +263,7 @@ export class TgpuLaidOutBufferImpl<
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, schema);
+        return snip(this, schema, /* ref */ isNaturallyRef(schema));
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

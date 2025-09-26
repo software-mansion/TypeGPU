@@ -10,6 +10,7 @@ import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
+import { isNaturallyRef } from '../../data/wgslTypes.ts';
 
 function isKnownAtComptime(value: unknown): boolean {
   return typeof value !== 'string' && getOwnSnippet(value) === undefined;
@@ -78,10 +79,13 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       return snip(
         options.normalImpl(...converted.map((s) => s.value) as never[]),
         returnType,
+        // Functions give up ownership of their return value
+        /* ref */ false,
       );
     }
 
-    return snip(options.codegenImpl(...converted), returnType);
+    // Functions give up ownership of their return value
+    return snip(options.codegenImpl(...converted), returnType, /* ref */ false);
   };
 
   const impl = ((...args: Parameters<T>) => {
