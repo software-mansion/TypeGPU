@@ -127,7 +127,7 @@ export const textureSample: TextureSampleOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(stitch`textureSample(${args})`, vec4f),
+  (...args) => snip(stitch`textureSample(${args})`, vec4f, /* ref */ false),
   'textureSample',
 );
 
@@ -197,7 +197,7 @@ export const textureSampleBias: TextureSampleBiasOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(stitch`textureSampleBias(${args})`, vec4f),
+  (...args) => snip(stitch`textureSampleBias(${args})`, vec4f, /* ref */ false),
   'textureSampleBias',
 );
 
@@ -247,7 +247,8 @@ export const textureSampleLevel: TextureSampleLevelOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(stitch`textureSampleLevel(${args})`, vec4f),
+  (...args) =>
+    snip(stitch`textureSampleLevel(${args})`, vec4f, /* ref */ false),
   'textureSampleLevel',
 );
 
@@ -336,6 +337,7 @@ export const textureLoad: TextureLoadOverload = createDualImpl(
       'texelDataType' in textureInfo
         ? textureInfo.texelDataType
         : channelDataToInstance[textureInfo.channelDataType.type],
+      /* ref */ false,
     );
   },
   'textureLoad',
@@ -378,7 +380,7 @@ export const textureStore: TextureStoreOverload = createDualImpl(
     );
   },
   // CODEGEN implementation
-  (...args) => snip(stitch`textureStore(${args})`, Void),
+  (...args) => snip(stitch`textureStore(${args})`, Void, /* ref */ false),
   'textureStore',
 );
 
@@ -438,6 +440,7 @@ export const textureDimensions: TextureDimensionsOverload = createDualImpl(
     return snip(
       stitch`textureDimensions(${[texture, level]})`,
       dim === '1d' ? u32 : dim === '3d' ? vec3u : vec2u,
+      /* ref */ false,
     );
   },
   'textureDimensions',
@@ -503,7 +506,8 @@ export const textureSampleCompare: TextureSampleCompareOverload =
       );
     },
     // CODEGEN implementation
-    (...args) => snip(stitch`textureSampleCompare(${args})`, f32),
+    (...args) =>
+      snip(stitch`textureSampleCompare(${args})`, f32, /* ref */ false),
     'textureSampleCompare',
   );
 
@@ -530,6 +534,7 @@ export const textureSampleBaseClampToEdge: TextureSampleBaseClampToEdge =
       snip(
         stitch`textureSampleBaseClampToEdge(${args})`,
         vec4f,
+        /* ref */ false,
       ),
     'textureSampleBaseClampToEdge',
   );

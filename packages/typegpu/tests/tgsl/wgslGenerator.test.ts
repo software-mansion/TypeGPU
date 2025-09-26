@@ -284,7 +284,7 @@ describe('wgslGenerator', () => {
     }
 
     const args = astInfo.ast.params.map((arg) =>
-      snip((arg as { type: 'i'; name: string }).name, d.u32)
+      snip((arg as { type: 'i'; name: string }).name, d.u32, false)
     );
 
     provideCtx(ctx, () => {
@@ -467,7 +467,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
-        [snip('idx', d.u32)],
+        [snip('idx', d.u32, false)],
         {},
         d.f32,
         astInfo.externals ?? {},

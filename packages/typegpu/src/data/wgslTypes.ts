@@ -25,6 +25,7 @@ import type {
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
+import { isMarkedInternal } from '../types.ts';
 import type { DualFn } from './dualFn.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
@@ -1866,4 +1867,24 @@ export function isHalfPrecisionSchema(
       type === 'vec3h' ||
       type === 'vec4h')
   );
+}
+
+const valueTypes = [
+  'abstractInt',
+  'abstractFloat',
+  'f32',
+  'f16',
+  'i32',
+  'u32',
+  'bool',
+];
+
+/**
+ * Returns true for schemas that are naturally referential in JS.
+ * @param schema
+ * @returns
+ */
+export function isNaturallyRef(schema: unknown): boolean {
+  return isMarkedInternal(schema) &&
+    !valueTypes.includes((schema as BaseData)?.type);
 }

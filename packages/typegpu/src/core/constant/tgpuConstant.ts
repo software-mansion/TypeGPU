@@ -1,5 +1,5 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import { type AnyWgslData, isNaturallyRef } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -67,7 +67,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
-    return snip(id, this.dataType);
+    return snip(id, this.dataType, /* ref */ isNaturallyRef(this.dataType));
   }
 
   toString() {
@@ -80,7 +80,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType);
+        return snip(this, dataType, /* ref */ isNaturallyRef(dataType));
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,

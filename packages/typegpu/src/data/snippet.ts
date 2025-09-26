@@ -10,6 +10,7 @@ export interface Snippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData | UnknownData;
+  readonly ref: boolean;
 }
 
 export interface ResolvedSnippet {
@@ -19,6 +20,7 @@ export interface ResolvedSnippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData;
+  readonly ref: boolean;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
@@ -27,6 +29,7 @@ class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
     readonly dataType: AnyData | UnknownData,
+    readonly ref: boolean,
   ) {}
 }
 
@@ -38,11 +41,20 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(value: string, dataType: AnyData): ResolvedSnippet;
-export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet;
+export function snip(
+  value: string,
+  dataType: AnyData,
+  ref: boolean,
+): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
+  ref: boolean,
+): Snippet;
+export function snip(
+  value: unknown,
+  dataType: AnyData | UnknownData,
+  ref: boolean,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -53,5 +65,6 @@ export function snip(
     value,
     // We don't care about attributes in snippet land, so we discard that information.
     undecorate(dataType as AnyData),
+    ref,
   );
 }

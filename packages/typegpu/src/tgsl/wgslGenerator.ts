@@ -163,7 +163,11 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    const snippet = snip(this.ctx.makeNameValid(id), dataType);
+    const snippet = snip(
+      this.ctx.makeNameValid(id),
+      dataType,
+      /* ref */ wgsl.isNaturallyRef(dataType),
+    );
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
@@ -208,7 +212,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool);
+      return snip(expression, bool, /* ref */ false);
     }
 
     if (
@@ -245,6 +249,8 @@ ${this.ctx.pre}}`;
           ? `(${lhsStr} ${op} ${rhsStr})`
           : `${lhsStr} ${op} ${rhsStr}`,
         type,
+        // Result of an operation, so not a reference to anything
+        /* ref */ false,
       );
     }
 
@@ -254,7 +260,8 @@ ${this.ctx.pre}}`;
       const argExpr = this.expression(arg);
       const argStr = this.ctx.resolve(argExpr.value).value;
 
-      return snip(`${argStr}${op}`, argExpr.dataType);
+      // Result of an operation, so not a reference to anything
+      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ false);
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -264,7 +271,8 @@ ${this.ctx.pre}}`;
       const argStr = this.ctx.resolve(argExpr.value).value;
 
       const type = operatorToType(argExpr.dataType, op);
-      return snip(`${op}${argStr}`, type);
+      // Result of an operation, so not a reference to anything
+      return snip(`${op}${argStr}`, type, /* ref */ false);
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -273,21 +281,22 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData);
+        return snip(new ConsoleLog(), UnknownData, /* ref */ true);
       }
 
       if (
         infixKinds.includes(target.dataType.type) &&
         property in infixOperators
       ) {
-        return {
-          value: new InfixDispatch(
+        return snip(
+          new InfixDispatch(
             property,
             target,
             infixOperators[property as InfixOperator][$internal].gpuImpl,
           ),
-          dataType: UnknownData,
-        };
+          UnknownData,
+          /* ref */ true,
+        );
       }
 
       if (target.dataType.type === 'unknown') {
@@ -301,9 +310,15 @@ ${this.ctx.pre}}`;
       }
 
       if (wgsl.isPtr(target.dataType)) {
+        const propType = getTypeForPropAccess(
+          target.dataType.inner as AnyData,
+          property,
+        );
+
         return snip(
           `(*${this.ctx.resolve(target.value).value}).${property}`,
-          getTypeForPropAccess(target.dataType.inner as AnyData, property),
+          propType,
+          /* ref */ wgsl.isNaturallyRef(propType),
         );
       }
 
@@ -313,14 +328,23 @@ ${this.ctx.pre}}`;
           return snip(
             `arrayLength(&${this.ctx.resolve(target.value).value})`,
             u32,
+            /* ref */ false,
           );
         }
 
-        return snip(String(target.dataType.elementCount), abstractInt);
+        return snip(
+          String(target.dataType.elementCount),
+          abstractInt,
+          /* ref */ false,
+        );
       }
 
       if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return snip(new MatrixColumnsAccess(target), UnknownData);
+        return snip(
+          new MatrixColumnsAccess(target),
+          UnknownData,
+          /* ref */ true,
+        );
       }
 
       if (
@@ -331,9 +355,11 @@ ${this.ctx.pre}}`;
         return coerceToSnippet((target.value as any)[property]);
       }
 
+      const propType = getTypeForPropAccess(target.dataType, property);
       return snip(
         `${this.ctx.resolve(target.value).value}.${property}`,
-        getTypeForPropAccess(target.dataType, property),
+        propType,
+        /* ref */ target.ref && wgsl.isNaturallyRef(propType),
       );
     }
 
@@ -346,9 +372,14 @@ ${this.ctx.pre}}`;
         this.ctx.resolve(property.value, property.dataType).value;
 
       if (target.value instanceof MatrixColumnsAccess) {
+        const propType = getTypeForIndexAccess(
+          target.value.matrix.dataType as AnyData,
+        );
+
         return snip(
           stitch`${target.value.matrix}[${propertyStr}]`,
-          getTypeForIndexAccess(target.value.matrix.dataType as AnyData),
+          propType,
+          /* ref */ target.ref,
         );
       }
       const targetStr = this.ctx.resolve(target.value, target.dataType).value;
@@ -377,17 +408,23 @@ ${this.ctx.pre}}`;
       }
 
       if (wgsl.isPtr(target.dataType)) {
+        const propType = getTypeForIndexAccess(
+          target.dataType.inner as AnyData,
+        );
         return snip(
           `(*${targetStr})[${propertyStr}]`,
-          getTypeForIndexAccess(target.dataType.inner as AnyData),
+          propType,
+          /* ref */ wgsl.isNaturallyRef(propType),
         );
       }
 
+      const propType = isData(target.dataType)
+        ? getTypeForIndexAccess(target.dataType)
+        : UnknownData;
       return snip(
         `${targetStr}[${propertyStr}]`,
-        isData(target.dataType)
-          ? getTypeForIndexAccess(target.dataType)
-          : UnknownData,
+        propType,
+        /* ref */ target.ref && wgsl.isNaturallyRef(propType),
       );
     }
 
@@ -421,6 +458,8 @@ ${this.ctx.pre}}`;
           return snip(
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
+            // A new struct, so not a reference
+            /* ref */ false,
           );
         }
 
@@ -434,6 +473,8 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
+          // A new struct, so not a reference
+          /* ref */ false,
         );
       }
 
@@ -457,7 +498,11 @@ ${this.ctx.pre}}`;
         if (shellless) {
           return this.ctx.withResetIndentLevel(() => {
             const snippet = this.ctx.resolve(shellless);
-            return snip(stitch`${snippet.value}(${args})`, snippet.dataType);
+            return snip(
+              stitch`${snippet.value}(${args})`,
+              snippet.dataType,
+              /* ref */ false,
+            );
           });
         }
 
@@ -563,6 +608,7 @@ ${this.ctx.pre}}`;
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
+        /* ref */ false,
       );
     }
 
@@ -618,11 +664,12 @@ ${this.ctx.pre}}`;
           elemType as wgsl.AnyWgslData,
           values.length,
         ) as wgsl.AnyWgslData,
+        /* ref */ false,
       );
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData);
+      return snip(expression[1], UnknownData, /* ref */ true);
     }
 
     if (expression[0] === NODE.preUpdate) {

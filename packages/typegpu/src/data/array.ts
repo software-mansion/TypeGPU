@@ -53,7 +53,8 @@ export const arrayOf = createDualImpl(
       // Marking so the WGSL generator lets this function through
       partial[$internal] = true;
 
-      return snip(partial, UnknownData);
+      // Why ref? It's a function.
+      return snip(partial, UnknownData, /* ref*/ true);
     }
 
     if (typeof elementCount.value !== 'number') {
@@ -65,6 +66,7 @@ export const arrayOf = createDualImpl(
     return snip(
       cpu_arrayOf(elementType.value as AnyWgslData, elementCount.value),
       elementType.value as AnyWgslData,
+      /* ref */ false,
     );
   },
   'arrayOf',
