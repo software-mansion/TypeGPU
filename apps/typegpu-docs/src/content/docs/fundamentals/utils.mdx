@@ -188,6 +188,6 @@ Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ig
 - `console.log` only works in fragment and compute shaders.
 This is due to [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
 - TypeGPU needs to handle every logged data type individually.
-Currently, the only supported types are `bool`, `u32`, `vec2u`, `vec3u` and `vec4u`.
+Currently, we only support scalar, vector and matrix types.
 - `console.log` currently does not support template literals and string substitutions.
 - Other `console` methods like `clear` or `warn` are not yet supported.

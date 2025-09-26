@@ -71,7 +71,7 @@
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
     "jiti": "catalog:build",
-    "jsdom": "^26.1.0",
+    "jsdom": "^27.0.0",
     "tsup": "catalog:build",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",

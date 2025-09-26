@@ -43,12 +43,12 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { getBestConversion } from './tgsl/conversion.ts';
 import {
   LogGeneratorImpl,
   LogGeneratorNullImpl,
 } from './tgsl/consoleLog/logGenerator.ts';
 import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
+import { getBestConversion } from './tgsl/conversion.ts';
 import {
   coerceToSnippet,
   concretize,
@@ -101,7 +101,7 @@ type SlotBindingLayer = {
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyData | UnknownData>;
+  declarations: Map<string, Snippet>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -178,7 +178,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
-      declarations: new Map<string, AnyData | UnknownData>(),
+      declarations: new Map(),
     });
   }
 
@@ -249,9 +249,9 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const declarationType = layer.declarations.get(id);
-        if (declarationType !== undefined) {
-          return snip(id, declarationType);
+        const snippet = layer.declarations.get(id);
+        if (snippet !== undefined) {
+          return snippet;
         }
       } else {
         // Skip
@@ -261,8 +261,8 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
-    if (type.type === 'unknown') {
+  defineBlockVariable(id: string, snippet: Snippet): void {
+    if (snippet.dataType.type === 'unknown') {
       throw Error(`Tried to define variable '${id}' of unknown type`);
     }
 
@@ -270,9 +270,8 @@ class ItemStateStackImpl implements ItemStateStack {
       const layer = this._stack[i];
 
       if (layer?.type === 'blockScope') {
-        layer.declarations.set(id, type);
-
-        return snip(id, type);
+        layer.declarations.set(id, snippet);
+        return;
       }
     }
 
@@ -383,6 +382,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return getUniqueName(this.#namespace, resource);
   }
 
+  makeNameValid(name: string): string {
+    return this.#namespace.nameRegistry.makeValid(name);
+  }
+
   get pre(): string {
     return this._indentController.pre;
   }
@@ -419,8 +422,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyData | UnknownData): Snippet {
-    return this._itemStateStack.defineBlockVariable(id, dataType);
+  defineVariable(id: string, snippet: Snippet) {
+    this._itemStateStack.defineBlockVariable(id, snippet);
   }
 
   reportReturnType(dataType: AnyData) {

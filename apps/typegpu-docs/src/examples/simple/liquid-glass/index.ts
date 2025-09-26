@@ -31,7 +31,7 @@ const Params = d.struct({
   tintStrength: d.f32,
   tintColor: d.vec3f,
 });
-const defaultParams: d.Infer<typeof Params> = {
+const defaultParams = Params({
   rectDims: d.vec2f(0.13, 0.01),
   radius: 0.003,
   start: 0.05,
@@ -43,7 +43,7 @@ const defaultParams: d.Infer<typeof Params> = {
   edgeBlurMultiplier: 0.7,
   tintStrength: 0.05,
   tintColor: d.vec3f(0.58, 0.44, 0.96),
-};
+});
 
 const paramsUniform = root.createUniform(Params, defaultParams);
 
@@ -53,10 +53,13 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const sampleWithChromaticAberration = tgpu.fn(
-  [d.vec2f, d.f32, d.vec2f, d.f32],
-  d.vec3f,
-)((uv, offset, dir, blur) => {
+const sampleWithChromaticAberration = (
+  uv: d.v2f,
+  offset: number,
+  dir: d.v2f,
+  blur: number,
+): d.v3f => {
+  'kernel';
   const red = std.textureSampleBias(
     sampledView,
     sampler,
@@ -76,7 +79,7 @@ const sampleWithChromaticAberration = tgpu.fn(
     blur,
   );
   return d.vec3f(red.x, green.y, blue.z);
-});
+};
 
 const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },

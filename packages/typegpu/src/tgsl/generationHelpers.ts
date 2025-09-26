@@ -218,7 +218,7 @@ export type GenerationCtx = ResolutionCtx & {
   popBlockScope(): void;
   generateLog(args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
+  defineVariable(id: string, snippet: Snippet): void;
 
   /**
    * Types that are used in `return` statements are

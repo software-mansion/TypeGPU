@@ -20,35 +20,34 @@ const mainVertex = tgpu['~unstable'].vertexFn({
  * Given a coordinate, it returns a grayscale floor tile pattern at that
  * location.
  */
-const tilePattern = tgpu.fn([d.vec2f], d.f32)((uv) => {
+const tilePattern = (uv: d.v2f): number => {
+  'kernel';
   const tiledUv = std.fract(uv);
   const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
   const maxProximity = std.max(proximity.x, proximity.y);
-  return std.clamp(std.pow(1 - maxProximity, 0.6) * 5, 0, 1);
-});
+  return std.saturate(std.pow(1 - maxProximity, 0.6) * 5);
+};
 
-const caustics = tgpu.fn([d.vec2f, d.f32, d.vec3f], d.vec3f)(
-  (uv, time, profile) => {
-    const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
-    // Distorting UV coordinates
-    const uv2 = std.add(uv, distortion);
-    const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
-    return std.pow(d.vec3f(1 - noise), profile);
-  },
-);
-
-const clamp01 = tgpu.fn([d.f32], d.f32)((v) => std.clamp(v, 0, 1));
+const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
+  'kernel';
+  const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
+  // Distorting UV coordinates
+  const uv2 = std.add(uv, distortion);
+  const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
+  return std.pow(d.vec3f(1 - noise), profile);
+};
 
 /**
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XY plane (around the imaginary Z axis)
  */
-const rotateXY = tgpu.fn([d.f32], d.mat2x2f)((angle) =>
-  d.mat2x2f(
+const rotateXY = (angle: number): d.m2x2f => {
+  'kernel';
+  return d.mat2x2f(
     /* right */ d.vec2f(std.cos(angle), std.sin(angle)),
     /* up    */ d.vec2f(-std.sin(angle), std.cos(angle)),
-  )
-);
+  );
+};
 
 const root = await tgpu.init();
 
@@ -100,7 +99,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const blendCoord = d.vec3f(std.mul(uv, d.vec2f(5, 10)), time.$ * 0.2 + 5);
   // A smooth blending factor, so that caustics only appear at certain spots
-  const blend = clamp01(perlin3d.sample(blendCoord) + 0.3);
+  const blend = std.saturate(perlin3d.sample(blendCoord) + 0.3);
 
   // -- FOG --
 

@@ -591,10 +591,6 @@ export class Vec2fImpl extends Vec2<number> {
     };
   }
 
-  schema() {
-    return f32;
-  }
-
   get kind() {
     return 'vec2f' as const;
   }
