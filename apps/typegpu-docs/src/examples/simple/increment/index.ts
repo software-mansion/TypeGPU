@@ -6,14 +6,14 @@ const root = await tgpu.init();
 const counter = root.createMutable(d.u32);
 
 // A 0-dimentional shader function
-const dispatch = prepareDispatch(root, () => {
+const incrementKernel = prepareDispatch(root, () => {
   'kernel';
   counter.$ += 1;
 });
 
 async function increment() {
   // Dispatch and read the result
-  dispatch();
+  incrementKernel.dispatch();
   return await counter.read();
 }
 
