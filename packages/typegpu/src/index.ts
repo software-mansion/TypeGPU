@@ -102,6 +102,7 @@ export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
+export { isVariable } from './core/variable/tgpuVariable.ts';
 
 // types
 
@@ -189,6 +190,7 @@ export type {
   TgpuComputeFnShell,
 } from './core/function/tgpuComputeFn.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
+export type { Namespace } from './core/resolve/namespace.ts';
 // Exported for being able to track use of these global extensions easier,
 // and to establish a solid contract between tooling using them.
 export type { INTERNAL_GlobalExt } from './shared/meta.ts';

@@ -90,6 +90,15 @@ export function isNamable(value: unknown): value is TgpuNamable {
   return !!(value as TgpuNamable)?.$name;
 }
 
+/**
+ * AST's are given to functions with a 'kernel' directive, which this function checks for.
+ */
+export function isKernel(
+  value: unknown,
+): value is (...args: never[]) => unknown {
+  return !!getMetaData(value)?.ast;
+}
+
 export function getMetaData(
   definition: unknown,
 ): MetaData | undefined {
